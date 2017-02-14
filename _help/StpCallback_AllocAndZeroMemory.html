@@ -1,0 +1,42 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<link rel="Stylesheet" type="text/css" media="screen" href="Screen.css" />
+  <title>StpCallback_AllocAndZeroMemory</title>
+</head>
+<body>
+	<h3>StpCallback_AllocAndZeroMemory</h3>
+	<hr />
+<pre>
+void* StpCallback_AllocAndZeroMemory (unsigned int size);
+</pre>
+	<h4>
+		Summary</h4>
+	<p>
+		Application-defined function that allocates and zeroes-out memory for STP use.</p>
+	<p>
+		<code>StpCallback_AllocAndZeroMemory</code> is a placeholder name used throughout this documentation. The 
+		application may name this callback differently.</p>
+	<h4>
+		Parameters</h4>
+	<dl>
+		<dt>size</dt>
+		<dd>The application receives in this parameter the size of the required memory block.</dd>
+	</dl>
+	<h4>
+		Return value</h4>
+		<dl>
+		<dd>The application must return a pointer to the allocated and zeroed-out memory block.</dd>
+		</dl>
+	<h4>
+		Remarks</h4>
+		<p>
+			The STP library does not currenly support out-of-memory conditions. It 
+			verifies with an assert() that the pointer returned by this callback is not NULL.</p>
+	<p>
+			See the remarks section in <a href="STP_CreateBridge.html">
+			STP_CreateBridge</a>, for information about how and when the STP library allocates memory.</p>
+	
+</body>
+</html>

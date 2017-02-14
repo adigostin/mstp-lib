@@ -1,0 +1,58 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<link rel="Stylesheet" type="text/css" media="screen" href="Screen.css" />
+  <title>STP_SetPortAdminEdge</title>
+</head>
+<body>
+	<h3>STP_SetPortAdminEdge</h3>
+	<hr />
+<pre>
+void STP_SetPortAdminEdge
+(
+    STP_BRIDGE*   bridge,
+    unsigned int  portIndex,
+    bool          adminEdge
+);
+</pre>
+	<h4>
+		Summary</h4>
+	<p>
+		Sets the AdminEdge parameter for a given port.</p>
+	<h4>
+		Parameters</h4>
+	<dl>
+		<dt>bridge</dt>
+		<dd>Pointer to a STP_BRIDGE object, obtained from <a href="STP_CreateBridge.html">
+			STP_CreateBridge</a>.</dd>
+		<dt>portIndex</dt>
+		<dd>The index of the port for which the AdminEdge parameter is to be set.</dd>
+		<dt>newAdminEdge</dt>
+		<dd>The new value of the AdminEdge parameter.</dd>
+	</dl>
+	<h4>
+		Remarks</h4>
+		<p>
+			See §13.25.1 in 802.1Q-2011 for more information.</p>
+	<p>
+			The current library code was not tested in scenarios where this function is called after the bridge 
+			has been started. It was only tested in scenarios where this function is called once, after <a href="STP_CreateBridge.html">STP_CreateBridge</a> is 
+			called, and before <a href="STP_StartBridge.html">STP_StartBridge</a> is called.</p>
+	
+	<p>
+			Execution of this function is a potentially lengthy process. 
+			It may call various callbacks multiple times.</p>
+	<p>
+			When a port is configured as Edge by calling this function with <code>adminEdge</code> true, the 
+			library will still be sending BPDUs to that port, and will still need to receive and 
+			process BPDUs from that port. This is not a characteristic of this particular library; it is a 
+			characteristic of the STP protocol itself. This behavior is useful in case the end user 
+			configures a port as Edge by mistake (e.g., correctly configures a port as Edge in one 
+			location but later moves the switch to another location and doesn&#39;t remember to 
+			reconfigure that port.)</p>
+	<p>
+			This function may not be called from within an <a href="STP_CALLBACKS.html">STP callback</a>.</p>
+	
+</body>
+</html>

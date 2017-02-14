@@ -1,0 +1,40 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<link rel="Stylesheet" type="text/css" media="screen" href="Screen.css" />
+  <title>StpCallback_OnTopologyChanged</title>
+</head>
+<body>
+	<h3>StpCallback_OnTopologyChanged</h3>
+	<hr />
+<pre>
+void StpCallback_OnTopologyChanged (STP_BRIDGE* bridge, unsigned int treeIndex);
+</pre>
+	<h4>
+		Summary</h4>
+	<p>
+		Application-defined function that is called by the STP library when it detects
+		a change in the network topology.</p>
+	<h4>
+		Parameters</h4>
+	<dl>
+		<dt>bridge</dt>
+		<dd>The application receives in this parameter a pointer to a STP_BRIDGE object.</dd>
+		<dt>treeIndex</dt>
+		<dd>The index of the spanning tree on which a topology change occurred.</dd>
+	</dl>
+	<h4>
+		Remarks</h4>
+	<p>
+			The STP library calls this callback when it detects a topology change
+			on the local bridge.</p>
+
+	<p>
+			TODO: Update this page.</p>
+	<p>
+		StpCallback_OnTopologyChanged is a placeholder name used throughout this documentation. The
+		application may name this callback differently.</p>
+
+</body>
+</html>

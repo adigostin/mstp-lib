@@ -1,0 +1,43 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<link rel="Stylesheet" type="text/css" media="screen" href="Screen.css" />
+  <title>STP_StopBridge</title>
+</head>
+<body>
+	<h3>STP_StopBridge</h3>
+	<hr />
+<pre>
+void STP_StopBridge
+(
+    STP_BRIDGE*   bridge,
+    unsigned int  timestamp
+);
+</pre>
+	<h4>
+		Summary</h4>
+	<p>
+		Stops a bridge (i.e., stops executing the bridge&#39;s state machines).</p>
+	<h4>
+		Parameters</h4>
+	<dl>
+		<dt>bridge</dt>
+		<dd>Pointer to a STP_BRIDGE object, obtained from <a href="STP_CreateBridge.html">
+			STP_CreateBridge</a>.</dd>
+		<dt>timestamp</dt>
+		<dd>A timestamp used for the debug log. </dd>
+	</dl>
+	<h4>
+		Remarks</h4>
+	<p>
+			It is allowed to call this function for already-stopped bridges.</p>
+	
+	<p>
+		The current library code was not tested in scenarios where a bridge is 
+		stopped with this function.</p>
+	<p>
+		This function may not be called from within an <a href="STP_CALLBACKS.html">STP callback</a>.</p>
+	
+</body>
+</html>

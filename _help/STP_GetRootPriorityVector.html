@@ -1,0 +1,150 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<link rel="Stylesheet" type="text/css" media="screen" href="Screen.css" />
+  <title>STP_GetRootPriorityVector</title>
+</head>
+<body>
+	<h3>STP_GetRootPriorityVector</h3>
+	<hr />
+<pre>
+void STP_GetRootPriorityVector
+(
+    STP_BRIDGE*     bridge,
+    unsigned int    treeIndex,
+    unsigned char*  priorityVector36BytesOut
+); 
+</pre>
+	<h4>
+		Summary</h4>
+	<p>
+		Retrieves the root priority vector of a bridge. This is described in §13.9 and 
+		§13.10 in 802.1Q-2011.</p>
+	<h4>
+		Parameters</h4>
+	<dl>
+		<dt>bridge</dt>
+		<dd>Pointer to a STP_BRIDGE object, obtained from <a href="STP_CreateBridge.html">
+			STP_CreateBridge</a>.</dd>
+		<dt>treeIndex</dt>
+		<dd>The zero-based index of the spanning tree to read the information from. For STP or RSTP, this must be zero. For MSTP, this must be zero for the CIST, or 
+			1..64 for an MSTI.</dd>
+		<dt>priorityVector36BytesOut</dt>
+		<dd>A caller-allocated buffer, 36-byte long, where this function will write the 
+			priority vector. See the Remarks section for details.</dd>
+	</dl>
+	<h4>
+		Remarks</h4>
+		<p>
+			For the CIST (parameter <code>treeIndex</code> = 0), the root priority vector
+			has the following format, also described in §13.8 <strong>a)</strong> to <strong>
+			g)</strong> in 802.1Q-2011:</p>
+	<table border="1" cellpadding="2">
+		<thead>
+			<tr>
+				<th>Byte position</th>
+				<th>Description</th>
+				<th>Format</th>
+			</tr>
+		</thead>
+		<tr>
+			<td>0..7</td>
+			<td>CIST Root Identifier.</td>
+			<td>BRIDGE_ID (see below)</td>
+		</tr>
+		<tr>
+			<td>8..11</td>
+			<td>CIST External Root Path Cost</td>
+			<td>32-bit number in big-endian format</td>
+		</tr>
+		<tr>
+			<td>12..19</td>
+			<td>CIST Regional Root Identifier</td>
+			<td>BRIDGE_ID (see below)</td>
+		</tr>
+		<tr>
+			<td>20..23</td>
+			<td>CIST Internal Root Path Cost</td>
+			<td>32-bit number in big-endian format</td>
+		</tr>
+		<tr>
+			<td>24..31</td>
+			<td>CIST Designated Bridge Identifier</td>
+			<td>BRIDGE_ID (see below)</td>
+		</tr>
+		<tr>
+			<td>32..33</td>
+			<td>CIST Designated Port Identifier</td>
+			<td>PORT_ID (see below)</td>
+		</tr>
+		<tr>
+			<td>34..35</td>
+			<td>CIST Receiving Port Identifier</td>
+			<td>PORT_ID (see below)</td>
+		</tr>
+	</table>
+		<p>
+			For an MSTI (parameter <code>treeIndex</code> > 0), the root priority vector
+			has the following format, also described in §13.8 <strong>h)</strong> to <strong>
+			l)</strong> in 802.1Q-2011:</p>
+	<table border="1" cellpadding="2">
+		<thead>
+			<tr>
+				<th>Byte position</th>
+				<th>Description</th>
+				<th>Format</th>
+			</tr>
+		</thead>
+		<tr>
+			<td>0..7</td>
+			<td>unused</td>
+			<td>&nbsp;</td>
+		</tr>
+		<tr>
+			<td>8..11</td>
+			<td>unused</td>
+			<td>&nbsp;</td>
+		</tr>
+		<tr>
+			<td>12..19</td>
+			<td>MSTI Regional Root Identifier</td>
+			<td>BRIDGE_ID (see below)</td>
+		</tr>
+		<tr>
+			<td>20..23</td>
+			<td>MSTI Internal Root Path Cost</td>
+			<td>32-bit number in big-endian format</td>
+		</tr>
+		<tr>
+			<td>24..31</td>
+			<td>MSTI Designated Bridge Identifier</td>
+			<td>BRIDGE_ID (see below)</td>
+		</tr>
+		<tr>
+			<td>32..33</td>
+			<td>MSTI Designated Port Identifier</td>
+			<td>PORT_ID (see below)</td>
+		</tr>
+		<tr>
+			<td>34..35</td>
+			<td>MSTI Receiving Port Identifier</td>
+			<td>PORT_ID (see below)</td>
+		</tr>
+	</table>	
+	<p>For the BRIDGE_ID and PORT_ID formats, see <strong>base_types.h</strong> in the source code 
+		tree.</p>
+	<h4>Function information</h4>
+	<table>
+	<tr>
+		<td class="function_information_table_left_cell">Include header</td>
+		<td>stp.h</td>
+	</tr>
+	<tr>
+		<td class="function_information_table_left_cell">Required source code</td>
+		<td>stp.cpp</td>
+	</tr>
+	</table>
+
+</body>
+</html>

@@ -1,0 +1,51 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<link rel="Stylesheet" type="text/css" media="screen" href="Screen.css" />
+  <title>STP_OnPortDisabled</title>
+</head>
+<body>
+	<h3>STP_OnPortDisabled</h3>
+	<hr />
+<pre>
+void STP_OnPortDisabled
+(
+    STP_BRIDGE*   bridge,
+    unsigned int  portIndex,
+    unsigned int  timestampMilliseconds
+);
+</pre>
+	<h4>
+		Summary</h4>
+	<p>
+		Function which the application must call when 
+		the operational state of a port changes to FALSE. See the Remarks section of this page for 
+		more details, and also the Remarks section of <a href="STP_OnPortEnabled.html">
+		STP_OnPortEnabled</a>.</p>
+	<h4>
+		Parameters</h4>
+	<dl>
+		<dt>bridge</dt>
+		<dd>Pointer to a STP_BRIDGE object, obtained from <a href="STP_CreateBridge.html">
+			STP_CreateBridge</a>.</dd>
+		<dt>portIndex</dt>
+		<dd>The index of the port whose operational state has just changed to FALSE.</dd>
+		<dt>timestamp</dt>
+		<dd>A timestamp used for the debug log. </dd>
+	</dl>
+	<h4>
+		Remarks</h4>
+		<p>
+			Also see the Remarks section of <a href="STP_OnPortEnabled.html">STP_OnPortEnabled</a>.</p>
+	<p>
+			It is allowed to call this function for already disabled ports.</p>
+
+	<p>
+			Execution of this function is a potentially lengthy process. 
+			It may call various callbacks multiple times.</p>
+	<p>
+			This function <strong>may not</strong> be called from within an <a href="STP_CALLBACKS.html">STP callback</a>.</p>
+
+</body>
+</html>

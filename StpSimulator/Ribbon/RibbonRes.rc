@@ -1,0 +1,88 @@
+// ******************************************************************************
+// * This is an automatically generated file containing the ribbon resource for *
+// * your application.                                                          *
+// ******************************************************************************
+
+#include ".\RibbonIds.h"
+
+STRINGTABLE 
+BEGIN
+    cmdHome_LabelTitle_RESID L"Home" /* LabelTitle cmdHome_LabelTitle_RESID: (null) */
+END
+
+STRINGTABLE 
+BEGIN
+    cmdEditGroup_LabelTitle_RESID L"Edit" /* LabelTitle cmdEditGroup_LabelTitle_RESID: (null) */
+END
+
+STRINGTABLE 
+BEGIN
+    cmdUndo_LabelTitle_RESID L"Undo" /* LabelTitle cmdUndo_LabelTitle_RESID: (null) */
+END
+
+cmdUndo_LargeImages_RESID    BITMAP    "EditUndo_32.bmp" /* LargeImages cmdUndo_LargeImages_RESID: (null) */
+STRINGTABLE 
+BEGIN
+    cmdRedo_LabelTitle_RESID L"Redo" /* LabelTitle cmdRedo_LabelTitle_RESID: (null) */
+END
+
+cmdRedo_LargeImages_RESID    BITMAP    "EditRedo_32.bmp" /* LargeImages cmdRedo_LargeImages_RESID: (null) */
+STRINGTABLE 
+BEGIN
+    cmdCut_LabelTitle_RESID L"Cut" /* LabelTitle cmdCut_LabelTitle_RESID: (null) */
+END
+
+cmdCut_SmallImages_RESID    BITMAP    "EditCut_16.bmp" /* SmallImages cmdCut_SmallImages_RESID: (null) */
+STRINGTABLE 
+BEGIN
+    cmdCopy_LabelTitle_RESID L"Copy" /* LabelTitle cmdCopy_LabelTitle_RESID: (null) */
+END
+
+cmdCopy_SmallImages_RESID    BITMAP    "EditCopy_16.bmp" /* SmallImages cmdCopy_SmallImages_RESID: (null) */
+STRINGTABLE 
+BEGIN
+    cmdPaste_LabelTitle_RESID L"Paste" /* LabelTitle cmdPaste_LabelTitle_RESID: (null) */
+END
+
+cmdPaste_SmallImages_RESID    BITMAP    "EditPaste_16.bmp" /* SmallImages cmdPaste_SmallImages_RESID: (null) */
+STRINGTABLE 
+BEGIN
+    cmdFileMenu_LabelTitle_RESID L"File" /* LabelTitle cmdFileMenu_LabelTitle_RESID: (null) */
+END
+
+STRINGTABLE 
+BEGIN
+    cmdFileMenuNew_LabelTitle_RESID L"New" /* LabelTitle cmdFileMenuNew_LabelTitle_RESID: (null) */
+END
+
+cmdFileMenuNew_LargeImages_RESID    BITMAP    "FileMenuNew_32.bmp" /* LargeImages cmdFileMenuNew_LargeImages_RESID: (null) */
+STRINGTABLE 
+BEGIN
+    cmdFileMenuOpen_LabelTitle_RESID L"Open..." /* LabelTitle cmdFileMenuOpen_LabelTitle_RESID: (null) */
+END
+
+cmdFileMenuOpen_LargeImages_RESID    BITMAP    "FileMenuOpen_32.bmp" /* LargeImages cmdFileMenuOpen_LargeImages_RESID: (null) */
+STRINGTABLE 
+BEGIN
+    cmdFileMenuSave_LabelTitle_RESID L"Save" /* LabelTitle cmdFileMenuSave_LabelTitle_RESID: (null) */
+END
+
+cmdFileMenuSave_LargeImages_RESID    BITMAP    "FileMenuSave_32.bmp" /* LargeImages cmdFileMenuSave_LargeImages_RESID: (null) */
+STRINGTABLE 
+BEGIN
+    cmdFileMenuSaveAs_LabelTitle_RESID L"Save As..." /* LabelTitle cmdFileMenuSaveAs_LabelTitle_RESID: (null) */
+END
+
+cmdFileMenuSaveAs_LargeImages_RESID    BITMAP    "FileMenuSaveAs_32.bmp" /* LargeImages cmdFileMenuSaveAs_LargeImages_RESID: (null) */
+STRINGTABLE 
+BEGIN
+    cmdFileMenuClose_LabelTitle_RESID L"Close" /* LabelTitle cmdFileMenuClose_LabelTitle_RESID: (null) */
+END
+
+cmdFileMenuClose_LargeImages_RESID    BITMAP    "FileMenuClose_32.bmp" /* LargeImages cmdFileMenuClose_LargeImages_RESID: (null) */
+STRINGTABLE 
+BEGIN
+    cmdRecentFiles_LabelTitle_RESID L"Recent Files" /* LabelTitle cmdRecentFiles_LabelTitle_RESID: (null) */
+END
+
+APPLICATION_RIBBON    UIFILE    "C:\\_mstp-lib\\trunk\\StpSimulator\\Ribbon\\Ribbon.bml"

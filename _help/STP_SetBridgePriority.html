@@ -1,0 +1,78 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<link rel="Stylesheet" type="text/css" media="screen" href="Screen.css" />
+  <title>STP_SetBridgePriority</title>
+	<style type="text/css">
+	.auto-style1 {
+	  color: #FF0000;
+	}
+	.auto-style3 {
+	  color: #0000FF;
+	}
+	.auto-style4 {
+	  color: #008000;
+	}
+  </style>
+</head>
+<body>
+	<h3>STP_SetBridgePriority</h3>
+	<hr />
+<pre>
+void STP_SetBridgePriority
+(
+    STP_BRIDGE*     bridge,
+    unsigned int    treeIndex,
+    unsigned short  bridgePriority,
+    unsigned int    timestamp
+);
+</pre>
+	<h4>
+		Summary</h4>
+	<p>
+		Sets the settable priority component - most significant 4 bits - of the BridgeIdentifier 
+		(§13.24.1 in 802.1Q-2011).</p>
+	<h4>
+		Parameters</h4>
+	<dl>
+		<dt>bridge</dt>
+		<dd>Pointer to a STP_BRIDGE object, obtained from <a href="STP_CreateBridge.html">
+			STP_CreateBridge</a>.</dd>
+		<dt>treeIndex</dt>
+		<dd>The index of the spanning tree for which bridge priority is to be set. For STP or RSTP, 
+			this must be zero. For MSTP, this must be zero for the CIST, or 1..64 for an MSTI.</dd>
+		<dt>bridgePriority</dt>
+		<dd>A value specifiying the bridge priority. Must be between 0 and 61440 (0xF000 hex), in 
+			steps of 4096 (0x1000 hex).</dd>
+		<dt>timestamp</dt>
+		<dd>A timestamp used for the debug log. </dd>
+	</dl>
+	<h4>
+		Remarks</h4>
+		<p>
+			Default priority is 32768 (0x8000 hex). This default priority is assigned to a bridge when 
+			it is created with <a href="STP_CreateBridge.html">STP_CreateBridge</a>.</p>
+	<p>
+		The BridgeIdentifier for a given spanning tree is usually represented as
+		<span class="auto-style1">8</span><span class="auto-style4">000</span>.<span 
+			class="auto-style3">01-02-03-04-05-06</span> and consists of:</p>
+	<ul>
+		<li><span class="auto-style1">4 bits set by this function</span>. These are the most 
+			significant bits.</li>
+		<li><span class="auto-style4">12 bits with the &quot;system ID extension&quot;</span>, which for 
+			STP and RSTP 
+			is zero, and for MSTP is populated by the library with the tree index (zero for the CIST, 
+			1..64 for MSTIs)</li>
+		<li><span class="auto-style3">48 bits with the MAC address</span>. These are the least 
+			significant bits, and they are settable with <a href="STP_SetBridgeAddress.html">
+			STP_SetBridgeAddress</a>.</li>
+	</ul>
+	<p>
+			Execution of this function is a potentially lengthy process. 
+			It may call various callbacks multiple times.</p>
+	<p>
+			This function <strong>may not</strong> be called from within an <a href="STP_CALLBACKS.html">STP callback</a>.</p>
+
+</body>
+</html>

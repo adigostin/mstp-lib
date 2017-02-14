@@ -1,0 +1,45 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<link rel="Stylesheet" type="text/css" media="screen" href="Screen.css" />
+  <title>STP_GetMstConfigTable</title>
+</head>
+<body>
+	<h3>STP_GetMstConfigTable</h3>
+	<hr />
+<pre>
+void STP_GetMstConfigTable
+(
+    STP_BRIDGE*    bridge,
+    unsigned char  mstidsOut [4094]
+);
+</pre>
+	<h4>
+		Summary</h4>
+	<p>
+		Retrieves a table containing the mapping of VLANs to MSTIs.</p>
+	<h4>
+		Parameters</h4>
+	<dl>
+		<dt>bridge</dt>
+		<dd>Pointer to a STP_BRIDGE object.</dd>
+		<dt>mstidsOut</dt>
+		<dd>Pointer to an array of 4094 bytes where this function will write the mapping.</dd>
+	</dl>
+	<h4>
+		Remarks</h4>
+		<p>
+			Element at index 0 of the array corresponds to VLAN 1, element at index 1 corresponds to 
+			VLAN 2, and so on until the element at index 4093 which corresponds to VLAN 4094.</p>
+		<p>
+			This function may be called only for MSTP bridges (i.e., if <code>STP_VERSION_MSTP</code> was passed 
+			to <a href="STP_CreateBridge.html">STP_CreateBridge</a> or
+			<a href="STP_SetStpVersion.html">STP_SetStpVersion</a>).</p>
+	<p>
+		See §13.7 in 802.1Q-2011 for more information about the MST Configuration Identifier.</p>
+	<p>
+		It is allowed to call this function from within an <a href="STP_CALLBACKS.html">STP callback</a>.</p>
+	
+</body>
+</html>

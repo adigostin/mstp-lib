@@ -1,0 +1,61 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<link rel="Stylesheet" type="text/css" media="screen" href="Screen.css" />
+  <title>StpCallback_FlushFdb</title>
+</head>
+<body>
+	<h3>StpCallback_FlushFdb</h3>
+	<hr />
+<pre>
+void StpCallback_FlushFdb
+(
+    STP_BRIDGE*              bridge,
+    unsigned int             portIndex,
+    unsigned int             treeIndex,
+    enum STP_FLUSH_FDB_TYPE  flushType
+);
+</pre>
+	<h4>
+		Summary</h4>
+	<p>Application-defined function that flushes FDB entries (MAC-to-port associations)
+		on a physical port.
+		</p>
+	<p>
+		<code>StpCallback_FlushFdb</code> is a placeholder name used throughout this documentation. The 
+		application may name this callback differently.</p>
+	<h4>
+		Parameters</h4>
+	<dl>
+		<dt>bridge</dt>
+		<dd>The application receives in this parameter a pointer to the bridge object returned by
+			<a href="STP_CreateBridge.html">STP_CreateBridge</a>.</dd>
+		<dt>portIndex</dt>
+		<dd>The application receives in this parameter the index of the port on which FDB entries are to be flushed.</dd>
+		<dt>treeIndex</dt>
+		<dd>The application receives in this parameter the index of the spanning tree for which FDB 
+			entries are to be flushed. For STP or RSTP, this is always zero. For MSTP, this is zero 
+			for CIST, or 1..64 for a MSTI.</dd>
+		<dt>flushType</dt>
+		<dd>The application receives in this parameter a value representing the type of flushing it 
+			must perform. See the Remarks section for more information.</dd>
+	</dl>
+	<h4>Remarks</h4>
+	<p>In complex networks, and especially in MSTP mode, the STP library can call
+		this function dozens of times in a row, with various combinations of parameters.
+		This is due to the protocol itself (i.e., it is not a characteristic of this
+		particular library). For that reason, the implementation of this function
+		should not take more than a few milliseconds. Usually all this function needs
+		to do is write a few bytes to the internal registers of the switch IC.</p>
+	<p>If <code>flushType</code> is <code>STP_FLUSH_FDB_TYPE_IMMEDIATE</code>, the application must flush the FDB entries 
+		and return after the flush is completed in hardware. This value is received for RSTP and 
+		MSTP bridges (i.e., when <code>STP_VERSION_RSTP</code> or <code>STP_VERSION_MSTP</code> was passed to
+		<a href="STP_CreateBridge.html">STP_CreateBridge</a> or STP_SetStpVersion).</p>
+	<p>If <code>flushType</code> is <code>STP_FLUSH_FDB_TYPE_RAPID_AGEING</code>, the application must initiate FDB 
+		flushing and return without waiting for flushing to be completed in hardware. This 
+		behavior is used in legacy STP (pre-RSTP) bridges (i.e., when <code>STP_VERSION_LEGACY_STP</code> 
+		was passed to <a href="STP_CreateBridge.html">STP_CreateBridge</a> or 
+		<a href="STP_SetStpVersion.html">STP_SetStpVersion</a>).</p>	
+</body>
+</html>

@@ -1,0 +1,30 @@
+﻿body
+{
+	font-family: 'Calibri', 'Times New Roman'
+}
+
+dd
+{
+    margin-bottom: 7px;
+}
+
+li
+{
+    margin-bottom: 7px;
+}
+pre
+{
+    background-color: #CCCCCC;
+}
+
+dt
+{
+	font-family: monospace;
+}
+
+.function_information_table_left_cell
+{
+    padding-right: 30px;
+    background-color: #C0C0C0;
+    vertical-align: top;
+}

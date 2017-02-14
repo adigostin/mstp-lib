@@ -1,0 +1,83 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<link rel="Stylesheet" type="text/css" media="screen" href="Screen.css" />
+  <title>STP_OnPortEnabled</title>
+</head>
+<body>
+	<h3>STP_OnPortEnabled</h3>
+	<hr />
+<pre>
+void STP_OnPortEnabled
+(
+    STP_BRIDGE*   bridge,
+    unsigned int  portIndex,
+    unsigned int  speedMegabitsPerSecond,
+    bool          detectedPointToPointMAC,
+    unsigned int  timestamp
+);
+</pre>
+	<h4>
+		Summary</h4>
+	<p>
+		Function which the application must call when 
+		the operational state of a port changes to TRUE. See the Remarks 
+		section for more details.</p>
+	<h4>
+		Parameters</h4>
+	<dl>
+		<dt>bridge</dt>
+		<dd>Pointer to a STP_BRIDGE object, obtained from <a href="STP_CreateBridge.html">
+			STP_CreateBridge</a>.</dd>
+		<dt>portIndex</dt>
+		<dd>The index of the port whose operational state has just changed to TRUE.</dd>
+		<dt>speedMegabitsPerSecond</dt>
+		<dd>The communication speed detected on the port (a value such as 100 for 100 Mbps). This 
+			value is used by the STP library to compute path costs.</dd>
+		<dt>detectedPointToPointMAC</dt>
+		<dd>The application must pass <code>true</code> when the port hardware detects a point-to-point link, or 
+			<code>false</code> otherwise. See the Remarks section for more information.</dd>
+		<dt>timestamp</dt>
+		<dd>A timestamp used for the debug log. </dd>
+	</dl>
+	<h4>
+		Remarks</h4>
+		<p>
+			See §6.6.2 and §6.6.3 in the 802.1Q-2011 Specification for more information.</p>
+	<p>
+		The application can usually detect changes in the operational state of a port by polling 
+		an internal register of the PHY of a physical port. Refer to the specifications of the 
+		switch chip for details on how to do this.</p>
+	<p>
+		You should check the electrical schematic of your device and establish in 
+		the application code a mapping between <strong>1)</strong> the <code>portIndex</code> values 
+		that your application uses to communicate with the STP library, and <strong>2)</strong> the port numbers that your 
+		application uses to communicate with the switch IC. This mapping is not always a 
+		1:1 mapping; it depends on the hardware particularities whether or not it is.</p>
+	<p>
+		The <code>detectedPointToPointMAC</code> parameter can usually be hardcoded by the application to <code>true</code> with all modern hardware, 
+		because such hardware uses exclusively point-to-point links: RJ45 connections, RMII buses, 
+		fiber optic cable etc. The application should pass <code>false</code> in case of non-point-to-point 
+		links such as multi-drop coaxial cable. The STP library uses this parameter, together with 
+		<code>adminPointToPointMAC</code>, to compute <code>operPointToPointMAC</code>. The current library code was tested 
+		on real hardware only with 
+		point-to-point links.</p>
+	<p>
+		The current version of the library ignores the <code>speedMegabitsPerSecond</code> parameter and uses a 
+		constant value of 200000 for port path costs. Anyway, it is recommended that
+		the application passes the correct value in this parameter, because the STP library will 
+		eventually implement calculation of the port path cost.</p>
+	<p>
+			Execution of this function is a potentially lengthy process. 
+			It may call various callbacks multiple times.</p>
+	<p>
+			The application must not call this function for already enabled ports (i.e., must not call 
+			it twice in a row). For convenience, the <a href="STP_GetPortEnabled.html">STP_GetPortEnabled</a> 
+			is provided, which the application can use to check whether it had previously enabled or 
+			disabled a port.</p>
+	<p>
+			This function <strong>may not</strong> be called from within an <a href="STP_CALLBACKS.html">STP callback</a>.</p>
+
+</body>
+</html>

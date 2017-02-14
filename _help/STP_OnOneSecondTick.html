@@ -1,0 +1,58 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<link rel="Stylesheet" type="text/css" media="screen" href="Screen.css" />
+  <title>STP_OnOneSecondTick</title>
+</head>
+<body>
+	<h3>STP_OnOneSecondTick</h3>
+	<hr />
+<pre>
+void STP_OnOneSecondTick
+(
+    STP_BRIDGE*   bridge,
+    unsigned int  timestamp
+);
+</pre>
+	<h4>
+		Summary</h4>
+	<p>
+		Function which the application must call approximately once every second.</p>
+	<h4>
+		Parameters</h4>
+	<dl>
+		<dt>bridge</dt>
+		<dd>Pointer to a STP_BRIDGE object, obtained from <a href="STP_CreateBridge.html">
+			STP_CreateBridge</a>.</dd>
+		<dt>timestamp</dt>
+		<dd>A timestamp used for the debug log. </dd>
+	</dl>
+	<h4>
+		Remarks</h4>
+		<p>
+			If the application runs multiple bridges, is it recommended that a single periodic timer 
+			is set up, and that this function is called for each bridge when this timer triggers, with the same 
+			value for <code>timestamp</code> 
+			for all bridges. This makes it easier to 
+			visualize in the debug log which tick triggered which actions on which 
+			bridge.</p>
+	
+	<p>
+			Execution of this function is a potentially lengthy process. 
+			It may call various callbacks multiple times.</p>
+	<p>
+		It is allowed to call this function for stopped bridges. In this case it will return 
+		immediately.</p>
+	<p>
+		If many devices are wired in the same STP network, it is recommended that the timer 
+		period is not identical on all devices, but spread a little around the one-second value 
+		(for instance, between 950 and 1050 ms). This helps avoid bursts of STP activity occurring 
+		on all devices at the same time. Note that there&#39;s still a chance these bursts are 
+		once in a while synchronized accross the network, so the whole system must still be 
+		designed to handle them.</p>
+	<p>
+		This function may not be called from within an <a href="STP_CALLBACKS.html">STP callback</a>.</p>
+	
+</body>
+</html>

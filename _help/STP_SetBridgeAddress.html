@@ -1,0 +1,48 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<link rel="Stylesheet" type="text/css" media="screen" href="Screen.css" />
+  <title>STP_SetBridgeAddress</title>
+</head>
+<body>
+	<h3>STP_SetBridgeAddress</h3>
+	<hr />
+<pre>
+void STP_SetBridgeAddress
+(
+    STP_BRIDGE*           bridge,
+    const unsigned char*  address,
+    unsigned int          timestamp
+);
+</pre>
+	<h4>
+		Summary</h4>
+	<p>
+		Function which the application must call every time the bridge&#39;s MAC address changes.</p>
+	<h4>
+		Parameters</h4>
+	<dl>
+			<dt>bridge</dt>
+		<dd>Pointer to a STP_BRIDGE object, obtained from <a href="STP_CreateBridge.html">
+			STP_CreateBridge</a>.</dd>
+		<dt>address</dt>
+		<dd>The new MAC address of the STP bridge. See the Remarks section for important information 
+			about this MAC address.</dd>
+		<dt>timestamp</dt>
+		<dd>A timestamp used for the debug log. </dd>
+	</dl>
+	<h4>
+		Remarks</h4>
+	<p>
+			The MAC address of the bridge is allowed to be different from the MAC address used by other Ethernet protocols running on the same device.</p>
+	<p>
+			Execution of this function is a potentially lengthy process. 
+			It may call various callbacks multiple times.</p>
+	<p>
+			See the Remarks section in <a href="STP_SetBridgePriority.html">STP_SetBridgePriority</a> for information on how the bridge priority is calculated from the bridge address.</p>
+	<p>
+			This function <strong>may not</strong> be called from within an <a href="STP_CALLBACKS.html">STP callback</a>.</p>
+	
+</body>
+</html>

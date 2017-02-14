@@ -1,0 +1,47 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<link rel="Stylesheet" type="text/css" media="screen" href="Screen.css" />
+  <title>STP_GetPortIdentifier</title>
+</head>
+<body>
+	<h3>STP_GetPortIdentifier</h3>
+	<hr />
+<pre>
+unsigned short STP_GetPortIdentifier
+(
+    STP_BRIDGE*   bridge,
+    unsigned int  portIndex,
+    unsigned int  treeIndex
+);
+</pre>
+	<h4>
+		Summary</h4>
+	<p>
+		Returns the port identifier <code>portId</code> for a given port and a given tree.</p>
+	<h4>
+		Parameters</h4>
+	<dl>
+		<dt>bridge</dt>
+		<dd>Pointer to a STP_BRIDGE object.</dd>
+		<dt>portIndex</dt>
+		<dd>The zero-based index of the port.</dd>
+		<dt>treeIndex</dt>
+		<dd>The zero-based index of the spanning tree for which the portId is to be read. For 
+			STP or RSTP, this must be zero. For MSTP, this must be zero for the CIST, or 1..64 for an 
+			MSTI.</dd>
+	</dl>
+	<h4>
+		Return value</h4>
+		<dl>
+		<dd>The port identifier. This is a number between 0 and 244, in steps of 16.</dd>
+		</dl>
+	<h4>
+		Remarks</h4>
+	<p>
+		See §13.25.32 in 802.1Q-2011 for more details.</p>
+	<p>
+		It is allowed to call this function from within an <a href="STP_CALLBACKS.html">STP callback</a>.</p>
+	</body>
+</html>

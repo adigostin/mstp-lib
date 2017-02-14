@@ -1,0 +1,234 @@
+<?xml version='1.0' encoding='utf-8'?>
+
+<Application xmlns='http://schemas.microsoft.com/windows/2009/Ribbon'>
+	<!-- Commands section -->
+	<Application.Commands>
+
+		<!-- Declare Tabs -->
+		<Command Name="HomeTab" LabelTitle="Home" Symbol="cmdHome" />
+
+		<Command Name="EditGroup" Symbol="cmdEditGroup" LabelTitle="Edit"/>
+
+		<Command Name="Undo" LabelTitle="Undo" Symbol="cmdUndo">
+			<Command.LargeImages>
+				<Image Source="EditUndo_32.bmp"/>
+			</Command.LargeImages>
+		</Command>
+
+		<Command Name="Redo" LabelTitle="Redo" Symbol="cmdRedo">
+			<Command.LargeImages>
+				<Image Source="EditRedo_32.bmp"/>
+			</Command.LargeImages>
+		</Command>
+
+		<Command Name="Cut" LabelTitle="Cut" Symbol="cmdCut">
+			<Command.SmallImages>
+				<Image Source="EditCut_16.bmp"/>
+			</Command.SmallImages>
+		</Command>
+
+		<Command Name="Copy" LabelTitle="Copy" Symbol="cmdCopy">
+			<Command.SmallImages>
+				<Image Source="EditCopy_16.bmp"/>
+			</Command.SmallImages>
+		</Command>
+
+		<Command Name="Paste" LabelTitle="Paste" Symbol="cmdPaste">
+			<Command.SmallImages>
+				<Image Source="EditPaste_16.bmp"/>
+			</Command.SmallImages>
+		</Command>
+
+		<!--__________________________ Declare Quick Access __________________________-->
+		<Command Name="cmdQat"/>
+	
+		<!-- Declare Menus -->
+
+		<Command Name="FileMenu" LabelTitle="File" Symbol="cmdFileMenu" />
+
+		<Command Name="NewFile" LabelTitle="New" Symbol="cmdFileMenuNew">
+			<Command.LargeImages>
+				<Image Source="FileMenuNew_32.bmp"/>
+			</Command.LargeImages>
+		</Command>
+
+		<Command Name="OpenFile" LabelTitle="Open..." Symbol="cmdFileMenuOpen">
+			<Command.LargeImages>
+				<Image Source="FileMenuOpen_32.bmp"/>
+			</Command.LargeImages>
+		</Command>
+
+		<Command Name="SaveFile" LabelTitle="Save" Symbol="cmdFileMenuSave">
+			<Command.LargeImages>
+				<Image Source="FileMenuSave_32.bmp"/>
+			</Command.LargeImages>
+		</Command>
+
+		<Command Name="SaveFileAs" LabelTitle="Save As..." Symbol="cmdFileMenuSaveAs">
+			<Command.LargeImages>
+				<Image Source="FileMenuSaveAs_32.bmp"/>
+			</Command.LargeImages>
+		</Command>
+
+		<Command Name="CloseFile" LabelTitle="Close" Symbol="cmdFileMenuClose">
+			<Command.LargeImages>
+				<Image Source="FileMenuClose_32.bmp"/>
+			</Command.LargeImages>
+		</Command>
+
+		<Command Name="RecentFiles" LabelTitle="Recent Files" Symbol="cmdRecentFiles"/>
+<!--
+		<Command Name="ContextMenuSingleElementSelected" Symbol="cmdContextMenuSingleElementSelected"/>
+		<Command Name="ContextMenuMultipleElementsSelected" Symbol="cmdContextMenuMultipleElementsSelected"/>
+
+		<Command Name="RestoreSize" LabelTitle="Restore Size to 100%" Symbol="cmdRestoreSize"/>
+		<Command Name="EditFrame" LabelTitle="Edit Frame" Symbol="cmdEditFrame"/>
+
+		<Command Name="OverlappedElements" LabelTitle="Overlapped Elements" Symbol="cmdOverlappedElements">
+			<Command.SmallImages>
+				<Image MinDPI="96" Source="Layers_16.bmp"/>
+				<Image MinDPI="120" Source="Layers_32.bmp"/>
+			</Command.SmallImages>
+			<Command.LargeImages>
+				<Image Source="Layers_32.bmp"/>
+			</Command.LargeImages>
+		</Command>
+-->
+	</Application.Commands>
+	<!-- High level view of command relationship -->
+	<Application.Views>
+		<Ribbon>
+			<!-- Declare relationship among menus and elements -->
+			<Ribbon.ApplicationMenu>
+				<ApplicationMenu CommandName="FileMenu">
+					<ApplicationMenu.RecentItems>
+						<RecentItems CommandName="RecentFiles" MaxCount="16"/>
+					</ApplicationMenu.RecentItems>
+					<MenuGroup>
+						<Button CommandName="NewFile"/>
+						<Button CommandName="OpenFile" />
+						<Button CommandName="SaveFile" />
+						<Button CommandName="SaveFileAs" />
+					</MenuGroup>
+					<MenuGroup>
+						<Button CommandName="CloseFile" />
+					</MenuGroup>
+				</ApplicationMenu>
+			</Ribbon.ApplicationMenu>
+			<!-- Declare relationship among tabs, groups and elements -->
+			<Ribbon.Tabs>
+				<Tab CommandName="HomeTab">
+					<Tab.ScalingPolicy>
+						<ScalingPolicy>
+							<ScalingPolicy.IdealSizes>
+								<!-- This describes the maximum size of each group in the tab. -->
+								<Scale Group="EditGroup" Size="Medium" />
+							</ScalingPolicy.IdealSizes>
+							<!-- This describes the order and how the groups shrink when the window is resized. -->
+							<Scale Group="EditGroup" Size="Small" />
+						</ScalingPolicy>
+					</Tab.ScalingPolicy>
+
+					<Group CommandName="EditGroup" SizeDefinition="FiveButtons">
+						<SplitButtonGallery CommandName="Undo" TextPosition="Bottom" Type="Commands" ItemHeight="20" ItemWidth="200">
+							<SplitButtonGallery.MenuLayout>
+								<VerticalMenuLayout/>
+							</SplitButtonGallery.MenuLayout>
+							<SplitButtonGallery.MenuGroups>
+								<MenuGroup>
+								</MenuGroup>
+							</SplitButtonGallery.MenuGroups>
+						</SplitButtonGallery>
+
+						<SplitButtonGallery CommandName="Redo" TextPosition="Bottom" Type="Commands" ItemHeight="20" ItemWidth="200">
+							<SplitButtonGallery.MenuLayout>
+								<VerticalMenuLayout/>
+							</SplitButtonGallery.MenuLayout>
+							<SplitButtonGallery.MenuGroups>
+								<MenuGroup>
+								</MenuGroup>
+							</SplitButtonGallery.MenuGroups>
+						</SplitButtonGallery>
+						<Button CommandName="Cut"/>
+						<Button CommandName="Copy"/>
+						<Button CommandName="Paste"/>
+					</Group>
+				</Tab>
+			</Ribbon.Tabs>
+			<Ribbon.QuickAccessToolbar>
+				<QuickAccessToolbar CommandName="cmdQat">
+					<QuickAccessToolbar.ApplicationDefaults>
+						<Button CommandName="SaveFile" ApplicationDefaults.IsChecked="true"/>
+					</QuickAccessToolbar.ApplicationDefaults>
+				</QuickAccessToolbar>
+			</Ribbon.QuickAccessToolbar>
+
+		</Ribbon>
+		<!--
+		<ContextPopup>
+			<ContextPopup.ContextMenus>
+
+				<ContextMenu Name="ContextMenuSingleElementSelected">
+					<MenuGroup>
+						<Button CommandName="Cut"/>
+						<Button CommandName="Copy"/>
+						<Button CommandName="Paste"/>
+					</MenuGroup>
+					<MenuGroup>
+						<Button CommandName="BringToFront"/>
+						<Button CommandName="SendToBack"/>
+						<Button CommandName="FlipHorizontal"/>
+						<Button CommandName="FlipVertical"/>
+						<Button CommandName="Rotate90"/>
+						<Button CommandName="RestoreSize"/>
+					</MenuGroup>
+					<MenuGroup>
+						<Button CommandName="EditFrame"/>
+					</MenuGroup>
+					<MenuGroup>
+						<DropDownGallery Type="Items" CommandName="OverlappedElements">
+							<DropDownGallery.MenuLayout>
+								<VerticalMenuLayout Gripper="None"/>
+							</DropDownGallery.MenuLayout>
+						</DropDownGallery>
+					</MenuGroup>
+				</ContextMenu>
+
+				<ContextMenu Name="ContextMenuMultipleElementsSelected">
+					<MenuGroup>
+						<Button CommandName="Cut"/>
+						<Button CommandName="Copy"/>
+						<Button CommandName="Paste"/>
+					</MenuGroup>
+					<MenuGroup>
+						<Button CommandName="BringToFront"/>
+						<Button CommandName="SendToBack"/>
+						<DropDownButton CommandName="AlignMenu">
+							<Button CommandName="AlignLeft"/>
+							<Button CommandName="AlignCenter"/>
+							<Button CommandName="AlignRight"/>
+							<Button CommandName="AlignTop"/>
+							<Button CommandName="AlignMiddle"/>
+							<Button CommandName="AlignBottom"/>
+						</DropDownButton>
+						<Button CommandName="FlipHorizontal"/>
+						<Button CommandName="FlipVertical"/>
+						<Button CommandName="Rotate90"/>
+					</MenuGroup>
+					<MenuGroup>
+						<DropDownGallery Type="Items" CommandName="OverlappedElements">
+							<DropDownGallery.MenuLayout>
+								<VerticalMenuLayout Gripper="None"/>
+							</DropDownGallery.MenuLayout>
+						</DropDownGallery>
+					</MenuGroup>
+				</ContextMenu>
+			</ContextPopup.ContextMenus>
+			<ContextPopup.ContextMaps>
+				<ContextMap CommandName="ContextMenuSingleElementSelected" ContextMenu="ContextMenuSingleElementSelected"/>
+				<ContextMap CommandName="ContextMenuMultipleElementsSelected" ContextMenu="ContextMenuMultipleElementsSelected"/>
+			</ContextPopup.ContextMaps>
+		</ContextPopup>
+		-->
+	</Application.Views>
+</Application>

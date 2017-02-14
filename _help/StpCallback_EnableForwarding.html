@@ -1,0 +1,55 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<link rel="Stylesheet" type="text/css" media="screen" href="Screen.css" />
+  <title>StpCallback_EnableForwarding</title>
+</head>
+<body>
+	<h3>StpCallback_EnableForwarding</h3>
+	<hr />
+<pre>
+void StpCallback_EnableForwarding
+(
+    STP_BRIDGE*   bridge,
+    unsigned int  portIndex,
+    unsigned int  treeIndex,
+    bool          enable
+);
+</pre>
+	<h4>
+		Summary</h4>
+	<p>
+		Application-defined function that must enable or disable forwarding on a physical port.</p>
+	<p>
+		<code>StpCallback_EnableForwarding</code> is a placeholder name used throughout this documentation. The 
+		application may name this callback differently.</p>
+	<h4>
+		Parameters</h4>
+	<dl>
+		<dt>bridge</dt>
+		<dd>The application receives in this parameter a pointer to the bridge object returned by
+			<a href="STP_CreateBridge.html">STP_CreateBridge</a>.</dd>
+		<dt>portIndex</dt>
+		<dd>The application receives in this parameter the zero-based index of the port for which 
+			forwarding is to be enabled or disabled.</dd>
+		<dt>treeIndex</dt>
+		<dd>The application receives in this parameter the zero-based index of the spanning tree for 
+			which forwarding is to be enabled or disabled. For STP or RSTP, this is always zero. For 
+			MSTP, this is zero for CIST, or 1..64 for a MSTI.</dd>
+		<dt>enable</dt>
+		<dd>The application receives in this parameter <code>true</code> if forwarding is to be enabled,
+			<code>false</code> if the forwarding is to be disabled.</dd>
+	</dl>
+	<h4>
+		Remarks</h4>
+	<p>In complex networks, and especially in MSTP mode, the STP library can call
+		this function dozens of times in a row, with various combinations of parameters.
+		This is due to the protocol itself (i.e., it is not a characteristic of this
+		particular library). For that reason, the implementation of this function
+		should not take more than a few milliseconds. Usually all this function needs
+		to do is write a few bytes to the internal registers of the switch IC.</p>
+	<p>This function must wait until the hardware has finished enabling or disabling forwarding 
+		(i.e., it must not just initiate the hardware action and return).</p>
+</body>
+</html>
