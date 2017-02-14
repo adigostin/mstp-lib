@@ -211,9 +211,6 @@
     <ClCompile Include="StpSimulator.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="StpSimulator.reg" />
-  </ItemGroup>
-  <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc" />
     <ResourceCompile Include="StpSimulator.rc" />
   </ItemGroup>
