@@ -25,8 +25,8 @@ class ProjectWindow : public IProjectWindow, IUIApplication
 	RECT _restoreBounds;
 
 public:
-	ProjectWindow (IProject* project, HINSTANCE rfResourceHInstance, const wchar_t* rfResourceName, EditAreaFactory* const editAreaFactory,
-		ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory)
+	ProjectWindow (IProject* project, HINSTANCE rfResourceHInstance, const wchar_t* rfResourceName, ISelection* selection,
+		EditAreaFactory editAreaFactory, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory)
 		: _project(project)
 	{
 		HINSTANCE hInstance;
@@ -80,7 +80,7 @@ public:
 		}
 
 		RECT areaRect = { 0, ribbonHeight, _clientRect.right, _clientRect.bottom };
-		_editArea = editAreaFactory(project, this, areaRect, deviceContext, dWriteFactory, wicFactory);
+		_editArea = editAreaFactory(project, this, selection, _rf, areaRect, deviceContext, dWriteFactory, wicFactory);
 	}
 
 	~ProjectWindow()
@@ -336,4 +336,4 @@ public:
 	#pragma endregion
 };
 
-extern ProjectWindowFactory* const projectWindowFactory = [](auto... params) { return ComPtr<IProjectWindow>(new ProjectWindow(params...), false); };
+extern const ProjectWindowFactory projectWindowFactory = [](auto... params) { return ComPtr<IProjectWindow>(new ProjectWindow(params...), false); };

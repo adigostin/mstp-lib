@@ -211,6 +211,7 @@
     </ClCompile>
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
+    <ClCompile Include="Selection.cpp" />
     <ClCompile Include="StpSimulator.cpp" />
     <ClCompile Include="ZoomableWindow.cpp" />
   </ItemGroup>

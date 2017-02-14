@@ -79,6 +79,8 @@
 		<Command Name="RecentFiles" LabelTitle="Recent Files" Symbol="cmdRecentFiles"/>
 
 		<Command Name="ContextMenuBlankArea" Symbol="cmdContextMenuBlankArea"/>
+		<Command Name="ContextMenuBridge" Symbol="cmdContextMenuBridge"/>
+		<Command Name="ContextMenuPort" Symbol="cmdContextMenuPort"/>
 		<!--
 		<Command Name="ContextMenuSingleElementSelected" Symbol="cmdContextMenuSingleElementSelected"/>
 		<Command Name="ContextMenuMultipleElementsSelected" Symbol="cmdContextMenuMultipleElementsSelected"/>
@@ -174,70 +176,21 @@
 						<Button CommandName="Paste"/>
 					</MenuGroup>
 				</ContextMenu>
-				<!--
-				<ContextMenu Name="ContextMenuSingleElementSelected">
+				<ContextMenu Name="ContextMenuBridge">
 					<MenuGroup>
 						<Button CommandName="Cut"/>
 						<Button CommandName="Copy"/>
-						<Button CommandName="Paste"/>
-					</MenuGroup>
-					<MenuGroup>
-						<Button CommandName="BringToFront"/>
-						<Button CommandName="SendToBack"/>
-						<Button CommandName="FlipHorizontal"/>
-						<Button CommandName="FlipVertical"/>
-						<Button CommandName="Rotate90"/>
-						<Button CommandName="RestoreSize"/>
-					</MenuGroup>
-					<MenuGroup>
-						<Button CommandName="EditFrame"/>
-					</MenuGroup>
-					<MenuGroup>
-						<DropDownGallery Type="Items" CommandName="OverlappedElements">
-							<DropDownGallery.MenuLayout>
-								<VerticalMenuLayout Gripper="None"/>
-							</DropDownGallery.MenuLayout>
-						</DropDownGallery>
 					</MenuGroup>
 				</ContextMenu>
-
-				<ContextMenu Name="ContextMenuMultipleElementsSelected">
+				<ContextMenu Name="ContextMenuPort">
 					<MenuGroup>
-						<Button CommandName="Cut"/>
-						<Button CommandName="Copy"/>
-						<Button CommandName="Paste"/>
-					</MenuGroup>
-					<MenuGroup>
-						<Button CommandName="BringToFront"/>
-						<Button CommandName="SendToBack"/>
-						<DropDownButton CommandName="AlignMenu">
-							<Button CommandName="AlignLeft"/>
-							<Button CommandName="AlignCenter"/>
-							<Button CommandName="AlignRight"/>
-							<Button CommandName="AlignTop"/>
-							<Button CommandName="AlignMiddle"/>
-							<Button CommandName="AlignBottom"/>
-						</DropDownButton>
-						<Button CommandName="FlipHorizontal"/>
-						<Button CommandName="FlipVertical"/>
-						<Button CommandName="Rotate90"/>
-					</MenuGroup>
-					<MenuGroup>
-						<DropDownGallery Type="Items" CommandName="OverlappedElements">
-							<DropDownGallery.MenuLayout>
-								<VerticalMenuLayout Gripper="None"/>
-							</DropDownGallery.MenuLayout>
-						</DropDownGallery>
 					</MenuGroup>
 				</ContextMenu>
-        -->
 			</ContextPopup.ContextMenus>
 			<ContextPopup.ContextMaps>
-				<!--
-				<ContextMap CommandName="ContextMenuSingleElementSelected" ContextMenu="ContextMenuSingleElementSelected"/>
-				<ContextMap CommandName="ContextMenuMultipleElementsSelected" ContextMenu="ContextMenuMultipleElementsSelected"/>
-				-->
 				<ContextMap CommandName="ContextMenuBlankArea" ContextMenu="ContextMenuBlankArea"/>
+				<ContextMap CommandName="ContextMenuBridge" ContextMenu="ContextMenuBridge"/>
+				<ContextMap CommandName="ContextMenuPort" ContextMenu="ContextMenuPort"/>
 			</ContextPopup.ContextMaps>
 		</ContextPopup>
 	</Application.Views>

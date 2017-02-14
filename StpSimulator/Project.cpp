@@ -8,4 +8,4 @@ class Project : public IProject
 {
 };
 
-extern ProjectFactory* const projectFactory = [] { return unique_ptr<IProject>(new Project()); };
+extern const ProjectFactory projectFactory = [] { return unique_ptr<IProject>(new Project()); };
