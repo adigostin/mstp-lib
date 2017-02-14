@@ -111,6 +111,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="ComPtr.h" />
+    <ClInclude Include="D2DWindow.h" />
     <ClInclude Include="EventManager.h" />
     <ClInclude Include="mstp-lib\802.1Q-2011\802_1Q_2011_procedures.h" />
     <ClInclude Include="mstp-lib\base_types.h" />
@@ -126,8 +127,10 @@
     <ClInclude Include="SimulatorInterfaces.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Win32Defs.h" />
+    <ClInclude Include="ZoomableWindow.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="D2DWindow.cpp" />
     <ClCompile Include="EditArea.cpp" />
     <ClCompile Include="EventManager.cpp" />
     <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_procedures.cpp">
@@ -209,6 +212,7 @@
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="StpSimulator.cpp" />
+    <ClCompile Include="ZoomableWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc" />
@@ -223,6 +227,9 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compiling "$(ProjectDir)Ribbon\Ribbon.xml"</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)Ribbon\Ribbon.bml;$(ProjectDir)Ribbon\RibbonRes.rc;$(ProjectDir)Ribbon\RibbonIds.h;%(Outputs)</Outputs>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="StpSimulator.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

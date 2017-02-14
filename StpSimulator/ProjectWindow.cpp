@@ -188,21 +188,7 @@ public:
 
 			return DefWindowProc(_hwnd, msg, wParam, lParam);
 		}
-		/*
-		if (msg == WM_COPYDATA)
-		{
-		// See the code in wWinMain that sends this.
-		auto data = (COPYDATASTRUCT*) lParam;
-		if ((data->cbData >= sizeof (GUID)) && (memcmp (data->lpData, &_app->GetOpenFileSignature(), sizeof(GUID)) == 0))
-		{
-		const wchar_t* cmdLine = (const wchar_t*) ((char*) data->lpData + 16);
-		_app->OpenOrCreateProjectAndWindow (cmdLine, GetHWnd(), 0, nullptr);
-		return TRUE;
-		}
-		else
-		return DefWindowProc (_hwnd, msg, wParam, lParam);
-		}
-		*/
+
 		return DefWindowProc(_hwnd, msg, wParam, lParam);
 	}
 
@@ -314,7 +300,7 @@ public:
 	#pragma region IUIApplication
 	virtual HRESULT STDMETHODCALLTYPE OnViewChanged(UINT32 viewId, UI_VIEWTYPE typeID, IUnknown *view, UI_VIEWVERB verb, INT32 uReasonCode) override final
 	{
-		//ResizeChildWindows();
+		ResizeChildWindows();
 		return S_OK;
 	}
 

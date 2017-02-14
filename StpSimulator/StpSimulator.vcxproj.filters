@@ -46,6 +46,8 @@
     <ClInclude Include="mstp-lib\stp.h">
       <Filter>mstp-lib</Filter>
     </ClInclude>
+    <ClInclude Include="D2DWindow.h" />
+    <ClInclude Include="ZoomableWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -108,6 +110,8 @@
     <ClCompile Include="mstp-lib\stp.cpp">
       <Filter>mstp-lib</Filter>
     </ClCompile>
+    <ClCompile Include="D2DWindow.cpp" />
+    <ClCompile Include="ZoomableWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc">
@@ -119,5 +123,8 @@
     <CustomBuild Include="Ribbon\Ribbon.xml">
       <Filter>Ribbon</Filter>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="StpSimulator.ico" />
   </ItemGroup>
 </Project>

@@ -240,3 +240,6 @@ ModelManifest.xml
 
 # FAKE - F# Make
 .fake/
+StpSimulator/Ribbon/RibbonIds.h
+StpSimulator/Ribbon/RibbonRes.rc
+StpSimulator/Ribbon/Ribbon.bml
