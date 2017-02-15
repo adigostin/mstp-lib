@@ -243,3 +243,6 @@ ModelManifest.xml
 StpSimulator/Ribbon/RibbonIds.h
 StpSimulator/Ribbon/RibbonRes.rc
 StpSimulator/Ribbon/Ribbon.bml
+/Simulator/Ribbon/Ribbon.bml
+/Simulator/Ribbon/RibbonIds.h
+/Simulator/Ribbon/RibbonRes.rc

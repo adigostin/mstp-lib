@@ -52,7 +52,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
-    <ClCompile Include="StpSimulator.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="EventManager.cpp" />
@@ -115,12 +114,13 @@
     <ClCompile Include="ZoomableWindow.cpp" />
     <ClCompile Include="Selection.cpp" />
     <ClCompile Include="PhysicalBridge.cpp" />
+    <ClCompile Include="Simulator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc">
       <Filter>Ribbon</Filter>
     </ResourceCompile>
-    <ResourceCompile Include="StpSimulator.rc" />
+    <ResourceCompile Include="Simulator.rc" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Ribbon\Ribbon.xml">
@@ -128,6 +128,6 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="StpSimulator.ico" />
+    <Image Include="Simulator.ico" />
   </ItemGroup>
 </Project>

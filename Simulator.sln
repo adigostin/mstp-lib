@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "StpSimulator", "StpSimulator\StpSimulator.vcxproj", "{072C8C7E-79FA-413C-A33C-EDDB256D72BE}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Simulator", "Simulator\Simulator.vcxproj", "{072C8C7E-79FA-413C-A33C-EDDB256D72BE}"
 EndProject
 Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "_help", "_help\", "{FF53569A-1D66-4F24-9E1A-D0598E5B56EF}"
 	ProjectSection(WebsiteProperties) = preProject

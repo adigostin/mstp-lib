@@ -215,12 +215,12 @@
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="Selection.cpp" />
-    <ClCompile Include="StpSimulator.cpp" />
+    <ClCompile Include="Simulator.cpp" />
     <ClCompile Include="ZoomableWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc" />
-    <ResourceCompile Include="StpSimulator.rc" />
+    <ResourceCompile Include="Simulator.rc" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Ribbon\Ribbon.xml">
@@ -233,7 +233,7 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="StpSimulator.ico" />
+    <Image Include="Simulator.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
