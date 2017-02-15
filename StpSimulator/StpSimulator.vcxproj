@@ -15,6 +15,7 @@
     <RootNamespace>StpSimulator</RootNamespace>
     <Keyword>MFCProj</Keyword>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <ProjectName>Simulator</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -122,6 +123,7 @@
     <ClInclude Include="mstp-lib\port.h" />
     <ClInclude Include="mstp-lib\stp.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="PhysicalBridge.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Ribbon\RibbonIds.h" />
     <ClInclude Include="SimulatorInterfaces.h" />
@@ -209,6 +211,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="PhysicalBridge.cpp" />
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="Selection.cpp" />

@@ -48,6 +48,7 @@
     </ClInclude>
     <ClInclude Include="D2DWindow.h" />
     <ClInclude Include="ZoomableWindow.h" />
+    <ClInclude Include="PhysicalBridge.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -113,6 +114,7 @@
     <ClCompile Include="D2DWindow.cpp" />
     <ClCompile Include="ZoomableWindow.cpp" />
     <ClCompile Include="Selection.cpp" />
+    <ClCompile Include="PhysicalBridge.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc">

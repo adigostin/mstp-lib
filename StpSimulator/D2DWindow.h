@@ -1,7 +1,6 @@
 
 #pragma once
 #include "Win32Defs.h"
-#include "ComPtr.h"
 
 struct HWndDeleter
 {

@@ -259,11 +259,12 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 			//auto actionList = actionListFactory();
 			auto selection = selectionFactory();
 			auto project = projectFactory();//move(actionList));
+			project->AddBridge (make_unique<PhysicalBridge>());
 			//auto wire = MakeRefCounted<Wire>();
 			//wire->AddPoint({ 100, 200 });
 			//wire->AddPoint({ 300, 500 });
 			//project->Add(move(wire));
-			auto projectWindow = projectWindowFactory(project.get(), hInstance, L"APPLICATION_RIBBON", selection, editAreaFactory, d3dDeviceContext, dWriteFactory, wicFactory);
+			auto projectWindow = projectWindowFactory(project, hInstance, L"APPLICATION_RIBBON", selection, editAreaFactory, d3dDeviceContext, dWriteFactory, wicFactory);
 			projectWindow->ShowAtSavedWindowLocation(RegKeyPath.c_str());
 			projectWindow->GetProjectWindowClosingEvent().AddHandler(onClosing, nullptr);
 		

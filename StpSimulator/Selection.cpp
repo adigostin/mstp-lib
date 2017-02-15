@@ -6,7 +6,7 @@ using namespace std;
 
 class Selection : public ISelection
 {
-	uint32_t _refCount = 1;
+	ULONG _refCount = 1;
 	vector<Object*> _objects;
 
 	virtual ~Selection()

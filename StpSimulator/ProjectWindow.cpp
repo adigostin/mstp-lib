@@ -16,8 +16,8 @@ static const wchar_t RegValueNameWindowBottom[] = L"WindowBottom";
 class ProjectWindow : public IProjectWindow, IUIApplication
 {
 	uint32_t _refCount = 1;
-	IProject* const _project;
-	unique_ptr<IEditArea> _editArea;
+	ComPtr<IProject> const _project;
+	ComPtr<IEditArea> _editArea;
 	ComPtr<IUIFramework> _rf;
 	HWND _hwnd;
 	RECT _clientRect;

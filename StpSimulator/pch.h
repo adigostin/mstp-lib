@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <array>
+#include <assert.h>
 #include <comdef.h>
 #include <Commctrl.h>
 #include <cstdint>
@@ -45,3 +46,4 @@
 #include <wincodec.h>
 #include <Windows.h>
 #include <windowsx.h>
+#include "ComPtr.h"
