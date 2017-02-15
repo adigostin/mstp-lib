@@ -39,6 +39,18 @@
 			</Command.SmallImages>
 		</Command>
 
+		<Command Name="CreateGroup" Symbol="cmdCreateGroup" LabelTitle="Create"/>
+
+		<Command Name="CreateBridge" Symbol="cmdCreateBridge" LabelTitle="New Bridge">
+			<Command.SmallImages>
+				<Image Source="NetworkHub_16.png" MinDPI="96"/>
+				<Image Source="NetworkHub_32.png" MinDPI="120"/>
+			</Command.SmallImages>
+			<Command.LargeImages>
+				<Image Source="NetworkHub_32.png"/>
+			</Command.LargeImages>
+		</Command>
+		
 		<!--__________________________ Declare Quick Access __________________________-->
 		<Command Name="cmdQat"/>
 
@@ -157,6 +169,9 @@
 						<Button CommandName="Copy"/>
 						<Button CommandName="Paste"/>
 					</Group>
+					<Group CommandName="CreateGroup" SizeDefinition="OneButton">
+						<Button CommandName="CreateBridge"/>
+					</Group>
 				</Tab>
 			</Ribbon.Tabs>
 			<Ribbon.QuickAccessToolbar>
@@ -172,6 +187,9 @@
 		<ContextPopup>
 			<ContextPopup.ContextMenus>
 				<ContextMenu Name="ContextMenuBlankArea">
+					<MenuGroup>
+						<Button CommandName="CreateBridge"/>
+					</MenuGroup>
 					<MenuGroup>
 						<Button CommandName="Paste"/>
 					</MenuGroup>

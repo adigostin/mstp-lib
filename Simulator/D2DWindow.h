@@ -32,6 +32,7 @@ public:
 
 	virtual HWND GetHWnd() const override { return _hwnd; }
 	const RECT& GetClientRect() const { return _clientRect; }
+	D2D1_RECT_F GetClientRectDips() const;
 	D2D1_POINT_2F GetDipLocationFromPixelLocation(POINT locationPixels) const;
 	POINT GetPixelLocationFromDipLocation(D2D1_POINT_2F locationDips) const;
 	D2D1_SIZE_F GetDipSizeFromPixelSize(SIZE sizePixels) const;

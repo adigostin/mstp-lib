@@ -109,10 +109,6 @@ void D2DWindow::CreateD2DDeviceContext()
 	hr = _d2dFactory->CreateDxgiSurfaceRenderTarget(dxgiSurface, &props, &rt); ThrowIfFailed(hr);
 	hr = rt->QueryInterface(&_d2dDeviceContext); ThrowIfFailed(hr);
 
-	// Tested: About 20% more processor usage overall when switching from Grayscale to ClearType.
-	// About the same processor usage when switching from Grayscale to Aliased. So let's keep Grayscale.
-	_d2dDeviceContext->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
-
 	//rassert(_fillStyleRenderTarget == nullptr);
 	//hr = _d2dDeviceContext->CreateCompatibleRenderTarget({ 8, 8 }, { 8, 8 }, &_fillStyleRenderTarget); rassert_hr(hr);
 }
@@ -283,4 +279,11 @@ SIZE D2DWindow::GetPixelSizeFromDipSize(D2D1_SIZE_F sizeDips) const
 	float dpiX, dpiY;
 	_d2dDeviceContext->GetDpi(&dpiX, &dpiY);
 	return SIZE{ (int)(sizeDips.width / 96.0f * dpiX), (int)(sizeDips.height / 96.0f * dpiY) };
+}
+
+D2D1_RECT_F D2DWindow::GetClientRectDips() const
+{
+	auto tl = GetDipLocationFromPixelLocation ({ _clientRect.left, _clientRect.top });
+	auto br = GetDipLocationFromPixelLocation({ _clientRect.right, _clientRect.bottom });
+	return D2D1_RECT_F { tl.x, tl.y, br.x, br.y };
 }

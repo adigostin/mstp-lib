@@ -23,7 +23,7 @@ void PhysicalPort::Render(ID2D1DeviceContext* dc) const
 			rect.top = _bridge->GetBottom() - PortShortSize;
 			rect.right = _bridge->GetLeft() + _offset + PortLongSize / 2;
 			rect.bottom = _bridge->GetBottom();
-			dc->DrawRectangle(rect, brush, 2.0f);
+			dc->DrawRoundedRectangle (RoundedRect(rect, 3, 3), brush, 2.0f);
 			break;
 
 		default:
