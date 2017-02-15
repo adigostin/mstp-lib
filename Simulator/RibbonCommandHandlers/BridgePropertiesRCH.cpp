@@ -8,19 +8,8 @@ class BridgePropertiesRCH : public RCHBase
 {
 	typedef RCHBase base;
 
-public:
 	using base::base;
-	/*
-	template<typename... Args>
-	BridgePropertiesRCH (Args... args)
-		: base (args...)
-	{
-	}
 
-	virtual ~BridgePropertiesRCH()
-	{
-	}
-	*/
 	template<typename... Args>
 	static ComPtr<IUICommandHandler> Create(Args... args) { return ComPtr<IUICommandHandler>(new BridgePropertiesRCH(args...), false); }
 

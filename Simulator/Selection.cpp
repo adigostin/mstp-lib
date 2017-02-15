@@ -19,10 +19,13 @@ class Selection : public ISelection
 
 	virtual void Clear() override final
 	{
-		for (auto o : _objects)
-			RemovingFromSelectionEvent::InvokeHandlers(_em, this, o);
-		_objects.clear();
-		SelectionChangedEvent::InvokeHandlers(_em, this);
+		if (!_objects.empty())
+		{
+			for (auto o : _objects)
+				RemovingFromSelectionEvent::InvokeHandlers(_em, this, o);
+			_objects.clear();
+			SelectionChangedEvent::InvokeHandlers(_em, this);
+		}
 	}
 
 	virtual void Select(Object* o) override final

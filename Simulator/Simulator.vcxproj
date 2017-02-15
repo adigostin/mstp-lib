@@ -215,6 +215,7 @@
     <ClCompile Include="PhysicalBridge.cpp" />
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
+    <ClCompile Include="RibbonCommandHandlers\BridgeControlRCH.cpp" />
     <ClCompile Include="RibbonCommandHandlers\BridgePropertiesRCH.cpp" />
     <ClCompile Include="RibbonCommandHandlers\CreateRCH.cpp" />
     <ClCompile Include="RibbonCommandHandlers\RCHBase.cpp" />

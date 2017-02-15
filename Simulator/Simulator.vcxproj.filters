@@ -119,6 +119,7 @@
     <ClCompile Include="RibbonCommandHandlers\CreateRCH.cpp" />
     <ClCompile Include="RibbonCommandHandlers\RCHBase.cpp" />
     <ClCompile Include="RibbonCommandHandlers\BridgePropertiesRCH.cpp" />
+    <ClCompile Include="RibbonCommandHandlers\BridgeControlRCH.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc">

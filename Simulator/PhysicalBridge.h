@@ -6,8 +6,9 @@
 static constexpr float PortLongSize = 30;
 static constexpr float PortShortSize = 15;
 static constexpr float PortSpacing = 20;
-static constexpr float BridgeDefaultHeight = 100;
+static constexpr float BridgeDefaultHeight = 150;
 static constexpr float BridgeOutlineWidth = 4;
+static constexpr float MinBridgeWidth = 300;
 
 class Object
 {
@@ -60,6 +61,8 @@ public:
 	void Render (ID2D1DeviceContext* dc, unsigned int treeIndex, IDWriteFactory* dWriteFactory) const;
 	void SetLocation (float x, float y);
 	BridgeInvalidateEvent::Subscriber GetInvalidateEvent() { return BridgeInvalidateEvent::Subscriber(_em); }
+
+	STP_BRIDGE* GetStpBridge() const { return _stpBridge; }
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final;
 	virtual ULONG STDMETHODCALLTYPE AddRef() override final;

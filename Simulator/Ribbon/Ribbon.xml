@@ -51,9 +51,29 @@
 			</Command.LargeImages>
 		</Command>
 
-		<Command Name="BridgePropsGroup" Symbol="cmdBridgePropsGroup" LabelTitle="Bridge Properties"/>
+		<Command Name="BridgeGroup" Symbol="cmdBridgeGroup" LabelTitle="Bridge"/>
 
 		<Command Name="BridgeAddress" Symbol="cmdBridgeAddress" LabelTitle="Address"/>
+
+		<Command Name="StartSTP" Symbol="cmdStartSTP" LabelTitle="Start STP">
+			<Command.SmallImages>
+				<Image Source="Play_16.png" MinDPI="96"/>
+				<Image Source="Play_32.png" MinDPI="120"/>
+			</Command.SmallImages>
+			<Command.LargeImages>
+				<Image Source="Play_32.png"/>
+			</Command.LargeImages>
+		</Command>
+
+		<Command Name="StopSTP" Symbol="cmdStopSTP" LabelTitle="Stop STP">
+			<Command.SmallImages>
+				<Image Source="Stop_16.png" MinDPI="96"/>
+				<Image Source="Stop_32.png" MinDPI="120"/>
+			</Command.SmallImages>
+			<Command.LargeImages>
+				<Image Source="Stop_32.png"/>
+			</Command.LargeImages>
+		</Command>
 		
 		<!--__________________________ Declare Quick Access __________________________-->
 		<Command Name="cmdQat"/>
@@ -157,7 +177,7 @@
 					<Group CommandName="CreateGroup" SizeDefinition="OneButton">
 						<Button CommandName="CreateBridge"/>
 					</Group>
-					<Group CommandName="BridgePropsGroup">
+					<Group CommandName="BridgeGroup">
 						<SizeDefinition>
 							<ControlNameMap>
 								<ControlNameDefinition Name="dropDown1"/>
@@ -198,8 +218,8 @@
 				</ContextMenu>
 				<ContextMenu Name="ContextMenuBridge">
 					<MenuGroup>
-						<Button CommandName="Cut"/>
-						<Button CommandName="Copy"/>
+						<Button CommandName="StartSTP"/>
+						<Button CommandName="StopSTP"/>
 					</MenuGroup>
 				</ContextMenu>
 				<ContextMenu Name="ContextMenuPort">

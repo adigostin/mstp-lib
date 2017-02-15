@@ -40,7 +40,7 @@ PhysicalBridge::PhysicalBridge (size_t portCount, const std::array<uint8_t, 6>& 
 
 	_x = 0;
 	_y = 0;
-	_width = offset;
+	_width = max (offset, MinBridgeWidth);
 	_height = BridgeDefaultHeight;
 
 	_stpBridge = STP_CreateBridge ((unsigned int) portCount, 1, &StpCallbacks, STP_VERSION_RSTP, &macAddress[0], 128);
@@ -63,8 +63,9 @@ void PhysicalBridge::Render(ID2D1DeviceContext* dc, unsigned int treeIndex, IDWr
 	unsigned char address[6];
 	STP_GetBridgeAddress (_stpBridge, address);
 	unsigned short prio = STP_GetBridgePriority(_stpBridge, treeIndex);
-	wchar_t str[32];
-	int strlen = swprintf_s (str, L"%04x.%02x%02x%02x%02x%02x%02x", prio, address[0], address[1], address[2], address[3], address[4], address[5]);
+	wchar_t str[64];
+	int strlen = swprintf_s (str, L"%04x.%02x%02x%02x%02x%02x%02x (STP %s)", prio, address[0], address[1], address[2], address[3], address[4], address[5],
+		STP_IsBridgeStarted(_stpBridge) ? L"running" : L"stopped");
 
 	ComPtr<IDWriteTextFormat> textFormat;
 	auto hr = dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 10, L"en-US", &textFormat); ThrowIfFailed(hr);
@@ -103,7 +104,9 @@ const STP_CALLBACKS PhysicalBridge::StpCallbacks =
 //static
 void* PhysicalBridge::StpCallback_AllocAndZeroMemory(unsigned int size)
 {
-	return malloc(size);
+	void* p = malloc(size);
+	memset (p, 0, size);
+	return p;
 }
 
 //static
