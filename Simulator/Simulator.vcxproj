@@ -53,7 +53,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)../mstp-lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MinimalRebuild>false</MinimalRebuild>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -85,7 +85,7 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)../mstp-lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalOptions>/await %(AdditionalOptions)</AdditionalOptions>
@@ -125,8 +125,9 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="PhysicalBridge.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="RibbonCommandHandlers\RCHBase.h" />
     <ClInclude Include="Ribbon\RibbonIds.h" />
-    <ClInclude Include="SimulatorInterfaces.h" />
+    <ClInclude Include="SimulatorDefs.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Win32Defs.h" />
     <ClInclude Include="ZoomableWindow.h" />
@@ -214,6 +215,8 @@
     <ClCompile Include="PhysicalBridge.cpp" />
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
+    <ClCompile Include="RibbonCommandHandlers\CreateRCH.cpp" />
+    <ClCompile Include="RibbonCommandHandlers\RCHBase.cpp" />
     <ClCompile Include="Selection.cpp" />
     <ClCompile Include="Simulator.cpp" />
     <ClCompile Include="ZoomableWindow.cpp" />

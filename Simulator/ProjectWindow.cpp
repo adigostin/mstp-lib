@@ -1,7 +1,8 @@
 #include "pch.h"
-#include "SimulatorInterfaces.h"
+#include "SimulatorDefs.h"
 #include "Win32Defs.h"
 #include "resource.h"
+#include "RibbonCommandHandlers/RCHBase.h"
 
 using namespace std;
 
@@ -23,6 +24,7 @@ class ProjectWindow : public IProjectWindow, IUIApplication
 	RECT _clientRect;
 	EventManager _em;
 	RECT _restoreBounds;
+	unordered_map<UINT32, ComPtr<IUICommandHandler>> _commandHandlers;
 
 public:
 	ProjectWindow (IProject* project, HINSTANCE rfResourceHInstance, const wchar_t* rfResourceName, ISelection* selection,
@@ -70,6 +72,13 @@ public:
 		LONG ribbonHeight = 0;
 		if ((rfResourceHInstance != nullptr) && (rfResourceName != nullptr))
 		{
+			for (auto& info : GetRCHInfos())
+			{
+				auto handler = info->_factory();
+				for (auto& commandAndProps : info->_cps)
+					_commandHandlers.insert ({ commandAndProps.first, handler });
+			}
+
 			auto hr = CoCreateInstance(CLSID_UIRibbonFramework, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&_rf)); ThrowIfFailed(hr);
 			hr = _rf->Initialize(hwnd, this); ThrowIfFailed(hr);
 			hr = _rf->LoadUI(rfResourceHInstance, rfResourceName); ThrowIfFailed(hr);
@@ -306,7 +315,13 @@ public:
 
 	virtual HRESULT STDMETHODCALLTYPE OnCreateUICommand(UINT32 commandId, UI_COMMANDTYPE typeID, IUICommandHandler **commandHandler) override final
 	{
-		return E_NOTIMPL;
+		auto it = _commandHandlers.find(commandId);
+		if (it == _commandHandlers.end())
+			return E_NOTIMPL;
+
+		*commandHandler = it->second;
+		it->second->AddRef();
+		return S_OK;
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE OnDestroyUICommand(UINT32 commandId, UI_COMMANDTYPE typeID, IUICommandHandler *commandHandler) override final
@@ -318,7 +333,24 @@ public:
 	#pragma region IUnknown
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override
 	{
-		throw NotImplementedException();
+		if (!ppvObject)
+			return E_INVALIDARG;
+
+		*ppvObject = NULL;
+		if (riid == __uuidof(IUnknown))
+		{
+			*ppvObject = static_cast<IUnknown*>((IProjectWindow*) this);
+			AddRef();
+			return S_OK;
+		}
+		else if (riid == __uuidof(IUIApplication))
+		{
+			*ppvObject = static_cast<IUIApplication*>(this);
+			AddRef();
+			return S_OK;
+		}
+
+		return E_NOINTERFACE;
 	}
 
 	virtual ULONG STDMETHODCALLTYPE AddRef() override

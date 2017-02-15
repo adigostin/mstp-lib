@@ -19,7 +19,6 @@
     <ClInclude Include="ComPtr.h" />
     <ClInclude Include="Win32Defs.h" />
     <ClInclude Include="EventManager.h" />
-    <ClInclude Include="SimulatorInterfaces.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="mstp-lib\802.1Q-2011\802_1Q_2011_procedures.h">
@@ -49,6 +48,8 @@
     <ClInclude Include="D2DWindow.h" />
     <ClInclude Include="ZoomableWindow.h" />
     <ClInclude Include="PhysicalBridge.h" />
+    <ClInclude Include="SimulatorDefs.h" />
+    <ClInclude Include="RibbonCommandHandlers\RCHBase.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -115,6 +116,8 @@
     <ClCompile Include="Selection.cpp" />
     <ClCompile Include="PhysicalBridge.cpp" />
     <ClCompile Include="Simulator.cpp" />
+    <ClCompile Include="RibbonCommandHandlers\CreateRCH.cpp" />
+    <ClCompile Include="RibbonCommandHandlers\RCHBase.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc">

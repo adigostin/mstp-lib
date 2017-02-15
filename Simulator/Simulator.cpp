@@ -1,6 +1,6 @@
 
 #include "pch.h"
-#include "SimulatorInterfaces.h"
+#include "SimulatorDefs.h"
 #include "Win32Defs.h"
 
 #pragma comment (lib, "d2d1.lib")

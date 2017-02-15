@@ -1,6 +1,6 @@
 
 #include "pch.h"
-#include "SimulatorInterfaces.h"
+#include "SimulatorDefs.h"
 #include "ZoomableWindow.h"
 #include "Ribbon/RibbonIds.h"
 
