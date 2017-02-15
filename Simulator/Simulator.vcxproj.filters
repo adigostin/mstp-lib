@@ -56,7 +56,6 @@
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="Project.cpp" />
-    <ClCompile Include="EventManager.cpp" />
     <ClCompile Include="EditArea.cpp" />
     <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortReceive.cpp">
       <Filter>mstp-lib\802.1Q-2011</Filter>
@@ -119,6 +118,7 @@
     <ClCompile Include="Simulator.cpp" />
     <ClCompile Include="RibbonCommandHandlers\CreateRCH.cpp" />
     <ClCompile Include="RibbonCommandHandlers\RCHBase.cpp" />
+    <ClCompile Include="RibbonCommandHandlers\BridgePropertiesRCH.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc">

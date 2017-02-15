@@ -1,27 +1,63 @@
 #pragma once
 
-struct EventBase abstract
+struct EventManager
 {
-	friend class EventManager;
+	friend struct EventBase;
 
-protected:
-	
+public:
 	struct EventHandler
 	{
 		void* callback;
 		void* callbackArg;
 	};
-	
-protected:
-	static void AddEventHandlerInternal(std::type_index eventType, EventManager& em, void* callback, void* callbackArg);
-	static void RemoveEventHandlerInternal(std::type_index eventType, EventManager& em, void* callback, void* callbackArg);
-	static void MakeHandlerList(std::type_index eventType, const EventManager& em, std::vector<EventHandler>& longList, std::array<EventHandler, 8>& shortList, size_t& shortListSizeOut);
+
+private:
+	std::unordered_multimap<std::type_index, EventHandler> _events;
 };
 
-class EventManager
+struct EventBase abstract
 {
-	friend struct EventBase;
-	std::unordered_multimap<std::type_index, EventBase::EventHandler> _events;
+protected:
+	static void AddEventHandlerInternal(std::type_index eventType, EventManager& em, void* callback, void* callbackArg)
+	{
+		em._events.insert({ eventType,{ callback, callbackArg } });
+	}
+
+	static void RemoveEventHandlerInternal(std::type_index eventType, EventManager& em, void* callback, void* callbackArg)
+	{
+		auto range = em._events.equal_range(eventType);
+
+		auto it = std::find_if(range.first, range.second, [=](const std::pair<std::type_index, EventManager::EventHandler>& p)
+		{
+			return (p.second.callback == callback) && (p.second.callbackArg == callbackArg);
+		});
+
+		assert(it != range.second); // handler to remove not found
+
+		em._events.erase(it);
+	}
+
+	static void MakeHandlerList(std::type_index eventType, const EventManager& em, std::vector<EventManager::EventHandler>& longList, std::array<EventManager::EventHandler, 8>& shortList, size_t& shortListSizeOut)
+	{
+		shortListSizeOut = 0;
+
+		size_t count = em._events.count(eventType);
+		if (count == 0)
+			return;
+
+		auto range = em._events.equal_range(eventType);
+
+		if (count <= shortList.size())
+		{
+			for (auto it = range.first; it != range.second; it++)
+				shortList[shortListSizeOut++] = it->second;
+		}
+		else
+		{
+			for (auto it = range.first; it != range.second; it++)
+				longList.push_back(it->second);
+		}
+	}
 };
 
 template<typename TEventType, typename... Args>
@@ -61,8 +97,8 @@ struct Event<TEventType, void(Args...)> abstract : EventBase
 	{
 		// Note that this function must be reentrant (one event handler can invoke another event).
 		// We use one of two lists: one in the stack in case we have a few handlers, the other in the heap for many handlers.
-		std::vector<EventHandler> longList;
-		std::array<EventHandler, 8> shortList;
+		std::vector<EventManager::EventHandler> longList;
+		std::array<EventManager::EventHandler, 8> shortList;
 		size_t shortListSize;
 
 		MakeHandlerList(std::type_index(typeid (TEventType)), em, longList, shortList, shortListSize);

@@ -12,37 +12,31 @@ class EditArea : public ZoomableWindow, public IEditArea
 	typedef ZoomableWindow base;
 
 	ULONG _refCount = 1;
+	IProjectWindow* const _pw;
 	IUIFramework* const _rf;
 	ComPtr<ISelection> const _selection;
 	ComPtr<IProject> const _project;
 	ComPtr<IDWriteFactory> const _dWriteFactory;
+	unsigned int _selectedTreeIndex = 0;
 
 public:
 	EditArea(IProject* project, IProjectWindow* pw, ISelection* selection, IUIFramework* rf, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory)
 		: base(0, WS_CHILD | WS_VISIBLE, rect, pw->GetHWnd(), 55, deviceContext, dWriteFactory, wicFactory)
-		, _project(project), _rf(rf), _selection(selection), _dWriteFactory(dWriteFactory)
+		, _project(project), _pw(pw), _rf(rf), _selection(selection), _dWriteFactory(dWriteFactory)
 	{
-		_selection->GetAddedToSelectionEvent().AddHandler (&OnObjectAddedToSelection, this);
-		_selection->GetRemovingFromSelectionEvent().AddHandler (&OnObjectRemovingFromSelection, this);
+		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
 	}
 
 	virtual ~EditArea()
 	{
 		assert (_refCount == 0);
-		_selection->GetRemovingFromSelectionEvent().RemoveHandler (&OnObjectRemovingFromSelection, this);
-		_selection->GetAddedToSelectionEvent().RemoveHandler(&OnObjectAddedToSelection, this);
+		_selection->GetSelectionChangedEvent().RemoveHandler (&OnSelectionChanged, this);
 	}
 
-	static void OnObjectAddedToSelection (void* callbackArg, ISelection* selection, Object* o)
+	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
 	{
 		auto editArea = static_cast<EditArea*>(callbackArg);
 		::InvalidateRect (editArea->GetHWnd(), nullptr, FALSE);
-	}
-
-	static void OnObjectRemovingFromSelection (void* callbackArg, ISelection* selection, Object* o)
-	{
-		auto editArea = static_cast<EditArea*>(callbackArg);
-		::InvalidateRect(editArea->GetHWnd(), nullptr, FALSE);
 	}
 
 	virtual void Render(ID2D1DeviceContext* dc) const override final
@@ -80,7 +74,7 @@ public:
 			dc->SetTransform(GetZoomTransform());
 
 			for (auto& b : _project->GetBridges())
-				b->Render(dc);
+				b->Render(dc, _selectedTreeIndex, _dWriteFactory);
 
 			dc->SetTransform(oldtr);
 
@@ -102,7 +96,7 @@ public:
 					hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &ss); ThrowIfFailed(hr);
 					ComPtr<ID2D1SolidColorBrush> brush;
 					hr = dc->CreateSolidColorBrush (ColorF(ColorF::Blue), &brush);
-					dc->DrawRectangle ({ tl.x - 10, tl.y - 10, br.x + 10, br.y + 10 }, brush, 2, ss);
+					dc->DrawRectangle ({ tl.x - 10, tl.y - 10, br.x + 10, br.y + 10 }, brush, 1, ss);
 				}
 			}
 
@@ -173,6 +167,15 @@ public:
 		hr = ui->ShowAtLocation(pt.x, pt.y); ThrowIfFailed(hr);
 		return 0;
 	}
+
+	virtual void SelectTreeIndex(unsigned int treeIndex) override final
+	{
+		if (_selectedTreeIndex != treeIndex)
+		{
+			_selectedTreeIndex = treeIndex;
+			::InvalidateRect (GetHWnd(), nullptr, FALSE);
+		}
+	};
 
 	#pragma region IUnknown
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final { throw NotImplementedException(); }

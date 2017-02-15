@@ -136,7 +136,6 @@
   <ItemGroup>
     <ClCompile Include="D2DWindow.cpp" />
     <ClCompile Include="EditArea.cpp" />
-    <ClCompile Include="EventManager.cpp" />
     <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_procedures.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
@@ -216,6 +215,7 @@
     <ClCompile Include="PhysicalBridge.cpp" />
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
+    <ClCompile Include="RibbonCommandHandlers\BridgePropertiesRCH.cpp" />
     <ClCompile Include="RibbonCommandHandlers\CreateRCH.cpp" />
     <ClCompile Include="RibbonCommandHandlers\RCHBase.cpp" />
     <ClCompile Include="Selection.cpp" />

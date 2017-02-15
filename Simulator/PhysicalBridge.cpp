@@ -26,7 +26,7 @@ void PhysicalPort::Render(ID2D1DeviceContext* dc) const
 	}
 }
 
-PhysicalBridge::PhysicalBridge (size_t portCount)
+PhysicalBridge::PhysicalBridge (size_t portCount, const std::array<uint8_t, 6>& macAddress)
 {
 	float offset = 0;
 
@@ -42,13 +42,16 @@ PhysicalBridge::PhysicalBridge (size_t portCount)
 	_y = 0;
 	_width = offset;
 	_height = BridgeDefaultHeight;
+
+	_stpBridge = STP_CreateBridge ((unsigned int) portCount, 1, &StpCallbacks, STP_VERSION_RSTP, &macAddress[0], 128);
 }
 
 PhysicalBridge::~PhysicalBridge()
 {
+	STP_DestroyBridge (_stpBridge);
 }
 
-void PhysicalBridge::Render(ID2D1DeviceContext* dc) const
+void PhysicalBridge::Render(ID2D1DeviceContext* dc, unsigned int treeIndex, IDWriteFactory* dWriteFactory) const
 {
 	ComPtr<ID2D1SolidColorBrush> brush;
 	dc->CreateSolidColorBrush (ColorF(ColorF::Red), &brush);
@@ -56,6 +59,18 @@ void PhysicalBridge::Render(ID2D1DeviceContext* dc) const
 
 	for (auto& port : _ports)
 		port->Render(dc);
+
+	unsigned char address[6];
+	STP_GetBridgeAddress (_stpBridge, address);
+	unsigned short prio = STP_GetBridgePriority(_stpBridge, treeIndex);
+	wchar_t str[32];
+	int strlen = swprintf_s (str, L"%04x.%02x%02x%02x%02x%02x%02x", prio, address[0], address[1], address[2], address[3], address[4], address[5]);
+
+	ComPtr<IDWriteTextFormat> textFormat;
+	auto hr = dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 10, L"en-US", &textFormat); ThrowIfFailed(hr);
+	ComPtr<IDWriteTextLayout> textLayout;
+	hr = dWriteFactory->CreateTextLayout (str, strlen, textFormat, 10000, 10000, &textLayout); ThrowIfFailed(hr);
+	dc->DrawTextLayout ({ _x + BridgeOutlineWidth / 2 + 3, _y + BridgeOutlineWidth / 2 + 3}, textLayout, brush);
 }
 
 void PhysicalBridge::SetLocation(float x, float y)
@@ -68,6 +83,35 @@ void PhysicalBridge::SetLocation(float x, float y)
 		BridgeInvalidateEvent::InvokeHandlers(_em, this);
 	}
 }
+
+#pragma region STP Callbacks
+const STP_CALLBACKS PhysicalBridge::StpCallbacks =
+{
+	nullptr, // enableLearning;
+	nullptr, // enableForwarding;
+	nullptr, // transmitGetBuffer;
+	nullptr, // transmitReleaseBuffer;
+	nullptr, // flushFdb;
+	nullptr, // debugStrOut;
+	nullptr, // onTopologyChange;
+	nullptr, // onNotifiedTopologyChange;
+	&StpCallback_AllocAndZeroMemory,
+	&StpCallback_FreeMemory,
+};
+
+
+//static
+void* PhysicalBridge::StpCallback_AllocAndZeroMemory(unsigned int size)
+{
+	return malloc(size);
+}
+
+//static
+void PhysicalBridge::StpCallback_FreeMemory(void* p)
+{
+	free(p);
+}
+#pragma endregion
 
 #pragma region PhysicalBridge::IUnknown
 HRESULT STDMETHODCALLTYPE PhysicalBridge::QueryInterface(REFIID riid, void** ppvObject)

@@ -29,3 +29,6 @@ inline void ThrowIfFailed(HRESULT hr)
 	if (FAILED(hr))
 		throw ComException(hr);
 }
+
+class NullArgumentException : public std::exception
+{ };

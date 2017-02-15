@@ -15,8 +15,8 @@ const std::unordered_set<const RCHInfo*>& GetRCHInfos()
 	return *chInfos;
 }
 
-RCHInfo::RCHInfo (RCHCommandsAndProperties&& cps, RCHFactory factory)
-	: _cps(move(cps)), _factory(factory)
+RCHInfo::RCHInfo (std::unordered_set<UINT32>&& commands, RCHFactory factory)
+	: _commands(move(commands)), _factory(factory)
 {
 	if (chInfos == nullptr)
 		chInfos = new unordered_set<const RCHInfo*>();
@@ -33,9 +33,23 @@ RCHInfo::~RCHInfo()
 	}
 }
 
-RCHBase::RCHBase (IProjectWindow* pw, IProject* project)
-	: _pw(pw), _project(project)
-{ }
+RCHBase::RCHBase (IProjectWindow* pw, IUIFramework* rf, IProject* project, ISelection* selection)
+	: _pw(pw), _rf(rf), _project(project), _selection(selection)
+{
+	_selection->GetSelectionChangedEvent().AddHandler(&OnSelectionChangedStatic, this);
+}
+
+RCHBase::~RCHBase()
+{
+	_selection->GetSelectionChangedEvent().RemoveHandler(&OnSelectionChangedStatic, this);
+}
+
+//static
+void RCHBase::OnSelectionChangedStatic(void* callbackArg, ISelection* selection)
+{
+	auto rch = static_cast<RCHBase*>(callbackArg);
+	rch->OnSelectionChanged();
+}
 
 HRESULT RCHBase::QueryInterface(REFIID riid, void **ppvObject)
 {

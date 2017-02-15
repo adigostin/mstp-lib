@@ -50,6 +50,10 @@
 				<Image Source="NetworkHub_32.png"/>
 			</Command.LargeImages>
 		</Command>
+
+		<Command Name="BridgePropsGroup" Symbol="cmdBridgePropsGroup" LabelTitle="Bridge Properties"/>
+
+		<Command Name="BridgeAddress" Symbol="cmdBridgeAddress" LabelTitle="Address"/>
 		
 		<!--__________________________ Declare Quick Access __________________________-->
 		<Command Name="cmdQat"/>
@@ -93,28 +97,11 @@
 		<Command Name="ContextMenuBlankArea" Symbol="cmdContextMenuBlankArea"/>
 		<Command Name="ContextMenuBridge" Symbol="cmdContextMenuBridge"/>
 		<Command Name="ContextMenuPort" Symbol="cmdContextMenuPort"/>
-		<!--
-		<Command Name="ContextMenuSingleElementSelected" Symbol="cmdContextMenuSingleElementSelected"/>
-		<Command Name="ContextMenuMultipleElementsSelected" Symbol="cmdContextMenuMultipleElementsSelected"/>
-
-		<Command Name="RestoreSize" LabelTitle="Restore Size to 100%" Symbol="cmdRestoreSize"/>
-		<Command Name="EditFrame" LabelTitle="Edit Frame" Symbol="cmdEditFrame"/>
-
-		<Command Name="OverlappedElements" LabelTitle="Overlapped Elements" Symbol="cmdOverlappedElements">
-			<Command.SmallImages>
-				<Image MinDPI="96" Source="Layers_16.bmp"/>
-				<Image MinDPI="120" Source="Layers_32.bmp"/>
-			</Command.SmallImages>
-			<Command.LargeImages>
-				<Image Source="Layers_32.bmp"/>
-			</Command.LargeImages>
-		</Command>
--->
+	
 	</Application.Commands>
-	<!-- High level view of command relationship -->
+
 	<Application.Views>
 		<Ribbon>
-			<!-- Declare relationship among menus and elements -->
 			<Ribbon.ApplicationMenu>
 				<ApplicationMenu CommandName="FileMenu">
 					<ApplicationMenu.RecentItems>
@@ -131,7 +118,6 @@
 					</MenuGroup>
 				</ApplicationMenu>
 			</Ribbon.ApplicationMenu>
-			<!-- Declare relationship among tabs, groups and elements -->
 			<Ribbon.Tabs>
 				<Tab CommandName="HomeTab">
 					<Tab.ScalingPolicy>
@@ -155,7 +141,6 @@
 								</MenuGroup>
 							</SplitButtonGallery.MenuGroups>
 						</SplitButtonGallery>
-
 						<SplitButtonGallery CommandName="Redo" TextPosition="Bottom" Type="Commands" ItemHeight="20" ItemWidth="200">
 							<SplitButtonGallery.MenuLayout>
 								<VerticalMenuLayout/>
@@ -171,6 +156,23 @@
 					</Group>
 					<Group CommandName="CreateGroup" SizeDefinition="OneButton">
 						<Button CommandName="CreateBridge"/>
+					</Group>
+					<Group CommandName="BridgePropsGroup">
+						<SizeDefinition>
+							<ControlNameMap>
+								<ControlNameDefinition Name="dropDown1"/>
+							</ControlNameMap>
+							<GroupSizeDefinition Size="Small">
+								<ControlSizeDefinition ControlName="dropDown1" ImageSize="Small" IsLabelVisible="false"/>
+							</GroupSizeDefinition>
+							<GroupSizeDefinition Size="Medium">
+								<ControlSizeDefinition ControlName="dropDown1" ImageSize="Small" IsLabelVisible="true"/>
+							</GroupSizeDefinition>
+							<GroupSizeDefinition Size="Large">
+								<ControlSizeDefinition ControlName="dropDown1" ImageSize="Large" IsLabelVisible="true"/>
+							</GroupSizeDefinition>
+						</SizeDefinition>
+						<ComboBox CommandName="BridgeAddress" IsEditable="true" IsAutoCompleteEnabled="false"/>
 					</Group>
 				</Tab>
 			</Ribbon.Tabs>

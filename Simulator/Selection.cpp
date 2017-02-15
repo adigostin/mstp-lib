@@ -22,15 +22,20 @@ class Selection : public ISelection
 		for (auto o : _objects)
 			RemovingFromSelectionEvent::InvokeHandlers(_em, this, o);
 		_objects.clear();
+		SelectionChangedEvent::InvokeHandlers(_em, this);
 	}
 
 	virtual void Select(Object* o) override final
 	{
+		if (o == nullptr)
+			throw NullArgumentException();
+
 		if ((_objects.size() != 1) || (_objects[0] != o))
 		{
 			this->Clear();
 			_objects.push_back(o);
 			AddedToSelectionEvent::InvokeHandlers(_em, this, o);
+			SelectionChangedEvent::InvokeHandlers(_em, this);
 		}
 	}
 
@@ -38,6 +43,9 @@ class Selection : public ISelection
 
 	virtual RemovingFromSelectionEvent::Subscriber GetRemovingFromSelectionEvent() override final { return RemovingFromSelectionEvent::Subscriber(_em); }
 
+	virtual SelectionChangedEvent::Subscriber GetSelectionChangedEvent() override final { return SelectionChangedEvent::Subscriber(_em); }
+
+	#pragma region IUnknown
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void ** ppvObject) override final
 	{
 		throw NotImplementedException();
@@ -55,6 +63,7 @@ class Selection : public ISelection
 			delete this;
 		return newRefCount;
 	}
+	#pragma endregion
 };
 
 extern const SelectionFactory selectionFactory = [] { return ComPtr<ISelection>(new Selection(), false); };

@@ -18,6 +18,7 @@ class ProjectWindow : public IProjectWindow, IUIApplication
 {
 	ULONG _refCount = 1;
 	ComPtr<IProject> const _project;
+	ComPtr<ISelection> const _selection;
 	ComPtr<IEditArea> _editArea;
 	ComPtr<IUIFramework> _rf;
 	HWND _hwnd;
@@ -29,7 +30,7 @@ class ProjectWindow : public IProjectWindow, IUIApplication
 public:
 	ProjectWindow (IProject* project, HINSTANCE rfResourceHInstance, const wchar_t* rfResourceName, ISelection* selection,
 		EditAreaFactory editAreaFactory, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory)
-		: _project(project)
+		: _project(project), _selection(selection)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR)&wndClassAtom, &hInstance);
@@ -73,14 +74,15 @@ public:
 		LONG ribbonHeight = 0;
 		if ((rfResourceHInstance != nullptr) && (rfResourceName != nullptr))
 		{
+			auto hr = CoCreateInstance(CLSID_UIRibbonFramework, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&_rf)); ThrowIfFailed(hr);
+
 			for (auto& info : GetRCHInfos())
 			{
-				auto handler = info->_factory(this, project);
-				for (auto& commandAndProps : info->_cps)
-					_commandHandlers.insert ({ commandAndProps.first, handler });
+				auto handler = info->_factory(this, _rf, project, _selection);
+				for (UINT32 command : info->_commands)
+					_commandHandlers.insert ({ command, handler });
 			}
 
-			auto hr = CoCreateInstance(CLSID_UIRibbonFramework, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&_rf)); ThrowIfFailed(hr);
 			hr = _rf->Initialize(hwnd, this); ThrowIfFailed(hr);
 			hr = _rf->LoadUI(rfResourceHInstance, rfResourceName); ThrowIfFailed(hr);
 
@@ -274,6 +276,10 @@ public:
 	}
 
 	virtual ProjectWindowClosingEvent::Subscriber GetProjectWindowClosingEvent() override final { return ProjectWindowClosingEvent::Subscriber(_em); }
+
+	virtual unsigned int GetSelectedTreeIndex() const override final { return 0; }
+
+	virtual SelectedTreeIndexChangedEvent::Subscriber GetSelectedTreeIndexChangedEvent() override final { return SelectedTreeIndexChangedEvent::Subscriber(_em); }
 
 	std::optional<LRESULT> ProcessWmClose()
 	{

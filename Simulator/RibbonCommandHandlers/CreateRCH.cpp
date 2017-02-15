@@ -14,11 +14,11 @@ public:
 
 	virtual HRESULT __stdcall Execute(UINT32 commandId, UI_EXECUTIONVERB verb, const PROPERTYKEY *key, const PROPVARIANT *currentValue, IUISimplePropertySet *commandExecutionProperties) override final
 	{
-		auto bridge = ComPtr<PhysicalBridge>(new PhysicalBridge(4), false);
+		auto macAddress = _project->AllocNextMacAddress();
+		auto bridge = ComPtr<PhysicalBridge>(new PhysicalBridge(4, macAddress), false);
 		bridge->SetLocation (100, 100);
 		_project->AddBridge (bridge);
-
-		return E_NOTIMPL;
+		return S_OK;
 	}
 
 	virtual HRESULT __stdcall UpdateProperty(UINT32 commandId, REFPROPERTYKEY key, const PROPVARIANT *currentValue, PROPVARIANT *newValue) override final
@@ -30,8 +30,4 @@ public:
 	virtual const RCHInfo& GetInfo() const override final { return _info; }
 };
 
-const RCHInfo CreateRCH::_info (
-	{
-		{ cmdCreateBridge, { &UI_PKEY_Enabled } },
-	},
-	&Create);
+const RCHInfo CreateRCH::_info ({ cmdCreateBridge, }, &Create);

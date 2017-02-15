@@ -4,7 +4,6 @@
 
 using namespace std;
 using namespace D2D1;
-//using namespace DirectX;
 
 #pragma comment (lib, "d2d1.lib")
 #pragma comment (lib, "dwrite.lib")
@@ -79,13 +78,10 @@ D2DWindow::D2DWindow (DWORD exStyle, DWORD style, const RECT& rect, HWND hWndPar
 	hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, IID_PPV_ARGS(&_d2dFactory)); ThrowIfFailed(hr);
 
 	CreateD2DDeviceContext();
-	//this->CreateDrawingResources();
-	//QueryPerformanceFrequency(&_performanceCounterFrequency);
 }
 
 D2DWindow::~D2DWindow()
 {
-	//this->ReleaseDrawingResources();
 	_d2dDeviceContext = nullptr;
 	_swapChain = nullptr;
 	::DestroyWindow(_hwnd);
@@ -108,18 +104,8 @@ void D2DWindow::CreateD2DDeviceContext()
 	ComPtr<ID2D1RenderTarget> rt;
 	hr = _d2dFactory->CreateDxgiSurfaceRenderTarget(dxgiSurface, &props, &rt); ThrowIfFailed(hr);
 	hr = rt->QueryInterface(&_d2dDeviceContext); ThrowIfFailed(hr);
+}
 
-	//rassert(_fillStyleRenderTarget == nullptr);
-	//hr = _d2dDeviceContext->CreateCompatibleRenderTarget({ 8, 8 }, { 8, 8 }, &_fillStyleRenderTarget); rassert_hr(hr);
-}
-/*
-void D2DWindow::ReleaseD2DDeviceContext()
-{
-	//_fillStyleRenderTarget->Release();
-	//_fillStyleRenderTarget = nullptr;
-	_d2dDeviceContext = nullptr;
-}
-*/
 // From http://blogs.msdn.com/b/oldnewthing/archive/2005/04/22/410773.aspx
 //static
 LRESULT CALLBACK D2DWindow::WindowProcStatic (HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -221,16 +207,6 @@ void D2DWindow::ProcessWmPaint()
 	::BeginPaint(_hwnd, &ps); // this will also hide the caret, if shown.
 
 	_painting = true;
-
-	// Setup the viewport
-	D3D11_VIEWPORT vp;
-	vp.Width = (FLOAT)_clientRect.right;
-	vp.Height = (FLOAT)_clientRect.bottom;
-	vp.MinDepth = 0.0f;
-	vp.MaxDepth = 1.0f;
-	vp.TopLeftX = 0;
-	vp.TopLeftY = 0;
-	_d3dDeviceContext->RSSetViewports(1, &vp);
 
 	ComPtr<ID3D11Texture2D> backBuffer;
 	hr = _swapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer)); ThrowIfFailed(hr);
