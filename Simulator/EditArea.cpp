@@ -29,7 +29,9 @@ public:
 
 	virtual void Render(ID2D1DeviceContext* dc) const override final
 	{
-		dc->Clear (ColorF(ColorF::Indigo));
+		auto backColorRef = GetSysColor(COLOR_WINDOW);
+		auto backColor = D2D1_COLOR_F{ (backColorRef & 0xff) / 255.0f, ((backColorRef >> 8) & 0xff) / 255.0f, ((backColorRef >> 16) & 0xff) / 255.0f, 1.0f };
+		dc->Clear(backColor);
 
 		D2D1_MATRIX_3X2_F oldtr;
 		dc->GetTransform(&oldtr);

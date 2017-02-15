@@ -15,7 +15,7 @@ static const wchar_t RegValueNameWindowBottom[] = L"WindowBottom";
 
 class ProjectWindow : public IProjectWindow, IUIApplication
 {
-	uint32_t _refCount = 1;
+	ULONG _refCount = 1;
 	ComPtr<IProject> const _project;
 	ComPtr<IEditArea> _editArea;
 	ComPtr<IUIFramework> _rf;
@@ -321,12 +321,12 @@ public:
 		throw NotImplementedException();
 	}
 
-	virtual ULONG STDMETHODCALLTYPE AddRef(void) override
+	virtual ULONG STDMETHODCALLTYPE AddRef() override
 	{
 		return InterlockedIncrement(&_refCount);
 	}
 
-	virtual ULONG STDMETHODCALLTYPE Release(void) override
+	virtual ULONG STDMETHODCALLTYPE Release() override
 	{
 		ULONG newRefCount = InterlockedDecrement(&_refCount);
 		if (newRefCount == 0)

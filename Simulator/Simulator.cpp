@@ -259,7 +259,9 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 			//auto actionList = actionListFactory();
 			auto selection = selectionFactory();
 			auto project = projectFactory();//move(actionList));
-			project->AddBridge (make_unique<PhysicalBridge>());
+			auto bridge = ComPtr<PhysicalBridge>(new PhysicalBridge(4), false);
+			bridge->SetLocation (100, 100);
+			project->AddBridge (bridge);
 			//auto wire = MakeRefCounted<Wire>();
 			//wire->AddPoint({ 100, 200 });
 			//wire->AddPoint({ 300, 500 });

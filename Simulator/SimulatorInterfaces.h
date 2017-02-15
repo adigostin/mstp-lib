@@ -44,16 +44,18 @@ extern const ProjectWindowFactory projectWindowFactory;
 
 struct BridgeInsertedEvent : public Event<BridgeInsertedEvent, void(IProject*, size_t index, PhysicalBridge*)> { };
 struct BridgeRemovingEvent : public Event<BridgeRemovingEvent, void(IProject*, size_t index, PhysicalBridge*)> { };
+struct ProjectInvalidateEvent : public Event<ProjectInvalidateEvent, void(IProject*)> { };
 
 struct IProject abstract : public IUnknown
 {
-	virtual const std::vector<std::unique_ptr<PhysicalBridge>>& GetBridges() const = 0;
-	virtual void InsertBridge (size_t index, std::unique_ptr<PhysicalBridge>&& bridge) = 0;
+	virtual const std::vector<ComPtr<PhysicalBridge>>& GetBridges() const = 0;
+	virtual void InsertBridge (size_t index, PhysicalBridge* bridge) = 0;
 	virtual void RemoveBridge (size_t index) = 0;
 	virtual BridgeInsertedEvent::Subscriber GetBridgeInsertedEvent() = 0;
 	virtual BridgeRemovingEvent::Subscriber GetBridgeRemovingEvent() = 0;
+	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() = 0;
 
-	void AddBridge (std::unique_ptr<PhysicalBridge>&& bridge) { InsertBridge (GetBridges().size(), move(bridge)); }
+	void AddBridge (PhysicalBridge* bridge) { InsertBridge (GetBridges().size(), bridge); }
 };
 
 using ProjectFactory = ComPtr<IProject>(*const)();
