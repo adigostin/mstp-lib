@@ -36,6 +36,7 @@ public:
 		if (!bRes)
 			throw Win32Exception(GetLastError());
 
+		_project->GetProjectInvalidateEvent().AddHandler (&OnProjectInvalidate, this);
 
 		if (wndClassAtom == 0)
 		{
@@ -74,7 +75,7 @@ public:
 		{
 			for (auto& info : GetRCHInfos())
 			{
-				auto handler = info->_factory();
+				auto handler = info->_factory(this, project);
 				for (auto& commandAndProps : info->_cps)
 					_commandHandlers.insert ({ commandAndProps.first, handler });
 			}
@@ -94,10 +95,16 @@ public:
 
 	~ProjectWindow()
 	{
+		_project->GetProjectInvalidateEvent().RemoveHandler(&OnProjectInvalidate, this);
 		_editArea = nullptr;
 		::DestroyWindow(_hwnd);
 	}
 
+	static void OnProjectInvalidate (void* callbackArg, IProject*)
+	{
+		auto pw = static_cast<ProjectWindow*>(callbackArg);
+		::InvalidateRect (pw->GetHWnd(), nullptr, FALSE);
+	}
 
 	virtual HWND GetHWnd() const override { return _hwnd; }
 

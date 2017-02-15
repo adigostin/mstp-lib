@@ -5,11 +5,6 @@
 using namespace std;
 using namespace D2D1;
 
-static constexpr float PortLongSize = 30;
-static constexpr float PortShortSize = 15;
-static constexpr float PortSpacing = 20;
-static constexpr float BridgeDefaultHeight = 100;
-
 void PhysicalPort::Render(ID2D1DeviceContext* dc) const
 {
 	ComPtr<ID2D1SolidColorBrush> brush;
@@ -57,7 +52,7 @@ void PhysicalBridge::Render(ID2D1DeviceContext* dc) const
 {
 	ComPtr<ID2D1SolidColorBrush> brush;
 	dc->CreateSolidColorBrush (ColorF(ColorF::Red), &brush);
-	dc->DrawRectangle ({ _x, _y, _x + _width, _y + _height }, brush, 4.0f);
+	dc->DrawRectangle ({ _x, _y, _x + _width, _y + _height }, brush, BridgeOutlineWidth);
 
 	for (auto& port : _ports)
 		port->Render(dc);

@@ -17,7 +17,8 @@ public:
 	{
 		_bridges.push_back(ComPtr<PhysicalBridge>(bridge));
 		bridge->GetInvalidateEvent().AddHandler (&OnBridgeInvalidate, this);
-		BridgeInsertedEvent::InvokeHandlers(_em, this, index, bridge);
+		BridgeInsertedEvent::InvokeHandlers (_em, this, index, bridge);
+		ProjectInvalidateEvent::InvokeHandlers (_em, this);
 	}
 
 	virtual void RemoveBridge(size_t index) override final
@@ -26,6 +27,7 @@ public:
 		BridgeRemovingEvent::InvokeHandlers(_em, this, index, bridge);
 		bridge->GetInvalidateEvent().RemoveHandler(&OnBridgeInvalidate, this);
 		_bridges.erase (_bridges.begin() + index);
+		ProjectInvalidateEvent::InvokeHandlers(_em, this);
 	}
 
 	static void OnBridgeInvalidate (void* callbackArg, PhysicalBridge* bridge)

@@ -50,6 +50,7 @@
     <ClInclude Include="PhysicalBridge.h" />
     <ClInclude Include="SimulatorDefs.h" />
     <ClInclude Include="RibbonCommandHandlers\RCHBase.h" />
+    <ClInclude Include="EditStates\EditState.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />

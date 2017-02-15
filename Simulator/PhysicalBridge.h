@@ -2,6 +2,12 @@
 #pragma once
 #include "EventManager.h"
 
+static constexpr float PortLongSize = 30;
+static constexpr float PortShortSize = 15;
+static constexpr float PortSpacing = 20;
+static constexpr float BridgeDefaultHeight = 100;
+static constexpr float BridgeOutlineWidth = 4;
+
 class Object
 {
 protected:

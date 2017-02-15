@@ -113,6 +113,7 @@
   <ItemGroup>
     <ClInclude Include="ComPtr.h" />
     <ClInclude Include="D2DWindow.h" />
+    <ClInclude Include="EditStates\EditState.h" />
     <ClInclude Include="EventManager.h" />
     <ClInclude Include="mstp-lib\802.1Q-2011\802_1Q_2011_procedures.h" />
     <ClInclude Include="mstp-lib\base_types.h" />

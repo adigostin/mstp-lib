@@ -21,11 +21,28 @@ public:
 	EditArea(IProject* project, IProjectWindow* pw, ISelection* selection, IUIFramework* rf, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory)
 		: base(0, WS_CHILD | WS_VISIBLE, rect, pw->GetHWnd(), 55, deviceContext, dWriteFactory, wicFactory)
 		, _project(project), _rf(rf), _selection(selection), _dWriteFactory(dWriteFactory)
-	{ }
+	{
+		_selection->GetAddedToSelectionEvent().AddHandler (&OnObjectAddedToSelection, this);
+		_selection->GetRemovingFromSelectionEvent().AddHandler (&OnObjectRemovingFromSelection, this);
+	}
 
 	virtual ~EditArea()
 	{
 		assert (_refCount == 0);
+		_selection->GetRemovingFromSelectionEvent().RemoveHandler (&OnObjectRemovingFromSelection, this);
+		_selection->GetAddedToSelectionEvent().RemoveHandler(&OnObjectAddedToSelection, this);
+	}
+
+	static void OnObjectAddedToSelection (void* callbackArg, ISelection* selection, Object* o)
+	{
+		auto editArea = static_cast<EditArea*>(callbackArg);
+		::InvalidateRect (editArea->GetHWnd(), nullptr, FALSE);
+	}
+
+	static void OnObjectRemovingFromSelection (void* callbackArg, ISelection* selection, Object* o)
+	{
+		auto editArea = static_cast<EditArea*>(callbackArg);
+		::InvalidateRect(editArea->GetHWnd(), nullptr, FALSE);
 	}
 
 	virtual void Render(ID2D1DeviceContext* dc) const override final
@@ -39,10 +56,6 @@ public:
 		dc->Clear(backColor);
 
 		auto clientRectDips = GetClientRectDips();
-
-		D2D1_MATRIX_3X2_F oldtr;
-		dc->GetTransform(&oldtr);
-		dc->SetTransform (base::GetZoomTransform());
 
 		HRESULT hr;
 
@@ -62,21 +75,81 @@ public:
 		}
 		else
 		{
+			D2D1_MATRIX_3X2_F oldtr;
+			dc->GetTransform(&oldtr);
+			dc->SetTransform(GetZoomTransform());
+
 			for (auto& b : _project->GetBridges())
 				b->Render(dc);
+
+			dc->SetTransform(oldtr);
+
+			auto oldaa = dc->GetAntialiasMode();
+			dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
+
+			for (auto o : _selection->GetObjects())
+			{
+				if (auto b = dynamic_cast<PhysicalBridge*>(o))
+				{
+					auto tl = GetDLocationFromWLocation ({ b->GetLeft() - BridgeOutlineWidth / 2, b->GetTop() - BridgeOutlineWidth / 2 });
+					auto br = GetDLocationFromWLocation ({ b->GetRight() + BridgeOutlineWidth / 2, b->GetBottom() + BridgeOutlineWidth / 2 });
+
+					ComPtr<ID2D1Factory> factory;
+					dc->GetFactory(&factory);
+					D2D1_STROKE_STYLE_PROPERTIES ssprops = {};
+					ssprops.dashStyle = D2D1_DASH_STYLE_DASH;
+					ComPtr<ID2D1StrokeStyle> ss;
+					hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &ss); ThrowIfFailed(hr);
+					ComPtr<ID2D1SolidColorBrush> brush;
+					hr = dc->CreateSolidColorBrush (ColorF(ColorF::Blue), &brush);
+					dc->DrawRectangle ({ tl.x - 10, tl.y - 10, br.x + 10, br.y + 10 }, brush, 2, ss);
+				}
+			}
+
+			dc->SetAntialiasMode(oldaa);
 		}
 
-		dc->SetTransform(oldtr);
 	}
 
 	virtual HWND GetHWnd() const override final { return base::GetHWnd(); }
 
 	virtual std::optional<LRESULT> WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override
 	{
+		if ((uMsg == WM_LBUTTONDOWN) || (uMsg == WM_RBUTTONDOWN))
+		{
+			auto button = (uMsg == WM_LBUTTONDOWN) ? MouseButton::Left : MouseButton::Right;
+			return ProcessMouseButtonDown (button, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
+		}
+
 		if (uMsg == WM_CONTEXTMENU)
 			return ProcessWmContextMenu (hwnd, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
 
 		return base::WindowProc (hwnd, uMsg, wParam, lParam);
+	}
+
+	Object* GetObjectAt (float x, float y) const
+	{
+		for (auto& b : _project->GetBridges())
+		{
+			if ((x >= b->GetLeft()) && (x < b->GetRight()) && (y >= b->GetTop()) && (y < b->GetBottom()))
+			{
+				return b;
+			}
+		}
+
+		return nullptr;
+	};
+
+	std::optional<LRESULT> ProcessMouseButtonDown (MouseButton button, POINT pt)
+	{
+		auto dLocation = GetDipLocationFromPixelLocation(pt);
+		auto wLocation = GetWLocationFromDLocation(dLocation);
+		auto clickedObject = GetObjectAt(wLocation.x, wLocation.y);
+		if (clickedObject == nullptr)
+			_selection->Clear();
+		else
+			_selection->Select(clickedObject);
+		return 0;
 	}
 
 	std::optional<LRESULT> ProcessWmContextMenu (HWND hwnd, POINT pt)
@@ -101,6 +174,7 @@ public:
 		return 0;
 	}
 
+	#pragma region IUnknown
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final { throw NotImplementedException(); }
 
 	virtual ULONG STDMETHODCALLTYPE AddRef() override final
@@ -115,6 +189,7 @@ public:
 			delete this;
 		return newRefCount;
 	}
+	#pragma endregion
 };
 
 extern const EditAreaFactory editAreaFactory = [](auto... params) { return ComPtr<IEditArea>(new EditArea(params...), false); };

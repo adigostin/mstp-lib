@@ -44,13 +44,19 @@ public:
 	using base::base;
 
 	ZoomTransformChangedEvent::Subscriber GetZoomTransformChangedEvent() { return ZoomTransformChangedEvent::Subscriber(_em); }
-	D2D1_MATRIX_3X2_F GetZoomTransform() const;
+	D2D1::Matrix3x2F GetZoomTransform() const;
 	float GetZoom() const { return _zoom; }
 	D2D1_POINT_2F GetWorkspaceOrigin() const { return _workspaceOrigin; }
 	float GetWorkspaceOriginX() const { return _workspaceOrigin.x; }
 	float GetWorkspaceOriginY() const { return _workspaceOrigin.y; }
 	void ZoomToRectangle(const D2D1_RECT_F& rect, float minMarginDips, float maxZoomOrZero, bool smooth);
 	void SetZoomAndOrigin(float zoom, float originX, float originY, bool smooth);
+
+	D2D1_POINT_2F GetWLocationFromDLocation (D2D1_POINT_2F dLocation) const;
+	D2D1_POINT_2F GetDLocationFromWLocation (D2D1_POINT_2F wLocation) const;
+
+	//Vector TransformSizeToProjectCoords(VectorD size);
+	//Vector TransformSizeToProjectCoords(VectorD size, coord_t alignSize);
 
 protected:
 	virtual std::optional<LRESULT> WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;

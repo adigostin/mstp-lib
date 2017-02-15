@@ -33,9 +33,30 @@ RCHInfo::~RCHInfo()
 	}
 }
 
+RCHBase::RCHBase (IProjectWindow* pw, IProject* project)
+	: _pw(pw), _project(project)
+{ }
+
 HRESULT RCHBase::QueryInterface(REFIID riid, void **ppvObject)
 {
-	throw NotImplementedException();
+	if (!ppvObject)
+		return E_INVALIDARG;
+
+	*ppvObject = NULL;
+	if (riid == __uuidof(IUnknown))
+	{
+		*ppvObject = static_cast<IUnknown*>((IProjectWindow*) this);
+		AddRef();
+		return S_OK;
+	}
+	else if (riid == __uuidof(IUICommandHandler))
+	{
+		*ppvObject = static_cast<IUICommandHandler*>(this);
+		AddRef();
+		return S_OK;
+	}
+
+	return E_NOINTERFACE;
 }
 
 ULONG RCHBase::AddRef()

@@ -5,11 +5,27 @@
 
 struct IProject;
 struct IProjectWindow;
+struct ISelection;
+
+enum class MouseButton
+{
+	None = 0,
+	Left = 1,
+	Right = 2,
+	Middle = 4,
+};
+
+struct AddedToSelectionEvent : public Event<AddedToSelectionEvent, void(ISelection*, Object*)> { };
+struct RemovingFromSelectionEvent : public Event<RemovingFromSelectionEvent, void(ISelection*, Object*)> { };
 
 struct ISelection abstract : public IUnknown
 {
 	virtual ~ISelection() { }
 	virtual const std::vector<Object*>& GetObjects() const = 0;
+	virtual void Select (Object* o) = 0;
+	virtual void Clear() = 0;
+	virtual AddedToSelectionEvent::Subscriber GetAddedToSelectionEvent() = 0;
+	virtual RemovingFromSelectionEvent::Subscriber GetRemovingFromSelectionEvent() = 0;
 };
 
 using SelectionFactory = ComPtr<ISelection>(*const)();
@@ -30,7 +46,6 @@ struct ProjectWindowClosingEvent : public Event<ProjectWindowClosingEvent, void(
 
 struct IProjectWindow : public IUnknown, public IWin32Window
 {
-	//virtual IProject* GetProject() const = 0;
 	virtual ProjectWindowClosingEvent::Subscriber GetProjectWindowClosingEvent() = 0;
 	virtual void ShowAtSavedWindowLocation(const wchar_t* regKeyPath) = 0;
 	virtual void SaveWindowLocation(const wchar_t* regKeyPath) const = 0;
@@ -62,3 +77,4 @@ using ProjectFactory = ComPtr<IProject>(*const)();
 extern const ProjectFactory projectFactory;
 
 // ============================================================================
+

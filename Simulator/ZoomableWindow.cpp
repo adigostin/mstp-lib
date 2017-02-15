@@ -2,6 +2,7 @@
 #include "ZoomableWindow.h"
 
 using namespace std;
+using namespace D2D1;
 
 void ZoomableWindow::OnBeforeRender()
 {
@@ -83,9 +84,9 @@ void ZoomableWindow::OnAfterRender()
 	}
 }
 
-D2D1_MATRIX_3X2_F ZoomableWindow::GetZoomTransform() const
+Matrix3x2F ZoomableWindow::GetZoomTransform() const
 {
-	return D2D1_MATRIX_3X2_F { _zoom, 0, 0, _zoom, _workspaceOrigin.x, _workspaceOrigin.y };
+	return Matrix3x2F(_zoom, 0, 0, _zoom, _workspaceOrigin.x, _workspaceOrigin.y);
 }
 
 void ZoomableWindow::ProcessWmSize(WPARAM wparam, LPARAM lparam)
@@ -283,3 +284,18 @@ std::optional<LRESULT> ZoomableWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM w
 
 	return base::WindowProc(hwnd, uMsg, wParam, lParam);
 }
+
+D2D1_POINT_2F ZoomableWindow::GetWLocationFromDLocation(D2D1_POINT_2F dLocation) const
+{
+	float x = (dLocation.x - _workspaceOrigin.x) / _zoom;
+	float y = (dLocation.y - _workspaceOrigin.y) / _zoom;
+	return { x, y };
+}
+
+D2D1_POINT_2F ZoomableWindow::GetDLocationFromWLocation(D2D1_POINT_2F wLocation) const
+{
+	float x = _workspaceOrigin.x + wLocation.x * _zoom;
+	float y = _workspaceOrigin.y + wLocation.y * _zoom;
+	return { x, y };
+}
+
