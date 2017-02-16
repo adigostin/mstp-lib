@@ -55,7 +55,7 @@
 
 		<Command Name="BridgeAddress" Symbol="cmdBridgeAddress" LabelTitle="Address"/>
 
-		<Command Name="StartSTP" Symbol="cmdStartSTP" LabelTitle="Start STP">
+		<Command Name="EnableSTP" Symbol="cmdEnableSTP" LabelTitle="Enable STP">
 			<Command.SmallImages>
 				<Image Source="Play_16.png" MinDPI="96"/>
 				<Image Source="Play_32.png" MinDPI="120"/>
@@ -65,7 +65,7 @@
 			</Command.LargeImages>
 		</Command>
 
-		<Command Name="StopSTP" Symbol="cmdStopSTP" LabelTitle="Stop STP">
+		<Command Name="DisableSTP" Symbol="cmdDisableSTP" LabelTitle="Disable STP">
 			<Command.SmallImages>
 				<Image Source="Stop_16.png" MinDPI="96"/>
 				<Image Source="Stop_32.png" MinDPI="120"/>
@@ -218,8 +218,8 @@
 				</ContextMenu>
 				<ContextMenu Name="ContextMenuBridge">
 					<MenuGroup>
-						<Button CommandName="StartSTP"/>
-						<Button CommandName="StopSTP"/>
+						<Button CommandName="EnableSTP"/>
+						<Button CommandName="DisableSTP"/>
 					</MenuGroup>
 				</ContextMenu>
 				<ContextMenu Name="ContextMenuPort">

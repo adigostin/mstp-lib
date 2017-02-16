@@ -18,26 +18,26 @@ class BridgeControlRCH : public RCHBase
 		if (verb != UI_EXECUTIONVERB_EXECUTE)
 			return E_NOTIMPL;
 
-		if ((commandId == cmdStartSTP) || (commandId == cmdStopSTP))
+		if ((commandId == cmdEnableSTP) || (commandId == cmdDisableSTP))
 		{
-			bool start = (commandId == cmdStartSTP);
+			bool enable = (commandId == cmdEnableSTP);
 
 			for (auto o : _selection->GetObjects())
 			{
 				if (auto b = dynamic_cast<PhysicalBridge*>(o))
 				{
-					bool started = b->IsStpBridgeStarted();
+					bool enabled = b->IsStpEnabled();
 
-					if (start && !started)
-						b->StartStpBridge(GetTimestampMilliseconds());
-					else if (!start && started)
-						b->StopStpBridge(GetTimestampMilliseconds());
+					if (enable && !enabled)
+						b->EnableStp(STP_VERSION_RSTP, 1, GetTimestampMilliseconds());
+					else if (!enable && enabled)
+						b->DisableStp(GetTimestampMilliseconds());
 				}
 			}
 
 			return S_OK;
 		}
-		else if (commandId == cmdStopSTP)
+		else if (commandId == cmdDisableSTP)
 		{
 			return S_OK;
 		}
@@ -47,7 +47,7 @@ class BridgeControlRCH : public RCHBase
 
 	virtual HRESULT __stdcall UpdateProperty(UINT32 commandId, REFPROPERTYKEY key, const PROPVARIANT *currentValue, PROPVARIANT *newValue) override final
 	{
-		if ((commandId == cmdStartSTP) || (commandId == cmdStopSTP))
+		if ((commandId == cmdEnableSTP) || (commandId == cmdDisableSTP))
 		{
 			if (key == UI_PKEY_Enabled)
 			{
@@ -56,8 +56,8 @@ class BridgeControlRCH : public RCHBase
 				{
 					if (auto b = dynamic_cast<PhysicalBridge*>(o))
 					{
-						if (((commandId == cmdStartSTP) && !b->IsStpBridgeStarted())
-							|| ((commandId == cmdStopSTP) && b->IsStpBridgeStarted()))
+						if (((commandId == cmdEnableSTP) && !b->IsStpEnabled())
+							|| ((commandId == cmdDisableSTP) && b->IsStpEnabled()))
 						{
 							enable = TRUE;
 							break;
@@ -77,8 +77,8 @@ class BridgeControlRCH : public RCHBase
 	virtual void OnSelectionChanged() override final
 	{
 		base::OnSelectionChanged();
-		_rf->InvalidateUICommand (cmdStartSTP, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_Enabled);
-		_rf->InvalidateUICommand (cmdStopSTP, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_Enabled);
+		_rf->InvalidateUICommand (cmdEnableSTP, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_Enabled);
+		_rf->InvalidateUICommand (cmdDisableSTP, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_Enabled);
 	}
 
 	virtual void OnAddedToSelection (Object* o) override final
@@ -104,26 +104,12 @@ class BridgeControlRCH : public RCHBase
 	static void OnSelectedBridgeStartedOrStopping (void* callbackArg, PhysicalBridge* b)
 	{
 		auto rch = static_cast<BridgeControlRCH*>(callbackArg);
-		rch->_rf->InvalidateUICommand(cmdStartSTP, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_Enabled);
-		rch->_rf->InvalidateUICommand(cmdStopSTP, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_Enabled);
-	}
-	/*
-	virtual void OnSelectedBridgeStarted (PhysicalBridge* b) override final
-	{
-		base::OnSelectedBridgeStarted(b);
-		_rf->InvalidateUICommand(cmdStartSTP, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_Enabled);
-		_rf->InvalidateUICommand(cmdStopSTP, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_Enabled);
+		rch->_rf->InvalidateUICommand(cmdEnableSTP, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_Enabled);
+		rch->_rf->InvalidateUICommand(cmdDisableSTP, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_Enabled);
 	}
 
-	virtual void OnSelectedBridgeStopping(PhysicalBridge* b) override final
-	{
-		base::OnSelectedBridgeStopping(b);
-		_rf->InvalidateUICommand(cmdStartSTP, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_Enabled);
-		_rf->InvalidateUICommand(cmdStopSTP, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_Enabled);
-	}
-	*/
 	static const RCHInfo _info;
 	virtual const RCHInfo& GetInfo() const override final { return _info; }
 };
 
-const RCHInfo BridgeControlRCH::_info({ cmdStartSTP, cmdStopSTP }, &Create);
+const RCHInfo BridgeControlRCH::_info({ cmdEnableSTP, cmdDisableSTP }, &Create);

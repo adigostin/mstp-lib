@@ -5,29 +5,8 @@
 using namespace std;
 using namespace D2D1;
 
-void PhysicalPort::Render(ID2D1DeviceContext* dc) const
-{
-	ComPtr<ID2D1SolidColorBrush> brush;
-	dc->CreateSolidColorBrush(ColorF(ColorF::DeepPink), &brush);
-
-	D2D1_RECT_F rect;
-	switch (_side)
-	{
-		case Side::Bottom:
-			rect.left = _bridge->GetLeft() + _offset - PortLongSize / 2;
-			rect.top = _bridge->GetBottom() - PortShortSize;
-			rect.right = _bridge->GetLeft() + _offset + PortLongSize / 2;
-			rect.bottom = _bridge->GetBottom();
-			dc->DrawRoundedRectangle (RoundedRect(rect, 3, 3), brush, 2.0f);
-			break;
-
-		default:
-			throw NotImplementedException();
-	}
-}
-
-PhysicalBridge::PhysicalBridge (size_t portCount, const std::array<uint8_t, 6>& macAddress)
-	: _guiThreadId(this_thread::get_id())
+PhysicalBridge::PhysicalBridge (unsigned int portCount, const std::array<uint8_t, 6>& macAddress)
+	: _macAddress(macAddress), _guiThreadId(this_thread::get_id())
 {
 	float offset = 0;
 
@@ -43,42 +22,45 @@ PhysicalBridge::PhysicalBridge (size_t portCount, const std::array<uint8_t, 6>& 
 	_y = 0;
 	_width = max (offset, MinBridgeWidth);
 	_height = BridgeDefaultHeight;
-
-	_stpBridge = STP_CreateBridge ((unsigned int) portCount, 1, &StpCallbacks, STP_VERSION_RSTP, &macAddress[0], 128);
-	STP_SetApplicationContext (_stpBridge, this);
 }
 
 PhysicalBridge::~PhysicalBridge()
 {
 	assert (this_thread::get_id() == _guiThreadId);
-	STP_DestroyBridge (_stpBridge);
+	if (_stpBridge != nullptr)
+		STP_DestroyBridge (_stpBridge);
 }
 
-void PhysicalBridge::Render(ID2D1DeviceContext* dc, unsigned int treeIndex, IDWriteFactory* dWriteFactory)
+void PhysicalBridge::EnableStp (STP_VERSION stpVersion, unsigned int treeCount, uint32_t timestamp)
 {
-	assert (this_thread::get_id() == _guiThreadId);
+	if (this_thread::get_id() != _guiThreadId)
+		throw InvalidOperationException (L"This function may be called only on the main thread.");
 
-	ComPtr<ID2D1SolidColorBrush> brush;
-	dc->CreateSolidColorBrush (ColorF(ColorF::Red), &brush);
-	dc->DrawRectangle ({ _x, _y, _x + _width, _y + _height }, brush, BridgeOutlineWidth);
+	if (_stpBridge != nullptr)
+		throw InvalidOperationException (L"STP is already enabled on this bridge.");
 
-	for (auto& port : _ports)
-		port->Render(dc);
+	_stpBridge = STP_CreateBridge ((unsigned int) _ports.size(), treeCount, &StpCallbacks, STP_VERSION_RSTP, &_macAddress[0], 128);
+	STP_SetApplicationContext (_stpBridge, this);
+	STP_StartBridge (_stpBridge, timestamp);
+	BridgeStartedEvent::InvokeHandlers (_em, this);
 
-	lock_guard<mutex> lock(_stpBridgeMutex);
+	BridgeInvalidateEvent::InvokeHandlers(_em, this);
+}
 
-	unsigned char address[6];
-	STP_GetBridgeAddress (_stpBridge, address);
-	unsigned short prio = STP_GetBridgePriority(_stpBridge, treeIndex);
-	wchar_t str[64];
-	int strlen = swprintf_s (str, L"%04x.%02x%02x%02x%02x%02x%02x (STP %s)", prio, address[0], address[1], address[2], address[3], address[4], address[5],
-		STP_IsBridgeStarted(_stpBridge) ? L"running" : L"stopped - right-click to start");
+void PhysicalBridge::DisableStp (uint32_t timestamp)
+{
+	if (this_thread::get_id() != _guiThreadId)
+		throw InvalidOperationException (L"This function may be called only on the main thread.");
 
-	ComPtr<IDWriteTextFormat> textFormat;
-	auto hr = dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &textFormat); ThrowIfFailed(hr);
-	ComPtr<IDWriteTextLayout> textLayout;
-	hr = dWriteFactory->CreateTextLayout (str, strlen, textFormat, 10000, 10000, &textLayout); ThrowIfFailed(hr);
-	dc->DrawTextLayout ({ _x + BridgeOutlineWidth / 2 + 3, _y + BridgeOutlineWidth / 2 + 3}, textLayout, brush);
+	if (_stpBridge == nullptr)
+		throw InvalidOperationException (L"STP was not enabled on this bridge.");
+
+	BridgeStoppingEvent::InvokeHandlers(_em, this);
+	STP_StopBridge(_stpBridge, timestamp);
+	STP_DestroyBridge (_stpBridge);
+	_stpBridge = nullptr;
+
+	BridgeInvalidateEvent::InvokeHandlers(_em, this);
 }
 
 void PhysicalBridge::SetLocation(float x, float y)
@@ -92,35 +74,52 @@ void PhysicalBridge::SetLocation(float x, float y)
 	}
 }
 
-void PhysicalBridge::StartStpBridge (uint32_t timestamp)
+unsigned int PhysicalBridge::GetTreeCount() const
 {
-	assert (this_thread::get_id() == _guiThreadId);
-	lock_guard<mutex> lock (_stpBridgeMutex);
-	if (STP_IsBridgeStarted (_stpBridge))
-		throw InvalidOperationException (L"The bridge is already started.");
-	
-	STP_StartBridge (_stpBridge, timestamp);
-	BridgeStartedEvent::InvokeHandlers (_em, this);
+	if (_stpBridge == nullptr)
+		throw InvalidOperationException (L"STP was not enabled on this bridge.");
 
-	BridgeInvalidateEvent::InvokeHandlers(_em, this);
+	return STP_GetTreeCount(_stpBridge);
 }
 
-void PhysicalBridge::StopStpBridge (uint32_t timestamp)
+STP_PORT_ROLE PhysicalBridge::GetStpPortRole (unsigned int portIndex, unsigned int treeIndex) const
 {
-	assert (this_thread::get_id() == _guiThreadId);
-	lock_guard<mutex> lock (_stpBridgeMutex);
-	if (!STP_IsBridgeStarted(_stpBridge))
-		throw InvalidOperationException (L"The bridge is already stopped.");
+	if (_stpBridge == nullptr)
+		throw InvalidOperationException (L"STP was not enabled on this bridge.");
 
-	BridgeStoppingEvent::InvokeHandlers(_em, this);
-	STP_StopBridge(_stpBridge, timestamp);
-
-	BridgeInvalidateEvent::InvokeHandlers(_em, this);
+	return STP_GetPortRole (_stpBridge, portIndex, treeIndex);
 }
 
-bool PhysicalBridge::IsStpBridgeStarted()
+bool PhysicalBridge::GetStpPortLearning (unsigned int portIndex, unsigned int treeIndex) const
 {
-	return STP_IsBridgeStarted(_stpBridge);
+	if (_stpBridge == nullptr)
+		throw InvalidOperationException (L"STP was not enabled on this bridge.");
+
+	return STP_GetPortLearning (_stpBridge, portIndex, treeIndex);
+}
+
+bool PhysicalBridge::GetStpPortForwarding (unsigned int portIndex, unsigned int treeIndex) const
+{
+	if (_stpBridge == nullptr)
+		throw InvalidOperationException (L"STP was not enabled on this bridge.");
+
+	return STP_GetPortForwarding (_stpBridge, portIndex, treeIndex);
+}
+
+bool PhysicalBridge::GetStpPortOperEdge (unsigned int portIndex) const
+{
+	if (_stpBridge == nullptr)
+		throw InvalidOperationException (L"STP was not enabled on this bridge.");
+
+	return STP_GetPortOperEdge (_stpBridge, portIndex);
+}
+
+unsigned short PhysicalBridge::GetStpBridgePriority (unsigned int treeIndex) const
+{
+	if (_stpBridge == nullptr)
+		throw InvalidOperationException (L"STP was not enabled on this bridge.");
+
+	return STP_GetBridgePriority(_stpBridge, treeIndex);
 }
 
 #pragma region STP Callbacks

@@ -37,7 +37,7 @@ extern const SelectionFactory selectionFactory;
 
 struct IEditArea abstract : public IWin32Window, public IUnknown
 {
-	virtual void SelectTreeIndex (unsigned int treeIndex) = 0;
+	virtual void SelectVlan (unsigned int vlanNumber) = 0;
 };
 
 using EditAreaFactory = ComPtr<IEditArea>(*const)(IProject* project, IProjectWindow* pw, ISelection* selection, IUIFramework* rf, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory);

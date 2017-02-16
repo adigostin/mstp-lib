@@ -18,6 +18,10 @@
 #define new new(_CLIENT_BLOCK, __FILE__, __LINE__)
 #endif
 
+#include <Windows.h>
+#include <windowsx.h>
+#undef DrawText
+
 #include <algorithm>
 #include <array>
 #include <assert.h>
@@ -46,6 +50,4 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <wincodec.h>
-#include <Windows.h>
-#include <windowsx.h>
 #include "ComPtr.h"

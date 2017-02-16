@@ -97,7 +97,7 @@ public:
 		return m_ComPtr;
 	}
 
-	T* GetInterface() const
+	T* Get() const
 	{
 		return m_ComPtr;
 	}

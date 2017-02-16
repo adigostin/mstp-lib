@@ -43,7 +43,7 @@ protected:
 	virtual void OnBeforeRender() { }
 	virtual void Render(ID2D1DeviceContext* dc) const = 0;
 	virtual void OnAfterRender() { }
-
+	ID2D1DeviceContext* GetDeviceContext() const { return _d2dDeviceContext; }
 private:
 	static LRESULT CALLBACK WindowProcStatic (HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
