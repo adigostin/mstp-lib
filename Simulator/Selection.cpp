@@ -17,6 +17,24 @@ class Selection : public ISelection
 
 	virtual const vector<Object*>& GetObjects() const override final { return _objects; }
 
+	void AddInternal (Object* o)
+	{
+		_objects.push_back(o);
+		AddedToSelectionEvent::InvokeHandlers(_em, this, o);
+		SelectionChangedEvent::InvokeHandlers(_em, this);
+	}
+
+	void RemoveInternal (Object* o)
+	{
+		auto it = find (_objects.begin(), _objects.end(), o);
+		assert (it != _objects.end());
+		
+		RemovingFromSelectionEvent::InvokeHandlers (_em, this, o);
+		SelectionChangedEvent::InvokeHandlers(_em, this);
+
+		_objects.erase(it);
+	}
+
 	virtual void Clear() override final
 	{
 		if (!_objects.empty())
@@ -36,9 +54,7 @@ class Selection : public ISelection
 		if ((_objects.size() != 1) || (_objects[0] != o))
 		{
 			this->Clear();
-			_objects.push_back(o);
-			AddedToSelectionEvent::InvokeHandlers(_em, this, o);
-			SelectionChangedEvent::InvokeHandlers(_em, this);
+			AddInternal(o);
 		}
 	}
 

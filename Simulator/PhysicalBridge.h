@@ -36,6 +36,8 @@ public:
 };
 
 struct BridgeInvalidateEvent : public Event<BridgeInvalidateEvent, void(PhysicalBridge*)> { };
+struct BridgeStartedEvent : public Event<BridgeStartedEvent, void(PhysicalBridge*)> { };
+struct BridgeStoppingEvent : public Event<BridgeStoppingEvent, void(PhysicalBridge*)> { };
 
 class PhysicalBridge : public Object, public IUnknown
 {
@@ -47,6 +49,8 @@ class PhysicalBridge : public Object, public IUnknown
 	EventManager _em;
 	std::vector<std::unique_ptr<PhysicalPort>> _ports;
 	STP_BRIDGE* _stpBridge;
+	std::mutex _stpBridgeMutex;
+	std::thread::id _guiThreadId;
 	static const STP_CALLBACKS StpCallbacks;
 
 public:
@@ -58,11 +62,16 @@ public:
 	float GetTop() const { return _y; }
 	float GetBottom() const { return _y + _height; }
 
-	void Render (ID2D1DeviceContext* dc, unsigned int treeIndex, IDWriteFactory* dWriteFactory) const;
+	void Render (ID2D1DeviceContext* dc, unsigned int treeIndex, IDWriteFactory* dWriteFactory);
 	void SetLocation (float x, float y);
+	
 	BridgeInvalidateEvent::Subscriber GetInvalidateEvent() { return BridgeInvalidateEvent::Subscriber(_em); }
+	BridgeStartedEvent::Subscriber GetBridgeStartedEvent() { return BridgeStartedEvent::Subscriber(_em); }
+	BridgeStoppingEvent::Subscriber GetBridgeStoppingEvent() { return BridgeStoppingEvent::Subscriber(_em); }
 
-	STP_BRIDGE* GetStpBridge() const { return _stpBridge; }
+	void StartStpBridge (uint32_t timestamp);
+	void StopStpBridge (uint32_t timestamp);
+	bool IsStpBridgeStarted();
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final;
 	virtual ULONG STDMETHODCALLTYPE AddRef() override final;
@@ -71,5 +80,8 @@ public:
 private:
 	static void* StpCallback_AllocAndZeroMemory (unsigned int size);
 	static void  StpCallback_FreeMemory (void* p);
+	static void  StpCallback_EnableLearning (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable);
+	static void  StpCallback_EnableForwarding (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable);
+	static void  StpCallback_FlushFdb (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType);
 };
 

@@ -32,8 +32,12 @@ protected:
 	virtual ULONG __stdcall Release() override final;
 
 	virtual const RCHInfo& GetInfo() const = 0;
+	virtual void OnAddedToSelection (Object* o) { }
+	virtual void OnRemovingFromSelection (Object* o) { }
 	virtual void OnSelectionChanged() { }
 
 private:
-	static void OnSelectionChangedStatic (void* callbackArg, ISelection* selection);
+	static void OnSelectionChangedStatic (void* callbackArg, ISelection* selection) { static_cast<RCHBase*>(callbackArg)->OnSelectionChanged(); }
+	static void OnAddedToSelection (void* callbackArg, ISelection* selection, Object* o) { static_cast<RCHBase*>(callbackArg)->OnAddedToSelection(o); }
+	static void OnRemovingFromSelection (void* callbackArg, ISelection* selection, Object* o) { static_cast<RCHBase*>(callbackArg)->OnRemovingFromSelection(o); }
 };

@@ -188,6 +188,26 @@ void GetStackTraceString (CString* str, unsigned int framesToSkip)
 }
 */
 
+unsigned int GetTimestampMilliseconds()
+{
+	SYSTEMTIME currentUtcTime;
+	GetSystemTime(&currentUtcTime);
+
+	FILETIME currentUtcFileTime;
+	SystemTimeToFileTime(&currentUtcTime, &currentUtcFileTime);
+
+	FILETIME creationTime;
+	FILETIME exitTime;
+	FILETIME kernelTime;
+	FILETIME userTime;
+	GetProcessTimes (GetCurrentProcess(), &creationTime, &exitTime, &kernelTime, &userTime);
+
+	uint64_t start = ((uint64_t) creationTime.dwHighDateTime << 32) | creationTime.dwLowDateTime;
+	uint64_t now = ((uint64_t) currentUtcFileTime.dwHighDateTime << 32) | currentUtcFileTime.dwLowDateTime;
+	uint64_t milliseconds = (now - start) / 10000;
+	return (unsigned int)milliseconds;
+}
+
 int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
 	int tmp = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
@@ -232,14 +252,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 		hr = device->QueryInterface(IID_PPV_ARGS(&d3dDevice)); ThrowIfFailed(hr);
 		ComPtr<ID3D11DeviceContext1> d3dDeviceContext;
 		hr = deviceContext->QueryInterface(IID_PPV_ARGS(&d3dDeviceContext)); ThrowIfFailed(hr);
-		/*
-		hr = _d3dDevice->QueryInterface(IID_PPV_ARGS(&_dxgiDevice)); ThrowIfFailed(hr);
-
-		ComPtr<IDXGIAdapter> dxgiAdapter;
-		hr = _dxgiDevice->GetAdapter(&dxgiAdapter); ThrowIfFailed(hr);
-
-		hr = dxgiAdapter->GetParent(IID_PPV_ARGS(&_dxgiFactory)); ThrowIfFailed(hr);
-		*/
+	
 		ComPtr<IDWriteFactory> dWriteFactory;
 		hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof (IDWriteFactory), reinterpret_cast<IUnknown**>(&dWriteFactory)); ThrowIfFailed(hr);
 
@@ -247,11 +260,8 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 		hr = CoCreateInstance(CLSID_WICImagingFactory2, NULL, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory2), (void**)&wicFactory); ThrowIfFailed(hr);
 
 		{
-			//App app(hInstance, device, deviceContext);
-		
 			auto onClosing = [](void* callbackArg, IProjectWindow* pw, bool* cancel)
 			{
-				//App* app = static_cast<App*>(callbackArg);
 				pw->SaveWindowLocation(RegKeyPath.c_str());
 				::PostQuitMessage(0);
 			};

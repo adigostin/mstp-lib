@@ -37,18 +37,15 @@ RCHBase::RCHBase (IProjectWindow* pw, IUIFramework* rf, IProject* project, ISele
 	: _pw(pw), _rf(rf), _project(project), _selection(selection)
 {
 	_selection->GetSelectionChangedEvent().AddHandler(&OnSelectionChangedStatic, this);
+	_selection->GetAddedToSelectionEvent().AddHandler(OnAddedToSelection, this);
+	_selection->GetRemovingFromSelectionEvent().AddHandler(OnRemovingFromSelection, this);
 }
 
 RCHBase::~RCHBase()
 {
+	_selection->GetRemovingFromSelectionEvent().RemoveHandler(OnRemovingFromSelection, this);
+	_selection->GetAddedToSelectionEvent().RemoveHandler(OnAddedToSelection, this);
 	_selection->GetSelectionChangedEvent().RemoveHandler(&OnSelectionChangedStatic, this);
-}
-
-//static
-void RCHBase::OnSelectionChangedStatic(void* callbackArg, ISelection* selection)
-{
-	auto rch = static_cast<RCHBase*>(callbackArg);
-	rch->OnSelectionChanged();
 }
 
 HRESULT RCHBase::QueryInterface(REFIID riid, void **ppvObject)

@@ -30,6 +30,7 @@
 #include <experimental/generator>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <objbase.h>
 #include <optional>
 #include <Shlwapi.h>
@@ -37,6 +38,7 @@
 #include <sstream>
 #include <stdint.h>
 #include <stdlib.h>
+#include <thread>
 #include <typeindex>
 #include <UIRibbon.h>
 #include <UIRibbonPropertyHelpers.h>

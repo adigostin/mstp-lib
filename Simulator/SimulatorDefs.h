@@ -17,7 +17,7 @@ enum class MouseButton
 
 struct AddedToSelectionEvent : public Event<AddedToSelectionEvent, void(ISelection*, Object*)> { };
 struct RemovingFromSelectionEvent : public Event<RemovingFromSelectionEvent, void(ISelection*, Object*)> { };
-struct SelectionChangedEvent : public Event<SelectionChangedEvent, void(ISelection*)> {};
+struct SelectionChangedEvent : public Event<SelectionChangedEvent, void(ISelection*)> { };
 
 struct ISelection abstract : public IUnknown
 {
@@ -85,3 +85,4 @@ extern const ProjectFactory projectFactory;
 
 // ============================================================================
 
+unsigned int GetTimestampMilliseconds();

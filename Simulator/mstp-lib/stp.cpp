@@ -214,10 +214,9 @@ void STP_StartBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 
 void STP_StopBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 {
-	LOG (bridge, -1, -1, "{T}: Bridge stopped.\r\n", timestamp);
-
 	bridge->started = false;
 
+	LOG (bridge, -1, -1, "{T}: Bridge stopped.\r\n", timestamp);
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
 	FLUSH_LOG (bridge);
 }
