@@ -16,7 +16,6 @@
     <ClInclude Include="Ribbon\RibbonIds.h">
       <Filter>Ribbon</Filter>
     </ClInclude>
-    <ClInclude Include="ComPtr.h" />
     <ClInclude Include="Win32Defs.h" />
     <ClInclude Include="EventManager.h" />
     <ClInclude Include="Resource.h" />

@@ -8,7 +8,7 @@ struct HWndDeleter
 };
 typedef std::unique_ptr<std::remove_pointer<HWND>::type, HWndDeleter> HWND_unique_ptr;
 
-class D2DWindow abstract : public IWin32Window
+class D2DWindow abstract
 {
 	HWND _hwnd;
 	RECT _clientRect;
@@ -30,7 +30,7 @@ public:
 		ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory);
 	~D2DWindow();
 
-	virtual HWND GetHWnd() const override { return _hwnd; }
+	HWND GetHWnd() const { return _hwnd; }
 	const RECT& GetClientRect() const { return _clientRect; }
 	D2D1_RECT_F GetClientRectDips() const;
 	D2D1_POINT_2F GetDipLocationFromPixelLocation(POINT locationPixels) const;

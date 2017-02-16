@@ -35,7 +35,7 @@ public:
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR)&wndClassAtom, &hInstance);
 		if (!bRes)
-			throw Win32Exception(GetLastError());
+			throw win32_exception(GetLastError());
 
 		_project->GetProjectInvalidateEvent().AddHandler (&OnProjectInvalidate, this);
 
@@ -59,7 +59,7 @@ public:
 
 			wndClassAtom = RegisterClassEx(&wndClassEx);
 			if (wndClassAtom == 0)
-				throw Win32Exception(GetLastError());
+				throw win32_exception(GetLastError());
 		}
 
 		int x = 100; //  InitialBounds.left;
@@ -68,7 +68,7 @@ public:
 		int h = 600; //  InitialBounds.bottom - InitialBounds.top;
 		auto hwnd = ::CreateWindowEx(WS_EX_OVERLAPPEDWINDOW, ProjectWindowWndClassName, L"", WS_OVERLAPPEDWINDOW, x, y, w, h, nullptr, 0, hInstance, this);
 		if (hwnd == nullptr)
-			throw Win32Exception(GetLastError());
+			throw win32_exception(GetLastError());
 		assert(hwnd == _hwnd);
 
 		LONG ribbonHeight = 0;

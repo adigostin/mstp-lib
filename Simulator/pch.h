@@ -50,4 +50,4 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <wincodec.h>
-#include "ComPtr.h"
+#include "Win32Defs.h"

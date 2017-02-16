@@ -22,7 +22,7 @@ D2DWindow::D2DWindow (DWORD exStyle, DWORD style, const RECT& rect, HWND hWndPar
 	HINSTANCE hInstance;
 	BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) WndClassName, &hInstance);
 	if (!bRes)
-		throw Win32Exception (GetLastError());
+		throw win32_exception(GetLastError());
 
 	ComPtr<ID3D11Device> device;
 	deviceContext->GetDevice(&device);
@@ -51,12 +51,12 @@ D2DWindow::D2DWindow (DWORD exStyle, DWORD style, const RECT& rect, HWND hWndPar
 		wcex.hIconSm = 0;
 		WndClassAtom = RegisterClassEx (&wcex);
 		if (WndClassAtom == 0)
-			throw Win32Exception(GetLastError());
+			throw win32_exception(GetLastError());
 	}
 
 	auto hwnd = ::CreateWindowEx (exStyle, WndClassName, L"", style, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, hWndParent, (HMENU) controlId, hInstance, this);
 	if (hwnd == nullptr)
-		throw Win32Exception(GetLastError());
+		throw win32_exception(GetLastError());
 	assert (hwnd == _hwnd);
 
 	DXGI_SWAP_CHAIN_DESC1 desc;

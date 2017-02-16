@@ -35,8 +35,9 @@ extern const SelectionFactory selectionFactory;
 
 // ============================================================================
 
-struct IEditArea abstract : public IWin32Window, public IUnknown
+struct IEditArea abstract : public IUnknown
 {
+	virtual HWND GetHWnd() const = 0;
 	virtual void SelectVlan (unsigned int vlanNumber) = 0;
 };
 
@@ -48,8 +49,9 @@ extern const EditAreaFactory editAreaFactory;
 struct ProjectWindowClosingEvent : public Event<ProjectWindowClosingEvent, void(IProjectWindow* pw, bool* cancelClose)> { };
 struct SelectedTreeIndexChangedEvent : public Event<SelectedTreeIndexChangedEvent, void(IProjectWindow*, unsigned int)> { };
 
-struct IProjectWindow : public IUnknown, public IWin32Window
+struct IProjectWindow : public IUnknown
 {
+	virtual HWND GetHWnd() const = 0;
 	virtual ProjectWindowClosingEvent::Subscriber GetProjectWindowClosingEvent() = 0;
 	virtual void ShowAtSavedWindowLocation(const wchar_t* regKeyPath) = 0;
 	virtual void SaveWindowLocation(const wchar_t* regKeyPath) const = 0;

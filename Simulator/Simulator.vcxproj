@@ -113,7 +113,6 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="ComPtr.h" />
     <ClInclude Include="D2DWindow.h" />
     <ClInclude Include="EditStates\EditState.h" />
     <ClInclude Include="EventManager.h" />
