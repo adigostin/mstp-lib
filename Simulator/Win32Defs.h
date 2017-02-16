@@ -1,8 +1,5 @@
 #pragma once
 
-class NotImplementedException : public std::exception
-{ };
-
 class ComException : public std::exception
 {
 	HRESULT const _hr;
@@ -29,17 +26,3 @@ inline void ThrowIfFailed(HRESULT hr)
 	if (FAILED(hr))
 		throw ComException(hr);
 }
-
-class NullArgumentException : public std::exception
-{ };
-
-class InvalidOperationException : public std::exception
-{
-	std::wstring _message;
-
-public:
-	InvalidOperationException() = default;
-	InvalidOperationException (const wchar_t* message) : _message(message) { }
-	InvalidOperationException (const std::wstring& message) : _message(message) { }
-	InvalidOperationException (std::wstring&& message) : _message(move(message)) { }
-};

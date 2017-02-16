@@ -49,7 +49,7 @@ class Selection : public ISelection
 	virtual void Select(Object* o) override final
 	{
 		if (o == nullptr)
-			throw NullArgumentException();
+			throw invalid_argument("Parameter may not be nullptr.");
 
 		if ((_objects.size() != 1) || (_objects[0] != o))
 		{
@@ -65,10 +65,7 @@ class Selection : public ISelection
 	virtual SelectionChangedEvent::Subscriber GetSelectionChangedEvent() override final { return SelectionChangedEvent::Subscriber(_em); }
 
 	#pragma region IUnknown
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void ** ppvObject) override final
-	{
-		throw NotImplementedException();
-	}
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void ** ppvObject) override final { throw exception("Not implemented."); }
 
 	virtual ULONG STDMETHODCALLTYPE AddRef(void) override final
 	{

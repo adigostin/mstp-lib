@@ -49,14 +49,14 @@ public:
 		{
 			_nextMacAddress[4]++;
 			if (_nextMacAddress[4] == 0)
-				throw NotImplementedException();
+				throw exception("Not implemented.");
 		}
 
 		return result;
 	}
 
 	#pragma region IUnknown
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override final { throw NotImplementedException(); }
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override final { throw exception("Not implemented."); }
 	
 	virtual ULONG STDMETHODCALLTYPE AddRef() override final
 	{

@@ -189,7 +189,7 @@ public:
 			dc->DrawText (L"?", 1, _regularTextFormat, &rect, _brushDiscardingPort, D2D1_DRAW_TEXT_OPTIONS_NO_SNAP);
 		}
 		else
-			throw NotImplementedException ();
+			throw exception("Not implemented.");
 	}
 
 	struct LegendInfoEntry
@@ -381,7 +381,7 @@ public:
 				portTransform._32 = bridgeRect.bottom;
 			}
 			else
-				throw NotImplementedException ();
+				throw exception("Not implemented.");
 
 			portTransform.SetProduct (portTransform, oldTransform);
 			dc->SetTransform (&portTransform);
@@ -554,7 +554,7 @@ public:
 		else if (dynamic_cast<PhysicalPort*>(_selection->GetObjects()[0]) != nullptr)
 			viewId = cmdContextMenuPort;
 		else
-			throw NotImplementedException();
+			throw exception("Not implemented.");
 
 		ComPtr<IUIContextualUI> ui;
 		auto hr = _rf->GetView(viewId, IID_PPV_ARGS(&ui)); ThrowIfFailed(hr);
@@ -572,7 +572,7 @@ public:
 	};
 
 	#pragma region IUnknown
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final { throw NotImplementedException(); }
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final { throw exception("Not implemented."); }
 
 	virtual ULONG STDMETHODCALLTYPE AddRef() override final
 	{

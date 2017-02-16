@@ -34,10 +34,10 @@ PhysicalBridge::~PhysicalBridge()
 void PhysicalBridge::EnableStp (STP_VERSION stpVersion, unsigned int treeCount, uint32_t timestamp)
 {
 	if (this_thread::get_id() != _guiThreadId)
-		throw InvalidOperationException (L"This function may be called only on the main thread.");
+		throw runtime_error ("This function may be called only on the main thread.");
 
 	if (_stpBridge != nullptr)
-		throw InvalidOperationException (L"STP is already enabled on this bridge.");
+		throw runtime_error ("STP is already enabled on this bridge.");
 
 	_stpBridge = STP_CreateBridge ((unsigned int) _ports.size(), treeCount, &StpCallbacks, STP_VERSION_RSTP, &_macAddress[0], 128);
 	STP_SetApplicationContext (_stpBridge, this);
@@ -50,10 +50,10 @@ void PhysicalBridge::EnableStp (STP_VERSION stpVersion, unsigned int treeCount, 
 void PhysicalBridge::DisableStp (uint32_t timestamp)
 {
 	if (this_thread::get_id() != _guiThreadId)
-		throw InvalidOperationException (L"This function may be called only on the main thread.");
+		throw runtime_error ("This function may be called only on the main thread.");
 
 	if (_stpBridge == nullptr)
-		throw InvalidOperationException (L"STP was not enabled on this bridge.");
+		throw runtime_error ("STP was not enabled on this bridge.");
 
 	BridgeStoppingEvent::InvokeHandlers(_em, this);
 	STP_StopBridge(_stpBridge, timestamp);
@@ -77,7 +77,7 @@ void PhysicalBridge::SetLocation(float x, float y)
 unsigned int PhysicalBridge::GetTreeCount() const
 {
 	if (_stpBridge == nullptr)
-		throw InvalidOperationException (L"STP was not enabled on this bridge.");
+		throw runtime_error ("STP was not enabled on this bridge.");
 
 	return STP_GetTreeCount(_stpBridge);
 }
@@ -85,7 +85,7 @@ unsigned int PhysicalBridge::GetTreeCount() const
 STP_PORT_ROLE PhysicalBridge::GetStpPortRole (unsigned int portIndex, unsigned int treeIndex) const
 {
 	if (_stpBridge == nullptr)
-		throw InvalidOperationException (L"STP was not enabled on this bridge.");
+		throw runtime_error ("STP was not enabled on this bridge.");
 
 	return STP_GetPortRole (_stpBridge, portIndex, treeIndex);
 }
@@ -93,7 +93,7 @@ STP_PORT_ROLE PhysicalBridge::GetStpPortRole (unsigned int portIndex, unsigned i
 bool PhysicalBridge::GetStpPortLearning (unsigned int portIndex, unsigned int treeIndex) const
 {
 	if (_stpBridge == nullptr)
-		throw InvalidOperationException (L"STP was not enabled on this bridge.");
+		throw runtime_error ("STP was not enabled on this bridge.");
 
 	return STP_GetPortLearning (_stpBridge, portIndex, treeIndex);
 }
@@ -101,7 +101,7 @@ bool PhysicalBridge::GetStpPortLearning (unsigned int portIndex, unsigned int tr
 bool PhysicalBridge::GetStpPortForwarding (unsigned int portIndex, unsigned int treeIndex) const
 {
 	if (_stpBridge == nullptr)
-		throw InvalidOperationException (L"STP was not enabled on this bridge.");
+		throw runtime_error ("STP was not enabled on this bridge.");
 
 	return STP_GetPortForwarding (_stpBridge, portIndex, treeIndex);
 }
@@ -109,7 +109,7 @@ bool PhysicalBridge::GetStpPortForwarding (unsigned int portIndex, unsigned int 
 bool PhysicalBridge::GetStpPortOperEdge (unsigned int portIndex) const
 {
 	if (_stpBridge == nullptr)
-		throw InvalidOperationException (L"STP was not enabled on this bridge.");
+		throw runtime_error ("STP was not enabled on this bridge.");
 
 	return STP_GetPortOperEdge (_stpBridge, portIndex);
 }
@@ -117,7 +117,7 @@ bool PhysicalBridge::GetStpPortOperEdge (unsigned int portIndex) const
 unsigned short PhysicalBridge::GetStpBridgePriority (unsigned int treeIndex) const
 {
 	if (_stpBridge == nullptr)
-		throw InvalidOperationException (L"STP was not enabled on this bridge.");
+		throw runtime_error ("STP was not enabled on this bridge.");
 
 	return STP_GetBridgePriority(_stpBridge, treeIndex);
 }
@@ -171,7 +171,7 @@ void PhysicalBridge::StpCallback_FlushFdb (STP_BRIDGE* bridge, unsigned int port
 #pragma region PhysicalBridge::IUnknown
 HRESULT STDMETHODCALLTYPE PhysicalBridge::QueryInterface(REFIID riid, void** ppvObject)
 {
-	throw NotImplementedException();
+	throw exception ("Not implemented.");
 }
 
 ULONG STDMETHODCALLTYPE PhysicalBridge::AddRef()
