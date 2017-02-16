@@ -50,6 +50,7 @@
     <ClInclude Include="SimulatorDefs.h" />
     <ClInclude Include="RibbonCommandHandlers\RCHBase.h" />
     <ClInclude Include="EditStates\EditState.h" />
+    <ClInclude Include="Wire.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -119,6 +120,8 @@
     <ClCompile Include="RibbonCommandHandlers\RCHBase.cpp" />
     <ClCompile Include="RibbonCommandHandlers\BridgePropertiesRCH.cpp" />
     <ClCompile Include="RibbonCommandHandlers\BridgeControlRCH.cpp" />
+    <ClCompile Include="Wire.cpp" />
+    <ClCompile Include="EditStates\MoveBridgesES.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc">

@@ -37,8 +37,6 @@ public:
 		if (!bRes)
 			throw win32_exception(GetLastError());
 
-		_project->GetProjectInvalidateEvent().AddHandler (&OnProjectInvalidate, this);
-
 		if (wndClassAtom == 0)
 		{
 			WNDCLASSEX wndClassEx =
@@ -66,7 +64,7 @@ public:
 		int y = 100; //  InitialBounds.top;
 		int w = 800; //  InitialBounds.right - InitialBounds.left;
 		int h = 600; //  InitialBounds.bottom - InitialBounds.top;
-		auto hwnd = ::CreateWindowEx(WS_EX_OVERLAPPEDWINDOW, ProjectWindowWndClassName, L"", WS_OVERLAPPEDWINDOW, x, y, w, h, nullptr, 0, hInstance, this);
+		auto hwnd = ::CreateWindowEx(WS_EX_OVERLAPPEDWINDOW, ProjectWindowWndClassName, L"", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, x, y, w, h, nullptr, 0, hInstance, this);
 		if (hwnd == nullptr)
 			throw win32_exception(GetLastError());
 		assert(hwnd == _hwnd);
@@ -97,15 +95,8 @@ public:
 
 	~ProjectWindow()
 	{
-		_project->GetProjectInvalidateEvent().RemoveHandler(&OnProjectInvalidate, this);
 		_editArea = nullptr;
 		::DestroyWindow(_hwnd);
-	}
-
-	static void OnProjectInvalidate (void* callbackArg, IProject*)
-	{
-		auto pw = static_cast<ProjectWindow*>(callbackArg);
-		::InvalidateRect (pw->GetHWnd(), nullptr, FALSE);
 	}
 
 	virtual HWND GetHWnd() const override { return _hwnd; }

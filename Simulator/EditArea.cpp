@@ -3,6 +3,7 @@
 #include "SimulatorDefs.h"
 #include "ZoomableWindow.h"
 #include "Ribbon/RibbonIds.h"
+#include "EditStates/EditState.h"
 
 using namespace std;
 using namespace D2D1;
@@ -30,7 +31,19 @@ class EditArea : public ZoomableWindow, public IEditArea
 	ComPtr<ID2D1SolidColorBrush> _brushTempWire;
 	ComPtr<ID2D1StrokeStyle> _strokeStyleNoForwardingWire;
 	ComPtr<IDWriteTextFormat> _regularTextFormat;
-	unsigned int _selectedVlanNumber = 0;
+	unsigned int _selectedVlanNumber = 1;
+	unique_ptr<EditState> _state;
+
+	struct BeginningDrag
+	{
+		POINT pt;
+		D2D1_POINT_2F dLocation;
+		D2D1_POINT_2F wLocation;
+		MouseButton button;
+		Object* clickedObj;
+	};
+
+	optional<BeginningDrag> _beginningDrag;
 
 public:
 	EditArea(IProject* project, IProjectWindow* pw, ISelection* selection, IUIFramework* rf, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory)
@@ -38,6 +51,7 @@ public:
 		, _project(project), _pw(pw), _rf(rf), _selection(selection), _dWriteFactory(dWriteFactory)
 	{
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
+		_project->GetProjectInvalidateEvent().AddHandler (&OnProjectInvalidate, this);
 		auto dc = base::GetDeviceContext();
 		auto hr = dc->CreateSolidColorBrush (ColorF (ColorF::Green), &_poweredBrush); ThrowIfFailed(hr);
 		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray), &_unpoweredBrush); ThrowIfFailed(hr);
@@ -56,7 +70,14 @@ public:
 	virtual ~EditArea()
 	{
 		assert (_refCount == 0);
+		_project->GetProjectInvalidateEvent().RemoveHandler(&OnProjectInvalidate, this);
 		_selection->GetSelectionChangedEvent().RemoveHandler (&OnSelectionChanged, this);
+	}
+
+	static void OnProjectInvalidate (void* callbackArg, IProject*)
+	{
+		auto area = static_cast<EditArea*>(callbackArg);
+		::InvalidateRect (area->GetHWnd(), nullptr, FALSE);
 	}
 
 	static ColorF GetD2DSystemColor (int sysColorIndex)
@@ -304,41 +325,46 @@ public:
 		dc->SetAntialiasMode(oldaa);
 	}
 
-	void RenderBridge (ID2D1DeviceContext* dc, PhysicalBridge* bridge) const
+	void RenderBridge (ID2D1DeviceContext* dc, PhysicalBridge* b) const
 	{
-		/*
-		STP_BRIDGE* stpBridge = bridge->LockStpBridge ();
-		unsigned int treeIndex = STP_GetTreeIndexFromVlanNumber (stpBridge, _selectedVlanNumber);
-		bridge->UnlockStpBridge ();
-		*/ unsigned int treeIndex = 0;
-		
+		optional<unsigned int> treeIndex;
+		if (b->IsStpEnabled())
+			treeIndex = b->GetStpTreeIndexFromVlanNumber(_selectedVlanNumber);
+
 		// Draw bridge outline.
-		D2D1_RECT_F bridgeRect = bridge->GetBounds();
+		D2D1_RECT_F bridgeRect = b->GetBounds();
 		D2D1_ROUNDED_RECT rr = RoundedRect (bridgeRect, BridgeRoundRadius, BridgeRoundRadius);
-		auto outlineBrush = bridge->IsPowered() ? _poweredBrush.Get() : _unpoweredBrush.Get();
+		auto outlineBrush = b->IsPowered() ? _poweredBrush.Get() : _unpoweredBrush.Get();
 		outlineBrush->SetOpacity(0.25f);
 		dc->FillRoundedRectangle (&rr, outlineBrush);
 		outlineBrush->SetOpacity(1);
 		dc->DrawRoundedRectangle (&rr, outlineBrush, 2.0f);
 
 		// Draw bridge name.
-		auto address = bridge->GetMacAddress();
+		auto address = b->GetMacAddress();
 		wchar_t str[128];
-		//unsigned short prio = bridge->GetStpBridgePriority(treeIndex);
-		//int strlen = swprintf_s (str, L"%04x.%02x%02x%02x%02x%02x%02x\r\nSTP %s", prio, address[0], address[1], address[2], address[3], address[4], address[5],
-		//	bridge->IsStpEnabled() ? L"enabled" : L"disabled (right-click to enable)");
-		int strlen = swprintf_s (str, L"%02x%02x%02x%02x%02x%02x\r\nSTP %s", address[0], address[1], address[2], address[3], address[4], address[5],
-			bridge->IsStpEnabled() ? L"enabled" : L"disabled (right-click to enable)");
+		int strlen;
+		if (b->IsStpEnabled())
+		{
+			unsigned short prio = b->GetStpBridgePriority(treeIndex.value());
+			strlen = swprintf_s (str, L"%04x.%02x%02x%02x%02x%02x%02x\r\nSTP enabled", prio,
+				address[0], address[1], address[2], address[3], address[4], address[5]);
+		}
+		else
+		{
+			strlen = swprintf_s (str, L"%02x%02x%02x%02x%02x%02x\r\nSTP disabled (right-click to enable)",
+				address[0], address[1], address[2], address[3], address[4], address[5]);
+		}
 		ComPtr<IDWriteTextLayout> tl;
 		HRESULT hr = _dWriteFactory->CreateTextLayout (str, strlen, _regularTextFormat, 10000, 10000, &tl); ThrowIfFailed(hr);
-		dc->DrawTextLayout ({ bridge->GetLeft() + BridgeOutlineWidth / 2 + 3, bridge->GetTop() + BridgeOutlineWidth / 2 + 3}, tl, _brushWindowText);
+		dc->DrawTextLayout ({ b->GetLeft() + BridgeOutlineWidth / 2 + 3, b->GetTop() + BridgeOutlineWidth / 2 + 3}, tl, _brushWindowText);
 
 		Matrix3x2F oldTransform;
 		dc->GetTransform (&oldTransform);
 
-		for (unsigned int portIndex = 0; portIndex < bridge->GetPortCount(); portIndex++)
+		for (unsigned int portIndex = 0; portIndex < b->GetPortCount(); portIndex++)
 		{
-			PhysicalPort* port = bridge->GetPort(portIndex);
+			PhysicalPort* port = b->GetPort(portIndex);
 
 			Matrix3x2F portTransform;
 			if (port->GetSide() == Side::Left)
@@ -397,12 +423,12 @@ public:
 			dc->DrawRectangle (&portRect, outlineBrush);
 
 			// Draw the exterior of the port.
-			if (bridge->IsStpEnabled())
+			if (b->IsStpEnabled())
 			{
-				STP_PORT_ROLE role = bridge->GetStpPortRole (portIndex, treeIndex);
-				bool learning      = bridge->GetStpPortLearning (portIndex, treeIndex);
-				bool forwarding    = bridge->GetStpPortForwarding (portIndex, treeIndex);
-				bool operEdge      = bridge->GetStpPortOperEdge (portIndex);
+				STP_PORT_ROLE role = b->GetStpPortRole (portIndex, treeIndex.value());
+				bool learning      = b->GetStpPortLearning (portIndex, treeIndex.value());
+				bool forwarding    = b->GetStpPortForwarding (portIndex, treeIndex.value());
+				bool operEdge      = b->GetStpPortOperEdge (portIndex);
 				RenderExteriorStpPort (dc, role, learning, forwarding, operEdge);
 			}
 			else
@@ -506,7 +532,20 @@ public:
 		if ((uMsg == WM_LBUTTONDOWN) || (uMsg == WM_RBUTTONDOWN))
 		{
 			auto button = (uMsg == WM_LBUTTONDOWN) ? MouseButton::Left : MouseButton::Right;
-			return ProcessMouseButtonDown (button, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
+			auto result = ProcessMouseButtonDown (button, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
+			return result ? result.value() : base::WindowProc (hwnd, uMsg, wParam, lParam);
+		}
+		else if (uMsg == WM_MOUSEMOVE)
+		{
+			ProcessWmMouseMove (POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
+			base::WindowProc (hwnd, uMsg, wParam, lParam);
+			return 0;
+		}
+		else if ((uMsg == WM_LBUTTONUP) || (uMsg == WM_RBUTTONUP))
+		{
+			auto button = (uMsg == WM_LBUTTONUP) ? MouseButton::Left : MouseButton::Right;
+			auto result = ProcessMouseButtonUp (button, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
+			return result ? result.value() : base::WindowProc (hwnd, uMsg, wParam, lParam);
 		}
 
 		if (uMsg == WM_CONTEXTMENU)
@@ -532,12 +571,109 @@ public:
 	{
 		auto dLocation = GetDipLocationFromPixelLocation(pt);
 		auto wLocation = GetWLocationFromDLocation(dLocation);
+
 		auto clickedObject = GetObjectAt(wLocation.x, wLocation.y);
+
+		if (_state != nullptr)
+		{
+			_state->OnMouseDown (dLocation, wLocation, button, clickedObject);
+			if (_state->Completed())
+			{
+				_state = nullptr;
+				::SetCursor (LoadCursor (nullptr, IDC_ARROW));
+			};
+			
+			return 0;
+		}
+
 		if (clickedObject == nullptr)
 			_selection->Clear();
 		else
 			_selection->Select(clickedObject);
+
+		if (!_beginningDrag)
+		{
+			_beginningDrag = BeginningDrag { pt, dLocation, wLocation, button, clickedObject };
+			return 0;
+		}
+
+		return nullopt;
+	}
+
+	std::optional<LRESULT> ProcessMouseButtonUp (MouseButton button, POINT pt)
+	{
+		auto dLocation = GetDipLocationFromPixelLocation(pt);
+		auto wLocation = GetWLocationFromDLocation(dLocation);
+
+		if (_state != nullptr)
+		{
+			_state->OnMouseUp (dLocation, wLocation, button);
+			if (_state->Completed())
+			{
+				_state = nullptr;
+				::SetCursor (LoadCursor (nullptr, IDC_ARROW));
+			};
+
+			return 0;
+		}
+
+		if (_beginningDrag && (button == _beginningDrag->button))
+			_beginningDrag = nullopt;
+
+		if (button == MouseButton::Right)
+			return nullopt; // return "not handled", to cause our called to pass the message to DefWindowProc, which will generate WM_CONTEXTMENU
+
 		return 0;
+	}
+
+	void ProcessWmMouseMove (POINT pt)
+	{
+		auto dLocation = GetDipLocationFromPixelLocation(pt);
+		auto wLocation = GetWLocationFromDLocation(dLocation);
+
+		if (_beginningDrag)
+		{
+			RECT rc = { _beginningDrag->pt.x, _beginningDrag->pt.y, _beginningDrag->pt.x, _beginningDrag->pt.y };
+			InflateRect (&rc, GetSystemMetrics(SM_CXDRAG), GetSystemMetrics(SM_CYDRAG));
+			if (!PtInRect (&rc, pt))
+			{
+				if (_beginningDrag->clickedObj == nullptr)
+				{
+					// TODO: area selection
+				}
+				else if (auto b = dynamic_cast<PhysicalBridge*>(_beginningDrag->clickedObj))
+				{
+					if (_beginningDrag->button == MouseButton::Left)
+						_state = CreateStateMoveBridges (this, _selection);
+				}
+				else if (auto b = dynamic_cast<PhysicalPort*>(_beginningDrag->clickedObj))
+				{
+					// TODO: move port
+					//if (_beginningDrag->button == MouseButton::Left)
+					//	_state = CreateStateMovePorts (this, _selection);
+				}
+				else
+					throw exception("Not implemented.");
+
+				if (_state != nullptr)
+				{
+					_state->OnMouseDown (_beginningDrag->dLocation, _beginningDrag->wLocation, _beginningDrag->button, _beginningDrag->clickedObj);
+					assert (!_state->Completed());
+					_state->OnMouseMove (dLocation, wLocation);
+				}
+
+				_beginningDrag = nullopt;
+			}
+		}
+		else if (_state != nullptr)
+		{
+			_state->OnMouseMove (dLocation, wLocation);
+			if (_state->Completed())
+			{
+				_state = nullptr;
+				::SetCursor (LoadCursor (nullptr, IDC_ARROW));
+			}
+		}
 	}
 
 	std::optional<LRESULT> ProcessWmContextMenu (HWND hwnd, POINT pt)

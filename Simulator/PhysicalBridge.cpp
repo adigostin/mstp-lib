@@ -122,6 +122,17 @@ unsigned short PhysicalBridge::GetStpBridgePriority (unsigned int treeIndex) con
 	return STP_GetBridgePriority(_stpBridge, treeIndex);
 }
 
+unsigned int PhysicalBridge::GetStpTreeIndexFromVlanNumber (unsigned int vlanNumber) const
+{
+	if (_stpBridge == nullptr)
+		throw runtime_error ("STP was not enabled on this bridge.");
+
+	if ((vlanNumber == 0) || (vlanNumber > 4094))
+		throw invalid_argument ("The VLAN number must be >=1 and <=4094.");
+
+	return STP_GetTreeIndexFromVlanNumber(_stpBridge, vlanNumber);
+}
+
 #pragma region STP Callbacks
 const STP_CALLBACKS PhysicalBridge::StpCallbacks =
 {

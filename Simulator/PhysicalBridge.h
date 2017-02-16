@@ -92,6 +92,7 @@ public:
 	bool GetStpPortForwarding (unsigned int portIndex, unsigned int treeIndex) const;
 	bool GetStpPortOperEdge (unsigned int portIndex) const;
 	unsigned short GetStpBridgePriority (unsigned int treeIndex) const;
+	unsigned int GetStpTreeIndexFromVlanNumber (unsigned int vlanNumber) const;
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final;
 	virtual ULONG STDMETHODCALLTYPE AddRef() override final;
