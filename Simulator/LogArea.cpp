@@ -484,15 +484,15 @@ public:
 
 	RECT GetSplitterRect()
 	{
-		LONG titleBarHeightPixels = (LONG) (TitleBarHeightDips * _dpiY / 96.0);
 		LONG splitterWidthPixels = (LONG) (SplitterWidthDips * _dpiX / 96.0);
-		return RECT { 0, titleBarHeightPixels, splitterWidthPixels, _clientSize.cy };
+		return RECT { 0, 0, splitterWidthPixels, _clientSize.cy };
 	}
 
 	RECT GetTitleBarRect()
 	{
+		LONG splitterWidthPixels = (LONG) (SplitterWidthDips * _dpiX / 96.0);
 		LONG titleBarHeightPixels = (LONG) (TitleBarHeightDips * _dpiY / 96.0);
-		return RECT { 0, 0, _clientSize.cx, titleBarHeightPixels };
+		return RECT { splitterWidthPixels, 0, _clientSize.cx, titleBarHeightPixels };
 	}
 
 	RECT GetCloseButtonRect()
