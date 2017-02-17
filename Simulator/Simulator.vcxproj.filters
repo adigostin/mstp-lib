@@ -13,9 +13,6 @@
     <Filter Include="EditStates">
       <UniqueIdentifier>{44c75b95-8381-4205-bb9c-ff949707452e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="RibbonCommandHandlers">
-      <UniqueIdentifier>{af695e29-d663-4b03-a67d-a0fc49907bc4}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -58,8 +55,8 @@
     <ClInclude Include="EditStates\EditState.h">
       <Filter>EditStates</Filter>
     </ClInclude>
-    <ClInclude Include="RibbonCommandHandlers\RCHBase.h">
-      <Filter>RibbonCommandHandlers</Filter>
+    <ClInclude Include="Ribbon\RCHBase.h">
+      <Filter>Ribbon</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -133,19 +130,19 @@
     <ClCompile Include="EditStates\MoveBridgesES.cpp">
       <Filter>EditStates</Filter>
     </ClCompile>
-    <ClCompile Include="RibbonCommandHandlers\BridgeControlRCH.cpp">
-      <Filter>RibbonCommandHandlers</Filter>
-    </ClCompile>
-    <ClCompile Include="RibbonCommandHandlers\BridgePropertiesRCH.cpp">
-      <Filter>RibbonCommandHandlers</Filter>
-    </ClCompile>
-    <ClCompile Include="RibbonCommandHandlers\CreateRCH.cpp">
-      <Filter>RibbonCommandHandlers</Filter>
-    </ClCompile>
-    <ClCompile Include="RibbonCommandHandlers\RCHBase.cpp">
-      <Filter>RibbonCommandHandlers</Filter>
-    </ClCompile>
     <ClCompile Include="LogArea.cpp" />
+    <ClCompile Include="Ribbon\BridgeControlRCH.cpp">
+      <Filter>Ribbon</Filter>
+    </ClCompile>
+    <ClCompile Include="Ribbon\BridgePropertiesRCH.cpp">
+      <Filter>Ribbon</Filter>
+    </ClCompile>
+    <ClCompile Include="Ribbon\CreateRCH.cpp">
+      <Filter>Ribbon</Filter>
+    </ClCompile>
+    <ClCompile Include="Ribbon\RCHBase.cpp">
+      <Filter>Ribbon</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc">
