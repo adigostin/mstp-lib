@@ -8,7 +8,7 @@ class CreateBridgeES : public EditState
 {
 	typedef EditState base;
 	bool _completed = false;
-	ComPtr<PhysicalBridge> _bridge;
+	ComPtr<Bridge> _bridge;
 
 public:
 	using base::base;
@@ -16,7 +16,7 @@ public:
 	virtual void OnMouseMove (D2D1_POINT_2F dLocation, D2D1_POINT_2F wLocation) override final
 	{
 		if (_bridge == nullptr)
-			_bridge = ComPtr<PhysicalBridge>(new PhysicalBridge (4, _project->AllocNextMacAddress()), false);
+			_bridge = ComPtr<Bridge>(new Bridge (4, _project->AllocNextMacAddress()), false);
 
 		_bridge->SetLocation (wLocation.x - _bridge->GetWidth() / 2, wLocation.y - _bridge->GetHeight() / 2);
 		::InvalidateRect (_area->GetHWnd(), nullptr, FALSE);

@@ -7,16 +7,16 @@ using namespace std;
 class Project : public IProject
 {
 	ULONG _refCount = 1;
-	vector<ComPtr<PhysicalBridge>> _bridges;
+	vector<ComPtr<Bridge>> _bridges;
 	EventManager _em;
 	std::array<uint8_t, 6> _nextMacAddress = { 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x01 };
 
 public:
-	virtual const vector<ComPtr<PhysicalBridge>>& GetBridges() const override final { return _bridges; }
+	virtual const vector<ComPtr<Bridge>>& GetBridges() const override final { return _bridges; }
 
-	virtual void InsertBridge(size_t index, PhysicalBridge* bridge) override final
+	virtual void InsertBridge(size_t index, Bridge* bridge) override final
 	{
-		_bridges.push_back(ComPtr<PhysicalBridge>(bridge));
+		_bridges.push_back(ComPtr<Bridge>(bridge));
 		bridge->GetInvalidateEvent().AddHandler (&OnBridgeInvalidate, this);
 		BridgeInsertedEvent::InvokeHandlers (_em, this, index, bridge);
 		ProjectInvalidateEvent::InvokeHandlers (_em, this);
@@ -24,14 +24,14 @@ public:
 
 	virtual void RemoveBridge(size_t index) override final
 	{
-		PhysicalBridge* bridge = _bridges[index];
+		Bridge* bridge = _bridges[index];
 		BridgeRemovingEvent::InvokeHandlers(_em, this, index, bridge);
 		bridge->GetInvalidateEvent().RemoveHandler(&OnBridgeInvalidate, this);
 		_bridges.erase (_bridges.begin() + index);
 		ProjectInvalidateEvent::InvokeHandlers(_em, this);
 	}
 
-	static void OnBridgeInvalidate (void* callbackArg, PhysicalBridge* bridge)
+	static void OnBridgeInvalidate (void* callbackArg, Bridge* bridge)
 	{
 		auto project = static_cast<Project*>(callbackArg);
 		ProjectInvalidateEvent::InvokeHandlers (project->_em, project);

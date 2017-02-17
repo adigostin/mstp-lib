@@ -19,7 +19,7 @@ public:
 		_mouseDownWLocation = wLocation;
 		for (auto o : _selection->GetObjects())
 		{
-			auto b = dynamic_cast<PhysicalBridge*>(o); assert (b != nullptr);
+			auto b = dynamic_cast<Bridge*>(o); assert (b != nullptr);
 			_offsets.push_back ({ wLocation.x - b->GetLeft(), wLocation.y - b->GetTop() });
 		}
 	}
@@ -28,7 +28,7 @@ public:
 	{
 		for (size_t i = 0; i < _selection->GetObjects().size(); i++)
 		{
-			auto b = dynamic_cast<PhysicalBridge*>(_selection->GetObjects()[i]); assert (b != nullptr);
+			auto b = dynamic_cast<Bridge*>(_selection->GetObjects()[i]); assert (b != nullptr);
 			b->SetLocation (wLocation.x - _offsets[i].width, wLocation.y - _offsets[i].height);
 		}
 	}

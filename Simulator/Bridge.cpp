@@ -5,7 +5,7 @@
 using namespace std;
 using namespace D2D1;
 
-PhysicalBridge::PhysicalBridge (unsigned int portCount, const std::array<uint8_t, 6>& macAddress)
+Bridge::Bridge (unsigned int portCount, const std::array<uint8_t, 6>& macAddress)
 	: _macAddress(macAddress), _guiThreadId(this_thread::get_id())
 {
 	float offset = 0;
@@ -13,7 +13,7 @@ PhysicalBridge::PhysicalBridge (unsigned int portCount, const std::array<uint8_t
 	for (size_t i = 0; i < portCount; i++)
 	{
 		offset += (PortSpacing / 2 + PortLongSize / 2);
-		auto port = make_unique<PhysicalPort>(this, i, Side::Bottom, offset);
+		auto port = make_unique<Port>(this, i, Side::Bottom, offset);
 		_ports.push_back (move(port));
 		offset += (PortLongSize / 2 + PortSpacing / 2);
 	}
@@ -24,14 +24,14 @@ PhysicalBridge::PhysicalBridge (unsigned int portCount, const std::array<uint8_t
 	_height = BridgeDefaultHeight;
 }
 
-PhysicalBridge::~PhysicalBridge()
+Bridge::~Bridge()
 {
 	assert (this_thread::get_id() == _guiThreadId);
 	if (_stpBridge != nullptr)
 		STP_DestroyBridge (_stpBridge);
 }
 
-void PhysicalBridge::EnableStp (STP_VERSION stpVersion, unsigned int treeCount, uint32_t timestamp)
+void Bridge::EnableStp (STP_VERSION stpVersion, unsigned int treeCount, uint32_t timestamp)
 {
 	if (this_thread::get_id() != _guiThreadId)
 		throw runtime_error ("This function may be called only on the main thread.");
@@ -47,7 +47,7 @@ void PhysicalBridge::EnableStp (STP_VERSION stpVersion, unsigned int treeCount, 
 	BridgeInvalidateEvent::InvokeHandlers(_em, this);
 }
 
-void PhysicalBridge::DisableStp (uint32_t timestamp)
+void Bridge::DisableStp (uint32_t timestamp)
 {
 	if (this_thread::get_id() != _guiThreadId)
 		throw runtime_error ("This function may be called only on the main thread.");
@@ -63,7 +63,7 @@ void PhysicalBridge::DisableStp (uint32_t timestamp)
 	BridgeInvalidateEvent::InvokeHandlers(_em, this);
 }
 
-void PhysicalBridge::SetLocation(float x, float y)
+void Bridge::SetLocation(float x, float y)
 {
 	if ((_x != x) || (_y != y))
 	{
@@ -74,7 +74,7 @@ void PhysicalBridge::SetLocation(float x, float y)
 	}
 }
 
-unsigned int PhysicalBridge::GetTreeCount() const
+unsigned int Bridge::GetTreeCount() const
 {
 	if (_stpBridge == nullptr)
 		throw runtime_error ("STP was not enabled on this bridge.");
@@ -82,7 +82,7 @@ unsigned int PhysicalBridge::GetTreeCount() const
 	return STP_GetTreeCount(_stpBridge);
 }
 
-STP_PORT_ROLE PhysicalBridge::GetStpPortRole (unsigned int portIndex, unsigned int treeIndex) const
+STP_PORT_ROLE Bridge::GetStpPortRole (unsigned int portIndex, unsigned int treeIndex) const
 {
 	if (_stpBridge == nullptr)
 		throw runtime_error ("STP was not enabled on this bridge.");
@@ -90,7 +90,7 @@ STP_PORT_ROLE PhysicalBridge::GetStpPortRole (unsigned int portIndex, unsigned i
 	return STP_GetPortRole (_stpBridge, portIndex, treeIndex);
 }
 
-bool PhysicalBridge::GetStpPortLearning (unsigned int portIndex, unsigned int treeIndex) const
+bool Bridge::GetStpPortLearning (unsigned int portIndex, unsigned int treeIndex) const
 {
 	if (_stpBridge == nullptr)
 		throw runtime_error ("STP was not enabled on this bridge.");
@@ -98,7 +98,7 @@ bool PhysicalBridge::GetStpPortLearning (unsigned int portIndex, unsigned int tr
 	return STP_GetPortLearning (_stpBridge, portIndex, treeIndex);
 }
 
-bool PhysicalBridge::GetStpPortForwarding (unsigned int portIndex, unsigned int treeIndex) const
+bool Bridge::GetStpPortForwarding (unsigned int portIndex, unsigned int treeIndex) const
 {
 	if (_stpBridge == nullptr)
 		throw runtime_error ("STP was not enabled on this bridge.");
@@ -106,7 +106,7 @@ bool PhysicalBridge::GetStpPortForwarding (unsigned int portIndex, unsigned int 
 	return STP_GetPortForwarding (_stpBridge, portIndex, treeIndex);
 }
 
-bool PhysicalBridge::GetStpPortOperEdge (unsigned int portIndex) const
+bool Bridge::GetStpPortOperEdge (unsigned int portIndex) const
 {
 	if (_stpBridge == nullptr)
 		throw runtime_error ("STP was not enabled on this bridge.");
@@ -114,7 +114,7 @@ bool PhysicalBridge::GetStpPortOperEdge (unsigned int portIndex) const
 	return STP_GetPortOperEdge (_stpBridge, portIndex);
 }
 
-unsigned short PhysicalBridge::GetStpBridgePriority (unsigned int treeIndex) const
+unsigned short Bridge::GetStpBridgePriority (unsigned int treeIndex) const
 {
 	if (_stpBridge == nullptr)
 		throw runtime_error ("STP was not enabled on this bridge.");
@@ -122,7 +122,7 @@ unsigned short PhysicalBridge::GetStpBridgePriority (unsigned int treeIndex) con
 	return STP_GetBridgePriority(_stpBridge, treeIndex);
 }
 
-unsigned int PhysicalBridge::GetStpTreeIndexFromVlanNumber (unsigned short vlanNumber) const
+unsigned int Bridge::GetStpTreeIndexFromVlanNumber (unsigned short vlanNumber) const
 {
 	if (_stpBridge == nullptr)
 		throw runtime_error ("STP was not enabled on this bridge.");
@@ -134,14 +134,14 @@ unsigned int PhysicalBridge::GetStpTreeIndexFromVlanNumber (unsigned short vlanN
 }
 
 // static
-void PhysicalBridge::RenderExteriorNonStpPort (ID2D1DeviceContext* dc, const DrawingObjects& dos, bool macOperational)
+void Bridge::RenderExteriorNonStpPort (ID2D1DeviceContext* dc, const DrawingObjects& dos, bool macOperational)
 {
 	auto brush = macOperational ? dos._brushForwarding : dos._brushDiscardingPort;
 	dc->DrawLine (Point2F (0, 0), Point2F (0, PortExteriorHeight), brush);
 }
 
 // static
-void PhysicalBridge::RenderExteriorStpPort (ID2D1DeviceContext* dc, const DrawingObjects& dos, STP_PORT_ROLE role, bool learning, bool forwarding, bool operEdge)
+void Bridge::RenderExteriorStpPort (ID2D1DeviceContext* dc, const DrawingObjects& dos, STP_PORT_ROLE role, bool learning, bool forwarding, bool operEdge)
 {
 	static constexpr float circleDiameter = min (PortExteriorHeight / 2, PortExteriorWidth);
 
@@ -255,7 +255,7 @@ void PhysicalBridge::RenderExteriorStpPort (ID2D1DeviceContext* dc, const Drawin
 		throw exception("Not implemented.");
 }
 
-void PhysicalBridge::Render (ID2D1DeviceContext* dc, const DrawingObjects& dos, IDWriteFactory* dWriteFactory, uint16_t vlanNumber) const
+void Bridge::Render (ID2D1DeviceContext* dc, const DrawingObjects& dos, IDWriteFactory* dWriteFactory, uint16_t vlanNumber) const
 {
 	optional<unsigned int> treeIndex;
 	if (IsStpEnabled())
@@ -289,7 +289,7 @@ void PhysicalBridge::Render (ID2D1DeviceContext* dc, const DrawingObjects& dos, 
 
 	for (size_t portIndex = 0; portIndex < _ports.size(); portIndex++)
 	{
-		PhysicalPort* port = _ports[portIndex].get();
+		Port* port = _ports[portIndex].get();
 
 		Matrix3x2F portTransform;
 		if (port->GetSide() == Side::Left)
@@ -369,7 +369,7 @@ void PhysicalBridge::Render (ID2D1DeviceContext* dc, const DrawingObjects& dos, 
 }
 
 #pragma region STP Callbacks
-const STP_CALLBACKS PhysicalBridge::StpCallbacks =
+const STP_CALLBACKS Bridge::StpCallbacks =
 {
 	&StpCallback_EnableLearning,
 	&StpCallback_EnableForwarding,
@@ -384,48 +384,48 @@ const STP_CALLBACKS PhysicalBridge::StpCallbacks =
 };
 
 
-void* PhysicalBridge::StpCallback_AllocAndZeroMemory(unsigned int size)
+void* Bridge::StpCallback_AllocAndZeroMemory(unsigned int size)
 {
 	void* p = malloc(size);
 	memset (p, 0, size);
 	return p;
 }
 
-void PhysicalBridge::StpCallback_FreeMemory(void* p)
+void Bridge::StpCallback_FreeMemory(void* p)
 {
 	free(p);
 }
 
-void PhysicalBridge::StpCallback_EnableLearning(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable)
+void Bridge::StpCallback_EnableLearning(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable)
 {
-	auto pb = static_cast<PhysicalBridge*>(STP_GetApplicationContext(bridge));
+	auto pb = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 	BridgeInvalidateEvent::InvokeHandlers (pb->_em, pb);
 }
 
-void PhysicalBridge::StpCallback_EnableForwarding(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable)
+void Bridge::StpCallback_EnableForwarding(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable)
 {
-	auto pb = static_cast<PhysicalBridge*>(STP_GetApplicationContext(bridge));
+	auto pb = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 	BridgeInvalidateEvent::InvokeHandlers(pb->_em, pb);
 }
 
-void PhysicalBridge::StpCallback_FlushFdb (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType)
+void Bridge::StpCallback_FlushFdb (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType)
 {
-	auto pb = static_cast<PhysicalBridge*>(STP_GetApplicationContext(bridge));
+	auto pb = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 }
 #pragma endregion
 
-#pragma region PhysicalBridge::IUnknown
-HRESULT STDMETHODCALLTYPE PhysicalBridge::QueryInterface(REFIID riid, void** ppvObject)
+#pragma region Bridge::IUnknown
+HRESULT STDMETHODCALLTYPE Bridge::QueryInterface(REFIID riid, void** ppvObject)
 {
 	throw exception ("Not implemented.");
 }
 
-ULONG STDMETHODCALLTYPE PhysicalBridge::AddRef()
+ULONG STDMETHODCALLTYPE Bridge::AddRef()
 {
 	return InterlockedIncrement(&_refCount);
 }
 
-ULONG STDMETHODCALLTYPE PhysicalBridge::Release()
+ULONG STDMETHODCALLTYPE Bridge::Release()
 {
 	ULONG newRefCount = InterlockedDecrement(&_refCount);
 	if (newRefCount == 0)

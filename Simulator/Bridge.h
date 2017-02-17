@@ -40,17 +40,17 @@ struct DrawingObjects
 	ComPtr<IDWriteTextFormat> _regularTextFormat;
 };
 
-class PhysicalBridge;
+class Bridge;
 
-class PhysicalPort : public Object
+class Port : public Object
 {
-	PhysicalBridge* const _bridge;
+	Bridge* const _bridge;
 	unsigned int const _portIndex;
 	Side _side;
 	float _offset;
 
 public:
-	PhysicalPort (PhysicalBridge* bridge, unsigned int portIndex, Side side, float offset)
+	Port (Bridge* bridge, unsigned int portIndex, Side side, float offset)
 		: _bridge(bridge), _portIndex(portIndex), _side(side), _offset(offset)
 	{ }
 
@@ -60,11 +60,11 @@ public:
 	bool GetMacOperational() const { return true; } // TODO
 };
 
-struct BridgeInvalidateEvent : public Event<BridgeInvalidateEvent, void(PhysicalBridge*)> { };
-struct BridgeStartedEvent : public Event<BridgeStartedEvent, void(PhysicalBridge*)> { };
-struct BridgeStoppingEvent : public Event<BridgeStoppingEvent, void(PhysicalBridge*)> { };
+struct BridgeInvalidateEvent : public Event<BridgeInvalidateEvent, void(Bridge*)> { };
+struct BridgeStartedEvent : public Event<BridgeStartedEvent, void(Bridge*)> { };
+struct BridgeStoppingEvent : public Event<BridgeStoppingEvent, void(Bridge*)> { };
 
-class PhysicalBridge : public Object, public IUnknown
+class Bridge : public Object, public IUnknown
 {
 	ULONG _refCount = 1;
 	float _x;
@@ -72,7 +72,7 @@ class PhysicalBridge : public Object, public IUnknown
 	float _width;
 	float _height;
 	EventManager _em;
-	std::vector<std::unique_ptr<PhysicalPort>> _ports;
+	std::vector<std::unique_ptr<Port>> _ports;
 	std::array<uint8_t, 6> _macAddress;
 	bool _powered = true;
 	STP_BRIDGE* _stpBridge = nullptr; // when nullptr, STP is disabled in the bridge
@@ -81,8 +81,8 @@ class PhysicalBridge : public Object, public IUnknown
 	static const STP_CALLBACKS StpCallbacks;
 
 public:
-	PhysicalBridge (unsigned int portCount, const std::array<uint8_t, 6>& macAddress);
-	~PhysicalBridge();
+	Bridge (unsigned int portCount, const std::array<uint8_t, 6>& macAddress);
+	~Bridge();
 
 	float GetLeft() const { return _x; }
 	float GetRight() const { return _x + _width; }
@@ -94,7 +94,7 @@ public:
 
 	D2D1_RECT_F GetBounds() const { return { _x, _y, _x + _width, _y + _height }; }
 	unsigned int GetPortCount() const { return (unsigned int) _ports.size(); }
-	PhysicalPort* GetPort(size_t portIndex) const { return _ports[portIndex].get(); }
+	Port* GetPort(size_t portIndex) const { return _ports[portIndex].get(); }
 	std::array<uint8_t, 6> GetMacAddress() const { return _macAddress; }
 	
 	void Render (ID2D1DeviceContext* dc, const DrawingObjects& dos, IDWriteFactory* dWriteFactory, uint16_t vlanNumber) const;

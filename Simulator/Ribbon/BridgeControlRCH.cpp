@@ -21,7 +21,7 @@ class BridgeControlRCH : public RCHBase
 
 			for (auto o : _selection->GetObjects())
 			{
-				if (auto b = dynamic_cast<PhysicalBridge*>(o))
+				if (auto b = dynamic_cast<Bridge*>(o))
 				{
 					bool enabled = b->IsStpEnabled();
 
@@ -51,7 +51,7 @@ class BridgeControlRCH : public RCHBase
 				BOOL enable = FALSE;
 				for (auto o : _selection->GetObjects())
 				{
-					if (auto b = dynamic_cast<PhysicalBridge*>(o))
+					if (auto b = dynamic_cast<Bridge*>(o))
 					{
 						if (((commandId == cmdEnableSTP) && !b->IsStpEnabled())
 							|| ((commandId == cmdDisableSTP) && b->IsStpEnabled()))
@@ -81,7 +81,7 @@ class BridgeControlRCH : public RCHBase
 	virtual void OnAddedToSelection (Object* o) override final
 	{
 		base::OnAddedToSelection(o);
-		if (auto b = dynamic_cast<PhysicalBridge*>(o))
+		if (auto b = dynamic_cast<Bridge*>(o))
 		{
 			b->GetBridgeStartedEvent().AddHandler (&OnSelectedBridgeStartedOrStopping, this);
 			b->GetBridgeStoppingEvent().AddHandler (&OnSelectedBridgeStartedOrStopping, this);
@@ -90,7 +90,7 @@ class BridgeControlRCH : public RCHBase
 
 	virtual void OnRemovingFromSelection (Object* o) override final
 	{
-		if (auto b = dynamic_cast<PhysicalBridge*>(o))
+		if (auto b = dynamic_cast<Bridge*>(o))
 		{
 			b->GetBridgeStartedEvent().RemoveHandler (&OnSelectedBridgeStartedOrStopping, this);
 			b->GetBridgeStoppingEvent().RemoveHandler (&OnSelectedBridgeStartedOrStopping, this);
@@ -98,7 +98,7 @@ class BridgeControlRCH : public RCHBase
 		base::OnRemovingFromSelection(o);
 	}
 
-	static void OnSelectedBridgeStartedOrStopping (void* callbackArg, PhysicalBridge* b)
+	static void OnSelectedBridgeStartedOrStopping (void* callbackArg, Bridge* b)
 	{
 		auto rch = static_cast<BridgeControlRCH*>(callbackArg);
 		rch->_rf->InvalidateUICommand(cmdEnableSTP, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_Enabled);

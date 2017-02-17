@@ -152,7 +152,7 @@ public:
 			trans.SetProduct (oldTransform, trans);
 			dc->SetTransform (&trans);
 
-			PhysicalBridge::RenderExteriorStpPort (dc, _drawingObjects, info.role, info.learning, info.forwarding, info.operEdge);
+			Bridge::RenderExteriorStpPort (dc, _drawingObjects, info.role, info.learning, info.forwarding, info.operEdge);
 
 			dc->SetTransform (&oldTransform);
 
@@ -167,7 +167,7 @@ public:
 
 		for (auto o : _selection->GetObjects())
 		{
-			if (auto b = dynamic_cast<PhysicalBridge*>(o))
+			if (auto b = dynamic_cast<Bridge*>(o))
 			{
 				auto tl = GetDLocationFromWLocation ({ b->GetLeft() - BridgeOutlineWidth / 2, b->GetTop() - BridgeOutlineWidth / 2 });
 				auto br = GetDLocationFromWLocation ({ b->GetRight() + BridgeOutlineWidth / 2, b->GetBottom() + BridgeOutlineWidth / 2 });
@@ -388,12 +388,12 @@ public:
 				{
 					// TODO: area selection
 				}
-				else if (auto b = dynamic_cast<PhysicalBridge*>(_beginningDrag->clickedObj))
+				else if (auto b = dynamic_cast<Bridge*>(_beginningDrag->clickedObj))
 				{
 					if (_beginningDrag->button == MouseButton::Left)
 						_state = CreateStateMoveBridges (MakeEditStateDeps());
 				}
-				else if (auto b = dynamic_cast<PhysicalPort*>(_beginningDrag->clickedObj))
+				else if (auto b = dynamic_cast<Port*>(_beginningDrag->clickedObj))
 				{
 					// TODO: move port
 					//if (_beginningDrag->button == MouseButton::Left)
@@ -432,9 +432,9 @@ public:
 		UINT32 viewId;
 		if (_selection->GetObjects().empty())
 			viewId = cmdContextMenuBlankArea;
-		else if (dynamic_cast<PhysicalBridge*>(_selection->GetObjects()[0]) != nullptr)
+		else if (dynamic_cast<Bridge*>(_selection->GetObjects()[0]) != nullptr)
 			viewId = cmdContextMenuBridge;
-		else if (dynamic_cast<PhysicalPort*>(_selection->GetObjects()[0]) != nullptr)
+		else if (dynamic_cast<Port*>(_selection->GetObjects()[0]) != nullptr)
 			viewId = cmdContextMenuPort;
 		else
 			throw exception("Not implemented.");

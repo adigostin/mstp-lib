@@ -1,7 +1,7 @@
 #pragma once
 
-class PhysicalPort;
-class PhysicalBridge;
+class Port;
+class Bridge;
 
 class Wire
 {
