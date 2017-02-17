@@ -2,7 +2,7 @@
 #include "SimulatorDefs.h"
 #include "Win32Defs.h"
 #include "resource.h"
-#include "Ribbon/RCHBase.h"
+#include "RibbonCommandHandlers/RCHBase.h"
 
 using namespace std;
 

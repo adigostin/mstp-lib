@@ -55,7 +55,7 @@
     <ClInclude Include="EditStates\EditState.h">
       <Filter>EditStates</Filter>
     </ClInclude>
-    <ClInclude Include="Ribbon\RCHBase.h">
+    <ClInclude Include="RibbonCommandHandlers\RCHBase.h">
       <Filter>Ribbon</Filter>
     </ClInclude>
   </ItemGroup>
@@ -131,16 +131,16 @@
       <Filter>EditStates</Filter>
     </ClCompile>
     <ClCompile Include="LogArea.cpp" />
-    <ClCompile Include="Ribbon\BridgeControlRCH.cpp">
+    <ClCompile Include="RibbonCommandHandlers\BridgeControlRCH.cpp">
       <Filter>Ribbon</Filter>
     </ClCompile>
-    <ClCompile Include="Ribbon\BridgePropertiesRCH.cpp">
+    <ClCompile Include="RibbonCommandHandlers\BridgePropertiesRCH.cpp">
       <Filter>Ribbon</Filter>
     </ClCompile>
-    <ClCompile Include="Ribbon\CreateRCH.cpp">
+    <ClCompile Include="RibbonCommandHandlers\CreateRCH.cpp">
       <Filter>Ribbon</Filter>
     </ClCompile>
-    <ClCompile Include="Ribbon\RCHBase.cpp">
+    <ClCompile Include="RibbonCommandHandlers\RCHBase.cpp">
       <Filter>Ribbon</Filter>
     </ClCompile>
   </ItemGroup>
