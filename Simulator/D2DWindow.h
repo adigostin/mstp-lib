@@ -11,7 +11,7 @@ typedef std::unique_ptr<std::remove_pointer<HWND>::type, HWndDeleter> HWND_uniqu
 class D2DWindow abstract
 {
 	HWND _hwnd;
-	RECT _clientRect;
+	SIZE _clientSize;
 	bool _painting = false;
 	bool _forceFullPresentation;
 	ComPtr<ID3D11Device1> _d3dDevice;
@@ -31,8 +31,10 @@ public:
 	~D2DWindow();
 
 	HWND GetHWnd() const { return _hwnd; }
-	const RECT& GetClientRect() const { return _clientRect; }
-	D2D1_RECT_F GetClientRectDips() const;
+	SIZE GetClientSize() const { return _clientSize; }
+	LONG GetClientWidth() const { return _clientSize.cx; }
+	LONG GetClientHeight() const { return _clientSize.cy; }
+	D2D1_SIZE_F GetClientSizeDips() const;
 	D2D1_POINT_2F GetDipLocationFromPixelLocation(POINT locationPixels) const;
 	POINT GetPixelLocationFromDipLocation(D2D1_POINT_2F locationDips) const;
 	D2D1_SIZE_F GetDipSizeFromPixelSize(SIZE sizePixels) const;

@@ -13,6 +13,7 @@
 #pragma comment (lib, "Comctl32")
 
 using namespace std;
+using namespace D2D1;
 
 static const wchar_t CompanyName[] = L"Adrian Gostin";
 static const wchar_t AppName[] = L"STP Simulator";
@@ -206,6 +207,13 @@ unsigned int GetTimestampMilliseconds()
 	uint64_t now = ((uint64_t) currentUtcFileTime.dwHighDateTime << 32) | currentUtcFileTime.dwLowDateTime;
 	uint64_t milliseconds = (now - start) / 10000;
 	return (unsigned int)milliseconds;
+}
+
+ColorF GetD2DSystemColor (int sysColorIndex)
+{
+	DWORD brg = GetSysColor (sysColorIndex);
+	DWORD rgb = ((brg & 0xff0000) >> 16) | (brg & 0xff00) | ((brg & 0xff) << 16);
+	return ColorF (rgb);
 }
 
 int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)

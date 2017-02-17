@@ -110,18 +110,16 @@ void ZoomableWindow::ZoomToRectangle (const D2D1_RECT_F& rect, float minMarginDi
 {
 	assert((rect.right > rect.left) && (rect.bottom > rect.top));
 
-	auto clientRect = base::GetClientRect();
-	float clientWidthDips = (float) (clientRect.right - clientRect.left);
-	float clientHeightDips = (float) (clientRect.bottom - clientRect.top);
+	auto clientSizeDips = base::GetClientSizeDips();
 
 	// Make below calculations with even sizes, to make sure things are always pixel-aligned when zoom is 1.
-	clientWidthDips = floor(clientWidthDips / 2.0f) * 2.0f;
-	clientHeightDips = floor(clientHeightDips / 2.0f) * 2.0f;
+	clientSizeDips.width = floor(clientSizeDips.width / 2.0f) * 2.0f;
+	clientSizeDips.height = floor(clientSizeDips.height / 2.0f) * 2.0f;
 	minMarginDips = floor(minMarginDips);
 
 	//float minMarginPixels = minMarginDips;
-	float horzZoom = (clientWidthDips - 2 * minMarginDips) / (rect.right - rect.left);
-	float vertZoom = (clientHeightDips - 2 * minMarginDips) / (rect.bottom - rect.top);
+	float horzZoom = (clientSizeDips.width - 2 * minMarginDips) / (rect.right - rect.left);
+	float vertZoom = (clientSizeDips.height - 2 * minMarginDips) / (rect.bottom - rect.top);
 	float newZoom = horzZoom < vertZoom ? horzZoom : vertZoom;
 	if (newZoom < 0.3f)
 		newZoom = 0.3f;
@@ -129,8 +127,8 @@ void ZoomableWindow::ZoomToRectangle (const D2D1_RECT_F& rect, float minMarginDi
 	if ((maxZoomOrZero > 0.0f) && (newZoom > maxZoomOrZero))
 		newZoom = maxZoomOrZero;
 
-	float newWOX = (clientWidthDips - (rect.right - rect.left) * newZoom) / 2 - rect.left * newZoom;
-	float newWOY = (clientHeightDips - (rect.bottom - rect.top) * newZoom) / 2 - rect.top * newZoom;
+	float newWOX = (clientSizeDips.width - (rect.right - rect.left) * newZoom) / 2 - rect.left * newZoom;
+	float newWOY = (clientSizeDips.height - (rect.bottom - rect.top) * newZoom) / 2 - rect.top * newZoom;
 
 	SetZoomAndOriginInternal(newZoom, newWOX, newWOY, smooth);
 

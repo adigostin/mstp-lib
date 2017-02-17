@@ -39,7 +39,7 @@ D2DWindow::D2DWindow (DWORD exStyle, DWORD style, const RECT& rect, HWND hWndPar
 		WNDCLASSEX wcex;
 		wcex.cbSize = sizeof (wcex);
 		wcex.style = CS_DBLCLKS | CS_HREDRAW | CS_VREDRAW;
-		wcex.lpfnWndProc = &D2DWindow::WindowProcStatic;
+		wcex.lpfnWndProc = &WindowProcStatic;
 		wcex.cbClsExtra = 0;
 		wcex.cbWndExtra = 0;
 		wcex.hInstance = hInstance;
@@ -60,8 +60,8 @@ D2DWindow::D2DWindow (DWORD exStyle, DWORD style, const RECT& rect, HWND hWndPar
 	assert (hwnd == _hwnd);
 
 	DXGI_SWAP_CHAIN_DESC1 desc;
-	desc.Width = std::max((LONG) 8, _clientRect.right);
-	desc.Height = std::max((LONG)8, _clientRect.bottom);
+	desc.Width = std::max((LONG) 8, _clientSize.cx);
+	desc.Height = std::max((LONG)8, _clientSize.cy);
 	desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
 	desc.Stereo = FALSE;
 	desc.SampleDesc.Count = 1;
@@ -151,17 +151,18 @@ std::optional<LRESULT> D2DWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam
 {
 	if (uMsg == WM_CREATE)
 	{
-		_clientRect = { 0, 0, ((CREATESTRUCT*)lParam)->cx, ((CREATESTRUCT*)lParam)->cy };
+		_clientSize.cx = ((CREATESTRUCT*)lParam)->cx;
+		_clientSize.cy = ((CREATESTRUCT*)lParam)->cy;
 		return 0;
 	}
 	
 	if (uMsg == WM_SIZE)
 	{
-		::GetClientRect(_hwnd, &_clientRect);
+		_clientSize = { LOWORD(lParam), HIWORD(lParam) };
 		if (_swapChain != nullptr)
 		{
 			_d2dDeviceContext = nullptr;
-			auto hr = _swapChain->ResizeBuffers (0, std::max ((LONG)8, _clientRect.right), std::max((LONG)8, _clientRect.bottom), DXGI_FORMAT_UNKNOWN, 0); ThrowIfFailed(hr);
+			auto hr = _swapChain->ResizeBuffers (0, std::max ((LONG)8, _clientSize.cx), std::max((LONG)8, _clientSize.cy), DXGI_FORMAT_UNKNOWN, 0); ThrowIfFailed(hr);
 			CreateD2DDeviceContext();
 		}
 		return 0;
@@ -257,9 +258,8 @@ SIZE D2DWindow::GetPixelSizeFromDipSize(D2D1_SIZE_F sizeDips) const
 	return SIZE{ (int)(sizeDips.width / 96.0f * dpiX), (int)(sizeDips.height / 96.0f * dpiY) };
 }
 
-D2D1_RECT_F D2DWindow::GetClientRectDips() const
+D2D1_SIZE_F D2DWindow::GetClientSizeDips() const
 {
-	auto tl = GetDipLocationFromPixelLocation ({ _clientRect.left, _clientRect.top });
-	auto br = GetDipLocationFromPixelLocation({ _clientRect.right, _clientRect.bottom });
-	return D2D1_RECT_F { tl.x, tl.y, br.x, br.y };
+	auto br = GetDipLocationFromPixelLocation({ _clientSize.cx, _clientSize.cy });
+	return { br.x, br.y };
 }

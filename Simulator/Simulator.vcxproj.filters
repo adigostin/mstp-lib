@@ -10,6 +10,12 @@
     <Filter Include="mstp-lib\802.1Q-2011">
       <UniqueIdentifier>{cfc75957-b41e-4da6-bf54-bb04b411d54e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="EditStates">
+      <UniqueIdentifier>{44c75b95-8381-4205-bb9c-ff949707452e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="RibbonCommandHandlers">
+      <UniqueIdentifier>{af695e29-d663-4b03-a67d-a0fc49907bc4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -47,10 +53,14 @@
     <ClInclude Include="D2DWindow.h" />
     <ClInclude Include="ZoomableWindow.h" />
     <ClInclude Include="SimulatorDefs.h" />
-    <ClInclude Include="RibbonCommandHandlers\RCHBase.h" />
-    <ClInclude Include="EditStates\EditState.h" />
     <ClInclude Include="Wire.h" />
     <ClInclude Include="Bridge.h" />
+    <ClInclude Include="EditStates\EditState.h">
+      <Filter>EditStates</Filter>
+    </ClInclude>
+    <ClInclude Include="RibbonCommandHandlers\RCHBase.h">
+      <Filter>RibbonCommandHandlers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -115,14 +125,27 @@
     <ClCompile Include="ZoomableWindow.cpp" />
     <ClCompile Include="Selection.cpp" />
     <ClCompile Include="Simulator.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\CreateRCH.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\RCHBase.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\BridgePropertiesRCH.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\BridgeControlRCH.cpp" />
     <ClCompile Include="Wire.cpp" />
-    <ClCompile Include="EditStates\MoveBridgesES.cpp" />
-    <ClCompile Include="EditStates\CreateBridgeES.cpp" />
     <ClCompile Include="Bridge.cpp" />
+    <ClCompile Include="EditStates\CreateBridgeES.cpp">
+      <Filter>EditStates</Filter>
+    </ClCompile>
+    <ClCompile Include="EditStates\MoveBridgesES.cpp">
+      <Filter>EditStates</Filter>
+    </ClCompile>
+    <ClCompile Include="RibbonCommandHandlers\BridgeControlRCH.cpp">
+      <Filter>RibbonCommandHandlers</Filter>
+    </ClCompile>
+    <ClCompile Include="RibbonCommandHandlers\BridgePropertiesRCH.cpp">
+      <Filter>RibbonCommandHandlers</Filter>
+    </ClCompile>
+    <ClCompile Include="RibbonCommandHandlers\CreateRCH.cpp">
+      <Filter>RibbonCommandHandlers</Filter>
+    </ClCompile>
+    <ClCompile Include="RibbonCommandHandlers\RCHBase.cpp">
+      <Filter>RibbonCommandHandlers</Filter>
+    </ClCompile>
+    <ClCompile Include="LogArea.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc">

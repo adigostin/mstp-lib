@@ -7,12 +7,12 @@
 using namespace std;
 
 static ATOM wndClassAtom;
-static const wchar_t ProjectWindowWndClassName[] = L"ProjectWindow-{24B42526-2970-4B3C-A753-2DABD22C4BB0}";
-static const wchar_t RegValueNameWindowState[] = L"WindowState";
-static const wchar_t RegValueNameWindowLeft[] = L"WindowLeft";
-static const wchar_t RegValueNameWindowTop[] = L"WindowTop";
-static const wchar_t RegValueNameWindowRight[] = L"WindowRight";
-static const wchar_t RegValueNameWindowBottom[] = L"WindowBottom";
+static constexpr wchar_t ProjectWindowWndClassName[] = L"ProjectWindow-{24B42526-2970-4B3C-A753-2DABD22C4BB0}";
+static constexpr wchar_t RegValueNameWindowState[] = L"WindowState";
+static constexpr wchar_t RegValueNameWindowLeft[] = L"WindowLeft";
+static constexpr wchar_t RegValueNameWindowTop[] = L"WindowTop";
+static constexpr wchar_t RegValueNameWindowRight[] = L"WindowRight";
+static constexpr wchar_t RegValueNameWindowBottom[] = L"WindowBottom";
 
 class ProjectWindow : public IProjectWindow, IUIApplication
 {
@@ -20,12 +20,14 @@ class ProjectWindow : public IProjectWindow, IUIApplication
 	ComPtr<IProject> const _project;
 	ComPtr<ISelection> const _selection;
 	ComPtr<IEditArea> _editArea;
+	ComPtr<ILogArea> _logArea;
 	ComPtr<IUIFramework> _rf;
 	HWND _hwnd;
-	RECT _clientRect;
+	SIZE _clientSize;
 	EventManager _em;
 	RECT _restoreBounds;
 	unordered_map<UINT32, ComPtr<IUICommandHandler>> _commandHandlers;
+	LONG _logAreaWidth = 500;
 
 public:
 	ProjectWindow (IProject* project, HINSTANCE rfResourceHInstance, const wchar_t* rfResourceName, ISelection* selection,
@@ -49,7 +51,7 @@ public:
 				hInstance, // hInstance
 				LoadIcon(hInstance, MAKEINTRESOURCE(IDI_DESIGNER)), // hIcon
 				LoadCursor(nullptr, IDC_ARROW), // hCursor
-				(HBRUSH)(COLOR_WINDOW + 1), // hbrBackground
+				nullptr,//(HBRUSH)(COLOR_WINDOW + 1), // hbrBackground
 				nullptr, // lpszMenuName
 				ProjectWindowWndClassName, // lpszClassName
 				LoadIcon(hInstance, MAKEINTRESOURCE(IDI_DESIGNER))
@@ -75,7 +77,10 @@ public:
 			ThrowIfFailed(hr);
 		}
 
-		_editArea = editAreaFactory(project, this, selection, _rf, { 0, 0, 0, 0 }, deviceContext, dWriteFactory, wicFactory);
+		_editArea = editAreaFactory (project, this, 333, selection, _rf, { 0, 0, 0, 0 }, deviceContext, dWriteFactory, wicFactory);
+
+		_logArea = logAreaFactory (_hwnd, 444, { 0, 0, _logAreaWidth, 0 }, deviceContext, dWriteFactory, wicFactory);
+		_logArea->GetLogAreaResizingEvent().AddHandler (&OnLogAreaResizing, this);
 
 		LONG ribbonHeight = 0;
 		if ((rfResourceHInstance != nullptr) && (rfResourceName != nullptr))
@@ -96,12 +101,13 @@ public:
 			hr = ribbon->GetHeight((UINT32*)&ribbonHeight); ThrowIfFailed(hr);
 		}
 
-		::SetWindowPos (_editArea->GetHWnd(), nullptr, 0, ribbonHeight, _clientRect.right, _clientRect.bottom - ribbonHeight, SWP_SHOWWINDOW);
+		ResizeChildWindows();
 	}
 
 	~ProjectWindow()
 	{
 		_editArea = nullptr;
+		_logArea = nullptr;
 		::DestroyWindow(_hwnd);
 	}
 
@@ -152,7 +158,7 @@ public:
 		if (msg == WM_CREATE)
 		{
 			auto cs = reinterpret_cast<const CREATESTRUCT*>(lParam);
-			_clientRect = { 0, 0, cs->cx, cs->cy };
+			_clientSize = { cs->cx, cs->cy };
 			return 0;
 		}
 
@@ -168,7 +174,7 @@ public:
 			if (wParam == SIZE_RESTORED)
 				::GetWindowRect(_hwnd, &_restoreBounds);
 
-			_clientRect = { 0, 0, LOWORD(lParam), HIWORD(lParam) };
+			_clientSize = { LOWORD(lParam), HIWORD(lParam) };
 			ResizeChildWindows();
 
 			return 0;
@@ -207,6 +213,16 @@ public:
 		return DefWindowProc(_hwnd, msg, wParam, lParam);
 	}
 
+	static void OnLogAreaResizing (void* callbackArg, ILogArea* lw, Side side, LONG offset)
+	{
+		auto pw = static_cast<ProjectWindow*>(callbackArg);
+		if (side == Side::Left)
+		{
+			pw->_logAreaWidth -= offset;
+			pw->ResizeChildWindows();
+		}
+	}
+
 	void ResizeChildWindows()
 	{
 		LONG ribbonHeight = 0;
@@ -217,8 +233,15 @@ public:
 			hr = ribbon->GetHeight((UINT32*)&ribbonHeight); ThrowIfFailed(hr);
 		}
 
+		LONG laWidth = 0;
+		if (_logArea != nullptr)
+		{
+			laWidth = _logAreaWidth;
+			::MoveWindow (_logArea->GetHWnd(), _clientSize.cx - laWidth, ribbonHeight, laWidth, _clientSize.cy - ribbonHeight, TRUE);
+		}
+
 		if (_editArea != nullptr)
-			::MoveWindow(_editArea->GetHWnd(), 0, ribbonHeight, _clientRect.right, _clientRect.bottom - ribbonHeight, TRUE);
+			::MoveWindow(_editArea->GetHWnd(), 0, ribbonHeight, _clientSize.cx - laWidth, _clientSize.cy - ribbonHeight, TRUE);
 	}
 
 	//virtual IProject* GetProject() const override final { return _project.get(); }

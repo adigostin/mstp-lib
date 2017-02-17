@@ -34,8 +34,8 @@ class EditArea : public ZoomableWindow, public IEditArea
 	optional<BeginningDrag> _beginningDrag;
 
 public:
-	EditArea(IProject* project, IProjectWindow* pw, ISelection* selection, IUIFramework* rf, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory)
-		: base(0, WS_CHILD | WS_VISIBLE, rect, pw->GetHWnd(), 55, deviceContext, dWriteFactory, wicFactory)
+	EditArea(IProject* project, IProjectWindow* pw, DWORD controlId, ISelection* selection, IUIFramework* rf, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory)
+		: base (WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, pw->GetHWnd(), controlId, deviceContext, dWriteFactory, wicFactory)
 		, _project(project), _pw(pw), _rf(rf), _selection(selection), _dWriteFactory(dWriteFactory)
 	{
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
@@ -67,13 +67,6 @@ public:
 	{
 		auto area = static_cast<EditArea*>(callbackArg);
 		::InvalidateRect (area->GetHWnd(), nullptr, FALSE);
-	}
-
-	static ColorF GetD2DSystemColor (int sysColorIndex)
-	{
-		DWORD brg = GetSysColor (sysColorIndex);
-		DWORD rgb = ((brg & 0xff0000) >> 16) | (brg & 0xff00) | ((brg & 0xff) << 16);
-		return ColorF (rgb);
 	}
 
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
@@ -113,7 +106,7 @@ public:
 
 	void RenderLegend (ID2D1DeviceContext* dc) const
 	{
-		auto clientRect = GetClientRectDips();
+		auto clientSizeDips = GetClientSizeDips();
 
 		float maxLineWidth = 0;
 		float maxLineHeight = 0;
@@ -135,10 +128,10 @@ public:
 			layouts.push_back(move(tl));
 		}
 
-		float textX = clientRect.right - (5 + maxLineWidth + 5 + PortExteriorHeight + 5);
-		float bitmapX = clientRect.right - (5 + PortExteriorHeight + 5);
+		float textX = clientSizeDips.width - (5 + maxLineWidth + 5 + PortExteriorHeight + 5);
+		float bitmapX = clientSizeDips.width - (5 + PortExteriorHeight + 5);
 		float rowHeight = 2 + max (maxLineHeight, PortExteriorWidth);
-		float y = clientRect.bottom - _countof(LegendInfo) * rowHeight;
+		float y = clientSizeDips.height - _countof(LegendInfo) * rowHeight;
 
 		Matrix3x2F oldTransform;
 		dc->GetTransform (&oldTransform);
@@ -149,7 +142,7 @@ public:
 
 			auto oldaa = dc->GetAntialiasMode();
 			dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-			dc->DrawLine (Point2F (textX, y), Point2F (clientRect.right, y), _drawingObjects._brushWindowText);
+			dc->DrawLine (Point2F (textX, y), Point2F (clientSizeDips.width, y), _drawingObjects._brushWindowText);
 			dc->SetAntialiasMode(oldaa);
 
 			dc->DrawTextLayout (Point2F (textX, y + 1), layouts[i], _drawingObjects._brushWindowText);
@@ -239,15 +232,9 @@ public:
 
 	virtual void Render(ID2D1DeviceContext* dc) const override final
 	{
-		auto backGdiColor = GetSysColor(COLOR_WINDOW);
-		auto backColor = D2D1_COLOR_F{ (backGdiColor & 0xff) / 255.0f, ((backGdiColor >> 8) & 0xff) / 255.0f, ((backGdiColor >> 16) & 0xff) / 255.0f, 1.0f };
+		dc->Clear(GetD2DSystemColor(COLOR_WINDOW));
 
-		auto textGdiColor = GetSysColor(COLOR_WINDOWTEXT);
-		auto textColor = D2D1_COLOR_F{ (textGdiColor & 0xff) / 255.0f, ((textGdiColor >> 8) & 0xff) / 255.0f, ((textGdiColor >> 16) & 0xff) / 255.0f, 1.0f };
-
-		dc->Clear(backColor);
-
-		auto clientRectDips = GetClientRectDips();
+		auto clientSizeDips = GetClientSizeDips();
 
 		HRESULT hr;
 
@@ -260,15 +247,13 @@ public:
 			hr = _dWriteFactory->CreateTextLayout (text, wcslen(text), tf, 10000, 10000, &tl); ThrowIfFailed(hr);
 			DWRITE_TEXT_METRICS metrics;
 			hr = tl->GetMetrics(&metrics); ThrowIfFailed(hr);
-			D2D1_POINT_2F origin = { clientRectDips.right / 2 - metrics.width / 2, clientRectDips.bottom / 2 - metrics.height / 2 };
-			ComPtr<ID2D1SolidColorBrush> brush;
-			dc->CreateSolidColorBrush (textColor, &brush);
-			dc->DrawTextLayout (origin, tl, brush);
+			D2D1_POINT_2F origin = { clientSizeDips.width / 2 - metrics.width / 2, clientSizeDips.height / 2 - metrics.height / 2 };
+			dc->DrawTextLayout (origin, tl, _drawingObjects._brushWindowText);
 		}
 		else
 		{
-			RenderBridges(dc);
 			RenderLegend(dc);
+			RenderBridges(dc);
 			RenderSelectionRectangles(dc);
 		}
 

@@ -20,6 +20,12 @@ inline void ThrowIfFailed(HRESULT hr)
 		throw com_exception(hr);
 }
 
+struct GdiObjectDeleter
+{
+	void operator() (HGDIOBJ object) { ::DeleteObject(object); }
+};
+typedef std::unique_ptr<std::remove_pointer<HFONT>::type, GdiObjectDeleter> HFONT_unique_ptr;
+
 
 template<typename T> class ComPtr
 {

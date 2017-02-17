@@ -6,6 +6,7 @@
 struct IProject;
 struct IProjectWindow;
 struct ISelection;
+struct ILogArea;
 
 enum class MouseButton
 {
@@ -35,6 +36,21 @@ extern const SelectionFactory selectionFactory;
 
 // ============================================================================
 
+struct LogAreaCloseButtonClicked : public Event<LogAreaCloseButtonClicked, void(ILogArea* logArea)> {};
+struct LogAreaResizingEvent : public Event<LogAreaResizingEvent, void(ILogArea* logArea, Side side, LONG offset)> {};
+
+struct ILogArea abstract : public IUnknown
+{
+	virtual HWND GetHWnd() const = 0;
+	virtual LogAreaCloseButtonClicked::Subscriber GetLogAreaCloseButtonClicked() = 0;
+	virtual LogAreaResizingEvent::Subscriber GetLogAreaResizingEvent() = 0;
+};
+
+using LogAreaFactory = ComPtr<ILogArea>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory);
+extern const LogAreaFactory logAreaFactory;
+
+// ============================================================================
+
 class EditState;
 struct EditStateDeps;
 
@@ -49,7 +65,7 @@ struct IEditArea abstract : public IUnknown
 	virtual EditStateDeps MakeEditStateDeps() = 0;
 };
 
-using EditAreaFactory = ComPtr<IEditArea>(*const)(IProject* project, IProjectWindow* pw, ISelection* selection, IUIFramework* rf, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory);
+using EditAreaFactory = ComPtr<IEditArea>(*const)(IProject* project, IProjectWindow* pw, DWORD controlId, ISelection* selection, IUIFramework* rf, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory);
 extern const EditAreaFactory editAreaFactory;
 
 // ============================================================================
@@ -96,3 +112,4 @@ extern const ProjectFactory projectFactory;
 // ============================================================================
 
 unsigned int GetTimestampMilliseconds();
+D2D1::ColorF GetD2DSystemColor (int sysColorIndex);
