@@ -46,11 +46,11 @@
     </ClInclude>
     <ClInclude Include="D2DWindow.h" />
     <ClInclude Include="ZoomableWindow.h" />
-    <ClInclude Include="PhysicalBridge.h" />
     <ClInclude Include="SimulatorDefs.h" />
     <ClInclude Include="RibbonCommandHandlers\RCHBase.h" />
     <ClInclude Include="EditStates\EditState.h" />
     <ClInclude Include="Wire.h" />
+    <ClInclude Include="Bridge.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -114,7 +114,6 @@
     <ClCompile Include="D2DWindow.cpp" />
     <ClCompile Include="ZoomableWindow.cpp" />
     <ClCompile Include="Selection.cpp" />
-    <ClCompile Include="PhysicalBridge.cpp" />
     <ClCompile Include="Simulator.cpp" />
     <ClCompile Include="RibbonCommandHandlers\CreateRCH.cpp" />
     <ClCompile Include="RibbonCommandHandlers\RCHBase.cpp" />
@@ -122,6 +121,8 @@
     <ClCompile Include="RibbonCommandHandlers\BridgeControlRCH.cpp" />
     <ClCompile Include="Wire.cpp" />
     <ClCompile Include="EditStates\MoveBridgesES.cpp" />
+    <ClCompile Include="EditStates\CreateBridgeES.cpp" />
+    <ClCompile Include="Bridge.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc">

@@ -18,20 +18,8 @@ class EditArea : public ZoomableWindow, public IEditArea
 	ComPtr<ISelection> const _selection;
 	ComPtr<IProject> const _project;
 	ComPtr<IDWriteFactory> const _dWriteFactory;
-	ComPtr<ID2D1SolidColorBrush> _poweredBrush;
-	ComPtr<ID2D1SolidColorBrush> _unpoweredBrush;
-	ComPtr<ID2D1SolidColorBrush> _brushWindowText;
-	ComPtr<ID2D1SolidColorBrush> _brushWindow;
-	ComPtr<ID2D1SolidColorBrush> _brushHighlight;
-	ComPtr<ID2D1SolidColorBrush> _brushDiscardingPort;
-	ComPtr<ID2D1SolidColorBrush> _brushLearningPort;
-	ComPtr<ID2D1SolidColorBrush> _brushForwardingPort;
-	ComPtr<ID2D1SolidColorBrush> _brushForwardingWire;
-	ComPtr<ID2D1SolidColorBrush> _brushNoForwardingWire;
-	ComPtr<ID2D1SolidColorBrush> _brushTempWire;
-	ComPtr<ID2D1StrokeStyle> _strokeStyleNoForwardingWire;
-	ComPtr<IDWriteTextFormat> _regularTextFormat;
-	unsigned int _selectedVlanNumber = 1;
+	DrawingObjects _drawingObjects;
+	uint16_t _selectedVlanNumber = 1;
 	unique_ptr<EditState> _state;
 
 	struct BeginningDrag
@@ -53,18 +41,19 @@ public:
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
 		_project->GetProjectInvalidateEvent().AddHandler (&OnProjectInvalidate, this);
 		auto dc = base::GetDeviceContext();
-		auto hr = dc->CreateSolidColorBrush (ColorF (ColorF::Green), &_poweredBrush); ThrowIfFailed(hr);
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray), &_unpoweredBrush); ThrowIfFailed(hr);
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Red), &_brushDiscardingPort); ThrowIfFailed(hr);
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Yellow), &_brushLearningPort); ThrowIfFailed(hr);
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Green), &_brushForwardingPort); ThrowIfFailed(hr);
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Green), &_brushForwardingWire); ThrowIfFailed(hr);
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray), &_brushNoForwardingWire); ThrowIfFailed(hr);
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Blue), &_brushTempWire); ThrowIfFailed(hr);
-		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOWTEXT), &_brushWindowText); ThrowIfFailed(hr);
-		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOW), &_brushWindow); ThrowIfFailed(hr);
-		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_HIGHLIGHT), &_brushHighlight); ThrowIfFailed(hr);
-		hr = _dWriteFactory->CreateTextFormat (L"Tahoma", NULL, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 14, L"en-US", &_regularTextFormat); ThrowIfFailed(hr);
+		auto hr = dc->CreateSolidColorBrush (ColorF (ColorF::Green), &_drawingObjects._poweredOutlineBrush); ThrowIfFailed(hr);
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::PaleGreen), &_drawingObjects._poweredFillBrush); ThrowIfFailed(hr);
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray), &_drawingObjects._unpoweredBrush); ThrowIfFailed(hr);
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Red), &_drawingObjects._brushDiscardingPort); ThrowIfFailed(hr);
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Yellow), &_drawingObjects._brushLearningPort); ThrowIfFailed(hr);
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Green), &_drawingObjects._brushForwarding); ThrowIfFailed(hr);
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray), &_drawingObjects._brushNoForwardingWire); ThrowIfFailed(hr);
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Blue), &_drawingObjects._brushTempWire); ThrowIfFailed(hr);
+		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOWTEXT), &_drawingObjects._brushWindowText); ThrowIfFailed(hr);
+		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOW), &_drawingObjects._brushWindow); ThrowIfFailed(hr);
+		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_HIGHLIGHT), &_drawingObjects._brushHighlight); ThrowIfFailed(hr);
+		hr = _dWriteFactory->CreateTextFormat (L"Tahoma", NULL, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
+			DWRITE_FONT_STRETCH_NORMAL, 14, L"en-US", &_drawingObjects._regularTextFormat); ThrowIfFailed(hr);
 	}
 
 	virtual ~EditArea()
@@ -91,126 +80,6 @@ public:
 	{
 		auto editArea = static_cast<EditArea*>(callbackArg);
 		::InvalidateRect (editArea->GetHWnd(), nullptr, FALSE);
-	}
-
-	void RenderExteriorNonStpPort (ID2D1DeviceContext* dc, bool macOperational) const
-	{
-		auto brush = macOperational ? _brushForwardingPort : _brushDiscardingPort;
-		dc->DrawLine (Point2F (0, 0), Point2F (0, PortExteriorHeight), brush);
-	}
-
-	void RenderExteriorStpPort (ID2D1DeviceContext* dc, STP_PORT_ROLE role, bool learning, bool forwarding, bool operEdge) const
-	{
-		static constexpr float circleDiameter = min (PortExteriorHeight / 2, PortExteriorWidth);
-
-		static constexpr float edw = PortExteriorWidth;
-		static constexpr float edh = PortExteriorHeight;
-
-		static constexpr float discardingFirstHorizontalLineY = circleDiameter + (edh - circleDiameter) / 3;
-		static constexpr float discardingSecondHorizontalLineY = circleDiameter + (edh - circleDiameter) * 2 / 3;
-		static constexpr float learningHorizontalLineY = circleDiameter + (edh - circleDiameter) / 2;
-
-		static constexpr float dfhly = discardingFirstHorizontalLineY;
-		static constexpr float dshly = discardingSecondHorizontalLineY;
-
-		static const D2D1_ELLIPSE ellipse = { Point2F (0, circleDiameter / 2), circleDiameter / 2, circleDiameter / 2};
-
-		if (role == STP_PORT_ROLE_DISABLED)
-		{
-			// disabled
-			dc->DrawLine (Point2F (0, 0), Point2F (0, edh), _brushDiscardingPort);
-			dc->DrawLine (Point2F (-edw / 2, edh / 3), Point2F (edw / 2, edh * 2 / 3), _brushDiscardingPort);
-		}
-		else if ((role == STP_PORT_ROLE_DESIGNATED) && !learning && !forwarding)
-		{
-			// designated discarding
-			dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), _brushDiscardingPort);
-			dc->FillEllipse (&ellipse, _brushDiscardingPort);
-			dc->DrawLine (Point2F (-edw / 2, dfhly), Point2F (edw / 2, dfhly), _brushDiscardingPort);
-			dc->DrawLine (Point2F (-edw / 2, dshly), Point2F (edw / 2, dshly), _brushDiscardingPort);
-		}
-		else if ((role == STP_PORT_ROLE_DESIGNATED) && learning && !forwarding)
-		{
-			// designated learning
-			dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), _brushLearningPort);
-			dc->FillEllipse (&ellipse, _brushLearningPort);
-			dc->DrawLine (Point2F (-edw / 2, learningHorizontalLineY), Point2F (edw / 2, learningHorizontalLineY), _brushLearningPort);
-		}
-		else if ((role == STP_PORT_ROLE_DESIGNATED) && learning && forwarding && !operEdge)
-		{
-			// designated forwarding
-			dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), _brushForwardingPort);
-			dc->FillEllipse (&ellipse, _brushForwardingPort);
-		}
-		else if ((role == STP_PORT_ROLE_DESIGNATED) && learning && forwarding && operEdge)
-		{
-			// designated forwarding operEdge
-			dc->FillEllipse (&ellipse, _brushForwardingPort);
-			static constexpr D2D1_POINT_2F points[] = 
-			{
-				{ 0, circleDiameter },
-				{ -edw / 2 + 1, circleDiameter + (edh - circleDiameter) / 2 },
-				{ 0, edh },
-				{ edw / 2 - 1, circleDiameter + (edh - circleDiameter) / 2 },
-			};
-
-			dc->DrawLine (points[0], points[1], _brushForwardingPort);
-			dc->DrawLine (points[1], points[2], _brushForwardingPort);
-			dc->DrawLine (points[2], points[3], _brushForwardingPort);
-			dc->DrawLine (points[3], points[0], _brushForwardingPort);
-		}
-		else if (((role == STP_PORT_ROLE_ROOT) || (role == STP_PORT_ROLE_MASTER)) && !learning && !forwarding)
-		{
-			// root or master discarding
-			dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), _brushDiscardingPort);
-			dc->DrawEllipse (&ellipse, _brushDiscardingPort);
-			dc->DrawLine (Point2F (-edw / 2, dfhly), Point2F (edw / 2, dfhly), _brushDiscardingPort);
-			dc->DrawLine (Point2F (-edw / 2, dshly), Point2F (edw / 2, dshly), _brushDiscardingPort);
-		}
-		else if (((role == STP_PORT_ROLE_ROOT) || (role == STP_PORT_ROLE_MASTER)) && learning && !forwarding)
-		{
-			// root or master learning
-			dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), _brushLearningPort);
-			dc->DrawEllipse (&ellipse, _brushLearningPort);
-			dc->DrawLine (Point2F (-edw / 2, learningHorizontalLineY), Point2F (edw / 2, learningHorizontalLineY), _brushLearningPort);
-		}
-		else if (((role == STP_PORT_ROLE_ROOT) || (role == STP_PORT_ROLE_MASTER)) && learning && forwarding)
-		{
-			// root or master forwarding
-			dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), _brushForwardingPort);
-			dc->DrawEllipse (&ellipse, _brushForwardingPort);
-		}
-		else if ((role == STP_PORT_ROLE_ALTERNATE) && !learning && !forwarding)
-		{
-			// Alternate discarding
-			dc->DrawLine (Point2F (0, 0), Point2F (0, edh), _brushDiscardingPort);
-			dc->DrawLine (Point2F (-edw / 2, dfhly), Point2F (edw / 2, dfhly), _brushDiscardingPort);
-			dc->DrawLine (Point2F (-edw / 2, dshly), Point2F (edw / 2, dshly), _brushDiscardingPort);
-		}
-		else if ((role == STP_PORT_ROLE_ALTERNATE) && learning && !forwarding)
-		{
-			// Alternate learning
-			dc->DrawLine (Point2F (0, 0), Point2F (0, edh), _brushLearningPort);
-			dc->DrawLine (Point2F (-edw / 2, learningHorizontalLineY), Point2F (edw / 2, learningHorizontalLineY), _brushLearningPort);
-		}
-		else if ((role == STP_PORT_ROLE_BACKUP) && !learning && !forwarding)
-		{
-			// Backup discarding
-			dc->DrawLine (Point2F (0, 0), Point2F (0, edh), _brushDiscardingPort);
-			dc->DrawLine (Point2F (-edw / 2, dfhly / 2), Point2F (edw / 2, dfhly / 2), _brushDiscardingPort);
-			dc->DrawLine (Point2F (-edw / 2, dfhly), Point2F (edw / 2, dfhly), _brushDiscardingPort);
-			dc->DrawLine (Point2F (-edw / 2, dshly), Point2F (edw / 2, dshly), _brushDiscardingPort);
-		}
-		else if (role == STP_PORT_ROLE_UNKNOWN)
-		{
-			// Undefined
-			dc->DrawLine (Point2F (0, 0), Point2F (0, edh), _brushDiscardingPort);
-
-			D2D1_RECT_F rect = { 2, 0, 20, 20 };
-			dc->DrawText (L"?", 1, _regularTextFormat, &rect, _brushDiscardingPort, D2D1_DRAW_TEXT_OPTIONS_NO_SNAP);
-		}
-		else
-			throw exception("Not implemented.");
 	}
 
 	struct LegendInfoEntry
@@ -252,7 +121,7 @@ public:
 		for (auto& info : LegendInfo)
 		{
 			ComPtr<IDWriteTextLayout> tl;
-			auto hr = _dWriteFactory->CreateTextLayout (info.text, wcslen(info.text), _regularTextFormat, 1000, 1000, &tl); ThrowIfFailed(hr);
+			auto hr = _dWriteFactory->CreateTextLayout (info.text, wcslen(info.text), _drawingObjects._regularTextFormat, 1000, 1000, &tl); ThrowIfFailed(hr);
 
 			DWRITE_TEXT_METRICS metrics;
 			tl->GetMetrics (&metrics);
@@ -280,17 +149,17 @@ public:
 
 			auto oldaa = dc->GetAntialiasMode();
 			dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-			dc->DrawLine (Point2F (textX, y), Point2F (clientRect.right, y), _brushWindowText);
+			dc->DrawLine (Point2F (textX, y), Point2F (clientRect.right, y), _drawingObjects._brushWindowText);
 			dc->SetAntialiasMode(oldaa);
 
-			dc->DrawTextLayout (Point2F (textX, y + 1), layouts[i], _brushWindowText);
+			dc->DrawTextLayout (Point2F (textX, y + 1), layouts[i], _drawingObjects._brushWindowText);
 
 			// Rotate 270 degrees and then translate.
 			Matrix3x2F trans (0.0f, -1.0f, 1.0f, 0.0f, bitmapX, y + rowHeight / 2);
 			trans.SetProduct (oldTransform, trans);
 			dc->SetTransform (&trans);
 
-			RenderExteriorStpPort (dc, info.role, info.learning, info.forwarding, info.operEdge);
+			PhysicalBridge::RenderExteriorStpPort (dc, _drawingObjects, info.role, info.learning, info.forwarding, info.operEdge);
 
 			dc->SetTransform (&oldTransform);
 
@@ -316,134 +185,13 @@ public:
 				ssprops.dashStyle = D2D1_DASH_STYLE_DASH;
 				ComPtr<ID2D1StrokeStyle> ss;
 				auto hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &ss); ThrowIfFailed(hr);
-				ComPtr<ID2D1SolidColorBrush> brush;
-				hr = dc->CreateSolidColorBrush (ColorF(ColorF::Blue), &brush);
-				dc->DrawRectangle ({ tl.x - 10, tl.y - 10, br.x + 10, br.y + 10 }, brush, 1, ss);
+				dc->DrawRectangle ({ tl.x - 10, tl.y - 10, br.x + 10, br.y + 10 }, _drawingObjects._brushHighlight, 2, ss);
 			}
 		}
 
 		dc->SetAntialiasMode(oldaa);
 	}
 
-	void RenderBridge (ID2D1DeviceContext* dc, PhysicalBridge* b) const
-	{
-		optional<unsigned int> treeIndex;
-		if (b->IsStpEnabled())
-			treeIndex = b->GetStpTreeIndexFromVlanNumber(_selectedVlanNumber);
-
-		// Draw bridge outline.
-		D2D1_RECT_F bridgeRect = b->GetBounds();
-		D2D1_ROUNDED_RECT rr = RoundedRect (bridgeRect, BridgeRoundRadius, BridgeRoundRadius);
-		auto outlineBrush = b->IsPowered() ? _poweredBrush.Get() : _unpoweredBrush.Get();
-		outlineBrush->SetOpacity(0.25f);
-		dc->FillRoundedRectangle (&rr, outlineBrush);
-		outlineBrush->SetOpacity(1);
-		dc->DrawRoundedRectangle (&rr, outlineBrush, 2.0f);
-
-		// Draw bridge name.
-		auto address = b->GetMacAddress();
-		wchar_t str[128];
-		int strlen;
-		if (b->IsStpEnabled())
-		{
-			unsigned short prio = b->GetStpBridgePriority(treeIndex.value());
-			strlen = swprintf_s (str, L"%04x.%02x%02x%02x%02x%02x%02x\r\nSTP enabled", prio,
-				address[0], address[1], address[2], address[3], address[4], address[5]);
-		}
-		else
-		{
-			strlen = swprintf_s (str, L"%02x%02x%02x%02x%02x%02x\r\nSTP disabled (right-click to enable)",
-				address[0], address[1], address[2], address[3], address[4], address[5]);
-		}
-		ComPtr<IDWriteTextLayout> tl;
-		HRESULT hr = _dWriteFactory->CreateTextLayout (str, strlen, _regularTextFormat, 10000, 10000, &tl); ThrowIfFailed(hr);
-		dc->DrawTextLayout ({ b->GetLeft() + BridgeOutlineWidth / 2 + 3, b->GetTop() + BridgeOutlineWidth / 2 + 3}, tl, _brushWindowText);
-
-		Matrix3x2F oldTransform;
-		dc->GetTransform (&oldTransform);
-
-		for (unsigned int portIndex = 0; portIndex < b->GetPortCount(); portIndex++)
-		{
-			PhysicalPort* port = b->GetPort(portIndex);
-
-			Matrix3x2F portTransform;
-			if (port->GetSide() == Side::Left)
-			{
-				//portTransform = Matrix3x2F::Rotation (90, Point2F (0, 0)) * Matrix3x2F::Translation (bridgeRect.left, bridgeRect.top + port->GetOffset ());
-				// The above calculation is correct but slow. Let's assign the matrix members directly.
-				portTransform._11 = 0;
-				portTransform._12 = 1;
-				portTransform._21 = -1;
-				portTransform._22 = 0;
-				portTransform._31 = bridgeRect.left;
-				portTransform._32 = bridgeRect.top + port->GetOffset();
-			}
-			else if (port->GetSide() == Side::Right)
-			{
-				//portTransform = Matrix3x2F::Rotation (270, Point2F (0, 0)) * Matrix3x2F::Translation (bridgeRect.right, bridgeRect.top + port->GetOffset ());
-				portTransform._11 = 0;
-				portTransform._12 = -1;
-				portTransform._21 = 1;
-				portTransform._22 = 0;
-				portTransform._31 = bridgeRect.right;
-				portTransform._32 = bridgeRect.top + port->GetOffset();
-			}
-			else if (port->GetSide() == Side::Top)
-			{
-				//portTransform = Matrix3x2F::Rotation (180, Point2F (0, 0)) * Matrix3x2F::Translation (bridgeRect.left + port->GetOffset (), bridgeRect.top);
-				portTransform._11 = -1;
-				portTransform._12 = 0;
-				portTransform._21 = 0;
-				portTransform._22 = -1;
-				portTransform._31 = bridgeRect.left + port->GetOffset();
-				portTransform._32 = bridgeRect.top;
-			}
-			else if (port->GetSide() == Side::Bottom)
-			{
-				//portTransform = Matrix3x2F::Translation (bridgeRect.left + port->GetOffset (), bridgeRect.bottom);
-				portTransform._11 = portTransform._22 = 1;
-				portTransform._12 = portTransform._21 = 0;
-				portTransform._31 = bridgeRect.left + port->GetOffset();
-				portTransform._32 = bridgeRect.bottom;
-			}
-			else
-				throw exception("Not implemented.");
-
-			portTransform.SetProduct (portTransform, oldTransform);
-			dc->SetTransform (&portTransform);
-			
-			// Draw the interior of the port.
-			D2D1_RECT_F portRect = RectF (
-				-PortInteriorLongSize / 2,
-				-PortInteriorShortSize,
-				-PortInteriorLongSize / 2 + PortInteriorLongSize,
-				-PortInteriorShortSize + PortInteriorShortSize);
-			outlineBrush = port->GetMacOperational() ? _poweredBrush : _unpoweredBrush;
-			dc->FillRectangle (&portRect, _brushWindow);
-			dc->DrawRectangle (&portRect, outlineBrush);
-
-			// Draw the exterior of the port.
-			if (b->IsStpEnabled())
-			{
-				STP_PORT_ROLE role = b->GetStpPortRole (portIndex, treeIndex.value());
-				bool learning      = b->GetStpPortLearning (portIndex, treeIndex.value());
-				bool forwarding    = b->GetStpPortForwarding (portIndex, treeIndex.value());
-				bool operEdge      = b->GetStpPortOperEdge (portIndex);
-				RenderExteriorStpPort (dc, role, learning, forwarding, operEdge);
-			}
-			else
-				RenderExteriorNonStpPort(dc, port->GetMacOperational());
-
-			// fill the gray/green circle representing the operational state of the port.
-			auto fillBrush = port->GetMacOperational() ? _poweredBrush : _unpoweredBrush;
-			float radius = 4;
-			D2D1_POINT_2F circleCenter = Point2F (-PortInteriorLongSize / 2 + 2 + radius, -PortInteriorShortSize + 2 + radius);
-			D2D1_ELLIPSE circle = Ellipse (circleCenter, radius, radius);
-			dc->FillEllipse (&circle, fillBrush);
-
-			dc->SetTransform (&oldTransform);
-		}
-	}
 	/*
 	void RenderWire (Wire* wire, unsigned short selectedVlanNumber)
 	{
@@ -485,7 +233,7 @@ public:
 		dc->GetTransform(&oldtr);
 		dc->SetTransform(GetZoomTransform());
 		for (auto& b : _project->GetBridges())
-			RenderBridge (dc, b);
+			b->Render (dc, _drawingObjects, _dWriteFactory, _selectedVlanNumber);
 		dc->SetTransform(oldtr);
 	}
 
@@ -523,6 +271,9 @@ public:
 			RenderLegend(dc);
 			RenderSelectionRectangles(dc);
 		}
+
+		if (_state != nullptr)
+			_state->Render(dc);
 	}
 
 	virtual HWND GetHWnd() const override final { return base::GetHWnd(); }
@@ -626,6 +377,17 @@ public:
 		return 0;
 	}
 
+	virtual EditStateDeps MakeEditStateDeps() override final
+	{
+		return EditStateDeps { _project, this, _selection };
+	}
+
+	virtual void EnterState (std::unique_ptr<EditState>&& state) override final
+	{
+		_beginningDrag = nullopt;
+		_state = move(state);
+	}
+
 	void ProcessWmMouseMove (POINT pt)
 	{
 		auto dLocation = GetDipLocationFromPixelLocation(pt);
@@ -644,7 +406,7 @@ public:
 				else if (auto b = dynamic_cast<PhysicalBridge*>(_beginningDrag->clickedObj))
 				{
 					if (_beginningDrag->button == MouseButton::Left)
-						_state = CreateStateMoveBridges (this, _selection);
+						_state = CreateStateMoveBridges (MakeEditStateDeps());
 				}
 				else if (auto b = dynamic_cast<PhysicalPort*>(_beginningDrag->clickedObj))
 				{
@@ -698,7 +460,7 @@ public:
 		return 0;
 	}
 
-	virtual void SelectVlan (unsigned int vlanNumber) override final
+	virtual void SelectVlan (uint16_t vlanNumber) override final
 	{
 		if (_selectedVlanNumber != vlanNumber)
 		{
@@ -706,6 +468,12 @@ public:
 			::InvalidateRect (GetHWnd(), nullptr, FALSE);
 		}
 	};
+
+	virtual uint16_t GetSelectedVlanNumber() const override final { return _selectedVlanNumber; }
+
+	virtual const DrawingObjects& GetDrawingObjects() const override final { return _drawingObjects; }
+
+	virtual IDWriteFactory* GetDWriteFactory() const override final { return _dWriteFactory; }
 
 	#pragma region IUnknown
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final { throw exception("Not implemented."); }

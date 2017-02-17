@@ -2,7 +2,16 @@
 #pragma once
 #include "../SimulatorDefs.h"
 
-typedef ComPtr<IUICommandHandler> (*RCHFactory)(IProjectWindow* pw, IUIFramework* rf, IProject* project, ISelection* selection);
+struct RCHDeps
+{
+	IProjectWindow* pw;
+	IUIFramework* rf;
+	IProject* project;
+	IEditArea* area;
+	ISelection* selection;
+};
+
+typedef ComPtr<IUICommandHandler> (*RCHFactory)(const RCHDeps& deps);
 
 struct RCHInfo
 {
@@ -21,11 +30,14 @@ class RCHBase abstract : public IUICommandHandler
 
 protected:
 	IProjectWindow* const _pw;
+	IEditArea* const _area;
 	IUIFramework* const _rf;
 	ComPtr<IProject> const _project;
 	ComPtr<ISelection> const _selection;
 
-	RCHBase (IProjectWindow* pw, IUIFramework* rf, IProject* project, ISelection* selection);
+public:
+	RCHBase (const RCHDeps& deps);
+protected:
 	virtual ~RCHBase();
 	virtual HRESULT __stdcall QueryInterface(REFIID riid, void **ppvObject) override final;
 	virtual ULONG __stdcall AddRef() override final;

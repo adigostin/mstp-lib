@@ -33,8 +33,8 @@ RCHInfo::~RCHInfo()
 	}
 }
 
-RCHBase::RCHBase (IProjectWindow* pw, IUIFramework* rf, IProject* project, ISelection* selection)
-	: _pw(pw), _rf(rf), _project(project), _selection(selection)
+RCHBase::RCHBase (const RCHDeps& deps)
+	: _pw(deps.pw), _rf(deps.rf), _project(deps.project), _area(deps.area), _selection(deps.selection)
 {
 	_selection->GetSelectionChangedEvent().AddHandler(&OnSelectionChangedStatic, this);
 	_selection->GetAddedToSelectionEvent().AddHandler(OnAddedToSelection, this);

@@ -2,22 +2,18 @@
 #include "pch.h"
 #include "RCHBase.h"
 #include "../Ribbon/RibbonIds.h"
-#include "../PhysicalBridge.h"
+#include "../Bridge.h"
+#include "../EditStates/EditState.h"
 
 class CreateRCH : public RCHBase
 {
-public:
-	using RCHBase::RCHBase;
+	typedef RCHBase base;
 
-	template<typename... Args>
-	static ComPtr<IUICommandHandler> Create (Args... args) { return ComPtr<IUICommandHandler>(new CreateRCH(args...), false); }
+	using base::base;
 
 	virtual HRESULT __stdcall Execute(UINT32 commandId, UI_EXECUTIONVERB verb, const PROPERTYKEY *key, const PROPVARIANT *currentValue, IUISimplePropertySet *commandExecutionProperties) override final
 	{
-		auto macAddress = _project->AllocNextMacAddress();
-		auto bridge = ComPtr<PhysicalBridge>(new PhysicalBridge(4, macAddress), false);
-		bridge->SetLocation (100, 100);
-		_project->AddBridge (bridge);
+		_area->EnterState (CreateStateCreateBridge(_area->MakeEditStateDeps()));
 		return S_OK;
 	}
 
@@ -30,4 +26,6 @@ public:
 	virtual const RCHInfo& GetInfo() const override final { return _info; }
 };
 
-const RCHInfo CreateRCH::_info ({ cmdCreateBridge, }, &Create);
+const RCHInfo CreateRCH::_info (
+	{ cmdCreateBridge, },
+	[](const RCHDeps& deps) { return ComPtr<IUICommandHandler>(new CreateRCH(deps), false); });

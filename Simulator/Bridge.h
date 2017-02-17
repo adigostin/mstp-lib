@@ -23,6 +23,23 @@ protected:
 
 enum class Side { Left, Top, Right, Bottom };
 
+struct DrawingObjects
+{
+	ComPtr<ID2D1SolidColorBrush> _poweredOutlineBrush;
+	ComPtr<ID2D1SolidColorBrush> _poweredFillBrush;
+	ComPtr<ID2D1SolidColorBrush> _unpoweredBrush;
+	ComPtr<ID2D1SolidColorBrush> _brushWindowText;
+	ComPtr<ID2D1SolidColorBrush> _brushWindow;
+	ComPtr<ID2D1SolidColorBrush> _brushHighlight;
+	ComPtr<ID2D1SolidColorBrush> _brushDiscardingPort;
+	ComPtr<ID2D1SolidColorBrush> _brushLearningPort;
+	ComPtr<ID2D1SolidColorBrush> _brushForwarding;
+	ComPtr<ID2D1SolidColorBrush> _brushNoForwardingWire;
+	ComPtr<ID2D1SolidColorBrush> _brushTempWire;
+	ComPtr<ID2D1StrokeStyle> _strokeStyleNoForwardingWire;
+	ComPtr<IDWriteTextFormat> _regularTextFormat;
+};
+
 class PhysicalBridge;
 
 class PhysicalPort : public Object
@@ -71,13 +88,19 @@ public:
 	float GetRight() const { return _x + _width; }
 	float GetTop() const { return _y; }
 	float GetBottom() const { return _y + _height; }
+	float GetWidth() const { return _width; }
+	float GetHeight() const { return _height; }
+	void SetLocation (float x, float y);
+
 	D2D1_RECT_F GetBounds() const { return { _x, _y, _x + _width, _y + _height }; }
 	unsigned int GetPortCount() const { return (unsigned int) _ports.size(); }
 	PhysicalPort* GetPort(size_t portIndex) const { return _ports[portIndex].get(); }
 	std::array<uint8_t, 6> GetMacAddress() const { return _macAddress; }
-
-	void SetLocation (float x, float y);
 	
+	void Render (ID2D1DeviceContext* dc, const DrawingObjects& dos, IDWriteFactory* dWriteFactory, uint16_t vlanNumber) const;
+	static void RenderExteriorNonStpPort (ID2D1DeviceContext* dc, const DrawingObjects& dos, bool macOperational);
+	static void RenderExteriorStpPort (ID2D1DeviceContext* dc, const DrawingObjects& dos, STP_PORT_ROLE role, bool learning, bool forwarding, bool operEdge);
+
 	BridgeInvalidateEvent::Subscriber GetInvalidateEvent() { return BridgeInvalidateEvent::Subscriber(_em); }
 	BridgeStartedEvent::Subscriber GetBridgeStartedEvent() { return BridgeStartedEvent::Subscriber(_em); }
 	BridgeStoppingEvent::Subscriber GetBridgeStoppingEvent() { return BridgeStoppingEvent::Subscriber(_em); }
@@ -92,13 +115,13 @@ public:
 	bool GetStpPortForwarding (unsigned int portIndex, unsigned int treeIndex) const;
 	bool GetStpPortOperEdge (unsigned int portIndex) const;
 	unsigned short GetStpBridgePriority (unsigned int treeIndex) const;
-	unsigned int GetStpTreeIndexFromVlanNumber (unsigned int vlanNumber) const;
+	unsigned int GetStpTreeIndexFromVlanNumber (unsigned short vlanNumber) const;
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final;
 	virtual ULONG STDMETHODCALLTYPE AddRef() override final;
 	virtual ULONG STDMETHODCALLTYPE Release() override final;
 
-private:
+private:	
 	static void* StpCallback_AllocAndZeroMemory (unsigned int size);
 	static void  StpCallback_FreeMemory (void* p);
 	static void  StpCallback_EnableLearning (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable);

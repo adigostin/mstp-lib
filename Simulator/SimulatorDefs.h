@@ -1,7 +1,7 @@
 #pragma once
 #include "EventManager.h"
 #include "Win32Defs.h"
-#include "PhysicalBridge.h"
+#include "Bridge.h"
 
 struct IProject;
 struct IProjectWindow;
@@ -35,10 +35,18 @@ extern const SelectionFactory selectionFactory;
 
 // ============================================================================
 
+class EditState;
+struct EditStateDeps;
+
 struct IEditArea abstract : public IUnknown
 {
 	virtual HWND GetHWnd() const = 0;
-	virtual void SelectVlan (unsigned int vlanNumber) = 0;
+	virtual void SelectVlan (uint16_t vlanNumber) = 0;
+	virtual uint16_t GetSelectedVlanNumber() const = 0;
+	virtual const DrawingObjects& GetDrawingObjects() const = 0;
+	virtual IDWriteFactory* GetDWriteFactory() const = 0;
+	virtual void EnterState (std::unique_ptr<EditState>&& state) = 0;
+	virtual EditStateDeps MakeEditStateDeps() = 0;
 };
 
 using EditAreaFactory = ComPtr<IEditArea>(*const)(IProject* project, IProjectWindow* pw, ISelection* selection, IUIFramework* rf, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory);

@@ -41,7 +41,4 @@ public:
 	virtual bool Completed() const override final { return _completed; }
 };
 
-unique_ptr<EditState> CreateStateMoveBridges (IEditArea* area, ISelection* selection)
-{
-	return unique_ptr<EditState>(new MoveBridgeES(area, selection));
-}
+unique_ptr<EditState> CreateStateMoveBridges (const EditStateDeps& deps) { return unique_ptr<EditState>(new MoveBridgeES(deps)); }

@@ -69,19 +69,26 @@ public:
 			throw win32_exception(GetLastError());
 		assert(hwnd == _hwnd);
 
+		if ((rfResourceHInstance != nullptr) && (rfResourceName != nullptr))
+		{
+			auto hr = CoCreateInstance(CLSID_UIRibbonFramework, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&_rf));
+			ThrowIfFailed(hr);
+		}
+
+		_editArea = editAreaFactory(project, this, selection, _rf, { 0, 0, 0, 0 }, deviceContext, dWriteFactory, wicFactory);
+
 		LONG ribbonHeight = 0;
 		if ((rfResourceHInstance != nullptr) && (rfResourceName != nullptr))
 		{
-			auto hr = CoCreateInstance(CLSID_UIRibbonFramework, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&_rf)); ThrowIfFailed(hr);
-
+			const RCHDeps deps = { this, _rf, _project, _editArea, _selection };
 			for (auto& info : GetRCHInfos())
 			{
-				auto handler = info->_factory(this, _rf, project, _selection);
+				auto handler = info->_factory(deps);
 				for (UINT32 command : info->_commands)
 					_commandHandlers.insert ({ command, handler });
 			}
 
-			hr = _rf->Initialize(hwnd, this); ThrowIfFailed(hr);
+			auto hr = _rf->Initialize(hwnd, this); ThrowIfFailed(hr);
 			hr = _rf->LoadUI(rfResourceHInstance, rfResourceName); ThrowIfFailed(hr);
 
 			ComPtr<IUIRibbon> ribbon;
@@ -89,8 +96,7 @@ public:
 			hr = ribbon->GetHeight((UINT32*)&ribbonHeight); ThrowIfFailed(hr);
 		}
 
-		RECT areaRect = { 0, ribbonHeight, _clientRect.right, _clientRect.bottom };
-		_editArea = editAreaFactory(project, this, selection, _rf, areaRect, deviceContext, dWriteFactory, wicFactory);
+		::SetWindowPos (_editArea->GetHWnd(), nullptr, 0, ribbonHeight, _clientRect.right, _clientRect.bottom - ribbonHeight, SWP_SHOWWINDOW);
 	}
 
 	~ProjectWindow()

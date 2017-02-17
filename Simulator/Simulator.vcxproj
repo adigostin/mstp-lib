@@ -112,6 +112,7 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Bridge.h" />
     <ClInclude Include="D2DWindow.h" />
     <ClInclude Include="EditStates\EditState.h" />
     <ClInclude Include="EventManager.h" />
@@ -124,7 +125,6 @@
     <ClInclude Include="mstp-lib\port.h" />
     <ClInclude Include="mstp-lib\stp.h" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="PhysicalBridge.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="RibbonCommandHandlers\RCHBase.h" />
     <ClInclude Include="Ribbon\RibbonIds.h" />
@@ -135,8 +135,10 @@
     <ClInclude Include="ZoomableWindow.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Bridge.cpp" />
     <ClCompile Include="D2DWindow.cpp" />
     <ClCompile Include="EditArea.cpp" />
+    <ClCompile Include="EditStates\CreateBridgeES.cpp" />
     <ClCompile Include="EditStates\MoveBridgesES.cpp" />
     <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_procedures.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
@@ -214,7 +216,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="PhysicalBridge.cpp" />
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="RibbonCommandHandlers\BridgeControlRCH.cpp" />

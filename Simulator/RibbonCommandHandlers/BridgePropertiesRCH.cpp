@@ -2,16 +2,13 @@
 #include "pch.h"
 #include "RCHBase.h"
 #include "../Ribbon/RibbonIds.h"
-#include "../PhysicalBridge.h"
+#include "../Bridge.h"
 
 class BridgePropertiesRCH : public RCHBase
 {
 	typedef RCHBase base;
 
 	using base::base;
-
-	template<typename... Args>
-	static ComPtr<IUICommandHandler> Create(Args... args) { return ComPtr<IUICommandHandler>(new BridgePropertiesRCH(args...), false); }
 
 	virtual HRESULT __stdcall Execute(UINT32 commandId, UI_EXECUTIONVERB verb, const PROPERTYKEY *key, const PROPVARIANT *currentValue, IUISimplePropertySet *commandExecutionProperties) override final
 	{
@@ -46,4 +43,6 @@ class BridgePropertiesRCH : public RCHBase
 	virtual const RCHInfo& GetInfo() const override final { return _info; }
 };
 
-const RCHInfo BridgePropertiesRCH::_info ({ cmdBridgeAddress }, &Create);
+const RCHInfo BridgePropertiesRCH::_info (
+	{ cmdBridgeAddress },
+	[](const RCHDeps& deps) { return ComPtr<IUICommandHandler>(new BridgePropertiesRCH(deps), false); });
