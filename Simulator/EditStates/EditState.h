@@ -26,6 +26,7 @@ public:
 	virtual void OnMouseUp   (D2D1_POINT_2F dLocation, D2D1_POINT_2F wLocation, MouseButton button) { }
 	virtual void Render (ID2D1DeviceContext* dc) { }
 	virtual bool Completed() const = 0;
+	virtual HCURSOR GetCursor() const { return LoadCursor(nullptr, IDC_ARROW); }
 };
 
 std::unique_ptr<EditState> CreateStateMoveBridges (const EditStateDeps& deps);

@@ -57,7 +57,7 @@ public:
 	Bridge* GetBridge() const { return _bridge; }
 	Side GetSide() const { return _side; }
 	float GetOffset() const { return _offset; }
-	
+	D2D1_POINT_2F GetConnectionPointLocation() const;
 	bool GetMacOperational() const { return true; } // TODO
 };
 
@@ -104,8 +104,7 @@ public:
 	void SetLocation (float x, float y);
 
 	D2D1_RECT_F GetBounds() const { return { _x, _y, _x + _width, _y + _height }; }
-	unsigned int GetPortCount() const { return (unsigned int) _ports.size(); }
-	Port* GetPort(size_t portIndex) const { return _ports[portIndex].get(); }
+	const std::vector<std::unique_ptr<Port>>& GetPorts() const { return _ports; }
 	std::array<uint8_t, 6> GetMacAddress() const { return _macAddress; }
 	
 	void Render (ID2D1DeviceContext* dc, const DrawingObjects& dos, IDWriteFactory* dWriteFactory, uint16_t vlanNumber) const;

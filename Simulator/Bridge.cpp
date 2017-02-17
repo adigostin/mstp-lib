@@ -5,6 +5,25 @@
 using namespace std;
 using namespace D2D1;
 
+D2D1_POINT_2F Port::GetConnectionPointLocation() const
+{
+	auto bounds = _bridge->GetBounds();
+
+	if (_side == Side::Left)
+		return Point2F (bounds.left - PortExteriorHeight, bounds.top + _offset);
+
+	if (_side == Side::Right)
+		return Point2F (bounds.right + PortExteriorHeight, bounds.top + _offset);
+
+	if (_side == Side::Top)
+		return Point2F (bounds.left + _offset, bounds.top - PortExteriorHeight);
+
+	if (_side == Side::Bottom)
+		return Point2F (bounds.left + _offset, bounds.bottom + PortExteriorHeight);
+
+	throw runtime_error ("Not implemented.");
+}
+
 Bridge::Bridge (unsigned int portCount, const std::array<uint8_t, 6>& macAddress)
 	: _macAddress(macAddress), _guiThreadId(this_thread::get_id())
 {

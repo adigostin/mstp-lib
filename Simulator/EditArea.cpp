@@ -8,6 +8,8 @@
 using namespace std;
 using namespace D2D1;
 
+static constexpr float SnappingDistance = 6;
+
 class EditArea : public ZoomableWindow, public IEditArea
 {
 	typedef ZoomableWindow base;
@@ -21,6 +23,7 @@ class EditArea : public ZoomableWindow, public IEditArea
 	DrawingObjects _drawingObjects;
 	uint16_t _selectedVlanNumber = 1;
 	unique_ptr<EditState> _state;
+	Port* _hoverPort = nullptr;
 
 	struct BeginningDrag
 	{
@@ -39,6 +42,7 @@ public:
 		, _project(project), _pw(pw), _rf(rf), _selection(selection), _dWriteFactory(dWriteFactory)
 	{
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
+		_project->GetBridgeRemovingEvent().AddHandler (&OnBridgeRemoving, this);
 		_project->GetProjectInvalidateEvent().AddHandler (&OnProjectInvalidate, this);
 		auto dc = base::GetDeviceContext();
 		auto hr = dc->CreateSolidColorBrush (ColorF (ColorF::Green), &_drawingObjects._poweredOutlineBrush); ThrowIfFailed(hr);
@@ -60,7 +64,18 @@ public:
 	{
 		assert (_refCount == 0);
 		_project->GetProjectInvalidateEvent().RemoveHandler(&OnProjectInvalidate, this);
+		_project->GetBridgeRemovingEvent().RemoveHandler (&OnBridgeRemoving, this);
 		_selection->GetSelectionChangedEvent().RemoveHandler (&OnSelectionChanged, this);
+	}
+
+	static void OnBridgeRemoving (void* callbackArg, IProject* project, size_t index, Bridge* b)
+	{
+		auto area = static_cast<EditArea*>(callbackArg);
+		if (area->_hoverPort->GetBridge() == b)
+		{
+			area->_hoverPort = nullptr;
+			InvalidateRect (area->GetHWnd(), nullptr, FALSE);
+		}
 	}
 
 	static void OnProjectInvalidate (void* callbackArg, IProject*)
@@ -185,6 +200,18 @@ public:
 		dc->SetAntialiasMode(oldaa);
 	}
 
+	void RenderHoverCP (ID2D1RenderTarget* rt) const
+	{
+		auto oldaa = rt->GetAntialiasMode();
+		rt->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
+
+		auto cpw = _hoverPort->GetConnectionPointLocation();
+		auto cpd = GetDLocationFromWLocation(cpw);
+		auto rect = RectF (cpd.x - SnappingDistance, cpd.y - SnappingDistance, cpd.x + SnappingDistance, cpd.y + SnappingDistance);
+		rt->DrawRectangle (rect, _drawingObjects._brushHighlight, 2);
+
+		rt->SetAntialiasMode(oldaa);
+	}
 	/*
 	void RenderWire (Wire* wire, unsigned short selectedVlanNumber)
 	{
@@ -255,6 +282,8 @@ public:
 			RenderLegend(dc);
 			RenderBridges(dc);
 			RenderSelectionRectangles(dc);
+			if (_hoverPort != nullptr)
+				RenderHoverCP(dc);
 		}
 
 		if (_state != nullptr)
@@ -271,21 +300,41 @@ public:
 			auto result = ProcessMouseButtonDown (button, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
 			return result ? result.value() : base::WindowProc (hwnd, uMsg, wParam, lParam);
 		}
-		else if (uMsg == WM_MOUSEMOVE)
-		{
-			ProcessWmMouseMove (POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
-			base::WindowProc (hwnd, uMsg, wParam, lParam);
-			return 0;
-		}
 		else if ((uMsg == WM_LBUTTONUP) || (uMsg == WM_RBUTTONUP))
 		{
 			auto button = (uMsg == WM_LBUTTONUP) ? MouseButton::Left : MouseButton::Right;
 			auto result = ProcessMouseButtonUp (button, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
 			return result ? result.value() : base::WindowProc (hwnd, uMsg, wParam, lParam);
 		}
+		else if (uMsg == WM_SETCURSOR)
+		{
+			if (((HWND) wParam == GetHWnd()) && (LOWORD (lParam) == HTCLIENT))
+			{
+				// Let's check the result because GetCursorPos fails when the input desktop is not the current desktop
+				// (happens for example when the monitor goes to sleep and then the lock screen is displayed).
+				POINT pt;
+				if (::GetCursorPos (&pt))
+				{
+					if (ScreenToClient (GetHWnd(), &pt))
+					{
+						this->ProcessWmSetCursor(pt);
+						return TRUE;
+					}
+				}
+			}
 
-		if (uMsg == WM_CONTEXTMENU)
+			return nullopt;
+		}
+		else if (uMsg == WM_MOUSEMOVE)
+		{
+			ProcessWmMouseMove (POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
+			base::WindowProc (hwnd, uMsg, wParam, lParam);
+			return 0;
+		}
+		else if (uMsg == WM_CONTEXTMENU)
+		{
 			return ProcessWmContextMenu (hwnd, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
+		}
 
 		return base::WindowProc (hwnd, uMsg, wParam, lParam);
 	}
@@ -302,6 +351,23 @@ public:
 
 		return nullptr;
 	};
+
+	Port* GetConnectionPointAt (D2D1_POINT_2F dipLocation, float snappingDistance)
+	{
+		for (auto& bridge : _project->GetBridges())
+		{
+			for (auto& port : bridge->GetPorts())
+			{
+				auto cpWLocation = port->GetConnectionPointLocation();
+				auto cpDLocation = GetDLocationFromWLocation(cpWLocation);
+
+				if ((abs (cpDLocation.x - dipLocation.x) <= snappingDistance) && (abs (cpDLocation.y - dipLocation.y) <= snappingDistance))
+					return port.get();
+			}
+		}
+
+		return nullptr;
+	}
 
 	std::optional<LRESULT> ProcessMouseButtonDown (MouseButton button, POINT pt)
 	{
@@ -373,6 +439,27 @@ public:
 		_state = move(state);
 	}
 
+	void ProcessWmSetCursor (POINT pt)
+	{
+		auto dLocation = GetDipLocationFromPixelLocation(pt);
+		auto wLocation = GetWLocationFromDLocation(dLocation);
+
+		if (_beginningDrag)
+		{
+		}
+		else if (_state != nullptr)
+		{
+			::SetCursor (GetCursor());
+		}
+		else
+		{
+			if (GetConnectionPointAt (dLocation, SnappingDistance) != nullptr)
+				::SetCursor (LoadCursor(nullptr, IDC_CROSS));
+			else
+				::SetCursor (LoadCursor(nullptr, IDC_ARROW));
+		}
+	}
+
 	void ProcessWmMouseMove (POINT pt)
 	{
 		auto dLocation = GetDipLocationFromPixelLocation(pt);
@@ -419,6 +506,15 @@ public:
 			{
 				_state = nullptr;
 				::SetCursor (LoadCursor (nullptr, IDC_ARROW));
+			}
+		}
+		else
+		{
+			auto newHoverCP = GetConnectionPointAt(dLocation, SnappingDistance);
+			if (_hoverPort != newHoverCP)
+			{
+				_hoverPort = newHoverCP;
+				InvalidateRect (GetHWnd(), nullptr, FALSE);
 			}
 		}
 	}

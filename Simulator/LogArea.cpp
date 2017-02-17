@@ -54,8 +54,8 @@ public:
 
 		if ((_bridge == nullptr) || _lines.empty())
 		{
-			static constexpr wchar_t TextNoBridge[] = L"The STP activity log is shown here. Select a bridge to see its log.";
-			static constexpr wchar_t TextNoEntries[] = L"No log text generated yet. You may want to enable STP on the selected bridge.";
+			static constexpr wchar_t TextNoBridge[] = L"The STP activity log is shown here.\r\nSelect a bridge to see its log.";
+			static constexpr wchar_t TextNoEntries[] = L"No log text generated yet.\r\nYou may want to enable STP on the selected bridge.";
 
 			auto oldta = _textFormat->GetTextAlignment();
 			_textFormat->SetTextAlignment (DWRITE_TEXT_ALIGNMENT_CENTER);
