@@ -39,8 +39,9 @@ void Bridge::EnableStp (STP_VERSION stpVersion, unsigned int treeCount, uint32_t
 	if (_stpBridge != nullptr)
 		throw runtime_error ("STP is already enabled on this bridge.");
 
-	_stpBridge = STP_CreateBridge ((unsigned int) _ports.size(), treeCount, &StpCallbacks, STP_VERSION_RSTP, &_macAddress[0], 128);
+	_stpBridge = STP_CreateBridge ((unsigned int) _ports.size(), treeCount, &StpCallbacks, stpVersion, &_macAddress[0], 256);
 	STP_SetApplicationContext (_stpBridge, this);
+	STP_EnableLogging (_stpBridge, true);
 	STP_StartBridge (_stpBridge, timestamp);
 	BridgeStartedEvent::InvokeHandlers (_em, this);
 
@@ -371,16 +372,16 @@ void Bridge::Render (ID2D1DeviceContext* dc, const DrawingObjects& dos, IDWriteF
 #pragma region STP Callbacks
 const STP_CALLBACKS Bridge::StpCallbacks =
 {
-	&StpCallback_EnableLearning,
-	&StpCallback_EnableForwarding,
+	StpCallback_EnableLearning,
+	StpCallback_EnableForwarding,
 	nullptr, // transmitGetBuffer;
 	nullptr, // transmitReleaseBuffer;
-	&StpCallback_FlushFdb,
-	nullptr, // debugStrOut;
+	StpCallback_FlushFdb,
+	StpCallback_DebugStrOut,
 	nullptr, // onTopologyChange;
 	nullptr, // onNotifiedTopologyChange;
-	&StpCallback_AllocAndZeroMemory,
-	&StpCallback_FreeMemory,
+	StpCallback_AllocAndZeroMemory,
+	StpCallback_FreeMemory,
 };
 
 
@@ -398,20 +399,61 @@ void Bridge::StpCallback_FreeMemory(void* p)
 
 void Bridge::StpCallback_EnableLearning(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable)
 {
-	auto pb = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
-	BridgeInvalidateEvent::InvokeHandlers (pb->_em, pb);
+	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
+	BridgeInvalidateEvent::InvokeHandlers (b->_em, b);
 }
 
 void Bridge::StpCallback_EnableForwarding(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable)
 {
-	auto pb = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
-	BridgeInvalidateEvent::InvokeHandlers(pb->_em, pb);
+	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
+	BridgeInvalidateEvent::InvokeHandlers(b->_em, b);
 }
 
 void Bridge::StpCallback_FlushFdb (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType)
 {
-	auto pb = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
+	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 }
+
+void Bridge::StpCallback_DebugStrOut (STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, bool flush)
+{
+	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
+
+	if (this_thread::get_id() != b->_guiThreadId)
+		throw std::runtime_error("Logging-related code does not yet support multithreading.");
+
+	if (stringLength > 0)
+	{
+		if (b->_currentLogLine.text.empty())
+		{
+			b->_currentLogLine.text.assign (nullTerminatedString, (size_t) stringLength);
+			b->_currentLogLine.portIndex = portIndex;
+			b->_currentLogLine.treeIndex = treeIndex;
+		}
+		else
+		{
+			if ((b->_currentLogLine.portIndex != portIndex) || (b->_currentLogLine.treeIndex != treeIndex))
+			{
+				b->_logLines.push_back(move(b->_currentLogLine));
+				BridgeLogLineGenerated::InvokeHandlers (b->_em, b, b->_logLines.back());
+			}
+
+			b->_currentLogLine.text.append (nullTerminatedString, (size_t) stringLength);
+		}
+
+		if (!b->_currentLogLine.text.empty() && (b->_currentLogLine.text.back() == L'\n'))
+		{
+			b->_logLines.push_back(move(b->_currentLogLine));
+			BridgeLogLineGenerated::InvokeHandlers (b->_em, b, b->_logLines.back());
+		}
+	}
+
+	if (flush && !b->_currentLogLine.text.empty())
+	{
+		b->_logLines.push_back(move(b->_currentLogLine));
+		BridgeLogLineGenerated::InvokeHandlers (b->_em, b, b->_logLines.back());
+	}
+}
+
 #pragma endregion
 
 #pragma region Bridge::IUnknown

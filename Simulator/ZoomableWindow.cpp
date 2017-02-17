@@ -275,7 +275,7 @@ std::optional<LRESULT> ZoomableWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM w
 
 	if (uMsg == WM_SIZE)
 	{
-		base::WindowProc(hwnd, uMsg, wParam, lParam);
+		base::WindowProc (hwnd, uMsg, wParam, lParam); // Pass it to the base class first, which stores the client size.
 		ProcessWmSize(wParam, lParam);
 		return 0;
 	}

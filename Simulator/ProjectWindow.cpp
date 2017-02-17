@@ -102,13 +102,37 @@ public:
 		}
 
 		ResizeChildWindows();
+
+		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
 	}
 
 	~ProjectWindow()
 	{
+		_selection->GetSelectionChangedEvent().RemoveHandler (&OnSelectionChanged, this);
+
 		_editArea = nullptr;
 		_logArea = nullptr;
 		::DestroyWindow(_hwnd);
+	}
+
+	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
+	{
+		auto pw = static_cast<ProjectWindow*>(callbackArg);
+		if (selection->GetObjects().size() != 1)
+			pw->_logArea->SelectBridge(nullptr);
+		else
+		{
+			auto b = dynamic_cast<Bridge*>(selection->GetObjects()[0]);
+			if (b == nullptr)
+			{
+				auto port = dynamic_cast<Port*>(selection->GetObjects()[0]);
+				if (port == nullptr)
+					throw runtime_error("Not implemented.");
+				b = port->GetBridge();
+			}
+
+			pw->_logArea->SelectBridge(b);
+		}
 	}
 
 	virtual HWND GetHWnd() const override { return _hwnd; }

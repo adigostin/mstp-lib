@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <array>
 #include <assert.h>
+#include <codecvt>
 #include <comdef.h>
 #include <Commctrl.h>
 #include <cstdint>
@@ -32,6 +33,7 @@
 #include <d3d11_1.h>
 #include <dwrite_1.h>
 #include <functional>
+#include <locale>
 #include <memory>
 #include <mutex>
 #include <objbase.h>

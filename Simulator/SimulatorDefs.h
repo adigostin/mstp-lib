@@ -44,6 +44,7 @@ struct ILogArea abstract : public IUnknown
 	virtual HWND GetHWnd() const = 0;
 	virtual LogAreaCloseButtonClicked::Subscriber GetLogAreaCloseButtonClicked() = 0;
 	virtual LogAreaResizingEvent::Subscriber GetLogAreaResizingEvent() = 0;
+	virtual void SelectBridge (Bridge* b) = 0;
 };
 
 using LogAreaFactory = ComPtr<ILogArea>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory);
