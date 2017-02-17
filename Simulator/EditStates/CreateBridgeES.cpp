@@ -25,7 +25,11 @@ public:
 	virtual void OnMouseUp (D2D1_POINT_2F dLocation, D2D1_POINT_2F wLocation, MouseButton button) override final
 	{
 		if (_bridge != nullptr)
+		{
 			_project->AddBridge(_bridge);
+			_selection->Select(_bridge);
+		}
+
 		_completed = true;
 	}
 
