@@ -1,8 +1,6 @@
 #pragma once
+#include "SimulatorDefs.h"
 
-class Port;
-class Bridge;
-
-class Wire
+class Wire : public Object
 {
 };

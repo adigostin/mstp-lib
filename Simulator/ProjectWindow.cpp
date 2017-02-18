@@ -1,8 +1,9 @@
 #include "pch.h"
 #include "SimulatorDefs.h"
 #include "Win32Defs.h"
-#include "resource.h"
+#include "Resource.h"
 #include "RibbonCommandHandlers/RCHBase.h"
+#include "Bridge.h"
 
 using namespace std;
 

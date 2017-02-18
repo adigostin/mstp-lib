@@ -45,6 +45,7 @@ Bridge::Bridge (unsigned int portCount, const std::array<uint8_t, 6>& macAddress
 
 Bridge::~Bridge()
 {
+	assert (_refCount == 0);
 	assert (this_thread::get_id() == _guiThreadId);
 	if (_stpBridge != nullptr)
 		STP_DestroyBridge (_stpBridge);
@@ -157,7 +158,7 @@ unsigned int Bridge::GetStpTreeIndexFromVlanNumber (unsigned short vlanNumber) c
 void Bridge::RenderExteriorNonStpPort (ID2D1DeviceContext* dc, const DrawingObjects& dos, bool macOperational)
 {
 	auto brush = macOperational ? dos._brushForwarding : dos._brushDiscardingPort;
-	dc->DrawLine (Point2F (0, 0), Point2F (0, PortExteriorHeight), brush);
+	dc->DrawLine (Point2F (0, 0), Point2F (0, PortExteriorHeight), brush, 2);
 }
 
 // static
@@ -175,39 +176,51 @@ void Bridge::RenderExteriorStpPort (ID2D1DeviceContext* dc, const DrawingObjects
 	static constexpr float dfhly = discardingFirstHorizontalLineY;
 	static constexpr float dshly = discardingSecondHorizontalLineY;
 
-	static const D2D1_ELLIPSE ellipse = { Point2F (0, circleDiameter / 2), circleDiameter / 2, circleDiameter / 2};
+	static const D2D1_ELLIPSE ellipseFill = { Point2F (0, circleDiameter / 2), circleDiameter / 2 + 0.5f, circleDiameter / 2 + 0.5f };
+	static const D2D1_ELLIPSE ellipseDraw = { Point2F (0, circleDiameter / 2), circleDiameter / 2 - 0.5f, circleDiameter / 2 - 0.5f};
+
+	auto oldaa = dc->GetAntialiasMode();
 
 	if (role == STP_PORT_ROLE_DISABLED)
 	{
 		// disabled
-		dc->DrawLine (Point2F (0, 0), Point2F (0, edh), dos._brushDiscardingPort);
+		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
+		dc->DrawLine (Point2F (0, 0), Point2F (0, edh), dos._brushDiscardingPort, 2);
+		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
 		dc->DrawLine (Point2F (-edw / 2, edh / 3), Point2F (edw / 2, edh * 2 / 3), dos._brushDiscardingPort);
 	}
 	else if ((role == STP_PORT_ROLE_DESIGNATED) && !learning && !forwarding)
 	{
 		// designated discarding
-		dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), dos._brushDiscardingPort);
-		dc->FillEllipse (&ellipse, dos._brushDiscardingPort);
+		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+		dc->FillEllipse (&ellipseFill, dos._brushDiscardingPort);
+		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
+		dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), dos._brushDiscardingPort, 2);
 		dc->DrawLine (Point2F (-edw / 2, dfhly), Point2F (edw / 2, dfhly), dos._brushDiscardingPort);
 		dc->DrawLine (Point2F (-edw / 2, dshly), Point2F (edw / 2, dshly), dos._brushDiscardingPort);
 	}
 	else if ((role == STP_PORT_ROLE_DESIGNATED) && learning && !forwarding)
 	{
 		// designated learning
-		dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), dos._brushLearningPort);
-		dc->FillEllipse (&ellipse, dos._brushLearningPort);
+		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+		dc->FillEllipse (&ellipseFill, dos._brushLearningPort);
+		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
+		dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), dos._brushLearningPort, 2);
 		dc->DrawLine (Point2F (-edw / 2, learningHorizontalLineY), Point2F (edw / 2, learningHorizontalLineY), dos._brushLearningPort);
 	}
 	else if ((role == STP_PORT_ROLE_DESIGNATED) && learning && forwarding && !operEdge)
 	{
 		// designated forwarding
-		dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), dos._brushForwarding);
-		dc->FillEllipse (&ellipse, dos._brushForwarding);
+		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+		dc->FillEllipse (&ellipseFill, dos._brushForwarding);
+		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
+		dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), dos._brushForwarding, 2);
 	}
 	else if ((role == STP_PORT_ROLE_DESIGNATED) && learning && forwarding && operEdge)
 	{
 		// designated forwarding operEdge
-		dc->FillEllipse (&ellipse, dos._brushForwarding);
+		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+		dc->FillEllipse (&ellipseFill, dos._brushForwarding);
 		static constexpr D2D1_POINT_2F points[] = 
 		{
 			{ 0, circleDiameter },
@@ -216,49 +229,58 @@ void Bridge::RenderExteriorStpPort (ID2D1DeviceContext* dc, const DrawingObjects
 			{ edw / 2 - 1, circleDiameter + (edh - circleDiameter) / 2 },
 		};
 
-		dc->DrawLine (points[0], points[1], dos._brushForwarding);
-		dc->DrawLine (points[1], points[2], dos._brushForwarding);
-		dc->DrawLine (points[2], points[3], dos._brushForwarding);
-		dc->DrawLine (points[3], points[0], dos._brushForwarding);
+		dc->DrawLine (points[0], points[1], dos._brushForwarding, 2);
+		dc->DrawLine (points[1], points[2], dos._brushForwarding, 2);
+		dc->DrawLine (points[2], points[3], dos._brushForwarding, 2);
+		dc->DrawLine (points[3], points[0], dos._brushForwarding, 2);
 	}
 	else if (((role == STP_PORT_ROLE_ROOT) || (role == STP_PORT_ROLE_MASTER)) && !learning && !forwarding)
 	{
 		// root or master discarding
-		dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), dos._brushDiscardingPort);
-		dc->DrawEllipse (&ellipse, dos._brushDiscardingPort);
+		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+		dc->DrawEllipse (&ellipseDraw, dos._brushDiscardingPort, 2);
+		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
+		dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), dos._brushDiscardingPort, 2);
 		dc->DrawLine (Point2F (-edw / 2, dfhly), Point2F (edw / 2, dfhly), dos._brushDiscardingPort);
 		dc->DrawLine (Point2F (-edw / 2, dshly), Point2F (edw / 2, dshly), dos._brushDiscardingPort);
 	}
 	else if (((role == STP_PORT_ROLE_ROOT) || (role == STP_PORT_ROLE_MASTER)) && learning && !forwarding)
 	{
 		// root or master learning
-		dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), dos._brushLearningPort);
-		dc->DrawEllipse (&ellipse, dos._brushLearningPort);
+		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+		dc->DrawEllipse (&ellipseDraw, dos._brushLearningPort, 2);
+		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
+		dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), dos._brushLearningPort, 2);
 		dc->DrawLine (Point2F (-edw / 2, learningHorizontalLineY), Point2F (edw / 2, learningHorizontalLineY), dos._brushLearningPort);
 	}
 	else if (((role == STP_PORT_ROLE_ROOT) || (role == STP_PORT_ROLE_MASTER)) && learning && forwarding)
 	{
 		// root or master forwarding
-		dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), dos._brushForwarding);
-		dc->DrawEllipse (&ellipse, dos._brushForwarding);
+		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+		dc->DrawEllipse (&ellipseDraw, dos._brushForwarding, 2);
+		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
+		dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), dos._brushForwarding, 2);
 	}
 	else if ((role == STP_PORT_ROLE_ALTERNATE) && !learning && !forwarding)
 	{
 		// Alternate discarding
-		dc->DrawLine (Point2F (0, 0), Point2F (0, edh), dos._brushDiscardingPort);
+		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
+		dc->DrawLine (Point2F (0, 0), Point2F (0, edh), dos._brushDiscardingPort, 2);
 		dc->DrawLine (Point2F (-edw / 2, dfhly), Point2F (edw / 2, dfhly), dos._brushDiscardingPort);
 		dc->DrawLine (Point2F (-edw / 2, dshly), Point2F (edw / 2, dshly), dos._brushDiscardingPort);
 	}
 	else if ((role == STP_PORT_ROLE_ALTERNATE) && learning && !forwarding)
 	{
 		// Alternate learning
-		dc->DrawLine (Point2F (0, 0), Point2F (0, edh), dos._brushLearningPort);
+		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
+		dc->DrawLine (Point2F (0, 0), Point2F (0, edh), dos._brushLearningPort, 2);
 		dc->DrawLine (Point2F (-edw / 2, learningHorizontalLineY), Point2F (edw / 2, learningHorizontalLineY), dos._brushLearningPort);
 	}
 	else if ((role == STP_PORT_ROLE_BACKUP) && !learning && !forwarding)
 	{
 		// Backup discarding
-		dc->DrawLine (Point2F (0, 0), Point2F (0, edh), dos._brushDiscardingPort);
+		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
+		dc->DrawLine (Point2F (0, 0), Point2F (0, edh), dos._brushDiscardingPort, 2);
 		dc->DrawLine (Point2F (-edw / 2, dfhly / 2), Point2F (edw / 2, dfhly / 2), dos._brushDiscardingPort);
 		dc->DrawLine (Point2F (-edw / 2, dfhly), Point2F (edw / 2, dfhly), dos._brushDiscardingPort);
 		dc->DrawLine (Point2F (-edw / 2, dshly), Point2F (edw / 2, dshly), dos._brushDiscardingPort);
@@ -266,13 +288,14 @@ void Bridge::RenderExteriorStpPort (ID2D1DeviceContext* dc, const DrawingObjects
 	else if (role == STP_PORT_ROLE_UNKNOWN)
 	{
 		// Undefined
-		dc->DrawLine (Point2F (0, 0), Point2F (0, edh), dos._brushDiscardingPort);
-
-		D2D1_RECT_F rect = { 2, 0, 20, 20 };
-		dc->DrawText (L"?", 1, dos._regularTextFormat, &rect, dos._brushDiscardingPort, D2D1_DRAW_TEXT_OPTIONS_NO_SNAP);
+		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
+		dc->DrawLine (Point2F (0, 0), Point2F (0, edh), dos._brushDiscardingPort, 2);
+		dc->DrawText (L"?", 1, dos._regularTextFormat, { 2, 0, 20, 20 }, dos._brushDiscardingPort, D2D1_DRAW_TEXT_OPTIONS_NO_SNAP);
 	}
 	else
 		throw exception("Not implemented.");
+
+	dc->SetAntialiasMode(oldaa);
 }
 
 void Bridge::Render (ID2D1DeviceContext* dc, const DrawingObjects& dos, IDWriteFactory* dWriteFactory, uint16_t vlanNumber) const

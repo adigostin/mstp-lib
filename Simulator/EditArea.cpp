@@ -4,6 +4,7 @@
 #include "ZoomableWindow.h"
 #include "Ribbon/RibbonIds.h"
 #include "EditStates/EditState.h"
+#include "Bridge.h"
 
 using namespace std;
 using namespace D2D1;
@@ -49,7 +50,7 @@ public:
 		hr = dc->CreateSolidColorBrush (ColorF (ColorF::PaleGreen), &_drawingObjects._poweredFillBrush); ThrowIfFailed(hr);
 		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray), &_drawingObjects._unpoweredBrush); ThrowIfFailed(hr);
 		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Red), &_drawingObjects._brushDiscardingPort); ThrowIfFailed(hr);
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Yellow), &_drawingObjects._brushLearningPort); ThrowIfFailed(hr);
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gold), &_drawingObjects._brushLearningPort); ThrowIfFailed(hr);
 		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Green), &_drawingObjects._brushForwarding); ThrowIfFailed(hr);
 		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray), &_drawingObjects._brushNoForwardingWire); ThrowIfFailed(hr);
 		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Blue), &_drawingObjects._brushTempWire); ThrowIfFailed(hr);

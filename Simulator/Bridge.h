@@ -1,6 +1,7 @@
 
 #pragma once
 #include "EventManager.h"
+#include "SimulatorDefs.h"
 #include "mstp-lib/stp.h"
 
 static constexpr float PortLongSize = 30;
@@ -9,36 +10,11 @@ static constexpr float PortSpacing = 20;
 static constexpr float PortInteriorLongSize = 25;  // Size along the edge of the bridge.
 static constexpr float PortInteriorShortSize = 14; // Size from the edge to the interior of the bridge.
 static constexpr float PortExteriorWidth = 12;
-static constexpr float PortExteriorHeight = 18;
-static constexpr float BridgeDefaultHeight = 150;
+static constexpr float PortExteriorHeight = 24;
+static constexpr float BridgeDefaultHeight = 120;
 static constexpr float BridgeOutlineWidth = 4;
-static constexpr float MinBridgeWidth = 300;
+static constexpr float MinBridgeWidth = 250;
 static constexpr float BridgeRoundRadius = 8;
-
-class Object
-{
-protected:
-	virtual ~Object() { }
-};
-
-enum class Side { Left, Top, Right, Bottom };
-
-struct DrawingObjects
-{
-	ComPtr<ID2D1SolidColorBrush> _poweredOutlineBrush;
-	ComPtr<ID2D1SolidColorBrush> _poweredFillBrush;
-	ComPtr<ID2D1SolidColorBrush> _unpoweredBrush;
-	ComPtr<ID2D1SolidColorBrush> _brushWindowText;
-	ComPtr<ID2D1SolidColorBrush> _brushWindow;
-	ComPtr<ID2D1SolidColorBrush> _brushHighlight;
-	ComPtr<ID2D1SolidColorBrush> _brushDiscardingPort;
-	ComPtr<ID2D1SolidColorBrush> _brushLearningPort;
-	ComPtr<ID2D1SolidColorBrush> _brushForwarding;
-	ComPtr<ID2D1SolidColorBrush> _brushNoForwardingWire;
-	ComPtr<ID2D1SolidColorBrush> _brushTempWire;
-	ComPtr<ID2D1StrokeStyle> _strokeStyleNoForwardingWire;
-	ComPtr<IDWriteTextFormat> _regularTextFormat;
-};
 
 class Bridge;
 

@@ -1,6 +1,7 @@
 
 #include "pch.h"
 #include "SimulatorDefs.h"
+#include "Bridge.h"
 
 using namespace std;
 

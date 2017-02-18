@@ -1,12 +1,39 @@
 #pragma once
 #include "EventManager.h"
 #include "Win32Defs.h"
-#include "Bridge.h"
 
 struct IProject;
 struct IProjectWindow;
 struct ISelection;
 struct ILogArea;
+class Bridge;
+class Port;
+class Wire;
+
+class Object
+{
+protected:
+	virtual ~Object() { }
+};
+
+enum class Side { Left, Top, Right, Bottom };
+
+struct DrawingObjects
+{
+	ComPtr<ID2D1SolidColorBrush> _poweredOutlineBrush;
+	ComPtr<ID2D1SolidColorBrush> _poweredFillBrush;
+	ComPtr<ID2D1SolidColorBrush> _unpoweredBrush;
+	ComPtr<ID2D1SolidColorBrush> _brushWindowText;
+	ComPtr<ID2D1SolidColorBrush> _brushWindow;
+	ComPtr<ID2D1SolidColorBrush> _brushHighlight;
+	ComPtr<ID2D1SolidColorBrush> _brushDiscardingPort;
+	ComPtr<ID2D1SolidColorBrush> _brushLearningPort;
+	ComPtr<ID2D1SolidColorBrush> _brushForwarding;
+	ComPtr<ID2D1SolidColorBrush> _brushNoForwardingWire;
+	ComPtr<ID2D1SolidColorBrush> _brushTempWire;
+	ComPtr<ID2D1StrokeStyle> _strokeStyleNoForwardingWire;
+	ComPtr<IDWriteTextFormat> _regularTextFormat;
+};
 
 enum class MouseButton
 {

@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "SimulatorDefs.h"
 #include "D2DWindow.h"
+#include "Bridge.h"
 
 using namespace std;
 using namespace D2D1;
