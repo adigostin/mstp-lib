@@ -7,7 +7,7 @@ using namespace std;
 class Selection : public ISelection
 {
 	ULONG _refCount = 1;
-	vector<Object*> _objects;
+	vector<ComPtr<Object>> _objects;
 	EventManager _em;
 
 	virtual ~Selection()
@@ -15,11 +15,11 @@ class Selection : public ISelection
 		assert (_refCount == 0);
 	}
 
-	virtual const vector<Object*>& GetObjects() const override final { return _objects; }
+	virtual const vector<ComPtr<Object>>& GetObjects() const override final { return _objects; }
 
 	void AddInternal (Object* o)
 	{
-		_objects.push_back(o);
+		_objects.push_back(ComPtr<Object>(o));
 		AddedToSelectionEvent::InvokeHandlers(_em, this, o);
 		SelectionChangedEvent::InvokeHandlers(_em, this);
 	}
@@ -65,7 +65,7 @@ class Selection : public ISelection
 	virtual SelectionChangedEvent::Subscriber GetSelectionChangedEvent() override final { return SelectionChangedEvent::Subscriber(_em); }
 
 	#pragma region IUnknown
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void ** ppvObject) override final { throw exception("Not implemented."); }
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final { return E_NOTIMPL; }
 
 	virtual ULONG STDMETHODCALLTYPE AddRef(void) override final
 	{

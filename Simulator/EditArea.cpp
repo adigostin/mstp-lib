@@ -32,7 +32,7 @@ class EditArea : public ZoomableWindow, public IEditArea
 		D2D1_POINT_2F dLocation;
 		D2D1_POINT_2F wLocation;
 		MouseButton button;
-		Object* clickedObj;
+		HTCodeAndObject ht;
 	};
 
 	optional<BeginningDrag> _beginningDrag;
@@ -43,7 +43,7 @@ public:
 		, _project(project), _pw(pw), _rf(rf), _selection(selection), _dWriteFactory(dWriteFactory)
 	{
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
-		_project->GetBridgeRemovingEvent().AddHandler (&OnBridgeRemoving, this);
+		_project->GetObjectRemovingEvent().AddHandler (&OnObjectRemoving, this);
 		_project->GetProjectInvalidateEvent().AddHandler (&OnProjectInvalidate, this);
 		auto dc = base::GetDeviceContext();
 		auto hr = dc->CreateSolidColorBrush (ColorF (ColorF::Green), &_drawingObjects._poweredOutlineBrush); ThrowIfFailed(hr);
@@ -65,14 +65,14 @@ public:
 	{
 		assert (_refCount == 0);
 		_project->GetProjectInvalidateEvent().RemoveHandler(&OnProjectInvalidate, this);
-		_project->GetBridgeRemovingEvent().RemoveHandler (&OnBridgeRemoving, this);
+		_project->GetObjectRemovingEvent().RemoveHandler (&OnObjectRemoving, this);
 		_selection->GetSelectionChangedEvent().RemoveHandler (&OnSelectionChanged, this);
 	}
 
-	static void OnBridgeRemoving (void* callbackArg, IProject* project, size_t index, Bridge* b)
+	static void OnObjectRemoving (void* callbackArg, IProject* project, size_t index, Object* o)
 	{
 		auto area = static_cast<EditArea*>(callbackArg);
-		if (area->_hoverPort->GetBridge() == b)
+		if (area->_hoverPort->GetBridge() == o)
 		{
 			area->_hoverPort = nullptr;
 			InvalidateRect (area->GetHWnd(), nullptr, FALSE);
@@ -181,9 +181,9 @@ public:
 		auto oldaa = dc->GetAntialiasMode();
 		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
 
-		for (auto o : _selection->GetObjects())
+		for (auto& o : _selection->GetObjects())
 		{
-			if (auto b = dynamic_cast<Bridge*>(o))
+			if (auto b = dynamic_cast<Bridge*>(o.Get()))
 			{
 				auto tl = GetDLocationFromWLocation ({ b->GetLeft() - BridgeOutlineWidth / 2, b->GetTop() - BridgeOutlineWidth / 2 });
 				auto br = GetDLocationFromWLocation ({ b->GetRight() + BridgeOutlineWidth / 2, b->GetBottom() + BridgeOutlineWidth / 2 });
@@ -248,13 +248,18 @@ public:
 		_renderTarget->DrawLine (wire->GetFirstEnd ()->GetLocation (), wire->GetSecondEnd ()->GetLocation (), brush, 2.0f, strokeStyle);
 	}
 	*/
-	void RenderBridges (ID2D1DeviceContext* dc) const
+	void RenderObjects (ID2D1DeviceContext* dc) const
 	{
 		D2D1_MATRIX_3X2_F oldtr;
 		dc->GetTransform(&oldtr);
 		dc->SetTransform(GetZoomTransform());
-		for (auto& b : _project->GetBridges())
-			b->Render (dc, _drawingObjects, _dWriteFactory, _selectedVlanNumber);
+		for (auto& o : _project->GetObjects())
+		{
+			if (auto b = dynamic_cast<Bridge*>(o.Get()))
+				b->Render (dc, _drawingObjects, _dWriteFactory, _selectedVlanNumber);
+			else
+				throw not_implemented_exception();
+		}
 		dc->SetTransform(oldtr);
 	}
 
@@ -266,7 +271,7 @@ public:
 
 		HRESULT hr;
 
-		if (_project->GetBridges().empty())
+		if (none_of (_project->GetObjects().begin(), _project->GetObjects().end(), [](auto&& o) { return dynamic_cast<Bridge*>(o.Get()) != nullptr; }))
 		{
 			auto text = L"No bridges created. Right-click to create some.";
 			ComPtr<IDWriteTextFormat> tf;
@@ -281,7 +286,7 @@ public:
 		else
 		{
 			RenderLegend(dc);
-			RenderBridges(dc);
+			RenderObjects(dc);
 			RenderSelectionRectangles(dc);
 			if (_hoverPort != nullptr)
 				RenderHoverCP(dc);
@@ -340,19 +345,33 @@ public:
 		return base::WindowProc (hwnd, uMsg, wParam, lParam);
 	}
 
-	Object* GetObjectAt (float x, float y) const
+	HTCodeAndObject HitTestObjects (D2D1_POINT_2F dipLocation, float tolerance) const
 	{
-		for (auto& b : _project->GetBridges())
+		for (auto& o : _project->GetObjects())
 		{
-			if ((x >= b->GetLeft()) && (x < b->GetRight()) && (y >= b->GetTop()) && (y < b->GetBottom()))
+			if (auto b = dynamic_cast<Bridge*>(o.Get()))
 			{
-				return b;
+				for (auto& port : b->GetPorts())
+				{
+					auto cpWLocation = port->GetConnectionPointLocation();
+					auto cpDLocation = GetDLocationFromWLocation(cpWLocation);
+					if ((abs (cpDLocation.x - dipLocation.x) <= tolerance) && (abs (cpDLocation.y - dipLocation.y) <= tolerance))
+						return { HTCode::PortConnectionPoint, port };
+				}
+
+				if ((dipLocation.x >= b->GetLeft()) && (dipLocation.x < b->GetRight())
+					&& (dipLocation.y >= b->GetTop()) && (dipLocation.y < b->GetBottom()))
+				{
+					return { HTCode::BridgeInner, b };
+				}
 			}
+			else
+				throw not_implemented_exception();
 		}
 
-		return nullptr;
+		return { HTCode::Nothing, nullptr };
 	};
-
+	/*
 	Port* GetConnectionPointAt (D2D1_POINT_2F dipLocation, float snappingDistance)
 	{
 		for (auto& bridge : _project->GetBridges())
@@ -369,17 +388,17 @@ public:
 
 		return nullptr;
 	}
-
+	*/
 	std::optional<LRESULT> ProcessMouseButtonDown (MouseButton button, POINT pt)
 	{
 		auto dLocation = GetDipLocationFromPixelLocation(pt);
 		auto wLocation = GetWLocationFromDLocation(dLocation);
 
-		auto clickedObject = GetObjectAt(wLocation.x, wLocation.y);
+		auto hitTestedObject = HitTestObjects (dLocation, SnappingDistance);
 
 		if (_state != nullptr)
 		{
-			_state->OnMouseDown (dLocation, wLocation, button, clickedObject);
+			_state->OnMouseDown (dLocation, wLocation, button, hitTestedObject);
 			if (_state->Completed())
 			{
 				_state = nullptr;
@@ -389,14 +408,14 @@ public:
 			return 0;
 		}
 
-		if (clickedObject == nullptr)
+		if (hitTestedObject.object == nullptr)
 			_selection->Clear();
 		else
-			_selection->Select(clickedObject);
+			_selection->Select(hitTestedObject.object);
 
 		if (!_beginningDrag)
 		{
-			_beginningDrag = BeginningDrag { pt, dLocation, wLocation, button, clickedObject };
+			_beginningDrag = BeginningDrag { pt, dLocation, wLocation, button, hitTestedObject };
 			return 0;
 		}
 
@@ -454,7 +473,8 @@ public:
 		}
 		else
 		{
-			if (GetConnectionPointAt (dLocation, SnappingDistance) != nullptr)
+			auto ht = HitTestObjects(dLocation, SnappingDistance);
+			if (ht.code == HTCode::PortConnectionPoint)
 				::SetCursor (LoadCursor(nullptr, IDC_CROSS));
 			else
 				::SetCursor (LoadCursor(nullptr, IDC_ARROW));
@@ -472,27 +492,31 @@ public:
 			InflateRect (&rc, GetSystemMetrics(SM_CXDRAG), GetSystemMetrics(SM_CYDRAG));
 			if (!PtInRect (&rc, pt))
 			{
-				if (_beginningDrag->clickedObj == nullptr)
+				if (_beginningDrag->ht.code == HTCode::Nothing)
 				{
 					// TODO: area selection
 				}
-				else if (auto b = dynamic_cast<Bridge*>(_beginningDrag->clickedObj))
+				else if (_beginningDrag->ht.code == HTCode::BridgeInner)
 				{
 					if (_beginningDrag->button == MouseButton::Left)
 						_state = CreateStateMoveBridges (MakeEditStateDeps());
 				}
-				else if (auto b = dynamic_cast<Port*>(_beginningDrag->clickedObj))
-				{
+				//else if (auto b = dynamic_cast<Port*>(_beginningDrag->clickedObj))
+				//{
 					// TODO: move port
 					//if (_beginningDrag->button == MouseButton::Left)
 					//	_state = CreateStateMovePorts (this, _selection);
+				//}
+				else if (_beginningDrag->ht.code == HTCode::PortConnectionPoint)
+				{
+					_state = CreateStateCreateWire(MakeEditStateDeps());
 				}
 				else
-					throw exception("Not implemented.");
+					throw not_implemented_exception();
 
 				if (_state != nullptr)
 				{
-					_state->OnMouseDown (_beginningDrag->dLocation, _beginningDrag->wLocation, _beginningDrag->button, _beginningDrag->clickedObj);
+					_state->OnMouseDown (_beginningDrag->dLocation, _beginningDrag->wLocation, _beginningDrag->button, _beginningDrag->ht);
 					assert (!_state->Completed());
 					_state->OnMouseMove (dLocation, wLocation);
 				}
@@ -511,10 +535,12 @@ public:
 		}
 		else
 		{
-			auto newHoverCP = GetConnectionPointAt(dLocation, SnappingDistance);
-			if (_hoverPort != newHoverCP)
+			auto ht = HitTestObjects(dLocation, SnappingDistance);
+
+			if (((ht.code == HTCode::PortConnectionPoint) && (ht.object != _hoverPort))
+				|| ((ht.code != HTCode::PortConnectionPoint) && (_hoverPort != nullptr)))
 			{
-				_hoverPort = newHoverCP;
+				_hoverPort = dynamic_cast<Port*>(ht.object);
 				InvalidateRect (GetHWnd(), nullptr, FALSE);
 			}
 		}
@@ -529,12 +555,12 @@ public:
 		UINT32 viewId;
 		if (_selection->GetObjects().empty())
 			viewId = cmdContextMenuBlankArea;
-		else if (dynamic_cast<Bridge*>(_selection->GetObjects()[0]) != nullptr)
+		else if (dynamic_cast<Bridge*>(_selection->GetObjects()[0].Get()) != nullptr)
 			viewId = cmdContextMenuBridge;
-		else if (dynamic_cast<Port*>(_selection->GetObjects()[0]) != nullptr)
+		else if (dynamic_cast<Port*>(_selection->GetObjects()[0].Get()) != nullptr)
 			viewId = cmdContextMenuPort;
 		else
-			throw exception("Not implemented.");
+			throw not_implemented_exception();
 
 		ComPtr<IUIContextualUI> ui;
 		auto hr = _rf->GetView(viewId, IID_PPV_ARGS(&ui)); ThrowIfFailed(hr);
@@ -558,7 +584,7 @@ public:
 	virtual IDWriteFactory* GetDWriteFactory() const override final { return _dWriteFactory; }
 
 	#pragma region IUnknown
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final { throw exception("Not implemented."); }
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final { return E_NOTIMPL; }
 
 	virtual ULONG STDMETHODCALLTYPE AddRef() override final
 	{

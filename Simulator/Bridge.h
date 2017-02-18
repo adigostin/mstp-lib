@@ -30,6 +30,10 @@ public:
 		: _bridge(bridge), _portIndex(portIndex), _side(side), _offset(offset)
 	{ }
 
+protected:
+	virtual ~Port() = default;
+
+public:
 	Bridge* GetBridge() const { return _bridge; }
 	Side GetSide() const { return _side; }
 	float GetOffset() const { return _offset; }
@@ -44,20 +48,17 @@ struct BridgeLogLine
 	int treeIndex;
 };
 
-struct BridgeInvalidateEvent : public Event<BridgeInvalidateEvent, void(Bridge*)> { };
 struct BridgeStartedEvent : public Event<BridgeStartedEvent, void(Bridge*)> { };
 struct BridgeStoppingEvent : public Event<BridgeStoppingEvent, void(Bridge*)> { };
 struct BridgeLogLineGenerated : public Event<BridgeLogLineGenerated, void(Bridge*, const BridgeLogLine& line)> { };
 
-class Bridge : public Object, public IUnknown
+class Bridge : public Object
 {
-	ULONG _refCount = 1;
 	float _x;
 	float _y;
 	float _width;
 	float _height;
-	EventManager _em;
-	std::vector<std::unique_ptr<Port>> _ports;
+	std::vector<ComPtr<Port>> _ports;
 	std::array<uint8_t, 6> _macAddress;
 	bool _powered = true;
 	STP_BRIDGE* _stpBridge = nullptr; // when nullptr, STP is disabled in the bridge
@@ -69,8 +70,10 @@ class Bridge : public Object, public IUnknown
 
 public:
 	Bridge (unsigned int portCount, const std::array<uint8_t, 6>& macAddress);
+protected:
 	~Bridge();
 
+public:
 	float GetLeft() const { return _x; }
 	float GetRight() const { return _x + _width; }
 	float GetTop() const { return _y; }
@@ -80,14 +83,13 @@ public:
 	void SetLocation (float x, float y);
 
 	D2D1_RECT_F GetBounds() const { return { _x, _y, _x + _width, _y + _height }; }
-	const std::vector<std::unique_ptr<Port>>& GetPorts() const { return _ports; }
+	const std::vector<ComPtr<Port>>& GetPorts() const { return _ports; }
 	std::array<uint8_t, 6> GetMacAddress() const { return _macAddress; }
 	
-	void Render (ID2D1DeviceContext* dc, const DrawingObjects& dos, IDWriteFactory* dWriteFactory, uint16_t vlanNumber) const;
-	static void RenderExteriorNonStpPort (ID2D1DeviceContext* dc, const DrawingObjects& dos, bool macOperational);
-	static void RenderExteriorStpPort (ID2D1DeviceContext* dc, const DrawingObjects& dos, STP_PORT_ROLE role, bool learning, bool forwarding, bool operEdge);
+	void Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, IDWriteFactory* dWriteFactory, uint16_t vlanNumber) const;
+	static void RenderExteriorNonStpPort (ID2D1RenderTarget* dc, const DrawingObjects& dos, bool macOperational);
+	static void RenderExteriorStpPort (ID2D1RenderTarget* dc, const DrawingObjects& dos, STP_PORT_ROLE role, bool learning, bool forwarding, bool operEdge);
 
-	BridgeInvalidateEvent::Subscriber GetInvalidateEvent() { return BridgeInvalidateEvent::Subscriber(_em); }
 	BridgeStartedEvent::Subscriber GetBridgeStartedEvent() { return BridgeStartedEvent::Subscriber(_em); }
 	BridgeStoppingEvent::Subscriber GetBridgeStoppingEvent() { return BridgeStoppingEvent::Subscriber(_em); }
 	BridgeLogLineGenerated::Subscriber GetBridgeLogLineGeneratedEvent() { return BridgeLogLineGenerated::Subscriber(_em); }
@@ -104,10 +106,6 @@ public:
 	unsigned short GetStpBridgePriority (unsigned int treeIndex) const;
 	unsigned int GetStpTreeIndexFromVlanNumber (unsigned short vlanNumber) const;
 	const std::vector<BridgeLogLine>& GetLogLines() const { return _logLines; }
-
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final;
-	virtual ULONG STDMETHODCALLTYPE AddRef() override final;
-	virtual ULONG STDMETHODCALLTYPE Release() override final;
 
 private:	
 	static void* StpCallback_AllocAndZeroMemory (unsigned int size);

@@ -30,14 +30,14 @@ public:
 	{
 		if (_bridge != nullptr)
 		{
-			_project->AddBridge(_bridge);
+			_project->Add(_bridge);
 			_selection->Select(_bridge);
 		}
 
 		_completed = true;
 	}
 
-	virtual void Render (ID2D1DeviceContext* dc) override final
+	virtual void Render (ID2D1RenderTarget* dc) override final
 	{
 		if (_bridge != nullptr)
 			_bridge->Render (dc, _area->GetDrawingObjects(), _area->GetDWriteFactory(), _area->GetSelectedVlanNumber());

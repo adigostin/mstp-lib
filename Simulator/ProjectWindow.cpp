@@ -123,12 +123,12 @@ public:
 			pw->_logArea->SelectBridge(nullptr);
 		else
 		{
-			auto b = dynamic_cast<Bridge*>(selection->GetObjects()[0]);
+			auto b = dynamic_cast<Bridge*>(selection->GetObjects()[0].Get());
 			if (b == nullptr)
 			{
-				auto port = dynamic_cast<Port*>(selection->GetObjects()[0]);
+				auto port = dynamic_cast<Port*>(selection->GetObjects()[0].Get());
 				if (port == nullptr)
-					throw runtime_error("Not implemented.");
+					throw not_implemented_exception();
 				b = port->GetBridge();
 			}
 

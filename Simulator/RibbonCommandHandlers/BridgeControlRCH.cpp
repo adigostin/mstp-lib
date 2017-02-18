@@ -19,9 +19,9 @@ class BridgeControlRCH : public RCHBase
 		{
 			bool enable = (commandId == cmdEnableSTP);
 
-			for (auto o : _selection->GetObjects())
+			for (auto& o : _selection->GetObjects())
 			{
-				if (auto b = dynamic_cast<Bridge*>(o))
+				if (auto b = dynamic_cast<Bridge*>(o.Get()))
 				{
 					bool enabled = b->IsStpEnabled();
 
@@ -49,9 +49,9 @@ class BridgeControlRCH : public RCHBase
 			if (key == UI_PKEY_Enabled)
 			{
 				BOOL enable = FALSE;
-				for (auto o : _selection->GetObjects())
+				for (auto& o : _selection->GetObjects())
 				{
-					if (auto b = dynamic_cast<Bridge*>(o))
+					if (auto b = dynamic_cast<Bridge*>(o.Get()))
 					{
 						if (((commandId == cmdEnableSTP) && !b->IsStpEnabled())
 							|| ((commandId == cmdDisableSTP) && b->IsStpEnabled()))

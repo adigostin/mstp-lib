@@ -759,7 +759,7 @@ public:
 	virtual void SelectBridge (Bridge* b) override final { _textArea->SelectBridge(b); }
 
 	#pragma region IUnknown
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final { throw exception("Not implemented."); }
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final { return E_NOTIMPL; }
 
 	virtual ULONG STDMETHODCALLTYPE AddRef() override final
 	{

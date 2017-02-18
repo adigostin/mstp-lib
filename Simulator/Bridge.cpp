@@ -21,7 +21,7 @@ D2D1_POINT_2F Port::GetConnectionPointLocation() const
 	if (_side == Side::Bottom)
 		return Point2F (bounds.left + _offset, bounds.bottom + PortExteriorHeight);
 
-	throw runtime_error ("Not implemented.");
+	throw not_implemented_exception();
 }
 
 Bridge::Bridge (unsigned int portCount, const std::array<uint8_t, 6>& macAddress)
@@ -32,7 +32,7 @@ Bridge::Bridge (unsigned int portCount, const std::array<uint8_t, 6>& macAddress
 	for (size_t i = 0; i < portCount; i++)
 	{
 		offset += (PortSpacing / 2 + PortLongSize / 2);
-		auto port = make_unique<Port>(this, i, Side::Bottom, offset);
+		auto port = ComPtr<Port>(new Port(this, i, Side::Bottom, offset), false);
 		_ports.push_back (move(port));
 		offset += (PortLongSize / 2 + PortSpacing / 2);
 	}
@@ -45,7 +45,6 @@ Bridge::Bridge (unsigned int portCount, const std::array<uint8_t, 6>& macAddress
 
 Bridge::~Bridge()
 {
-	assert (_refCount == 0);
 	assert (this_thread::get_id() == _guiThreadId);
 	if (_stpBridge != nullptr)
 		STP_DestroyBridge (_stpBridge);
@@ -65,7 +64,7 @@ void Bridge::EnableStp (STP_VERSION stpVersion, unsigned int treeCount, uint32_t
 	STP_StartBridge (_stpBridge, timestamp);
 	BridgeStartedEvent::InvokeHandlers (_em, this);
 
-	BridgeInvalidateEvent::InvokeHandlers(_em, this);
+	InvalidateEvent::InvokeHandlers(_em, this);
 }
 
 void Bridge::DisableStp (uint32_t timestamp)
@@ -81,17 +80,17 @@ void Bridge::DisableStp (uint32_t timestamp)
 	STP_DestroyBridge (_stpBridge);
 	_stpBridge = nullptr;
 
-	BridgeInvalidateEvent::InvokeHandlers(_em, this);
+	InvalidateEvent::InvokeHandlers(_em, this);
 }
 
 void Bridge::SetLocation(float x, float y)
 {
 	if ((_x != x) || (_y != y))
 	{
-		BridgeInvalidateEvent::InvokeHandlers(_em, this);
+		InvalidateEvent::InvokeHandlers(_em, this);
 		_x = x;
 		_y = y;
-		BridgeInvalidateEvent::InvokeHandlers(_em, this);
+		InvalidateEvent::InvokeHandlers(_em, this);
 	}
 }
 
@@ -155,14 +154,14 @@ unsigned int Bridge::GetStpTreeIndexFromVlanNumber (unsigned short vlanNumber) c
 }
 
 // static
-void Bridge::RenderExteriorNonStpPort (ID2D1DeviceContext* dc, const DrawingObjects& dos, bool macOperational)
+void Bridge::RenderExteriorNonStpPort (ID2D1RenderTarget* dc, const DrawingObjects& dos, bool macOperational)
 {
 	auto brush = macOperational ? dos._brushForwarding : dos._brushDiscardingPort;
 	dc->DrawLine (Point2F (0, 0), Point2F (0, PortExteriorHeight), brush, 2);
 }
 
 // static
-void Bridge::RenderExteriorStpPort (ID2D1DeviceContext* dc, const DrawingObjects& dos, STP_PORT_ROLE role, bool learning, bool forwarding, bool operEdge)
+void Bridge::RenderExteriorStpPort (ID2D1RenderTarget* dc, const DrawingObjects& dos, STP_PORT_ROLE role, bool learning, bool forwarding, bool operEdge)
 {
 	static constexpr float circleDiameter = min (PortExteriorHeight / 2, PortExteriorWidth);
 
@@ -293,12 +292,12 @@ void Bridge::RenderExteriorStpPort (ID2D1DeviceContext* dc, const DrawingObjects
 		dc->DrawText (L"?", 1, dos._regularTextFormat, { 2, 0, 20, 20 }, dos._brushDiscardingPort, D2D1_DRAW_TEXT_OPTIONS_NO_SNAP);
 	}
 	else
-		throw exception("Not implemented.");
+		throw not_implemented_exception();
 
 	dc->SetAntialiasMode(oldaa);
 }
 
-void Bridge::Render (ID2D1DeviceContext* dc, const DrawingObjects& dos, IDWriteFactory* dWriteFactory, uint16_t vlanNumber) const
+void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, IDWriteFactory* dWriteFactory, uint16_t vlanNumber) const
 {
 	optional<unsigned int> treeIndex;
 	if (IsStpEnabled())
@@ -332,7 +331,7 @@ void Bridge::Render (ID2D1DeviceContext* dc, const DrawingObjects& dos, IDWriteF
 
 	for (size_t portIndex = 0; portIndex < _ports.size(); portIndex++)
 	{
-		Port* port = _ports[portIndex].get();
+		Port* port = _ports[portIndex];
 
 		Matrix3x2F portTransform;
 		if (port->GetSide() == Side::Left)
@@ -375,7 +374,7 @@ void Bridge::Render (ID2D1DeviceContext* dc, const DrawingObjects& dos, IDWriteF
 			portTransform._32 = _y + _height;
 		}
 		else
-			throw exception("Not implemented.");
+			throw not_implemented_exception();
 
 		portTransform.SetProduct (portTransform, oldTransform);
 		dc->SetTransform (&portTransform);
@@ -442,13 +441,13 @@ void Bridge::StpCallback_FreeMemory(void* p)
 void Bridge::StpCallback_EnableLearning(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
-	BridgeInvalidateEvent::InvokeHandlers (b->_em, b);
+	InvalidateEvent::InvokeHandlers (b->_em, b);
 }
 
 void Bridge::StpCallback_EnableForwarding(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
-	BridgeInvalidateEvent::InvokeHandlers(b->_em, b);
+	InvalidateEvent::InvokeHandlers(b->_em, b);
 }
 
 void Bridge::StpCallback_FlushFdb (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType)
@@ -496,24 +495,4 @@ void Bridge::StpCallback_DebugStrOut (STP_BRIDGE* bridge, int portIndex, int tre
 	}
 }
 
-#pragma endregion
-
-#pragma region Bridge::IUnknown
-HRESULT STDMETHODCALLTYPE Bridge::QueryInterface(REFIID riid, void** ppvObject)
-{
-	throw exception ("Not implemented.");
-}
-
-ULONG STDMETHODCALLTYPE Bridge::AddRef()
-{
-	return InterlockedIncrement(&_refCount);
-}
-
-ULONG STDMETHODCALLTYPE Bridge::Release()
-{
-	ULONG newRefCount = InterlockedDecrement(&_refCount);
-	if (newRefCount == 0)
-		delete this;
-	return newRefCount;
-}
 #pragma endregion

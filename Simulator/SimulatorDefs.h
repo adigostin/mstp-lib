@@ -10,10 +10,21 @@ class Bridge;
 class Port;
 class Wire;
 
-class Object
+class Object : public IUnknown
 {
+	ULONG _refCount = 1;
 protected:
-	virtual ~Object() { }
+	EventManager _em;
+	virtual ~Object() { assert(_refCount == 0); }
+
+public:
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
+	virtual ULONG STDMETHODCALLTYPE AddRef() override final;
+	virtual ULONG STDMETHODCALLTYPE Release() override final;
+
+	struct InvalidateEvent : public Event<InvalidateEvent, void(Object*)> { };
+
+	InvalidateEvent::Subscriber GetInvalidateEvent() { return InvalidateEvent::Subscriber(_em); }
 };
 
 enum class Side { Left, Top, Right, Bottom };
@@ -49,8 +60,7 @@ struct SelectionChangedEvent : public Event<SelectionChangedEvent, void(ISelecti
 
 struct ISelection abstract : public IUnknown
 {
-	virtual ~ISelection() { }
-	virtual const std::vector<Object*>& GetObjects() const = 0;
+	virtual const std::vector<ComPtr<Object>>& GetObjects() const = 0;
 	virtual void Select (Object* o) = 0;
 	virtual void Clear() = 0;
 	virtual AddedToSelectionEvent::Subscriber GetAddedToSelectionEvent() = 0;
@@ -81,6 +91,19 @@ extern const LogAreaFactory logAreaFactory;
 
 class EditState;
 struct EditStateDeps;
+
+enum class HTCode
+{
+	Nothing,
+	BridgeInner,
+	PortConnectionPoint,
+};
+
+struct HTCodeAndObject
+{
+	HTCode code;
+	Object* object;
+};
 
 struct IEditArea abstract : public IUnknown
 {
@@ -117,21 +140,21 @@ extern const ProjectWindowFactory projectWindowFactory;
 
 // ============================================================================
 
-struct BridgeInsertedEvent : public Event<BridgeInsertedEvent, void(IProject*, size_t index, Bridge*)> { };
-struct BridgeRemovingEvent : public Event<BridgeRemovingEvent, void(IProject*, size_t index, Bridge*)> { };
+struct ObjectInsertedEvent : public Event<ObjectInsertedEvent, void(IProject*, size_t index, Object*)> { };
+struct ObjectRemovingEvent : public Event<ObjectRemovingEvent, void(IProject*, size_t index, Object*)> { };
 struct ProjectInvalidateEvent : public Event<ProjectInvalidateEvent, void(IProject*)> { };
 
 struct IProject abstract : public IUnknown
 {
-	virtual const std::vector<ComPtr<Bridge>>& GetBridges() const = 0;
-	virtual void InsertBridge (size_t index, Bridge* bridge) = 0;
-	virtual void RemoveBridge (size_t index) = 0;
-	virtual BridgeInsertedEvent::Subscriber GetBridgeInsertedEvent() = 0;
-	virtual BridgeRemovingEvent::Subscriber GetBridgeRemovingEvent() = 0;
+	virtual const std::vector<ComPtr<Object>>& GetObjects() const = 0;
+	virtual void Insert (size_t index, Object* bridge) = 0;
+	virtual void Remove (size_t index) = 0;
+	virtual ObjectInsertedEvent::Subscriber GetObjectInsertedEvent() = 0;
+	virtual ObjectRemovingEvent::Subscriber GetObjectRemovingEvent() = 0;
 	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() = 0;
-	virtual std::array<uint8_t, 6> AllocMacAddressRange (size_t count) = 0;
+	void Add (Object* object) { Insert (GetObjects().size(), object); }
 
-	void AddBridge (Bridge* bridge) { InsertBridge (GetBridges().size(), bridge); }
+	virtual std::array<uint8_t, 6> AllocMacAddressRange (size_t count) = 0;
 };
 
 using ProjectFactory = ComPtr<IProject>(*const)();

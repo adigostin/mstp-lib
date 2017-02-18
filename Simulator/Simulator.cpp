@@ -19,6 +19,21 @@ static const wchar_t CompanyName[] = L"Adrian Gostin";
 static const wchar_t AppName[] = L"STP Simulator";
 static wstring RegKeyPath;
 
+#pragma region Object class
+ULONG STDMETHODCALLTYPE Object::AddRef()
+{
+	return InterlockedIncrement(&_refCount);
+}
+
+ULONG STDMETHODCALLTYPE Object::Release()
+{
+	ULONG newRefCount = InterlockedDecrement(&_refCount);
+	if (newRefCount == 0)
+		delete this;
+	return newRefCount;
+}
+#pragma endregion
+
 /*
 BOOL CStpSimulatorApp::InitInstance ()
 {

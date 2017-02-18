@@ -50,5 +50,6 @@
 #include <Unknwn.h>
 #include <unordered_map>
 #include <unordered_set>
+#include <variant>
 #include <wincodec.h>
 #include "Win32Defs.h"

@@ -20,6 +20,14 @@ inline void ThrowIfFailed(HRESULT hr)
 		throw com_exception(hr);
 }
 
+class not_implemented_exception : public std::exception
+{
+public:
+	not_implemented_exception()
+		: std::exception("Not implemented.")
+	{ }
+};
+
 struct GdiObjectDeleter
 {
 	void operator() (HGDIOBJ object) { ::DeleteObject(object); }
