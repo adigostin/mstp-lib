@@ -129,7 +129,7 @@ struct IProject abstract : public IUnknown
 	virtual BridgeInsertedEvent::Subscriber GetBridgeInsertedEvent() = 0;
 	virtual BridgeRemovingEvent::Subscriber GetBridgeRemovingEvent() = 0;
 	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() = 0;
-	virtual std::array<uint8_t, 6> AllocNextMacAddress() = 0;
+	virtual std::array<uint8_t, 6> AllocMacAddressRange (size_t count) = 0;
 
 	void AddBridge (Bridge* bridge) { InsertBridge (GetBridges().size(), bridge); }
 };

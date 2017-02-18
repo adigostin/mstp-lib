@@ -10,7 +10,7 @@ class Project : public IProject
 	ULONG _refCount = 1;
 	vector<ComPtr<Bridge>> _bridges;
 	EventManager _em;
-	std::array<uint8_t, 6> _nextMacAddress = { 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x01 };
+	std::array<uint8_t, 6> _nextMacAddress = { 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x80 };
 
 public:
 	virtual const vector<ComPtr<Bridge>>& GetBridges() const override final { return _bridges; }
@@ -42,11 +42,14 @@ public:
 	virtual BridgeRemovingEvent::Subscriber GetBridgeRemovingEvent() override final { return BridgeRemovingEvent::Subscriber(_em); }
 	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() override final { return ProjectInvalidateEvent::Subscriber(_em); }
 
-	virtual array<uint8_t, 6> AllocNextMacAddress() override final
+	virtual array<uint8_t, 6> AllocMacAddressRange (size_t count) override final
 	{
+		if (count >= 128)
+			throw range_error("count must be lower than 128.");
+
 		auto result = _nextMacAddress;
-		_nextMacAddress[5]++;
-		if (_nextMacAddress[5] == 0)
+		_nextMacAddress[5] += (uint8_t)count;
+		if (_nextMacAddress[5] < count)
 		{
 			_nextMacAddress[4]++;
 			if (_nextMacAddress[4] == 0)
