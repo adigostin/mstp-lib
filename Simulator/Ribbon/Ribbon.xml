@@ -43,24 +43,24 @@
 
 		<Command Name="CreateBridge" Symbol="cmdCreateBridge" LabelTitle="New Bridge">
 			<Command.SmallImages>
-				<Image Source="NetworkHub_16.png" MinDPI="96"/>
-				<Image Source="NetworkHub_32.png" MinDPI="120"/>
+				<Image Source="NetworkHub_16.bmp" MinDPI="96"/>
+				<Image Source="NetworkHub_32.bmp" MinDPI="120"/>
 			</Command.SmallImages>
 			<Command.LargeImages>
-				<Image Source="NetworkHub_32.png"/>
+				<Image Source="NetworkHub_32.bmp"/>
 			</Command.LargeImages>
 		</Command>
 
 		<Command Name="CreateCable" Symbol="cmdCreateCable" LabelTitle="New Cable">
 			<Command.SmallImages>
-				<Image Source="Cable_16.png" MinDPI="96"/>
-				<Image Source="Cable_24.png" MinDPI="120"/>
-				<Image Source="Cable_32.png" MinDPI="168"/>
+				<Image Source="Cable_16.bmp" MinDPI="96"/>
+				<Image Source="Cable_24.bmp" MinDPI="120"/>
+				<Image Source="Cable_32.bmp" MinDPI="168"/>
 			</Command.SmallImages>
 			<Command.LargeImages>
-				<Image Source="Cable_32.png" MinDPI="96"/>
-				<Image Source="Cable_48.png" MinDPI="120"/>
-				<Image Source="Cable_64.png" MinDPI="168"/>
+				<Image Source="Cable_32.bmp" MinDPI="96"/>
+				<Image Source="Cable_48.bmp" MinDPI="120"/>
+				<Image Source="Cable_64.bmp" MinDPI="168"/>
 			</Command.LargeImages>
 		</Command>
 		
