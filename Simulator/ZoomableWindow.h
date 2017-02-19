@@ -6,7 +6,7 @@
 class ZoomableWindow;
 struct ZoomTransformChangedEvent : public Event<ZoomTransformChangedEvent, void(ZoomableWindow*)> { };
 
-class ZoomableWindow abstract : public D2DWindow
+class ZoomableWindow abstract : public D2DWindow, public IZoomable
 {
 	typedef D2DWindow base;
 
@@ -52,8 +52,9 @@ public:
 	void ZoomToRectangle(const D2D1_RECT_F& rect, float minMarginDips, float maxZoomOrZero, bool smooth);
 	void SetZoomAndOrigin(float zoom, float originX, float originY, bool smooth);
 
-	D2D1_POINT_2F GetWLocationFromDLocation (D2D1_POINT_2F dLocation) const;
-	D2D1_POINT_2F GetDLocationFromWLocation (D2D1_POINT_2F wLocation) const;
+	virtual D2D1_POINT_2F GetWLocationFromDLocation (D2D1_POINT_2F dLocation) const override final;
+	virtual D2D1_POINT_2F GetDLocationFromWLocation (D2D1_POINT_2F wLocation) const override final;
+	virtual float GetDLengthFromWLength (float wLength) const override final { return wLength * _zoom; }
 
 	//Vector TransformSizeToProjectCoords(VectorD size);
 	//Vector TransformSizeToProjectCoords(VectorD size, coord_t alignSize);

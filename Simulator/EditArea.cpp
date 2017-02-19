@@ -1,15 +1,15 @@
 
 #include "pch.h"
-#include "SimulatorDefs.h"
+#include "Simulator.h"
 #include "ZoomableWindow.h"
 #include "Ribbon/RibbonIds.h"
 #include "EditStates/EditState.h"
 #include "Bridge.h"
+#include "Port.h"
+#include "Wire.h"
 
 using namespace std;
 using namespace D2D1;
-
-static constexpr float SnappingDistance = 6;
 
 class EditArea : public ZoomableWindow, public IEditArea
 {
@@ -32,7 +32,8 @@ class EditArea : public ZoomableWindow, public IEditArea
 		D2D1_POINT_2F dLocation;
 		D2D1_POINT_2F wLocation;
 		MouseButton button;
-		HTCodeAndObject ht;
+		HCURSOR cursor;
+		HTResult ht;
 	};
 
 	optional<BeginningDrag> _beginningDrag;
@@ -59,6 +60,12 @@ public:
 		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_HIGHLIGHT), &_drawingObjects._brushHighlight); ThrowIfFailed(hr);
 		hr = _dWriteFactory->CreateTextFormat (L"Tahoma", NULL, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
 			DWRITE_FONT_STRETCH_NORMAL, 14, L"en-US", &_drawingObjects._regularTextFormat); ThrowIfFailed(hr);
+
+		ComPtr<ID2D1Factory> factory;
+		dc->GetFactory(&factory);
+		D2D1_STROKE_STYLE_PROPERTIES ssprops = {};
+		ssprops.dashStyle = D2D1_DASH_STYLE_DASH;
+		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawingObjects._strokeStyleSelectionRect); ThrowIfFailed(hr);
 	}
 
 	virtual ~EditArea()
@@ -144,9 +151,9 @@ public:
 			layouts.push_back(move(tl));
 		}
 
-		float textX = clientSizeDips.width - (5 + maxLineWidth + 5 + PortExteriorHeight + 5);
-		float bitmapX = clientSizeDips.width - (5 + PortExteriorHeight + 5);
-		float rowHeight = 2 + max (maxLineHeight, PortExteriorWidth);
+		float textX = clientSizeDips.width - (5 + maxLineWidth + 5 + Port::ExteriorHeight + 5);
+		float bitmapX = clientSizeDips.width - (5 + Port::ExteriorHeight + 5);
+		float rowHeight = 2 + max (maxLineHeight, Port::ExteriorWidth);
 		float y = clientSizeDips.height - _countof(LegendInfo) * rowHeight;
 
 		Matrix3x2F oldTransform;
@@ -168,7 +175,7 @@ public:
 			trans.SetProduct (oldTransform, trans);
 			dc->SetTransform (&trans);
 
-			Bridge::RenderExteriorStpPort (dc, _drawingObjects, info.role, info.learning, info.forwarding, info.operEdge);
+			Port::RenderExteriorStpPort (dc, _drawingObjects, info.role, info.learning, info.forwarding, info.operEdge);
 
 			dc->SetTransform (&oldTransform);
 
@@ -176,39 +183,14 @@ public:
 		}
 	}
 
-	void RenderSelectionRectangles (ID2D1DeviceContext* dc) const
-	{
-		auto oldaa = dc->GetAntialiasMode();
-		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-
-		for (auto& o : _selection->GetObjects())
-		{
-			if (auto b = dynamic_cast<Bridge*>(o.Get()))
-			{
-				auto tl = GetDLocationFromWLocation ({ b->GetLeft() - BridgeOutlineWidth / 2, b->GetTop() - BridgeOutlineWidth / 2 });
-				auto br = GetDLocationFromWLocation ({ b->GetRight() + BridgeOutlineWidth / 2, b->GetBottom() + BridgeOutlineWidth / 2 });
-
-				ComPtr<ID2D1Factory> factory;
-				dc->GetFactory(&factory);
-				D2D1_STROKE_STYLE_PROPERTIES ssprops = {};
-				ssprops.dashStyle = D2D1_DASH_STYLE_DASH;
-				ComPtr<ID2D1StrokeStyle> ss;
-				auto hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &ss); ThrowIfFailed(hr);
-				dc->DrawRectangle ({ tl.x - 10, tl.y - 10, br.x + 10, br.y + 10 }, _drawingObjects._brushHighlight, 2, ss);
-			}
-		}
-
-		dc->SetAntialiasMode(oldaa);
-	}
-
-	void RenderHoverCP (ID2D1RenderTarget* rt) const
+	virtual void RenderHoverCP (ID2D1RenderTarget* rt, Port* port) const override final
 	{
 		auto oldaa = rt->GetAntialiasMode();
 		rt->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
 
-		auto cpw = _hoverPort->GetConnectionPointLocation();
+		auto cpw = port->GetConnectionPointLocation();
 		auto cpd = GetDLocationFromWLocation(cpw);
-		auto rect = RectF (cpd.x - SnappingDistance, cpd.y - SnappingDistance, cpd.x + SnappingDistance, cpd.y + SnappingDistance);
+		auto rect = RectF (cpd.x - SnapDistance, cpd.y - SnapDistance, cpd.x + SnapDistance, cpd.y + SnapDistance);
 		rt->DrawRectangle (rect, _drawingObjects._brushHighlight, 2);
 
 		rt->SetAntialiasMode(oldaa);
@@ -253,13 +235,10 @@ public:
 		D2D1_MATRIX_3X2_F oldtr;
 		dc->GetTransform(&oldtr);
 		dc->SetTransform(GetZoomTransform());
+
 		for (auto& o : _project->GetObjects())
-		{
-			if (auto b = dynamic_cast<Bridge*>(o.Get()))
-				b->Render (dc, _drawingObjects, _dWriteFactory, _selectedVlanNumber);
-			else
-				throw not_implemented_exception();
-		}
+			o->Render (dc, _drawingObjects, _dWriteFactory, _selectedVlanNumber);
+
 		dc->SetTransform(oldtr);
 	}
 
@@ -287,9 +266,12 @@ public:
 		{
 			RenderLegend(dc);
 			RenderObjects(dc);
-			RenderSelectionRectangles(dc);
+
+			for (auto& o : _selection->GetObjects())
+				o->RenderSelection(this, dc, _drawingObjects);
+
 			if (_hoverPort != nullptr)
-				RenderHoverCP(dc);
+				RenderHoverCP (dc, _hoverPort);
 		}
 
 		if (_state != nullptr)
@@ -345,7 +327,7 @@ public:
 		return base::WindowProc (hwnd, uMsg, wParam, lParam);
 	}
 
-	HTCodeAndObject HitTestObjects (D2D1_POINT_2F dipLocation, float tolerance) const
+	virtual Port* GetCPAt (D2D1_POINT_2F dLocation, float tolerance) const override final
 	{
 		for (auto& o : _project->GetObjects())
 		{
@@ -353,52 +335,41 @@ public:
 			{
 				for (auto& port : b->GetPorts())
 				{
-					auto cpWLocation = port->GetConnectionPointLocation();
-					auto cpDLocation = GetDLocationFromWLocation(cpWLocation);
-					if ((abs (cpDLocation.x - dipLocation.x) <= tolerance) && (abs (cpDLocation.y - dipLocation.y) <= tolerance))
-						return { HTCode::PortConnectionPoint, port };
+					if (port->HitTestCP (this, dLocation, tolerance))
+						return port;
 				}
-
-				if ((dipLocation.x >= b->GetLeft()) && (dipLocation.x < b->GetRight())
-					&& (dipLocation.y >= b->GetTop()) && (dipLocation.y < b->GetBottom()))
-				{
-					return { HTCode::BridgeInner, b };
-				}
-			}
-			else
-				throw not_implemented_exception();
-		}
-
-		return { HTCode::Nothing, nullptr };
-	};
-	/*
-	Port* GetConnectionPointAt (D2D1_POINT_2F dipLocation, float snappingDistance)
-	{
-		for (auto& bridge : _project->GetBridges())
-		{
-			for (auto& port : bridge->GetPorts())
-			{
-				auto cpWLocation = port->GetConnectionPointLocation();
-				auto cpDLocation = GetDLocationFromWLocation(cpWLocation);
-
-				if ((abs (cpDLocation.x - dipLocation.x) <= snappingDistance) && (abs (cpDLocation.y - dipLocation.y) <= snappingDistance))
-					return port.get();
 			}
 		}
 
 		return nullptr;
 	}
-	*/
+
+	HTResult HitTestObjects (D2D1_POINT_2F dLocation, float tolerance) const
+	{
+		for (auto& o : _project->GetObjects())
+		{
+			auto ht = o->HitTest(this, dLocation, tolerance);
+			if (ht.object != nullptr)
+				return ht;
+		}
+
+		return { };
+	}
+
 	std::optional<LRESULT> ProcessMouseButtonDown (MouseButton button, POINT pt)
 	{
 		auto dLocation = GetDipLocationFromPixelLocation(pt);
 		auto wLocation = GetWLocationFromDLocation(dLocation);
 
-		auto hitTestedObject = HitTestObjects (dLocation, SnappingDistance);
+		if (_beginningDrag)
+		{
+			// user began dragging with a mouse button, not he pressed a second button.
+			return nullopt;
+		}
 
 		if (_state != nullptr)
 		{
-			_state->OnMouseDown (dLocation, wLocation, button, hitTestedObject);
+			_state->OnMouseDown (dLocation, wLocation, button);
 			if (_state->Completed())
 			{
 				_state = nullptr;
@@ -408,18 +379,14 @@ public:
 			return 0;
 		}
 
-		if (hitTestedObject.object == nullptr)
+		auto ht = HitTestObjects (dLocation, SnapDistance);
+		if (ht.object == nullptr)
 			_selection->Clear();
 		else
-			_selection->Select(hitTestedObject.object);
+			_selection->Select(ht.object);
 
-		if (!_beginningDrag)
-		{
-			_beginningDrag = BeginningDrag { pt, dLocation, wLocation, button, hitTestedObject };
-			return 0;
-		}
-
-		return nullopt;
+		_beginningDrag = BeginningDrag { pt, dLocation, wLocation, button, ::GetCursor(), ht };
+		return 0;
 	}
 
 	std::optional<LRESULT> ProcessMouseButtonUp (MouseButton button, POINT pt)
@@ -466,18 +433,24 @@ public:
 
 		if (_beginningDrag)
 		{
+			::SetCursor (_beginningDrag->cursor);
 		}
 		else if (_state != nullptr)
 		{
-			::SetCursor (GetCursor());
+			::SetCursor (_state->GetCursor());
 		}
 		else
 		{
-			auto ht = HitTestObjects(dLocation, SnappingDistance);
-			if (ht.code == HTCode::PortConnectionPoint)
-				::SetCursor (LoadCursor(nullptr, IDC_CROSS));
-			else
-				::SetCursor (LoadCursor(nullptr, IDC_ARROW));
+			auto ht = HitTestObjects (dLocation, SnapDistance);
+
+			LPCWSTR idc = IDC_ARROW;
+			if (dynamic_cast<Port*>(ht.object) != nullptr)
+			{
+				if (ht.code == Port::HTCodeCP)
+					idc = IDC_CROSS;
+			}
+
+			::SetCursor (LoadCursor(nullptr, idc));
 		}
 	}
 
@@ -492,11 +465,11 @@ public:
 			InflateRect (&rc, GetSystemMetrics(SM_CXDRAG), GetSystemMetrics(SM_CYDRAG));
 			if (!PtInRect (&rc, pt))
 			{
-				if (_beginningDrag->ht.code == HTCode::Nothing)
+				if (_beginningDrag->ht.object == nullptr)
 				{
 					// TODO: area selection
 				}
-				else if (_beginningDrag->ht.code == HTCode::BridgeInner)
+				else if (auto b = dynamic_cast<Bridge*>(_beginningDrag->ht.object))
 				{
 					if (_beginningDrag->button == MouseButton::Left)
 						_state = CreateStateMoveBridges (MakeEditStateDeps());
@@ -507,16 +480,18 @@ public:
 					//if (_beginningDrag->button == MouseButton::Left)
 					//	_state = CreateStateMovePorts (this, _selection);
 				//}
-				else if (_beginningDrag->ht.code == HTCode::PortConnectionPoint)
+				else if (auto p = dynamic_cast<Port*>(_beginningDrag->ht.object))
 				{
-					_state = CreateStateCreateWire(MakeEditStateDeps());
+					if (_beginningDrag->ht.code == Port::HTCodeCP)
+						_state = CreateStateCreateWire(MakeEditStateDeps(), p);
 				}
 				else
 					throw not_implemented_exception();
 
 				if (_state != nullptr)
 				{
-					_state->OnMouseDown (_beginningDrag->dLocation, _beginningDrag->wLocation, _beginningDrag->button, _beginningDrag->ht);
+					_hoverPort = nullptr;
+					_state->OnMouseDown (_beginningDrag->dLocation, _beginningDrag->wLocation, _beginningDrag->button);
 					assert (!_state->Completed());
 					_state->OnMouseMove (dLocation, wLocation);
 				}
@@ -535,12 +510,10 @@ public:
 		}
 		else
 		{
-			auto ht = HitTestObjects(dLocation, SnappingDistance);
-
-			if (((ht.code == HTCode::PortConnectionPoint) && (ht.object != _hoverPort))
-				|| ((ht.code != HTCode::PortConnectionPoint) && (_hoverPort != nullptr)))
+			Port* newHoverPort = GetCPAt(dLocation, SnapDistance);
+			if (_hoverPort != newHoverPort)
 			{
-				_hoverPort = dynamic_cast<Port*>(ht.object);
+				_hoverPort = newHoverPort;
 				InvalidateRect (GetHWnd(), nullptr, FALSE);
 			}
 		}
@@ -582,6 +555,8 @@ public:
 	virtual const DrawingObjects& GetDrawingObjects() const override final { return _drawingObjects; }
 
 	virtual IDWriteFactory* GetDWriteFactory() const override final { return _dWriteFactory; }
+
+	virtual D2D1::Matrix3x2F GetZoomTransform() const override final { return base::GetZoomTransform(); }
 
 	#pragma region IUnknown
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final { return E_NOTIMPL; }

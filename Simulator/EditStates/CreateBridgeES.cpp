@@ -37,10 +37,16 @@ public:
 		_completed = true;
 	}
 
-	virtual void Render (ID2D1RenderTarget* dc) override final
+	virtual void Render (ID2D1RenderTarget* rt) override final
 	{
 		if (_bridge != nullptr)
-			_bridge->Render (dc, _area->GetDrawingObjects(), _area->GetDWriteFactory(), _area->GetSelectedVlanNumber());
+		{
+			D2D1_MATRIX_3X2_F oldtr;
+			rt->GetTransform(&oldtr);
+			rt->SetTransform(_area->GetZoomTransform());
+			_bridge->Render (rt, _area->GetDrawingObjects(), _area->GetDWriteFactory(), _area->GetSelectedVlanNumber());
+			rt->SetTransform(&oldtr);
+		}
 	}
 
 	virtual bool Completed() const override final { return _completed; }

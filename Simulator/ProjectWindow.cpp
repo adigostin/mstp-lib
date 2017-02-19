@@ -1,9 +1,10 @@
 #include "pch.h"
-#include "SimulatorDefs.h"
+#include "Simulator.h"
 #include "Win32Defs.h"
 #include "Resource.h"
 #include "RibbonCommandHandlers/RCHBase.h"
 #include "Bridge.h"
+#include "Port.h"
 
 using namespace std;
 
@@ -127,9 +128,8 @@ public:
 			if (b == nullptr)
 			{
 				auto port = dynamic_cast<Port*>(selection->GetObjects()[0].Get());
-				if (port == nullptr)
-					throw not_implemented_exception();
-				b = port->GetBridge();
+				if (port != nullptr)
+					b = port->GetBridge();
 			}
 
 			pw->_logArea->SelectBridge(b);

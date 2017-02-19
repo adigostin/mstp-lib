@@ -1,6 +1,6 @@
 
 #pragma once
-#include "../SimulatorDefs.h"
+#include "../Simulator.h"
 
 struct RCHDeps
 {

@@ -1,45 +1,8 @@
 
 #pragma once
 #include "EventManager.h"
-#include "SimulatorDefs.h"
+#include "Simulator.h"
 #include "mstp-lib/stp.h"
-
-static constexpr float PortLongSize = 30;
-static constexpr float PortShortSize = 15;
-static constexpr float PortSpacing = 20;
-static constexpr float PortInteriorLongSize = 25;  // Size along the edge of the bridge.
-static constexpr float PortInteriorShortSize = 14; // Size from the edge to the interior of the bridge.
-static constexpr float PortExteriorWidth = 12;
-static constexpr float PortExteriorHeight = 24;
-static constexpr float BridgeDefaultHeight = 120;
-static constexpr float BridgeOutlineWidth = 4;
-static constexpr float MinBridgeWidth = 250;
-static constexpr float BridgeRoundRadius = 8;
-
-class Bridge;
-
-class Port : public Object
-{
-	Bridge* const _bridge;
-	unsigned int const _portIndex;
-	Side _side;
-	float _offset;
-
-public:
-	Port (Bridge* bridge, unsigned int portIndex, Side side, float offset)
-		: _bridge(bridge), _portIndex(portIndex), _side(side), _offset(offset)
-	{ }
-
-protected:
-	virtual ~Port() = default;
-
-public:
-	Bridge* GetBridge() const { return _bridge; }
-	Side GetSide() const { return _side; }
-	float GetOffset() const { return _offset; }
-	D2D1_POINT_2F GetConnectionPointLocation() const;
-	bool GetMacOperational() const { return true; } // TODO
-};
 
 struct BridgeLogLine
 {
@@ -74,6 +37,13 @@ protected:
 	~Bridge();
 
 public:
+	static constexpr int HTCodeInner = 1;
+
+	static constexpr float DefaultHeight = 120;
+	static constexpr float OutlineWidth = 4;
+	static constexpr float MinWidth = 250;
+	static constexpr float RoundRadius = 8;
+
 	float GetLeft() const { return _x; }
 	float GetRight() const { return _x + _width; }
 	float GetTop() const { return _y; }
@@ -86,25 +56,25 @@ public:
 	const std::vector<ComPtr<Port>>& GetPorts() const { return _ports; }
 	std::array<uint8_t, 6> GetMacAddress() const { return _macAddress; }
 	
-	void Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, IDWriteFactory* dWriteFactory, uint16_t vlanNumber) const;
-	static void RenderExteriorNonStpPort (ID2D1RenderTarget* dc, const DrawingObjects& dos, bool macOperational);
-	static void RenderExteriorStpPort (ID2D1RenderTarget* dc, const DrawingObjects& dos, STP_PORT_ROLE role, bool learning, bool forwarding, bool operEdge);
+	virtual void Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, IDWriteFactory* dWriteFactory, uint16_t vlanNumber) const override final;
+	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const override final;
+	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
 
 	BridgeStartedEvent::Subscriber GetBridgeStartedEvent() { return BridgeStartedEvent::Subscriber(_em); }
 	BridgeStoppingEvent::Subscriber GetBridgeStoppingEvent() { return BridgeStoppingEvent::Subscriber(_em); }
 	BridgeLogLineGenerated::Subscriber GetBridgeLogLineGeneratedEvent() { return BridgeLogLineGenerated::Subscriber(_em); }
 
 	bool IsPowered() const { return _powered; }
-	void EnableStp (STP_VERSION stpVersion, unsigned int treeCount, uint32_t timestamp);
+	void EnableStp (STP_VERSION stpVersion, uint16_t treeCount, uint32_t timestamp);
 	void DisableStp (uint32_t timestamp);
 	bool IsStpEnabled() const { return _stpBridge != nullptr; }
-	unsigned int GetTreeCount() const;
-	STP_PORT_ROLE GetStpPortRole (unsigned int portIndex, unsigned int treeIndex) const;
-	bool GetStpPortLearning (unsigned int portIndex, unsigned int treeIndex) const;
-	bool GetStpPortForwarding (unsigned int portIndex, unsigned int treeIndex) const;
-	bool GetStpPortOperEdge (unsigned int portIndex) const;
-	unsigned short GetStpBridgePriority (unsigned int treeIndex) const;
-	unsigned int GetStpTreeIndexFromVlanNumber (unsigned short vlanNumber) const;
+	uint16_t GetTreeCount() const;
+	STP_PORT_ROLE GetStpPortRole (uint16_t portIndex, uint16_t treeIndex) const;
+	bool GetStpPortLearning (uint16_t portIndex, uint16_t treeIndex) const;
+	bool GetStpPortForwarding (uint16_t portIndex, uint16_t treeIndex) const;
+	bool GetStpPortOperEdge (uint16_t portIndex) const;
+	uint16_t GetStpBridgePriority (uint16_t treeIndex) const;
+	uint16_t GetStpTreeIndexFromVlanNumber (uint16_t vlanNumber) const;
 	const std::vector<BridgeLogLine>& GetLogLines() const { return _logLines; }
 
 private:	

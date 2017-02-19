@@ -125,10 +125,11 @@
     <ClInclude Include="mstp-lib\port.h" />
     <ClInclude Include="mstp-lib\stp.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="Port.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="RibbonCommandHandlers\RCHBase.h" />
     <ClInclude Include="Ribbon\RibbonIds.h" />
-    <ClInclude Include="SimulatorDefs.h" />
+    <ClInclude Include="Simulator.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Win32Defs.h" />
     <ClInclude Include="Wire.h" />
@@ -218,6 +219,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Port.cpp" />
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="RibbonCommandHandlers\BridgeControlRCH.cpp" />

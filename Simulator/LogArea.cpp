@@ -1,6 +1,6 @@
 
 #include "pch.h"
-#include "SimulatorDefs.h"
+#include "Simulator.h"
 #include "D2DWindow.h"
 #include "Bridge.h"
 
@@ -453,7 +453,7 @@ public:
 				throw win32_exception(GetLastError());
 		}
 		
-		auto hwnd = ::CreateWindowEx (0, WndClassName, L"STP Log", WS_CHILD | WS_VISIBLE | WS_BORDER | WS_CLIPCHILDREN,
+		auto hwnd = ::CreateWindowEx (0, WndClassName, L"STP Log", WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN,
 			rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, hWndParent, (HMENU) controlId, hInstance, this);
 		if (hwnd == nullptr)
 			throw win32_exception(GetLastError());
@@ -570,12 +570,6 @@ public:
 		else if (msg == WM_SIZE)
 		{
 			_clientSize = { LOWORD(lParam), HIWORD(lParam) };
-
-			//RECT rect;
-			//GetWindowRect (_hwnd, &rect);
-			//MapWindowPoints (HWND_DESKTOP, GetParent(_hwnd), (LPPOINT) &rect, 2);
-			//LogAreaRectChangedEvent::InvokeHandlers (_em, this, rect);
-
 			ResizeChildWindows();
 			return 0;
 		}

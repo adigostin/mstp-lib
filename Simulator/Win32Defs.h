@@ -28,11 +28,24 @@ public:
 	{ }
 };
 
+struct IZoomable abstract
+{
+	virtual D2D1_POINT_2F GetWLocationFromDLocation (D2D1_POINT_2F dLocation) const = 0;
+	virtual D2D1_POINT_2F GetDLocationFromWLocation (D2D1_POINT_2F wLocation) const = 0;
+	virtual float GetDLengthFromWLength (float wLength) const = 0;
+};
+
 struct GdiObjectDeleter
 {
 	void operator() (HGDIOBJ object) { ::DeleteObject(object); }
 };
 typedef std::unique_ptr<std::remove_pointer<HFONT>::type, GdiObjectDeleter> HFONT_unique_ptr;
+
+struct HWndDeleter
+{
+	void operator() (HWND hWnd) { ::DestroyWindow(hWnd); }
+};
+typedef std::unique_ptr<std::remove_pointer<HWND>::type, HWndDeleter> HWND_unique_ptr;
 
 
 template<typename T> class ComPtr

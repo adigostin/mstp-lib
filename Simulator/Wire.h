@@ -1,5 +1,5 @@
 #pragma once
-#include "SimulatorDefs.h"
+#include "Simulator.h"
 
 using ConnectedWireEnd = Port*;
 using LooseWireEnd = D2D1_POINT_2F;
@@ -22,6 +22,11 @@ public:
 	void SetP0 (const WireEnd& p0);
 	const WireEnd& GetP1() const { return _p1; }
 	void SetP1 (const WireEnd& p1);
-	void Render (ID2D1RenderTarget* rt, const DrawingObjects& dos) const;
+	D2D1_POINT_2F GetP0Coords() const;
+	D2D1_POINT_2F GetP1Coords() const;
 	WireInvalidateEvent::Subscriber GetWireInvalidateEvent() { return WireInvalidateEvent::Subscriber(_em); }
+
+	virtual void Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, IDWriteFactory* dWriteFactory, uint16_t vlanNumber) const override final;
+	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const override final;
+	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
 };

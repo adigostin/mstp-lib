@@ -6,9 +6,17 @@ struct IProject;
 struct IProjectWindow;
 struct ISelection;
 struct ILogArea;
+struct DrawingObjects;
+class Object;
 class Bridge;
 class Port;
 class Wire;
+
+struct HTResult
+{
+	Object* object;
+	int code;
+};
 
 class Object : public IUnknown
 {
@@ -23,8 +31,11 @@ public:
 	virtual ULONG STDMETHODCALLTYPE Release() override final;
 
 	struct InvalidateEvent : public Event<InvalidateEvent, void(Object*)> { };
-
 	InvalidateEvent::Subscriber GetInvalidateEvent() { return InvalidateEvent::Subscriber(_em); }
+
+	virtual void Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, IDWriteFactory* dWriteFactory, uint16_t vlanNumber) const = 0;
+	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const = 0;
+	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) = 0;
 };
 
 enum class Side { Left, Top, Right, Bottom };
@@ -44,6 +55,7 @@ struct DrawingObjects
 	ComPtr<ID2D1SolidColorBrush> _brushTempWire;
 	ComPtr<ID2D1StrokeStyle> _strokeStyleNoForwardingWire;
 	ComPtr<IDWriteTextFormat> _regularTextFormat;
+	ComPtr<ID2D1StrokeStyle> _strokeStyleSelectionRect;
 };
 
 enum class MouseButton
@@ -92,18 +104,7 @@ extern const LogAreaFactory logAreaFactory;
 class EditState;
 struct EditStateDeps;
 
-enum class HTCode
-{
-	Nothing,
-	BridgeInner,
-	PortConnectionPoint,
-};
-
-struct HTCodeAndObject
-{
-	HTCode code;
-	Object* object;
-};
+static constexpr float SnapDistance = 6;
 
 struct IEditArea abstract : public IUnknown
 {
@@ -114,6 +115,9 @@ struct IEditArea abstract : public IUnknown
 	virtual IDWriteFactory* GetDWriteFactory() const = 0;
 	virtual void EnterState (std::unique_ptr<EditState>&& state) = 0;
 	virtual EditStateDeps MakeEditStateDeps() = 0;
+	virtual Port* GetCPAt (D2D1_POINT_2F dipLocation, float tolerance) const = 0;
+	virtual void RenderHoverCP (ID2D1RenderTarget* rt, Port* port) const = 0;
+	virtual D2D1::Matrix3x2F GetZoomTransform() const = 0;
 };
 
 using EditAreaFactory = ComPtr<IEditArea>(*const)(IProject* project, IProjectWindow* pw, DWORD controlId, ISelection* selection, IUIFramework* rf, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory);
@@ -164,3 +168,5 @@ extern const ProjectFactory projectFactory;
 
 unsigned int GetTimestampMilliseconds();
 D2D1::ColorF GetD2DSystemColor (int sysColorIndex);
+bool HitTestLine (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance, D2D1_POINT_2F p0w, D2D1_POINT_2F p1w, float lineWidth);
+bool PointInPolygon (const D2D1_POINT_2F* vertices, size_t vertexCount, D2D1_POINT_2F point);

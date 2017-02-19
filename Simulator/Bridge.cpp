@@ -1,28 +1,10 @@
 #include "pch.h"
 #include "Bridge.h"
 #include "Win32Defs.h"
+#include "Port.h"
 
 using namespace std;
 using namespace D2D1;
-
-D2D1_POINT_2F Port::GetConnectionPointLocation() const
-{
-	auto bounds = _bridge->GetBounds();
-
-	if (_side == Side::Left)
-		return Point2F (bounds.left - PortExteriorHeight, bounds.top + _offset);
-
-	if (_side == Side::Right)
-		return Point2F (bounds.right + PortExteriorHeight, bounds.top + _offset);
-
-	if (_side == Side::Top)
-		return Point2F (bounds.left + _offset, bounds.top - PortExteriorHeight);
-
-	if (_side == Side::Bottom)
-		return Point2F (bounds.left + _offset, bounds.bottom + PortExteriorHeight);
-
-	throw not_implemented_exception();
-}
 
 Bridge::Bridge (unsigned int portCount, const std::array<uint8_t, 6>& macAddress)
 	: _macAddress(macAddress), _guiThreadId(this_thread::get_id())
@@ -31,16 +13,16 @@ Bridge::Bridge (unsigned int portCount, const std::array<uint8_t, 6>& macAddress
 
 	for (size_t i = 0; i < portCount; i++)
 	{
-		offset += (PortSpacing / 2 + PortLongSize / 2);
+		offset += (Port::PortToPortSpacing / 2 + Port::InteriorLongSize / 2);
 		auto port = ComPtr<Port>(new Port(this, i, Side::Bottom, offset), false);
 		_ports.push_back (move(port));
-		offset += (PortLongSize / 2 + PortSpacing / 2);
+		offset += (Port::InteriorLongSize / 2 + Port::PortToPortSpacing / 2);
 	}
 
 	_x = 0;
 	_y = 0;
-	_width = max (offset, MinBridgeWidth);
-	_height = BridgeDefaultHeight;
+	_width = max (offset, MinWidth);
+	_height = DefaultHeight;
 }
 
 Bridge::~Bridge()
@@ -50,7 +32,7 @@ Bridge::~Bridge()
 		STP_DestroyBridge (_stpBridge);
 }
 
-void Bridge::EnableStp (STP_VERSION stpVersion, unsigned int treeCount, uint32_t timestamp)
+void Bridge::EnableStp (STP_VERSION stpVersion, uint16_t treeCount, uint32_t timestamp)
 {
 	if (this_thread::get_id() != _guiThreadId)
 		throw runtime_error ("This function may be called only on the main thread.");
@@ -94,7 +76,7 @@ void Bridge::SetLocation(float x, float y)
 	}
 }
 
-unsigned int Bridge::GetTreeCount() const
+uint16_t Bridge::GetTreeCount() const
 {
 	if (_stpBridge == nullptr)
 		throw runtime_error ("STP was not enabled on this bridge.");
@@ -102,7 +84,7 @@ unsigned int Bridge::GetTreeCount() const
 	return STP_GetTreeCount(_stpBridge);
 }
 
-STP_PORT_ROLE Bridge::GetStpPortRole (unsigned int portIndex, unsigned int treeIndex) const
+STP_PORT_ROLE Bridge::GetStpPortRole (uint16_t portIndex, uint16_t treeIndex) const
 {
 	if (_stpBridge == nullptr)
 		throw runtime_error ("STP was not enabled on this bridge.");
@@ -110,7 +92,7 @@ STP_PORT_ROLE Bridge::GetStpPortRole (unsigned int portIndex, unsigned int treeI
 	return STP_GetPortRole (_stpBridge, portIndex, treeIndex);
 }
 
-bool Bridge::GetStpPortLearning (unsigned int portIndex, unsigned int treeIndex) const
+bool Bridge::GetStpPortLearning (uint16_t portIndex, uint16_t treeIndex) const
 {
 	if (_stpBridge == nullptr)
 		throw runtime_error ("STP was not enabled on this bridge.");
@@ -118,7 +100,7 @@ bool Bridge::GetStpPortLearning (unsigned int portIndex, unsigned int treeIndex)
 	return STP_GetPortLearning (_stpBridge, portIndex, treeIndex);
 }
 
-bool Bridge::GetStpPortForwarding (unsigned int portIndex, unsigned int treeIndex) const
+bool Bridge::GetStpPortForwarding (uint16_t portIndex, uint16_t treeIndex) const
 {
 	if (_stpBridge == nullptr)
 		throw runtime_error ("STP was not enabled on this bridge.");
@@ -126,7 +108,7 @@ bool Bridge::GetStpPortForwarding (unsigned int portIndex, unsigned int treeInde
 	return STP_GetPortForwarding (_stpBridge, portIndex, treeIndex);
 }
 
-bool Bridge::GetStpPortOperEdge (unsigned int portIndex) const
+bool Bridge::GetStpPortOperEdge (uint16_t portIndex) const
 {
 	if (_stpBridge == nullptr)
 		throw runtime_error ("STP was not enabled on this bridge.");
@@ -134,7 +116,7 @@ bool Bridge::GetStpPortOperEdge (unsigned int portIndex) const
 	return STP_GetPortOperEdge (_stpBridge, portIndex);
 }
 
-unsigned short Bridge::GetStpBridgePriority (unsigned int treeIndex) const
+unsigned short Bridge::GetStpBridgePriority (uint16_t treeIndex) const
 {
 	if (_stpBridge == nullptr)
 		throw runtime_error ("STP was not enabled on this bridge.");
@@ -142,7 +124,7 @@ unsigned short Bridge::GetStpBridgePriority (unsigned int treeIndex) const
 	return STP_GetBridgePriority(_stpBridge, treeIndex);
 }
 
-unsigned int Bridge::GetStpTreeIndexFromVlanNumber (unsigned short vlanNumber) const
+uint16_t Bridge::GetStpTreeIndexFromVlanNumber (uint16_t vlanNumber) const
 {
 	if (_stpBridge == nullptr)
 		throw runtime_error ("STP was not enabled on this bridge.");
@@ -153,150 +135,6 @@ unsigned int Bridge::GetStpTreeIndexFromVlanNumber (unsigned short vlanNumber) c
 	return STP_GetTreeIndexFromVlanNumber(_stpBridge, vlanNumber);
 }
 
-// static
-void Bridge::RenderExteriorNonStpPort (ID2D1RenderTarget* dc, const DrawingObjects& dos, bool macOperational)
-{
-	auto brush = macOperational ? dos._brushForwarding : dos._brushDiscardingPort;
-	dc->DrawLine (Point2F (0, 0), Point2F (0, PortExteriorHeight), brush, 2);
-}
-
-// static
-void Bridge::RenderExteriorStpPort (ID2D1RenderTarget* dc, const DrawingObjects& dos, STP_PORT_ROLE role, bool learning, bool forwarding, bool operEdge)
-{
-	static constexpr float circleDiameter = min (PortExteriorHeight / 2, PortExteriorWidth);
-
-	static constexpr float edw = PortExteriorWidth;
-	static constexpr float edh = PortExteriorHeight;
-
-	static constexpr float discardingFirstHorizontalLineY = circleDiameter + (edh - circleDiameter) / 3;
-	static constexpr float discardingSecondHorizontalLineY = circleDiameter + (edh - circleDiameter) * 2 / 3;
-	static constexpr float learningHorizontalLineY = circleDiameter + (edh - circleDiameter) / 2;
-
-	static constexpr float dfhly = discardingFirstHorizontalLineY;
-	static constexpr float dshly = discardingSecondHorizontalLineY;
-
-	static const D2D1_ELLIPSE ellipseFill = { Point2F (0, circleDiameter / 2), circleDiameter / 2 + 0.5f, circleDiameter / 2 + 0.5f };
-	static const D2D1_ELLIPSE ellipseDraw = { Point2F (0, circleDiameter / 2), circleDiameter / 2 - 0.5f, circleDiameter / 2 - 0.5f};
-
-	auto oldaa = dc->GetAntialiasMode();
-
-	if (role == STP_PORT_ROLE_DISABLED)
-	{
-		// disabled
-		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-		dc->DrawLine (Point2F (0, 0), Point2F (0, edh), dos._brushDiscardingPort, 2);
-		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
-		dc->DrawLine (Point2F (-edw / 2, edh / 3), Point2F (edw / 2, edh * 2 / 3), dos._brushDiscardingPort);
-	}
-	else if ((role == STP_PORT_ROLE_DESIGNATED) && !learning && !forwarding)
-	{
-		// designated discarding
-		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
-		dc->FillEllipse (&ellipseFill, dos._brushDiscardingPort);
-		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-		dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), dos._brushDiscardingPort, 2);
-		dc->DrawLine (Point2F (-edw / 2, dfhly), Point2F (edw / 2, dfhly), dos._brushDiscardingPort);
-		dc->DrawLine (Point2F (-edw / 2, dshly), Point2F (edw / 2, dshly), dos._brushDiscardingPort);
-	}
-	else if ((role == STP_PORT_ROLE_DESIGNATED) && learning && !forwarding)
-	{
-		// designated learning
-		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
-		dc->FillEllipse (&ellipseFill, dos._brushLearningPort);
-		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-		dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), dos._brushLearningPort, 2);
-		dc->DrawLine (Point2F (-edw / 2, learningHorizontalLineY), Point2F (edw / 2, learningHorizontalLineY), dos._brushLearningPort);
-	}
-	else if ((role == STP_PORT_ROLE_DESIGNATED) && learning && forwarding && !operEdge)
-	{
-		// designated forwarding
-		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
-		dc->FillEllipse (&ellipseFill, dos._brushForwarding);
-		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-		dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), dos._brushForwarding, 2);
-	}
-	else if ((role == STP_PORT_ROLE_DESIGNATED) && learning && forwarding && operEdge)
-	{
-		// designated forwarding operEdge
-		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
-		dc->FillEllipse (&ellipseFill, dos._brushForwarding);
-		static constexpr D2D1_POINT_2F points[] = 
-		{
-			{ 0, circleDiameter },
-			{ -edw / 2 + 1, circleDiameter + (edh - circleDiameter) / 2 },
-			{ 0, edh },
-			{ edw / 2 - 1, circleDiameter + (edh - circleDiameter) / 2 },
-		};
-
-		dc->DrawLine (points[0], points[1], dos._brushForwarding, 2);
-		dc->DrawLine (points[1], points[2], dos._brushForwarding, 2);
-		dc->DrawLine (points[2], points[3], dos._brushForwarding, 2);
-		dc->DrawLine (points[3], points[0], dos._brushForwarding, 2);
-	}
-	else if (((role == STP_PORT_ROLE_ROOT) || (role == STP_PORT_ROLE_MASTER)) && !learning && !forwarding)
-	{
-		// root or master discarding
-		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
-		dc->DrawEllipse (&ellipseDraw, dos._brushDiscardingPort, 2);
-		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-		dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), dos._brushDiscardingPort, 2);
-		dc->DrawLine (Point2F (-edw / 2, dfhly), Point2F (edw / 2, dfhly), dos._brushDiscardingPort);
-		dc->DrawLine (Point2F (-edw / 2, dshly), Point2F (edw / 2, dshly), dos._brushDiscardingPort);
-	}
-	else if (((role == STP_PORT_ROLE_ROOT) || (role == STP_PORT_ROLE_MASTER)) && learning && !forwarding)
-	{
-		// root or master learning
-		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
-		dc->DrawEllipse (&ellipseDraw, dos._brushLearningPort, 2);
-		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-		dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), dos._brushLearningPort, 2);
-		dc->DrawLine (Point2F (-edw / 2, learningHorizontalLineY), Point2F (edw / 2, learningHorizontalLineY), dos._brushLearningPort);
-	}
-	else if (((role == STP_PORT_ROLE_ROOT) || (role == STP_PORT_ROLE_MASTER)) && learning && forwarding)
-	{
-		// root or master forwarding
-		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
-		dc->DrawEllipse (&ellipseDraw, dos._brushForwarding, 2);
-		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-		dc->DrawLine (Point2F (0, circleDiameter), Point2F (0, edh), dos._brushForwarding, 2);
-	}
-	else if ((role == STP_PORT_ROLE_ALTERNATE) && !learning && !forwarding)
-	{
-		// Alternate discarding
-		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-		dc->DrawLine (Point2F (0, 0), Point2F (0, edh), dos._brushDiscardingPort, 2);
-		dc->DrawLine (Point2F (-edw / 2, dfhly), Point2F (edw / 2, dfhly), dos._brushDiscardingPort);
-		dc->DrawLine (Point2F (-edw / 2, dshly), Point2F (edw / 2, dshly), dos._brushDiscardingPort);
-	}
-	else if ((role == STP_PORT_ROLE_ALTERNATE) && learning && !forwarding)
-	{
-		// Alternate learning
-		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-		dc->DrawLine (Point2F (0, 0), Point2F (0, edh), dos._brushLearningPort, 2);
-		dc->DrawLine (Point2F (-edw / 2, learningHorizontalLineY), Point2F (edw / 2, learningHorizontalLineY), dos._brushLearningPort);
-	}
-	else if ((role == STP_PORT_ROLE_BACKUP) && !learning && !forwarding)
-	{
-		// Backup discarding
-		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-		dc->DrawLine (Point2F (0, 0), Point2F (0, edh), dos._brushDiscardingPort, 2);
-		dc->DrawLine (Point2F (-edw / 2, dfhly / 2), Point2F (edw / 2, dfhly / 2), dos._brushDiscardingPort);
-		dc->DrawLine (Point2F (-edw / 2, dfhly), Point2F (edw / 2, dfhly), dos._brushDiscardingPort);
-		dc->DrawLine (Point2F (-edw / 2, dshly), Point2F (edw / 2, dshly), dos._brushDiscardingPort);
-	}
-	else if (role == STP_PORT_ROLE_UNKNOWN)
-	{
-		// Undefined
-		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-		dc->DrawLine (Point2F (0, 0), Point2F (0, edh), dos._brushDiscardingPort, 2);
-		dc->DrawText (L"?", 1, dos._regularTextFormat, { 2, 0, 20, 20 }, dos._brushDiscardingPort, D2D1_DRAW_TEXT_OPTIONS_NO_SNAP);
-	}
-	else
-		throw not_implemented_exception();
-
-	dc->SetAntialiasMode(oldaa);
-}
-
 void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, IDWriteFactory* dWriteFactory, uint16_t vlanNumber) const
 {
 	optional<unsigned int> treeIndex;
@@ -304,7 +142,7 @@ void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, IDWriteFa
 		treeIndex = GetStpTreeIndexFromVlanNumber(vlanNumber);
 
 	// Draw bridge outline.
-	D2D1_ROUNDED_RECT rr = RoundedRect (GetBounds(), BridgeRoundRadius, BridgeRoundRadius);
+	D2D1_ROUNDED_RECT rr = RoundedRect (GetBounds(), RoundRadius, RoundRadius);
 	dc->FillRoundedRectangle (&rr, _powered ? dos._poweredFillBrush : dos._unpoweredBrush);
 	dc->DrawRoundedRectangle (&rr, _powered ? dos._poweredOutlineBrush : dos._unpoweredBrush, 2.0f);
 
@@ -324,90 +162,43 @@ void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, IDWriteFa
 	}
 	ComPtr<IDWriteTextLayout> tl;
 	HRESULT hr = dWriteFactory->CreateTextLayout (str, strlen, dos._regularTextFormat, 10000, 10000, &tl); ThrowIfFailed(hr);
-	dc->DrawTextLayout ({ _x + BridgeOutlineWidth / 2 + 3, _y + BridgeOutlineWidth / 2 + 3}, tl, dos._brushWindowText);
+	dc->DrawTextLayout ({ _x + OutlineWidth / 2 + 3, _y + OutlineWidth / 2 + 3}, tl, dos._brushWindowText);
 
 	Matrix3x2F oldTransform;
 	dc->GetTransform (&oldTransform);
 
-	for (size_t portIndex = 0; portIndex < _ports.size(); portIndex++)
+	for (auto& port : _ports)
+		port->Render (dc, dos, dWriteFactory, vlanNumber);
+}
+
+void Bridge::RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const
+{
+	auto oldaa = rt->GetAntialiasMode();
+	rt->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
+
+	auto tl = zoomable->GetDLocationFromWLocation ({ _x - OutlineWidth / 2, _y - OutlineWidth / 2 });
+	auto br = zoomable->GetDLocationFromWLocation ({ _x + _width + OutlineWidth / 2, _y + _height + OutlineWidth / 2 });
+	rt->DrawRectangle ({ tl.x - 10, tl.y - 10, br.x + 10, br.y + 10 }, dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
+
+	rt->SetAntialiasMode(oldaa);
+}
+
+HTResult Bridge::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance)
+{
+	for (auto& p : _ports)
 	{
-		Port* port = _ports[portIndex];
-
-		Matrix3x2F portTransform;
-		if (port->GetSide() == Side::Left)
-		{
-			//portTransform = Matrix3x2F::Rotation (90, Point2F (0, 0)) * Matrix3x2F::Translation (bridgeRect.left, bridgeRect.top + port->GetOffset ());
-			// The above calculation is correct but slow. Let's assign the matrix members directly.
-			portTransform._11 = 0;
-			portTransform._12 = 1;
-			portTransform._21 = -1;
-			portTransform._22 = 0;
-			portTransform._31 = _x;
-			portTransform._32 = _y + port->GetOffset();
-		}
-		else if (port->GetSide() == Side::Right)
-		{
-			//portTransform = Matrix3x2F::Rotation (270, Point2F (0, 0)) * Matrix3x2F::Translation (bridgeRect.right, bridgeRect.top + port->GetOffset ());
-			portTransform._11 = 0;
-			portTransform._12 = -1;
-			portTransform._21 = 1;
-			portTransform._22 = 0;
-			portTransform._31 = _x + _width;
-			portTransform._32 = _y + port->GetOffset();
-		}
-		else if (port->GetSide() == Side::Top)
-		{
-			//portTransform = Matrix3x2F::Rotation (180, Point2F (0, 0)) * Matrix3x2F::Translation (bridgeRect.left + port->GetOffset (), bridgeRect.top);
-			portTransform._11 = -1;
-			portTransform._12 = 0;
-			portTransform._21 = 0;
-			portTransform._22 = -1;
-			portTransform._31 = _x + port->GetOffset();
-			portTransform._32 = _y;
-		}
-		else if (port->GetSide() == Side::Bottom)
-		{
-			//portTransform = Matrix3x2F::Translation (bridgeRect.left + port->GetOffset (), bridgeRect.bottom);
-			portTransform._11 = portTransform._22 = 1;
-			portTransform._12 = portTransform._21 = 0;
-			portTransform._31 = _x + port->GetOffset();
-			portTransform._32 = _y + _height;
-		}
-		else
-			throw not_implemented_exception();
-
-		portTransform.SetProduct (portTransform, oldTransform);
-		dc->SetTransform (&portTransform);
-
-		// Draw the interior of the port.
-		D2D1_RECT_F portRect = RectF (
-			-PortInteriorLongSize / 2,
-			-PortInteriorShortSize,
-			-PortInteriorLongSize / 2 + PortInteriorLongSize,
-			-PortInteriorShortSize + PortInteriorShortSize);
-		dc->FillRectangle (&portRect, port->GetMacOperational() ? dos._poweredFillBrush : dos._unpoweredBrush);
-		dc->DrawRectangle (&portRect, port->GetMacOperational() ? dos._poweredOutlineBrush : dos._unpoweredBrush);
-
-		// Draw the exterior of the port.
-		if (IsStpEnabled())
-		{
-			STP_PORT_ROLE role = STP_GetPortRole (_stpBridge, (unsigned int) portIndex, treeIndex.value());
-			bool learning      = STP_GetPortLearning (_stpBridge, (unsigned int) portIndex, treeIndex.value());
-			bool forwarding    = STP_GetPortForwarding (_stpBridge, (unsigned int) portIndex, treeIndex.value());
-			bool operEdge      = STP_GetPortOperEdge (_stpBridge, (unsigned int) portIndex);
-			RenderExteriorStpPort (dc, dos, role, learning, forwarding, operEdge);
-		}
-		else
-			RenderExteriorNonStpPort(dc, dos, port->GetMacOperational());
-
-		// fill the gray/green circle representing the operational state of the port.
-		float radius = 4;
-		D2D1_POINT_2F circleCenter = Point2F (-PortInteriorLongSize / 2 + 2 + radius, -PortInteriorShortSize + 2 + radius);
-		D2D1_ELLIPSE circle = Ellipse (circleCenter, radius, radius);
-		dc->FillEllipse (&circle, port->GetMacOperational() ? dos._poweredFillBrush : dos._unpoweredBrush);
-
-		dc->SetTransform (&oldTransform);
+		auto ht = p->HitTest (zoomable, dLocation, tolerance);
+		if (ht.object != nullptr)
+			return ht;
 	}
+
+	auto tl = zoomable->GetDLocationFromWLocation ({ _x, _y });
+	auto br = zoomable->GetDLocationFromWLocation ({ _x + _width, _y + _height });
+	
+	if ((dLocation.x >= tl.x) && (dLocation.y >= tl.y) && (dLocation.x < br.x) && (dLocation.y < br.y))
+		return { this, HTCodeInner };
+	
+	return {};
 }
 
 #pragma region STP Callbacks

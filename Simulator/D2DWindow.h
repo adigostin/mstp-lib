@@ -2,12 +2,6 @@
 #pragma once
 #include "Win32Defs.h"
 
-struct HWndDeleter
-{
-	void operator() (HWND hWnd) { ::DestroyWindow(hWnd); }
-};
-typedef std::unique_ptr<std::remove_pointer<HWND>::type, HWndDeleter> HWND_unique_ptr;
-
 class D2DWindow abstract
 {
 	HWND _hwnd;

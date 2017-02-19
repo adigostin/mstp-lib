@@ -1,6 +1,6 @@
 
 #include "pch.h"
-#include "SimulatorDefs.h"
+#include "Simulator.h"
 #include "Win32Defs.h"
 
 #pragma comment (lib, "d2d1.lib")
@@ -34,176 +34,6 @@ ULONG STDMETHODCALLTYPE Object::Release()
 }
 #pragma endregion
 
-/*
-BOOL CStpSimulatorApp::InitInstance ()
-{
-	_invokeGuiThreadRegisteredMessage = RegisterWindowMessage (L"{391CC5EE-942B-448E-B100-0ADE2521F34B}");
-	if (_invokeGuiThreadRegisteredMessage == 0)
-		throw Win32Exception (GetLastError (), L"RegisterWindowMessage");
-
-
-	//BOOL bRes = SymInitialize (GetCurrentProcess (), NULL, TRUE);
-	//ASSERT (bRes);
-	//SymSetOptions (SYMOPT_LOAD_LINES);
-
-	SYSTEMTIME startupUtcTime;
-	GetSystemTime (&startupUtcTime);
-	SystemTimeToFileTime (&startupUtcTime, &startupUtcFileTime);
-
-	// InitCommonControlsEx() is required on Windows XP if an application
-	// manifest specifies use of ComCtl32.dll version 6 or later to enable
-	// visual styles.  Otherwise, any window creation will fail.
-	INITCOMMONCONTROLSEX InitCtrls;
-	InitCtrls.dwSize = sizeof(InitCtrls);
-	// Set this to include all the common control classes you want to use
-	// in your application.
-	InitCtrls.dwICC = ICC_WIN95_CLASSES;
-	InitCommonControlsEx(&InitCtrls);
-
-	CWinAppEx::InitInstance();
-
-	EnableTaskbarInteraction(FALSE);
-
-	// AfxInitRichEdit2() is required to use RichEdit control	
-	// AfxInitRichEdit2();
-
-	// Standard initialization
-	// If you are not using these features and wish to reduce the size
-	// of your final executable, you should remove from the following
-	// the specific initialization routines you do not need
-	// Change the registry key under which our settings are stored
-	SetRegistryKey (L"Adrian Gostin");
-	LoadStdProfileSettings (4);  // Load standard INI file options (including MRU)
-
-	InitContextMenuManager();
-
-	InitKeyboardManager();
-
-	InitTooltipManager();
-	CMFCToolTipInfo ttParams;
-	ttParams.m_bVislManagerTheme = TRUE;
-	theApp.GetTooltipManager()->SetTooltipParams(AFX_TOOLTIP_TYPE_ALL,
-		RUNTIME_CLASS(CMFCToolTipCtrl), &ttParams);
-
-	// Register the application's document templates.  Document templates
-	//  serve as the connection between documents, frame windows and views
-	CSingleDocTemplate* pDocTemplate;
-	pDocTemplate = new CSingleDocTemplate(
-		IDR_MAINFRAME,
-		RUNTIME_CLASS(CStpSimulatorDoc),
-		RUNTIME_CLASS(CMainFrame),       // main SDI frame window
-		RUNTIME_CLASS(CSimulatorView));
-	if (!pDocTemplate)
-		return FALSE;
-	AddDocTemplate(pDocTemplate);
-
-
-	// Parse command line for standard shell commands, DDE, file open
-	CCommandLineInfo cmdInfo;
-	ParseCommandLine(cmdInfo);
-
-	// Enable DDE Execute open
-	EnableShellOpen();
-	RegisterShellFileTypes(TRUE);
-
-
-	// Dispatch commands specified on the command line.  Will return FALSE if
-	// app was launched with /RegServer, /Register, /Unregserver or /Unregister.
-	if (!ProcessShellCommand(cmdInfo))
-		return FALSE;
-
-	// The one and only window has been initialized, so show and update it
-	m_pMainWnd->ShowWindow(SW_SHOW);
-	m_pMainWnd->UpdateWindow();
-	// call DragAcceptFiles only if there's a suffix
-	//  In an SDI app, this should occur after ProcessShellCommand
-	// Enable drag/drop open
-	m_pMainWnd->DragAcceptFiles();
-	return TRUE;
-}
-
-afx_msg void CStpSimulatorApp::OnInvokeGuiThreadMessage (WPARAM wParam, LPARAM lParam)
-{
-	InvokeFunction targetFunction = (InvokeFunction) wParam;
-	void* arg = (void*) lParam;
-	targetFunction (arg);
-}
-
-void CStpSimulatorApp::PostInvokeOnGuiThread (InvokeFunction target, void* param)
-{
-	BOOL bRes = this->PostThreadMessage (_invokeGuiThreadRegisteredMessage, (WPARAM) target, (LPARAM) param);
-	if (bRes == FALSE)
-		throw Win32Exception (GetLastError (), L"PostThreadMessage");
-}
-
-unsigned int GetTimeMillis()
-{
-	SYSTEMTIME currentUtcTime;
-	GetSystemTime (&currentUtcTime);
-
-	FILETIME currentUtcFileTime;
-	SystemTimeToFileTime (&currentUtcTime, &currentUtcFileTime);
-
-	unsigned long long start = *(unsigned long long *) &startupUtcFileTime;
-	unsigned long long now   = *(unsigned long long *) &currentUtcFileTime;
-	
-	unsigned long long milliseconds = (now - start) / 10000;
-	return (unsigned int) milliseconds;
-}
-
-static const wchar_t NoStackTraceString [] = L"Could not get stack trace.";
-
-void GetStackTraceString (CString* str, unsigned int framesToSkip)
-{
-	HANDLE process = GetCurrentProcess ();
-	void* stack [100];
-	unsigned int frameCount = CaptureStackBackTrace (framesToSkip, sizeof (stack) / sizeof (void*), stack, NULL);
-	if (frameCount == 0)
-	{
-		str->Format (NoStackTraceString);
-		return;
-	}
-
-	union
-	{
-		SYMBOL_INFO symbol;
-		unsigned char symbolBuffer [sizeof (SYMBOL_INFO) + 256];
-	};
-
-	ZeroMemory (symbolBuffer, sizeof (symbolBuffer));
-	symbol.MaxNameLen   = 255;
-	symbol.SizeOfStruct = sizeof (SYMBOL_INFO);
-
-	IMAGEHLP_LINEW64 line;
-	ZeroMemory (&line, sizeof (line));
-	line.SizeOfStruct = sizeof (line);
-
-	for (unsigned int i = 0; i < frameCount; i++)
-	{
-		DWORD address = (DWORD64) (stack [i]);
-		BOOL bRes = SymFromAddr (process, address, NULL, &symbol);
-		if (!bRes)
-		{
-			str->Format (NoStackTraceString);
-			return;
-		}
-
-		str->AppendFormat (L"@ %S", symbol.Name);
-
-		DWORD displacement;
-		bRes = SymGetLineFromAddrW64 (process, address, &displacement, &line);
-		if (bRes)
-		{
-			const wchar_t* filePart = PathFindFileName (line.FileName);
-
-			str->AppendFormat (L" (%s: %d)", filePart, line.LineNumber);
-		}
-
-		str->Append (L"\r\n");
-	}
-}
-*/
-
 unsigned int GetTimestampMilliseconds()
 {
 	SYSTEMTIME currentUtcTime;
@@ -229,6 +59,44 @@ ColorF GetD2DSystemColor (int sysColorIndex)
 	DWORD brg = GetSysColor (sysColorIndex);
 	DWORD rgb = ((brg & 0xff0000) >> 16) | (brg & 0xff00) | ((brg & 0xff) << 16);
 	return ColorF (rgb);
+}
+
+bool HitTestLine (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance, D2D1_POINT_2F p0w, D2D1_POINT_2F p1w, float lineWidth)
+{
+	auto fd = zoomable->GetDLocationFromWLocation(p0w);
+	auto td = zoomable->GetDLocationFromWLocation(p1w);
+
+	float halfw = zoomable->GetDLengthFromWLength(lineWidth) / 2.0f;
+	if (halfw < tolerance)
+		halfw = tolerance;
+
+	float angle = atan2(td.y - fd.y, td.x - fd.x);
+	float s = sin(angle);
+	float c = cos(angle);
+
+	array<D2D1_POINT_2F, 4> vertices = 
+	{
+		D2D1_POINT_2F { fd.x + s * halfw, fd.y - c * halfw },
+		D2D1_POINT_2F { fd.x - s * halfw, fd.y + c * halfw },
+		D2D1_POINT_2F { td.x - s * halfw, td.y + c * halfw },
+		D2D1_POINT_2F { td.x + s * halfw, td.y - c * halfw }
+	};
+
+	return PointInPolygon (&vertices[0], 4, dLocation);
+}
+
+bool PointInPolygon (const D2D1_POINT_2F* vertices, size_t vertexCount, D2D1_POINT_2F point)
+{
+	// Taken from http://stackoverflow.com/a/2922778/451036
+	bool c = false;
+	for (size_t i = 0, j = vertexCount - 1; i < vertexCount; j = i++)
+	{
+		if (((vertices[i].y > point.y) != (vertices[j].y > point.y)) &&
+			(point.x < (vertices[j].x - vertices[i].x) * (point.y - vertices[i].y) / (vertices[j].y - vertices[i].y) + vertices[i].x))
+			c = !c;
+	}
+
+	return c;
 }
 
 int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)

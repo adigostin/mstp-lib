@@ -20,7 +20,7 @@ public:
 			[](const ComPtr<Object>& so) { return dynamic_cast<Bridge*>(so.Get()); }));
 	}
 
-	virtual void OnMouseDown (D2D1_POINT_2F dLocation, D2D1_POINT_2F wLocation, MouseButton button, HTCodeAndObject ht) override final
+	virtual void OnMouseDown (D2D1_POINT_2F dLocation, D2D1_POINT_2F wLocation, MouseButton button) override final
 	{
 		_mouseDownWLocation = wLocation;
 		for (auto o : _selection->GetObjects())

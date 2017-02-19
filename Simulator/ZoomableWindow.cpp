@@ -296,4 +296,3 @@ D2D1_POINT_2F ZoomableWindow::GetDLocationFromWLocation(D2D1_POINT_2F wLocation)
 	float y = _workspaceOrigin.y + wLocation.y * _zoom;
 	return { x, y };
 }
-
