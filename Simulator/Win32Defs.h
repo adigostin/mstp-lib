@@ -47,6 +47,11 @@ struct HWndDeleter
 };
 typedef std::unique_ptr<std::remove_pointer<HWND>::type, HWndDeleter> HWND_unique_ptr;
 
+struct TimerQueueHandleDeleter
+{
+	void operator() (HANDLE handle) { ::DeleteTimerQueueEx(handle, INVALID_HANDLE_VALUE); }
+};
+typedef std::unique_ptr<std::remove_pointer<HANDLE>::type, TimerQueueHandleDeleter> TimerQueue_unique_ptr;
 
 template<typename T> class ComPtr
 {

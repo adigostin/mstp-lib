@@ -147,6 +147,8 @@
     <ClCompile Include="EditStates\CreateWireES.cpp" />
     <ClCompile Include="Port.cpp" />
     <ClCompile Include="EditStates\MoveWirePointES.cpp" />
+    <ClCompile Include="RibbonCommandHandlers\CutCopyPasteRCH.cpp" />
+    <ClCompile Include="RibbonCommandHandlers\UndoRedoRCH.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc">

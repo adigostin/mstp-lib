@@ -38,6 +38,7 @@
 #include <mutex>
 #include <objbase.h>
 #include <optional>
+#include <random>
 #include <Shlwapi.h>
 #include <signal.h>
 #include <sstream>

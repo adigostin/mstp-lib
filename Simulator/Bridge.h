@@ -30,6 +30,7 @@ class Bridge : public Object
 	static const STP_CALLBACKS StpCallbacks;
 	std::vector<BridgeLogLine> _logLines;
 	BridgeLogLine _currentLogLine;
+	HANDLE _timerHandle = nullptr;
 
 public:
 	Bridge (unsigned int portCount, const std::array<uint8_t, 6>& macAddress);
@@ -78,6 +79,9 @@ public:
 	const std::vector<BridgeLogLine>& GetLogLines() const { return _logLines; }
 
 private:	
+	static void CALLBACK TimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
+	static LRESULT CALLBACK HelperWindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
+
 	static void* StpCallback_AllocAndZeroMemory (unsigned int size);
 	static void  StpCallback_FreeMemory (void* p);
 	static void  StpCallback_EnableLearning (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable);

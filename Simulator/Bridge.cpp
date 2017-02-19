@@ -6,6 +6,10 @@
 using namespace std;
 using namespace D2D1;
 
+static constexpr UINT WM_ONE_SECOND_TIMER = WM_APP + 1;
+
+static HWND_unique_ptr helperWindow;
+
 Bridge::Bridge (unsigned int portCount, const std::array<uint8_t, 6>& macAddress)
 	: _macAddress(macAddress), _guiThreadId(this_thread::get_id())
 {
@@ -23,13 +27,64 @@ Bridge::Bridge (unsigned int portCount, const std::array<uint8_t, 6>& macAddress
 	_y = 0;
 	_width = max (offset, MinWidth);
 	_height = DefaultHeight;
+
+	if (helperWindow == nullptr)
+	{
+		HINSTANCE hInstance;
+		BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &helperWindow, &hInstance);
+		if (!bRes)
+			throw win32_exception(GetLastError());
+
+		auto hwnd = CreateWindow (L"STATIC", L"", 0, 0, 0, 0, 0, HWND_MESSAGE, 0, hInstance, 0);
+		if (hwnd == nullptr)
+			throw win32_exception(GetLastError());
+		helperWindow.reset (hwnd);
+
+		bRes = SetWindowSubclass (hwnd, HelperWindowProc, 0, 0);
+		if (!bRes)
+			throw win32_exception(GetLastError());
+	}
+
+	DWORD period = 950 + (std::random_device()() % 100);
+	BOOL bRes = CreateTimerQueueTimer (&_timerHandle, nullptr, TimerCallback, this, period, period, 0);
+	if (!bRes)
+		throw win32_exception(GetLastError());
 }
 
 Bridge::~Bridge()
 {
 	assert (this_thread::get_id() == _guiThreadId);
+
+	assert (_timerHandle != nullptr);
+	DeleteTimerQueueTimer (nullptr, _timerHandle, INVALID_HANDLE_VALUE);
+
 	if (_stpBridge != nullptr)
 		STP_DestroyBridge (_stpBridge);
+}
+
+//static
+void CALLBACK Bridge::TimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired)
+{
+	auto bridge = static_cast<Bridge*>(lpParameter);
+	::PostMessage (helperWindow.get(), WM_ONE_SECOND_TIMER, (WPARAM) bridge, 0);
+	bridge->AddRef();
+}
+
+// static
+LRESULT CALLBACK Bridge::HelperWindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	if (uMsg == WM_ONE_SECOND_TIMER)
+	{
+		auto bridge = static_cast<Bridge*>((void*)wParam);
+
+		if (bridge->_stpBridge != nullptr)
+			STP_OnOneSecondTick (bridge->_stpBridge, GetTimestampMilliseconds());
+
+		bridge->Release();
+		return 0;
+	}
+
+	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
 }
 
 void Bridge::EnableStp (STP_VERSION stpVersion, uint16_t treeCount, uint32_t timestamp)
@@ -287,3 +342,4 @@ void Bridge::StpCallback_DebugStrOut (STP_BRIDGE* bridge, int portIndex, int tre
 }
 
 #pragma endregion
+
