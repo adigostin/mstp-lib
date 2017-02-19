@@ -6,7 +6,7 @@
 using namespace std;
 using namespace D2D1;
 
-D2D1_POINT_2F Port::GetConnectionPointLocation() const
+D2D1_POINT_2F Port::GetCPLocation() const
 {
 	auto bounds = _bridge->GetBounds();
 
@@ -259,7 +259,7 @@ void Port::RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, co
 
 bool Port::HitTestCP (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) const
 {
-	auto cpWLocation = GetConnectionPointLocation();
+	auto cpWLocation = GetCPLocation();
 	auto cpDLocation = zoomable->GetDLocationFromWLocation(cpWLocation);
 	
 	return (abs (cpDLocation.x - dLocation.x) <= tolerance)

@@ -106,6 +106,13 @@ struct EditStateDeps;
 
 static constexpr float SnapDistance = 6;
 
+struct MouseLocation
+{
+	POINT pt;
+	D2D1_POINT_2F d;
+	D2D1_POINT_2F w;
+};
+
 struct IEditArea abstract : public IUnknown
 {
 	virtual HWND GetHWnd() const = 0;
@@ -115,7 +122,7 @@ struct IEditArea abstract : public IUnknown
 	virtual IDWriteFactory* GetDWriteFactory() const = 0;
 	virtual void EnterState (std::unique_ptr<EditState>&& state) = 0;
 	virtual EditStateDeps MakeEditStateDeps() = 0;
-	virtual Port* GetCPAt (D2D1_POINT_2F dipLocation, float tolerance) const = 0;
+	virtual Port* GetCPAt (D2D1_POINT_2F dLocation, float tolerance) const = 0;
 	virtual void RenderHoverCP (ID2D1RenderTarget* rt, Port* port) const = 0;
 	virtual D2D1::Matrix3x2F GetZoomTransform() const = 0;
 };
@@ -159,6 +166,7 @@ struct IProject abstract : public IUnknown
 	void Add (Object* object) { Insert (GetObjects().size(), object); }
 
 	virtual std::array<uint8_t, 6> AllocMacAddressRange (size_t count) = 0;
+	virtual std::pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const = 0;
 };
 
 using ProjectFactory = ComPtr<IProject>(*const)();

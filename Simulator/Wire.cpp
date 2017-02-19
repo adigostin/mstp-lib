@@ -28,12 +28,12 @@ void Wire::SetP1 (const WireEnd& p1)
 
 D2D1_POINT_2F Wire::GetP0Coords() const
 {
-	return holds_alternative<LooseWireEnd>(_p0) ? get<LooseWireEnd>(_p0) : get<ConnectedWireEnd>(_p0)->GetConnectionPointLocation();
+	return holds_alternative<LooseWireEnd>(_p0) ? get<LooseWireEnd>(_p0) : get<ConnectedWireEnd>(_p0)->GetCPLocation();
 }
 
 D2D1_POINT_2F Wire::GetP1Coords() const
 {
-	return holds_alternative<LooseWireEnd>(_p1) ? get<LooseWireEnd>(_p1) : get<ConnectedWireEnd>(_p1)->GetConnectionPointLocation();
+	return holds_alternative<LooseWireEnd>(_p1) ? get<LooseWireEnd>(_p1) : get<ConnectedWireEnd>(_p1)->GetCPLocation();
 }
 
 void Wire::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, IDWriteFactory* dWriteFactory, uint16_t vlanNumber) const

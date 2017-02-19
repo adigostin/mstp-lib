@@ -31,7 +31,7 @@ public:
 	Bridge* GetBridge() const { return _bridge; }
 	Side GetSide() const { return _side; }
 	float GetOffset() const { return _offset; }
-	D2D1_POINT_2F GetConnectionPointLocation() const;
+	D2D1_POINT_2F GetCPLocation() const;
 	bool GetMacOperational() const { return true; } // TODO
 	D2D1::Matrix3x2F GetPortTransform() const;
 	D2D1_RECT_F GetInnerRect() const;

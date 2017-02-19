@@ -1,8 +1,7 @@
 
 #include "pch.h"
 #include "Simulator.h"
-//#include "Bridge.h"
-//#include "Wire.h"
+#include "Wire.h"
 
 using namespace std;
 
@@ -63,6 +62,22 @@ public:
 		}
 
 		return result;
+	}
+
+	virtual pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const override final
+	{
+		for (auto& o : _objects)
+		{
+			if (auto w = dynamic_cast<Wire*>(o.Get()))
+			{
+				if (holds_alternative<ConnectedWireEnd>(w->GetP0()) && (get<ConnectedWireEnd>(w->GetP0()) == port))
+					return { w, 0 };
+				else if (holds_alternative<ConnectedWireEnd>(w->GetP1()) && (get<ConnectedWireEnd>(w->GetP1()) == port))
+					return { w, 1 };
+			}
+		}
+
+		return { };
 	}
 
 	#pragma region IUnknown

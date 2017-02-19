@@ -14,7 +14,7 @@ class CreateBridgeES : public EditState
 public:
 	using base::base;
 
-	virtual void OnMouseMove (D2D1_POINT_2F dLocation, D2D1_POINT_2F wLocation) override final
+	virtual void OnMouseMove (const MouseLocation& location) override final
 	{
 		if (_bridge == nullptr)
 		{
@@ -22,11 +22,11 @@ public:
 			_bridge = ComPtr<Bridge>(new Bridge (portCount, _project->AllocMacAddressRange(1 + portCount)), false);
 		}
 
-		_bridge->SetLocation (wLocation.x - _bridge->GetWidth() / 2, wLocation.y - _bridge->GetHeight() / 2);
+		_bridge->SetLocation (location.w.x - _bridge->GetWidth() / 2, location.w.y - _bridge->GetHeight() / 2);
 		::InvalidateRect (_area->GetHWnd(), nullptr, FALSE);
 	}
 
-	virtual void OnMouseUp (D2D1_POINT_2F dLocation, D2D1_POINT_2F wLocation, MouseButton button) override final
+	virtual void OnMouseUp (const MouseLocation& location, MouseButton button) override final
 	{
 		if (_bridge != nullptr)
 		{

@@ -20,26 +20,26 @@ public:
 			[](const ComPtr<Object>& so) { return dynamic_cast<Bridge*>(so.Get()); }));
 	}
 
-	virtual void OnMouseDown (D2D1_POINT_2F dLocation, D2D1_POINT_2F wLocation, MouseButton button) override final
+	virtual void OnMouseDown (const MouseLocation& location, MouseButton button) override final
 	{
-		_mouseDownWLocation = wLocation;
+		_mouseDownWLocation = location.w;
 		for (auto o : _selection->GetObjects())
 		{
 			auto b = dynamic_cast<Bridge*>(o.Get()); assert (b != nullptr);
-			_offsets.push_back ({ wLocation.x - b->GetLeft(), wLocation.y - b->GetTop() });
+			_offsets.push_back ({ location.w.x - b->GetLeft(), location.w.y - b->GetTop() });
 		}
 	}
 
-	virtual void OnMouseMove (D2D1_POINT_2F dLocation, D2D1_POINT_2F wLocation) override final
+	virtual void OnMouseMove (const MouseLocation& location) override final
 	{
 		for (size_t i = 0; i < _selection->GetObjects().size(); i++)
 		{
 			auto b = dynamic_cast<Bridge*>(_selection->GetObjects()[i].Get()); assert (b != nullptr);
-			b->SetLocation (wLocation.x - _offsets[i].width, wLocation.y - _offsets[i].height);
+			b->SetLocation (location.w.x - _offsets[i].width, location.w.y - _offsets[i].height);
 		}
 	}
 
-	virtual void OnMouseUp (D2D1_POINT_2F dLocation, D2D1_POINT_2F wLocation, MouseButton button) override final
+	virtual void OnMouseUp (const MouseLocation& location, MouseButton button) override final
 	{
 		_completed = true;
 	}

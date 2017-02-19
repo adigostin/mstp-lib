@@ -51,6 +51,19 @@
 			</Command.LargeImages>
 		</Command>
 
+		<Command Name="CreateCable" Symbol="cmdCreateCable" LabelTitle="New Cable">
+			<Command.SmallImages>
+				<Image Source="Cable_16.png" MinDPI="96"/>
+				<Image Source="Cable_24.png" MinDPI="120"/>
+				<Image Source="Cable_32.png" MinDPI="168"/>
+			</Command.SmallImages>
+			<Command.LargeImages>
+				<Image Source="Cable_32.png" MinDPI="96"/>
+				<Image Source="Cable_48.png" MinDPI="120"/>
+				<Image Source="Cable_64.png" MinDPI="168"/>
+			</Command.LargeImages>
+		</Command>
+		
 		<Command Name="BridgeGroup" Symbol="cmdBridgeGroup" LabelTitle="Bridge"/>
 
 		<Command Name="BridgeAddress" Symbol="cmdBridgeAddress" LabelTitle="Address"/>
@@ -174,8 +187,9 @@
 						<Button CommandName="Copy"/>
 						<Button CommandName="Paste"/>
 					</Group>
-					<Group CommandName="CreateGroup" SizeDefinition="OneButton">
+					<Group CommandName="CreateGroup" SizeDefinition="TwoButtons">
 						<Button CommandName="CreateBridge"/>
+						<Button CommandName="CreateCable"/>
 					</Group>
 					<Group CommandName="BridgeGroup">
 						<SizeDefinition>
@@ -211,6 +225,7 @@
 				<ContextMenu Name="ContextMenuBlankArea">
 					<MenuGroup>
 						<Button CommandName="CreateBridge"/>
+						<Button CommandName="CreateCable"/>
 					</MenuGroup>
 					<MenuGroup>
 						<Button CommandName="Paste"/>

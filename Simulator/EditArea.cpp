@@ -28,12 +28,11 @@ class EditArea : public ZoomableWindow, public IEditArea
 
 	struct BeginningDrag
 	{
-		POINT pt;
-		D2D1_POINT_2F dLocation;
-		D2D1_POINT_2F wLocation;
+		MouseLocation location;
 		MouseButton button;
 		HCURSOR cursor;
-		HTResult ht;
+		unique_ptr<EditState> stateMoveThreshold;
+		unique_ptr<EditState> stateButtonUp;
 	};
 
 	optional<BeginningDrag> _beginningDrag;
@@ -188,7 +187,7 @@ public:
 		auto oldaa = rt->GetAntialiasMode();
 		rt->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
 
-		auto cpw = port->GetConnectionPointLocation();
+		auto cpw = port->GetCPLocation();
 		auto cpd = GetDLocationFromWLocation(cpw);
 		auto rect = RectF (cpd.x - SnapDistance, cpd.y - SnapDistance, cpd.x + SnapDistance, cpd.y + SnapDistance);
 		rt->DrawRectangle (rect, _drawingObjects._brushHighlight, 2);
@@ -280,6 +279,22 @@ public:
 
 	virtual HWND GetHWnd() const override final { return base::GetHWnd(); }
 
+	static UINT GetModifierKeys()
+	{
+		UINT modifierKeys = 0;
+
+		if (GetKeyState (VK_SHIFT) < 0)
+			modifierKeys |= MK_SHIFT;
+
+		if (GetKeyState (VK_CONTROL) < 0)
+			modifierKeys |= MK_CONTROL;
+
+		if (GetKeyState (VK_MENU) < 0)
+			modifierKeys |= MK_ALT;
+
+		return modifierKeys;
+	}
+
 	virtual std::optional<LRESULT> WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override
 	{
 		if ((uMsg == WM_LBUTTONDOWN) || (uMsg == WM_RBUTTONDOWN))
@@ -323,6 +338,14 @@ public:
 		{
 			return ProcessWmContextMenu (hwnd, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
 		}
+		else if ((uMsg == WM_KEYDOWN) || (uMsg == WM_SYSKEYDOWN))
+		{
+			return ProcessKeyOrSysKeyDown ((UINT) wParam, GetModifierKeys());
+		}
+		else if ((uMsg == WM_KEYUP) || (uMsg == WM_SYSKEYUP))
+		{
+			return ProcessKeyOrSysKeyUp ((UINT) wParam, GetModifierKeys());
+		}
 
 		return base::WindowProc (hwnd, uMsg, wParam, lParam);
 	}
@@ -356,8 +379,40 @@ public:
 		return { };
 	}
 
+	std::optional<LRESULT> ProcessKeyOrSysKeyDown (UINT virtualKey, UINT modifierKeys)
+	{
+		if (_beginningDrag)
+		{
+			if (virtualKey == VK_ESCAPE)
+			{
+				_beginningDrag = nullopt;
+				return 0;
+			}
+
+			return nullopt;
+		}
+
+		if (_state != nullptr)
+			return _state->OnKeyDown (virtualKey, modifierKeys);
+
+		return nullopt;
+	}
+
+	std::optional<LRESULT> ProcessKeyOrSysKeyUp (UINT virtualKey, UINT modifierKeys)
+	{
+		if (_beginningDrag)
+			return nullopt;
+
+		if (_state != nullptr)
+			return _state->OnKeyUp (virtualKey, modifierKeys);
+
+		return nullopt;
+	}
+
 	std::optional<LRESULT> ProcessMouseButtonDown (MouseButton button, POINT pt)
 	{
+		::SetFocus(GetHWnd());
+
 		auto dLocation = GetDipLocationFromPixelLocation(pt);
 		auto wLocation = GetWLocationFromDLocation(dLocation);
 
@@ -369,7 +424,7 @@ public:
 
 		if (_state != nullptr)
 		{
-			_state->OnMouseDown (dLocation, wLocation, button);
+			_state->OnMouseDown ({ pt, dLocation, wLocation }, button);
 			if (_state->Completed())
 			{
 				_state = nullptr;
@@ -385,7 +440,44 @@ public:
 		else
 			_selection->Select(ht.object);
 
-		_beginningDrag = BeginningDrag { pt, dLocation, wLocation, button, ::GetCursor(), ht };
+		_beginningDrag = BeginningDrag();
+		_beginningDrag->location.pt = pt;
+		_beginningDrag->location.d = dLocation;
+		_beginningDrag->location.w = wLocation;
+		_beginningDrag->button = button;
+		_beginningDrag->cursor = ::GetCursor();
+
+		if (ht.object == nullptr)
+		{
+			// TODO: area selection
+			//stateForMoveThreshold = 
+		}
+		else if (auto b = dynamic_cast<Bridge*>(ht.object))
+		{
+			if (button == MouseButton::Left)
+				_beginningDrag->stateMoveThreshold = CreateStateMoveBridges (MakeEditStateDeps());
+		}
+		//else if (auto b = dynamic_cast<Port*>(_beginningDrag->clickedObj))
+		//{
+		// TODO: move port
+		//if (_beginningDrag->button == MouseButton::Left)
+		//	_state = CreateStateMovePorts (this, _selection);
+		//}
+		else if (auto p = dynamic_cast<Port*>(ht.object))
+		{
+			if (ht.code == Port::HTCodeCP)
+			{
+				auto alreadyConnectedWire = _project->GetWireConnectedToPort(p);
+				if (alreadyConnectedWire.first == nullptr)
+				{
+					_beginningDrag->stateMoveThreshold = CreateStateCreateWire(MakeEditStateDeps(), p);
+					_beginningDrag->stateButtonUp = CreateStateCreateWire(MakeEditStateDeps(), p);
+				}
+				else
+					_beginningDrag->stateMoveThreshold = CreateStateMoveWirePoint(MakeEditStateDeps(), alreadyConnectedWire.first, alreadyConnectedWire.second);
+			}
+		}
+
 		return 0;
 	}
 
@@ -394,9 +486,28 @@ public:
 		auto dLocation = GetDipLocationFromPixelLocation(pt);
 		auto wLocation = GetWLocationFromDLocation(dLocation);
 
+		if (_beginningDrag)
+		{
+			if (button != _beginningDrag->button)
+				return nullopt; // return "not handled"
+
+			if (_beginningDrag->stateButtonUp != nullptr)
+			{
+				_hoverPort = nullptr;
+				_state = move(_beginningDrag->stateButtonUp);
+				_state->OnMouseDown (_beginningDrag->location, _beginningDrag->button);
+				assert (!_state->Completed());
+				if ((pt.x != _beginningDrag->location.pt.x) || (pt.y != _beginningDrag->location.pt.y))
+					_state->OnMouseMove (_beginningDrag->location);
+			}
+			
+			_beginningDrag = nullopt;
+			// fall-through to the code that handles the state
+		}
+
 		if (_state != nullptr)
 		{
-			_state->OnMouseUp (dLocation, wLocation, button);
+			_state->OnMouseUp ({ pt, dLocation, wLocation }, button);
 			if (_state->Completed())
 			{
 				_state = nullptr;
@@ -405,9 +516,6 @@ public:
 
 			return 0;
 		}
-
-		if (_beginningDrag && (button == _beginningDrag->button))
-			_beginningDrag = nullopt;
 
 		if (button == MouseButton::Right)
 			return nullopt; // return "not handled", to cause our called to pass the message to DefWindowProc, which will generate WM_CONTEXTMENU
@@ -424,6 +532,7 @@ public:
 	{
 		_beginningDrag = nullopt;
 		_state = move(state);
+		_hoverPort = nullptr;
 	}
 
 	void ProcessWmSetCursor (POINT pt)
@@ -461,47 +570,25 @@ public:
 
 		if (_beginningDrag)
 		{
-			RECT rc = { _beginningDrag->pt.x, _beginningDrag->pt.y, _beginningDrag->pt.x, _beginningDrag->pt.y };
+			RECT rc = { _beginningDrag->location.pt.x, _beginningDrag->location.pt.y, _beginningDrag->location.pt.x, _beginningDrag->location.pt.y };
 			InflateRect (&rc, GetSystemMetrics(SM_CXDRAG), GetSystemMetrics(SM_CYDRAG));
 			if (!PtInRect (&rc, pt))
 			{
-				if (_beginningDrag->ht.object == nullptr)
+				if (_beginningDrag->stateMoveThreshold != nullptr)
 				{
-					// TODO: area selection
-				}
-				else if (auto b = dynamic_cast<Bridge*>(_beginningDrag->ht.object))
-				{
-					if (_beginningDrag->button == MouseButton::Left)
-						_state = CreateStateMoveBridges (MakeEditStateDeps());
-				}
-				//else if (auto b = dynamic_cast<Port*>(_beginningDrag->clickedObj))
-				//{
-					// TODO: move port
-					//if (_beginningDrag->button == MouseButton::Left)
-					//	_state = CreateStateMovePorts (this, _selection);
-				//}
-				else if (auto p = dynamic_cast<Port*>(_beginningDrag->ht.object))
-				{
-					if (_beginningDrag->ht.code == Port::HTCodeCP)
-						_state = CreateStateCreateWire(MakeEditStateDeps(), p);
-				}
-				else
-					throw not_implemented_exception();
-
-				if (_state != nullptr)
-				{
-					_hoverPort = nullptr;
-					_state->OnMouseDown (_beginningDrag->dLocation, _beginningDrag->wLocation, _beginningDrag->button);
+					_state = move(_beginningDrag->stateMoveThreshold);
+					_state->OnMouseDown (_beginningDrag->location, _beginningDrag->button);
 					assert (!_state->Completed());
-					_state->OnMouseMove (dLocation, wLocation);
+					_state->OnMouseMove ({ pt, dLocation, wLocation });
 				}
 
 				_beginningDrag = nullopt;
+				_hoverPort = nullptr;
 			}
 		}
 		else if (_state != nullptr)
 		{
-			_state->OnMouseMove (dLocation, wLocation);
+			_state->OnMouseMove ({ pt, dLocation, wLocation });
 			if (_state->Completed())
 			{
 				_state = nullptr;
