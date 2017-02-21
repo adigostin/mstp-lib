@@ -121,7 +121,7 @@ void Bridge::ComputeMacOperational()
 	{
 		auto& port = _ports[portIndex];
 	
-		bool newMacOperational = (_project->GetReceivingPortUnsafe(port) != nullptr);
+		bool newMacOperational = (_project->GetReceivingPort(port) != nullptr);
 		if (port->_macOperational != newMacOperational)
 		{
 			if (port->_macOperational)
@@ -165,7 +165,7 @@ void Bridge::EnableStp (STP_VERSION stpVersion, uint16_t treeCount, uint32_t tim
 	for (size_t portIndex = 0; portIndex < _ports.size(); portIndex++)
 	{
 		auto& port = _ports[portIndex];
-		if (_project->GetReceivingPortUnsafe(port) != nullptr)
+		if (_project->GetReceivingPort(port) != nullptr)
 			STP_OnPortEnabled (_stpBridge, portIndex, 100, true, timestamp);
 	}
 
@@ -375,7 +375,7 @@ void Bridge::StpCallback_TransmitReleaseBuffer (STP_BRIDGE* bridge, void* buffer
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 	auto& txPort = b->_ports[b->_txPortIndex];
-	auto otherPort = b->_project->GetReceivingPortUnsafe(txPort);
+	auto otherPort = b->_project->GetReceivingPort(txPort);
 	if (otherPort == nullptr)
 		return; // The port was disconnected and our port polling code hasn't reacted yet. This is what happens in a real system too.
 
