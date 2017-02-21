@@ -47,7 +47,7 @@ public:
 	virtual ObjectRemovingEvent::Subscriber GetObjectRemovingEvent() override final { return ObjectRemovingEvent::Subscriber(_em); }
 	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() override final { return ProjectInvalidateEvent::Subscriber(_em); }
 	
-	virtual Port* GetReceivingPort (Port* txPort) const override final
+	virtual Port* FindReceivingPort (Port* txPort) const override final
 	{
 		for (auto& o : _objects)
 		{

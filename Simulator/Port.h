@@ -8,7 +8,7 @@ class Port : public Object
 	friend class Bridge;
 
 	Bridge* const _bridge;
-	uint16_t const _portIndex;
+	unsigned int const _portIndex;
 	Side _side;
 	float _offset;
 	bool _macOperational = false;
@@ -32,6 +32,7 @@ public:
 	static constexpr float ExteriorHeight = 24;
 
 	Bridge* GetBridge() const { return _bridge; }
+	unsigned int GetPortIndex() const { return _portIndex; }
 	Side GetSide() const { return _side; }
 	float GetOffset() const { return _offset; }
 	D2D1_POINT_2F GetCPLocation() const;

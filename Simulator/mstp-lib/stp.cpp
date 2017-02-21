@@ -1028,11 +1028,22 @@ bool STP_GetPortOperPointToPointMAC (STP_BRIDGE* bridge, unsigned int portIndex)
 	return bridge->ports [portIndex]->operPointToPointMAC;
 }
 
-unsigned char STP_GetTreeIndexFromVlanNumber (STP_BRIDGE* bridge, unsigned short vlanNumber)
+unsigned int STP_GetTreeIndexFromVlanNumber (STP_BRIDGE* bridge, unsigned short vlanNumber)
 {
 	assert ((vlanNumber >= 1) && (vlanNumber <= 4094));
 
-	return (unsigned char) bridge->mstConfigTable [vlanNumber].GetValue ();
+	switch (bridge->ForceProtocolVersion)
+	{
+		case STP_VERSION_LEGACY_STP:
+		case STP_VERSION_RSTP:
+			return 0;
+
+		case STP_VERSION_MSTP:
+			return bridge->mstConfigTable[vlanNumber].GetValue();
+
+		default:
+			assert(false); return 0;
+	}
 }
 
 // ============================================================================

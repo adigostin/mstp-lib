@@ -33,10 +33,20 @@ class Bridge : public Object
 	BridgeLogLine _currentLogLine;
 	TimerQueueTimer_unique_ptr _oneSecondTimerHandle;
 	TimerQueueTimer_unique_ptr _macOperationalTimerHandle;
-	std::vector<uint8_t> _txBuffer;
-	unsigned int _txSize;
-	unsigned int _txPortIndex;
-	unsigned int _txTimestamp;
+	HWND_unique_ptr _helperWindow;
+	
+	struct RxPacketInfo
+	{
+		std::vector<uint8_t> data;
+		unsigned int portIndex;
+		unsigned int timestamp;
+	};
+	std::queue<RxPacketInfo> _rxQueue;
+
+	// variables used by TransmitGetBuffer/ReleaseBuffer
+	std::vector<uint8_t> _txPacketData;
+	Port*                _txReceivingPort;
+	unsigned int         _txTimestamp;
 
 public:
 	Bridge (IProject* project, unsigned int portCount, const std::array<uint8_t, 6>& macAddress);
@@ -83,13 +93,14 @@ public:
 	uint16_t GetStpBridgePriority (uint16_t treeIndex) const;
 	uint16_t GetStpTreeIndexFromVlanNumber (uint16_t vlanNumber) const;
 	const std::vector<BridgeLogLine>& GetLogLines() const { return _logLines; }
+	bool IsPortForwardingOnVlan (unsigned int portIndex, uint16_t vlanNumber) const;
 
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
 	static void CALLBACK MacOperationalTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
 	static LRESULT CALLBACK HelperWindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 	void ComputeMacOperational();
-	void EnqueuePacket (unsigned int portIndex, const uint8_t* packet, unsigned int packetSize, unsigned int timestamp);
+	void ProcessReceivedPacket();
 
 	static void* StpCallback_AllocAndZeroMemory (unsigned int size);
 	static void  StpCallback_FreeMemory (void* p);
@@ -99,5 +110,7 @@ private:
 	static void  StpCallback_EnableForwarding (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable);
 	static void  StpCallback_FlushFdb (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType);
 	static void  StpCallback_DebugStrOut (STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, bool flush);
+	static void  StpCallback_OnTopologyChange (STP_BRIDGE* bridge);
+	static void  StpCallback_OnNotifiedTopologyChange (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
 };
 

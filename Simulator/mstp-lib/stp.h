@@ -153,7 +153,7 @@ void STP_SetMstConfigTableAndComputeDigest1 (STP_BRIDGE* bridge, const unsigned 
 void STP_SetMstConfigTableAndComputeDigest  (STP_BRIDGE* bridge, const struct VLAN_TO_MSTID* table, unsigned int tableEntryCount, unsigned int timestamp);
 void STP_GetMstConfigTable (STP_BRIDGE* bridge, unsigned char mstidsOut [4094]);
 const unsigned char* STP_GetMstConfigTableDigest (STP_BRIDGE* bridge);
-unsigned char STP_GetTreeIndexFromVlanNumber (STP_BRIDGE* bridge, unsigned short vlanNumber);
+unsigned int STP_GetTreeIndexFromVlanNumber (STP_BRIDGE* bridge, unsigned short vlanNumber);
 
 const char* STP_GetPortRoleString (STP_PORT_ROLE portRole);
 const char* STP_GetVersionString (enum STP_VERSION version);

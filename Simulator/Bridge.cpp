@@ -9,7 +9,9 @@ using namespace D2D1;
 
 static constexpr UINT WM_ONE_SECOND_TIMER = WM_APP + 1;
 static constexpr UINT WM_MAC_OPERATIONAL_TIMER = WM_APP + 2;
-static HWND_unique_ptr helperWindow;
+static constexpr UINT WM_PACKET_RECEIVED = WM_APP + 3;
+
+static constexpr uint8_t BpduDestAddress[6] = { 1, 0x80, 0xC2, 0, 0, 0 };
 
 Bridge::Bridge (IProject* project, unsigned int portCount, const std::array<uint8_t, 6>& macAddress)
 	: _project(project), _macAddress(macAddress), _guiThreadId(this_thread::get_id())
@@ -29,26 +31,23 @@ Bridge::Bridge (IProject* project, unsigned int portCount, const std::array<uint
 	_width = max (offset, MinWidth);
 	_height = DefaultHeight;
 
-	if (helperWindow == nullptr)
-	{
-		HINSTANCE hInstance;
-		BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &helperWindow, &hInstance);
-		if (!bRes)
-			throw win32_exception(GetLastError());
+	HINSTANCE hInstance;
+	BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &StpCallbacks, &hInstance);
+	if (!bRes)
+		throw win32_exception(GetLastError());
 
-		auto hwnd = CreateWindow (L"STATIC", L"", 0, 0, 0, 0, 0, HWND_MESSAGE, 0, hInstance, 0);
-		if (hwnd == nullptr)
-			throw win32_exception(GetLastError());
-		helperWindow.reset (hwnd);
+	auto hwnd = CreateWindow (L"STATIC", L"", 0, 0, 0, 0, 0, HWND_MESSAGE, 0, hInstance, 0);
+	if (hwnd == nullptr)
+		throw win32_exception(GetLastError());
+	_helperWindow.reset (hwnd);
 
-		bRes = SetWindowSubclass (hwnd, HelperWindowProc, 0, 0);
-		if (!bRes)
-			throw win32_exception(GetLastError());
-	}
+	bRes = SetWindowSubclass (hwnd, HelperWindowProc, 0, 0);
+	if (!bRes)
+		throw win32_exception(GetLastError());
 
 	DWORD period = 950 + (std::random_device()() % 100);
 	HANDLE handle;
-	BOOL bRes = CreateTimerQueueTimer (&handle, nullptr, OneSecondTimerCallback, this, period, period, 0);
+	bRes = CreateTimerQueueTimer (&handle, nullptr, OneSecondTimerCallback, this, period, period, 0);
 	if (!bRes)
 		throw win32_exception(GetLastError());
 	_oneSecondTimerHandle.reset(handle);
@@ -62,9 +61,11 @@ Bridge::Bridge (IProject* project, unsigned int portCount, const std::array<uint
 
 Bridge::~Bridge()
 {
-	// First stop the timers, to be sure the mutex won't be acquired in a background thread (when we'll have them).
-	_oneSecondTimerHandle = nullptr;
+	// First stop the timers, to be sure the mutex won't be acquired in a background thread (when we'll have background threads).
 	_macOperationalTimerHandle = nullptr;
+	_oneSecondTimerHandle = nullptr;
+
+	RemoveWindowSubclass (_helperWindow.get(), HelperWindowProc, 0);
 
 	if (_stpBridge != nullptr)
 		STP_DestroyBridge (_stpBridge);
@@ -74,16 +75,14 @@ Bridge::~Bridge()
 void CALLBACK Bridge::OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired)
 {
 	auto bridge = static_cast<Bridge*>(lpParameter);
-	::PostMessage (helperWindow.get(), WM_ONE_SECOND_TIMER, (WPARAM) bridge, 0);
-	bridge->AddRef();
+	::PostMessage (bridge->_helperWindow.get(), WM_ONE_SECOND_TIMER, (WPARAM) bridge, 0);
 }
 
 //static
 void CALLBACK Bridge::MacOperationalTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired)
 {
 	auto bridge = static_cast<Bridge*>(lpParameter);
-	::PostMessage (helperWindow.get(), WM_MAC_OPERATIONAL_TIMER, (WPARAM) bridge, 0);
-	bridge->AddRef();
+	::PostMessage (bridge->_helperWindow.get(), WM_MAC_OPERATIONAL_TIMER, (WPARAM) bridge, 0);
 }
 
 // static
@@ -96,14 +95,18 @@ LRESULT CALLBACK Bridge::HelperWindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, 
 		if (bridge->_stpBridge != nullptr)
 			STP_OnOneSecondTick (bridge->_stpBridge, GetTimestampMilliseconds());
 
-		bridge->Release();
 		return 0;
 	}
 	else if (uMsg == WM_MAC_OPERATIONAL_TIMER)
 	{
 		auto bridge = static_cast<Bridge*>((void*)wParam);
 		bridge->ComputeMacOperational();
-		bridge->Release();
+		return 0;
+	}
+	else if (uMsg == WM_PACKET_RECEIVED)
+	{
+		auto bridge = static_cast<Bridge*>((void*)wParam);
+		bridge->ProcessReceivedPacket();
 		return 0;
 	}
 
@@ -121,7 +124,7 @@ void Bridge::ComputeMacOperational()
 	{
 		auto& port = _ports[portIndex];
 	
-		bool newMacOperational = (_project->GetReceivingPort(port) != nullptr);
+		bool newMacOperational = (_project->FindReceivingPort(port) != nullptr);
 		if (port->_macOperational != newMacOperational)
 		{
 			if (port->_macOperational)
@@ -148,6 +151,45 @@ void Bridge::ComputeMacOperational()
 		InvalidateEvent::InvokeHandlers(_em, this);
 }
 
+void Bridge::ProcessReceivedPacket()
+{
+	auto rp = move(_rxQueue.front());
+	_rxQueue.pop();
+	
+	if (memcmp (&rp.data[0], BpduDestAddress, 6) == 0)
+	{
+		// It's a BPDU.
+		if (_stpBridge != nullptr)
+		{
+			if (!_ports[rp.portIndex]->_macOperational)
+			{
+				_ports[rp.portIndex]->_macOperational = true;
+				STP_OnPortEnabled (_stpBridge, rp.portIndex, 100, true, rp.timestamp);
+				InvalidateEvent::InvokeHandlers (_em, this);
+			}
+
+			STP_OnBpduReceived (_stpBridge, rp.portIndex, &rp.data[21], (unsigned int) (rp.data.size() - 21), rp.timestamp);
+		}
+		else
+		{
+			// broadcast it to the other ports.
+			for (auto& txPort : _ports)
+			{
+				if (txPort->_portIndex != rp.portIndex)
+				{
+					auto rxPort = _project->FindReceivingPort(txPort);
+					if (rxPort != nullptr)
+					{
+						RxPacketInfo info = { rp.data, rxPort->_portIndex, rp.timestamp };
+						rxPort->_bridge->_rxQueue.push(move(info));
+						::PostMessage (rxPort->_bridge->_helperWindow.get(), WM_PACKET_RECEIVED, (WPARAM)(void*)rxPort->_bridge, 0);
+					}
+				}
+			}
+		}
+	}
+}
+
 void Bridge::EnableStp (STP_VERSION stpVersion, uint16_t treeCount, uint32_t timestamp)
 {
 	if (this_thread::get_id() != _guiThreadId)
@@ -165,7 +207,7 @@ void Bridge::EnableStp (STP_VERSION stpVersion, uint16_t treeCount, uint32_t tim
 	for (size_t portIndex = 0; portIndex < _ports.size(); portIndex++)
 	{
 		auto& port = _ports[portIndex];
-		if (_project->GetReceivingPort(port) != nullptr)
+		if (_project->FindReceivingPort(port) != nullptr)
 			STP_OnPortEnabled (_stpBridge, portIndex, 100, true, timestamp);
 	}
 
@@ -324,9 +366,13 @@ HTResult Bridge::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, fl
 	return {};
 }
 
-void Bridge::EnqueuePacket (unsigned int portIndex, const uint8_t* packet, unsigned int packetSize, unsigned int timestamp)
+bool Bridge::IsPortForwardingOnVlan (unsigned int portIndex, uint16_t vlanNumber) const
 {
-	//throw not_implemented_exception();
+	if (_stpBridge == nullptr)
+		return true;
+
+	auto treeIndex = STP_GetTreeIndexFromVlanNumber(_stpBridge, vlanNumber);
+	return STP_GetPortForwarding(_stpBridge, portIndex, treeIndex);
 }
 
 #pragma region STP Callbacks
@@ -338,8 +384,8 @@ const STP_CALLBACKS Bridge::StpCallbacks =
 	StpCallback_TransmitReleaseBuffer,
 	StpCallback_FlushFdb,
 	StpCallback_DebugStrOut,
-	nullptr, // onTopologyChange;
-	nullptr, // onNotifiedTopologyChange;
+	StpCallback_OnTopologyChange,
+	StpCallback_OnNotifiedTopologyChange,
 	StpCallback_AllocAndZeroMemory,
 	StpCallback_FreeMemory,
 };
@@ -360,26 +406,30 @@ void Bridge::StpCallback_FreeMemory(void* p)
 void* Bridge::StpCallback_TransmitGetBuffer (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int bpduSize, unsigned int timestamp)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
+	auto txPort = b->_ports[portIndex].Get();
+	auto rxPort = b->_project->FindReceivingPort(txPort);
+	if (rxPort == nullptr)
+		return nullptr; // The port was disconnected and our port polling code hasn't reacted yet. This is what happens in a real system too.
 
-	b->_txSize = bpduSize + 21;
-	if (b->_txBuffer.size() < b->_txSize)
-		b->_txBuffer.resize (b->_txSize);
-
-	memset(&b->_txBuffer[0], 0, b->_txBuffer.size());
-	b->_txPortIndex = portIndex;
+	b->_txPacketData.resize (bpduSize + 21);
+	memcpy (&b->_txPacketData[0], BpduDestAddress, 6);
+	b->_txReceivingPort = rxPort;
 	b->_txTimestamp = timestamp;
-	return &b->_txBuffer[21];
+	return &b->_txPacketData[21];
 }
 
 void Bridge::StpCallback_TransmitReleaseBuffer (STP_BRIDGE* bridge, void* bufferReturnedByGetBuffer)
 {
-	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
-	auto& txPort = b->_ports[b->_txPortIndex];
-	auto otherPort = b->_project->GetReceivingPort(txPort);
-	if (otherPort == nullptr)
-		return; // The port was disconnected and our port polling code hasn't reacted yet. This is what happens in a real system too.
+	auto transmittingBridge = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
+	
+	RxPacketInfo info;
+	info.data = move(transmittingBridge->_txPacketData);
+	info.portIndex = transmittingBridge->_txReceivingPort->_portIndex;
+	info.timestamp = transmittingBridge->_txTimestamp;
 
-	otherPort->_bridge->EnqueuePacket (otherPort->_portIndex, &b->_txBuffer[0], b->_txSize, b->_txTimestamp);
+	Bridge* receivingBridge = transmittingBridge->_txReceivingPort->_bridge;
+	receivingBridge->_rxQueue.push (move(info));
+	::PostMessage (receivingBridge->_helperWindow.get(), WM_PACKET_RECEIVED, (WPARAM)(void*)receivingBridge, 0);
 }
 
 void Bridge::StpCallback_EnableLearning(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable)
@@ -439,5 +489,12 @@ void Bridge::StpCallback_DebugStrOut (STP_BRIDGE* bridge, int portIndex, int tre
 	}
 }
 
+void Bridge::StpCallback_OnTopologyChange (STP_BRIDGE* bridge)
+{
+}
+
+void Bridge::StpCallback_OnNotifiedTopologyChange (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
+{
+}
 #pragma endregion
 

@@ -59,7 +59,16 @@ D2D1_POINT_2F Wire::GetPointCoords (size_t pointIndex) const
 
 void Wire::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, IDWriteFactory* dWriteFactory, uint16_t vlanNumber) const
 {
-	bool forwarding = holds_alternative<ConnectedWireEnd>(_points[0]) && holds_alternative<ConnectedWireEnd>(_points[1]);
+	bool forwarding = false;
+	if (holds_alternative<ConnectedWireEnd>(_points[0]) && holds_alternative<ConnectedWireEnd>(_points[1]))
+	{
+		auto portA = get<ConnectedWireEnd>(_points[0]);
+		auto portB = get<ConnectedWireEnd>(_points[1]);
+		bool portAFw = portA->GetBridge()->IsPortForwardingOnVlan(portA->GetPortIndex(), vlanNumber);
+		bool portBFw = portB->GetBridge()->IsPortForwardingOnVlan(portB->GetPortIndex(), vlanNumber);
+		forwarding = portAFw && portBFw;
+	}
+
 	auto brush = forwarding ? dos._brushForwarding.Get() : dos._brushNoForwardingWire.Get();
 	rt->DrawLine (GetP0Coords(), GetP1Coords(), brush, WireThickness);
 }
