@@ -202,12 +202,8 @@ void Port::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, IDWriteFact
 
 	bool macOperational = GetMacOperational();
 
-	// Draw the interior of the port.
-	auto portRect = D2D1_RECT_F { -InteriorLongSize / 2, -InteriorShortSize, -InteriorLongSize / 2 + InteriorLongSize, -InteriorShortSize + InteriorShortSize };
-	rt->FillRectangle (&portRect, macOperational ? dos._poweredFillBrush : dos._unpoweredBrush);
-	rt->DrawRectangle (&portRect, macOperational ? dos._poweredOutlineBrush : dos._unpoweredBrush);
-
 	// Draw the exterior of the port.
+	float interiorPortOutlineWidth = 2.0f;
 	if (_bridge->IsStpEnabled())
 	{
 		uint16_t treeIndex = _bridge->GetStpTreeIndexFromVlanNumber(vlanNumber);
@@ -216,15 +212,17 @@ void Port::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, IDWriteFact
 		bool forwarding    = _bridge->GetStpPortForwarding (_portIndex, treeIndex);
 		bool operEdge      = _bridge->GetStpPortOperEdge (_portIndex);
 		RenderExteriorStpPort (rt, dos, role, learning, forwarding, operEdge);
+
+		if (role == STP_PORT_ROLE_ROOT)
+			interiorPortOutlineWidth = 5;
 	}
 	else
 		RenderExteriorNonStpPort(rt, dos, macOperational);
 
-	// fill the gray/green circle representing the operational state of the port.
-	float radius = 4;
-	D2D1_POINT_2F circleCenter = Point2F (-InteriorLongSize / 2 + 2 + radius, -InteriorShortSize + 2 + radius);
-	D2D1_ELLIPSE circle = Ellipse (circleCenter, radius, radius);
-	rt->FillEllipse (&circle, macOperational ? dos._poweredFillBrush : dos._unpoweredBrush);
+	// Draw the interior of the port.
+	auto portRect = D2D1_RECT_F { -InteriorLongSize / 2, -InteriorShortSize, -InteriorLongSize / 2 + InteriorLongSize, -InteriorShortSize + InteriorShortSize };
+	rt->FillRectangle (&portRect, macOperational ? dos._poweredFillBrush : dos._unpoweredBrush);
+	rt->DrawRectangle (&portRect, dos._brushWindowText, interiorPortOutlineWidth);
 
 	rt->SetTransform (&oldtr);
 }

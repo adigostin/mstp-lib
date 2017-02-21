@@ -42,7 +42,6 @@ enum class Side { Left, Top, Right, Bottom };
 
 struct DrawingObjects
 {
-	ComPtr<ID2D1SolidColorBrush> _poweredOutlineBrush;
 	ComPtr<ID2D1SolidColorBrush> _poweredFillBrush;
 	ComPtr<ID2D1SolidColorBrush> _unpoweredBrush;
 	ComPtr<ID2D1SolidColorBrush> _brushWindowText;

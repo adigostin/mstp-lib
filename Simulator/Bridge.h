@@ -94,6 +94,7 @@ public:
 	uint16_t GetStpTreeIndexFromVlanNumber (uint16_t vlanNumber) const;
 	const std::vector<BridgeLogLine>& GetLogLines() const { return _logLines; }
 	bool IsPortForwardingOnVlan (unsigned int portIndex, uint16_t vlanNumber) const;
+	bool IsStpRootBridge() const;
 
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);

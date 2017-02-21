@@ -46,8 +46,7 @@ public:
 		_project->GetObjectRemovingEvent().AddHandler (&OnObjectRemoving, this);
 		_project->GetProjectInvalidateEvent().AddHandler (&OnProjectInvalidate, this);
 		auto dc = base::GetDeviceContext();
-		auto hr = dc->CreateSolidColorBrush (ColorF (ColorF::Green), &_drawingObjects._poweredOutlineBrush); ThrowIfFailed(hr);
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::PaleGreen), &_drawingObjects._poweredFillBrush); ThrowIfFailed(hr);
+		auto hr = dc->CreateSolidColorBrush (ColorF (ColorF::PaleGreen), &_drawingObjects._poweredFillBrush); ThrowIfFailed(hr);
 		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray), &_drawingObjects._unpoweredBrush); ThrowIfFailed(hr);
 		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Red), &_drawingObjects._brushDiscardingPort); ThrowIfFailed(hr);
 		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gold), &_drawingObjects._brushLearningPort); ThrowIfFailed(hr);
@@ -65,6 +64,7 @@ public:
 		D2D1_STROKE_STYLE_PROPERTIES ssprops = {};
 		ssprops.dashStyle = D2D1_DASH_STYLE_DASH;
 		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawingObjects._strokeStyleSelectionRect); ThrowIfFailed(hr);
+		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawingObjects._strokeStyleNoForwardingWire); ThrowIfFailed(hr);
 	}
 
 	virtual ~EditArea()

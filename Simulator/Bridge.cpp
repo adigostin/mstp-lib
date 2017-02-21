@@ -306,10 +306,12 @@ void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, IDWriteFa
 	if (IsStpEnabled())
 		treeIndex = GetStpTreeIndexFromVlanNumber(vlanNumber);
 
+	bool isRootBridge = ((_stpBridge != nullptr) && STP_IsRootBridge(_stpBridge));
 	// Draw bridge outline.
 	D2D1_ROUNDED_RECT rr = RoundedRect (GetBounds(), RoundRadius, RoundRadius);
 	dc->FillRoundedRectangle (&rr, _powered ? dos._poweredFillBrush : dos._unpoweredBrush);
-	dc->DrawRoundedRectangle (&rr, _powered ? dos._poweredOutlineBrush : dos._unpoweredBrush, 2.0f);
+	float ow = isRootBridge ? 5.0f : 2.0f;
+	dc->DrawRoundedRectangle (&rr, dos._brushWindowText, ow);
 
 	// Draw bridge name.
 	wchar_t str[128];
@@ -317,8 +319,9 @@ void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, IDWriteFa
 	if (IsStpEnabled())
 	{
 		unsigned short prio = GetStpBridgePriority(treeIndex.value());
-		strlen = swprintf_s (str, L"%04x.%02x%02x%02x%02x%02x%02x\r\nSTP enabled", prio,
-			_macAddress[0], _macAddress[1], _macAddress[2], _macAddress[3], _macAddress[4], _macAddress[5]);
+		strlen = swprintf_s (str, L"%04x.%02x%02x%02x%02x%02x%02x\r\nSTP enabled\r\n%s", prio,
+							 _macAddress[0], _macAddress[1], _macAddress[2], _macAddress[3], _macAddress[4], _macAddress[5],
+							 isRootBridge ? L"Root Bridge\r\n" : L"");
 	}
 	else
 	{
@@ -373,6 +376,14 @@ bool Bridge::IsPortForwardingOnVlan (unsigned int portIndex, uint16_t vlanNumber
 
 	auto treeIndex = STP_GetTreeIndexFromVlanNumber(_stpBridge, vlanNumber);
 	return STP_GetPortForwarding(_stpBridge, portIndex, treeIndex);
+}
+
+bool Bridge::IsStpRootBridge() const
+{
+	if (_stpBridge == nullptr)
+		throw runtime_error ("STP was not enabled on this bridge.");
+
+	return STP_IsRootBridge(_stpBridge);
 }
 
 #pragma region STP Callbacks

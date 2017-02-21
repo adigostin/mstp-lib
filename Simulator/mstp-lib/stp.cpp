@@ -1128,6 +1128,21 @@ void STP_GetRootTimes (STP_BRIDGE* bridge,
 
 // ============================================================================
 
+bool STP_IsRootBridge (STP_BRIDGE* bridge)
+{
+	BRIDGE_TREE* cist = bridge->trees[CIST_INDEX];
+	return cist->rootPriority.RootId == cist->GetBridgeIdentifier();
+}
+
+bool STP_IsRegionalRootBridge (STP_BRIDGE* bridge, unsigned int treeIndex)
+{
+	assert (treeIndex < bridge->treeCount);
+	BRIDGE_TREE* tree = bridge->trees [treeIndex];
+	return tree->rootPriority.RegionalRootId == tree->GetBridgeIdentifier();
+}
+
+// ============================================================================
+
 void  STP_SetApplicationContext (STP_BRIDGE* bridge, void* applicationContext)
 {
 	bridge->applicationContext = applicationContext;

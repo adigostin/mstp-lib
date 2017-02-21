@@ -167,7 +167,10 @@ void STP_GetRootTimes (STP_BRIDGE* bridge,
 					   unsigned short* maxAgeOutOrNull,
 					   unsigned short* messageAgeOutOrNull,
 					   unsigned char* remainingHopsOutOrNull);
-		
+
+bool STP_IsRootBridge (STP_BRIDGE* bridge);
+bool STP_IsRegionalRootBridge (STP_BRIDGE* bridge, unsigned int treeIndex);
+
 void  STP_SetApplicationContext (STP_BRIDGE* bridge, void* applicationContext);
 void* STP_GetApplicationContext (STP_BRIDGE* bridge);
 

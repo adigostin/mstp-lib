@@ -70,7 +70,8 @@ void Wire::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, IDWriteFact
 	}
 
 	auto brush = forwarding ? dos._brushForwarding.Get() : dos._brushNoForwardingWire.Get();
-	rt->DrawLine (GetP0Coords(), GetP1Coords(), brush, WireThickness);
+	auto ss = forwarding ? nullptr : dos._strokeStyleNoForwardingWire.Get();
+	rt->DrawLine (GetP0Coords(), GetP1Coords(), brush, WireThickness, ss);
 }
 
 void Wire::RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const
