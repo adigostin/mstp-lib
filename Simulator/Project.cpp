@@ -46,7 +46,31 @@ public:
 	virtual ObjectInsertedEvent::Subscriber GetObjectInsertedEvent() override final { return ObjectInsertedEvent::Subscriber(_em); }
 	virtual ObjectRemovingEvent::Subscriber GetObjectRemovingEvent() override final { return ObjectRemovingEvent::Subscriber(_em); }
 	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() override final { return ProjectInvalidateEvent::Subscriber(_em); }
+	
+	virtual Port* GetReceivingPort (Port* txPort) const override final
+	{
+		for (auto& o : _objects)
+		{
+			if (auto w = dynamic_cast<Wire*>(o.Get()))
+			{
+				for (size_t i = 0; i < 2; i++)
+				{
+					auto& thisEnd = w->GetPoints()[i];
+					if (holds_alternative<ConnectedWireEnd>(thisEnd) && (get<ConnectedWireEnd>(thisEnd) == txPort))
+					{
+						auto& otherEnd = w->GetPoints()[1 - i];
+						if (holds_alternative<ConnectedWireEnd>(otherEnd))
+							return get<ConnectedWireEnd>(otherEnd);
+						else
+							return nullptr;
+					}
+				}
+			}
+		}
 
+		return nullptr;
+	}
+	
 	virtual array<uint8_t, 6> AllocMacAddressRange (size_t count) override final
 	{
 		if (count >= 128)

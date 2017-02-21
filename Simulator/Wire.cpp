@@ -8,37 +8,60 @@ using namespace std;
 
 static constexpr float WireThickness = 2;
 
-void Wire::SetP0 (const WireEnd& p0)
+// Workaround for what seems like a library bug: std::variant's operators == and != not working.
+static bool Same (const WireEnd& a, const WireEnd& b)
 {
-	//if (_p0 != p0)
-	//{
-		_p0 = p0;
+	if (a.index() != b.index())
+		return false;
+
+	if (holds_alternative<LooseWireEnd>(a))
+	{
+		auto aa = get<LooseWireEnd>(a);
+		auto bb = get<LooseWireEnd>(b);
+		return (aa.x == bb.x) && (aa.y == bb.y);
+	}
+	else
+		return get<ConnectedWireEnd>(a) == get<ConnectedWireEnd>(b);
+}
+
+void Wire::SetPoint (size_t pointIndex, const WireEnd& point)
+{
+	if (!Same(_points[pointIndex], point))
+	{
+		/*
+		if (holds_alternative<ConnectedWireEnd>(_points[pointIndex]) && holds_alternative<ConnectedWireEnd>(_points[1 - pointIndex]))
+		{
+			// disconnecting two ports
+			auto portA = get<ConnectedWireEnd>(_points[pointIndex]);
+			auto portB = get<ConnectedWireEnd>(_points[1 - pointIndex]);
+		}
+		*/
+		_points[pointIndex] = point;
+		/*
+		if (holds_alternative<ConnectedWireEnd>(_points[pointIndex]) && holds_alternative<ConnectedWireEnd>(_points[1 - pointIndex]))
+		{
+			// connected two ports
+			auto portA = get<ConnectedWireEnd>(_points[pointIndex]);
+			auto portB = get<ConnectedWireEnd>(_points[1 - pointIndex]);
+		}
+		*/
 		WireInvalidateEvent::InvokeHandlers(_em, this);
-	//}
+	}
 }
 
-void Wire::SetP1 (const WireEnd& p1)
+D2D1_POINT_2F Wire::GetPointCoords (size_t pointIndex) const
 {
-	//if (_p1 != p1)
-	//{
-		_p1 = p1;
-		WireInvalidateEvent::InvokeHandlers(_em, this);
-	//}
-}
-
-D2D1_POINT_2F Wire::GetP0Coords() const
-{
-	return holds_alternative<LooseWireEnd>(_p0) ? get<LooseWireEnd>(_p0) : get<ConnectedWireEnd>(_p0)->GetCPLocation();
-}
-
-D2D1_POINT_2F Wire::GetP1Coords() const
-{
-	return holds_alternative<LooseWireEnd>(_p1) ? get<LooseWireEnd>(_p1) : get<ConnectedWireEnd>(_p1)->GetCPLocation();
+	if (holds_alternative<LooseWireEnd>(_points[pointIndex]))
+		return get<LooseWireEnd>(_points[pointIndex]);
+	else
+		return get<ConnectedWireEnd>(_points[pointIndex])->GetCPLocation();
 }
 
 void Wire::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, IDWriteFactory* dWriteFactory, uint16_t vlanNumber) const
 {
-	rt->DrawLine (GetP0Coords(), GetP1Coords(), dos._brushNoForwardingWire, WireThickness);
+	bool forwarding = holds_alternative<ConnectedWireEnd>(_points[0]) && holds_alternative<ConnectedWireEnd>(_points[1]);
+	auto brush = forwarding ? dos._brushForwarding.Get() : dos._brushNoForwardingWire.Get();
+	rt->DrawLine (GetP0Coords(), GetP1Coords(), brush, WireThickness);
 }
 
 void Wire::RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const

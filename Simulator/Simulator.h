@@ -167,6 +167,7 @@ struct IProject abstract : public IUnknown
 
 	virtual std::array<uint8_t, 6> AllocMacAddressRange (size_t count) = 0;
 	virtual std::pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const = 0;
+	virtual Port* GetReceivingPort (Port* txPort) const = 0;
 };
 
 using ProjectFactory = ComPtr<IProject>(*const)();

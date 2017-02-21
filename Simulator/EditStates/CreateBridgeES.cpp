@@ -19,7 +19,7 @@ public:
 		if (_bridge == nullptr)
 		{
 			unsigned int portCount = 3;
-			_bridge = ComPtr<Bridge>(new Bridge (portCount, _project->AllocMacAddressRange(1 + portCount)), false);
+			_bridge = ComPtr<Bridge>(new Bridge (_project, portCount, _project->AllocMacAddressRange(1 + portCount)), false);
 		}
 
 		_bridge->SetLocation (location.w.x - _bridge->GetWidth() / 2, location.w.y - _bridge->GetHeight() / 2);

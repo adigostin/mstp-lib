@@ -5,10 +5,13 @@
 
 class Port : public Object
 {
+	friend class Bridge;
+
 	Bridge* const _bridge;
 	uint16_t const _portIndex;
 	Side _side;
 	float _offset;
+	bool _macOperational = false;
 
 public:
 	Port (Bridge* bridge, unsigned int portIndex, Side side, float offset)
@@ -32,7 +35,7 @@ public:
 	Side GetSide() const { return _side; }
 	float GetOffset() const { return _offset; }
 	D2D1_POINT_2F GetCPLocation() const;
-	bool GetMacOperational() const { return true; } // TODO
+	bool GetMacOperational() const { return _macOperational; }
 	D2D1::Matrix3x2F GetPortTransform() const;
 	D2D1_RECT_F GetInnerRect() const;
 
