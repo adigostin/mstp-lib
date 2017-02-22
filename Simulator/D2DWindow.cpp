@@ -64,9 +64,8 @@ D2DWindow::D2DWindow (DWORD exStyle, DWORD style, const RECT& rect, HWND hWndPar
 
 D2DWindow::~D2DWindow()
 {
-	_d2dDeviceContext = nullptr;
-	_swapChain = nullptr;
-	::DestroyWindow(_hwnd);
+	if (_hwnd != nullptr)
+		::DestroyWindow(_hwnd);
 }
 
 void D2DWindow::CreateD2DDeviceContext()

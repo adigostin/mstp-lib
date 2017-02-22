@@ -22,6 +22,20 @@
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_DIALOG_BRIDGE_PROPS DIALOGEX 0, 0, 169, 216
+STYLE DS_LOCALEDIT | DS_SETFONT | DS_CONTROL | WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN
+FONT 9, "Segoe UI", 400, 0, 0xEE
+BEGIN
+    PUSHBUTTON      "Button1",IDC_BUTTON1,29,36,66,18
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //

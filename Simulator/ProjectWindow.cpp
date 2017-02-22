@@ -22,8 +22,10 @@ class ProjectWindow : public IProjectWindow, IUIApplication
 	ComPtr<IProject> const _project;
 	ComPtr<ISelection> const _selection;
 	ComPtr<IEditArea> _editArea;
+	ComPtr<ISidePanel> _logPanel;
 	ComPtr<ILogArea> _logArea;
 	ComPtr<IUIFramework> _rf;
+	ComPtr<IBridgePropsArea> _bridgePropsArea;
 	HWND _hwnd;
 	SIZE _clientSize;
 	EventManager _em;
@@ -81,8 +83,11 @@ public:
 
 		_editArea = editAreaFactory (project, this, 333, selection, _rf, { 0, 0, 0, 0 }, deviceContext, dWriteFactory, wicFactory);
 
-		_logArea = logAreaFactory (_hwnd, 444, { 0, 0, _logAreaWidth, 0 }, deviceContext, dWriteFactory, wicFactory);
-		_logArea->GetLogAreaResizingEvent().AddHandler (&OnLogAreaResizing, this);
+		_logPanel = sidePanelFactory (_hwnd, 125, { 0, 0, _logAreaWidth, 0 });
+		_logPanel->GetSidePanelResizingEvent().AddHandler (&OnLogPanelResizing, this);
+		_logArea = logAreaFactory (_logPanel->GetHWnd(), 444, { 0, 0, _logAreaWidth, 0 }, deviceContext, dWriteFactory, wicFactory);
+
+		//_bridgePropsArea = bridgePropsAreaFactory (_hwnd, 321, { 100, 100, 300, 300 });
 
 		LONG ribbonHeight = 0;
 		if ((rfResourceHInstance != nullptr) && (rfResourceName != nullptr))
@@ -112,14 +117,14 @@ public:
 	{
 		_selection->GetSelectionChangedEvent().RemoveHandler (&OnSelectionChanged, this);
 
-		_editArea = nullptr;
-		_logArea = nullptr;
-		::DestroyWindow(_hwnd);
+		if (_hwnd != nullptr)
+			::DestroyWindow(_hwnd);
 	}
 
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
 	{
 		auto pw = static_cast<ProjectWindow*>(callbackArg);
+
 		if (selection->GetObjects().size() != 1)
 			pw->_logArea->SelectBridge(nullptr);
 		else
@@ -238,7 +243,7 @@ public:
 		return DefWindowProc(_hwnd, msg, wParam, lParam);
 	}
 
-	static void OnLogAreaResizing (void* callbackArg, ILogArea* lw, Side side, LONG offset)
+	static void OnLogPanelResizing (void* callbackArg, ISidePanel* lp, Side side, LONG offset)
 	{
 		auto pw = static_cast<ProjectWindow*>(callbackArg);
 		if (side == Side::Left)
@@ -258,15 +263,15 @@ public:
 			hr = ribbon->GetHeight((UINT32*)&ribbonHeight); ThrowIfFailed(hr);
 		}
 
-		LONG laWidth = 0;
-		if (_logArea != nullptr)
+		LONG lpWidth = 0;
+		if (_logPanel != nullptr)
 		{
-			laWidth = _logAreaWidth;
-			::MoveWindow (_logArea->GetHWnd(), _clientSize.cx - laWidth, ribbonHeight, laWidth, _clientSize.cy - ribbonHeight, TRUE);
+			lpWidth = _logAreaWidth;
+			::MoveWindow (_logPanel->GetHWnd(), _clientSize.cx - lpWidth, ribbonHeight, lpWidth, _clientSize.cy - ribbonHeight, TRUE);
 		}
 
 		if (_editArea != nullptr)
-			::MoveWindow(_editArea->GetHWnd(), 0, ribbonHeight, _clientSize.cx - laWidth, _clientSize.cy - ribbonHeight, TRUE);
+			::MoveWindow(_editArea->GetHWnd(), 0, ribbonHeight, _clientSize.cx - lpWidth, _clientSize.cy - ribbonHeight, TRUE);
 	}
 
 	//virtual IProject* GetProject() const override final { return _project.get(); }

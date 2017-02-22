@@ -7,6 +7,7 @@ struct IProject;
 struct IProjectWindow;
 struct ISelection;
 struct ILogArea;
+struct ISidePanel;
 struct DrawingObjects;
 class Object;
 class Bridge;
@@ -40,14 +41,23 @@ extern const SelectionFactory selectionFactory;
 
 // ============================================================================
 
-struct LogAreaCloseButtonClicked : public Event<LogAreaCloseButtonClicked, void(ILogArea* logArea)> {};
-struct LogAreaResizingEvent : public Event<LogAreaResizingEvent, void(ILogArea* logArea, Side side, LONG offset)> {};
+struct SidePanelCloseButtonClicked : public Event<SidePanelCloseButtonClicked, void(ISidePanel* panel)> {};
+struct SidePanelResizingEvent : public Event<SidePanelResizingEvent, void(ISidePanel* panel, Side side, LONG offset)> {};
+
+struct ISidePanel abstract : public IUnknown
+{
+	virtual HWND GetHWnd() const = 0;
+	virtual SidePanelCloseButtonClicked::Subscriber GetSidePanelCloseButtonClicked() = 0;
+	virtual SidePanelResizingEvent::Subscriber GetSidePanelResizingEvent() = 0;
+};
+
+using SidePanelFactory = ComPtr<ISidePanel>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect);
+extern const SidePanelFactory sidePanelFactory;
+
+// ============================================================================
 
 struct ILogArea abstract : public IUnknown
 {
-	virtual HWND GetHWnd() const = 0;
-	virtual LogAreaCloseButtonClicked::Subscriber GetLogAreaCloseButtonClicked() = 0;
-	virtual LogAreaResizingEvent::Subscriber GetLogAreaResizingEvent() = 0;
 	virtual void SelectBridge (Bridge* b) = 0;
 };
 
@@ -129,3 +139,11 @@ using ProjectFactory = ComPtr<IProject>(*const)();
 extern const ProjectFactory projectFactory;
 
 // ============================================================================
+
+class IBridgePropsArea abstract : public IUnknown
+{
+	virtual HWND GetHWnd() const = 0;
+};
+
+using BridgePropsAreaFactory = ComPtr<IBridgePropsArea>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect);
+extern const BridgePropsAreaFactory bridgePropsAreaFactory;

@@ -305,9 +305,9 @@ void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, IDWriteFa
 	bool isRootBridge = ((_stpBridge != nullptr) && STP_IsRootBridge(_stpBridge));
 	// Draw bridge outline.
 	D2D1_ROUNDED_RECT rr = RoundedRect (GetBounds(), RoundRadius, RoundRadius);
-	dc->FillRoundedRectangle (&rr, _powered ? dos._poweredFillBrush : dos._unpoweredBrush);
 	float ow = OutlineWidth * (isRootBridge ? 2 : 1);
 	InflateRoundedRect (&rr, -ow / 2);
+	dc->FillRoundedRectangle (&rr, _powered ? dos._poweredFillBrush : dos._unpoweredBrush);
 	dc->DrawRoundedRectangle (&rr, dos._brushWindowText, ow);
 
 	// Draw bridge name.

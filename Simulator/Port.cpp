@@ -219,8 +219,8 @@ void Port::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, IDWriteFact
 
 	// Draw the interior of the port.
 	auto portRect = D2D1_RECT_F { -InteriorWidth / 2, -InteriorDepth, -InteriorWidth / 2 + InteriorWidth, -InteriorDepth + InteriorDepth };
-	rt->FillRectangle (&portRect, _macOperational ? dos._poweredFillBrush : dos._unpoweredBrush);
 	InflateRect (&portRect, -interiorPortOutlineWidth / 2);
+	rt->FillRectangle (&portRect, _macOperational ? dos._poweredFillBrush : dos._unpoweredBrush);
 	rt->DrawRectangle (&portRect, dos._brushWindowText, interiorPortOutlineWidth);
 
 	rt->SetTransform (&oldtr);

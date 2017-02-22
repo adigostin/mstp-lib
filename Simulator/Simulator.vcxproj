@@ -138,6 +138,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Bridge.cpp" />
+    <ClCompile Include="BridgePropertiesArea.cpp" />
     <ClCompile Include="D2DWindow.cpp" />
     <ClCompile Include="EditArea.cpp" />
     <ClCompile Include="EditStates\CreateBridgeES.cpp" />
@@ -231,6 +232,7 @@
     <ClCompile Include="RibbonCommandHandlers\RCHBase.cpp" />
     <ClCompile Include="RibbonCommandHandlers\UndoRedoRCH.cpp" />
     <ClCompile Include="Selection.cpp" />
+    <ClCompile Include="SidePanel.cpp" />
     <ClCompile Include="Simulator.cpp" />
     <ClCompile Include="UtilityFunctions.cpp" />
     <ClCompile Include="Wire.cpp" />
