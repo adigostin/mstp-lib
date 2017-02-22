@@ -31,11 +31,10 @@ class ProjectWindow : public IProjectWindow, IUIApplication
 	EventManager _em;
 	RECT _restoreBounds;
 	unordered_map<UINT32, ComPtr<IUICommandHandler>> _commandHandlers;
-	LONG _logAreaWidth = 500;
+	unordered_map<Side, LONG> _panelSizes = { { Side::Left, 400 }, { Side::Top, 400 }, { Side::Right, 400 }, { Side::Bottom, 400 } };
 
 public:
-	ProjectWindow (IProject* project, HINSTANCE rfResourceHInstance, const wchar_t* rfResourceName, ISelection* selection,
-		EditAreaFactory editAreaFactory, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory)
+	ProjectWindow (IProject* project, HINSTANCE rfResourceHInstance, const wchar_t* rfResourceName, ISelection* selection, EditAreaFactory editAreaFactory)
 		: _project(project), _selection(selection)
 	{
 		HINSTANCE hInstance;
@@ -81,11 +80,11 @@ public:
 			ThrowIfFailed(hr);
 		}
 
-		_editArea = editAreaFactory (project, this, 333, selection, _rf, { 0, 0, 0, 0 }, deviceContext, dWriteFactory, wicFactory);
+		_editArea = editAreaFactory (project, this, 333, selection, _rf, { 0, 0, 0, 0 });
 
-		_logPanel = sidePanelFactory (_hwnd, 125, { 0, 0, _logAreaWidth, 0 });
-		_logPanel->GetSidePanelResizingEvent().AddHandler (&OnLogPanelResizing, this);
-		_logArea = logAreaFactory (_logPanel->GetHWnd(), 444, { 0, 0, _logAreaWidth, 0 }, deviceContext, dWriteFactory, wicFactory);
+		_logPanel = sidePanelFactory (_hwnd, 125, { 0, 0, 0, 0 }, Side::Right);
+		_logPanel->GetSidePanelSplitterDraggingEvent().AddHandler (&OnSidePanelSplitterDragging, this);
+		_logArea = logAreaFactory (_logPanel->GetHWnd(), 444, _logPanel->GetClientRect());
 
 		//_bridgePropsArea = bridgePropsAreaFactory (_hwnd, 321, { 100, 100, 300, 300 });
 
@@ -243,14 +242,17 @@ public:
 		return DefWindowProc(_hwnd, msg, wParam, lParam);
 	}
 
-	static void OnLogPanelResizing (void* callbackArg, ISidePanel* lp, Side side, LONG offset)
+	static void OnSidePanelSplitterDragging (void* callbackArg, ISidePanel* lp, SIZE offset)
 	{
 		auto pw = static_cast<ProjectWindow*>(callbackArg);
-		if (side == Side::Left)
+		if (lp->GetSide() == Side::Right)
 		{
-			pw->_logAreaWidth -= offset;
-			pw->ResizeChildWindows();
+			pw->_panelSizes.at(Side::Right) -= offset.cx;
 		}
+		else
+			throw not_implemented_exception();
+
+		pw->ResizeChildWindows();
 	}
 
 	void ResizeChildWindows()
@@ -263,18 +265,19 @@ public:
 			hr = ribbon->GetHeight((UINT32*)&ribbonHeight); ThrowIfFailed(hr);
 		}
 
-		LONG lpWidth = 0;
+		RECT middleRect = { 0, ribbonHeight, _clientSize.cx, _clientSize.cy };
+
 		if (_logPanel != nullptr)
 		{
-			lpWidth = _logAreaWidth;
-			::MoveWindow (_logPanel->GetHWnd(), _clientSize.cx - lpWidth, ribbonHeight, lpWidth, _clientSize.cy - ribbonHeight, TRUE);
+			assert (_logPanel->GetSide() == Side::Right);
+			auto panelWidth = _panelSizes.at(Side::Right);
+			::MoveWindow (_logPanel->GetHWnd(), middleRect.right - panelWidth, middleRect.top, panelWidth, middleRect.bottom - middleRect.top, TRUE);
+			middleRect.right -= panelWidth;
 		}
 
 		if (_editArea != nullptr)
-			::MoveWindow(_editArea->GetHWnd(), 0, ribbonHeight, _clientSize.cx - lpWidth, _clientSize.cy - ribbonHeight, TRUE);
+			::MoveWindow(_editArea->GetHWnd(), middleRect.left, middleRect.top, middleRect.right - middleRect.left, middleRect.bottom - middleRect.top, TRUE);
 	}
-
-	//virtual IProject* GetProject() const override final { return _project.get(); }
 
 	virtual void ShowAtSavedWindowLocation(const wchar_t* regKeyPath) override final
 	{

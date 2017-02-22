@@ -57,7 +57,7 @@ D2D1_POINT_2F Wire::GetPointCoords (size_t pointIndex) const
 		return get<ConnectedWireEnd>(_points[pointIndex])->GetCPLocation();
 }
 
-void Wire::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, IDWriteFactory* dWriteFactory, uint16_t vlanNumber) const
+void Wire::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, uint16_t vlanNumber) const
 {
 	bool forwarding = false;
 	if (holds_alternative<ConnectedWireEnd>(_points[0]) && holds_alternative<ConnectedWireEnd>(_points[1]))

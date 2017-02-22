@@ -194,7 +194,7 @@ void Port::RenderExteriorStpPort (ID2D1RenderTarget* dc, const DrawingObjects& d
 	dc->SetAntialiasMode(oldaa);
 }
 
-void Port::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, IDWriteFactory* dWriteFactory, uint16_t vlanNumber) const
+void Port::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, uint16_t vlanNumber) const
 {
 	D2D1_MATRIX_3X2_F oldtr;
 	rt->GetTransform(&oldtr);

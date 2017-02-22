@@ -20,7 +20,6 @@ class EditArea : public ZoomableWindow, public IEditArea
 	IUIFramework* const _rf;
 	ComPtr<ISelection> const _selection;
 	ComPtr<IProject> const _project;
-	ComPtr<IDWriteFactory> const _dWriteFactory;
 	ComPtr<IDWriteTextFormat> _legendFont;
 	DrawingObjects _drawingObjects;
 	uint16_t _selectedVlanNumber = 1;
@@ -39,9 +38,10 @@ class EditArea : public ZoomableWindow, public IEditArea
 	optional<BeginningDrag> _beginningDrag;
 
 public:
-	EditArea(IProject* project, IProjectWindow* pw, DWORD controlId, ISelection* selection, IUIFramework* rf, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory)
-		: base (WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, pw->GetHWnd(), controlId, deviceContext, dWriteFactory, wicFactory)
-		, _project(project), _pw(pw), _rf(rf), _selection(selection), _dWriteFactory(dWriteFactory)
+	EditArea(IProject* project, IProjectWindow* pw, DWORD controlId, ISelection* selection, IUIFramework* rf, const RECT& rect)
+		: base (WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, pw->GetHWnd(), controlId,
+				App->GetD3DDeviceContext(), App->GetDWriteFactory(), App->GetWicFactory())
+		, _project(project), _pw(pw), _rf(rf), _selection(selection)
 	{
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
 		_project->GetObjectRemovingEvent().AddHandler (&OnObjectRemoving, this);
@@ -57,10 +57,10 @@ public:
 		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOWTEXT), &_drawingObjects._brushWindowText); ThrowIfFailed(hr);
 		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOW), &_drawingObjects._brushWindow); ThrowIfFailed(hr);
 		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_HIGHLIGHT), &_drawingObjects._brushHighlight); ThrowIfFailed(hr);
-		hr = _dWriteFactory->CreateTextFormat (L"Tahoma", NULL, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
+		hr = App->GetDWriteFactory()->CreateTextFormat (L"Tahoma", NULL, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
 			DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_drawingObjects._regularTextFormat); ThrowIfFailed(hr);
 
-		_dWriteFactory->CreateTextFormat (L"Tahoma", nullptr,  DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
+		App->GetDWriteFactory()->CreateTextFormat (L"Tahoma", nullptr,  DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
 										  DWRITE_FONT_STRETCH_CONDENSED, 11, L"en-US", &_legendFont); ThrowIfFailed(hr);
 		
 		ComPtr<ID2D1Factory> factory;
@@ -149,7 +149,7 @@ public:
 		for (auto& info : LegendInfo)
 		{
 			ComPtr<IDWriteTextLayout> tl;
-			auto hr = _dWriteFactory->CreateTextLayout (info.text, wcslen(info.text), _legendFont, 1000, 1000, &tl); ThrowIfFailed(hr);
+			auto hr = App->GetDWriteFactory()->CreateTextLayout (info.text, wcslen(info.text), _legendFont, 1000, 1000, &tl); ThrowIfFailed(hr);
 
 			DWRITE_TEXT_METRICS metrics;
 			tl->GetMetrics (&metrics);
@@ -251,7 +251,7 @@ public:
 		dc->SetTransform(GetZoomTransform());
 
 		for (auto& o : _project->GetObjects())
-			o->Render (dc, _drawingObjects, _dWriteFactory, _selectedVlanNumber);
+			o->Render (dc, _drawingObjects, _selectedVlanNumber);
 
 		dc->SetTransform(oldtr);
 	}
@@ -267,10 +267,8 @@ public:
 		if (none_of (_project->GetObjects().begin(), _project->GetObjects().end(), [](auto&& o) { return dynamic_cast<Bridge*>(o.Get()) != nullptr; }))
 		{
 			auto text = L"No bridges created. Right-click to create some.";
-			ComPtr<IDWriteTextFormat> tf;
-			hr = _dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13, L"en-US", &tf); ThrowIfFailed(hr);
 			ComPtr<IDWriteTextLayout> tl;
-			hr = _dWriteFactory->CreateTextLayout (text, wcslen(text), tf, 10000, 10000, &tl); ThrowIfFailed(hr);
+			hr = App->GetDWriteFactory()->CreateTextLayout (text, wcslen(text), _drawingObjects._regularTextFormat, 10000, 10000, &tl); ThrowIfFailed(hr);
 			DWRITE_TEXT_METRICS metrics;
 			hr = tl->GetMetrics(&metrics); ThrowIfFailed(hr);
 			D2D1_POINT_2F origin = { clientSizeDips.width / 2 - metrics.width / 2, clientSizeDips.height / 2 - metrics.height / 2 };
@@ -655,8 +653,6 @@ public:
 	virtual uint16_t GetSelectedVlanNumber() const override final { return _selectedVlanNumber; }
 
 	virtual const DrawingObjects& GetDrawingObjects() const override final { return _drawingObjects; }
-
-	virtual IDWriteFactory* GetDWriteFactory() const override final { return _dWriteFactory; }
 
 	virtual D2D1::Matrix3x2F GetZoomTransform() const override final { return base::GetZoomTransform(); }
 

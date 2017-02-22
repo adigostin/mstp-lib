@@ -12,7 +12,6 @@ class LogArea : public D2DWindow, public ILogArea
 	typedef D2DWindow base;
 
 	LONG _refCount = 1;
-	ComPtr<IDWriteFactory> _dWriteFactory;
 	ComPtr<IDWriteTextFormat> _textFormat;
 	ComPtr<ID2D1SolidColorBrush> _windowBrush;
 	ComPtr<ID2D1SolidColorBrush> _windowTextBrush;
@@ -30,11 +29,11 @@ class LogArea : public D2DWindow, public ILogArea
 	static constexpr UINT AnimationScrollFramesMax = 10;
 
 public:
-	LogArea (HWND hWndParent, DWORD controlId, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory)
-		: base (WS_EX_CLIENTEDGE, WS_VISIBLE | WS_CHILD | WS_HSCROLL | WS_VSCROLL, rect, hWndParent, controlId, deviceContext, dWriteFactory, wicFactory)
-		, _dWriteFactory(dWriteFactory)
+	LogArea (HWND hWndParent, DWORD controlId, const RECT& rect)
+		: base (WS_EX_CLIENTEDGE, WS_VISIBLE | WS_CHILD | WS_HSCROLL | WS_VSCROLL, rect, hWndParent, controlId,
+				App->GetD3DDeviceContext(), App->GetDWriteFactory(), App->GetWicFactory())
 	{
-		auto hr = dWriteFactory->CreateTextFormat (L"Consolas", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
+		auto hr = App->GetDWriteFactory()->CreateTextFormat (L"Consolas", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
 			DWRITE_FONT_STRETCH_NORMAL, 11, L"en-US", &_textFormat); ThrowIfFailed(hr);
 
 		GetDeviceContext()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOW), &_windowBrush);
@@ -62,7 +61,7 @@ public:
 			_textFormat->SetTextAlignment (DWRITE_TEXT_ALIGNMENT_CENTER);
 			ComPtr<IDWriteTextLayout> tl;
 			auto text = (_bridge == nullptr) ? TextNoBridge : TextNoEntries;
-			auto hr = _dWriteFactory->CreateTextLayout (text, wcslen(text), _textFormat, clientSize.width, 10000, &tl); ThrowIfFailed(hr);
+			auto hr = App->GetDWriteFactory()->CreateTextLayout (text, wcslen(text), _textFormat, clientSize.width, 10000, &tl); ThrowIfFailed(hr);
 			_textFormat->SetTextAlignment(oldta);
 			DWRITE_TEXT_METRICS metrics;
 			tl->GetMetrics (&metrics);
@@ -83,7 +82,7 @@ public:
 					line.resize (line.length() - 2);
 
 				ComPtr<IDWriteTextLayout> tl;
-				auto hr = _dWriteFactory->CreateTextLayout (line.c_str(), (UINT32) line.length(), _textFormat, 10000, 10000, &tl); ThrowIfFailed(hr);
+				auto hr = App->GetDWriteFactory()->CreateTextLayout (line.c_str(), (UINT32) line.length(), _textFormat, 10000, 10000, &tl); ThrowIfFailed(hr);
 
 				if (lineHeight == 0)
 				{
@@ -288,7 +287,7 @@ public:
 		}
 
 		ComPtr<IDWriteTextLayout> tl;
-		auto hr = _dWriteFactory->CreateTextLayout (L"A", 1, _textFormat, 1000, 1000, &tl); ThrowIfFailed(hr);
+		auto hr = App->GetDWriteFactory()->CreateTextLayout (L"A", 1, _textFormat, 1000, 1000, &tl); ThrowIfFailed(hr);
 		DWRITE_TEXT_METRICS metrics;
 		hr = tl->GetMetrics(&metrics);
 		size_t newNumberOfLinesFitting = (size_t) floor(GetClientSizeDips().height / metrics.height);

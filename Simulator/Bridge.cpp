@@ -300,7 +300,7 @@ uint16_t Bridge::GetStpTreeIndexFromVlanNumber (uint16_t vlanNumber) const
 	return STP_GetTreeIndexFromVlanNumber(_stpBridge, vlanNumber);
 }
 
-void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, IDWriteFactory* dWriteFactory, uint16_t vlanNumber) const
+void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, uint16_t vlanNumber) const
 {
 	bool isRootBridge = ((_stpBridge != nullptr) && STP_IsRootBridge(_stpBridge));
 	// Draw bridge outline.
@@ -327,11 +327,11 @@ void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, IDWriteFa
 			_macAddress[0], _macAddress[1], _macAddress[2], _macAddress[3], _macAddress[4], _macAddress[5]);
 	}
 	ComPtr<IDWriteTextLayout> tl;
-	HRESULT hr = dWriteFactory->CreateTextLayout (str, strlen, dos._regularTextFormat, 10000, 10000, &tl); ThrowIfFailed(hr);
+	HRESULT hr = App->GetDWriteFactory()->CreateTextLayout (str, strlen, dos._regularTextFormat, 10000, 10000, &tl); ThrowIfFailed(hr);
 	dc->DrawTextLayout ({ _x + OutlineWidth * 2 + 3, _y + OutlineWidth * 2 + 3}, tl, dos._brushWindowText);
 
 	for (auto& port : _ports)
-		port->Render (dc, dos, dWriteFactory, vlanNumber);
+		port->Render (dc, dos, vlanNumber);
 }
 
 void Bridge::RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const

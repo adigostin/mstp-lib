@@ -14,6 +14,7 @@ static const int SplitterWidthDips = 4;
 class SidePanel : public ISidePanel
 {
 	ULONG _refCount = 1;
+	Side _side;
 	HWND _hwnd;
 	SIZE _clientSize;
 	HFONT_unique_ptr _titleBarFont;
@@ -24,7 +25,8 @@ class SidePanel : public ISidePanel
 	EventManager _em;
 
 public:
-	SidePanel (HWND hWndParent, DWORD controlId, const RECT& rect)
+	SidePanel (HWND hWndParent, DWORD controlId, const RECT& rect, Side side)
+		: _side(side)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) WndClassName, &hInstance);
@@ -76,10 +78,17 @@ public:
 			::DestroyWindow(_hwnd);
 	}
 
+	virtual Side GetSide() const override final { return _side; }
+
 	RECT GetSplitterRect()
 	{
-		LONG splitterWidthPixels = (LONG) (SplitterWidthDips * _dpiX / 96.0);
-		return RECT { 0, 0, splitterWidthPixels, _clientSize.cy };
+		if (_side == Side::Right)
+		{
+			LONG splitterWidthPixels = (LONG) (SplitterWidthDips * _dpiX / 96.0);
+			return RECT { 0, 0, splitterWidthPixels, _clientSize.cy };
+		}
+		else
+			throw not_implemented_exception();
 	}
 
 	RECT GetTitleBarRect()
@@ -91,22 +100,27 @@ public:
 
 	RECT GetCloseButtonRect()
 	{
-		LONG closeButtonSizePixels = (LONG) (CloseButtonSizeDips * _dpiY / 96.0);
-		LONG closeButtonMarginPixels = (LONG) (CloseButtonMarginDips * _dpiY / 96.0);
+		if (_side == Side::Right)
+		{
+			LONG closeButtonSizePixels = (LONG) (CloseButtonSizeDips * _dpiY / 96.0);
+			LONG closeButtonMarginPixels = (LONG) (CloseButtonMarginDips * _dpiY / 96.0);
 
-		RECT rect;
-		rect.left = _clientSize.cx - closeButtonMarginPixels - closeButtonSizePixels;
-		rect.top = closeButtonMarginPixels;
-		rect.right = rect.left + closeButtonSizePixels;
-		rect.bottom = rect.top + closeButtonSizePixels;
+			RECT rect;
+			rect.left = _clientSize.cx - closeButtonMarginPixels - closeButtonSizePixels;
+			rect.top = closeButtonMarginPixels;
+			rect.right = rect.left + closeButtonSizePixels;
+			rect.bottom = rect.top + closeButtonSizePixels;
 
-		// Move it slightly, it looks better.
-		rect.left--;
-		rect.right--;
-		rect.top++;
-		rect.bottom++;
+			// Move it slightly, it looks better.
+			rect.left--;
+			rect.right--;
+			rect.top++;
+			rect.bottom++;
 
-		return rect;
+			return rect;
+		}
+		else
+			throw not_implemented_exception();
 	}
 
 	void ResizeContent()
@@ -216,9 +230,6 @@ public:
 
 	void ProcessWmSetCursor (POINT pt)
 	{
-		RECT clientRect;
-		GetClientRect (_hwnd, &clientRect);
-
 		auto splitterRect = GetSplitterRect();
 		if (PtInRect (&splitterRect, pt))
 		{
@@ -319,12 +330,9 @@ public:
 
 	void ProcessMouseMove (DWORD mouseButtonsAndModifierKeysDown, POINT pt)
 	{
-		RECT clientRect;
-		::GetClientRect (_hwnd, &clientRect);
-		const RECT closeButtonRect = GetCloseButtonRect();
-
 		if (_closeButtonDown)
 		{
+			auto closeButtonRect = GetCloseButtonRect();
 			if (!PtInRect (&closeButtonRect, pt))
 			{
 				_closeButtonDown = false;
@@ -333,16 +341,18 @@ public:
 		}
 		else if (_draggingSplitter)
 		{
-			LONG offset = pt.x - _draggingSplitterLastMouseLocation.x;
-			SidePanelResizingEvent::InvokeHandlers (_em, this, Side::Left, offset);
+			SIZE offset = { pt.x - _draggingSplitterLastMouseLocation.x, pt.y - _draggingSplitterLastMouseLocation.y };
+			SidePanelSplitterDragging::InvokeHandlers (_em, this, offset);
 		}
 	}
 
 	virtual HWND GetHWnd() const override final { return _hwnd; }
 
-	virtual SidePanelCloseButtonClicked::Subscriber GetSidePanelCloseButtonClicked() override final { return SidePanelCloseButtonClicked::Subscriber(_em); }
+	virtual RECT GetClientRect() const override final { return { 0, 0, _clientSize.cx, _clientSize.cy }; }
 
-	virtual SidePanelResizingEvent::Subscriber GetSidePanelResizingEvent() override final { return SidePanelResizingEvent::Subscriber(_em); }
+	virtual SidePanelCloseButtonClicked::Subscriber GetSidePanelCloseButtonClickedEvent() override final { return SidePanelCloseButtonClicked::Subscriber(_em); }
+
+	virtual SidePanelSplitterDragging::Subscriber GetSidePanelSplitterDraggingEvent() override final { return SidePanelSplitterDragging::Subscriber(_em); }
 
 	#pragma region IUnknown
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final { return E_NOTIMPL; }

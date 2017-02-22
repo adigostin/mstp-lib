@@ -22,6 +22,18 @@ enum class MouseButton
 	Middle = 4,
 };
 
+struct ISimulatorApp
+{
+	virtual ~ISimulatorApp() { }
+	virtual ID3D11DeviceContext1* GetD3DDeviceContext() const = 0;
+	virtual IDWriteFactory* GetDWriteFactory() const = 0;
+	virtual IWICImagingFactory2* GetWicFactory() const = 0;
+};
+
+extern std::unique_ptr<ISimulatorApp> App;
+
+// ============================================================================
+
 struct AddedToSelectionEvent : public Event<AddedToSelectionEvent, void(ISelection*, Object*)> { };
 struct RemovingFromSelectionEvent : public Event<RemovingFromSelectionEvent, void(ISelection*, Object*)> { };
 struct SelectionChangedEvent : public Event<SelectionChangedEvent, void(ISelection*)> { };
@@ -42,16 +54,19 @@ extern const SelectionFactory selectionFactory;
 // ============================================================================
 
 struct SidePanelCloseButtonClicked : public Event<SidePanelCloseButtonClicked, void(ISidePanel* panel)> {};
-struct SidePanelResizingEvent : public Event<SidePanelResizingEvent, void(ISidePanel* panel, Side side, LONG offset)> {};
+struct SidePanelSplitterDragging : public Event<SidePanelSplitterDragging, void(ISidePanel* panel, SIZE offset)> {};
+struct SidePanelSplitterDragComplete : public Event<SidePanelSplitterDragComplete, void(ISidePanel* panel)> {};
 
 struct ISidePanel abstract : public IUnknown
 {
 	virtual HWND GetHWnd() const = 0;
-	virtual SidePanelCloseButtonClicked::Subscriber GetSidePanelCloseButtonClicked() = 0;
-	virtual SidePanelResizingEvent::Subscriber GetSidePanelResizingEvent() = 0;
+	virtual RECT GetClientRect() const = 0;
+	virtual SidePanelCloseButtonClicked::Subscriber GetSidePanelCloseButtonClickedEvent() = 0;
+	virtual SidePanelSplitterDragging::Subscriber GetSidePanelSplitterDraggingEvent() = 0;
+	virtual Side GetSide() const = 0;
 };
 
-using SidePanelFactory = ComPtr<ISidePanel>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect);
+using SidePanelFactory = ComPtr<ISidePanel>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect, Side side);
 extern const SidePanelFactory sidePanelFactory;
 
 // ============================================================================
@@ -61,7 +76,7 @@ struct ILogArea abstract : public IUnknown
 	virtual void SelectBridge (Bridge* b) = 0;
 };
 
-using LogAreaFactory = ComPtr<ILogArea>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory);
+using LogAreaFactory = ComPtr<ILogArea>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect);
 extern const LogAreaFactory logAreaFactory;
 
 // ============================================================================
@@ -84,7 +99,6 @@ struct IEditArea abstract : public IUnknown
 	virtual void SelectVlan (uint16_t vlanNumber) = 0;
 	virtual uint16_t GetSelectedVlanNumber() const = 0;
 	virtual const DrawingObjects& GetDrawingObjects() const = 0;
-	virtual IDWriteFactory* GetDWriteFactory() const = 0;
 	virtual void EnterState (std::unique_ptr<EditState>&& state) = 0;
 	virtual EditStateDeps MakeEditStateDeps() = 0;
 	virtual Port* GetCPAt (D2D1_POINT_2F dLocation, float tolerance) const = 0;
@@ -92,7 +106,7 @@ struct IEditArea abstract : public IUnknown
 	virtual D2D1::Matrix3x2F GetZoomTransform() const = 0;
 };
 
-using EditAreaFactory = ComPtr<IEditArea>(*const)(IProject* project, IProjectWindow* pw, DWORD controlId, ISelection* selection, IUIFramework* rf, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory);
+using EditAreaFactory = ComPtr<IEditArea>(*const)(IProject* project, IProjectWindow* pw, DWORD controlId, ISelection* selection, IUIFramework* rf, const RECT& rect);
 extern const EditAreaFactory editAreaFactory;
 
 // ============================================================================
@@ -111,7 +125,7 @@ struct IProjectWindow : public IUnknown
 };
 
 using ProjectWindowFactory = ComPtr<IProjectWindow>(*const)(IProject* project, HINSTANCE rfResourceHInstance, const wchar_t* rfResourceName,
-	ISelection* selection, EditAreaFactory editAreaFactory, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory);
+	ISelection* selection, EditAreaFactory editAreaFactory);
 extern const ProjectWindowFactory projectWindowFactory;
 
 // ============================================================================
