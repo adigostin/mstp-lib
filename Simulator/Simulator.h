@@ -1,6 +1,7 @@
 #pragma once
 #include "EventManager.h"
 #include "Win32Defs.h"
+#include "UtilityFunctions.h"
 
 struct IProject;
 struct IProjectWindow;
@@ -11,51 +12,6 @@ class Object;
 class Bridge;
 class Port;
 class Wire;
-
-struct HTResult
-{
-	Object* object;
-	int code;
-};
-
-class Object : public IUnknown
-{
-	ULONG _refCount = 1;
-protected:
-	EventManager _em;
-	virtual ~Object() { assert(_refCount == 0); }
-
-public:
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
-	virtual ULONG STDMETHODCALLTYPE AddRef() override final;
-	virtual ULONG STDMETHODCALLTYPE Release() override final;
-
-	struct InvalidateEvent : public Event<InvalidateEvent, void(Object*)> { };
-	InvalidateEvent::Subscriber GetInvalidateEvent() { return InvalidateEvent::Subscriber(_em); }
-
-	virtual void Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, IDWriteFactory* dWriteFactory, uint16_t vlanNumber) const = 0;
-	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const = 0;
-	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) = 0;
-};
-
-enum class Side { Left, Top, Right, Bottom };
-
-struct DrawingObjects
-{
-	ComPtr<ID2D1SolidColorBrush> _poweredFillBrush;
-	ComPtr<ID2D1SolidColorBrush> _unpoweredBrush;
-	ComPtr<ID2D1SolidColorBrush> _brushWindowText;
-	ComPtr<ID2D1SolidColorBrush> _brushWindow;
-	ComPtr<ID2D1SolidColorBrush> _brushHighlight;
-	ComPtr<ID2D1SolidColorBrush> _brushDiscardingPort;
-	ComPtr<ID2D1SolidColorBrush> _brushLearningPort;
-	ComPtr<ID2D1SolidColorBrush> _brushForwarding;
-	ComPtr<ID2D1SolidColorBrush> _brushNoForwardingWire;
-	ComPtr<ID2D1SolidColorBrush> _brushTempWire;
-	ComPtr<ID2D1StrokeStyle> _strokeStyleNoForwardingWire;
-	ComPtr<IDWriteTextFormat> _regularTextFormat;
-	ComPtr<ID2D1StrokeStyle> _strokeStyleSelectionRect;
-};
 
 enum class MouseButton
 {
@@ -173,8 +129,3 @@ using ProjectFactory = ComPtr<IProject>(*const)();
 extern const ProjectFactory projectFactory;
 
 // ============================================================================
-
-unsigned int GetTimestampMilliseconds();
-D2D1::ColorF GetD2DSystemColor (int sysColorIndex);
-bool HitTestLine (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance, D2D1_POINT_2F p0w, D2D1_POINT_2F p1w, float lineWidth);
-bool PointInPolygon (const D2D1_POINT_2F* vertices, size_t vertexCount, D2D1_POINT_2F point);

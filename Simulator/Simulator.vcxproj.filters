@@ -59,6 +59,7 @@
     </ClInclude>
     <ClInclude Include="Port.h" />
     <ClInclude Include="Simulator.h" />
+    <ClInclude Include="UtilityFunctions.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -149,6 +150,7 @@
     <ClCompile Include="EditStates\MoveWirePointES.cpp" />
     <ClCompile Include="RibbonCommandHandlers\CutCopyPasteRCH.cpp" />
     <ClCompile Include="RibbonCommandHandlers\UndoRedoRCH.cpp" />
+    <ClCompile Include="UtilityFunctions.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc">

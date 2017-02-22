@@ -25,11 +25,12 @@ public:
 	static constexpr int HTCodeInner = 1;
 	static constexpr int HTCodeCP = 2;
 
-	static constexpr float InteriorLongSize = 30;  // Size along the edge of the bridge.
-	static constexpr float InteriorShortSize = 14; // Size from the edge to the interior of the bridge.
-	static constexpr float PortToPortSpacing = 20;
-	static constexpr float ExteriorWidth = 12;
-	static constexpr float ExteriorHeight = 24;
+	static constexpr float InteriorWidth = 30;
+	static constexpr float InteriorDepth = 16;
+	static constexpr float PortToPortSpacing = 16;
+	static constexpr float ExteriorWidth = 10;
+	static constexpr float ExteriorHeight = 20;
+	static constexpr float OutlineWidth = 2;
 
 	Bridge* GetBridge() const { return _bridge; }
 	unsigned int GetPortIndex() const { return _portIndex; }

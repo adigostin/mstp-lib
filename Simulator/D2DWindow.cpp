@@ -34,6 +34,8 @@ D2DWindow::D2DWindow (DWORD exStyle, DWORD style, const RECT& rect, HWND hWndPar
 
 	hr = _dxgiAdapter->GetParent(IID_PPV_ARGS(&_dxgiFactory)); ThrowIfFailed(hr);
 
+	hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, IID_PPV_ARGS(&_d2dFactory)); ThrowIfFailed(hr);
+
 	if (WndClassAtom == 0)
 	{
 		WNDCLASSEX wcex;
@@ -58,26 +60,6 @@ D2DWindow::D2DWindow (DWORD exStyle, DWORD style, const RECT& rect, HWND hWndPar
 	if (hwnd == nullptr)
 		throw win32_exception(GetLastError());
 	assert (hwnd == _hwnd);
-
-	DXGI_SWAP_CHAIN_DESC1 desc;
-	desc.Width = std::max((LONG) 8, _clientSize.cx);
-	desc.Height = std::max((LONG)8, _clientSize.cy);
-	desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-	desc.Stereo = FALSE;
-	desc.SampleDesc.Count = 1;
-	desc.SampleDesc.Quality = 0;
-	desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	desc.BufferCount = 1;
-	desc.Scaling = DXGI_SCALING_STRETCH;
-	desc.SwapEffect = DXGI_SWAP_EFFECT_SEQUENTIAL;// DXGI_SWAP_EFFECT_DISCARD;// DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
-	desc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-	desc.Flags = 0;
-	hr = _dxgiFactory->CreateSwapChainForHwnd(_d3dDevice, _hwnd, &desc, nullptr, nullptr, &_swapChain); ThrowIfFailed(hr);
-	_forceFullPresentation = true;
-
-	hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, IID_PPV_ARGS(&_d2dFactory)); ThrowIfFailed(hr);
-
-	CreateD2DDeviceContext();
 }
 
 D2DWindow::~D2DWindow()
@@ -98,7 +80,7 @@ void D2DWindow::CreateD2DDeviceContext()
 	props.type = D2D1_RENDER_TARGET_TYPE_HARDWARE;
 	props.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
 	props.pixelFormat.alphaMode = D2D1_ALPHA_MODE_IGNORE;
-	props.dpiX = 96.0f; props.dpiY = 96.0f;
+	_d2dFactory->GetDesktopDpi (&props.dpiX, &props.dpiY);
 	props.usage = D2D1_RENDER_TARGET_USAGE_NONE;
 	props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
 	ComPtr<ID2D1RenderTarget> rt;
@@ -153,18 +135,46 @@ std::optional<LRESULT> D2DWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam
 	{
 		_clientSize.cx = ((CREATESTRUCT*)lParam)->cx;
 		_clientSize.cy = ((CREATESTRUCT*)lParam)->cy;
+
+		DXGI_SWAP_CHAIN_DESC1 desc;
+		desc.Width = std::max((LONG) 8, _clientSize.cx);
+		desc.Height = std::max((LONG)8, _clientSize.cy);
+		desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+		desc.Stereo = FALSE;
+		desc.SampleDesc.Count = 1;
+		desc.SampleDesc.Quality = 0;
+		desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+		desc.BufferCount = 1;
+		desc.Scaling = DXGI_SCALING_STRETCH;
+		desc.SwapEffect = DXGI_SWAP_EFFECT_SEQUENTIAL;// DXGI_SWAP_EFFECT_DISCARD;// DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+		desc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+		desc.Flags = 0;
+		auto hr = _dxgiFactory->CreateSwapChainForHwnd(_d3dDevice, _hwnd, &desc, nullptr, nullptr, &_swapChain); ThrowIfFailed(hr);
+		_forceFullPresentation = true;
+
+		CreateD2DDeviceContext();
+
+		float dpiX, dpiY;
+		_d2dDeviceContext->GetDpi(&dpiX, &dpiY);
+		_clientSizeDips.width = _clientSize.cx * 96.0f / dpiX;
+		_clientSizeDips.height = _clientSize.cy * 96.0f / dpiY;
+
 		return 0;
 	}
 	
 	if (uMsg == WM_SIZE)
 	{
 		_clientSize = { LOWORD(lParam), HIWORD(lParam) };
-		if (_swapChain != nullptr)
-		{
-			_d2dDeviceContext = nullptr;
-			auto hr = _swapChain->ResizeBuffers (0, std::max ((LONG)8, _clientSize.cx), std::max((LONG)8, _clientSize.cy), DXGI_FORMAT_UNKNOWN, 0); ThrowIfFailed(hr);
-			CreateD2DDeviceContext();
-		}
+
+		_d2dDeviceContext = nullptr;
+		auto hr = _swapChain->ResizeBuffers (0, std::max ((LONG)8, _clientSize.cx), std::max((LONG)8, _clientSize.cy), DXGI_FORMAT_UNKNOWN, 0); ThrowIfFailed(hr);
+		CreateD2DDeviceContext();
+
+		float dpiX, dpiY;
+		_d2dDeviceContext->GetDpi(&dpiX, &dpiY);
+		_clientSizeDips.width = _clientSize.cx * 96.0f / dpiX;
+		_clientSizeDips.height = _clientSize.cy * 96.0f / dpiY;
+
 		return 0;
 	}
 
@@ -256,10 +266,4 @@ SIZE D2DWindow::GetPixelSizeFromDipSize(D2D1_SIZE_F sizeDips) const
 	float dpiX, dpiY;
 	_d2dDeviceContext->GetDpi(&dpiX, &dpiY);
 	return SIZE{ (int)(sizeDips.width / 96.0f * dpiX), (int)(sizeDips.height / 96.0f * dpiY) };
-}
-
-D2D1_SIZE_F D2DWindow::GetClientSizeDips() const
-{
-	auto br = GetDipLocationFromPixelLocation({ _clientSize.cx, _clientSize.cy });
-	return { br.x, br.y };
 }

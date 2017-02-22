@@ -20,10 +20,10 @@ Bridge::Bridge (IProject* project, unsigned int portCount, const std::array<uint
 
 	for (size_t i = 0; i < portCount; i++)
 	{
-		offset += (Port::PortToPortSpacing / 2 + Port::InteriorLongSize / 2);
+		offset += (Port::PortToPortSpacing / 2 + Port::InteriorWidth / 2);
 		auto port = ComPtr<Port>(new Port(this, i, Side::Bottom, offset), false);
 		_ports.push_back (move(port));
-		offset += (Port::InteriorLongSize / 2 + Port::PortToPortSpacing / 2);
+		offset += (Port::InteriorWidth / 2 + Port::PortToPortSpacing / 2);
 	}
 
 	_x = 0;
@@ -302,15 +302,12 @@ uint16_t Bridge::GetStpTreeIndexFromVlanNumber (uint16_t vlanNumber) const
 
 void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, IDWriteFactory* dWriteFactory, uint16_t vlanNumber) const
 {
-	optional<unsigned int> treeIndex;
-	if (IsStpEnabled())
-		treeIndex = GetStpTreeIndexFromVlanNumber(vlanNumber);
-
 	bool isRootBridge = ((_stpBridge != nullptr) && STP_IsRootBridge(_stpBridge));
 	// Draw bridge outline.
 	D2D1_ROUNDED_RECT rr = RoundedRect (GetBounds(), RoundRadius, RoundRadius);
 	dc->FillRoundedRectangle (&rr, _powered ? dos._poweredFillBrush : dos._unpoweredBrush);
-	float ow = isRootBridge ? 5.0f : 2.0f;
+	float ow = OutlineWidth * (isRootBridge ? 2 : 1);
+	InflateRoundedRect (&rr, -ow / 2);
 	dc->DrawRoundedRectangle (&rr, dos._brushWindowText, ow);
 
 	// Draw bridge name.
@@ -318,7 +315,8 @@ void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, IDWriteFa
 	int strlen;
 	if (IsStpEnabled())
 	{
-		unsigned short prio = GetStpBridgePriority(treeIndex.value());
+		auto treeIndex = GetStpTreeIndexFromVlanNumber(vlanNumber);
+		unsigned short prio = GetStpBridgePriority(treeIndex);
 		strlen = swprintf_s (str, L"%04x.%02x%02x%02x%02x%02x%02x\r\nSTP enabled\r\n%s", prio,
 							 _macAddress[0], _macAddress[1], _macAddress[2], _macAddress[3], _macAddress[4], _macAddress[5],
 							 isRootBridge ? L"Root Bridge\r\n" : L"");
@@ -330,10 +328,7 @@ void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, IDWriteFa
 	}
 	ComPtr<IDWriteTextLayout> tl;
 	HRESULT hr = dWriteFactory->CreateTextLayout (str, strlen, dos._regularTextFormat, 10000, 10000, &tl); ThrowIfFailed(hr);
-	dc->DrawTextLayout ({ _x + OutlineWidth / 2 + 3, _y + OutlineWidth / 2 + 3}, tl, dos._brushWindowText);
-
-	Matrix3x2F oldTransform;
-	dc->GetTransform (&oldTransform);
+	dc->DrawTextLayout ({ _x + OutlineWidth * 2 + 3, _y + OutlineWidth * 2 + 3}, tl, dos._brushWindowText);
 
 	for (auto& port : _ports)
 		port->Render (dc, dos, dWriteFactory, vlanNumber);

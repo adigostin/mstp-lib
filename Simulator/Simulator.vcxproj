@@ -131,6 +131,7 @@
     <ClInclude Include="Ribbon\RibbonIds.h" />
     <ClInclude Include="Simulator.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="UtilityFunctions.h" />
     <ClInclude Include="Win32Defs.h" />
     <ClInclude Include="Wire.h" />
     <ClInclude Include="ZoomableWindow.h" />
@@ -231,6 +232,7 @@
     <ClCompile Include="RibbonCommandHandlers\UndoRedoRCH.cpp" />
     <ClCompile Include="Selection.cpp" />
     <ClCompile Include="Simulator.cpp" />
+    <ClCompile Include="UtilityFunctions.cpp" />
     <ClCompile Include="Wire.cpp" />
     <ClCompile Include="ZoomableWindow.cpp" />
   </ItemGroup>

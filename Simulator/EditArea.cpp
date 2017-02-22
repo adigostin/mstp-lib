@@ -21,6 +21,7 @@ class EditArea : public ZoomableWindow, public IEditArea
 	ComPtr<ISelection> const _selection;
 	ComPtr<IProject> const _project;
 	ComPtr<IDWriteFactory> const _dWriteFactory;
+	ComPtr<IDWriteTextFormat> _legendFont;
 	DrawingObjects _drawingObjects;
 	uint16_t _selectedVlanNumber = 1;
 	unique_ptr<EditState> _state;
@@ -57,14 +58,26 @@ public:
 		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOW), &_drawingObjects._brushWindow); ThrowIfFailed(hr);
 		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_HIGHLIGHT), &_drawingObjects._brushHighlight); ThrowIfFailed(hr);
 		hr = _dWriteFactory->CreateTextFormat (L"Tahoma", NULL, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
-			DWRITE_FONT_STRETCH_NORMAL, 14, L"en-US", &_drawingObjects._regularTextFormat); ThrowIfFailed(hr);
+			DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_drawingObjects._regularTextFormat); ThrowIfFailed(hr);
 
+		_dWriteFactory->CreateTextFormat (L"Tahoma", nullptr,  DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
+										  DWRITE_FONT_STRETCH_CONDENSED, 11, L"en-US", &_legendFont); ThrowIfFailed(hr);
+		
 		ComPtr<ID2D1Factory> factory;
 		dc->GetFactory(&factory);
+
 		D2D1_STROKE_STYLE_PROPERTIES ssprops = {};
 		ssprops.dashStyle = D2D1_DASH_STYLE_DASH;
 		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawingObjects._strokeStyleSelectionRect); ThrowIfFailed(hr);
+
+		ssprops = { };
+		ssprops.dashStyle = D2D1_DASH_STYLE_DASH;
 		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawingObjects._strokeStyleNoForwardingWire); ThrowIfFailed(hr);
+
+		ssprops = { };
+		ssprops.startCap = D2D1_CAP_STYLE_ROUND;
+		ssprops.endCap = D2D1_CAP_STYLE_ROUND;
+		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawingObjects._strokeStyleForwardingWire); ThrowIfFailed(hr);
 	}
 
 	virtual ~EditArea()
@@ -136,7 +149,7 @@ public:
 		for (auto& info : LegendInfo)
 		{
 			ComPtr<IDWriteTextLayout> tl;
-			auto hr = _dWriteFactory->CreateTextLayout (info.text, wcslen(info.text), _drawingObjects._regularTextFormat, 1000, 1000, &tl); ThrowIfFailed(hr);
+			auto hr = _dWriteFactory->CreateTextLayout (info.text, wcslen(info.text), _legendFont, 1000, 1000, &tl); ThrowIfFailed(hr);
 
 			DWRITE_TEXT_METRICS metrics;
 			tl->GetMetrics (&metrics);
@@ -162,9 +175,11 @@ public:
 		{
 			auto& info = LegendInfo[i];
 
+			auto lineWidth = GetDipSizeFromPixelSize({ 0, 1 }).height;
+
 			auto oldaa = dc->GetAntialiasMode();
 			dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-			dc->DrawLine (Point2F (textX, y), Point2F (clientSizeDips.width, y), _drawingObjects._brushWindowText);
+			dc->DrawLine (Point2F (textX, y), Point2F (clientSizeDips.width, y), _drawingObjects._brushWindowText, lineWidth);
 			dc->SetAntialiasMode(oldaa);
 
 			dc->DrawTextLayout (Point2F (textX, y + 1), layouts[i], _drawingObjects._brushWindowText);
@@ -253,7 +268,7 @@ public:
 		{
 			auto text = L"No bridges created. Right-click to create some.";
 			ComPtr<IDWriteTextFormat> tf;
-			hr = _dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 16, L"en-US", &tf); ThrowIfFailed(hr);
+			hr = _dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13, L"en-US", &tf); ThrowIfFailed(hr);
 			ComPtr<IDWriteTextLayout> tl;
 			hr = _dWriteFactory->CreateTextLayout (text, wcslen(text), tf, 10000, 10000, &tl); ThrowIfFailed(hr);
 			DWRITE_TEXT_METRICS metrics;

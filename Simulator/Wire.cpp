@@ -70,7 +70,7 @@ void Wire::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, IDWriteFact
 	}
 
 	auto brush = forwarding ? dos._brushForwarding.Get() : dos._brushNoForwardingWire.Get();
-	auto ss = forwarding ? nullptr : dos._strokeStyleNoForwardingWire.Get();
+	auto ss = forwarding ? dos._strokeStyleForwardingWire : dos._strokeStyleNoForwardingWire.Get();
 	rt->DrawLine (GetP0Coords(), GetP1Coords(), brush, WireThickness, ss);
 }
 

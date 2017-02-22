@@ -6,6 +6,7 @@ class D2DWindow abstract
 {
 	HWND _hwnd;
 	SIZE _clientSize;
+	D2D1_SIZE_F _clientSizeDips;
 	bool _painting = false;
 	bool _forceFullPresentation;
 	ComPtr<ID3D11Device1> _d3dDevice;
@@ -28,7 +29,7 @@ public:
 	SIZE GetClientSize() const { return _clientSize; }
 	LONG GetClientWidth() const { return _clientSize.cx; }
 	LONG GetClientHeight() const { return _clientSize.cy; }
-	D2D1_SIZE_F GetClientSizeDips() const;
+	D2D1_SIZE_F GetClientSizeDips() const { return _clientSizeDips; }
 	D2D1_POINT_2F GetDipLocationFromPixelLocation(POINT locationPixels) const;
 	POINT GetPixelLocationFromDipLocation(D2D1_POINT_2F locationDips) const;
 	D2D1_SIZE_F GetDipSizeFromPixelSize(SIZE sizePixels) const;

@@ -35,7 +35,7 @@ public:
 		, _dWriteFactory(dWriteFactory)
 	{
 		auto hr = dWriteFactory->CreateTextFormat (L"Consolas", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
-			DWRITE_FONT_STRETCH_NORMAL, 14, L"en-US", &_textFormat); ThrowIfFailed(hr);
+			DWRITE_FONT_STRETCH_NORMAL, 11, L"en-US", &_textFormat); ThrowIfFailed(hr);
 
 		GetDeviceContext()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOW), &_windowBrush);
 		GetDeviceContext()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOWTEXT), &_windowTextBrush);

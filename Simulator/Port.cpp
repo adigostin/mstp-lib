@@ -200,10 +200,8 @@ void Port::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, IDWriteFact
 	rt->GetTransform(&oldtr);
 	rt->SetTransform (GetPortTransform() * oldtr);
 
-	bool macOperational = GetMacOperational();
-
 	// Draw the exterior of the port.
-	float interiorPortOutlineWidth = 2.0f;
+	float interiorPortOutlineWidth = OutlineWidth;
 	if (_bridge->IsStpEnabled())
 	{
 		uint16_t treeIndex = _bridge->GetStpTreeIndexFromVlanNumber(vlanNumber);
@@ -214,14 +212,15 @@ void Port::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, IDWriteFact
 		RenderExteriorStpPort (rt, dos, role, learning, forwarding, operEdge);
 
 		if (role == STP_PORT_ROLE_ROOT)
-			interiorPortOutlineWidth = 5;
+			interiorPortOutlineWidth *= 2;
 	}
 	else
-		RenderExteriorNonStpPort(rt, dos, macOperational);
+		RenderExteriorNonStpPort(rt, dos, _macOperational);
 
 	// Draw the interior of the port.
-	auto portRect = D2D1_RECT_F { -InteriorLongSize / 2, -InteriorShortSize, -InteriorLongSize / 2 + InteriorLongSize, -InteriorShortSize + InteriorShortSize };
-	rt->FillRectangle (&portRect, macOperational ? dos._poweredFillBrush : dos._unpoweredBrush);
+	auto portRect = D2D1_RECT_F { -InteriorWidth / 2, -InteriorDepth, -InteriorWidth / 2 + InteriorWidth, -InteriorDepth + InteriorDepth };
+	rt->FillRectangle (&portRect, _macOperational ? dos._poweredFillBrush : dos._unpoweredBrush);
+	InflateRect (&portRect, -interiorPortOutlineWidth / 2);
 	rt->DrawRectangle (&portRect, dos._brushWindowText, interiorPortOutlineWidth);
 
 	rt->SetTransform (&oldtr);
@@ -232,9 +231,9 @@ D2D1_RECT_F Port::GetInnerRect() const
 	if (_side == Side::Bottom)
 		return D2D1_RECT_F
 		{
-			_bridge->GetLeft() + _offset - InteriorLongSize / 2,
-			_bridge->GetBottom() - InteriorShortSize,
-			_bridge->GetLeft() + _offset + InteriorLongSize / 2,
+			_bridge->GetLeft() + _offset - InteriorWidth / 2,
+			_bridge->GetBottom() - InteriorDepth,
+			_bridge->GetLeft() + _offset + InteriorWidth / 2,
 			_bridge->GetBottom() + ExteriorHeight
 		};
 

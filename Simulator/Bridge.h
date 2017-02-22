@@ -56,9 +56,9 @@ protected:
 public:
 	static constexpr int HTCodeInner = 1;
 
-	static constexpr float DefaultHeight = 120;
-	static constexpr float OutlineWidth = 4;
-	static constexpr float MinWidth = 250;
+	static constexpr float DefaultHeight = 100;
+	static constexpr float OutlineWidth = 2;
+	static constexpr float MinWidth = 180;
 	static constexpr float RoundRadius = 8;
 
 	float GetLeft() const { return _x; }
