@@ -22,7 +22,7 @@ class ProjectWindow : public IProjectWindow, IUIApplication
 	ComPtr<IProject> const _project;
 	ComPtr<ISelection> const _selection;
 	ComPtr<IEditArea> _editArea;
-	ComPtr<IDockPanel> _dockPanel;
+	ComPtr<IDockContainer> _dockContainer;
 	ComPtr<ILogArea> _logArea;
 	ComPtr<IUIFramework> _rf;
 	ComPtr<IBridgePropsArea> _bridgePropsArea;
@@ -108,14 +108,16 @@ public:
 		}
 
 		RECT dockPanelRect = { 0, (LONG) ribbonHeight, _clientSize.cx, _clientSize.cy };
-		_dockPanel = dockPanelFactory (_hwnd, 0xFFFF, dockPanelRect);
+		_dockContainer = dockPanelFactory (_hwnd, 0xFFFF, dockPanelRect);
 
-		auto logSidePanel = _dockPanel->GetOrCreateSidePanel(Side::Right);
-		_logArea = logAreaFactory (logSidePanel->GetHWnd(), 0xFFFF, logSidePanel->GetContentRect());
+		auto logPanel = _dockContainer->GetOrCreateDockablePanel(Side::Right, L"STP Log");
+		_logArea = logAreaFactory (logPanel->GetHWnd(), 0xFFFF, logPanel->GetContentRect());
 
-		_editArea = editAreaFactory (project, this, selection, _rf, _dockPanel->GetHWnd(), _dockPanel->GetContentRect());
-
+		auto propsDockablePanel = _dockContainer->GetOrCreateDockablePanel(Side::Left, L"Properties");
 		//_bridgePropsArea = bridgePropsAreaFactory (_hwnd, 0xFFFF, { 100, 100, 300, 300 });
+
+
+		_editArea = editAreaFactory (project, this, selection, _rf, _dockContainer->GetHWnd(), _dockContainer->GetContentRect());
 
 		const RCHDeps rchDeps = { this, _rf, _project, _editArea, _selection };
 		for (auto p : _commandHandlers)
@@ -212,7 +214,7 @@ public:
 
 		if (msg == WM_DESTROY)
 		{
-			_dockPanel = nullptr; // destroy it early to avoid doing layout-related processing
+			_dockContainer = nullptr; // destroy it early to avoid doing layout-related processing
 			if (_rf != nullptr)
 				_rf->Destroy();
 			return 0;
@@ -224,8 +226,8 @@ public:
 				::GetWindowRect(_hwnd, &_restoreBounds);
 
 			_clientSize = { LOWORD(lParam), HIWORD(lParam) };
-			if (_dockPanel != nullptr)
-				ResizeDockPanel();
+			if (_dockContainer != nullptr)
+				ResizeDockContainer();
 
 			return 0;
 		}
@@ -253,7 +255,7 @@ public:
 		return DefWindowProc(_hwnd, msg, wParam, lParam);
 	}
 
-	void ResizeDockPanel()
+	void ResizeDockContainer()
 	{
 		int x = 0, y = 0, w = _clientSize.cx, h = _clientSize.cy;
 
@@ -269,7 +271,7 @@ public:
 			h -= ribbonHeight;
 		}
 
-		::MoveWindow (_dockPanel->GetHWnd(), x, y, w, h, TRUE);
+		::MoveWindow (_dockContainer->GetHWnd(), x, y, w, h, TRUE);
 	}
 
 	static bool TryGetSavedWindowLocation (_Out_ RECT* restoreBounds, _Out_ int* nCmdShow)
@@ -366,8 +368,8 @@ public:
 	#pragma region IUIApplication
 	virtual HRESULT STDMETHODCALLTYPE OnViewChanged(UINT32 viewId, UI_VIEWTYPE typeID, IUnknown *view, UI_VIEWVERB verb, INT32 uReasonCode) override final
 	{
-		if (_dockPanel != nullptr)
-			ResizeDockPanel();
+		if (_dockContainer != nullptr)
+			ResizeDockContainer();
 		return S_OK;
 	}
 

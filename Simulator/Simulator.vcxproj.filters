@@ -152,8 +152,8 @@
     <ClCompile Include="RibbonCommandHandlers\UndoRedoRCH.cpp" />
     <ClCompile Include="UtilityFunctions.cpp" />
     <ClCompile Include="BridgePropertiesArea.cpp" />
-    <ClCompile Include="SidePanel.cpp" />
-    <ClCompile Include="DockPanel.cpp" />
+    <ClCompile Include="DockablePanel.cpp" />
+    <ClCompile Include="DockContainer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc">

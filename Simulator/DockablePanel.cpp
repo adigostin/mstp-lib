@@ -11,7 +11,7 @@ static const float CloseButtonMarginDips = 2;
 static const float TitleBarHeightDips = CloseButtonMarginDips + CloseButtonSizeDips + CloseButtonMarginDips;
 static const int SplitterWidthDips = 4;
 
-class SidePanel : public ISidePanel
+class DockablePanel : public IDockablePanel
 {
 	ULONG _refCount = 1;
 	Side _side;
@@ -21,11 +21,11 @@ class SidePanel : public ISidePanel
 	int _dpiX, _dpiY;
 	bool _closeButtonDown = false;
 	bool _draggingSplitter = false;
-	POINT _draggingSplitterLastMouseLocation;
+	POINT _draggingSplitterLastMouseScreenLocation;
 	EventManager _em;
 
 public:
-	SidePanel (HWND hWndParent, DWORD controlId, const RECT& rect, Side side)
+	DockablePanel (HWND hWndParent, DWORD controlId, const RECT& rect, Side side, const wchar_t* title)
 		: _side(side)
 	{
 		HINSTANCE hInstance;
@@ -53,8 +53,9 @@ public:
 				throw win32_exception(GetLastError());
 		}
 
-		auto hwnd = ::CreateWindowEx (0, WndClassName, L"STP Log", WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN,
-										rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, hWndParent, (HMENU) controlId, hInstance, this);
+		auto hwnd = ::CreateWindow (WndClassName, title, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN,
+									rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,
+									hWndParent, (HMENU) controlId, hInstance, this);
 		if (hwnd == nullptr)
 			throw win32_exception(GetLastError());
 		assert (hwnd == _hwnd);
@@ -72,7 +73,7 @@ public:
 		_titleBarFont = HFONT_unique_ptr(f);
 	}
 
-	~SidePanel()
+	~DockablePanel()
 	{
 		if (_hwnd != nullptr)
 			::DestroyWindow(_hwnd);
@@ -82,27 +83,28 @@ public:
 
 	virtual RECT GetContentRect() const override final
 	{
-		auto rect = GetClientRect();
-		LONG splitterWidthPixels = (LONG) (SplitterWidthDips * _dpiX / 96.0);
-		switch (_side)
+		if ((_side == Side::Left) || (_side == Side::Right))
 		{
-			case Side::Right:
-				rect.left += splitterWidthPixels;
-				break;
-
-			default:
-				throw not_implemented_exception();
+			LONG splitterWidthPixels = (LONG) (SplitterWidthDips * _dpiX / 96.0);
+			LONG titleBarHeightPixels = (LONG) (TitleBarHeightDips * _dpiY / 96.0);
+			if (_side == Side::Left)
+				return RECT { 0, titleBarHeightPixels, _clientSize.cx - splitterWidthPixels, _clientSize.cy };
+			else
+				return RECT { splitterWidthPixels, titleBarHeightPixels, _clientSize.cx, _clientSize.cy };
 		}
-
-		return rect;
+		else
+			throw not_implemented_exception();
 	}
 
 	RECT GetSplitterRect()
 	{
-		if (_side == Side::Right)
+		if ((_side == Side::Left) || (_side == Side::Right))
 		{
 			LONG splitterWidthPixels = (LONG) (SplitterWidthDips * _dpiX / 96.0);
-			return RECT { 0, 0, splitterWidthPixels, _clientSize.cy };
+			if (_side == Side::Left)
+				return RECT { _clientSize.cx - splitterWidthPixels, 0, _clientSize.cx, _clientSize.cy };
+			else
+				return RECT { 0, 0, splitterWidthPixels, _clientSize.cy };
 		}
 		else
 			throw not_implemented_exception();
@@ -110,30 +112,30 @@ public:
 
 	RECT GetTitleBarRect()
 	{
-		LONG splitterWidthPixels = (LONG) (SplitterWidthDips * _dpiX / 96.0);
-		LONG titleBarHeightPixels = (LONG) (TitleBarHeightDips * _dpiY / 96.0);
-		return RECT { splitterWidthPixels, 0, _clientSize.cx, titleBarHeightPixels };
+		if ((_side == Side::Left) || (_side == Side::Right))
+		{
+			LONG splitterWidthPixels = (LONG) (SplitterWidthDips * _dpiX / 96.0);
+			LONG titleBarHeightPixels = (LONG) (TitleBarHeightDips * _dpiY / 96.0);
+			if (_side == Side::Left)
+				return RECT { 0, 0, _clientSize.cx - splitterWidthPixels, titleBarHeightPixels };
+			else
+				return RECT { splitterWidthPixels, 0, _clientSize.cx, titleBarHeightPixels };
+		}
+		else
+			throw not_implemented_exception();
 	}
 
 	RECT GetCloseButtonRect()
 	{
-		if (_side == Side::Right)
+		if ((_side == Side::Left) || (_side == Side::Right))
 		{
-			LONG closeButtonSizePixels = (LONG) (CloseButtonSizeDips * _dpiY / 96.0);
 			LONG closeButtonMarginPixels = (LONG) (CloseButtonMarginDips * _dpiY / 96.0);
 
-			RECT rect;
-			rect.left = _clientSize.cx - closeButtonMarginPixels - closeButtonSizePixels;
-			rect.top = closeButtonMarginPixels;
-			rect.right = rect.left + closeButtonSizePixels;
-			rect.bottom = rect.top + closeButtonSizePixels;
-
-			// Move it slightly, it looks better.
-			rect.left--;
-			rect.right--;
-			rect.top++;
-			rect.bottom++;
-
+			auto rect = GetTitleBarRect();
+			rect.right -= closeButtonMarginPixels;
+			rect.top += closeButtonMarginPixels;
+			rect.bottom -= closeButtonMarginPixels;
+			rect.left = rect.right - (rect.bottom - rect.top);
 			return rect;
 		}
 		else
@@ -157,16 +159,16 @@ public:
 
 	static LRESULT CALLBACK WindowProcStatic (HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
-		SidePanel* panel;
+		DockablePanel* panel;
 		if (uMsg == WM_NCCREATE)
 		{
 			LPCREATESTRUCT lpcs = reinterpret_cast<LPCREATESTRUCT>(lParam);
-			panel = reinterpret_cast<SidePanel*>(lpcs->lpCreateParams);
+			panel = reinterpret_cast<DockablePanel*>(lpcs->lpCreateParams);
 			panel->_hwnd = hwnd;
 			SetWindowLongPtr (hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(panel));
 		}
 		else
-			panel = reinterpret_cast<SidePanel*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+			panel = reinterpret_cast<DockablePanel*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
 
 		if (panel == nullptr)
 		{
@@ -317,7 +319,8 @@ public:
 		if (PtInRect (&splitterRect, pt))
 		{
 			_draggingSplitter = true;
-			_draggingSplitterLastMouseLocation = pt;
+			_draggingSplitterLastMouseScreenLocation = pt;
+			ClientToScreen (_hwnd, &_draggingSplitterLastMouseScreenLocation);
 		}
 	}
 
@@ -329,7 +332,7 @@ public:
 		{
 			_closeButtonDown = false;
 			::InvalidateRect (_hwnd, nullptr, FALSE);
-			SidePanelCloseButtonClicked::InvokeHandlers (_em, this);
+			CloseButtonClicked::InvokeHandlers (_em, this);
 		}
 		else if (_draggingSplitter)
 		{
@@ -362,25 +365,30 @@ public:
 		}
 		else if (_draggingSplitter)
 		{
-			SIZE offset = { pt.x - _draggingSplitterLastMouseLocation.x, pt.y - _draggingSplitterLastMouseLocation.y };
+			POINT ptScreen = pt;
+			::ClientToScreen(_hwnd, &ptScreen);
+
+			SIZE offset = { ptScreen.x - _draggingSplitterLastMouseScreenLocation.x, ptScreen.y - _draggingSplitterLastMouseScreenLocation.y };
 
 			SIZE proposedSize;
-			if (_side == Side::Right)
+			if (_side == Side::Left)
+				proposedSize = { _clientSize.cx + offset.cx, _clientSize.cy };
+			else if (_side == Side::Right)
 				proposedSize = { _clientSize.cx - offset.cx, _clientSize.cy };
 			else
 				throw not_implemented_exception();
 
-			SidePanelSplitterDragging::InvokeHandlers(_em, this, proposedSize);
+			SplitterDragging::InvokeHandlers(_em, this, proposedSize);
+
+			_draggingSplitterLastMouseScreenLocation = ptScreen;
 		}
 	}
 
 	virtual HWND GetHWnd() const override final { return _hwnd; }
 
-	virtual RECT GetClientRect() const override final { return { 0, 0, _clientSize.cx, _clientSize.cy }; }
+	virtual CloseButtonClicked::Subscriber GetCloseButtonClickedEvent() override final { return CloseButtonClicked::Subscriber(_em); }
 
-	virtual SidePanelCloseButtonClicked::Subscriber GetSidePanelCloseButtonClickedEvent() override final { return SidePanelCloseButtonClicked::Subscriber(_em); }
-
-	virtual SidePanelSplitterDragging::Subscriber GetSidePanelSplitterDraggingEvent() override final { return SidePanelSplitterDragging::Subscriber(_em); }
+	virtual SplitterDragging::Subscriber GetSplitterDraggingEvent() override final { return SplitterDragging::Subscriber(_em); }
 
 	#pragma region IUnknown
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final { return E_NOTIMPL; }
@@ -400,4 +408,4 @@ public:
 	#pragma endregion
 };
 
-extern const SidePanelFactory sidePanelFactory = [](auto... params) { return ComPtr<ISidePanel>(new SidePanel(params...), false); };
+extern const DockablePanelFactory dockablePanelFactory = [](auto... params) { return ComPtr<IDockablePanel>(new DockablePanel(params...), false); };

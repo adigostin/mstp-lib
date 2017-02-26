@@ -5,17 +5,17 @@
 using namespace std;
 
 static ATOM wndClassAtom;
-static constexpr wchar_t DockPanelClassName[] = L"DockPanel-{24B42526-2970-4B3C-A753-2DABD22C4BB0}";
+static constexpr wchar_t DockContainerClassName[] = L"DockContainer-{24B42526-2970-4B3C-A753-2DABD22C4BB0}";
 
-class DockPanel : public IDockPanel
+class DockContainer : public IDockContainer
 {
 	ULONG _refCount = 1;
 	EventManager _em;
 	HWND _hwnd = nullptr;
-	vector<ComPtr<ISidePanel>> _sidePanels;
+	vector<ComPtr<IDockablePanel>> _dockablePanels;
 
 public:
-	DockPanel(HWND hWndParent, DWORD controlId, const RECT& rect)
+	DockContainer(HWND hWndParent, DWORD controlId, const RECT& rect)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR)&wndClassAtom, &hInstance);
@@ -35,7 +35,7 @@ public:
 				nullptr, // hCursor
 				nullptr, //(HBRUSH)(COLOR_WINDOW + 1), // hbrBackground
 				nullptr, // lpszMenuName
-				DockPanelClassName // lpszClassName
+				DockContainerClassName // lpszClassName
 			};
 
 			wndClassAtom = RegisterClass(&wndClass);
@@ -47,13 +47,13 @@ public:
 		LONG y = rect.top;
 		LONG w = rect.right - rect.left;
 		LONG h = rect.bottom - rect.top;
-		auto hwnd = ::CreateWindowEx(0, DockPanelClassName, L"", WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, x, y, w, h, hWndParent, 0, hInstance, this);
+		auto hwnd = ::CreateWindowEx(0, DockContainerClassName, L"", WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, x, y, w, h, hWndParent, 0, hInstance, this);
 		if (hwnd == nullptr)
 			throw win32_exception(GetLastError());
 		assert(hwnd == _hwnd);
 	}
 
-	~DockPanel()
+	~DockContainer()
 	{
 		assert(_refCount == 0);
 		if (_hwnd != nullptr)
@@ -68,18 +68,18 @@ public:
 		//	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 		//}
 
-		DockPanel* window;
+		DockContainer* window;
 		if (uMsg == WM_NCCREATE)
 		{
 			LPCREATESTRUCT lpcs = reinterpret_cast<LPCREATESTRUCT>(lParam);
-			window = reinterpret_cast<DockPanel*>(lpcs->lpCreateParams);
+			window = reinterpret_cast<DockContainer*>(lpcs->lpCreateParams);
 			window->_hwnd = hwnd;
 			SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(window));
 			// GDI now holds a pointer to this object, so let's call AddRef.
 			window->AddRef();
 		}
 		else
-			window = reinterpret_cast<DockPanel*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+			window = reinterpret_cast<DockContainer*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
 
 		if (window == nullptr)
 		{
@@ -103,7 +103,7 @@ public:
 	{
 		if (msg == WM_SIZE)
 		{
-			auto layOutFunction = [](ISidePanel* sp, const RECT& rect)
+			auto layOutFunction = [](IDockablePanel* sp, const RECT& rect)
 				{ ::MoveWindow(sp->GetHWnd(), rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE); };
 			auto contentRect = LayOutPanels (nullptr, layOutFunction);
 			LayOutContent(contentRect);
@@ -138,6 +138,11 @@ public:
 		RECT panelRect;
 		switch (side)
 		{
+			case Side::Left:
+				panelRect = { contentRect->left, contentRect->top, contentRect->left + proposedSize.cx, contentRect->bottom };
+				contentRect->left += proposedSize.cx;
+				return panelRect;
+
 			case Side::Right:
 				panelRect = { contentRect->right - proposedSize.cx, contentRect->top, contentRect->right, contentRect->bottom };
 				contentRect->right -= proposedSize.cx;
@@ -149,11 +154,11 @@ public:
 		}
 	}
 
-	RECT LayOutPanels (function<SIZE(ISidePanel*)> getProposedSize, function<void(ISidePanel* sp, const RECT& panelRect)> fn) const
+	RECT LayOutPanels (function<SIZE(IDockablePanel*)> getProposedSize, function<void(IDockablePanel* sp, const RECT& panelRect)> fn) const
 	{
 		RECT contentRect = GetClientRect();
 
-		for (auto& sp : _sidePanels)
+		for (auto& sp : _dockablePanels)
 		{
 			SIZE proposedSize = (getProposedSize != nullptr) ? getProposedSize(sp) : (proposedSize = sp->GetWindowSize());
 			RECT panelRect = LayOutPanel (sp->GetSide(), proposedSize, &contentRect);
@@ -168,7 +173,7 @@ public:
 	{
 		auto isContentHWnd = [this](HWND c)
 		{
-			return none_of(_sidePanels.begin(), _sidePanels.end(), [c](const ComPtr<ISidePanel>& sp) { return sp->GetHWnd() == c; });
+			return none_of(_dockablePanels.begin(), _dockablePanels.end(), [c](const ComPtr<IDockablePanel>& sp) { return sp->GetHWnd() == c; });
 		};
 
 		auto content = FindChild(isContentHWnd);
@@ -181,10 +186,10 @@ public:
 		return LayOutPanels(nullptr, nullptr);
 	}
 
-	virtual ISidePanel* GetOrCreateSidePanel(Side side) override final
+	virtual IDockablePanel* GetOrCreateDockablePanel(Side side, const wchar_t* title) override final
 	{
-		auto it = find_if(_sidePanels.begin(), _sidePanels.end(), [side](const ComPtr<ISidePanel>& p) { return p->GetSide() == side; });
-		if (it != _sidePanels.end())
+		auto it = find_if(_dockablePanels.begin(), _dockablePanels.end(), [side](const ComPtr<IDockablePanel>& p) { return p->GetSide() == side; });
+		if (it != _dockablePanels.end())
 			return it->Get();
 
 		static constexpr SIZE DefaultPanelSize = { 300, 300 };
@@ -193,24 +198,22 @@ public:
 		
 		LayOutContent (contentRect);
 
-		auto panel = sidePanelFactory(_hwnd, 0xFFFF, panelRect, side);
-
-		panel->GetSidePanelSplitterDraggingEvent().AddHandler (&OnSidePanelSplitterDragging, this);
-		_sidePanels.push_back(panel);
-
+		auto panel = dockablePanelFactory(_hwnd, 0xFFFF, panelRect, side, title);
+		panel->GetSplitterDraggingEvent().AddHandler (&OnSidePanelSplitterDragging, this);
+		_dockablePanels.push_back(panel);
 		return panel;
 	}
 	
-	static void OnSidePanelSplitterDragging (void* callbackArg, ISidePanel* sidePanel, SIZE proposedSize)
+	static void OnSidePanelSplitterDragging (void* callbackArg, IDockablePanel* panel, SIZE proposedSize)
 	{
-		auto dp = static_cast<DockPanel*>(callbackArg);
+		auto container = static_cast<DockContainer*>(callbackArg);
 
-		auto getProposedSize = [sidePanel, proposedSize](ISidePanel* sp) { return (sp != sidePanel) ? sp->GetWindowSize() : proposedSize; };
-		auto layOutFunction = [](ISidePanel* sp, const RECT& rect)
+		auto getProposedSize = [panel, proposedSize](IDockablePanel* p) { return (p != panel) ? p->GetWindowSize() : proposedSize; };
+		auto layOutFunction = [](IDockablePanel* sp, const RECT& rect)
 			{ ::MoveWindow(sp->GetHWnd(), rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE); };
 
-		auto contentRect = dp->LayOutPanels(getProposedSize, layOutFunction);
-		dp->LayOutContent(contentRect);
+		auto contentRect = container->LayOutPanels(getProposedSize, layOutFunction);
+		container->LayOutContent(contentRect);
 	}
 
 	#pragma region IUnknown
@@ -231,4 +234,4 @@ public:
 	#pragma endregion
 };
 
-extern const DockPanelFactory dockPanelFactory = [](auto... params) { return ComPtr<IDockPanel>(new DockPanel(params...), false); };
+extern const DockContainerFactory dockPanelFactory = [](auto... params) { return ComPtr<IDockContainer>(new DockContainer(params...), false); };

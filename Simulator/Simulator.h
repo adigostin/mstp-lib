@@ -7,8 +7,8 @@ struct IProject;
 struct IProjectWindow;
 struct ISelection;
 struct ILogArea;
-struct ISidePanel;
-struct IDockPanel;
+struct IDockablePanel;
+struct IDockContainer;
 struct DrawingObjects;
 class Object;
 class Bridge;
@@ -65,31 +65,41 @@ extern const SelectionFactory selectionFactory;
 
 // ============================================================================
 
-struct SidePanelCloseButtonClicked : public Event<SidePanelCloseButtonClicked, void(ISidePanel* panel)> {};
-struct SidePanelSplitterDragging : public Event<SidePanelSplitterDragging, void(ISidePanel* panel, SIZE proposedSize)> {};
-struct SidePanelSplitterDragComplete : public Event<SidePanelSplitterDragComplete, void(ISidePanel* panel)> {};
-
-struct ISidePanel abstract : public IWin32Window
+struct IDockContainer abstract : public IWin32Window
 {
-	virtual Side GetSide() const = 0;
 	virtual RECT GetContentRect() const = 0;
-	virtual SidePanelCloseButtonClicked::Subscriber GetSidePanelCloseButtonClickedEvent() = 0;
-	virtual SidePanelSplitterDragging::Subscriber GetSidePanelSplitterDraggingEvent() = 0;
+	virtual IDockablePanel* GetOrCreateDockablePanel(Side side, const wchar_t* title) = 0;
 };
 
-using SidePanelFactory = ComPtr<ISidePanel>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect, Side side);
-extern const SidePanelFactory sidePanelFactory;
+using DockContainerFactory = ComPtr<IDockContainer>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect);
+extern const DockContainerFactory dockPanelFactory;
 
 // ============================================================================
 
-struct IDockPanel abstract : public IWin32Window
+struct IDockablePanel abstract : public IUnknown
 {
+	struct CloseButtonClicked : public Event<CloseButtonClicked, void(IDockablePanel* panel)> {};
+	struct SplitterDragging : public Event<SplitterDragging, void(IDockablePanel* panel, SIZE proposedSize)> {};
+	struct SplitterDragComplete : public Event<SplitterDragComplete, void(IDockablePanel* panel)> {};
+
+	virtual HWND GetHWnd() const = 0;
+	virtual Side GetSide() const = 0;
 	virtual RECT GetContentRect() const = 0;
-	virtual ISidePanel* GetOrCreateSidePanel(Side side) = 0;
+	virtual CloseButtonClicked::Subscriber GetCloseButtonClickedEvent() = 0;
+	virtual SplitterDragging::Subscriber GetSplitterDraggingEvent() = 0;
+
+	SIZE GetWindowSize() const
+	{
+		RECT wr;
+		BOOL bRes = ::GetWindowRect(this->GetHWnd(), &wr);
+		if (!bRes)
+			throw win32_exception(GetLastError());
+		return { wr.right - wr.left, wr.bottom - wr.top };
+	}
 };
 
-using DockPanelFactory = ComPtr<IDockPanel>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect);
-extern const DockPanelFactory dockPanelFactory;
+using DockablePanelFactory = ComPtr<IDockablePanel>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect, Side side, const wchar_t* title);
+extern const DockablePanelFactory dockablePanelFactory;
 
 // ============================================================================
 
