@@ -15,8 +15,9 @@
 using namespace std;
 using namespace D2D1;
 
-static const wchar_t CompanyName[] = L"Adrian Gostin";
+static const wchar_t CompanyName[] = L"Adi Gostin";
 static const wchar_t AppName[] = L"STP Simulator";
+static const wchar_t AppVersion[] = L"2.0";
 
 unique_ptr<ISimulatorApp> App;
 
@@ -90,8 +91,8 @@ public:
 		}
 
 		wstringstream ss;
-		ss << L"SOFTWARE\\" << CompanyName << L"\\" << ::AppName;
-		_regKeyPath = ss.get();
+		ss << L"SOFTWARE\\" << CompanyName << L"\\" << ::AppName << L"\\" << ::AppVersion;
+		_regKeyPath = ss.str();
 
 		hr = device->QueryInterface(IID_PPV_ARGS(&_d3dDevice)); ThrowIfFailed(hr);
 
@@ -115,7 +116,7 @@ public:
 		*/
 	}
 
-	virtual const wchar_t* GetRegKeyPath() const override final { return _regKeyPath.c_str(); }
+	virtual const wstring& GetRegKeyPath() const override final { return _regKeyPath; }
 
 	virtual ID3D11DeviceContext1* GetD3DDeviceContext() const override final { return _d3dDeviceContext; }
 

@@ -29,7 +29,7 @@ struct ISimulatorApp
 	virtual ID3D11DeviceContext1* GetD3DDeviceContext() const = 0;
 	virtual IDWriteFactory* GetDWriteFactory() const = 0;
 	virtual IWICImagingFactory2* GetWicFactory() const = 0;
-	virtual const wchar_t* GetRegKeyPath() const = 0;
+	virtual const std::wstring& GetRegKeyPath() const = 0;
 };
 
 extern std::unique_ptr<ISimulatorApp> App;
@@ -118,8 +118,6 @@ struct MouseLocation
 struct IEditArea abstract : public IUnknown
 {
 	virtual HWND GetHWnd() const = 0;
-	virtual void SelectVlan (uint16_t vlanNumber) = 0;
-	virtual uint16_t GetSelectedVlanNumber() const = 0;
 	virtual const DrawingObjects& GetDrawingObjects() const = 0;
 	virtual void EnterState (std::unique_ptr<EditState>&& state) = 0;
 	virtual EditStateDeps MakeEditStateDeps() = 0;
@@ -128,17 +126,18 @@ struct IEditArea abstract : public IUnknown
 	virtual D2D1::Matrix3x2F GetZoomTransform() const = 0;
 };
 
-using EditAreaFactory = ComPtr<IEditArea>(*const)(IProject* project, HWND hWndParent, DWORD controlId, ISelection* selection, IUIFramework* rf, const RECT& rect);
+using EditAreaFactory = ComPtr<IEditArea>(*const)(IProject* project, IProjectWindow* pw, ISelection* selection, IUIFramework* rf, HWND hWndParent, const RECT& rect);
 extern const EditAreaFactory editAreaFactory;
 
 // ============================================================================
 
-struct SelectedTreeIndexChangedEvent : public Event<SelectedTreeIndexChangedEvent, void(IProjectWindow*, unsigned int)> { };
+struct SelectedVlanNumerChangedEvent : public Event<SelectedVlanNumerChangedEvent, void(IProjectWindow* pw, uint16_t vlanNumber)> { };
 
 struct IProjectWindow : public IWin32Window
 {
-	virtual unsigned int GetSelectedTreeIndex() const = 0;
-	virtual SelectedTreeIndexChangedEvent::Subscriber GetSelectedTreeIndexChangedEvent() = 0;
+	virtual void SelectVlan (uint16_t vlanNumber) = 0;
+	virtual uint16_t GetSelectedVlanNumber() const = 0;
+	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() = 0;
 };
 
 using ProjectWindowFactory = ComPtr<IProjectWindow>(*const)(IProject* project, HINSTANCE rfResourceHInstance, const wchar_t* rfResourceName,

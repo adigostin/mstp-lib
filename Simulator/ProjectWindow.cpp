@@ -11,10 +11,10 @@ using namespace std;
 static ATOM wndClassAtom;
 static constexpr wchar_t ProjectWindowWndClassName[] = L"ProjectWindow-{24B42526-2970-4B3C-A753-2DABD22C4BB0}";
 static constexpr wchar_t RegValueNameShowCmd[] = L"WindowShowCmd";
-static constexpr wchar_t RegValueNameWindowX[] = L"WindowX";
-static constexpr wchar_t RegValueNameWindowY[] = L"WindowY";
-static constexpr wchar_t RegValueNameWindowWidth[] = L"WindowWidth";
-static constexpr wchar_t RegValueNameWindowHeight[] = L"WindowHeight";
+static constexpr wchar_t RegValueNameWindowLeft[] = L"WindowLeft";
+static constexpr wchar_t RegValueNameWindowTop[] = L"WindowTop";
+static constexpr wchar_t RegValueNameWindowRight[] = L"WindowRight";
+static constexpr wchar_t RegValueNameWindowBottom[] = L"WindowBottom";
 
 class ProjectWindow : public IProjectWindow, IUIApplication
 {
@@ -31,7 +31,7 @@ class ProjectWindow : public IProjectWindow, IUIApplication
 	EventManager _em;
 	RECT _restoreBounds;
 	unordered_map<UINT32, ComPtr<RCHBase>> _commandHandlers;
-	unordered_map<Side, LONG> _panelSizes = { { Side::Left, 400 }, { Side::Top, 400 }, { Side::Right, 400 }, { Side::Bottom, 400 } };
+	uint16_t _selectedVlanNumber = 1;
 
 public:
 	ProjectWindow (IProject* project, HINSTANCE rfResourceHInstance, const wchar_t* rfResourceName,
@@ -66,13 +66,22 @@ public:
 				throw win32_exception(GetLastError());
 		}
 
+		bool read = TryGetSavedWindowLocation (&_restoreBounds, &nCmdShow);
 		int x = CW_USEDEFAULT, y = CW_USEDEFAULT, w = CW_USEDEFAULT, h = CW_USEDEFAULT;
-		TryGetSavedWindowLocation (&x, &y, &w, &h, &nCmdShow);
+		if (read)
+		{
+			x = _restoreBounds.left;
+			y = _restoreBounds.top;
+			w = _restoreBounds.right - _restoreBounds.left;
+			h = _restoreBounds.bottom - _restoreBounds.top;
+		}
 		auto hwnd = ::CreateWindow(ProjectWindowWndClassName, L"STP Simulator", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, x, y, w, h, nullptr, 0, hInstance, this);
 		if (hwnd == nullptr)
 			throw win32_exception(GetLastError());
 		assert(hwnd == _hwnd);
-		::ShowWindow (hwnd, nCmdShow);
+		if (!read)
+			::GetWindowRect(_hwnd, &_restoreBounds);
+		::ShowWindow (_hwnd, nCmdShow);
 		
 		if ((rfResourceHInstance != nullptr) && (rfResourceName != nullptr))
 		{
@@ -104,7 +113,7 @@ public:
 		auto logSidePanel = _dockPanel->GetOrCreateSidePanel(Side::Right);
 		_logArea = logAreaFactory (logSidePanel->GetHWnd(), 0xFFFF, logSidePanel->GetContentRect());
 
-		_editArea = editAreaFactory (project, _dockPanel->GetHWnd(), 0xFFFF, selection, _rf, _dockPanel->GetContentRect());
+		_editArea = editAreaFactory (project, this, selection, _rf, _dockPanel->GetHWnd(), _dockPanel->GetContentRect());
 
 		//_bridgePropsArea = bridgePropsAreaFactory (_hwnd, 0xFFFF, { 100, 100, 300, 300 });
 
@@ -263,31 +272,29 @@ public:
 		::MoveWindow (_dockPanel->GetHWnd(), x, y, w, h, TRUE);
 	}
 
-	static bool TryGetSavedWindowLocation (int* xOut, int* yOut, int* wOut, int* hOut, int* nCmdShowOut)
+	static bool TryGetSavedWindowLocation (_Out_ RECT* restoreBounds, _Out_ int* nCmdShow)
 	{
 		auto ReadDword = [](const wchar_t* valueName, DWORD* valueOut) -> bool
 		{
 			DWORD dataSize = 4;
-			auto lresult = RegGetValue(HKEY_CURRENT_USER, App->GetRegKeyPath(), valueName, RRF_RT_REG_DWORD, nullptr, valueOut, &dataSize);
+			auto lresult = RegGetValue(HKEY_CURRENT_USER, App->GetRegKeyPath().c_str(), valueName, RRF_RT_REG_DWORD, nullptr, valueOut, &dataSize);
 			return lresult == ERROR_SUCCESS;
 		};
 
-		int x, y, w, h, showCmd;
-		if (ReadDword(RegValueNameShowCmd, (DWORD*)&showCmd)
-			&& ReadDword(RegValueNameWindowX, (DWORD*)&x)
-			&& ReadDword(RegValueNameWindowY, (DWORD*)&y)
-			&& ReadDword(RegValueNameWindowWidth, (DWORD*)&w)
-			&& ReadDword(RegValueNameWindowHeight, (DWORD*)&h))
+		int cmd;
+		RECT rb;
+		if (ReadDword(RegValueNameShowCmd, (DWORD*)&cmd)
+			&& ReadDword(RegValueNameWindowLeft, (DWORD*)&rb.left)
+			&& ReadDword(RegValueNameWindowTop, (DWORD*)&rb.top)
+			&& ReadDword(RegValueNameWindowRight, (DWORD*)&rb.right)
+			&& ReadDword(RegValueNameWindowBottom, (DWORD*)&rb.bottom))
 		{
-			*xOut = x;
-			*yOut = y;
-			*wOut = w;
-			*hOut = h;
-			*nCmdShowOut = showCmd;
+			*restoreBounds = rb;
+			*nCmdShow = cmd;
 			return true;
 		}
-		else
-			return false;
+
+		return false;
 	}
 
 	void SaveWindowLocation() const
@@ -297,24 +304,33 @@ public:
 		if (bRes && ((wp.showCmd == SW_NORMAL) || (wp.showCmd == SW_MAXIMIZE)))
 		{
 			HKEY key;
-			auto lstatus = RegCreateKeyEx(HKEY_CURRENT_USER, App->GetRegKeyPath(), 0, NULL, 0, KEY_WRITE, NULL, &key, NULL);
+			auto lstatus = RegCreateKeyEx(HKEY_CURRENT_USER, App->GetRegKeyPath().c_str(), 0, NULL, 0, KEY_WRITE, NULL, &key, NULL);
 			if (lstatus == ERROR_SUCCESS)
 			{
-				int w = _restoreBounds.right - _restoreBounds.left;
-				int h = _restoreBounds.bottom - _restoreBounds.top;
-				RegSetValueEx(key, RegValueNameWindowX, 0, REG_DWORD, (BYTE*)&_restoreBounds.left, 4);
-				RegSetValueEx(key, RegValueNameWindowY, 0, REG_DWORD, (BYTE*)&_restoreBounds.top, 4);
-				RegSetValueEx(key, RegValueNameWindowWidth, 0, REG_DWORD, (BYTE*)&w, 4);
-				RegSetValueEx(key, RegValueNameWindowHeight, 0, REG_DWORD, (BYTE*)&h, 4);
+				RegSetValueEx(key, RegValueNameWindowLeft, 0, REG_DWORD, (BYTE*)&_restoreBounds.left, 4);
+				RegSetValueEx(key, RegValueNameWindowTop, 0, REG_DWORD, (BYTE*)&_restoreBounds.top, 4);
+				RegSetValueEx(key, RegValueNameWindowRight, 0, REG_DWORD, (BYTE*)&_restoreBounds.right, 4);
+				RegSetValueEx(key, RegValueNameWindowBottom, 0, REG_DWORD, (BYTE*)&_restoreBounds.bottom, 4);
 				RegSetValueEx(key, RegValueNameShowCmd, 0, REG_DWORD, (BYTE*)&wp.showCmd, 4);
 				RegCloseKey(key);
 			}
 		}
 	}
 
-	virtual unsigned int GetSelectedTreeIndex() const override final { return 0; }
+	virtual void SelectVlan (uint16_t vlanNumber) override final
+	{
+		if (_selectedVlanNumber != vlanNumber)
+		{
+			_selectedVlanNumber = vlanNumber;
+			SelectedVlanNumerChangedEvent::InvokeHandlers(_em, this, vlanNumber);
+			::InvalidateRect (GetHWnd(), nullptr, FALSE);
+		}
+	};
 
-	virtual SelectedTreeIndexChangedEvent::Subscriber GetSelectedTreeIndexChangedEvent() override final { return SelectedTreeIndexChangedEvent::Subscriber(_em); }
+	virtual uint16_t GetSelectedVlanNumber() const override final { return _selectedVlanNumber; }
+
+	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() override final { return SelectedVlanNumerChangedEvent::Subscriber(_em); }
+
 	/*
 	LRESULT ProcessWmClose()
 	{

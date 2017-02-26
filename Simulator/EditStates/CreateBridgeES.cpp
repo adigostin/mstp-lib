@@ -44,7 +44,7 @@ public:
 			D2D1_MATRIX_3X2_F oldtr;
 			rt->GetTransform(&oldtr);
 			rt->SetTransform(_area->GetZoomTransform());
-			_bridge->Render (rt, _area->GetDrawingObjects(), _area->GetSelectedVlanNumber());
+			_bridge->Render (rt, _area->GetDrawingObjects(), _pw->GetSelectedVlanNumber());
 			rt->SetTransform(&oldtr);
 		}
 	}

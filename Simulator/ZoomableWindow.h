@@ -1,7 +1,6 @@
 
 #pragma once
 #include "D2DWindow.h"
-#include "EventManager.h"
 
 class ZoomableWindow;
 struct ZoomTransformChangedEvent : public Event<ZoomTransformChangedEvent, void(ZoomableWindow*)> { };
@@ -37,8 +36,6 @@ class ZoomableWindow abstract : public D2DWindow, public IZoomable
 		float _maxZoomOrZero;
 	};
 	std::optional<ZoomedToRect> _zoomedToRect;
-
-	EventManager _em;
 
 public:
 	using base::base;

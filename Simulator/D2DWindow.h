@@ -1,6 +1,7 @@
 
 #pragma once
 #include "Win32Defs.h"
+#include "EventManager.h"
 
 class D2DWindow abstract
 {
@@ -36,6 +37,7 @@ public:
 	SIZE GetPixelSizeFromDipSize(D2D1_SIZE_F sizeDips) const;
 
 protected:
+	EventManager _em;
 	virtual std::optional<LRESULT> WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 	virtual void OnBeforeRender() { }
 	virtual void Render(ID2D1DeviceContext* dc) const = 0;

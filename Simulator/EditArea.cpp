@@ -16,12 +16,12 @@ class EditArea : public ZoomableWindow, public IEditArea
 	typedef ZoomableWindow base;
 
 	ULONG _refCount = 1;
+	IProjectWindow* const _pw;
 	IUIFramework* const _rf;
 	ComPtr<ISelection> const _selection;
 	ComPtr<IProject> const _project;
 	ComPtr<IDWriteTextFormat> _legendFont;
 	DrawingObjects _drawingObjects;
-	uint16_t _selectedVlanNumber = 1;
 	unique_ptr<EditState> _state;
 	Port* _hoverPort = nullptr;
 
@@ -37,10 +37,10 @@ class EditArea : public ZoomableWindow, public IEditArea
 	optional<BeginningDrag> _beginningDrag;
 
 public:
-	EditArea(IProject* project, HWND hWndParent, DWORD controlId, ISelection* selection, IUIFramework* rf, const RECT& rect)
-		: base (WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, hWndParent, controlId,
+	EditArea(IProject* project, IProjectWindow* pw, ISelection* selection, IUIFramework* rf, HWND hWndParent, const RECT& rect)
+		: base (WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, hWndParent, 0xFFFF,
 				App->GetD3DDeviceContext(), App->GetDWriteFactory(), App->GetWicFactory())
-		, _project(project), _rf(rf), _selection(selection)
+		, _project(project), _pw(pw), _rf(rf), _selection(selection)
 	{
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
 		_project->GetObjectRemovingEvent().AddHandler (&OnObjectRemoving, this);
@@ -250,7 +250,7 @@ public:
 		dc->SetTransform(GetZoomTransform());
 
 		for (auto& o : _project->GetObjects())
-			o->Render (dc, _drawingObjects, _selectedVlanNumber);
+			o->Render (dc, _drawingObjects, _pw->GetSelectedVlanNumber());
 
 		dc->SetTransform(oldtr);
 	}
@@ -537,7 +537,7 @@ public:
 
 	virtual EditStateDeps MakeEditStateDeps() override final
 	{
-		return EditStateDeps { _project, this, _selection };
+		return EditStateDeps { _project, _pw, this, _selection };
 	}
 
 	virtual void EnterState (std::unique_ptr<EditState>&& state) override final
@@ -639,17 +639,6 @@ public:
 		hr = ui->ShowAtLocation(pt.x, pt.y); ThrowIfFailed(hr);
 		return 0;
 	}
-
-	virtual void SelectVlan (uint16_t vlanNumber) override final
-	{
-		if (_selectedVlanNumber != vlanNumber)
-		{
-			_selectedVlanNumber = vlanNumber;
-			::InvalidateRect (GetHWnd(), nullptr, FALSE);
-		}
-	};
-
-	virtual uint16_t GetSelectedVlanNumber() const override final { return _selectedVlanNumber; }
 
 	virtual const DrawingObjects& GetDrawingObjects() const override final { return _drawingObjects; }
 
