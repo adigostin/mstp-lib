@@ -8,6 +8,7 @@ struct IProjectWindow;
 struct ISelection;
 struct ILogArea;
 struct ISidePanel;
+struct IDockPanel;
 struct DrawingObjects;
 class Object;
 class Bridge;
@@ -28,9 +29,20 @@ struct ISimulatorApp
 	virtual ID3D11DeviceContext1* GetD3DDeviceContext() const = 0;
 	virtual IDWriteFactory* GetDWriteFactory() const = 0;
 	virtual IWICImagingFactory2* GetWicFactory() const = 0;
+	virtual const wchar_t* GetRegKeyPath() const = 0;
 };
 
 extern std::unique_ptr<ISimulatorApp> App;
+
+struct IWin32Window : public IUnknown
+{
+	virtual HWND GetHWnd() const = 0;
+	virtual RECT GetClientRect() const;
+
+	RECT GetWindowRect() const;
+	SIZE GetWindowSize() const;
+	SIZE GetClientSize() const;
+};
 
 // ============================================================================
 
@@ -54,16 +66,15 @@ extern const SelectionFactory selectionFactory;
 // ============================================================================
 
 struct SidePanelCloseButtonClicked : public Event<SidePanelCloseButtonClicked, void(ISidePanel* panel)> {};
-struct SidePanelSplitterDragging : public Event<SidePanelSplitterDragging, void(ISidePanel* panel, SIZE offset)> {};
+struct SidePanelSplitterDragging : public Event<SidePanelSplitterDragging, void(ISidePanel* panel, SIZE proposedSize)> {};
 struct SidePanelSplitterDragComplete : public Event<SidePanelSplitterDragComplete, void(ISidePanel* panel)> {};
 
-struct ISidePanel abstract : public IUnknown
+struct ISidePanel abstract : public IWin32Window
 {
-	virtual HWND GetHWnd() const = 0;
-	virtual RECT GetClientRect() const = 0;
+	virtual Side GetSide() const = 0;
+	virtual RECT GetContentRect() const = 0;
 	virtual SidePanelCloseButtonClicked::Subscriber GetSidePanelCloseButtonClickedEvent() = 0;
 	virtual SidePanelSplitterDragging::Subscriber GetSidePanelSplitterDraggingEvent() = 0;
-	virtual Side GetSide() const = 0;
 };
 
 using SidePanelFactory = ComPtr<ISidePanel>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect, Side side);
@@ -71,7 +82,18 @@ extern const SidePanelFactory sidePanelFactory;
 
 // ============================================================================
 
-struct ILogArea abstract : public IUnknown
+struct IDockPanel abstract : public IWin32Window
+{
+	virtual RECT GetContentRect() const = 0;
+	virtual ISidePanel* GetOrCreateSidePanel(Side side) = 0;
+};
+
+using DockPanelFactory = ComPtr<IDockPanel>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect);
+extern const DockPanelFactory dockPanelFactory;
+
+// ============================================================================
+
+struct ILogArea abstract : public IWin32Window
 {
 	virtual void SelectBridge (Bridge* b) = 0;
 };
@@ -106,26 +128,21 @@ struct IEditArea abstract : public IUnknown
 	virtual D2D1::Matrix3x2F GetZoomTransform() const = 0;
 };
 
-using EditAreaFactory = ComPtr<IEditArea>(*const)(IProject* project, IProjectWindow* pw, DWORD controlId, ISelection* selection, IUIFramework* rf, const RECT& rect);
+using EditAreaFactory = ComPtr<IEditArea>(*const)(IProject* project, HWND hWndParent, DWORD controlId, ISelection* selection, IUIFramework* rf, const RECT& rect);
 extern const EditAreaFactory editAreaFactory;
 
 // ============================================================================
 
-struct ProjectWindowClosingEvent : public Event<ProjectWindowClosingEvent, void(IProjectWindow* pw, bool* cancelClose)> { };
 struct SelectedTreeIndexChangedEvent : public Event<SelectedTreeIndexChangedEvent, void(IProjectWindow*, unsigned int)> { };
 
-struct IProjectWindow : public IUnknown
+struct IProjectWindow : public IWin32Window
 {
-	virtual HWND GetHWnd() const = 0;
-	virtual ProjectWindowClosingEvent::Subscriber GetProjectWindowClosingEvent() = 0;
-	virtual void ShowAtSavedWindowLocation(const wchar_t* regKeyPath) = 0;
-	virtual void SaveWindowLocation(const wchar_t* regKeyPath) const = 0;
 	virtual unsigned int GetSelectedTreeIndex() const = 0;
 	virtual SelectedTreeIndexChangedEvent::Subscriber GetSelectedTreeIndexChangedEvent() = 0;
 };
 
 using ProjectWindowFactory = ComPtr<IProjectWindow>(*const)(IProject* project, HINSTANCE rfResourceHInstance, const wchar_t* rfResourceName,
-	ISelection* selection, EditAreaFactory editAreaFactory);
+	ISelection* selection, EditAreaFactory editAreaFactory, int nCmdShow);
 extern const ProjectWindowFactory projectWindowFactory;
 
 // ============================================================================
@@ -154,7 +171,7 @@ extern const ProjectFactory projectFactory;
 
 // ============================================================================
 
-class IBridgePropsArea abstract : public IUnknown
+struct IBridgePropsArea abstract : public IUnknown
 {
 	virtual HWND GetHWnd() const = 0;
 };

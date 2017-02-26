@@ -17,12 +17,42 @@ using namespace D2D1;
 
 static const wchar_t CompanyName[] = L"Adrian Gostin";
 static const wchar_t AppName[] = L"STP Simulator";
-static wstring RegKeyPath;
 
 unique_ptr<ISimulatorApp> App;
 
+RECT IWin32Window::GetWindowRect() const
+{
+	RECT rect;
+	BOOL bRes = ::GetWindowRect (GetHWnd(), &rect);
+	if (!bRes)
+		throw win32_exception(GetLastError());
+	return rect;
+}
+
+SIZE IWin32Window::GetWindowSize() const
+{
+	auto rect = GetWindowRect();
+	return SIZE { rect.right - rect.left, rect.bottom - rect.top };
+}
+
+SIZE IWin32Window::GetClientSize() const
+{
+	RECT rect = this->GetClientRect();
+	return SIZE { rect.right, rect.bottom };
+}
+
+RECT IWin32Window::GetClientRect() const
+{
+	RECT rect;
+	BOOL bRes = ::GetClientRect (GetHWnd(), &rect);
+	if (!bRes)
+		throw win32_exception(GetLastError());
+	return rect;
+};
+
 class SimulatorApp : public ISimulatorApp
 {
+	wstring _regKeyPath;
 	ComPtr<ID3D11Device1> _d3dDevice;
 	ComPtr<ID3D11DeviceContext1> _d3dDeviceContext;
 	ComPtr<IDWriteFactory> _dWriteFactory;
@@ -61,7 +91,7 @@ public:
 
 		wstringstream ss;
 		ss << L"SOFTWARE\\" << CompanyName << L"\\" << ::AppName;
-		RegKeyPath = ss.get();
+		_regKeyPath = ss.get();
 
 		hr = device->QueryInterface(IID_PPV_ARGS(&_d3dDevice)); ThrowIfFailed(hr);
 
@@ -85,6 +115,8 @@ public:
 		*/
 	}
 
+	virtual const wchar_t* GetRegKeyPath() const override final { return _regKeyPath.c_str(); }
+
 	virtual ID3D11DeviceContext1* GetD3DDeviceContext() const override final { return _d3dDeviceContext; }
 
 	virtual IDWriteFactory* GetDWriteFactory() const override final { return _dWriteFactory; }
@@ -103,18 +135,10 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 	int processExitValue;
 
 	{
-		auto onClosing = [](void* callbackArg, IProjectWindow* pw, bool* cancel)
-		{
-			pw->SaveWindowLocation(RegKeyPath.c_str());
-			::PostQuitMessage(0);
-		};
-
 		//auto actionList = actionListFactory();
 		auto selection = selectionFactory();
 		auto project = projectFactory();//move(actionList));
-		auto projectWindow = projectWindowFactory(project, hInstance, L"APPLICATION_RIBBON", selection, editAreaFactory);
-		projectWindow->ShowAtSavedWindowLocation(RegKeyPath.c_str());
-		projectWindow->GetProjectWindowClosingEvent().AddHandler(onClosing, nullptr);
+		auto projectWindow = projectWindowFactory(project, hInstance, L"APPLICATION_RIBBON", selection, editAreaFactory, nCmdShow);
 		
 		MSG msg;
 		while (GetMessage(&msg, nullptr, 0, 0))

@@ -10,11 +10,11 @@ using namespace std;
 
 static ATOM wndClassAtom;
 static constexpr wchar_t ProjectWindowWndClassName[] = L"ProjectWindow-{24B42526-2970-4B3C-A753-2DABD22C4BB0}";
-static constexpr wchar_t RegValueNameWindowState[] = L"WindowState";
-static constexpr wchar_t RegValueNameWindowLeft[] = L"WindowLeft";
-static constexpr wchar_t RegValueNameWindowTop[] = L"WindowTop";
-static constexpr wchar_t RegValueNameWindowRight[] = L"WindowRight";
-static constexpr wchar_t RegValueNameWindowBottom[] = L"WindowBottom";
+static constexpr wchar_t RegValueNameShowCmd[] = L"WindowShowCmd";
+static constexpr wchar_t RegValueNameWindowX[] = L"WindowX";
+static constexpr wchar_t RegValueNameWindowY[] = L"WindowY";
+static constexpr wchar_t RegValueNameWindowWidth[] = L"WindowWidth";
+static constexpr wchar_t RegValueNameWindowHeight[] = L"WindowHeight";
 
 class ProjectWindow : public IProjectWindow, IUIApplication
 {
@@ -22,7 +22,7 @@ class ProjectWindow : public IProjectWindow, IUIApplication
 	ComPtr<IProject> const _project;
 	ComPtr<ISelection> const _selection;
 	ComPtr<IEditArea> _editArea;
-	ComPtr<ISidePanel> _logPanel;
+	ComPtr<IDockPanel> _dockPanel;
 	ComPtr<ILogArea> _logArea;
 	ComPtr<IUIFramework> _rf;
 	ComPtr<IBridgePropsArea> _bridgePropsArea;
@@ -30,11 +30,12 @@ class ProjectWindow : public IProjectWindow, IUIApplication
 	SIZE _clientSize;
 	EventManager _em;
 	RECT _restoreBounds;
-	unordered_map<UINT32, ComPtr<IUICommandHandler>> _commandHandlers;
+	unordered_map<UINT32, ComPtr<RCHBase>> _commandHandlers;
 	unordered_map<Side, LONG> _panelSizes = { { Side::Left, 400 }, { Side::Top, 400 }, { Side::Right, 400 }, { Side::Bottom, 400 } };
 
 public:
-	ProjectWindow (IProject* project, HINSTANCE rfResourceHInstance, const wchar_t* rfResourceName, ISelection* selection, EditAreaFactory editAreaFactory)
+	ProjectWindow (IProject* project, HINSTANCE rfResourceHInstance, const wchar_t* rfResourceName,
+				   ISelection* selection, EditAreaFactory editAreaFactory, int nCmdShow)
 		: _project(project), _selection(selection)
 	{
 		HINSTANCE hInstance;
@@ -65,36 +66,26 @@ public:
 				throw win32_exception(GetLastError());
 		}
 
-		int x = 100; //  InitialBounds.left;
-		int y = 100; //  InitialBounds.top;
-		int w = 800; //  InitialBounds.right - InitialBounds.left;
-		int h = 600; //  InitialBounds.bottom - InitialBounds.top;
-		auto hwnd = ::CreateWindowEx(WS_EX_OVERLAPPEDWINDOW, ProjectWindowWndClassName, L"", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, x, y, w, h, nullptr, 0, hInstance, this);
+		int x = CW_USEDEFAULT, y = CW_USEDEFAULT, w = CW_USEDEFAULT, h = CW_USEDEFAULT;
+		TryGetSavedWindowLocation (&x, &y, &w, &h, &nCmdShow);
+		auto hwnd = ::CreateWindow(ProjectWindowWndClassName, L"STP Simulator", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, x, y, w, h, nullptr, 0, hInstance, this);
 		if (hwnd == nullptr)
 			throw win32_exception(GetLastError());
 		assert(hwnd == _hwnd);
-
+		::ShowWindow (hwnd, nCmdShow);
+		
 		if ((rfResourceHInstance != nullptr) && (rfResourceName != nullptr))
 		{
 			auto hr = CoCreateInstance(CLSID_UIRibbonFramework, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&_rf));
 			ThrowIfFailed(hr);
 		}
 
-		_editArea = editAreaFactory (project, this, 333, selection, _rf, { 0, 0, 0, 0 });
-
-		_logPanel = sidePanelFactory (_hwnd, 125, { 0, 0, 0, 0 }, Side::Right);
-		_logPanel->GetSidePanelSplitterDraggingEvent().AddHandler (&OnSidePanelSplitterDragging, this);
-		_logArea = logAreaFactory (_logPanel->GetHWnd(), 444, _logPanel->GetClientRect());
-
-		//_bridgePropsArea = bridgePropsAreaFactory (_hwnd, 321, { 100, 100, 300, 300 });
-
-		LONG ribbonHeight = 0;
+		UINT32 ribbonHeight = 0;
 		if ((rfResourceHInstance != nullptr) && (rfResourceName != nullptr))
 		{
-			const RCHDeps deps = { this, _rf, _project, _editArea, _selection };
 			for (auto& info : GetRCHInfos())
 			{
-				auto handler = info->_factory(deps);
+				auto handler = info->_factory();
 				for (UINT32 command : info->_commands)
 					_commandHandlers.insert ({ command, handler });
 			}
@@ -104,10 +95,22 @@ public:
 
 			ComPtr<IUIRibbon> ribbon;
 			hr = _rf->GetView(0, IID_PPV_ARGS(&ribbon)); ThrowIfFailed(hr);
-			hr = ribbon->GetHeight((UINT32*)&ribbonHeight); ThrowIfFailed(hr);
+			hr = ribbon->GetHeight(&ribbonHeight); ThrowIfFailed(hr);
 		}
 
-		ResizeChildWindows();
+		RECT dockPanelRect = { 0, (LONG) ribbonHeight, _clientSize.cx, _clientSize.cy };
+		_dockPanel = dockPanelFactory (_hwnd, 0xFFFF, dockPanelRect);
+
+		auto logSidePanel = _dockPanel->GetOrCreateSidePanel(Side::Right);
+		_logArea = logAreaFactory (logSidePanel->GetHWnd(), 0xFFFF, logSidePanel->GetContentRect());
+
+		_editArea = editAreaFactory (project, _dockPanel->GetHWnd(), 0xFFFF, selection, _rf, _dockPanel->GetContentRect());
+
+		//_bridgePropsArea = bridgePropsAreaFactory (_hwnd, 0xFFFF, { 100, 100, 300, 300 });
+
+		const RCHDeps rchDeps = { this, _rf, _project, _editArea, _selection };
+		for (auto p : _commandHandlers)
+			p.second->InjectDependencies(rchDeps);
 
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
 	}
@@ -191,8 +194,16 @@ public:
 			return 0;
 		}
 
+		if (msg == WM_CLOSE)
+		{
+			SaveWindowLocation();
+			PostQuitMessage(0);
+			return DefWindowProc(_hwnd, msg, wParam, lParam); // this calls DestroyWindow
+		}
+
 		if (msg == WM_DESTROY)
 		{
+			_dockPanel = nullptr; // destroy it early to avoid doing layout-related processing
 			if (_rf != nullptr)
 				_rf->Destroy();
 			return 0;
@@ -204,7 +215,8 @@ public:
 				::GetWindowRect(_hwnd, &_restoreBounds);
 
 			_clientSize = { LOWORD(lParam), HIWORD(lParam) };
-			ResizeChildWindows();
+			if (_dockPanel != nullptr)
+				ResizeDockPanel();
 
 			return 0;
 		}
@@ -229,114 +241,83 @@ public:
 			return 0;
 		}
 
-		if (msg == WM_CLOSE)
-		{
-			bool cancel = false;
-			ProjectWindowClosingEvent::InvokeHandlers(_em, this, &cancel);
-			if (cancel)
-				return 0;
-
-			return DefWindowProc(_hwnd, msg, wParam, lParam);
-		}
-
 		return DefWindowProc(_hwnd, msg, wParam, lParam);
 	}
 
-	static void OnSidePanelSplitterDragging (void* callbackArg, ISidePanel* lp, SIZE offset)
+	void ResizeDockPanel()
 	{
-		auto pw = static_cast<ProjectWindow*>(callbackArg);
-		if (lp->GetSide() == Side::Right)
-		{
-			pw->_panelSizes.at(Side::Right) -= offset.cx;
-		}
-		else
-			throw not_implemented_exception();
+		int x = 0, y = 0, w = _clientSize.cx, h = _clientSize.cy;
 
-		pw->ResizeChildWindows();
-	}
-
-	void ResizeChildWindows()
-	{
-		LONG ribbonHeight = 0;
 		if (_rf != nullptr)
 		{
 			ComPtr<IUIRibbon> ribbon;
 			auto hr = _rf->GetView(0, IID_PPV_ARGS(&ribbon)); ThrowIfFailed(hr);
-			hr = ribbon->GetHeight((UINT32*)&ribbonHeight); ThrowIfFailed(hr);
+
+			UINT32 ribbonHeight;
+			hr = ribbon->GetHeight(&ribbonHeight); ThrowIfFailed(hr);
+
+			y += ribbonHeight;
+			h -= ribbonHeight;
 		}
 
-		RECT middleRect = { 0, ribbonHeight, _clientSize.cx, _clientSize.cy };
-
-		if (_logPanel != nullptr)
-		{
-			assert (_logPanel->GetSide() == Side::Right);
-			auto panelWidth = _panelSizes.at(Side::Right);
-			::MoveWindow (_logPanel->GetHWnd(), middleRect.right - panelWidth, middleRect.top, panelWidth, middleRect.bottom - middleRect.top, TRUE);
-			middleRect.right -= panelWidth;
-		}
-
-		if (_editArea != nullptr)
-			::MoveWindow(_editArea->GetHWnd(), middleRect.left, middleRect.top, middleRect.right - middleRect.left, middleRect.bottom - middleRect.top, TRUE);
+		::MoveWindow (_dockPanel->GetHWnd(), x, y, w, h, TRUE);
 	}
 
-	virtual void ShowAtSavedWindowLocation(const wchar_t* regKeyPath) override final
+	static bool TryGetSavedWindowLocation (int* xOut, int* yOut, int* wOut, int* hOut, int* nCmdShowOut)
 	{
-		auto ReadDword = [regKeyPath](const wchar_t* valueName, DWORD* valueOut) -> bool
+		auto ReadDword = [](const wchar_t* valueName, DWORD* valueOut) -> bool
 		{
 			DWORD dataSize = 4;
-			auto lresult = RegGetValue(HKEY_CURRENT_USER, regKeyPath, valueName, RRF_RT_REG_DWORD, nullptr, valueOut, &dataSize);
+			auto lresult = RegGetValue(HKEY_CURRENT_USER, App->GetRegKeyPath(), valueName, RRF_RT_REG_DWORD, nullptr, valueOut, &dataSize);
 			return lresult == ERROR_SUCCESS;
 		};
 
-		DWORD windowState;
-		if (ReadDword(RegValueNameWindowState, &windowState)
-			&& ReadDword(RegValueNameWindowLeft, (DWORD*)&_restoreBounds.left)
-			&& ReadDword(RegValueNameWindowTop, (DWORD*)&_restoreBounds.top)
-			&& ReadDword(RegValueNameWindowRight, (DWORD*)&_restoreBounds.right)
-			&& ReadDword(RegValueNameWindowBottom, (DWORD*)&_restoreBounds.bottom))
+		int x, y, w, h, showCmd;
+		if (ReadDword(RegValueNameShowCmd, (DWORD*)&showCmd)
+			&& ReadDword(RegValueNameWindowX, (DWORD*)&x)
+			&& ReadDword(RegValueNameWindowY, (DWORD*)&y)
+			&& ReadDword(RegValueNameWindowWidth, (DWORD*)&w)
+			&& ReadDword(RegValueNameWindowHeight, (DWORD*)&h))
 		{
-			::SetWindowPos(GetHWnd(), nullptr,
-				_restoreBounds.left,
-				_restoreBounds.top,
-				_restoreBounds.right - _restoreBounds.left,
-				_restoreBounds.bottom - _restoreBounds.top,
-				SWP_HIDEWINDOW);
-
-			::ShowWindow(GetHWnd(), windowState);
+			*xOut = x;
+			*yOut = y;
+			*wOut = w;
+			*hOut = h;
+			*nCmdShowOut = showCmd;
+			return true;
 		}
 		else
-			::ShowWindow(GetHWnd(), SW_SHOWMAXIMIZED);
+			return false;
 	}
 
-	virtual void SaveWindowLocation(const wchar_t* regKeyPath) const override final
+	void SaveWindowLocation() const
 	{
 		WINDOWPLACEMENT wp = { sizeof(WINDOWPLACEMENT) };
 		BOOL bRes = GetWindowPlacement(GetHWnd(), &wp);
 		if (bRes && ((wp.showCmd == SW_NORMAL) || (wp.showCmd == SW_MAXIMIZE)))
 		{
 			HKEY key;
-			auto lstatus = RegCreateKeyEx(HKEY_CURRENT_USER, regKeyPath, 0, NULL, 0, KEY_WRITE, NULL, &key, NULL);
+			auto lstatus = RegCreateKeyEx(HKEY_CURRENT_USER, App->GetRegKeyPath(), 0, NULL, 0, KEY_WRITE, NULL, &key, NULL);
 			if (lstatus == ERROR_SUCCESS)
 			{
-				RegSetValueEx(key, RegValueNameWindowLeft, 0, REG_DWORD, (BYTE*)&_restoreBounds.left, 4);
-				RegSetValueEx(key, RegValueNameWindowTop, 0, REG_DWORD, (BYTE*)&_restoreBounds.top, 4);
-				RegSetValueEx(key, RegValueNameWindowRight, 0, REG_DWORD, (BYTE*)&_restoreBounds.right, 4);
-				RegSetValueEx(key, RegValueNameWindowBottom, 0, REG_DWORD, (BYTE*)&_restoreBounds.bottom, 4);
-				RegSetValueEx(key, RegValueNameWindowState, 0, REG_DWORD, (BYTE*)&wp.showCmd, 4);
+				int w = _restoreBounds.right - _restoreBounds.left;
+				int h = _restoreBounds.bottom - _restoreBounds.top;
+				RegSetValueEx(key, RegValueNameWindowX, 0, REG_DWORD, (BYTE*)&_restoreBounds.left, 4);
+				RegSetValueEx(key, RegValueNameWindowY, 0, REG_DWORD, (BYTE*)&_restoreBounds.top, 4);
+				RegSetValueEx(key, RegValueNameWindowWidth, 0, REG_DWORD, (BYTE*)&w, 4);
+				RegSetValueEx(key, RegValueNameWindowHeight, 0, REG_DWORD, (BYTE*)&h, 4);
+				RegSetValueEx(key, RegValueNameShowCmd, 0, REG_DWORD, (BYTE*)&wp.showCmd, 4);
 				RegCloseKey(key);
 			}
 		}
 	}
 
-	virtual ProjectWindowClosingEvent::Subscriber GetProjectWindowClosingEvent() override final { return ProjectWindowClosingEvent::Subscriber(_em); }
-
 	virtual unsigned int GetSelectedTreeIndex() const override final { return 0; }
 
 	virtual SelectedTreeIndexChangedEvent::Subscriber GetSelectedTreeIndexChangedEvent() override final { return SelectedTreeIndexChangedEvent::Subscriber(_em); }
-
-	std::optional<LRESULT> ProcessWmClose()
+	/*
+	LRESULT ProcessWmClose()
 	{
-		/*
 		auto& allWindowsForProject = _project->GetProjectWindows();
 
 		rassert (!allWindowsForProject.empty());
@@ -351,19 +332,13 @@ public:
 		bool continueClosing = SaveProject (_project->GetFilePath(), true, SaveProjectOption::SaveIfChangedAskUserFirst, L"Save changes?");
 		if (!continueClosing)
 		return;
-		*/
-		/*
+
 		// Copy some pointers from "this" to the stack cause destroying the project window might release the last reference to it and destroy this object.
 		IEditorProject* project = _project;
 		IEditorApplication* app = _app;
 
 		_project->RemoveAndDestroyProjectWindow (this);
-		*/
 
-		if (_rf != nullptr)
-			_rf->Destroy();
-		::DestroyWindow(_hwnd);
-		PostQuitMessage(0);
 		//if (project->GetProjectWindows().empty())
 		//{
 		//	app->CloseProject (project);
@@ -371,11 +346,12 @@ public:
 		//		PostQuitMessage (0);
 		//}
 	}
-
+	*/
 	#pragma region IUIApplication
 	virtual HRESULT STDMETHODCALLTYPE OnViewChanged(UINT32 viewId, UI_VIEWTYPE typeID, IUnknown *view, UI_VIEWVERB verb, INT32 uReasonCode) override final
 	{
-		ResizeChildWindows();
+		if (_dockPanel != nullptr)
+			ResizeDockPanel();
 		return S_OK;
 	}
 

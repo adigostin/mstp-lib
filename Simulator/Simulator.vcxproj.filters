@@ -153,6 +153,7 @@
     <ClCompile Include="UtilityFunctions.cpp" />
     <ClCompile Include="BridgePropertiesArea.cpp" />
     <ClCompile Include="SidePanel.cpp" />
+    <ClCompile Include="DockPanel.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc">

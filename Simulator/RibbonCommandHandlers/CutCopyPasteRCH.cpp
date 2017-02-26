@@ -7,8 +7,6 @@ class CutCopyPasteRCH : public RCHBase
 {
 	typedef RCHBase base;
 
-	using base::base;
-
 	virtual HRESULT __stdcall Execute(UINT32 commandId, UI_EXECUTIONVERB verb, const PROPERTYKEY *key, const PROPVARIANT *currentValue, IUISimplePropertySet *commandExecutionProperties) override final
 	{
 		return E_NOTIMPL;
@@ -26,6 +24,4 @@ class CutCopyPasteRCH : public RCHBase
 	virtual const RCHInfo& GetInfo() const override final { return _info; }
 };
 
-const RCHInfo CutCopyPasteRCH::_info (
-{ cmdCut, cmdCopy, cmdPaste },
-[](const RCHDeps& deps) { return ComPtr<IUICommandHandler>(new CutCopyPasteRCH(deps), false); });
+const RCHInfo CutCopyPasteRCH::_info ({ cmdCut, cmdCopy, cmdPaste }, [] { return ComPtr<RCHBase>(new CutCopyPasteRCH(), false); });

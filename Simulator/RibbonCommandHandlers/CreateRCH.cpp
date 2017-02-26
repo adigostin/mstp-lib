@@ -9,8 +9,6 @@ class CreateRCH : public RCHBase
 {
 	typedef RCHBase base;
 
-	using base::base;
-
 	virtual HRESULT __stdcall Execute(UINT32 commandId, UI_EXECUTIONVERB verb, const PROPERTYKEY *key, const PROPVARIANT *currentValue, IUISimplePropertySet *commandExecutionProperties) override final
 	{
 		_area->EnterState (CreateStateCreateBridge(_area->MakeEditStateDeps()));
@@ -26,6 +24,4 @@ class CreateRCH : public RCHBase
 	virtual const RCHInfo& GetInfo() const override final { return _info; }
 };
 
-const RCHInfo CreateRCH::_info (
-	{ cmdCreateBridge, },
-	[](const RCHDeps& deps) { return ComPtr<IUICommandHandler>(new CreateRCH(deps), false); });
+const RCHInfo CreateRCH::_info ({ cmdCreateBridge, }, [] { return ComPtr<RCHBase>(new CreateRCH(), false); });

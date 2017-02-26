@@ -8,8 +8,6 @@ class BridgePropertiesRCH : public RCHBase
 {
 	typedef RCHBase base;
 
-	using base::base;
-
 	virtual HRESULT __stdcall Execute(UINT32 commandId, UI_EXECUTIONVERB verb, const PROPERTYKEY *key, const PROPVARIANT *currentValue, IUISimplePropertySet *commandExecutionProperties) override final
 	{
 		return E_NOTIMPL;
@@ -21,7 +19,7 @@ class BridgePropertiesRCH : public RCHBase
 		{
 			if (key == UI_PKEY_Enabled)
 			{
-				bool enable = (_selection->GetObjects().size() == 1);
+				bool enable = (_selection != nullptr) && (_selection->GetObjects().size() == 1);
 				return UIInitPropertyFromBoolean (key, enable ? TRUE : FALSE, newValue);
 			}
 			else
@@ -43,6 +41,4 @@ class BridgePropertiesRCH : public RCHBase
 	virtual const RCHInfo& GetInfo() const override final { return _info; }
 };
 
-const RCHInfo BridgePropertiesRCH::_info (
-	{ cmdBridgeAddress },
-	[](const RCHDeps& deps) { return ComPtr<IUICommandHandler>(new BridgePropertiesRCH(deps), false); });
+const RCHInfo BridgePropertiesRCH::_info ({ cmdBridgeAddress }, []() { return ComPtr<RCHBase>(new BridgePropertiesRCH(), false); });

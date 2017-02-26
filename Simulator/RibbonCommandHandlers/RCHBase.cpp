@@ -33,9 +33,16 @@ RCHInfo::~RCHInfo()
 	}
 }
 
-RCHBase::RCHBase (const RCHDeps& deps)
-	: _pw(deps.pw), _rf(deps.rf), _project(deps.project), _area(deps.area), _selection(deps.selection)
+// ============================================================================
+
+void RCHBase::InjectDependencies (const RCHDeps& deps)
 {
+	_pw = deps.pw;
+	_rf = deps.rf;
+	_project = deps.project;
+	_area = deps.area;
+	_selection = deps.selection;
+
 	_selection->GetSelectionChangedEvent().AddHandler(&OnSelectionChangedStatic, this);
 	_selection->GetAddedToSelectionEvent().AddHandler(OnAddedToSelection, this);
 	_selection->GetRemovingFromSelectionEvent().AddHandler(OnRemovingFromSelection, this);

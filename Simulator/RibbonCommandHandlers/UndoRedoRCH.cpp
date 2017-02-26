@@ -7,8 +7,6 @@ class UndoRedoRCH : public RCHBase
 {
 	typedef RCHBase base;
 
-	using base::base;
-
 	virtual HRESULT __stdcall Execute(UINT32 commandId, UI_EXECUTIONVERB verb, const PROPERTYKEY *key, const PROPVARIANT *currentValue, IUISimplePropertySet *commandExecutionProperties) override final
 	{
 		return E_NOTIMPL;
@@ -26,6 +24,4 @@ class UndoRedoRCH : public RCHBase
 	virtual const RCHInfo& GetInfo() const override final { return _info; }
 };
 
-const RCHInfo UndoRedoRCH::_info (
-{ cmdUndo, cmdRedo },
-[](const RCHDeps& deps) { return ComPtr<IUICommandHandler>(new UndoRedoRCH(deps), false); });
+const RCHInfo UndoRedoRCH::_info ({ cmdUndo, cmdRedo }, [] { return ComPtr<RCHBase>(new UndoRedoRCH(), false); });

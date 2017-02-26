@@ -8,8 +8,6 @@ class BridgeControlRCH : public RCHBase
 {
 	typedef RCHBase base;
 
-	using base::base;
-
 	virtual HRESULT __stdcall Execute(UINT32 commandId, UI_EXECUTIONVERB verb, const PROPERTYKEY *key, const PROPVARIANT *currentValue, IUISimplePropertySet *commandExecutionProperties) override final
 	{
 		if (verb != UI_EXECUTIONVERB_EXECUTE)
@@ -109,6 +107,4 @@ class BridgeControlRCH : public RCHBase
 	virtual const RCHInfo& GetInfo() const override final { return _info; }
 };
 
-const RCHInfo BridgeControlRCH::_info (
-	{ cmdEnableSTP, cmdDisableSTP },
-	[](const RCHDeps& deps) { return ComPtr<IUICommandHandler>(new BridgeControlRCH(deps), false); });
+const RCHInfo BridgeControlRCH::_info ({ cmdEnableSTP, cmdDisableSTP }, [] { return ComPtr<RCHBase>(new BridgeControlRCH(), false); });

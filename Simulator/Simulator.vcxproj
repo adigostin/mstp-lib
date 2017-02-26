@@ -140,6 +140,7 @@
     <ClCompile Include="Bridge.cpp" />
     <ClCompile Include="BridgePropertiesArea.cpp" />
     <ClCompile Include="D2DWindow.cpp" />
+    <ClCompile Include="DockPanel.cpp" />
     <ClCompile Include="EditArea.cpp" />
     <ClCompile Include="EditStates\CreateBridgeES.cpp" />
     <ClCompile Include="EditStates\CreateWireES.cpp" />

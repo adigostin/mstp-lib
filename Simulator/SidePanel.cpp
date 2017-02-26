@@ -80,6 +80,23 @@ public:
 
 	virtual Side GetSide() const override final { return _side; }
 
+	virtual RECT GetContentRect() const override final
+	{
+		auto rect = GetClientRect();
+		LONG splitterWidthPixels = (LONG) (SplitterWidthDips * _dpiX / 96.0);
+		switch (_side)
+		{
+			case Side::Right:
+				rect.left += splitterWidthPixels;
+				break;
+
+			default:
+				throw not_implemented_exception();
+		}
+
+		return rect;
+	}
+
 	RECT GetSplitterRect()
 	{
 		if (_side == Side::Right)
@@ -130,7 +147,11 @@ public:
 		{
 			LONG titleBarHeightPixels = (LONG) (TitleBarHeightDips * _dpiY / 96.0);
 			LONG splitterWidthPixels  = (LONG) (SplitterWidthDips * _dpiX / 96.0);
-			MoveWindow (contentHWnd, splitterWidthPixels, titleBarHeightPixels, _clientSize.cx - splitterWidthPixels, _clientSize.cy - titleBarHeightPixels, TRUE);
+			int x = splitterWidthPixels;
+			int y = titleBarHeightPixels;
+			int w = _clientSize.cx - splitterWidthPixels;
+			int h = _clientSize.cy - titleBarHeightPixels;
+			MoveWindow (contentHWnd, x, y, w, h, TRUE);
 		}
 	}
 
@@ -342,7 +363,14 @@ public:
 		else if (_draggingSplitter)
 		{
 			SIZE offset = { pt.x - _draggingSplitterLastMouseLocation.x, pt.y - _draggingSplitterLastMouseLocation.y };
-			SidePanelSplitterDragging::InvokeHandlers (_em, this, offset);
+
+			SIZE proposedSize;
+			if (_side == Side::Right)
+				proposedSize = { _clientSize.cx - offset.cx, _clientSize.cy };
+			else
+				throw not_implemented_exception();
+
+			SidePanelSplitterDragging::InvokeHandlers(_em, this, proposedSize);
 		}
 	}
 

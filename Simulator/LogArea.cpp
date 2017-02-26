@@ -24,7 +24,7 @@ class LogArea : public D2DWindow, public ILogArea
 	int _animationEndLineCount = 0;
 	UINT _animationScrollFramesRemaining = 0;
 	int _topLineIndex = 0;
-	int _numberOfLinesFitting = 10;
+	int _numberOfLinesFitting = 0;
 	static constexpr UINT AnimationDurationMilliseconds = 75;
 	static constexpr UINT AnimationScrollFramesMax = 10;
 
@@ -36,6 +36,8 @@ public:
 		auto hr = App->GetDWriteFactory()->CreateTextFormat (L"Consolas", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
 			DWRITE_FONT_STRETCH_NORMAL, 11, L"en-US", &_textFormat); ThrowIfFailed(hr);
 
+		_numberOfLinesFitting = CalcNumberOfLinesFitting (_textFormat, GetClientSizeDips().height);
+
 		GetDeviceContext()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOW), &_windowBrush);
 		GetDeviceContext()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOWTEXT), &_windowTextBrush);
 	}
@@ -44,6 +46,11 @@ public:
 	{
 		if (_bridge != nullptr)
 			_bridge->GetBridgeLogLineGeneratedEvent().RemoveHandler (OnLogLineGeneratedStatic, this);
+	}
+
+	virtual HWND GetHWnd() const override final
+	{
+		return this->D2DWindow::GetHWnd();
 	}
 
 	virtual void Render(ID2D1DeviceContext* dc) const override final
@@ -270,6 +277,16 @@ public:
 		}
 	}
 
+	static size_t CalcNumberOfLinesFitting (IDWriteTextFormat* textFormat, float clientHeightDips)
+	{
+		ComPtr<IDWriteTextLayout> tl;
+		auto hr = App->GetDWriteFactory()->CreateTextLayout (L"A", 1, textFormat, 1000, 1000, &tl); ThrowIfFailed(hr);
+		DWRITE_TEXT_METRICS metrics;
+		hr = tl->GetMetrics(&metrics);
+		size_t numberOfLinesFitting = (size_t) floor(clientHeightDips / metrics.height);
+		return numberOfLinesFitting;
+	}
+
 	void ProcessWmSize (WPARAM wParam, LPARAM lParam)
 	{
 		bool isLastLineVisible = (_topLineIndex + _numberOfLinesFitting >= _animationCurrentLineCount);
@@ -286,12 +303,7 @@ public:
 				_topLineIndex = 0;
 		}
 
-		ComPtr<IDWriteTextLayout> tl;
-		auto hr = App->GetDWriteFactory()->CreateTextLayout (L"A", 1, _textFormat, 1000, 1000, &tl); ThrowIfFailed(hr);
-		DWRITE_TEXT_METRICS metrics;
-		hr = tl->GetMetrics(&metrics);
-		size_t newNumberOfLinesFitting = (size_t) floor(GetClientSizeDips().height / metrics.height);
-		
+		size_t newNumberOfLinesFitting = CalcNumberOfLinesFitting (_textFormat, GetClientSizeDips().height);		
 		if (_numberOfLinesFitting != newNumberOfLinesFitting)
 		{
 			_numberOfLinesFitting = newNumberOfLinesFitting;

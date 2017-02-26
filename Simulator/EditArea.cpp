@@ -16,7 +16,6 @@ class EditArea : public ZoomableWindow, public IEditArea
 	typedef ZoomableWindow base;
 
 	ULONG _refCount = 1;
-	IProjectWindow* const _pw;
 	IUIFramework* const _rf;
 	ComPtr<ISelection> const _selection;
 	ComPtr<IProject> const _project;
@@ -38,10 +37,10 @@ class EditArea : public ZoomableWindow, public IEditArea
 	optional<BeginningDrag> _beginningDrag;
 
 public:
-	EditArea(IProject* project, IProjectWindow* pw, DWORD controlId, ISelection* selection, IUIFramework* rf, const RECT& rect)
-		: base (WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, pw->GetHWnd(), controlId,
+	EditArea(IProject* project, HWND hWndParent, DWORD controlId, ISelection* selection, IUIFramework* rf, const RECT& rect)
+		: base (WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, hWndParent, controlId,
 				App->GetD3DDeviceContext(), App->GetDWriteFactory(), App->GetWicFactory())
-		, _project(project), _pw(pw), _rf(rf), _selection(selection)
+		, _project(project), _rf(rf), _selection(selection)
 	{
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
 		_project->GetObjectRemovingEvent().AddHandler (&OnObjectRemoving, this);

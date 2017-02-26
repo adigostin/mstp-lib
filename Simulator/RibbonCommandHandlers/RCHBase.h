@@ -11,7 +11,8 @@ struct RCHDeps
 	ISelection* selection;
 };
 
-typedef ComPtr<IUICommandHandler> (*RCHFactory)(const RCHDeps& deps);
+class RCHBase;
+typedef ComPtr<RCHBase> (*RCHFactory)();
 
 struct RCHInfo
 {
@@ -29,19 +30,21 @@ class RCHBase abstract : public IUICommandHandler
 	ULONG _refCount = 1;
 
 protected:
-	IProjectWindow* const _pw;
-	IEditArea* const _area;
-	IUIFramework* const _rf;
-	ComPtr<IProject> const _project;
-	ComPtr<ISelection> const _selection;
+	IProjectWindow* _pw;
+	IEditArea* _area;
+	IUIFramework* _rf;
+	ComPtr<IProject> _project;
+	ComPtr<ISelection> _selection;
 
 public:
-	RCHBase (const RCHDeps& deps);
-protected:
-	virtual ~RCHBase();
+	void InjectDependencies (const RCHDeps& deps);
+
 	virtual HRESULT __stdcall QueryInterface(REFIID riid, void **ppvObject) override final;
 	virtual ULONG __stdcall AddRef() override final;
 	virtual ULONG __stdcall Release() override final;
+
+protected:
+	virtual ~RCHBase();
 
 	virtual const RCHInfo& GetInfo() const = 0;
 	virtual void OnAddedToSelection (Object* o) { }
