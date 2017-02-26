@@ -64,6 +64,9 @@ public:
 
 	Result DialogProc (UINT msg, WPARAM wParam , LPARAM lParam)
 	{
+		if (msg == WM_CTLCOLORDLG)
+			return { reinterpret_cast<INT_PTR>(GetSysColorBrush(COLOR_WINDOW)), 0 };
+
 		return { FALSE, 0 };
 	}
 
