@@ -15,6 +15,7 @@ public:
 	{
 		auto hwnd = CreateDialogParamW (nullptr, MAKEINTRESOURCE(IDD_DIALOG_BRIDGE_PROPS), hWndParent, DialogProcStatic, (LPARAM)this);
 		assert (hwnd == _hwnd);
+		::MoveWindow (_hwnd, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE);
 	}
 
 	~BridgePropsArea()
@@ -23,6 +24,12 @@ public:
 		if (_hwnd != nullptr)
 			::DestroyWindow (_hwnd);
 	}
+
+	struct Result
+	{
+		INT_PTR dialogProcResult;
+		LRESULT messageResult;
+	};
 
 	static INT_PTR CALLBACK DialogProcStatic (HWND hwnd, UINT uMsg, WPARAM wParam , LPARAM lParam)
 	{
@@ -43,7 +50,7 @@ public:
 			return DefWindowProc (hwnd, uMsg, wParam, lParam);
 		}
 
-		auto result = window->DialogProc (uMsg, wParam, lParam);
+		Result result = window->DialogProc (uMsg, wParam, lParam);
 
 		if (uMsg == WM_NCDESTROY)
 		{
@@ -51,14 +58,13 @@ public:
 			SetWindowLongPtr (hwnd, GWLP_USERDATA, 0);
 		}
 
-		if (result)
-			return result.value();
+		::SetWindowLong (hwnd, DWL_MSGRESULT, result.messageResult);
+		return result.dialogProcResult;
+	}
 
-		return ::DefWindowProc(hwnd, uMsg, wParam, lParam);	}
-
-	optional<LRESULT> DialogProc (UINT msg, WPARAM wParam , LPARAM lParam)
+	Result DialogProc (UINT msg, WPARAM wParam , LPARAM lParam)
 	{
-		return nullopt;
+		return { FALSE, 0 };
 	}
 
 	virtual HWND GetHWnd() const override final { return _hwnd; }

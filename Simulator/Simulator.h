@@ -65,19 +65,23 @@ extern const SelectionFactory selectionFactory;
 
 // ============================================================================
 
-struct IDockContainer abstract : public IWin32Window
+struct IDockContainer abstract
 {
+	virtual ~IDockContainer() { }
+	virtual HWND GetHWnd() const = 0;
 	virtual RECT GetContentRect() const = 0;
 	virtual IDockablePanel* GetOrCreateDockablePanel(Side side, const wchar_t* title) = 0;
 };
 
-using DockContainerFactory = ComPtr<IDockContainer>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect);
+using DockContainerFactory = std::unique_ptr<IDockContainer>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect);
 extern const DockContainerFactory dockPanelFactory;
 
 // ============================================================================
 
-struct IDockablePanel abstract : public IUnknown
+struct IDockablePanel abstract
 {
+	virtual ~IDockablePanel() { }
+
 	struct CloseButtonClicked : public Event<CloseButtonClicked, void(IDockablePanel* panel)> {};
 	struct SplitterDragging : public Event<SplitterDragging, void(IDockablePanel* panel, SIZE proposedSize)> {};
 	struct SplitterDragComplete : public Event<SplitterDragComplete, void(IDockablePanel* panel)> {};
@@ -98,7 +102,7 @@ struct IDockablePanel abstract : public IUnknown
 	}
 };
 
-using DockablePanelFactory = ComPtr<IDockablePanel>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect, Side side, const wchar_t* title);
+using DockablePanelFactory = std::unique_ptr<IDockablePanel>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect, Side side, const wchar_t* title);
 extern const DockablePanelFactory dockablePanelFactory;
 
 // ============================================================================

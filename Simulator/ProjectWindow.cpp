@@ -22,7 +22,7 @@ class ProjectWindow : public IProjectWindow, IUIApplication
 	ComPtr<IProject> const _project;
 	ComPtr<ISelection> const _selection;
 	ComPtr<IEditArea> _editArea;
-	ComPtr<IDockContainer> _dockContainer;
+	unique_ptr<IDockContainer> _dockContainer;
 	ComPtr<ILogArea> _logArea;
 	ComPtr<IUIFramework> _rf;
 	ComPtr<IBridgePropsArea> _bridgePropsArea;
@@ -113,9 +113,8 @@ public:
 		auto logPanel = _dockContainer->GetOrCreateDockablePanel(Side::Right, L"STP Log");
 		_logArea = logAreaFactory (logPanel->GetHWnd(), 0xFFFF, logPanel->GetContentRect());
 
-		auto propsDockablePanel = _dockContainer->GetOrCreateDockablePanel(Side::Left, L"Properties");
-		//_bridgePropsArea = bridgePropsAreaFactory (_hwnd, 0xFFFF, { 100, 100, 300, 300 });
-
+		auto propsPanel = _dockContainer->GetOrCreateDockablePanel(Side::Left, L"Properties");
+		_bridgePropsArea = bridgePropsAreaFactory (propsPanel->GetHWnd(), 0xFFFF, propsPanel->GetContentRect());
 
 		_editArea = editAreaFactory (project, this, selection, _rf, _dockContainer->GetHWnd(), _dockContainer->GetContentRect());
 

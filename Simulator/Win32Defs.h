@@ -20,6 +20,12 @@ inline void ThrowIfFailed(HRESULT hr)
 		throw com_exception(hr);
 }
 
+inline void ThrowWin32IfFailed(BOOL bRes)
+{
+	if (!bRes)
+		throw win32_exception(GetLastError());
+}
+
 class not_implemented_exception : public std::exception
 {
 public:

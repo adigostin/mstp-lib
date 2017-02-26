@@ -13,7 +13,6 @@ static const int SplitterWidthDips = 4;
 
 class DockablePanel : public IDockablePanel
 {
-	ULONG _refCount = 1;
 	Side _side;
 	HWND _hwnd;
 	SIZE _clientSize;
@@ -149,11 +148,13 @@ public:
 		{
 			LONG titleBarHeightPixels = (LONG) (TitleBarHeightDips * _dpiY / 96.0);
 			LONG splitterWidthPixels  = (LONG) (SplitterWidthDips * _dpiX / 96.0);
-			int x = splitterWidthPixels;
-			int y = titleBarHeightPixels;
-			int w = _clientSize.cx - splitterWidthPixels;
-			int h = _clientSize.cy - titleBarHeightPixels;
-			MoveWindow (contentHWnd, x, y, w, h, TRUE);
+
+			if (_side == Side::Left)
+				::MoveWindow (contentHWnd, 0, titleBarHeightPixels, _clientSize.cx - splitterWidthPixels, _clientSize.cy - titleBarHeightPixels, TRUE);
+			else if (_side == Side::Right)
+				::MoveWindow (contentHWnd, splitterWidthPixels, titleBarHeightPixels, _clientSize.cx - splitterWidthPixels, _clientSize.cy - titleBarHeightPixels, TRUE);
+			else
+				throw not_implemented_exception();
 		}
 	}
 
@@ -389,23 +390,6 @@ public:
 	virtual CloseButtonClicked::Subscriber GetCloseButtonClickedEvent() override final { return CloseButtonClicked::Subscriber(_em); }
 
 	virtual SplitterDragging::Subscriber GetSplitterDraggingEvent() override final { return SplitterDragging::Subscriber(_em); }
-
-	#pragma region IUnknown
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final { return E_NOTIMPL; }
-
-	virtual ULONG STDMETHODCALLTYPE AddRef() override final
-	{
-		return InterlockedIncrement(&_refCount);
-	}
-
-	virtual ULONG STDMETHODCALLTYPE Release() override final
-	{
-		auto newRefCount = InterlockedDecrement(&_refCount);
-		if (newRefCount == 0)
-			delete this;
-		return newRefCount;
-	}
-	#pragma endregion
 };
 
-extern const DockablePanelFactory dockablePanelFactory = [](auto... params) { return ComPtr<IDockablePanel>(new DockablePanel(params...), false); };
+extern const DockablePanelFactory dockablePanelFactory = [](auto... params) { return unique_ptr<IDockablePanel>(new DockablePanel(params...)); };

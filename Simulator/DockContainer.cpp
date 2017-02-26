@@ -9,10 +9,9 @@ static constexpr wchar_t DockContainerClassName[] = L"DockContainer-{24B42526-29
 
 class DockContainer : public IDockContainer
 {
-	ULONG _refCount = 1;
 	EventManager _em;
 	HWND _hwnd = nullptr;
-	vector<ComPtr<IDockablePanel>> _dockablePanels;
+	vector<unique_ptr<IDockablePanel>> _dockablePanels;
 
 public:
 	DockContainer(HWND hWndParent, DWORD controlId, const RECT& rect)
@@ -55,7 +54,6 @@ public:
 
 	~DockContainer()
 	{
-		assert(_refCount == 0);
 		if (_hwnd != nullptr)
 			::DestroyWindow(_hwnd);
 	}
@@ -75,8 +73,6 @@ public:
 			window = reinterpret_cast<DockContainer*>(lpcs->lpCreateParams);
 			window->_hwnd = hwnd;
 			SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(window));
-			// GDI now holds a pointer to this object, so let's call AddRef.
-			window->AddRef();
 		}
 		else
 			window = reinterpret_cast<DockContainer*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
@@ -93,7 +89,6 @@ public:
 		{
 			window->_hwnd = nullptr;
 			SetWindowLongPtr(hwnd, GWLP_USERDATA, 0);
-			window->Release(); // Release the reference we added on WM_NCCREATE.
 		}
 
 		return result;
@@ -156,14 +151,15 @@ public:
 
 	RECT LayOutPanels (function<SIZE(IDockablePanel*)> getProposedSize, function<void(IDockablePanel* sp, const RECT& panelRect)> fn) const
 	{
-		RECT contentRect = GetClientRect();
+		RECT contentRect;
+		BOOL bRes = ::GetClientRect(_hwnd, &contentRect); ThrowWin32IfFailed(bRes);
 
-		for (auto& sp : _dockablePanels)
+		for (auto& panel : _dockablePanels)
 		{
-			SIZE proposedSize = (getProposedSize != nullptr) ? getProposedSize(sp) : (proposedSize = sp->GetWindowSize());
-			RECT panelRect = LayOutPanel (sp->GetSide(), proposedSize, &contentRect);
+			SIZE proposedSize = (getProposedSize != nullptr) ? getProposedSize(panel.get()) : (proposedSize = panel->GetWindowSize());
+			RECT panelRect = LayOutPanel (panel->GetSide(), proposedSize, &contentRect);
 			if (fn != nullptr)
-				fn (sp, panelRect);
+				fn (panel.get(), panelRect);
 		}
 
 		return contentRect;
@@ -173,7 +169,7 @@ public:
 	{
 		auto isContentHWnd = [this](HWND c)
 		{
-			return none_of(_dockablePanels.begin(), _dockablePanels.end(), [c](const ComPtr<IDockablePanel>& sp) { return sp->GetHWnd() == c; });
+			return none_of(_dockablePanels.begin(), _dockablePanels.end(), [c](const unique_ptr<IDockablePanel>& sp) { return sp->GetHWnd() == c; });
 		};
 
 		auto content = FindChild(isContentHWnd);
@@ -188,9 +184,9 @@ public:
 
 	virtual IDockablePanel* GetOrCreateDockablePanel(Side side, const wchar_t* title) override final
 	{
-		auto it = find_if(_dockablePanels.begin(), _dockablePanels.end(), [side](const ComPtr<IDockablePanel>& p) { return p->GetSide() == side; });
+		auto it = find_if(_dockablePanels.begin(), _dockablePanels.end(), [side](const unique_ptr<IDockablePanel>& p) { return p->GetSide() == side; });
 		if (it != _dockablePanels.end())
-			return it->Get();
+			return it->get();
 
 		static constexpr SIZE DefaultPanelSize = { 300, 300 };
 		auto contentRect = LayOutPanels(nullptr, nullptr);
@@ -200,8 +196,9 @@ public:
 
 		auto panel = dockablePanelFactory(_hwnd, 0xFFFF, panelRect, side, title);
 		panel->GetSplitterDraggingEvent().AddHandler (&OnSidePanelSplitterDragging, this);
-		_dockablePanels.push_back(panel);
-		return panel;
+		auto result = panel.get();
+		_dockablePanels.push_back(move(panel));
+		return result;
 	}
 	
 	static void OnSidePanelSplitterDragging (void* callbackArg, IDockablePanel* panel, SIZE proposedSize)
@@ -210,28 +207,15 @@ public:
 
 		auto getProposedSize = [panel, proposedSize](IDockablePanel* p) { return (p != panel) ? p->GetWindowSize() : proposedSize; };
 		auto layOutFunction = [](IDockablePanel* sp, const RECT& rect)
-			{ ::MoveWindow(sp->GetHWnd(), rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE); };
+		{
+			::MoveWindow(sp->GetHWnd(), rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE);
+			RECT rc;
+			::GetWindowRect (sp->GetHWnd(), &rc);
+		};
 
 		auto contentRect = container->LayOutPanels(getProposedSize, layOutFunction);
 		container->LayOutContent(contentRect);
 	}
-
-	#pragma region IUnknown
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final { return E_NOTIMPL; }
-
-	virtual ULONG STDMETHODCALLTYPE AddRef() override final
-	{
-		return InterlockedIncrement(&_refCount);
-	}
-
-	virtual ULONG STDMETHODCALLTYPE Release() override final
-	{
-		auto newRefCount = InterlockedDecrement(&_refCount);
-		if (newRefCount == 0)
-			delete this;
-		return newRefCount;
-	}
-	#pragma endregion
 };
 
-extern const DockContainerFactory dockPanelFactory = [](auto... params) { return ComPtr<IDockContainer>(new DockContainer(params...), false); };
+extern const DockContainerFactory dockPanelFactory = [](auto... params) { return unique_ptr<IDockContainer>(new DockContainer(params...)); };
