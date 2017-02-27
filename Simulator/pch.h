@@ -53,5 +53,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <variant>
+#include <VersionHelpers.h>
 #include <wincodec.h>
 #include "Win32Defs.h"

@@ -66,32 +66,37 @@ public:
 				throw win32_exception(GetLastError());
 		}
 
-		bool read = TryGetSavedWindowLocation (&_restoreBounds, &nCmdShow);
 		int x = CW_USEDEFAULT, y = CW_USEDEFAULT, w = CW_USEDEFAULT, h = CW_USEDEFAULT;
-		if (read)
+		if (TryGetSavedWindowLocation(&_restoreBounds, &nCmdShow))
 		{
-			x = _restoreBounds.left;
-			y = _restoreBounds.top;
-			w = _restoreBounds.right - _restoreBounds.left;
-			h = _restoreBounds.bottom - _restoreBounds.top;
+			RECT desktopRect;
+			::GetWindowRect (::GetDesktopWindow(), &desktopRect);
+
+			auto rgn = ::CreateRectRgn(desktopRect.left, desktopRect.top, desktopRect.right, desktopRect.bottom);
+			BOOL visible = ::RectInRegion(rgn, &_restoreBounds);
+			::DeleteObject(rgn);
+
+			if (visible)
+			{
+				x = _restoreBounds.left;
+				y = _restoreBounds.top;
+				w = _restoreBounds.right - _restoreBounds.left;
+				h = _restoreBounds.bottom - _restoreBounds.top;
+			}
 		}
 		auto hwnd = ::CreateWindow(ProjectWindowWndClassName, L"STP Simulator", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, x, y, w, h, nullptr, 0, hInstance, this);
 		if (hwnd == nullptr)
 			throw win32_exception(GetLastError());
 		assert(hwnd == _hwnd);
-		if (!read)
+		if ((x == CW_USEDEFAULT) && (y == CW_USEDEFAULT))
 			::GetWindowRect(_hwnd, &_restoreBounds);
 		::ShowWindow (_hwnd, nCmdShow);
-		
-		if ((rfResourceHInstance != nullptr) && (rfResourceName != nullptr))
-		{
-			auto hr = CoCreateInstance(CLSID_UIRibbonFramework, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&_rf));
-			ThrowIfFailed(hr);
-		}
 
 		UINT32 ribbonHeight = 0;
 		if ((rfResourceHInstance != nullptr) && (rfResourceName != nullptr))
 		{
+			auto hr = CoCreateInstance(CLSID_UIRibbonFramework, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&_rf)); ThrowIfFailed(hr);
+
 			for (auto& info : GetRCHInfos())
 			{
 				auto handler = info->_factory();
@@ -99,8 +104,17 @@ public:
 					_commandHandlers.insert ({ command, handler });
 			}
 
-			auto hr = _rf->Initialize(hwnd, this); ThrowIfFailed(hr);
+			hr = _rf->Initialize(hwnd, this); ThrowIfFailed(hr);
 			hr = _rf->LoadUI(rfResourceHInstance, rfResourceName); ThrowIfFailed(hr);
+
+			if (!IsWindows8OrGreater())
+			{
+				// Workaround for what seems to be a bug in the ribbon framework on Windows 7:
+				// When ribbon->GetHeight is called right after the window was created (before and window sizing ocurs),
+				// it will return a height of zero, even though at this point the ribbon is already displayed and has a non-zero height.
+				::ShowWindow(_hwnd, SW_MINIMIZE);
+				::ShowWindow (_hwnd, nCmdShow);
+			}
 
 			ComPtr<IUIRibbon> ribbon;
 			hr = _rf->GetView(0, IID_PPV_ARGS(&ribbon)); ThrowIfFailed(hr);
