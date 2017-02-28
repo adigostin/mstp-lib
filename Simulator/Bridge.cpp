@@ -202,7 +202,7 @@ void Bridge::EnableStp (STP_VERSION stpVersion, uint16_t treeCount, uint32_t tim
 	STP_SetApplicationContext (_stpBridge, this);
 	STP_EnableLogging (_stpBridge, true);
 	STP_StartBridge (_stpBridge, timestamp);
-	BridgeStartedEvent::InvokeHandlers (_em, this);
+	StpEnabledEvent::InvokeHandlers (_em, this);
 
 	for (size_t portIndex = 0; portIndex < _ports.size(); portIndex++)
 	{
@@ -222,7 +222,7 @@ void Bridge::DisableStp (uint32_t timestamp)
 	if (_stpBridge == nullptr)
 		throw runtime_error ("STP was not enabled on this bridge.");
 
-	BridgeStoppingEvent::InvokeHandlers(_em, this);
+	StpDisablingEvent::InvokeHandlers(_em, this);
 	STP_StopBridge(_stpBridge, timestamp);
 	STP_DestroyBridge (_stpBridge);
 	_stpBridge = nullptr;

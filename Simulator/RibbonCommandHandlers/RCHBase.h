@@ -14,12 +14,22 @@ struct RCHDeps
 class RCHBase;
 typedef ComPtr<RCHBase> (*RCHFactory)();
 
+using RCHUpdate  = HRESULT(RCHBase::*)(UINT32 commandId, REFPROPERTYKEY key, const PROPVARIANT *currentValue, PROPVARIANT *newValue);
+using RCHExecute = HRESULT(RCHBase::*)(UINT32 commandId, UI_EXECUTIONVERB verb, const PROPERTYKEY *key, const PROPVARIANT *currentValue, IUISimplePropertySet *commandExecutionProperties);
+
 struct RCHInfo
 {
-	std::unordered_set<UINT32> const _commands;
+	struct Callbacks
+	{
+		RCHUpdate  update;
+		RCHExecute execute;
+	};
+
+
+	std::unordered_map<UINT32, Callbacks> const _commands;
 	RCHFactory const _factory;
 
-	RCHInfo(std::unordered_set<UINT32>&& commands, RCHFactory factory);
+	RCHInfo(std::unordered_map<UINT32, Callbacks>&& commands, RCHFactory factory);
 	~RCHInfo();
 };
 
@@ -45,6 +55,10 @@ public:
 
 protected:
 	virtual ~RCHBase();
+
+	// IUICommandHandler
+	virtual HRESULT STDMETHODCALLTYPE Execute (UINT32 commandId, UI_EXECUTIONVERB verb, const PROPERTYKEY *key, const PROPVARIANT *currentValue, IUISimplePropertySet *commandExecutionProperties) override final;
+	virtual HRESULT STDMETHODCALLTYPE UpdateProperty (UINT32 commandId, REFPROPERTYKEY key, const PROPVARIANT *currentValue, PROPVARIANT *newValue) override final;
 
 	virtual const RCHInfo& GetInfo() const = 0;
 	virtual void OnAddedToSelection (Object* o) { }

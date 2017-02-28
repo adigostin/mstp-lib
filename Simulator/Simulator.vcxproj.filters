@@ -133,9 +133,6 @@
       <Filter>EditStates</Filter>
     </ClCompile>
     <ClCompile Include="LogArea.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\BridgeControlRCH.cpp">
-      <Filter>Ribbon</Filter>
-    </ClCompile>
     <ClCompile Include="RibbonCommandHandlers\BridgePropertiesRCH.cpp">
       <Filter>Ribbon</Filter>
     </ClCompile>
@@ -145,15 +142,22 @@
     <ClCompile Include="RibbonCommandHandlers\RCHBase.cpp">
       <Filter>Ribbon</Filter>
     </ClCompile>
-    <ClCompile Include="EditStates\CreateWireES.cpp" />
     <ClCompile Include="Port.cpp" />
-    <ClCompile Include="EditStates\MoveWirePointES.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\CutCopyPasteRCH.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\UndoRedoRCH.cpp" />
     <ClCompile Include="UtilityFunctions.cpp" />
-    <ClCompile Include="BridgePropertiesArea.cpp" />
     <ClCompile Include="DockablePanel.cpp" />
     <ClCompile Include="DockContainer.cpp" />
+    <ClCompile Include="RibbonCommandHandlers\CutCopyPasteRCH.cpp">
+      <Filter>Ribbon</Filter>
+    </ClCompile>
+    <ClCompile Include="EditStates\MoveWirePointES.cpp">
+      <Filter>EditStates</Filter>
+    </ClCompile>
+    <ClCompile Include="EditStates\CreateWireES.cpp">
+      <Filter>EditStates</Filter>
+    </ClCompile>
+    <ClCompile Include="RibbonCommandHandlers\UndoRedoRCH.cpp">
+      <Filter>Ribbon</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc">

@@ -11,8 +11,8 @@ struct BridgeLogLine
 	int treeIndex;
 };
 
-struct BridgeStartedEvent : public Event<BridgeStartedEvent, void(Bridge*)> { };
-struct BridgeStoppingEvent : public Event<BridgeStoppingEvent, void(Bridge*)> { };
+struct StpEnabledEvent : public Event<StpEnabledEvent, void(Bridge*)> { };
+struct StpDisablingEvent : public Event<StpDisablingEvent, void(Bridge*)> { };
 struct BridgeLogLineGenerated : public Event<BridgeLogLineGenerated, void(Bridge*, const BridgeLogLine& line)> { };
 
 class Bridge : public Object
@@ -77,8 +77,8 @@ public:
 	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const override final;
 	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
 
-	BridgeStartedEvent::Subscriber GetBridgeStartedEvent() { return BridgeStartedEvent::Subscriber(_em); }
-	BridgeStoppingEvent::Subscriber GetBridgeStoppingEvent() { return BridgeStoppingEvent::Subscriber(_em); }
+	StpEnabledEvent::Subscriber GetStpEnabledEvent() { return StpEnabledEvent::Subscriber(_em); }
+	StpDisablingEvent::Subscriber GetStpDisablingEvent() { return StpDisablingEvent::Subscriber(_em); }
 	BridgeLogLineGenerated::Subscriber GetBridgeLogLineGeneratedEvent() { return BridgeLogLineGenerated::Subscriber(_em); }
 
 	bool IsPowered() const { return _powered; }

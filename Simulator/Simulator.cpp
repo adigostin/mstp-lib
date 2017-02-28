@@ -11,6 +11,7 @@
 #pragma comment (lib, "Shlwapi")
 #pragma comment (lib, "Version")
 #pragma comment (lib, "Comctl32")
+#pragma comment (lib, "PropSys")
 
 using namespace std;
 using namespace D2D1;

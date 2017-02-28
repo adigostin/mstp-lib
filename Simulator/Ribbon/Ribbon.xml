@@ -63,10 +63,15 @@
 				<Image Source="Cable_64.bmp" MinDPI="168"/>
 			</Command.LargeImages>
 		</Command>
-		
-		<Command Name="BridgeGroup" Symbol="cmdBridgeGroup" LabelTitle="Bridge"/>
 
-		<Command Name="BridgeAddress" Symbol="cmdBridgeAddress" LabelTitle="Address"/>
+		<Command Name="BridgeTabGroup" Symbol="cmdBridgeTabGroup" LabelTitle="Bridge" />
+
+		<Command Name="BridgePropertiesTab" Symbol="cmdBridgePropertiesTab" LabelTitle="Properties" />
+
+		<Command Name="BridgePropertiesGroup" Symbol="cmdBridgePropertiesGroup" LabelTitle="Bridge Properties"/>
+
+		<Command Name="BridgeAddress" Symbol="cmdBridgeAddress"/>
+		<Command Name="StpEnabled" Symbol="cmdStpEnabled" LabelTitle="STP Enabled"/>
 
 		<Command Name="EnableSTP" Symbol="cmdEnableSTP" LabelTitle="Enable STP">
 			<Command.SmallImages>
@@ -87,7 +92,7 @@
 				<Image Source="Stop_32.png"/>
 			</Command.LargeImages>
 		</Command>
-		
+
 		<!--__________________________ Declare Quick Access __________________________-->
 		<Command Name="cmdQat"/>
 
@@ -130,7 +135,7 @@
 		<Command Name="ContextMenuBlankArea" Symbol="cmdContextMenuBlankArea"/>
 		<Command Name="ContextMenuBridge" Symbol="cmdContextMenuBridge"/>
 		<Command Name="ContextMenuPort" Symbol="cmdContextMenuPort"/>
-	
+
 	</Application.Commands>
 
 	<Application.Views>
@@ -191,25 +196,36 @@
 						<Button CommandName="CreateBridge"/>
 						<Button CommandName="CreateCable"/>
 					</Group>
-					<Group CommandName="BridgeGroup">
-						<SizeDefinition>
-							<ControlNameMap>
-								<ControlNameDefinition Name="dropDown1"/>
-							</ControlNameMap>
-							<GroupSizeDefinition Size="Small">
-								<ControlSizeDefinition ControlName="dropDown1" ImageSize="Small" IsLabelVisible="false"/>
-							</GroupSizeDefinition>
-							<GroupSizeDefinition Size="Medium">
-								<ControlSizeDefinition ControlName="dropDown1" ImageSize="Small" IsLabelVisible="true"/>
-							</GroupSizeDefinition>
-							<GroupSizeDefinition Size="Large">
-								<ControlSizeDefinition ControlName="dropDown1" ImageSize="Large" IsLabelVisible="true"/>
-							</GroupSizeDefinition>
-						</SizeDefinition>
-						<ComboBox CommandName="BridgeAddress" IsEditable="true" IsAutoCompleteEnabled="false"/>
-					</Group>
 				</Tab>
 			</Ribbon.Tabs>
+			<Ribbon.ContextualTabs>
+				<TabGroup CommandName="BridgeTabGroup">
+					<Tab CommandName="BridgePropertiesTab">
+						<Group CommandName="BridgeGroup">
+							<SizeDefinition>
+								<ControlNameMap>
+									<ControlNameDefinition Name="dd1"/>
+									<ControlNameDefinition Name="dd2"/>
+								</ControlNameMap>
+								<GroupSizeDefinition Size="Small">
+									<ControlSizeDefinition ControlName="dd1" ImageSize="Small" IsLabelVisible="false"/>
+									<ControlSizeDefinition ControlName="dd2" ImageSize="Small" IsLabelVisible="false"/>
+								</GroupSizeDefinition>
+								<GroupSizeDefinition Size="Medium">
+									<ControlSizeDefinition ControlName="dd1" ImageSize="Small" IsLabelVisible="true"/>
+									<ControlSizeDefinition ControlName="dd2" ImageSize="Small" IsLabelVisible="true"/>
+								</GroupSizeDefinition>
+								<GroupSizeDefinition Size="Large">
+									<ControlSizeDefinition ControlName="dd1" ImageSize="Large" IsLabelVisible="true"/>
+									<ControlSizeDefinition ControlName="dd2" ImageSize="Large" IsLabelVisible="true"/>
+								</GroupSizeDefinition>
+							</SizeDefinition>
+							<ComboBox CommandName="BridgeAddress" IsEditable="true" IsAutoCompleteEnabled="false"/>
+							<CheckBox CommandName="StpEnabled"/>
+						</Group>
+					</Tab>
+				</TabGroup>
+			</Ribbon.ContextualTabs>
 			<Ribbon.QuickAccessToolbar>
 				<QuickAccessToolbar CommandName="cmdQat">
 					<QuickAccessToolbar.ApplicationDefaults>
@@ -217,7 +233,6 @@
 					</QuickAccessToolbar.ApplicationDefaults>
 				</QuickAccessToolbar>
 			</Ribbon.QuickAccessToolbar>
-
 		</Ribbon>
 
 		<ContextPopup>

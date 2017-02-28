@@ -25,7 +25,6 @@ class ProjectWindow : public IProjectWindow, IUIApplication
 	unique_ptr<IDockContainer> _dockContainer;
 	ComPtr<ILogArea> _logArea;
 	ComPtr<IUIFramework> _rf;
-	ComPtr<IBridgePropsArea> _bridgePropsArea;
 	HWND _hwnd;
 	SIZE _clientSize;
 	EventManager _em;
@@ -95,8 +94,8 @@ public:
 			for (auto& info : GetRCHInfos())
 			{
 				auto handler = info->_factory();
-				for (UINT32 command : info->_commands)
-					_commandHandlers.insert ({ command, handler });
+				for (auto p : info->_commands)
+					_commandHandlers.insert ({ p.first, handler });
 			}
 
 			auto hr = _rf->Initialize(hwnd, this); ThrowIfFailed(hr);
@@ -112,9 +111,6 @@ public:
 
 		auto logPanel = _dockContainer->GetOrCreateDockablePanel(Side::Right, L"STP Log");
 		_logArea = logAreaFactory (logPanel->GetHWnd(), 0xFFFF, logPanel->GetContentRect());
-
-		auto propsPanel = _dockContainer->GetOrCreateDockablePanel(Side::Left, L"Properties");
-		_bridgePropsArea = bridgePropsAreaFactory (propsPanel->GetHWnd(), 0xFFFF, propsPanel->GetContentRect());
 
 		_editArea = editAreaFactory (project, this, selection, _rf, _dockContainer->GetHWnd(), _dockContainer->GetContentRect());
 

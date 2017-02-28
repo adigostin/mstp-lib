@@ -181,13 +181,3 @@ struct IProject abstract : public IUnknown
 
 using ProjectFactory = ComPtr<IProject>(*const)();
 extern const ProjectFactory projectFactory;
-
-// ============================================================================
-
-struct IBridgePropsArea abstract : public IUnknown
-{
-	virtual HWND GetHWnd() const = 0;
-};
-
-using BridgePropsAreaFactory = ComPtr<IBridgePropsArea>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect);
-extern const BridgePropsAreaFactory bridgePropsAreaFactory;

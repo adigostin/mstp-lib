@@ -15,7 +15,7 @@ const std::unordered_set<const RCHInfo*>& GetRCHInfos()
 	return *chInfos;
 }
 
-RCHInfo::RCHInfo (std::unordered_set<UINT32>&& commands, RCHFactory factory)
+RCHInfo::RCHInfo (std::unordered_map<UINT32, Callbacks>&& commands, RCHFactory factory)
 	: _commands(move(commands)), _factory(factory)
 {
 	if (chInfos == nullptr)
@@ -53,6 +53,26 @@ RCHBase::~RCHBase()
 	_selection->GetRemovingFromSelectionEvent().RemoveHandler(OnRemovingFromSelection, this);
 	_selection->GetAddedToSelectionEvent().RemoveHandler(OnAddedToSelection, this);
 	_selection->GetSelectionChangedEvent().RemoveHandler(&OnSelectionChangedStatic, this);
+}
+
+HRESULT STDMETHODCALLTYPE RCHBase::Execute (UINT32 commandId, UI_EXECUTIONVERB verb, const PROPERTYKEY *key, const PROPVARIANT *currentValue, IUISimplePropertySet *commandExecutionProperties)
+{
+	const auto& commands = this->GetInfo()._commands;
+	auto it = commands.find(commandId);
+	if ((it == commands.end()) || (it->second.execute == nullptr))
+		return E_NOTIMPL;
+	
+	return (this->*(it->second.execute)) (commandId, verb, key, currentValue, commandExecutionProperties);
+}
+
+HRESULT STDMETHODCALLTYPE RCHBase::UpdateProperty (UINT32 commandId, REFPROPERTYKEY key, const PROPVARIANT *currentValue, PROPVARIANT *newValue)
+{
+	const auto& commands = this->GetInfo()._commands;
+	auto it = commands.find(commandId);
+	if ((it == commands.end()) || (it->second.update == nullptr))
+		return E_NOTIMPL;
+
+	return (this->*(it->second.update)) (commandId, key, currentValue, newValue);
 }
 
 HRESULT RCHBase::QueryInterface(REFIID riid, void **ppvObject)
