@@ -327,7 +327,7 @@ void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, uint16_t 
 			_macAddress[0], _macAddress[1], _macAddress[2], _macAddress[3], _macAddress[4], _macAddress[5]);
 	}
 	ComPtr<IDWriteTextLayout> tl;
-	HRESULT hr = App->GetDWriteFactory()->CreateTextLayout (str, strlen, dos._regularTextFormat, 10000, 10000, &tl); ThrowIfFailed(hr);
+	HRESULT hr = dos._dWriteFactory->CreateTextLayout (str, strlen, dos._regularTextFormat, 10000, 10000, &tl); ThrowIfFailed(hr);
 	dc->DrawTextLayout ({ _x + OutlineWidth * 2 + 3, _y + OutlineWidth * 2 + 3}, tl, dos._brushWindowText);
 
 	for (auto& port : _ports)

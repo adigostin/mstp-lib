@@ -228,6 +228,7 @@
     <ClCompile Include="RibbonCommandHandlers\BridgePropertiesRCH.cpp" />
     <ClCompile Include="RibbonCommandHandlers\CreateRCH.cpp" />
     <ClCompile Include="RibbonCommandHandlers\CutCopyPasteRCH.cpp" />
+    <ClCompile Include="RibbonCommandHandlers\OptionsRCH.cpp" />
     <ClCompile Include="RibbonCommandHandlers\RCHBase.cpp" />
     <ClCompile Include="RibbonCommandHandlers\UndoRedoRCH.cpp" />
     <ClCompile Include="Selection.cpp" />

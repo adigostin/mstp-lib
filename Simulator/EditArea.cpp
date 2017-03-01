@@ -37,15 +37,15 @@ class EditArea : public ZoomableWindow, public IEditArea
 	optional<BeginningDrag> _beginningDrag;
 
 public:
-	EditArea(IProject* project, IProjectWindow* pw, ISelection* selection, IUIFramework* rf, HWND hWndParent, const RECT& rect)
-		: base (WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, hWndParent, 0xFFFF,
-				App->GetD3DDeviceContext(), App->GetDWriteFactory(), App->GetWicFactory())
+	EditArea(IProject* project, IProjectWindow* pw, ISelection* selection, IUIFramework* rf, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory)
+		: base (WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, hWndParent, 0xFFFF, deviceContext, dWriteFactory)
 		, _project(project), _pw(pw), _rf(rf), _selection(selection)
 	{
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
 		_project->GetObjectRemovingEvent().AddHandler (&OnObjectRemoving, this);
 		_project->GetProjectInvalidateEvent().AddHandler (&OnProjectInvalidate, this);
 		auto dc = base::GetDeviceContext();
+		_drawingObjects._dWriteFactory = dWriteFactory;
 		auto hr = dc->CreateSolidColorBrush (ColorF (ColorF::PaleGreen), &_drawingObjects._poweredFillBrush); ThrowIfFailed(hr);
 		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray), &_drawingObjects._unpoweredBrush); ThrowIfFailed(hr);
 		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Red), &_drawingObjects._brushDiscardingPort); ThrowIfFailed(hr);
@@ -56,10 +56,10 @@ public:
 		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOWTEXT), &_drawingObjects._brushWindowText); ThrowIfFailed(hr);
 		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOW), &_drawingObjects._brushWindow); ThrowIfFailed(hr);
 		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_HIGHLIGHT), &_drawingObjects._brushHighlight); ThrowIfFailed(hr);
-		hr = App->GetDWriteFactory()->CreateTextFormat (L"Tahoma", NULL, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
+		hr = GetDWriteFactory()->CreateTextFormat (L"Tahoma", NULL, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
 			DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_drawingObjects._regularTextFormat); ThrowIfFailed(hr);
 
-		App->GetDWriteFactory()->CreateTextFormat (L"Tahoma", nullptr,  DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
+		GetDWriteFactory()->CreateTextFormat (L"Tahoma", nullptr,  DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
 										  DWRITE_FONT_STRETCH_CONDENSED, 11, L"en-US", &_legendFont); ThrowIfFailed(hr);
 		
 		ComPtr<ID2D1Factory> factory;
@@ -148,7 +148,7 @@ public:
 		for (auto& info : LegendInfo)
 		{
 			ComPtr<IDWriteTextLayout> tl;
-			auto hr = App->GetDWriteFactory()->CreateTextLayout (info.text, wcslen(info.text), _legendFont, 1000, 1000, &tl); ThrowIfFailed(hr);
+			auto hr = GetDWriteFactory()->CreateTextLayout (info.text, wcslen(info.text), _legendFont, 1000, 1000, &tl); ThrowIfFailed(hr);
 
 			DWRITE_TEXT_METRICS metrics;
 			tl->GetMetrics (&metrics);
@@ -208,41 +208,7 @@ public:
 
 		rt->SetAntialiasMode(oldaa);
 	}
-	/*
-	void RenderWire (Wire* wire, unsigned short selectedVlanNumber)
-	{
-		ID2D1SolidColorBrush* brush = _brushNoForwardingWire;
-		ID2D1StrokeStyle* strokeStyle = _strokeStyleNoForwardingWire;
-
-		// If both ends are forwarding, make the wire thick.
-		ConnectedWireEnd* firstConnectedEnd  = dynamic_cast<ConnectedWireEnd*> (wire->GetFirstEnd  ());
-		ConnectedWireEnd* secondConnectedEnd = dynamic_cast<ConnectedWireEnd*> (wire->GetSecondEnd ());
-		if ((firstConnectedEnd != NULL) && (secondConnectedEnd != NULL)
-			&& firstConnectedEnd->Port->GetMacOperational () && secondConnectedEnd->Port->GetMacOperational ())
-		{
-			STP_BRIDGE* stpBridge = firstConnectedEnd->Port->Bridge->LockStpBridge ();
-			byte oneEndTreeIndex = STP_GetTreeIndexFromVlanNumber (stpBridge, selectedVlanNumber);
-			bool oneForwarding = STP_GetPortForwarding (stpBridge, firstConnectedEnd->Port->PortIndex, oneEndTreeIndex);
-			firstConnectedEnd->Port->Bridge->UnlockStpBridge ();
-
-			if (oneForwarding)
-			{
-				stpBridge = secondConnectedEnd->Port->Bridge->LockStpBridge ();
-				byte otherEndTreeIndex = STP_GetTreeIndexFromVlanNumber (stpBridge, selectedVlanNumber);
-				bool otherForwarding = STP_GetPortForwarding (stpBridge, secondConnectedEnd->Port->PortIndex, otherEndTreeIndex);
-				secondConnectedEnd->Port->Bridge->UnlockStpBridge ();
-
-				if (otherForwarding)
-				{
-					brush = _brushForwardingWire;
-					strokeStyle = NULL;
-				}
-			}
-		}
-
-		_renderTarget->DrawLine (wire->GetFirstEnd ()->GetLocation (), wire->GetSecondEnd ()->GetLocation (), brush, 2.0f, strokeStyle);
-	}
-	*/
+	
 	void RenderObjects (ID2D1DeviceContext* dc) const
 	{
 		D2D1_MATRIX_3X2_F oldtr;
@@ -267,7 +233,7 @@ public:
 		{
 			auto text = L"No bridges created. Right-click to create some.";
 			ComPtr<IDWriteTextLayout> tl;
-			hr = App->GetDWriteFactory()->CreateTextLayout (text, wcslen(text), _drawingObjects._regularTextFormat, 10000, 10000, &tl); ThrowIfFailed(hr);
+			hr = GetDWriteFactory()->CreateTextLayout (text, wcslen(text), _drawingObjects._regularTextFormat, 10000, 10000, &tl); ThrowIfFailed(hr);
 			DWRITE_TEXT_METRICS metrics;
 			hr = tl->GetMetrics(&metrics); ThrowIfFailed(hr);
 			D2D1_POINT_2F origin = { clientSizeDips.width / 2 - metrics.width / 2, clientSizeDips.height / 2 - metrics.height / 2 };

@@ -23,17 +23,6 @@ enum class MouseButton
 	Middle = 4,
 };
 
-struct ISimulatorApp
-{
-	virtual ~ISimulatorApp() { }
-	virtual ID3D11DeviceContext1* GetD3DDeviceContext() const = 0;
-	virtual IDWriteFactory* GetDWriteFactory() const = 0;
-	virtual IWICImagingFactory2* GetWicFactory() const = 0;
-	virtual const std::wstring& GetRegKeyPath() const = 0;
-};
-
-extern std::unique_ptr<ISimulatorApp> App;
-
 struct IWin32Window : public IUnknown
 {
 	virtual HWND GetHWnd() const = 0;
@@ -112,7 +101,7 @@ struct ILogArea abstract : public IWin32Window
 	virtual void SelectBridge (Bridge* b) = 0;
 };
 
-using LogAreaFactory = ComPtr<ILogArea>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect);
+using LogAreaFactory = ComPtr<ILogArea>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory);
 extern const LogAreaFactory logAreaFactory;
 
 // ============================================================================
@@ -140,7 +129,7 @@ struct IEditArea abstract : public IUnknown
 	virtual D2D1::Matrix3x2F GetZoomTransform() const = 0;
 };
 
-using EditAreaFactory = ComPtr<IEditArea>(*const)(IProject* project, IProjectWindow* pw, ISelection* selection, IUIFramework* rf, HWND hWndParent, const RECT& rect);
+using EditAreaFactory = ComPtr<IEditArea>(*const)(IProject* project, IProjectWindow* pw, ISelection* selection, IUIFramework* rf, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory);
 extern const EditAreaFactory editAreaFactory;
 
 // ============================================================================
@@ -154,8 +143,15 @@ struct IProjectWindow : public IWin32Window
 	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() = 0;
 };
 
-using ProjectWindowFactory = ComPtr<IProjectWindow>(*const)(IProject* project, HINSTANCE rfResourceHInstance, const wchar_t* rfResourceName,
-	ISelection* selection, EditAreaFactory editAreaFactory, int nCmdShow);
+using ProjectWindowFactory = ComPtr<IProjectWindow>(*const)(IProject* project,
+															HINSTANCE rfResourceHInstance,
+															const wchar_t* rfResourceName,
+															ISelection* selection,
+															EditAreaFactory editAreaFactory,
+															int nCmdShow,
+															const wchar_t* regKeyPath,
+															ID3D11DeviceContext1* deviceContext,
+															IDWriteFactory* dWriteFactory);
 extern const ProjectWindowFactory projectWindowFactory;
 
 // ============================================================================

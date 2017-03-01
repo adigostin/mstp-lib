@@ -158,6 +158,7 @@
     <ClCompile Include="RibbonCommandHandlers\UndoRedoRCH.cpp">
       <Filter>Ribbon</Filter>
     </ClCompile>
+    <ClCompile Include="RibbonCommandHandlers\OptionsRCH.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc">

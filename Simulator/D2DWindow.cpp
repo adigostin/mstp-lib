@@ -13,11 +13,9 @@ using namespace D2D1;
 static ATOM WndClassAtom;
 static const wchar_t WndClassName[] = L"D2DWindow-{175802BE-0628-45C0-BC8A-3D27C6F4F0BE}";
 
-D2DWindow::D2DWindow (DWORD exStyle, DWORD style, const RECT& rect, HWND hWndParent, DWORD controlId,
-	ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory)
+D2DWindow::D2DWindow (DWORD exStyle, DWORD style, const RECT& rect, HWND hWndParent, DWORD controlId, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory)
 	: _d3dDeviceContext(deviceContext)
 	, _dWriteFactory(dWriteFactory)
-	, _wicFactory(wicFactory)
 {
 	HINSTANCE hInstance;
 	BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) WndClassName, &hInstance);

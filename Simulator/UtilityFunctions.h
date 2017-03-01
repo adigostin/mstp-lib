@@ -11,6 +11,7 @@ struct HTResult
 
 struct DrawingObjects
 {
+	ComPtr<IDWriteFactory> _dWriteFactory;
 	ComPtr<ID2D1SolidColorBrush> _poweredFillBrush;
 	ComPtr<ID2D1SolidColorBrush> _unpoweredBrush;
 	ComPtr<ID2D1SolidColorBrush> _brushWindowText;

@@ -21,6 +21,7 @@ class ProjectWindow : public IProjectWindow, IUIApplication
 	ULONG _refCount = 1;
 	ComPtr<IProject> const _project;
 	ComPtr<ISelection> const _selection;
+	wstring const _regKeyPath;
 	ComPtr<IEditArea> _editArea;
 	unique_ptr<IDockContainer> _dockContainer;
 	ComPtr<ILogArea> _logArea;
@@ -34,8 +35,9 @@ class ProjectWindow : public IProjectWindow, IUIApplication
 
 public:
 	ProjectWindow (IProject* project, HINSTANCE rfResourceHInstance, const wchar_t* rfResourceName,
-				   ISelection* selection, EditAreaFactory editAreaFactory, int nCmdShow)
-		: _project(project), _selection(selection)
+				   ISelection* selection, EditAreaFactory editAreaFactory, int nCmdShow, const wchar_t* regKeyPath,
+				   ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory)
+		: _project(project), _selection(selection), _regKeyPath(regKeyPath)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR)&wndClassAtom, &hInstance);
@@ -110,9 +112,9 @@ public:
 		_dockContainer = dockPanelFactory (_hwnd, 0xFFFF, dockPanelRect);
 
 		auto logPanel = _dockContainer->GetOrCreateDockablePanel(Side::Right, L"STP Log");
-		_logArea = logAreaFactory (logPanel->GetHWnd(), 0xFFFF, logPanel->GetContentRect());
+		_logArea = logAreaFactory (logPanel->GetHWnd(), 0xFFFF, logPanel->GetContentRect(), deviceContext, dWriteFactory);
 
-		_editArea = editAreaFactory (project, this, selection, _rf, _dockContainer->GetHWnd(), _dockContainer->GetContentRect());
+		_editArea = editAreaFactory (project, this, selection, _rf, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), deviceContext, dWriteFactory);
 
 		const RCHDeps rchDeps = { this, _rf, _project, _editArea, _selection };
 		for (auto p : _commandHandlers)
@@ -269,12 +271,12 @@ public:
 		::MoveWindow (_dockContainer->GetHWnd(), x, y, w, h, TRUE);
 	}
 
-	static bool TryGetSavedWindowLocation (_Out_ RECT* restoreBounds, _Out_ int* nCmdShow)
+	bool TryGetSavedWindowLocation (_Out_ RECT* restoreBounds, _Out_ int* nCmdShow)
 	{
-		auto ReadDword = [](const wchar_t* valueName, DWORD* valueOut) -> bool
+		auto ReadDword = [this](const wchar_t* valueName, DWORD* valueOut) -> bool
 		{
 			DWORD dataSize = 4;
-			auto lresult = RegGetValue(HKEY_CURRENT_USER, App->GetRegKeyPath().c_str(), valueName, RRF_RT_REG_DWORD, nullptr, valueOut, &dataSize);
+			auto lresult = RegGetValue(HKEY_CURRENT_USER, _regKeyPath.c_str(), valueName, RRF_RT_REG_DWORD, nullptr, valueOut, &dataSize);
 			return lresult == ERROR_SUCCESS;
 		};
 
@@ -301,7 +303,7 @@ public:
 		if (bRes && ((wp.showCmd == SW_NORMAL) || (wp.showCmd == SW_MAXIMIZE)))
 		{
 			HKEY key;
-			auto lstatus = RegCreateKeyEx(HKEY_CURRENT_USER, App->GetRegKeyPath().c_str(), 0, NULL, 0, KEY_WRITE, NULL, &key, NULL);
+			auto lstatus = RegCreateKeyEx(HKEY_CURRENT_USER, _regKeyPath.c_str(), 0, NULL, 0, KEY_WRITE, NULL, &key, NULL);
 			if (lstatus == ERROR_SUCCESS)
 			{
 				RegSetValueEx(key, RegValueNameWindowLeft, 0, REG_DWORD, (BYTE*)&_restoreBounds.left, 4);

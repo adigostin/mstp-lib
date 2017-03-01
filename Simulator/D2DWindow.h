@@ -13,7 +13,6 @@ class D2DWindow abstract
 	ComPtr<ID3D11Device1> _d3dDevice;
 	ComPtr<ID3D11DeviceContext1> _d3dDeviceContext;
 	ComPtr<IDWriteFactory> _dWriteFactory;
-	ComPtr<IWICImagingFactory2> _wicFactory;
 	ComPtr<IDXGIDevice2> _dxgiDevice;
 	ComPtr<IDXGIAdapter> _dxgiAdapter;
 	ComPtr<IDXGIFactory2> _dxgiFactory;
@@ -22,8 +21,7 @@ class D2DWindow abstract
 	ComPtr<ID2D1DeviceContext> _d2dDeviceContext;
 
 public:
-	D2DWindow (DWORD exStyle, DWORD style, const RECT& rect, HWND hWndParent, DWORD controlId,
-		ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, IWICImagingFactory2* wicFactory);
+	D2DWindow (DWORD exStyle, DWORD style, const RECT& rect, HWND hWndParent, DWORD controlId, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory);
 	~D2DWindow();
 
 	HWND GetHWnd() const { return _hwnd; }
@@ -36,13 +34,15 @@ public:
 	D2D1_SIZE_F GetDipSizeFromPixelSize(SIZE sizePixels) const;
 	SIZE GetPixelSizeFromDipSize(D2D1_SIZE_F sizeDips) const;
 
+	ID2D1DeviceContext* GetDeviceContext() const { return _d2dDeviceContext; }
+	IDWriteFactory* GetDWriteFactory() const { return _dWriteFactory; }
+
 protected:
 	EventManager _em;
 	virtual std::optional<LRESULT> WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 	virtual void OnBeforeRender() { }
 	virtual void Render(ID2D1DeviceContext* dc) const = 0;
 	virtual void OnAfterRender() { }
-	ID2D1DeviceContext* GetDeviceContext() const { return _d2dDeviceContext; }
 private:
 	static LRESULT CALLBACK WindowProcStatic (HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 

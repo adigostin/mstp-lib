@@ -93,6 +93,10 @@
 			</Command.LargeImages>
 		</Command>
 
+		<Command Name="OptionsTab" Symbol="cmdOptionsTab" LabelTitle="Options"/>
+		<Command Name="NewBridgeOptionsGroup" Symbol="cmdNewBridgeOptionsGroup" LabelTitle="New Bridges"/>
+		<Command Name="NewBridgePortCount" Symbol="cmdNewBridgePortCount" LabelTitle="Number of Ports"/>
+		
 		<!--__________________________ Declare Quick Access __________________________-->
 		<Command Name="cmdQat"/>
 
@@ -197,11 +201,30 @@
 						<Button CommandName="CreateCable"/>
 					</Group>
 				</Tab>
+				<Tab CommandName="OptionsTab">
+					<Group CommandName="NewBridgeOptionsGroup">
+						<SizeDefinition>
+							<ControlNameMap>
+								<ControlNameDefinition Name="dd1"/>
+							</ControlNameMap>
+							<GroupSizeDefinition Size="Small">
+								<ControlSizeDefinition ControlName="dd1" IsImageVisible="false"/>
+							</GroupSizeDefinition>
+							<GroupSizeDefinition Size="Medium">
+								<ControlSizeDefinition ControlName="dd1" IsImageVisible="false"/>
+							</GroupSizeDefinition>
+							<GroupSizeDefinition Size="Large">
+								<ControlSizeDefinition ControlName="dd1" IsImageVisible="false"/>
+							</GroupSizeDefinition>
+						</SizeDefinition>
+						<ComboBox CommandName="NewBridgePortCount" IsAutoCompleteEnabled="false" IsEditable="false"/>
+					</Group>
+				</Tab>
 			</Ribbon.Tabs>
 			<Ribbon.ContextualTabs>
 				<TabGroup CommandName="BridgeTabGroup">
 					<Tab CommandName="BridgePropertiesTab">
-						<Group CommandName="BridgeGroup">
+						<Group CommandName="BridgePropertiesGroup">
 							<SizeDefinition>
 								<ControlNameMap>
 									<ControlNameDefinition Name="dd1"/>
