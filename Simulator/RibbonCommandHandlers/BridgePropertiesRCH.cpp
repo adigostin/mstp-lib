@@ -21,7 +21,6 @@ class BridgePropertiesRCH : public RCHBase
 			&& !_selection->GetObjects().empty()
 			&& all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(),
 					   [](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get()) != nullptr; });
-
 	}
 
 	HRESULT Update_cmdStpEnabled (UINT32 commandId, REFPROPERTYKEY key, const PROPVARIANT *currentValue, PROPVARIANT *newValue)
@@ -77,23 +76,43 @@ class BridgePropertiesRCH : public RCHBase
 
 	HRESULT Update_cmdStpVersion (UINT32 commandId, REFPROPERTYKEY key, const PROPVARIANT *currentValue, PROPVARIANT *newValue)
 	{
-		if (key == UI_PKEY_Enabled)
+		if ((key == UI_PKEY_Enabled) || (key == UI_PKEY_StringValue) || (key == UI_PKEY_SelectedItem))
 		{
-			if ((_selection == nullptr) || _selection->GetObjects().empty())
-				return UIInitPropertyFromBoolean (key, FALSE, newValue);
+			std::optional<STP_VERSION> stpVersion;
+			if (BridgesSelected())
+			{
+				auto s = dynamic_cast<Bridge*>(_selection->GetObjects()[0].Get())->GetStpVersion();
+				if (all_of (_selection->GetObjects().begin(),
+							_selection->GetObjects().end(),
+							[=](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get())->GetStpVersion() == s; }))
+					stpVersion = s;
+			}
 
-			if (any_of (_selection->GetObjects().begin(),
-						_selection->GetObjects().end(),
-						[](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get()) == nullptr; }))
-				return UIInitPropertyFromBoolean (key, FALSE, newValue);
+			if (key == UI_PKEY_Enabled)
+				return UIInitPropertyFromBoolean (key, stpVersion ? TRUE : FALSE, newValue);
 
-			auto stpVersion = dynamic_cast<Bridge*>(_selection->GetObjects()[0].Get())->GetStpVersion();
-			if (any_of (_selection->GetObjects().begin(),
-						_selection->GetObjects().end(),
-						[=](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get())->GetStpVersion() != stpVersion; }))
-				return UIInitPropertyFromBoolean (key, FALSE, newValue);
-			
-			return UIInitPropertyFromBoolean (key, TRUE, newValue);
+			if (key == UI_PKEY_SelectedItem)
+			{
+				if (!stpVersion)
+					return UIInitPropertyFromUInt32 (key, -1, newValue);
+				else if (stpVersion == STP_VERSION_LEGACY_STP)
+					return UIInitPropertyFromUInt32 (key, 0, newValue);
+				else if (stpVersion == STP_VERSION_RSTP)
+					return UIInitPropertyFromUInt32 (key, 1, newValue);
+				else if (stpVersion == STP_VERSION_MSTP)
+					return UIInitPropertyFromUInt32 (key, 2, newValue);
+				else
+					return E_NOTIMPL;
+			}
+		
+			if (key == UI_PKEY_StringValue)
+			{
+				wstring_convert<codecvt_utf8<wchar_t>> converter;
+				auto s = stpVersion ? converter.from_bytes(STP_GetVersionString(stpVersion.value())) : wstring();
+				return UIInitPropertyFromString (key, s.c_str(), newValue);
+			}
+
+			return E_NOTIMPL;
 		}
 
 		if (key == UI_PKEY_RepresentativeString)
@@ -115,27 +134,6 @@ class BridgePropertiesRCH : public RCHBase
 			collection->Add (ComPtr<IUISimplePropertySet>(new ItemPropertySet(converter.from_bytes(STP_GetVersionString(STP_VERSION_MSTP))), false));
 			//return UIInitPropertyFromInterface (key, collection, newValue);
 			return S_OK;
-		}
-
-		if (key == UI_PKEY_SelectedItem)
-		{
-			if ((_selection == nullptr) || _selection->GetObjects().empty() || any_of (_selection->GetObjects().begin(),
-																					   _selection->GetObjects().end(),
-																					   [](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get()) == nullptr; }))
-				return UIInitPropertyFromUInt32 (key, -1, newValue);
-
-			auto stpVersion = dynamic_cast<Bridge*>(_selection->GetObjects()[0].Get())->GetStpVersion();
-			if (stpVersion == STP_VERSION_LEGACY_STP)
-				return UIInitPropertyFromUInt32 (key, 0, newValue);
-			else if (stpVersion == STP_VERSION_RSTP)
-				return UIInitPropertyFromUInt32 (key, 1, newValue);
-			else if (stpVersion == STP_VERSION_MSTP)
-				return UIInitPropertyFromUInt32 (key, 2, newValue);
-			else
-			{
-				assert(false);
-				return E_NOTIMPL;
-			}
 		}
 
 		return E_NOTIMPL;
