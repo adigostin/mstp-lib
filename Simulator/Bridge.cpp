@@ -190,7 +190,7 @@ void Bridge::ProcessReceivedPacket()
 	}
 }
 
-void Bridge::EnableStp (STP_VERSION stpVersion, uint16_t treeCount, uint32_t timestamp)
+void Bridge::EnableStp (uint32_t timestamp)
 {
 	if (this_thread::get_id() != _guiThreadId)
 		throw runtime_error ("This function may be called only on the main thread.");
@@ -198,7 +198,7 @@ void Bridge::EnableStp (STP_VERSION stpVersion, uint16_t treeCount, uint32_t tim
 	if (_stpBridge != nullptr)
 		throw runtime_error ("STP is already enabled on this bridge.");
 
-	_stpBridge = STP_CreateBridge ((unsigned int) _ports.size(), treeCount, &StpCallbacks, stpVersion, &_macAddress[0], 256);
+	_stpBridge = STP_CreateBridge ((unsigned int) _ports.size(), _treeCount, &StpCallbacks, _stpVersion, &_macAddress[0], 256);
 	STP_SetApplicationContext (_stpBridge, this);
 	STP_EnableLogging (_stpBridge, true);
 	STP_StartBridge (_stpBridge, timestamp);
@@ -228,6 +228,21 @@ void Bridge::DisableStp (uint32_t timestamp)
 	_stpBridge = nullptr;
 
 	InvalidateEvent::InvokeHandlers(_em, this);
+}
+
+void Bridge::SetStpVersion (STP_VERSION stpVersion, uint32_t timestamp)
+{
+	if (this_thread::get_id() != _guiThreadId)
+		throw runtime_error ("This function may be called only on the main thread.");
+
+	if (_stpBridge != nullptr)
+		throw runtime_error ("Setting the protocol version while STP is enabled is not supported by the library.");
+
+	if (_stpVersion != stpVersion)
+	{
+		_stpVersion = stpVersion;
+		StpVersionChangedEvent::InvokeHandlers(_em, this);
+	}
 }
 
 void Bridge::SetLocation(float x, float y)

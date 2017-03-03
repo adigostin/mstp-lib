@@ -13,6 +13,7 @@ struct BridgeLogLine
 
 struct StpEnabledEvent : public Event<StpEnabledEvent, void(Bridge*)> { };
 struct StpDisablingEvent : public Event<StpDisablingEvent, void(Bridge*)> { };
+struct StpVersionChangedEvent : public Event<StpVersionChangedEvent, void(Bridge*)> { };
 struct BridgeLogLineGenerated : public Event<BridgeLogLineGenerated, void(Bridge*, const BridgeLogLine& line)> { };
 
 class Bridge : public Object
@@ -28,6 +29,8 @@ class Bridge : public Object
 	STP_BRIDGE* _stpBridge = nullptr; // when nullptr, STP is disabled in the bridge
 	std::mutex _stpBridgeMutex;
 	std::thread::id _guiThreadId;
+	STP_VERSION _stpVersion = STP_VERSION_RSTP;
+	uint16_t _treeCount = 1;
 	static const STP_CALLBACKS StpCallbacks;
 	std::vector<BridgeLogLine> _logLines;
 	BridgeLogLine _currentLogLine;
@@ -79,10 +82,11 @@ public:
 
 	StpEnabledEvent::Subscriber GetStpEnabledEvent() { return StpEnabledEvent::Subscriber(_em); }
 	StpDisablingEvent::Subscriber GetStpDisablingEvent() { return StpDisablingEvent::Subscriber(_em); }
+	StpVersionChangedEvent::Subscriber GetStpVersionChangedEvent() { return StpVersionChangedEvent::Subscriber(_em); }
 	BridgeLogLineGenerated::Subscriber GetBridgeLogLineGeneratedEvent() { return BridgeLogLineGenerated::Subscriber(_em); }
 
 	bool IsPowered() const { return _powered; }
-	void EnableStp (STP_VERSION stpVersion, uint16_t treeCount, uint32_t timestamp);
+	void EnableStp (uint32_t timestamp);
 	void DisableStp (uint32_t timestamp);
 	bool IsStpEnabled() const { return _stpBridge != nullptr; }
 	uint16_t GetTreeCount() const;
@@ -95,6 +99,8 @@ public:
 	const std::vector<BridgeLogLine>& GetLogLines() const { return _logLines; }
 	bool IsPortForwardingOnVlan (unsigned int portIndex, uint16_t vlanNumber) const;
 	bool IsStpRootBridge() const;
+	STP_VERSION GetStpVersion() const { return _stpVersion; }
+	void SetStpVersion (STP_VERSION stpVersion, uint32_t timestamp);
 
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);

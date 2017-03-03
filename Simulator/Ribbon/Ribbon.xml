@@ -72,6 +72,7 @@
 
 		<Command Name="BridgeAddress" Symbol="cmdBridgeAddress"/>
 		<Command Name="StpEnabled" Symbol="cmdStpEnabled" LabelTitle="STP Enabled"/>
+		<Command Name="StpVersion" Symbol="cmdStpVersion" LabelTitle="STP Version"/>
 
 		<Command Name="EnableSTP" Symbol="cmdEnableSTP" LabelTitle="Enable STP">
 			<Command.SmallImages>
@@ -229,22 +230,27 @@
 								<ControlNameMap>
 									<ControlNameDefinition Name="dd1"/>
 									<ControlNameDefinition Name="dd2"/>
+									<ControlNameDefinition Name="dd3"/>
 								</ControlNameMap>
 								<GroupSizeDefinition Size="Small">
-									<ControlSizeDefinition ControlName="dd1" ImageSize="Small" IsLabelVisible="false"/>
-									<ControlSizeDefinition ControlName="dd2" ImageSize="Small" IsLabelVisible="false"/>
+									<ControlSizeDefinition ControlName="dd1" IsImageVisible="false"/>
+									<ControlSizeDefinition ControlName="dd2" IsImageVisible="false"/>
+									<ControlSizeDefinition ControlName="dd3" IsImageVisible="false"/>
 								</GroupSizeDefinition>
 								<GroupSizeDefinition Size="Medium">
-									<ControlSizeDefinition ControlName="dd1" ImageSize="Small" IsLabelVisible="true"/>
-									<ControlSizeDefinition ControlName="dd2" ImageSize="Small" IsLabelVisible="true"/>
+									<ControlSizeDefinition ControlName="dd1" IsImageVisible="false"/>
+									<ControlSizeDefinition ControlName="dd2" IsImageVisible="false"/>
+									<ControlSizeDefinition ControlName="dd3" IsImageVisible="false"/>
 								</GroupSizeDefinition>
 								<GroupSizeDefinition Size="Large">
-									<ControlSizeDefinition ControlName="dd1" ImageSize="Large" IsLabelVisible="true"/>
-									<ControlSizeDefinition ControlName="dd2" ImageSize="Large" IsLabelVisible="true"/>
+									<ControlSizeDefinition ControlName="dd1" IsImageVisible="false"/>
+									<ControlSizeDefinition ControlName="dd2" IsImageVisible="false"/>
+									<ControlSizeDefinition ControlName="dd3" IsImageVisible="false"/>
 								</GroupSizeDefinition>
 							</SizeDefinition>
 							<ComboBox CommandName="BridgeAddress" IsEditable="true" IsAutoCompleteEnabled="false"/>
 							<CheckBox CommandName="StpEnabled"/>
+							<ComboBox CommandName="StpVersion" IsEditable="false"/>
 						</Group>
 					</Tab>
 				</TabGroup>

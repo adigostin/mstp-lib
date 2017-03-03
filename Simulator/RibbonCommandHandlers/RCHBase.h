@@ -70,3 +70,20 @@ private:
 	static void OnAddedToSelection (void* callbackArg, ISelection* selection, Object* o) { static_cast<RCHBase*>(callbackArg)->OnAddedToSelection(o); }
 	static void OnRemovingFromSelection (void* callbackArg, ISelection* selection, Object* o) { static_cast<RCHBase*>(callbackArg)->OnRemovingFromSelection(o); }
 };
+
+class ItemPropertySet : public IUISimplePropertySet
+{
+	volatile ULONG _refCount = 1;
+	std::wstring _text;
+
+public:
+	ItemPropertySet (std::wstring&& text);
+
+	// IUnknown
+	virtual ULONG STDMETHODCALLTYPE AddRef() override final;
+	virtual ULONG STDMETHODCALLTYPE Release() override final;
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, void** ppv) override;
+
+	// IUISimplePropertySet
+	virtual HRESULT STDMETHODCALLTYPE GetValue (REFPROPERTYKEY key, PROPVARIANT *ppropvar) override;
+};

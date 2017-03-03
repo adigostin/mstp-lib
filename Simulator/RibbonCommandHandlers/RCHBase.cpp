@@ -61,8 +61,16 @@ HRESULT STDMETHODCALLTYPE RCHBase::Execute (UINT32 commandId, UI_EXECUTIONVERB v
 	auto it = commands.find(commandId);
 	if ((it == commands.end()) || (it->second.execute == nullptr))
 		return E_NOTIMPL;
-	
-	return (this->*(it->second.execute)) (commandId, verb, key, currentValue, commandExecutionProperties);
+
+	try
+	{
+		return (this->*(it->second.execute)) (commandId, verb, key, currentValue, commandExecutionProperties);
+	}
+	catch (const exception& ex)
+	{
+		MessageBoxA (_pw->GetHWnd(), ex.what(), nullptr, 0);
+		return S_FALSE;
+	}
 }
 
 HRESULT STDMETHODCALLTYPE RCHBase::UpdateProperty (UINT32 commandId, REFPROPERTYKEY key, const PROPVARIANT *currentValue, PROPVARIANT *newValue)
@@ -108,4 +116,70 @@ ULONG RCHBase::Release()
 	if (newRefCount == 0)
 		delete this;
 	return newRefCount;
+}
+
+// ============================================================================
+
+ItemPropertySet::ItemPropertySet (wstring&& text)
+	: _text(move(text))
+{ }
+
+ULONG STDMETHODCALLTYPE ItemPropertySet::AddRef()
+{
+	return InterlockedIncrement (&_refCount);
+}
+
+ULONG STDMETHODCALLTYPE ItemPropertySet::Release()
+{
+	auto newRefCount = InterlockedDecrement(&_refCount);
+	if (newRefCount == 0)
+		delete this;
+	return newRefCount;
+}
+
+HRESULT STDMETHODCALLTYPE ItemPropertySet::QueryInterface(REFIID iid, void** ppv)
+{
+	if (!ppv)
+		return E_POINTER;
+
+	if (iid == __uuidof(IUnknown))
+	{
+		*ppv = static_cast<IUnknown*>(this);
+		AddRef();
+		return S_OK;
+	}
+
+	if (iid == __uuidof(IUISimplePropertySet))
+	{
+		*ppv = static_cast<IUISimplePropertySet*>(this);
+		AddRef();
+		return S_OK;
+	}
+
+	*ppv = NULL;
+	return E_NOINTERFACE;
+}
+
+// IUISimplePropertySet
+HRESULT STDMETHODCALLTYPE ItemPropertySet::GetValue (REFPROPERTYKEY key, PROPVARIANT *ppropvar)
+{
+	/*
+	if (key == UI_PKEY_Enabled)
+	return UIInitPropertyFromBoolean (UI_PKEY_Enabled, _enabled, ppropvar);
+
+	if (key == UI_PKEY_ItemImage)
+	{
+	if (_image)
+	return UIInitPropertyFromImage (UI_PKEY_ItemImage, _image, ppropvar);
+
+	return S_FALSE;
+	}
+	*/
+	if (key == UI_PKEY_Label)
+		return UIInitPropertyFromString (UI_PKEY_Label, _text.c_str(), ppropvar);
+
+	//if (key == UI_PKEY_CategoryId)
+	//	return UIInitPropertyFromUInt32 (UI_PKEY_CategoryId, _categoryId, ppropvar);
+
+	return E_NOTIMPL;
 }

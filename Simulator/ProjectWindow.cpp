@@ -30,7 +30,7 @@ class ProjectWindow : public IProjectWindow, IUIApplication
 	SIZE _clientSize;
 	EventManager _em;
 	RECT _restoreBounds;
-	unordered_map<UINT32, ComPtr<RCHBase>> _commandHandlers;
+	unordered_map<UINT32, ComPtr<RCHBase>> _commandHandlerMap;
 	uint16_t _selectedVlanNumber = 1;
 
 public:
@@ -90,6 +90,7 @@ public:
 			ThrowIfFailed(hr);
 		}
 
+		std::vector<RCHBase*> commandHandlers;
 		UINT32 ribbonHeight = 0;
 		if ((rfResourceHInstance != nullptr) && (rfResourceName != nullptr))
 		{
@@ -97,7 +98,8 @@ public:
 			{
 				auto handler = info->_factory();
 				for (auto p : info->_commands)
-					_commandHandlers.insert ({ p.first, handler });
+					_commandHandlerMap.insert ({ p.first, handler });
+				commandHandlers.push_back (handler.Get());
 			}
 
 			auto hr = _rf->Initialize(hwnd, this); ThrowIfFailed(hr);
@@ -117,8 +119,8 @@ public:
 		_editArea = editAreaFactory (project, this, selection, _rf, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), deviceContext, dWriteFactory);
 
 		const RCHDeps rchDeps = { this, _rf, _project, _editArea, _selection };
-		for (auto p : _commandHandlers)
-			p.second->InjectDependencies(rchDeps);
+		for (auto h : commandHandlers)
+			h->InjectDependencies(rchDeps);
 
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
 	}
@@ -372,8 +374,8 @@ public:
 
 	virtual HRESULT STDMETHODCALLTYPE OnCreateUICommand(UINT32 commandId, UI_COMMANDTYPE typeID, IUICommandHandler **commandHandler) override final
 	{
-		auto it = _commandHandlers.find(commandId);
-		if (it == _commandHandlers.end())
+		auto it = _commandHandlerMap.find(commandId);
+		if (it == _commandHandlerMap.end())
 			return E_NOTIMPL;
 
 		*commandHandler = it->second;
