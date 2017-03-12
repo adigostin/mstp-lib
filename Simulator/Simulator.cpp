@@ -38,11 +38,11 @@ SIZE IWin32Window::GetWindowSize() const
 
 SIZE IWin32Window::GetClientSize() const
 {
-	RECT rect = this->GetClientRect();
+	RECT rect = this->GetClientRectPixels();
 	return SIZE { rect.right, rect.bottom };
 }
 
-RECT IWin32Window::GetClientRect() const
+RECT IWin32Window::GetClientRectPixels() const
 {
 	RECT rect;
 	BOOL bRes = ::GetClientRect (GetHWnd(), &rect);

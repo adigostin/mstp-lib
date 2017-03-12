@@ -159,6 +159,7 @@
       <Filter>Ribbon</Filter>
     </ClCompile>
     <ClCompile Include="RibbonCommandHandlers\OptionsRCH.cpp" />
+    <ClCompile Include="RibbonCommandHandlers\VlanRCH.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc">

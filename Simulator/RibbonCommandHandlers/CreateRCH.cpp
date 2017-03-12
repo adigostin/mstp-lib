@@ -7,6 +7,10 @@
 
 class CreateRCH : public RCHBase
 {
+	typedef RCHBase base;
+public:
+	using RCHBase::RCHBase;
+
 	HRESULT Update_cmdCreateBridge(UINT32 commandId, REFPROPERTYKEY key, const PROPVARIANT *currentValue, PROPVARIANT *newValue)
 	{
 		return E_NOTIMPL;
@@ -26,5 +30,5 @@ const RCHInfo CreateRCH::_info (
 	{
 		{ cmdCreateBridge, { static_cast<RCHUpdate>(&Update_cmdCreateBridge), static_cast<RCHExecute>(&Execute_cmdCreateBridge) } },
 	},
-	[]() { return ComPtr<RCHBase>(new CreateRCH(), false); }
+	[](const RCHDeps& deps) { return ComPtr<RCHBase>(new CreateRCH(deps), false); }
 );

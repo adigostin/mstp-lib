@@ -227,20 +227,19 @@ public:
 
 		auto clientSizeDips = GetClientSizeDips();
 
-		HRESULT hr;
-
 		if (none_of (_project->GetObjects().begin(), _project->GetObjects().end(), [](auto&& o) { return dynamic_cast<Bridge*>(o.Get()) != nullptr; }))
 		{
-			auto text = L"No bridges created. Right-click to create some.";
-			ComPtr<IDWriteTextLayout> tl;
-			hr = GetDWriteFactory()->CreateTextLayout (text, wcslen(text), _drawingObjects._regularTextFormat, 10000, 10000, &tl); ThrowIfFailed(hr);
-			DWRITE_TEXT_METRICS metrics;
-			hr = tl->GetMetrics(&metrics); ThrowIfFailed(hr);
-			D2D1_POINT_2F origin = { clientSizeDips.width / 2 - metrics.width / 2, clientSizeDips.height / 2 - metrics.height / 2 };
-			dc->DrawTextLayout (origin, tl, _drawingObjects._brushWindowText);
+			auto layout = TextLayout::Make(GetDWriteFactory(), _drawingObjects._regularTextFormat, L"No bridges created. Right-click to create some.");
+			D2D1_POINT_2F origin = { clientSizeDips.width / 2 - layout.metrics.width / 2, clientSizeDips.height / 2 - layout.metrics.height / 2 };
+			dc->DrawTextLayout (origin, layout.layout, _drawingObjects._brushWindowText);
 		}
 		else
 		{
+			wstringstream ss;
+			ss << L"Showing network topology for VLAN " << to_wstring(_pw->GetSelectedVlanNumber()) << L".";
+			auto layout = TextLayout::Make(GetDWriteFactory(), _drawingObjects._regularTextFormat, ss.str().c_str());
+			dc->DrawTextLayout ({ 5, 5 }, layout.layout, _drawingObjects._brushWindowText);
+
 			RenderLegend(dc);
 			RenderObjects(dc);
 

@@ -26,11 +26,11 @@ class Bridge : public Object
 	std::vector<ComPtr<Port>> _ports;
 	std::array<uint8_t, 6> _macAddress;
 	bool _powered = true;
-	STP_BRIDGE* _stpBridge = nullptr; // when nullptr, STP is disabled in the bridge
+	STP_BRIDGE* _stpBridge = nullptr;
 	std::mutex _stpBridgeMutex;
 	std::thread::id _guiThreadId;
 	STP_VERSION _stpVersion = STP_VERSION_RSTP;
-	uint16_t _treeCount = 1;
+	size_t _treeCount = 1;
 	static const STP_CALLBACKS StpCallbacks;
 	std::vector<BridgeLogLine> _logLines;
 	BridgeLogLine _currentLogLine;
@@ -89,7 +89,7 @@ public:
 	void EnableStp (uint32_t timestamp);
 	void DisableStp (uint32_t timestamp);
 	bool IsStpEnabled() const { return _stpBridge != nullptr; }
-	uint16_t GetTreeCount() const;
+	size_t GetTreeCount() const { return _treeCount; }
 	STP_PORT_ROLE GetStpPortRole (uint16_t portIndex, uint16_t treeIndex) const;
 	bool GetStpPortLearning (uint16_t portIndex, uint16_t treeIndex) const;
 	bool GetStpPortForwarding (uint16_t portIndex, uint16_t treeIndex) const;
@@ -101,6 +101,7 @@ public:
 	bool IsStpRootBridge() const;
 	STP_VERSION GetStpVersion() const { return _stpVersion; }
 	void SetStpVersion (STP_VERSION stpVersion, uint32_t timestamp);
+	void SetStpTreeCount (size_t treeCount);
 
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);

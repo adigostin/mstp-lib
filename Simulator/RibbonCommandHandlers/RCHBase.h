@@ -12,7 +12,7 @@ struct RCHDeps
 };
 
 class RCHBase;
-typedef ComPtr<RCHBase> (*RCHFactory)();
+using RCHFactory = std::add_pointer<ComPtr<RCHBase>(const RCHDeps& deps)>::type;
 
 using RCHUpdate  = HRESULT(RCHBase::*)(UINT32 commandId, REFPROPERTYKEY key, const PROPVARIANT *currentValue, PROPVARIANT *newValue);
 using RCHExecute = HRESULT(RCHBase::*)(UINT32 commandId, UI_EXECUTIONVERB verb, const PROPERTYKEY *key, const PROPVARIANT *currentValue, IUISimplePropertySet *commandExecutionProperties);
@@ -24,7 +24,6 @@ struct RCHInfo
 		RCHUpdate  update;
 		RCHExecute execute;
 	};
-
 
 	std::unordered_map<UINT32, Callbacks> const _commands;
 	RCHFactory const _factory;
@@ -40,18 +39,14 @@ class RCHBase abstract : public IUICommandHandler
 	ULONG _refCount = 1;
 
 protected:
-	IProjectWindow* _pw;
-	IEditArea* _area;
-	IUIFramework* _rf;
-	ComPtr<IProject> _project;
-	ComPtr<ISelection> _selection;
+	IProjectWindow* const _pw;
+	IEditArea* const _area;
+	IUIFramework* const _rf;
+	ComPtr<IProject> const _project;
+	ComPtr<ISelection> const _selection;
 
 public:
-	void InjectDependencies (const RCHDeps& deps);
-
-	virtual HRESULT __stdcall QueryInterface(REFIID riid, void **ppvObject) override final;
-	virtual ULONG __stdcall AddRef() override final;
-	virtual ULONG __stdcall Release() override final;
+	RCHBase (const RCHDeps& deps);
 
 protected:
 	virtual ~RCHBase();
@@ -65,6 +60,11 @@ protected:
 	virtual void OnRemovingFromSelection (Object* o) { }
 	virtual void OnSelectionChanged() { }
 
+public:
+	virtual HRESULT __stdcall QueryInterface(REFIID riid, void **ppvObject) override final;
+	virtual ULONG __stdcall AddRef() override final;
+	virtual ULONG __stdcall Release() override final;
+
 private:
 	static void OnSelectionChangedStatic (void* callbackArg, ISelection* selection) { static_cast<RCHBase*>(callbackArg)->OnSelectionChanged(); }
 	static void OnAddedToSelection (void* callbackArg, ISelection* selection, Object* o) { static_cast<RCHBase*>(callbackArg)->OnAddedToSelection(o); }
@@ -76,8 +76,13 @@ class ItemPropertySet : public IUISimplePropertySet
 	volatile ULONG _refCount = 1;
 	std::wstring _text;
 
-public:
 	ItemPropertySet (std::wstring&& text);
+
+public:
+	static ComPtr<IUISimplePropertySet> Make (std::wstring&& text)
+	{
+		return ComPtr<IUISimplePropertySet>(new ItemPropertySet(move(text)), false);
+	}
 
 	// IUnknown
 	virtual ULONG STDMETHODCALLTYPE AddRef() override final;

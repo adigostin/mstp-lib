@@ -7,6 +7,10 @@ using namespace std;
 
 class OptionsRCH : public RCHBase
 {
+	typedef RCHBase base;
+public:
+	using RCHBase::RCHBase;
+
 	HRESULT Update_NewBridgePortCount (UINT32 commandId, REFPROPERTYKEY key, const PROPVARIANT *currentValue, PROPVARIANT *newValue)
 	{
 		if (key == UI_PKEY_RepresentativeString)
@@ -50,4 +54,4 @@ const RCHInfo OptionsRCH::_info (
 {
 	{ cmdNewBridgePortCount,  { static_cast<RCHUpdate>(&Update_NewBridgePortCount), static_cast<RCHExecute>(&Execute_NewBridgePortCount) } },
 },
-[]() { return ComPtr<RCHBase>(new OptionsRCH(), false); });
+[](const RCHDeps& deps) { return ComPtr<RCHBase>(new OptionsRCH(deps), false); });

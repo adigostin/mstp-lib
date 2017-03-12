@@ -120,6 +120,15 @@ void InflateRoundedRect (D2D1_ROUNDED_RECT* rr, float distance)
 		rr->radiusY = 0;
 }
 
+TextLayout TextLayout::Make (IDWriteFactory* dWriteFactory, IDWriteTextFormat* format, const wchar_t* str)
+{
+	ComPtr<IDWriteTextLayout> tl;
+	auto hr = dWriteFactory->CreateTextLayout(str, wcslen(str), format, 10000, 10000, &tl); ThrowIfFailed(hr);
+	DWRITE_TEXT_METRICS metrics;
+	hr = tl->GetMetrics(&metrics); ThrowIfFailed(hr);
+	return TextLayout { move(tl), metrics };
+}
+
 /*
 unsigned long long GetMacAddressValueFromBytes (unsigned char* address)
 {

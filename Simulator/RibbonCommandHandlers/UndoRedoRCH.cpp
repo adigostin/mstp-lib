@@ -6,6 +6,8 @@
 class UndoRedoRCH : public RCHBase
 {
 	typedef RCHBase base;
+public:
+	using RCHBase::RCHBase;
 
 	HRESULT Update_cmdUndo (UINT32 commandId, REFPROPERTYKEY key, const PROPVARIANT *currentValue, PROPVARIANT *newValue)
 	{
@@ -32,5 +34,5 @@ const RCHInfo UndoRedoRCH::_info (
 		{ cmdUndo,  { static_cast<RCHUpdate>(&Update_cmdUndo), nullptr } },
 		{ cmdRedo,  { static_cast<RCHUpdate>(&Update_cmdRedo), nullptr } },
 	},
-	[] { return ComPtr<RCHBase>(new UndoRedoRCH(), false); }
+	[](const RCHDeps& deps) { return ComPtr<RCHBase>(new UndoRedoRCH(deps), false); }
 );

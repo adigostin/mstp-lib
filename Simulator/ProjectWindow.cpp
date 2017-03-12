@@ -90,37 +90,29 @@ public:
 			ThrowIfFailed(hr);
 		}
 
-		std::vector<RCHBase*> commandHandlers;
-		UINT32 ribbonHeight = 0;
-		if ((rfResourceHInstance != nullptr) && (rfResourceName != nullptr))
-		{
-			for (auto& info : GetRCHInfos())
-			{
-				auto handler = info->_factory();
-				for (auto p : info->_commands)
-					_commandHandlerMap.insert ({ p.first, handler });
-				commandHandlers.push_back (handler.Get());
-			}
-
-			auto hr = _rf->Initialize(hwnd, this); ThrowIfFailed(hr);
-			hr = _rf->LoadUI(rfResourceHInstance, rfResourceName); ThrowIfFailed(hr);
-
-			ComPtr<IUIRibbon> ribbon;
-			hr = _rf->GetView(0, IID_PPV_ARGS(&ribbon)); ThrowIfFailed(hr);
-			hr = ribbon->GetHeight(&ribbonHeight); ThrowIfFailed(hr);
-		}
-
-		RECT dockPanelRect = { 0, (LONG) ribbonHeight, _clientSize.cx, _clientSize.cy };
-		_dockContainer = dockPanelFactory (_hwnd, 0xFFFF, dockPanelRect);
+		_dockContainer = dockPanelFactory (_hwnd, 0xFFFF, GetClientRectPixels());
 
 		auto logPanel = _dockContainer->GetOrCreateDockablePanel(Side::Right, L"STP Log");
 		_logArea = logAreaFactory (logPanel->GetHWnd(), 0xFFFF, logPanel->GetContentRect(), deviceContext, dWriteFactory);
 
 		_editArea = editAreaFactory (project, this, selection, _rf, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), deviceContext, dWriteFactory);
 
-		const RCHDeps rchDeps = { this, _rf, _project, _editArea, _selection };
-		for (auto h : commandHandlers)
-			h->InjectDependencies(rchDeps);
+		if ((rfResourceHInstance != nullptr) && (rfResourceName != nullptr))
+		{
+			const RCHDeps deps = { this, _rf, _project, _editArea, _selection };
+
+			for (auto& info : GetRCHInfos())
+			{
+				auto handler = info->_factory(deps);
+				for (auto p : info->_commands)
+					_commandHandlerMap.insert ({ p.first, handler });
+			}
+
+			auto hr = _rf->Initialize(hwnd, this); ThrowIfFailed(hr);
+			hr = _rf->LoadUI(rfResourceHInstance, rfResourceName); ThrowIfFailed(hr);
+
+			this->ResizeDockContainer();
+		}
 
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
 	}

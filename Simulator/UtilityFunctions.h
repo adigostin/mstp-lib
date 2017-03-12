@@ -51,6 +51,14 @@ public:
 
 enum class Side { Left, Top, Right, Bottom };
 
+struct TextLayout
+{
+	ComPtr<IDWriteTextLayout> layout;
+	DWRITE_TEXT_METRICS metrics;
+
+	static TextLayout Make (IDWriteFactory* dWriteFactory, IDWriteTextFormat* format, const wchar_t* str);
+};
+
 unsigned int GetTimestampMilliseconds();
 D2D1::ColorF GetD2DSystemColor (int sysColorIndex);
 bool HitTestLine (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance, D2D1_POINT_2F p0w, D2D1_POINT_2F p1w, float lineWidth);

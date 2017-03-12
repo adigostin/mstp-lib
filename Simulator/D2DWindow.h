@@ -25,10 +25,12 @@ public:
 	~D2DWindow();
 
 	HWND GetHWnd() const { return _hwnd; }
-	SIZE GetClientSize() const { return _clientSize; }
-	LONG GetClientWidth() const { return _clientSize.cx; }
-	LONG GetClientHeight() const { return _clientSize.cy; }
+	SIZE GetClientSizePixels() const { return _clientSize; }
+	LONG GetClientWidthPixels() const { return _clientSize.cx; }
+	LONG GetClientHeightPixels() const { return _clientSize.cy; }
 	D2D1_SIZE_F GetClientSizeDips() const { return _clientSizeDips; }
+	float GetClientWidthDips() const { return _clientSizeDips.width; }
+	float GetClientHeightDips() const { return _clientSizeDips.height; }
 	D2D1_POINT_2F GetDipLocationFromPixelLocation(POINT locationPixels) const;
 	POINT GetPixelLocationFromDipLocation(D2D1_POINT_2F locationDips) const;
 	D2D1_SIZE_F GetDipSizeFromPixelSize(SIZE sizePixels) const;

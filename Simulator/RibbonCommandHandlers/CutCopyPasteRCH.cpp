@@ -6,6 +6,8 @@
 class CutCopyPasteRCH : public RCHBase
 {
 	typedef RCHBase base;
+public:
+	using RCHBase::RCHBase;
 
 	HRESULT Update_cmdCutCopy (UINT32 commandId, REFPROPERTYKEY key, const PROPVARIANT *currentValue, PROPVARIANT *newValue)
 	{
@@ -33,5 +35,5 @@ const RCHInfo CutCopyPasteRCH::_info (
 		{ cmdCopy,  { static_cast<RCHUpdate>(&Update_cmdCutCopy), nullptr } },
 		{ cmdPaste, { static_cast<RCHUpdate>(&Update_cmdPaste), nullptr } },
 	},
-	[] { return ComPtr<RCHBase>(new CutCopyPasteRCH(), false); }
+	[](const RCHDeps& deps) { return ComPtr<RCHBase>(new CutCopyPasteRCH(deps), false); }
 );

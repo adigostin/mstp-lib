@@ -26,7 +26,7 @@ enum class MouseButton
 struct IWin32Window : public IUnknown
 {
 	virtual HWND GetHWnd() const = 0;
-	virtual RECT GetClientRect() const;
+	virtual RECT GetClientRectPixels() const;
 
 	RECT GetWindowRect() const;
 	SIZE GetWindowSize() const;

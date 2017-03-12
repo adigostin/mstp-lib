@@ -64,13 +64,16 @@
 			</Command.LargeImages>
 		</Command>
 
+		<Command Name="VlanGroup" Symbol="cmdVlanGroup" LabelTitle="VLAN"/>
+		<Command Name="SelectedVlan" Symbol="cmdSelectedVlan" LabelTitle="Selected VLAN"/>
+		
 		<Command Name="BridgeTabGroup" Symbol="cmdBridgeTabGroup" LabelTitle="Bridge" />
 
 		<Command Name="BridgePropertiesTab" Symbol="cmdBridgePropertiesTab" LabelTitle="Properties" />
 
-		<Command Name="BridgePropertiesGroup" Symbol="cmdBridgePropertiesGroup" LabelTitle="Bridge Properties"/>
+		<Command Name="BridgePropertiesGroup" Symbol="cmdBridgePropertiesGroup" LabelTitle="Bridge Properties (Disable STP to change)"/>
 
-		<Command Name="BridgeAddress" Symbol="cmdBridgeAddress"/>
+		<Command Name="BridgeAddress" Symbol="cmdBridgeAddress"/> <!--LabelTitle="MAC Address"-->
 		<Command Name="StpEnabled" Symbol="cmdStpEnabled" LabelTitle="STP Enabled"/>
 		<Command Name="StpVersion" Symbol="cmdStpVersion" LabelTitle="STP Version"/>
 
@@ -96,7 +99,12 @@
 
 		<Command Name="OptionsTab" Symbol="cmdOptionsTab" LabelTitle="Options"/>
 		<Command Name="NewBridgeOptionsGroup" Symbol="cmdNewBridgeOptionsGroup" LabelTitle="New Bridges"/>
-		<Command Name="NewBridgePortCount" Symbol="cmdNewBridgePortCount" LabelTitle="Number of Ports"/>
+		<!--<Command Name="NewBridgePortCount" Symbol="cmdNewBridgePortCount" LabelTitle="Number of Ports"/>-->
+
+		<Command Name="PortCount" Symbol="cmdPortCount" LabelTitle="Port Count"/>
+		<Command Name="TreeCount" Symbol="cmdTreeCount" LabelTitle="Spanning Tree Count"/>
+		<Command Name="MSTConfigGroup" Symbol="cmdMSTConfigGroup" LabelTitle="MST Config"/>
+		<Command Name="MSTConfigTable" Symbol="cmdMSTConfigTable" LabelTitle="Table"/>
 		
 		<!--__________________________ Declare Quick Access __________________________-->
 		<Command Name="cmdQat"/>
@@ -201,7 +209,25 @@
 						<Button CommandName="CreateBridge"/>
 						<Button CommandName="CreateCable"/>
 					</Group>
+					<Group CommandName="VlanGroup">
+						<SizeDefinition>
+							<ControlNameMap>
+								<ControlNameDefinition Name="dd1"/>
+							</ControlNameMap>
+							<GroupSizeDefinition Size="Small">
+								<ControlSizeDefinition ControlName="dd1" IsImageVisible="false"/>
+							</GroupSizeDefinition>
+							<GroupSizeDefinition Size="Medium">
+								<ControlSizeDefinition ControlName="dd1" IsImageVisible="false"/>
+							</GroupSizeDefinition>
+							<GroupSizeDefinition Size="Large">
+								<ControlSizeDefinition ControlName="dd1" IsImageVisible="false"/>
+							</GroupSizeDefinition>
+						</SizeDefinition>
+						<ComboBox CommandName="SelectedVlan" IsAutoCompleteEnabled="false" IsEditable="true"/>
+					</Group>
 				</Tab>
+				<!--
 				<Tab CommandName="OptionsTab">
 					<Group CommandName="NewBridgeOptionsGroup">
 						<SizeDefinition>
@@ -221,6 +247,7 @@
 						<ComboBox CommandName="NewBridgePortCount" IsAutoCompleteEnabled="false" IsEditable="false"/>
 					</Group>
 				</Tab>
+				-->
 			</Ribbon.Tabs>
 			<Ribbon.ContextualTabs>
 				<TabGroup CommandName="BridgeTabGroup">
@@ -231,26 +258,52 @@
 									<ControlNameDefinition Name="dd1"/>
 									<ControlNameDefinition Name="dd2"/>
 									<ControlNameDefinition Name="dd3"/>
+									<ControlNameDefinition Name="dd4"/>
+									<ControlNameDefinition Name="dd5"/>
 								</ControlNameMap>
 								<GroupSizeDefinition Size="Small">
 									<ControlSizeDefinition ControlName="dd1" IsImageVisible="false"/>
 									<ControlSizeDefinition ControlName="dd2" IsImageVisible="false"/>
 									<ControlSizeDefinition ControlName="dd3" IsImageVisible="false"/>
+									<ControlSizeDefinition ControlName="dd4" IsImageVisible="false"/>
+									<ControlSizeDefinition ControlName="dd5" IsImageVisible="false"/>
 								</GroupSizeDefinition>
 								<GroupSizeDefinition Size="Medium">
 									<ControlSizeDefinition ControlName="dd1" IsImageVisible="false"/>
 									<ControlSizeDefinition ControlName="dd2" IsImageVisible="false"/>
 									<ControlSizeDefinition ControlName="dd3" IsImageVisible="false"/>
+									<ControlSizeDefinition ControlName="dd4" IsImageVisible="false"/>
+									<ControlSizeDefinition ControlName="dd5" IsImageVisible="false"/>
 								</GroupSizeDefinition>
 								<GroupSizeDefinition Size="Large">
 									<ControlSizeDefinition ControlName="dd1" IsImageVisible="false"/>
 									<ControlSizeDefinition ControlName="dd2" IsImageVisible="false"/>
 									<ControlSizeDefinition ControlName="dd3" IsImageVisible="false"/>
+									<ControlSizeDefinition ControlName="dd4" IsImageVisible="false"/>
+									<ControlSizeDefinition ControlName="dd5" IsImageVisible="false"/>
 								</GroupSizeDefinition>
 							</SizeDefinition>
 							<ComboBox CommandName="BridgeAddress" IsEditable="true" IsAutoCompleteEnabled="false"/>
 							<CheckBox CommandName="StpEnabled"/>
 							<ComboBox CommandName="StpVersion" IsEditable="false"/>
+							<ComboBox CommandName="PortCount"/>
+							<ComboBox CommandName="TreeCount"/>
+						</Group>
+						<Group CommandName="MSTConfigGroup">
+							<SizeDefinition>
+								<ControlNameMap>
+									<ControlNameDefinition Name="dd1"/>
+								</ControlNameMap>
+								<GroupSizeDefinition Size="Small">
+									<ControlSizeDefinition ControlName="dd1" IsImageVisible="false"/>
+								</GroupSizeDefinition>
+								<GroupSizeDefinition Size="Medium">
+									<ControlSizeDefinition ControlName="dd1" IsImageVisible="false"/>
+								</GroupSizeDefinition>
+								<GroupSizeDefinition Size="Large">
+									<ControlSizeDefinition ControlName="dd1" IsImageVisible="false"/>
+								</GroupSizeDefinition>
+							</SizeDefinition>
 						</Group>
 					</Tab>
 				</TabGroup>
