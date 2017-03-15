@@ -146,9 +146,6 @@
     <ClCompile Include="UtilityFunctions.cpp" />
     <ClCompile Include="DockablePanel.cpp" />
     <ClCompile Include="DockContainer.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\CutCopyPasteRCH.cpp">
-      <Filter>Ribbon</Filter>
-    </ClCompile>
     <ClCompile Include="EditStates\MoveWirePointES.cpp">
       <Filter>EditStates</Filter>
     </ClCompile>
@@ -160,6 +157,9 @@
     </ClCompile>
     <ClCompile Include="RibbonCommandHandlers\OptionsRCH.cpp" />
     <ClCompile Include="RibbonCommandHandlers\VlanRCH.cpp" />
+    <ClCompile Include="RibbonCommandHandlers\CutCopyPasteDeleteRCH.cpp">
+      <Filter>Ribbon</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc">

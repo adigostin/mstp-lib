@@ -28,7 +28,7 @@ class Selection : public ISelection
 	{
 		auto it = find (_objects.begin(), _objects.end(), o);
 		assert (it != _objects.end());
-		
+
 		RemovingFromSelectionEvent::InvokeHandlers (_em, this, o);
 		SelectionChangedEvent::InvokeHandlers(_em, this);
 

@@ -37,7 +37,7 @@ protected:
 
 public:
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
-	
+
 	virtual ULONG STDMETHODCALLTYPE AddRef() override final;
 	virtual ULONG STDMETHODCALLTYPE Release() override final;
 

@@ -64,9 +64,17 @@
 			</Command.LargeImages>
 		</Command>
 
+		<Command Name="DeleteBridge" Symbol="cmdDeleteBridge" LabelTitle="Delete Bridge">
+			<Command.SmallImages>
+				<Image Source="Cancel_16x.bmp" MinDPI="96"/>
+				<Image Source="Cancel_24x.bmp" MinDPI="120"/>
+				<Image Source="Cancel_32x.bmp" MinDPI="168"/>
+			</Command.SmallImages>
+		</Command>
+
 		<Command Name="VlanGroup" Symbol="cmdVlanGroup" LabelTitle="VLAN"/>
-		<Command Name="SelectedVlan" Symbol="cmdSelectedVlan" LabelTitle="Selected VLAN"/>
-		
+		<Command Name="SelectedVlan" Symbol="cmdSelectedVlan" LabelTitle="Show topology for VLAN"/>
+
 		<Command Name="BridgeTabGroup" Symbol="cmdBridgeTabGroup" LabelTitle="Bridge" />
 
 		<Command Name="BridgePropertiesTab" Symbol="cmdBridgePropertiesTab" LabelTitle="Properties" />
@@ -105,7 +113,7 @@
 		<Command Name="TreeCount" Symbol="cmdTreeCount" LabelTitle="Spanning Tree Count"/>
 		<Command Name="MSTConfigGroup" Symbol="cmdMSTConfigGroup" LabelTitle="MST Config"/>
 		<Command Name="MSTConfigTable" Symbol="cmdMSTConfigTable" LabelTitle="Table"/>
-		
+
 		<!--__________________________ Declare Quick Access __________________________-->
 		<Command Name="cmdQat"/>
 
@@ -304,6 +312,7 @@
 									<ControlSizeDefinition ControlName="dd1" IsImageVisible="false"/>
 								</GroupSizeDefinition>
 							</SizeDefinition>
+							<Button CommandName="MSTConfigTable"/>
 						</Group>
 					</Tab>
 				</TabGroup>
@@ -332,6 +341,9 @@
 					<MenuGroup>
 						<Button CommandName="EnableSTP"/>
 						<Button CommandName="DisableSTP"/>
+					</MenuGroup>
+					<MenuGroup>
+						<Button CommandName="DeleteBridge"/>
 					</MenuGroup>
 				</ContextMenu>
 				<ContextMenu Name="ContextMenuPort">

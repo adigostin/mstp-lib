@@ -156,19 +156,31 @@ extern const ProjectWindowFactory projectWindowFactory;
 
 // ============================================================================
 
-struct ObjectInsertedEvent : public Event<ObjectInsertedEvent, void(IProject*, size_t index, Object*)> { };
-struct ObjectRemovingEvent : public Event<ObjectRemovingEvent, void(IProject*, size_t index, Object*)> { };
+struct BridgeInsertedEvent : public Event<BridgeInsertedEvent, void(IProject*, size_t index, Bridge*)> { };
+struct BridgeRemovingEvent : public Event<BridgeRemovingEvent, void(IProject*, size_t index, Bridge*)> { };
+
+struct WireInsertedEvent : public Event<WireInsertedEvent, void(IProject*, size_t index, Wire*)> { };
+struct WireRemovingEvent : public Event<WireRemovingEvent, void(IProject*, size_t index, Wire*)> { };
+
 struct ProjectInvalidateEvent : public Event<ProjectInvalidateEvent, void(IProject*)> { };
 
 struct IProject abstract : public IUnknown
 {
-	virtual const std::vector<ComPtr<Object>>& GetObjects() const = 0;
-	virtual void Insert (size_t index, Object* bridge) = 0;
-	virtual void Remove (size_t index) = 0;
-	virtual ObjectInsertedEvent::Subscriber GetObjectInsertedEvent() = 0;
-	virtual ObjectRemovingEvent::Subscriber GetObjectRemovingEvent() = 0;
+	virtual const std::vector<ComPtr<Bridge>>& GetBridges() const = 0;
+	virtual void InsertBridge (size_t index, Bridge* bridge) = 0;
+	virtual void RemoveBridge (size_t index) = 0;
+	virtual BridgeInsertedEvent::Subscriber GetBridgeInsertedEvent() = 0;
+	virtual BridgeRemovingEvent::Subscriber GetBridgeRemovingEvent() = 0;
+	void Add (Bridge* bridge) { InsertBridge (GetBridges().size(), bridge); }
+
+	virtual const std::vector<ComPtr<Wire>>& GetWires() const = 0;
+	virtual void InsertWire (size_t index, Wire* wire) = 0;
+	virtual void RemoveWire (size_t index) = 0;
+	virtual WireInsertedEvent::Subscriber GetWireInsertedEvent() = 0;
+	virtual WireRemovingEvent::Subscriber GetWireRemovingEvent() = 0;
+	void Add (Wire* wire) { InsertWire (GetWires().size(), wire); }
+
 	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() = 0;
-	void Add (Object* object) { Insert (GetObjects().size(), object); }
 
 	virtual std::array<uint8_t, 6> AllocMacAddressRange (size_t count) = 0;
 	virtual std::pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const = 0;

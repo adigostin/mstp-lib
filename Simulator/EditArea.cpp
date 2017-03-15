@@ -42,7 +42,8 @@ public:
 		, _project(project), _pw(pw), _rf(rf), _selection(selection)
 	{
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
-		_project->GetObjectRemovingEvent().AddHandler (&OnObjectRemoving, this);
+		_project->GetBridgeRemovingEvent().AddHandler (&OnBridgeRemoving, this);
+		_project->GetWireRemovingEvent().AddHandler (&OnWireRemoving, this);
 		_project->GetProjectInvalidateEvent().AddHandler (&OnProjectInvalidate, this);
 		auto dc = base::GetDeviceContext();
 		_drawingObjects._dWriteFactory = dWriteFactory;
@@ -61,7 +62,7 @@ public:
 
 		GetDWriteFactory()->CreateTextFormat (L"Tahoma", nullptr,  DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
 										  DWRITE_FONT_STRETCH_CONDENSED, 11, L"en-US", &_legendFont); ThrowIfFailed(hr);
-		
+
 		ComPtr<ID2D1Factory> factory;
 		dc->GetFactory(&factory);
 
@@ -83,18 +84,23 @@ public:
 	{
 		assert (_refCount == 0);
 		_project->GetProjectInvalidateEvent().RemoveHandler(&OnProjectInvalidate, this);
-		_project->GetObjectRemovingEvent().RemoveHandler (&OnObjectRemoving, this);
+		_project->GetWireRemovingEvent().RemoveHandler (&OnWireRemoving, this);
+		_project->GetBridgeRemovingEvent().RemoveHandler (&OnBridgeRemoving, this);
 		_selection->GetSelectionChangedEvent().RemoveHandler (&OnSelectionChanged, this);
 	}
 
-	static void OnObjectRemoving (void* callbackArg, IProject* project, size_t index, Object* o)
+	static void OnBridgeRemoving (void* callbackArg, IProject* project, size_t index, Bridge* b)
 	{
 		auto area = static_cast<EditArea*>(callbackArg);
-		if (area->_hoverPort->GetBridge() == o)
+		if (area->_hoverPort->GetBridge() == b)
 		{
 			area->_hoverPort = nullptr;
 			InvalidateRect (area->GetHWnd(), nullptr, FALSE);
 		}
+	}
+
+	static void OnWireRemoving (void* callbackArg, IProject* project, size_t index, Wire* w)
+	{
 	}
 
 	static void OnProjectInvalidate (void* callbackArg, IProject*)
@@ -121,19 +127,19 @@ public:
 	static constexpr LegendInfoEntry LegendInfo[] =
 	{
 		{ L"Disabled",							STP_PORT_ROLE_DISABLED,   false, false, false },
-		
+
 		{ L"Designated discarding",				STP_PORT_ROLE_DESIGNATED, false, false, false },
 		{ L"Designated learning",				STP_PORT_ROLE_DESIGNATED, true,  false, false },
 		{ L"Designated forwarding",				STP_PORT_ROLE_DESIGNATED, true,  true,  false },
 		{ L"Designated forwarding operEdge",	STP_PORT_ROLE_DESIGNATED, true,  true,  true  },
-		
+
 		{ L"Root/Master discarding",			STP_PORT_ROLE_ROOT,       false, false, false },
 		{ L"Root/Master learning",				STP_PORT_ROLE_ROOT,       true,  false, false },
 		{ L"Root/Master forwarding",			STP_PORT_ROLE_ROOT,       true,  true,  false },
-		
+
 		{ L"Alternate discarding",				STP_PORT_ROLE_ALTERNATE,  false, false, false },
 		{ L"Alternate learning",				STP_PORT_ROLE_ALTERNATE,  true,  false, false },
-		
+
 		{ L"Backup discarding",					STP_PORT_ROLE_BACKUP,     false, false, false },
 		{ L"Undefined",							STP_PORT_ROLE_UNKNOWN,    false, false, false },
 	};
@@ -208,17 +214,64 @@ public:
 
 		rt->SetAntialiasMode(oldaa);
 	}
-	
+
+	void RenderHint (ID2D1DeviceContext* dc, float centerX, float topY, const wchar_t* text) const
+	{
+		float padding = 3.0f;
+		auto tl = TextLayout::Make (GetDWriteFactory(), _drawingObjects._regularTextFormat, text);
+
+		D2D1_ROUNDED_RECT rr;
+		rr.rect.left = centerX - tl.metrics.width / 2 - padding;
+		rr.rect.top = topY;
+		rr.rect.right = centerX + tl.metrics.width / 2 + padding;
+		rr.rect.bottom = topY + padding + tl.metrics.height + padding;
+		rr.radiusX = rr.radiusY = 4;
+		ComPtr<ID2D1SolidColorBrush> brush;
+		dc->CreateSolidColorBrush (GetD2DSystemColor(COLOR_INFOBK), &brush);
+		dc->FillRoundedRectangle (&rr, brush);
+		brush->SetColor (GetD2DSystemColor(COLOR_INFOTEXT));
+		dc->DrawRoundedRectangle (&rr, brush);
+		dc->DrawTextLayout ({ rr.rect.left + padding, rr.rect.top + padding }, tl.layout, brush);
+	}
+
 	void RenderObjects (ID2D1DeviceContext* dc) const
 	{
 		D2D1_MATRIX_3X2_F oldtr;
 		dc->GetTransform(&oldtr);
 		dc->SetTransform(GetZoomTransform());
 
-		for (auto& o : _project->GetObjects())
-			o->Render (dc, _drawingObjects, _pw->GetSelectedVlanNumber());
+		bool anyPortConnected = false;
+
+		for (const ComPtr<Bridge>& b : _project->GetBridges())
+		{
+			b->Render (dc, _drawingObjects, _pw->GetSelectedVlanNumber());
+
+			anyPortConnected |= any_of (b->GetPorts().begin(), b->GetPorts().end(),
+										[this](const ComPtr<Port>& p) { return _project->GetWireConnectedToPort(p).first != nullptr; });
+		}
+
+		for (const ComPtr<Wire>& w : _project->GetWires())
+			w->Render (dc, _drawingObjects, _pw->GetSelectedVlanNumber());
 
 		dc->SetTransform(oldtr);
+
+		if (_project->GetBridges().empty())
+		{
+			RenderHint (dc, GetClientWidthDips() / 2, GetClientHeightDips() / 2, L"No bridges created. Right-click to create some.");
+		}
+		else if (_project->GetBridges().size() == 1)
+		{
+			RenderHint (dc, GetClientWidthDips() / 2, GetClientHeightDips() / 2, L"Right-click to add more bridges.");
+		}
+		else
+		{
+			if (!anyPortConnected)
+			{
+				auto first = _project->GetBridges()[0];
+				auto text = L"No port connected. You can connect\r\nports by drawing wires with the mouse.";
+				RenderHint (dc, first->GetLeft() + first->GetWidth() / 2, first->GetBottom() + Port::ExteriorHeight * 1.5f, text);
+			}
+		}
 	}
 
 	virtual void Render(ID2D1DeviceContext* dc) const override final
@@ -227,28 +280,25 @@ public:
 
 		auto clientSizeDips = GetClientSizeDips();
 
-		if (none_of (_project->GetObjects().begin(), _project->GetObjects().end(), [](auto&& o) { return dynamic_cast<Bridge*>(o.Get()) != nullptr; }))
+		if (!_project->GetWires().empty())
 		{
-			auto layout = TextLayout::Make(GetDWriteFactory(), _drawingObjects._regularTextFormat, L"No bridges created. Right-click to create some.");
-			D2D1_POINT_2F origin = { clientSizeDips.width / 2 - layout.metrics.width / 2, clientSizeDips.height / 2 - layout.metrics.height / 2 };
-			dc->DrawTextLayout (origin, layout.layout, _drawingObjects._brushWindowText);
+			bool anyMstpBridge = any_of (_project->GetBridges().begin(), _project->GetBridges().end(), [](const ComPtr<Bridge>& b) { return b->GetStpVersion() == STP_VERSION_MSTP; });
+			if (anyMstpBridge)
+			{
+				wstringstream ss;
+				ss << L"Showing network topology for VLAN " << to_wstring(_pw->GetSelectedVlanNumber()) << L".";
+				RenderHint (dc, clientSizeDips.width / 2, 4, ss.str().c_str());
+			}
 		}
-		else
-		{
-			wstringstream ss;
-			ss << L"Showing network topology for VLAN " << to_wstring(_pw->GetSelectedVlanNumber()) << L".";
-			auto layout = TextLayout::Make(GetDWriteFactory(), _drawingObjects._regularTextFormat, ss.str().c_str());
-			dc->DrawTextLayout ({ 5, 5 }, layout.layout, _drawingObjects._brushWindowText);
 
-			RenderLegend(dc);
-			RenderObjects(dc);
+		RenderLegend(dc);
+		RenderObjects(dc);
 
-			for (auto& o : _selection->GetObjects())
-				o->RenderSelection(this, dc, _drawingObjects);
+		for (auto& o : _selection->GetObjects())
+			o->RenderSelection(this, dc, _drawingObjects);
 
-			if (_hoverPort != nullptr)
-				RenderHoverCP (dc, _hoverPort);
-		}
+		if (_hoverPort != nullptr)
+			RenderHoverCP (dc, _hoverPort);
 
 		if (_state != nullptr)
 			_state->Render(dc);
@@ -329,15 +379,12 @@ public:
 
 	virtual Port* GetCPAt (D2D1_POINT_2F dLocation, float tolerance) const override final
 	{
-		for (auto& o : _project->GetObjects())
+		for (auto& b : _project->GetBridges())
 		{
-			if (auto b = dynamic_cast<Bridge*>(o.Get()))
+			for (auto& port : b->GetPorts())
 			{
-				for (auto& port : b->GetPorts())
-				{
-					if (port->HitTestCP (this, dLocation, tolerance))
-						return port;
-				}
+				if (port->HitTestCP (this, dLocation, tolerance))
+					return port;
 			}
 		}
 
@@ -346,9 +393,16 @@ public:
 
 	HTResult HitTestObjects (D2D1_POINT_2F dLocation, float tolerance) const
 	{
-		for (auto& o : _project->GetObjects())
+		for (auto& w : _project->GetWires())
 		{
-			auto ht = o->HitTest(this, dLocation, tolerance);
+			auto ht = w->HitTest (this, dLocation, tolerance);
+			if (ht.object != nullptr)
+				return ht;
+		}
+
+		for (auto& b : _project->GetBridges())
+		{
+			auto ht = b->HitTest(this, dLocation, tolerance);
 			if (ht.object != nullptr)
 				return ht;
 		}
@@ -407,7 +461,7 @@ public:
 				_state = nullptr;
 				::SetCursor (LoadCursor (nullptr, IDC_ARROW));
 			};
-			
+
 			return 0;
 		}
 
@@ -427,7 +481,7 @@ public:
 		if (ht.object == nullptr)
 		{
 			// TODO: area selection
-			//stateForMoveThreshold = 
+			//stateForMoveThreshold =
 		}
 		else if (auto b = dynamic_cast<Bridge*>(ht.object))
 		{
@@ -477,7 +531,7 @@ public:
 				if ((pt.x != _beginningDrag->location.pt.x) || (pt.y != _beginningDrag->location.pt.y))
 					_state->OnMouseMove (_beginningDrag->location);
 			}
-			
+
 			_beginningDrag = nullopt;
 			// fall-through to the code that handles the state
 		}

@@ -51,7 +51,7 @@ Bridge::Bridge (IProject* project, unsigned int portCount, const std::array<uint
 	if (!bRes)
 		throw win32_exception(GetLastError());
 	_oneSecondTimerHandle.reset(handle);
-	
+
 	period = 45 + (std::random_device()() % 10);
 	bRes = CreateTimerQueueTimer (&handle, nullptr, MacOperationalTimerCallback, this, period, period, 0);
 	if (!bRes)
@@ -116,14 +116,14 @@ LRESULT CALLBACK Bridge::HelperWindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, 
 void Bridge::ComputeMacOperational()
 {
 	assert (this_thread::get_id() == _guiThreadId);
-	
+
 	auto timestamp = GetTimestampMilliseconds();
 
 	bool invalidate = false;
 	for (size_t portIndex = 0; portIndex < _ports.size(); portIndex++)
 	{
 		auto& port = _ports[portIndex];
-	
+
 		bool newMacOperational = (_project->FindReceivingPort(port) != nullptr);
 		if (port->_macOperational != newMacOperational)
 		{
@@ -155,7 +155,7 @@ void Bridge::ProcessReceivedPacket()
 {
 	auto rp = move(_rxQueue.front());
 	_rxQueue.pop();
-	
+
 	if (memcmp (&rp.data[0], BpduDestAddress, 6) == 0)
 	{
 		// It's a BPDU.
@@ -340,7 +340,7 @@ void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, uint16_t 
 	{
 		auto treeIndex = STP_GetTreeIndexFromVlanNumber(_stpBridge, vlanNumber);
 		ss << uppercase << setfill(L'0') << setw(4) << hex << STP_GetBridgePriority(_stpBridge, treeIndex) << L'.'
-			<< setw(2) << _macAddress[0] << setw(2) << _macAddress[1] << setw(2) << _macAddress[2] 
+			<< setw(2) << _macAddress[0] << setw(2) << _macAddress[1] << setw(2) << _macAddress[2]
 			<< setw(2) << _macAddress[3] << setw(2) << _macAddress[4] << setw(2) << _macAddress[5] << endl
 			<< L"STP enabled (" << STP_GetVersionString(_stpVersion) << L")" << endl
 			<< L"VLAN " << dec << vlanNumber << L" (spanning tree " << treeIndex << L")" << endl
@@ -384,10 +384,10 @@ HTResult Bridge::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, fl
 
 	auto tl = zoomable->GetDLocationFromWLocation ({ _x, _y });
 	auto br = zoomable->GetDLocationFromWLocation ({ _x + _width, _y + _height });
-	
+
 	if ((dLocation.x >= tl.x) && (dLocation.y >= tl.y) && (dLocation.x < br.x) && (dLocation.y < br.y))
 		return { this, HTCodeInner };
-	
+
 	return {};
 }
 
@@ -454,7 +454,7 @@ void* Bridge::StpCallback_TransmitGetBuffer (STP_BRIDGE* bridge, unsigned int po
 void Bridge::StpCallback_TransmitReleaseBuffer (STP_BRIDGE* bridge, void* bufferReturnedByGetBuffer)
 {
 	auto transmittingBridge = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
-	
+
 	RxPacketInfo info;
 	info.data = move(transmittingBridge->_txPacketData);
 	info.portIndex = transmittingBridge->_txReceivingPort->_portIndex;

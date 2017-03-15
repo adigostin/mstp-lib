@@ -227,7 +227,7 @@
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="RibbonCommandHandlers\BridgePropertiesRCH.cpp" />
     <ClCompile Include="RibbonCommandHandlers\CreateRCH.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\CutCopyPasteRCH.cpp" />
+    <ClCompile Include="RibbonCommandHandlers\CutCopyPasteDeleteRCH.cpp" />
     <ClCompile Include="RibbonCommandHandlers\OptionsRCH.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>

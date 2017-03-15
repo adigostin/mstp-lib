@@ -69,17 +69,13 @@ public:
 		static_assert (std::is_base_of<IUnknown, T>::value, "T needs to be IUnknown based");
 	}
 
-	explicit ComPtr(T* lComPtr, bool addRef = true)
+	ComPtr(T* lComPtr, bool addRef = true)
 		: m_ComPtr(lComPtr)
 	{
 		static_assert (std::is_base_of<IUnknown, T>::value, "T needs to be IUnknown based");
 		if ((m_ComPtr != nullptr) && addRef)
 			m_ComPtr->AddRef();
 	}
-
-	ComPtr(nullptr_t np)
-		: m_ComPtr(nullptr)
-	{ }
 
 	ComPtr(const ComPtr<T>& lComPtrObj)
 	{
@@ -184,9 +180,9 @@ public:
 		return this->m_ComPtr == other.m_ComPtr;
 	}
 
-	bool operator==(nullptr_t np) const
+	bool operator==(T* other) const
 	{
-		return this->m_ComPtr == np;
+		return this->m_ComPtr == other;
 	}
 
 	template <typename I>

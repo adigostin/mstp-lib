@@ -18,8 +18,9 @@ public:
 	{
 		if (_bridge == nullptr)
 		{
-			unsigned int portCount = 3;
-			_bridge = ComPtr<Bridge>(new Bridge (_project, portCount, _project->AllocMacAddressRange(1 + portCount)), false);
+			unsigned int portCount = 4;
+			size_t macAddressesToReserve = std::max ((size_t) 1 + portCount, (size_t) 16);
+			_bridge = ComPtr<Bridge>(new Bridge (_project, portCount, _project->AllocMacAddressRange(macAddressesToReserve)), false);
 		}
 
 		_bridge->SetLocation (location.w.x - _bridge->GetWidth() / 2, location.w.y - _bridge->GetHeight() / 2);
@@ -32,6 +33,7 @@ public:
 		{
 			_project->Add(_bridge);
 			_selection->Select(_bridge);
+			_bridge->EnableStp(GetTimestampMilliseconds());
 		}
 
 		_completed = true;
