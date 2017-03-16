@@ -37,7 +37,7 @@ class Bridge : public Object
 	TimerQueueTimer_unique_ptr _oneSecondTimerHandle;
 	TimerQueueTimer_unique_ptr _macOperationalTimerHandle;
 	HWND_unique_ptr _helperWindow;
-	
+
 	struct RxPacketInfo
 	{
 		std::vector<uint8_t> data;
@@ -75,7 +75,7 @@ public:
 	D2D1_RECT_F GetBounds() const { return { _x, _y, _x + _width, _y + _height }; }
 	const std::vector<ComPtr<Port>>& GetPorts() const { return _ports; }
 	std::array<uint8_t, 6> GetMacAddress() const { return _macAddress; }
-	
+
 	virtual void Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, uint16_t vlanNumber) const override final;
 	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const override final;
 	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
@@ -120,5 +120,6 @@ private:
 	static void  StpCallback_DebugStrOut (STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, bool flush);
 	static void  StpCallback_OnTopologyChange (STP_BRIDGE* bridge);
 	static void  StpCallback_OnNotifiedTopologyChange (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
+	static void  StpCallback_OnPortRoleChanged (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role);
 };
 

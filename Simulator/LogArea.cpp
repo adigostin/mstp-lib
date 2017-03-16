@@ -83,7 +83,7 @@ public:
 			for (int lineIndex = _topLineIndex; (lineIndex < _animationCurrentLineCount) && (y < clientSize.height); lineIndex++)
 			{
 				line = converter.from_bytes(_lines[lineIndex]);
-				
+
 				if ((line.length() >= 2) && (line[line.length() - 2] == '\r') && (line[line.length() - 1] == '\n'))
 					line.resize (line.length() - 2);
 

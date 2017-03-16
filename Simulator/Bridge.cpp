@@ -419,6 +419,7 @@ const STP_CALLBACKS Bridge::StpCallbacks =
 	StpCallback_DebugStrOut,
 	StpCallback_OnTopologyChange,
 	StpCallback_OnNotifiedTopologyChange,
+	StpCallback_OnPortRoleChanged,
 	StpCallback_AllocAndZeroMemory,
 	StpCallback_FreeMemory,
 };
@@ -529,5 +530,12 @@ void Bridge::StpCallback_OnTopologyChange (STP_BRIDGE* bridge)
 void Bridge::StpCallback_OnNotifiedTopologyChange (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
 {
 }
+
+void Bridge::StpCallback_OnPortRoleChanged (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role)
+{
+	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
+	InvalidateEvent::InvokeHandlers(b->_em, b);
+}
+
 #pragma endregion
 

@@ -49,7 +49,7 @@ struct ISelection abstract : public IUnknown
 	virtual SelectionChangedEvent::Subscriber GetSelectionChangedEvent() = 0;
 };
 
-using SelectionFactory = ComPtr<ISelection>(*const)();
+using SelectionFactory = ComPtr<ISelection>(*const)(IProject* project);
 extern const SelectionFactory selectionFactory;
 
 // ============================================================================
@@ -179,6 +179,10 @@ struct IProject abstract : public IUnknown
 	virtual WireInsertedEvent::Subscriber GetWireInsertedEvent() = 0;
 	virtual WireRemovingEvent::Subscriber GetWireRemovingEvent() = 0;
 	void Add (Wire* wire) { InsertWire (GetWires().size(), wire); }
+
+	void Remove (Bridge* b);
+	void Remove (Wire* w);
+	void Remove (Object* o);
 
 	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() = 0;
 

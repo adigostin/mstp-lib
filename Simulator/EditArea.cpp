@@ -92,7 +92,7 @@ public:
 	static void OnBridgeRemoving (void* callbackArg, IProject* project, size_t index, Bridge* b)
 	{
 		auto area = static_cast<EditArea*>(callbackArg);
-		if (area->_hoverPort->GetBridge() == b)
+		if ((area->_hoverPort != nullptr) && (area->_hoverPort->GetBridge() == b))
 		{
 			area->_hoverPort = nullptr;
 			InvalidateRect (area->GetHWnd(), nullptr, FALSE);
@@ -267,9 +267,11 @@ public:
 		{
 			if (!anyPortConnected)
 			{
-				auto first = _project->GetBridges()[0];
+				auto b = _project->GetBridges()[0];
 				auto text = L"No port connected. You can connect\r\nports by drawing wires with the mouse.";
-				RenderHint (dc, first->GetLeft() + first->GetWidth() / 2, first->GetBottom() + Port::ExteriorHeight * 1.5f, text);
+				auto wl = D2D1_POINT_2F { b->GetLeft() + b->GetWidth() / 2, b->GetBottom() + Port::ExteriorHeight * 1.5f };
+				auto dl = GetDLocationFromWLocation(wl);
+				RenderHint (dc, dl.x, dl.y, text);
 			}
 		}
 	}
@@ -425,6 +427,13 @@ public:
 
 		if (_state != nullptr)
 			return _state->OnKeyDown (virtualKey, modifierKeys);
+
+		if (virtualKey == VK_DELETE)
+		{
+			while (!_selection->GetObjects().empty())
+				_project->Remove(_selection->GetObjects().back());
+			return 0;
+		}
 
 		return nullopt;
 	}

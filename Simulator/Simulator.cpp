@@ -2,6 +2,8 @@
 #include "pch.h"
 #include "Simulator.h"
 #include "Win32Defs.h"
+#include "Bridge.h"
+#include "Wire.h"
 
 #pragma comment (lib, "d2d1.lib")
 #pragma comment (lib, "dwrite.lib")
@@ -51,6 +53,35 @@ RECT IWin32Window::GetClientRectPixels() const
 	return rect;
 };
 #pragma endregion
+
+void IProject::Remove (Object* o)
+{
+	if (auto b = dynamic_cast<Bridge*>(o))
+		Remove(b);
+	else if (auto w = dynamic_cast<Wire*>(o))
+		Remove(w);
+	else
+		throw not_implemented_exception();
+}
+
+void IProject::Remove (Bridge* b)
+{
+	auto& bridges = GetBridges();
+	auto it = find (bridges.begin(), bridges.end(), b);
+	if (it == bridges.end())
+		throw invalid_argument("b");
+	RemoveBridge(it - bridges.begin());
+}
+
+void IProject::Remove (Wire* w)
+{
+	auto& wires = GetWires();
+	auto it = find (wires.begin(), wires.end(), w);
+	if (it == wires.end())
+		throw invalid_argument("w");
+	RemoveWire (it - wires.begin());
+}
+
 
 int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
@@ -104,8 +135,8 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 		auto regKeyPath = ss.str();
 
 		//auto actionList = actionListFactory();
-		auto selection = selectionFactory();
 		auto project = projectFactory();//move(actionList));
+		auto selection = selectionFactory(project);
 		auto projectWindow = projectWindowFactory(project, hInstance, L"APPLICATION_RIBBON", selection, editAreaFactory, nCmdShow, regKeyPath.c_str(), deviceContext1, dWriteFactory);
 
 		MSG msg;
