@@ -2,6 +2,8 @@
 #include "pch.h"
 #include "Simulator.h"
 #include "Win32Defs.h"
+#include "Bridge.h"
+#include "Wire.h"
 
 #pragma comment (lib, "d2d1.lib")
 #pragma comment (lib, "dwrite.lib")
@@ -11,6 +13,7 @@
 #pragma comment (lib, "Shlwapi")
 #pragma comment (lib, "Version")
 #pragma comment (lib, "Comctl32")
+#pragma comment (lib, "PropSys")
 
 using namespace std;
 using namespace D2D1;
@@ -19,8 +22,7 @@ static const wchar_t CompanyName[] = L"Adi Gostin";
 static const wchar_t AppName[] = L"STP Simulator";
 static const wchar_t AppVersion[] = L"2.0";
 
-unique_ptr<ISimulatorApp> App;
-
+#pragma region IWin32Window
 RECT IWin32Window::GetWindowRect() const
 {
 	RECT rect;
@@ -38,11 +40,11 @@ SIZE IWin32Window::GetWindowSize() const
 
 SIZE IWin32Window::GetClientSize() const
 {
-	RECT rect = this->GetClientRect();
+	RECT rect = this->GetClientRectPixels();
 	return SIZE { rect.right, rect.bottom };
 }
 
-RECT IWin32Window::GetClientRect() const
+RECT IWin32Window::GetClientRectPixels() const
 {
 	RECT rect;
 	BOOL bRes = ::GetClientRect (GetHWnd(), &rect);
@@ -50,80 +52,36 @@ RECT IWin32Window::GetClientRect() const
 		throw win32_exception(GetLastError());
 	return rect;
 };
+#pragma endregion
 
-class SimulatorApp : public ISimulatorApp
+void IProject::Remove (Object* o)
 {
-	wstring _regKeyPath;
-	ComPtr<ID3D11Device1> _d3dDevice;
-	ComPtr<ID3D11DeviceContext1> _d3dDeviceContext;
-	ComPtr<IDWriteFactory> _dWriteFactory;
-	ComPtr<IWICImagingFactory2> _wicFactory;
+	if (auto b = dynamic_cast<Bridge*>(o))
+		Remove(b);
+	else if (auto w = dynamic_cast<Wire*>(o))
+		Remove(w);
+	else
+		throw not_implemented_exception();
+}
 
-public:
-	SimulatorApp()
-	{
-		HRESULT hr;
+void IProject::Remove (Bridge* b)
+{
+	auto& bridges = GetBridges();
+	auto it = find (bridges.begin(), bridges.end(), b);
+	if (it == bridges.end())
+		throw invalid_argument("b");
+	RemoveBridge(it - bridges.begin());
+}
 
-		bool tryDebugFirst = false;
-		#ifdef _DEBUG
-		tryDebugFirst = true;
-		#endif
+void IProject::Remove (Wire* w)
+{
+	auto& wires = GetWires();
+	auto it = find (wires.begin(), wires.end(), w);
+	if (it == wires.end())
+		throw invalid_argument("w");
+	RemoveWire (it - wires.begin());
+}
 
-		auto d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
-		ComPtr<ID3D11Device> device;
-		ComPtr<ID3D11DeviceContext> deviceContext;
-
-		if (tryDebugFirst)
-		{
-			hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
-								   D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_DEBUG,
-								   &d3dFeatureLevel, 1,
-								   D3D11_SDK_VERSION, &device, nullptr, &deviceContext);
-		}
-
-		if (!tryDebugFirst || FAILED(hr))
-		{
-			hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
-								   D3D11_CREATE_DEVICE_BGRA_SUPPORT,
-								   &d3dFeatureLevel, 1,
-								   D3D11_SDK_VERSION, &device, nullptr, &deviceContext);
-			ThrowIfFailed(hr);
-		}
-
-		wstringstream ss;
-		ss << L"SOFTWARE\\" << CompanyName << L"\\" << ::AppName << L"\\" << ::AppVersion;
-		_regKeyPath = ss.str();
-
-		hr = device->QueryInterface(IID_PPV_ARGS(&_d3dDevice)); ThrowIfFailed(hr);
-
-		hr = deviceContext->QueryInterface(IID_PPV_ARGS(&_d3dDeviceContext)); ThrowIfFailed(hr);
-
-		hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof (IDWriteFactory), reinterpret_cast<IUnknown**>(&_dWriteFactory)); ThrowIfFailed(hr);
-
-		hr = CoCreateInstance(CLSID_WICImagingFactory2, NULL, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory2), (void**)&_wicFactory); ThrowIfFailed(hr);
-	}
-
-	virtual ~SimulatorApp()
-	{
-		/*
-		if (device->GetCreationFlags() & D3D11_CREATE_DEVICE_DEBUG)
-		{
-			ComPtr<ID3D11Debug> debug;
-			hr = device->QueryInterface(&debug);
-			if (SUCCEEDED(hr))
-				debug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
-		}
-		*/
-	}
-
-	virtual const wstring& GetRegKeyPath() const override final { return _regKeyPath; }
-
-	virtual ID3D11DeviceContext1* GetD3DDeviceContext() const override final { return _d3dDeviceContext; }
-
-	virtual IDWriteFactory* GetDWriteFactory() const override final { return _dWriteFactory; }
-
-	virtual IWICImagingFactory2* GetWicFactory() const override final { return _wicFactory; }
-};
 
 int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
@@ -131,16 +89,56 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 	_CrtSetDbgFlag(tmp | _CRTDBG_LEAK_CHECK_DF);
 
 	HRESULT hr = CoInitialize(0);
-	::App = unique_ptr<ISimulatorApp>(new SimulatorApp());
+
+	bool tryDebugFirst = false;
+	#ifdef _DEBUG
+	tryDebugFirst = true;
+	#endif
+
+	auto d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
+	ComPtr<ID3D11Device> device;
+	ComPtr<ID3D11DeviceContext> deviceContext;
+
+	if (tryDebugFirst)
+	{
+		hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
+							   D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_DEBUG,
+							   &d3dFeatureLevel, 1,
+							   D3D11_SDK_VERSION, &device, nullptr, &deviceContext);
+	}
+
+	if (!tryDebugFirst || FAILED(hr))
+	{
+		hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
+							   D3D11_CREATE_DEVICE_BGRA_SUPPORT,
+							   &d3dFeatureLevel, 1,
+							   D3D11_SDK_VERSION, &device, nullptr, &deviceContext);
+		ThrowIfFailed(hr);
+	}
 
 	int processExitValue;
-
 	{
+		ComPtr<ID3D11Device1> d3dDevice;
+		hr = device->QueryInterface(IID_PPV_ARGS(&d3dDevice)); ThrowIfFailed(hr);
+
+		ComPtr<ID3D11DeviceContext1> deviceContext1;
+		hr = deviceContext->QueryInterface(IID_PPV_ARGS(&deviceContext1)); ThrowIfFailed(hr);
+
+		ComPtr<IDWriteFactory> dWriteFactory;
+		hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof (IDWriteFactory), reinterpret_cast<IUnknown**>(&dWriteFactory)); ThrowIfFailed(hr);
+
+		ComPtr<IWICImagingFactory2> wicFactory;
+		hr = CoCreateInstance(CLSID_WICImagingFactory2, NULL, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory2), (void**)&wicFactory); ThrowIfFailed(hr);
+
+		wstringstream ss;
+		ss << L"SOFTWARE\\" << CompanyName << L"\\" << ::AppName << L"\\" << ::AppVersion;
+		auto regKeyPath = ss.str();
+
 		//auto actionList = actionListFactory();
-		auto selection = selectionFactory();
 		auto project = projectFactory();//move(actionList));
-		auto projectWindow = projectWindowFactory(project, hInstance, L"APPLICATION_RIBBON", selection, editAreaFactory, nCmdShow);
-		
+		auto selection = selectionFactory(project);
+		auto projectWindow = projectWindowFactory(project, hInstance, L"APPLICATION_RIBBON", selection, editAreaFactory, nCmdShow, regKeyPath.c_str(), deviceContext1, dWriteFactory);
+
 		MSG msg;
 		while (GetMessage(&msg, nullptr, 0, 0))
 		{
@@ -150,8 +148,16 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 
 		processExitValue = (int)msg.wParam;
 	}
-
-	::App = nullptr;
+	/*
+	if (device->GetCreationFlags() & D3D11_CREATE_DEVICE_DEBUG)
+	{
+		deviceContext = nullptr;
+		ComPtr<ID3D11Debug> debug;
+		hr = device->QueryInterface(&debug);
+		if (SUCCEEDED(hr))
+			debug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
+	}
+	*/
 	CoUninitialize();
 
 	return processExitValue;

@@ -2,39 +2,59 @@
 #include "pch.h"
 #include "Simulator.h"
 #include "Wire.h"
+#include "Bridge.h"
 
 using namespace std;
 
 class Project : public IProject
 {
 	ULONG _refCount = 1;
-	vector<ComPtr<Object>> _objects;
+	vector<ComPtr<Bridge>> _bridges;
+	vector<ComPtr<Wire>> _wires;
 	EventManager _em;
 	std::array<uint8_t, 6> _nextMacAddress = { 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x80 };
 
 public:
-	virtual const vector<ComPtr<Object>>& GetObjects() const override final { return _objects; }
+	virtual const vector<ComPtr<Bridge>>& GetBridges() const override final { return _bridges; }
 
-	virtual void Insert (size_t index, Object* object) override final
+	virtual void InsertBridge (size_t index, Bridge* bridge) override final
 	{
-		if (index > _objects.size())
+		if (index > _bridges.size())
 			throw invalid_argument("index");
 
-		_objects.push_back (ComPtr<Object>(object));
-		object->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
-		ObjectInsertedEvent::InvokeHandlers (_em, this, index, object);
+		_bridges.push_back(bridge);
+		bridge->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
+		BridgeInsertedEvent::InvokeHandlers (_em, this, index, bridge);
 		ProjectInvalidateEvent::InvokeHandlers (_em, this);
 	}
 
-	virtual void Remove(size_t index) override final
+	virtual void RemoveBridge(size_t index) override final
 	{
-		if (index >= _objects.size())
+		if (index >= _bridges.size())
 			throw invalid_argument("index");
 
-		ObjectRemovingEvent::InvokeHandlers(_em, this, index, _objects[index]);
-		_objects[index]->GetInvalidateEvent().RemoveHandler(&OnObjectInvalidate, this);
-		_objects.erase (_objects.begin() + index);
-		ProjectInvalidateEvent::InvokeHandlers(_em, this);
+		BridgeRemovingEvent::InvokeHandlers(_em, this, index, _bridges[index]);
+		_bridges[index]->GetInvalidateEvent().RemoveHandler (&OnObjectInvalidate, this);
+		_bridges.erase (_bridges.begin() + index);
+		ProjectInvalidateEvent::InvokeHandlers (_em, this);
+	}
+
+	virtual const vector<ComPtr<Wire>>& GetWires() const override final { return _wires; }
+
+	virtual void InsertWire (size_t index, Wire* wire) override final
+	{
+		if (index > _wires.size())
+			throw invalid_argument("index");
+
+		_wires.push_back(wire);
+		wire->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
+		WireInsertedEvent::InvokeHandlers (_em, this, index, wire);
+		ProjectInvalidateEvent::InvokeHandlers (_em, this);
+	}
+
+	virtual void RemoveWire (size_t index) override final
+	{
+		throw not_implemented_exception();
 	}
 
 	static void OnObjectInvalidate (void* callbackArg, Object* object)
@@ -43,34 +63,35 @@ public:
 		ProjectInvalidateEvent::InvokeHandlers (project->_em, project);
 	}
 
-	virtual ObjectInsertedEvent::Subscriber GetObjectInsertedEvent() override final { return ObjectInsertedEvent::Subscriber(_em); }
-	virtual ObjectRemovingEvent::Subscriber GetObjectRemovingEvent() override final { return ObjectRemovingEvent::Subscriber(_em); }
+	virtual BridgeInsertedEvent::Subscriber GetBridgeInsertedEvent() override final { return BridgeInsertedEvent::Subscriber(_em); }
+	virtual BridgeRemovingEvent::Subscriber GetBridgeRemovingEvent() override final { return BridgeRemovingEvent::Subscriber(_em); }
+
+	virtual WireInsertedEvent::Subscriber GetWireInsertedEvent() override final { return WireInsertedEvent::Subscriber(_em); }
+	virtual WireRemovingEvent::Subscriber GetWireRemovingEvent() override final { return WireRemovingEvent::Subscriber(_em); }
+
 	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() override final { return ProjectInvalidateEvent::Subscriber(_em); }
-	
+
 	virtual Port* FindReceivingPort (Port* txPort) const override final
 	{
-		for (auto& o : _objects)
+		for (auto& w : _wires)
 		{
-			if (auto w = dynamic_cast<Wire*>(o.Get()))
+			for (size_t i = 0; i < 2; i++)
 			{
-				for (size_t i = 0; i < 2; i++)
+				auto& thisEnd = w->GetPoints()[i];
+				if (holds_alternative<ConnectedWireEnd>(thisEnd) && (get<ConnectedWireEnd>(thisEnd) == txPort))
 				{
-					auto& thisEnd = w->GetPoints()[i];
-					if (holds_alternative<ConnectedWireEnd>(thisEnd) && (get<ConnectedWireEnd>(thisEnd) == txPort))
-					{
-						auto& otherEnd = w->GetPoints()[1 - i];
-						if (holds_alternative<ConnectedWireEnd>(otherEnd))
-							return get<ConnectedWireEnd>(otherEnd);
-						else
-							return nullptr;
-					}
+					auto& otherEnd = w->GetPoints()[1 - i];
+					if (holds_alternative<ConnectedWireEnd>(otherEnd))
+						return get<ConnectedWireEnd>(otherEnd);
+					else
+						return nullptr;
 				}
 			}
 		}
 
 		return nullptr;
 	}
-	
+
 	virtual array<uint8_t, 6> AllocMacAddressRange (size_t count) override final
 	{
 		if (count >= 128)
@@ -90,15 +111,12 @@ public:
 
 	virtual pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const override final
 	{
-		for (auto& o : _objects)
+		for (auto& w : _wires)
 		{
-			if (auto w = dynamic_cast<Wire*>(o.Get()))
-			{
-				if (holds_alternative<ConnectedWireEnd>(w->GetP0()) && (get<ConnectedWireEnd>(w->GetP0()) == port))
-					return { w, 0 };
-				else if (holds_alternative<ConnectedWireEnd>(w->GetP1()) && (get<ConnectedWireEnd>(w->GetP1()) == port))
-					return { w, 1 };
-			}
+			if (holds_alternative<ConnectedWireEnd>(w->GetP0()) && (get<ConnectedWireEnd>(w->GetP0()) == port))
+				return { w, 0 };
+			else if (holds_alternative<ConnectedWireEnd>(w->GetP1()) && (get<ConnectedWireEnd>(w->GetP1()) == port))
+				return { w, 1 };
 		}
 
 		return { };

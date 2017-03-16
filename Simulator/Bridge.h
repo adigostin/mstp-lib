@@ -11,8 +11,9 @@ struct BridgeLogLine
 	int treeIndex;
 };
 
-struct BridgeStartedEvent : public Event<BridgeStartedEvent, void(Bridge*)> { };
-struct BridgeStoppingEvent : public Event<BridgeStoppingEvent, void(Bridge*)> { };
+struct StpEnabledEvent : public Event<StpEnabledEvent, void(Bridge*)> { };
+struct StpDisablingEvent : public Event<StpDisablingEvent, void(Bridge*)> { };
+struct StpVersionChangedEvent : public Event<StpVersionChangedEvent, void(Bridge*)> { };
 struct BridgeLogLineGenerated : public Event<BridgeLogLineGenerated, void(Bridge*, const BridgeLogLine& line)> { };
 
 class Bridge : public Object
@@ -25,16 +26,18 @@ class Bridge : public Object
 	std::vector<ComPtr<Port>> _ports;
 	std::array<uint8_t, 6> _macAddress;
 	bool _powered = true;
-	STP_BRIDGE* _stpBridge = nullptr; // when nullptr, STP is disabled in the bridge
+	STP_BRIDGE* _stpBridge = nullptr;
 	std::mutex _stpBridgeMutex;
 	std::thread::id _guiThreadId;
+	STP_VERSION _stpVersion = STP_VERSION_RSTP;
+	size_t _treeCount = 1;
 	static const STP_CALLBACKS StpCallbacks;
 	std::vector<BridgeLogLine> _logLines;
 	BridgeLogLine _currentLogLine;
 	TimerQueueTimer_unique_ptr _oneSecondTimerHandle;
 	TimerQueueTimer_unique_ptr _macOperationalTimerHandle;
 	HWND_unique_ptr _helperWindow;
-	
+
 	struct RxPacketInfo
 	{
 		std::vector<uint8_t> data;
@@ -72,20 +75,21 @@ public:
 	D2D1_RECT_F GetBounds() const { return { _x, _y, _x + _width, _y + _height }; }
 	const std::vector<ComPtr<Port>>& GetPorts() const { return _ports; }
 	std::array<uint8_t, 6> GetMacAddress() const { return _macAddress; }
-	
+
 	virtual void Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, uint16_t vlanNumber) const override final;
 	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const override final;
 	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
 
-	BridgeStartedEvent::Subscriber GetBridgeStartedEvent() { return BridgeStartedEvent::Subscriber(_em); }
-	BridgeStoppingEvent::Subscriber GetBridgeStoppingEvent() { return BridgeStoppingEvent::Subscriber(_em); }
+	StpEnabledEvent::Subscriber GetStpEnabledEvent() { return StpEnabledEvent::Subscriber(_em); }
+	StpDisablingEvent::Subscriber GetStpDisablingEvent() { return StpDisablingEvent::Subscriber(_em); }
+	StpVersionChangedEvent::Subscriber GetStpVersionChangedEvent() { return StpVersionChangedEvent::Subscriber(_em); }
 	BridgeLogLineGenerated::Subscriber GetBridgeLogLineGeneratedEvent() { return BridgeLogLineGenerated::Subscriber(_em); }
 
 	bool IsPowered() const { return _powered; }
-	void EnableStp (STP_VERSION stpVersion, uint16_t treeCount, uint32_t timestamp);
+	void EnableStp (uint32_t timestamp);
 	void DisableStp (uint32_t timestamp);
 	bool IsStpEnabled() const { return _stpBridge != nullptr; }
-	uint16_t GetTreeCount() const;
+	size_t GetTreeCount() const { return _treeCount; }
 	STP_PORT_ROLE GetStpPortRole (uint16_t portIndex, uint16_t treeIndex) const;
 	bool GetStpPortLearning (uint16_t portIndex, uint16_t treeIndex) const;
 	bool GetStpPortForwarding (uint16_t portIndex, uint16_t treeIndex) const;
@@ -95,6 +99,9 @@ public:
 	const std::vector<BridgeLogLine>& GetLogLines() const { return _logLines; }
 	bool IsPortForwardingOnVlan (unsigned int portIndex, uint16_t vlanNumber) const;
 	bool IsStpRootBridge() const;
+	STP_VERSION GetStpVersion() const { return _stpVersion; }
+	void SetStpVersion (STP_VERSION stpVersion, uint32_t timestamp);
+	void SetStpTreeCount (size_t treeCount);
 
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
@@ -113,5 +120,6 @@ private:
 	static void  StpCallback_DebugStrOut (STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, bool flush);
 	static void  StpCallback_OnTopologyChange (STP_BRIDGE* bridge);
 	static void  StpCallback_OnNotifiedTopologyChange (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
+	static void  StpCallback_OnPortRoleChanged (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role);
 };
 

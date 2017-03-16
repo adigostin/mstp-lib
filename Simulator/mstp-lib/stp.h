@@ -1,7 +1,7 @@
 
 // This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/
 // Copyright (c) 2011-2017 Adrian Gostin, distributed under the GNU General Public License v3.
-
+//
 // Find documentation for all STP functions in the _help directory in the source code tree.
 //
 // Improvements and bug fixes may have been made in the source code, but not put up yet as a zip download;
@@ -24,6 +24,17 @@ enum STP_FLUSH_FDB_TYPE
 	STP_FLUSH_FDB_TYPE_RAPID_AGEING,
 };
 
+enum STP_PORT_ROLE
+{
+	STP_PORT_ROLE_UNKNOWN	= 0,
+	STP_PORT_ROLE_DISABLED	= 5,
+	STP_PORT_ROLE_ROOT		= 6,
+	STP_PORT_ROLE_DESIGNATED= 7,
+	STP_PORT_ROLE_ALTERNATE = 8,
+	STP_PORT_ROLE_BACKUP    = 9,
+	STP_PORT_ROLE_MASTER	= 10,
+};
+
 typedef void  (*STP_CALLBACK_ENABLE_LEARNING)				(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable);
 typedef void  (*STP_CALLBACK_ENABLE_FORWARDING)				(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable);
 typedef void* (*STP_CALLBACK_TRANSMIT_GET_BUFFER)			(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int bpduSize, unsigned int timestamp);
@@ -32,6 +43,7 @@ typedef void  (*STP_CALLBACK_FLUSH_FDB)						(STP_BRIDGE* bridge, unsigned int p
 typedef void  (*STP_CALLBACK_DEBUG_STR_OUT)					(STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, bool flush);
 typedef void  (*STP_CALLBACK_ON_TOPOLOGY_CHANGE)			(STP_BRIDGE* bridge);
 typedef void  (*STP_CALLBACK_ON_NOTIFIED_TOPOLOGY_CHANGE)	(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
+typedef void  (*STP_CALLBACK_PORT_ROLE_CHANGED)             (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role);
 typedef void* (*STP_CALLBACK_ALLOC_AND_ZERO_MEMORY) (unsigned int size);
 typedef void  (*STP_CALLBACK_FREE_MEMORY) (void* p);
 
@@ -45,6 +57,7 @@ struct STP_CALLBACKS
 	STP_CALLBACK_DEBUG_STR_OUT				 debugStrOut;
 	STP_CALLBACK_ON_TOPOLOGY_CHANGE			 onTopologyChange;
 	STP_CALLBACK_ON_NOTIFIED_TOPOLOGY_CHANGE onNotifiedTopologyChange;
+	STP_CALLBACK_PORT_ROLE_CHANGED           onPortRoleChanged;
 	STP_CALLBACK_ALLOC_AND_ZERO_MEMORY		 allocAndZeroMemory;
 	STP_CALLBACK_FREE_MEMORY				 freeMemory;
 };
@@ -63,17 +76,6 @@ enum STP_VERSION
 	STP_VERSION_LEGACY_STP = 0,
 	STP_VERSION_RSTP = 2,
 	STP_VERSION_MSTP = 3,
-};
-
-enum STP_PORT_ROLE
-{
-	STP_PORT_ROLE_UNKNOWN	= 0,
-	STP_PORT_ROLE_DISABLED	= 5,
-	STP_PORT_ROLE_ROOT		= 6,
-	STP_PORT_ROLE_DESIGNATED= 7,
-	STP_PORT_ROLE_ALTERNATE = 8,
-	STP_PORT_ROLE_BACKUP    = 9,
-	STP_PORT_ROLE_MASTER	= 10,
 };
 
 STP_BRIDGE* STP_CreateBridge (unsigned int portCount,

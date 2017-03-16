@@ -23,21 +23,10 @@ enum class MouseButton
 	Middle = 4,
 };
 
-struct ISimulatorApp
-{
-	virtual ~ISimulatorApp() { }
-	virtual ID3D11DeviceContext1* GetD3DDeviceContext() const = 0;
-	virtual IDWriteFactory* GetDWriteFactory() const = 0;
-	virtual IWICImagingFactory2* GetWicFactory() const = 0;
-	virtual const std::wstring& GetRegKeyPath() const = 0;
-};
-
-extern std::unique_ptr<ISimulatorApp> App;
-
 struct IWin32Window : public IUnknown
 {
 	virtual HWND GetHWnd() const = 0;
-	virtual RECT GetClientRect() const;
+	virtual RECT GetClientRectPixels() const;
 
 	RECT GetWindowRect() const;
 	SIZE GetWindowSize() const;
@@ -60,7 +49,7 @@ struct ISelection abstract : public IUnknown
 	virtual SelectionChangedEvent::Subscriber GetSelectionChangedEvent() = 0;
 };
 
-using SelectionFactory = ComPtr<ISelection>(*const)();
+using SelectionFactory = ComPtr<ISelection>(*const)(IProject* project);
 extern const SelectionFactory selectionFactory;
 
 // ============================================================================
@@ -112,7 +101,7 @@ struct ILogArea abstract : public IWin32Window
 	virtual void SelectBridge (Bridge* b) = 0;
 };
 
-using LogAreaFactory = ComPtr<ILogArea>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect);
+using LogAreaFactory = ComPtr<ILogArea>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory);
 extern const LogAreaFactory logAreaFactory;
 
 // ============================================================================
@@ -140,7 +129,7 @@ struct IEditArea abstract : public IUnknown
 	virtual D2D1::Matrix3x2F GetZoomTransform() const = 0;
 };
 
-using EditAreaFactory = ComPtr<IEditArea>(*const)(IProject* project, IProjectWindow* pw, ISelection* selection, IUIFramework* rf, HWND hWndParent, const RECT& rect);
+using EditAreaFactory = ComPtr<IEditArea>(*const)(IProject* project, IProjectWindow* pw, ISelection* selection, IUIFramework* rf, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory);
 extern const EditAreaFactory editAreaFactory;
 
 // ============================================================================
@@ -154,25 +143,48 @@ struct IProjectWindow : public IWin32Window
 	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() = 0;
 };
 
-using ProjectWindowFactory = ComPtr<IProjectWindow>(*const)(IProject* project, HINSTANCE rfResourceHInstance, const wchar_t* rfResourceName,
-	ISelection* selection, EditAreaFactory editAreaFactory, int nCmdShow);
+using ProjectWindowFactory = ComPtr<IProjectWindow>(*const)(IProject* project,
+															HINSTANCE rfResourceHInstance,
+															const wchar_t* rfResourceName,
+															ISelection* selection,
+															EditAreaFactory editAreaFactory,
+															int nCmdShow,
+															const wchar_t* regKeyPath,
+															ID3D11DeviceContext1* deviceContext,
+															IDWriteFactory* dWriteFactory);
 extern const ProjectWindowFactory projectWindowFactory;
 
 // ============================================================================
 
-struct ObjectInsertedEvent : public Event<ObjectInsertedEvent, void(IProject*, size_t index, Object*)> { };
-struct ObjectRemovingEvent : public Event<ObjectRemovingEvent, void(IProject*, size_t index, Object*)> { };
+struct BridgeInsertedEvent : public Event<BridgeInsertedEvent, void(IProject*, size_t index, Bridge*)> { };
+struct BridgeRemovingEvent : public Event<BridgeRemovingEvent, void(IProject*, size_t index, Bridge*)> { };
+
+struct WireInsertedEvent : public Event<WireInsertedEvent, void(IProject*, size_t index, Wire*)> { };
+struct WireRemovingEvent : public Event<WireRemovingEvent, void(IProject*, size_t index, Wire*)> { };
+
 struct ProjectInvalidateEvent : public Event<ProjectInvalidateEvent, void(IProject*)> { };
 
 struct IProject abstract : public IUnknown
 {
-	virtual const std::vector<ComPtr<Object>>& GetObjects() const = 0;
-	virtual void Insert (size_t index, Object* bridge) = 0;
-	virtual void Remove (size_t index) = 0;
-	virtual ObjectInsertedEvent::Subscriber GetObjectInsertedEvent() = 0;
-	virtual ObjectRemovingEvent::Subscriber GetObjectRemovingEvent() = 0;
+	virtual const std::vector<ComPtr<Bridge>>& GetBridges() const = 0;
+	virtual void InsertBridge (size_t index, Bridge* bridge) = 0;
+	virtual void RemoveBridge (size_t index) = 0;
+	virtual BridgeInsertedEvent::Subscriber GetBridgeInsertedEvent() = 0;
+	virtual BridgeRemovingEvent::Subscriber GetBridgeRemovingEvent() = 0;
+	void Add (Bridge* bridge) { InsertBridge (GetBridges().size(), bridge); }
+
+	virtual const std::vector<ComPtr<Wire>>& GetWires() const = 0;
+	virtual void InsertWire (size_t index, Wire* wire) = 0;
+	virtual void RemoveWire (size_t index) = 0;
+	virtual WireInsertedEvent::Subscriber GetWireInsertedEvent() = 0;
+	virtual WireRemovingEvent::Subscriber GetWireRemovingEvent() = 0;
+	void Add (Wire* wire) { InsertWire (GetWires().size(), wire); }
+
+	void Remove (Bridge* b);
+	void Remove (Wire* w);
+	void Remove (Object* o);
+
 	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() = 0;
-	void Add (Object* object) { Insert (GetObjects().size(), object); }
 
 	virtual std::array<uint8_t, 6> AllocMacAddressRange (size_t count) = 0;
 	virtual std::pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const = 0;
@@ -181,13 +193,3 @@ struct IProject abstract : public IUnknown
 
 using ProjectFactory = ComPtr<IProject>(*const)();
 extern const ProjectFactory projectFactory;
-
-// ============================================================================
-
-struct IBridgePropsArea abstract : public IUnknown
-{
-	virtual HWND GetHWnd() const = 0;
-};
-
-using BridgePropsAreaFactory = ComPtr<IBridgePropsArea>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect);
-extern const BridgePropsAreaFactory bridgePropsAreaFactory;

@@ -33,6 +33,7 @@
 #include <d3d11_1.h>
 #include <dwrite_1.h>
 #include <functional>
+#include <iomanip>
 #include <locale>
 #include <memory>
 #include <mutex>
@@ -53,6 +54,5 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <variant>
-#include <VersionHelpers.h>
 #include <wincodec.h>
 #include "Win32Defs.h"

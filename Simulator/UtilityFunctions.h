@@ -11,6 +11,7 @@ struct HTResult
 
 struct DrawingObjects
 {
+	ComPtr<IDWriteFactory> _dWriteFactory;
 	ComPtr<ID2D1SolidColorBrush> _poweredFillBrush;
 	ComPtr<ID2D1SolidColorBrush> _unpoweredBrush;
 	ComPtr<ID2D1SolidColorBrush> _brushWindowText;
@@ -36,7 +37,7 @@ protected:
 
 public:
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
-	
+
 	virtual ULONG STDMETHODCALLTYPE AddRef() override final;
 	virtual ULONG STDMETHODCALLTYPE Release() override final;
 
@@ -49,6 +50,14 @@ public:
 };
 
 enum class Side { Left, Top, Right, Bottom };
+
+struct TextLayout
+{
+	ComPtr<IDWriteTextLayout> layout;
+	DWRITE_TEXT_METRICS metrics;
+
+	static TextLayout Make (IDWriteFactory* dWriteFactory, IDWriteTextFormat* format, const wchar_t* str);
+};
 
 unsigned int GetTimestampMilliseconds();
 D2D1::ColorF GetD2DSystemColor (int sysColorIndex);

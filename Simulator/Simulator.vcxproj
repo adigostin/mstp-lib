@@ -138,7 +138,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Bridge.cpp" />
-    <ClCompile Include="BridgePropertiesArea.cpp" />
     <ClCompile Include="D2DWindow.cpp" />
     <ClCompile Include="DockContainer.cpp" />
     <ClCompile Include="EditArea.cpp" />
@@ -226,12 +225,16 @@
     <ClCompile Include="Port.cpp" />
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\BridgeControlRCH.cpp" />
     <ClCompile Include="RibbonCommandHandlers\BridgePropertiesRCH.cpp" />
     <ClCompile Include="RibbonCommandHandlers\CreateRCH.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\CutCopyPasteRCH.cpp" />
+    <ClCompile Include="RibbonCommandHandlers\CutCopyPasteDeleteRCH.cpp" />
+    <ClCompile Include="RibbonCommandHandlers\OptionsRCH.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="RibbonCommandHandlers\RCHBase.cpp" />
     <ClCompile Include="RibbonCommandHandlers\UndoRedoRCH.cpp" />
+    <ClCompile Include="RibbonCommandHandlers\VlanRCH.cpp" />
     <ClCompile Include="Selection.cpp" />
     <ClCompile Include="DockablePanel.cpp" />
     <ClCompile Include="Simulator.cpp" />
@@ -251,6 +254,7 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">uicc.exe "$(ProjectDir)Ribbon\Ribbon.xml" "$(ProjectDir)Ribbon\Ribbon.bml" /header:"$(ProjectDir)Ribbon\RibbonIds.h" /res:"$(ProjectDir)Ribbon\RibbonRes.rc"</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compiling "$(ProjectDir)Ribbon\Ribbon.xml"</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)Ribbon\Ribbon.bml;$(ProjectDir)Ribbon\RibbonRes.rc;$(ProjectDir)Ribbon\RibbonIds.h;%(Outputs)</Outputs>
+      <SubType>Designer</SubType>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

@@ -1,18 +1,41 @@
 
 #include "pch.h"
 #include "Simulator.h"
+#include "Bridge.h"
+#include "Wire.h"
 
 using namespace std;
 
 class Selection : public ISelection
 {
 	ULONG _refCount = 1;
+	IProject* const _project;
 	vector<ComPtr<Object>> _objects;
 	EventManager _em;
 
+public:
+	Selection (IProject* project)
+		: _project(project)
+	{
+		_project->GetWireRemovingEvent().AddHandler (&OnWireRemoving, this);
+		_project->GetBridgeRemovingEvent().AddHandler (&OnBridgeRemoving, this);
+	}
+
 	virtual ~Selection()
 	{
-		assert (_refCount == 0);
+		_project->GetBridgeRemovingEvent().RemoveHandler (&OnBridgeRemoving, this);
+		_project->GetWireRemovingEvent().RemoveHandler (&OnWireRemoving, this);
+	}
+
+	static void OnBridgeRemoving (void* callbackArg, IProject* project, size_t index, Bridge* b) { static_cast<Selection*>(callbackArg)->OnObjectRemoving(b); }
+
+	static void OnWireRemoving (void* callbackArg, IProject* project, size_t index, Wire* w) { static_cast<Selection*>(callbackArg)->OnObjectRemoving(w); }
+
+	void OnObjectRemoving (Object* o)
+	{
+		auto it = find (_objects.begin(), _objects.end(), o);
+		if (it != _objects.end())
+			RemoveInternal(it - _objects.begin());
 	}
 
 	virtual const vector<ComPtr<Object>>& GetObjects() const override final { return _objects; }
@@ -21,29 +44,23 @@ class Selection : public ISelection
 	{
 		_objects.push_back(ComPtr<Object>(o));
 		AddedToSelectionEvent::InvokeHandlers(_em, this, o);
+
 		SelectionChangedEvent::InvokeHandlers(_em, this);
 	}
 
-	void RemoveInternal (Object* o)
+	void RemoveInternal (size_t index)
 	{
-		auto it = find (_objects.begin(), _objects.end(), o);
-		assert (it != _objects.end());
-		
+		auto o = _objects[index].Get();
 		RemovingFromSelectionEvent::InvokeHandlers (_em, this, o);
-		SelectionChangedEvent::InvokeHandlers(_em, this);
+		_objects.erase(_objects.begin() + index);
 
-		_objects.erase(it);
+		SelectionChangedEvent::InvokeHandlers(_em, this);
 	}
 
 	virtual void Clear() override final
 	{
-		if (!_objects.empty())
-		{
-			for (auto o : _objects)
-				RemovingFromSelectionEvent::InvokeHandlers(_em, this, o);
-			_objects.clear();
-			SelectionChangedEvent::InvokeHandlers(_em, this);
-		}
+		while (!_objects.empty())
+			RemoveInternal (_objects.size() - 1);
 	}
 
 	virtual void Select(Object* o) override final
@@ -82,4 +99,4 @@ class Selection : public ISelection
 	#pragma endregion
 };
 
-extern const SelectionFactory selectionFactory = [] { return ComPtr<ISelection>(new Selection(), false); };
+extern const SelectionFactory selectionFactory = [](auto... params) { return ComPtr<ISelection>(new Selection(params...), false); };
