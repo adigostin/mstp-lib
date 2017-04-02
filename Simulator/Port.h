@@ -8,13 +8,21 @@ class Port : public Object
 	friend class Bridge;
 
 	Bridge* const _bridge;
-	unsigned int const _portIndex;
+	size_t const _portIndex;
 	Side _side;
 	float _offset;
 	bool _macOperational = false;
 
+	struct Config
+	{
+		bool adminEdge = false;
+		bool autoEdge = true;
+	};
+
+	Config _config;
+
 public:
-	Port (Bridge* bridge, unsigned int portIndex, Side side, float offset)
+	Port (Bridge* bridge, size_t portIndex, Side side, float offset)
 		: _bridge(bridge), _portIndex(portIndex), _side(side), _offset(offset)
 	{ }
 
@@ -33,7 +41,7 @@ public:
 	static constexpr float OutlineWidth = 2;
 
 	Bridge* GetBridge() const { return _bridge; }
-	unsigned int GetPortIndex() const { return _portIndex; }
+	size_t GetPortIndex() const { return _portIndex; }
 	Side GetSide() const { return _side; }
 	float GetOffset() const { return _offset; }
 	D2D1_POINT_2F GetCPLocation() const;

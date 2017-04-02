@@ -76,7 +76,6 @@
 		<Command Name="SelectedVlan" Symbol="cmdSelectedVlan" LabelTitle="Show topology for VLAN"/>
 
 		<Command Name="BridgeTabGroup" Symbol="cmdBridgeTabGroup" LabelTitle="Bridge" />
-
 		<Command Name="BridgePropertiesTab" Symbol="cmdBridgePropertiesTab" LabelTitle="Properties" />
 
 		<Command Name="BridgePropertiesGroup" Symbol="cmdBridgePropertiesGroup" LabelTitle="Bridge Properties (Disable STP to change)"/>
@@ -104,6 +103,12 @@
 				<Image Source="Stop_32.png"/>
 			</Command.LargeImages>
 		</Command>
+
+		<Command Name="PortTabGroup" Symbol="cmdPortTabGroup" LabelTitle="Port"/>
+		<Command Name="PortPropertiesTab" Symbol="cmdPortPropertiesTab" LabelTitle="Properties"/>
+		<Command Name="PortPropertiesRSTPGroup" Symbol="cmdPortPropertiesRSTPGroup" LabelTitle="RSTP"/>
+		<Command Name="PortAdminEdge" Symbol="cmdPortAdminEdge" LabelTitle="AdminEdge"/>
+		<Command Name="PortAutoEdge" Symbol="cmdPortAutoEdge" LabelTitle="AutoEdge"/>
 
 		<Command Name="OptionsTab" Symbol="cmdOptionsTab" LabelTitle="Options"/>
 		<Command Name="NewBridgeOptionsGroup" Symbol="cmdNewBridgeOptionsGroup" LabelTitle="New Bridges"/>
@@ -313,6 +318,32 @@
 								</GroupSizeDefinition>
 							</SizeDefinition>
 							<Button CommandName="MSTConfigTable"/>
+						</Group>
+					</Tab>
+				</TabGroup>
+				<TabGroup CommandName="PortTabGroup">
+					<Tab CommandName="PortPropertiesTab">
+						<Group CommandName="PortPropertiesRSTPGroup">
+							<SizeDefinition>
+								<ControlNameMap>
+									<ControlNameDefinition Name="dd1"/>
+									<ControlNameDefinition Name="dd2"/>
+								</ControlNameMap>
+								<GroupSizeDefinition Size="Small">
+									<ControlSizeDefinition ControlName="dd1"/>
+									<ControlSizeDefinition ControlName="dd2"/>
+								</GroupSizeDefinition>
+								<GroupSizeDefinition Size="Medium">
+									<ControlSizeDefinition ControlName="dd1"/>
+									<ControlSizeDefinition ControlName="dd2"/>
+								</GroupSizeDefinition>
+								<GroupSizeDefinition Size="Large">
+									<ControlSizeDefinition ControlName="dd1"/>
+									<ControlSizeDefinition ControlName="dd2"/>
+								</GroupSizeDefinition>
+							</SizeDefinition>
+							<CheckBox CommandName="PortAdminEdge"/>
+							<CheckBox CommandName="PortAutoEdge"/>
 						</Group>
 					</Tab>
 				</TabGroup>

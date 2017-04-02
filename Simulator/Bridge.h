@@ -90,12 +90,16 @@ public:
 	void DisableStp (uint32_t timestamp);
 	bool IsStpEnabled() const { return _stpBridge != nullptr; }
 	size_t GetTreeCount() const { return _treeCount; }
-	STP_PORT_ROLE GetStpPortRole (uint16_t portIndex, uint16_t treeIndex) const;
-	bool GetStpPortLearning (uint16_t portIndex, uint16_t treeIndex) const;
-	bool GetStpPortForwarding (uint16_t portIndex, uint16_t treeIndex) const;
-	bool GetStpPortOperEdge (uint16_t portIndex) const;
-	uint16_t GetStpBridgePriority (uint16_t treeIndex) const;
-	uint16_t GetStpTreeIndexFromVlanNumber (uint16_t vlanNumber) const;
+	STP_PORT_ROLE GetStpPortRole (size_t portIndex, size_t treeIndex) const;
+	bool GetStpPortLearning (size_t portIndex, size_t treeIndex) const;
+	bool GetStpPortForwarding (size_t portIndex, size_t treeIndex) const;
+	bool GetStpPortOperEdge (size_t portIndex) const;
+	bool GetPortAdminEdge (size_t portIndex) const;
+	void SetPortAdminEdge (size_t portIndex, bool adminEdge);
+	bool GetPortAutoEdge  (size_t portIndex) const;
+	void SetPortAutoEdge  (size_t portIndex, bool autoEdge);
+	uint16_t GetStpBridgePriority (size_t treeIndex) const;
+	size_t GetStpTreeIndexFromVlanNumber (uint16_t vlanNumber) const;
 	const std::vector<BridgeLogLine>& GetLogLines() const { return _logLines; }
 	bool IsPortForwardingOnVlan (unsigned int portIndex, uint16_t vlanNumber) const;
 	bool IsStpRootBridge() const;

@@ -232,6 +232,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="RibbonCommandHandlers\PortPropertiesRCH.cpp" />
     <ClCompile Include="RibbonCommandHandlers\RCHBase.cpp" />
     <ClCompile Include="RibbonCommandHandlers\UndoRedoRCH.cpp" />
     <ClCompile Include="RibbonCommandHandlers\VlanRCH.cpp" />

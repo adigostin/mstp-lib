@@ -160,6 +160,7 @@
     <ClCompile Include="RibbonCommandHandlers\CutCopyPasteDeleteRCH.cpp">
       <Filter>Ribbon</Filter>
     </ClCompile>
+    <ClCompile Include="RibbonCommandHandlers\PortPropertiesRCH.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc">
