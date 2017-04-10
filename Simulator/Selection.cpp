@@ -75,6 +75,17 @@ public:
 		}
 	}
 
+	virtual void Add (Object* o) override final
+	{
+		if (o == nullptr)
+			throw invalid_argument("Parameter may not be nullptr.");
+
+		if (std::find (_objects.begin(), _objects.end(), o) != _objects.end())
+			throw invalid_argument("Object was already added to selection.");
+
+		AddInternal(o);
+	}
+
 	virtual AddedToSelectionEvent::Subscriber GetAddedToSelectionEvent() override final { return AddedToSelectionEvent::Subscriber(_em); }
 
 	virtual RemovingFromSelectionEvent::Subscriber GetRemovingFromSelectionEvent() override final { return RemovingFromSelectionEvent::Subscriber(_em); }

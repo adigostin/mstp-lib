@@ -63,7 +63,9 @@ HRESULT STDMETHODCALLTYPE RCHBase::Execute (UINT32 commandId, UI_EXECUTIONVERB v
 	}
 	catch (const exception& ex)
 	{
-		MessageBoxA (_pw->GetHWnd(), ex.what(), nullptr, 0);
+		wstring_convert<codecvt_utf8<wchar_t>> converter;
+		wstring message = converter.from_bytes(ex.what());
+		MessageBox (_pw->GetHWnd(), message.c_str(), nullptr, 0);
 		return S_FALSE;
 	}
 }

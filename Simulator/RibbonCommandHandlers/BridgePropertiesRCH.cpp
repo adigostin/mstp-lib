@@ -24,7 +24,7 @@ public:
 			&& all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(),
 					   [](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get()) != nullptr; });
 	}
-
+	
 	template<typename T>
 	optional<T> AllBridgesSameValue (function<T(Bridge*)> getter)
 	{
@@ -96,44 +96,54 @@ public:
 
 	HRESULT Update_cmdStpVersion (UINT32 commandId, REFPROPERTYKEY key, const PROPVARIANT *currentValue, PROPVARIANT *newValue)
 	{
-		if ((key == UI_PKEY_Enabled) || (key == UI_PKEY_StringValue) || (key == UI_PKEY_SelectedItem))
+		OutputDebugString (GetPKeyName(key));
+		OutputDebugString (L"\r\n");
+
+		if (key == UI_PKEY_Enabled)
 		{
-			optional<bool>        stpEnabled = AllBridgesSameValue<bool>       ([](Bridge* b) { return b->IsStpEnabled(); });
+			bool enable = !_selection->GetObjects().empty()
+				&& all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [](auto& o) { return dynamic_cast<Bridge*>(o.Get()) != nullptr; });
+			return UIInitPropertyFromBoolean (key, enable ? TRUE : FALSE, newValue); 
+		}
+
+		if (key == UI_PKEY_StringValue)
+		{
+			if ((_selection == nullptr) || _selection->GetObjects().empty())
+				return UIInitPropertyFromString (key, L"", newValue);
+
+			if (!all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [](auto& o) { return dynamic_cast<Bridge*>(o.Get()) != nullptr; }))
+				return UIInitPropertyFromString (key, L"", newValue);
+
+			STP_VERSION version = dynamic_cast<Bridge*>(_selection->GetObjects()[0].Get())->GetStpVersion();
+			bool allBridgesSameStpVersion = all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(),
+													[version](auto& o) { return dynamic_cast<Bridge*>(o.Get())->GetStpVersion() == version; });
+			if (!allBridgesSameStpVersion)
+				return UIInitPropertyFromString (key, L"(multiple selection)", newValue);
+
+			return UIInitPropertyFromString (key, Bridge::GetStpVersionString(version).c_str(), newValue);
+		}
+
+		if (key == UI_PKEY_SelectedItem)
+		{
+			// Workaround:
+//			_rf->InvalidateUICommand (cmdStpVersion, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_StringValue);
+
 			optional<STP_VERSION> stpVersion = AllBridgesSameValue<STP_VERSION>([](Bridge* b) { return b->GetStpVersion(); });
 
-			if (key == UI_PKEY_Enabled)
-				// enable the checkbox if all bridges have stp disabled and all have same stp version.
-				return UIInitPropertyFromBoolean (key, stpEnabled.has_value() && !stpEnabled.value() && stpVersion.has_value(), newValue);
-
-			if (key == UI_PKEY_SelectedItem)
-			{
-				if (!stpVersion)
-					return UIInitPropertyFromUInt32 (key, -1, newValue);
-				else if (stpVersion == STP_VERSION_LEGACY_STP)
-					return UIInitPropertyFromUInt32 (key, 0, newValue);
-				else if (stpVersion == STP_VERSION_RSTP)
-					return UIInitPropertyFromUInt32 (key, 1, newValue);
-				else if (stpVersion == STP_VERSION_MSTP)
-					return UIInitPropertyFromUInt32 (key, 2, newValue);
-				else
-					return E_NOTIMPL;
-			}
-		
-			if (key == UI_PKEY_StringValue)
-			{
-				wstring_convert<codecvt_utf8<wchar_t>> converter;
-				auto s = stpVersion ? converter.from_bytes(STP_GetVersionString(stpVersion.value())) : wstring();
-				return UIInitPropertyFromString (key, s.c_str(), newValue);
-			}
-
-			return E_NOTIMPL;
+			if (!stpVersion)
+				return UIInitPropertyFromUInt32 (key, -1, newValue);
+			else if (stpVersion == STP_VERSION_LEGACY_STP)
+				return UIInitPropertyFromUInt32 (key, 0, newValue);
+			else if (stpVersion == STP_VERSION_RSTP)
+				return UIInitPropertyFromUInt32 (key, 1, newValue);
+			else if (stpVersion == STP_VERSION_MSTP)
+				return UIInitPropertyFromUInt32 (key, 2, newValue);
+			else
+				return E_NOTIMPL;
 		}
 
 		if (key == UI_PKEY_RepresentativeString)
-		{
-			wstring_convert<codecvt_utf8<wchar_t>> converter;
-			return UIInitPropertyFromString (key, converter.from_bytes(STP_GetVersionString(STP_VERSION_LEGACY_STP)).c_str(), newValue);
-		}
+			return UIInitPropertyFromString (key, Bridge::GetStpVersionString(STP_VERSION_LEGACY_STP).c_str(), newValue);
 
 		if (key == UI_PKEY_ItemsSource)
 		{
@@ -141,12 +151,21 @@ public:
 			auto hr = UIPropertyToInterface (key, *currentValue, &collection);
 			if (FAILED(hr))
 				return hr;
+			/*
+			UINT32 count;
+			hr = collection->GetCount(&count);
+			if (FAILED(hr))
+				return hr;
+			if (count == 3)
+				return S_OK;
+				*/
 			collection->Clear();
-			wstring_convert<codecvt_utf8<wchar_t>> converter;
-			collection->Add (ItemPropertySet::Make (converter.from_bytes(STP_GetVersionString(STP_VERSION_LEGACY_STP))));
-			collection->Add (ItemPropertySet::Make (converter.from_bytes(STP_GetVersionString(STP_VERSION_RSTP))));
-			collection->Add (ItemPropertySet::Make (converter.from_bytes(STP_GetVersionString(STP_VERSION_MSTP))));
-			return S_OK;
+			collection->Add (ItemPropertySet::Make (Bridge::GetStpVersionString(STP_VERSION_LEGACY_STP)));
+			collection->Add (ItemPropertySet::Make (Bridge::GetStpVersionString(STP_VERSION_RSTP)));
+			collection->Add (ItemPropertySet::Make (Bridge::GetStpVersionString(STP_VERSION_MSTP)));
+
+			//return S_OK;
+			return UIInitPropertyFromInterface (key, collection, newValue);
 		}
 
 		return E_NOTIMPL;
@@ -175,7 +194,17 @@ public:
 		for (auto& o : _selection->GetObjects())
 		{
 			auto b = dynamic_cast<Bridge*>(o.Get()); assert (b != nullptr);
-			b->SetStpVersion(newVersion, timestamp);
+			if (b->GetStpVersion() != newVersion)
+			{
+				if (b->IsStpEnabled())
+				{
+					b->DisableStp(timestamp);
+					b->SetStpVersion(newVersion, timestamp);
+					b->EnableStp(timestamp);
+				}
+				else
+					b->SetStpVersion(newVersion, timestamp);
+			}
 		}
 
 		return S_OK;
@@ -362,6 +391,7 @@ public:
 
 	HRESULT Update_cmdBridgePropertiesGroup (UINT32 commandId, REFPROPERTYKEY key, const PROPVARIANT *currentValue, PROPVARIANT *newValue)
 	{
+		/*
 		if (key == UI_PKEY_Label)
 		{
 			const wchar_t* text = L"Properties";
@@ -375,7 +405,7 @@ public:
 
 			return UIInitPropertyFromString(key, text, newValue);
 		}
-
+		*/
 		return E_NOTIMPL;
 	}
 	
@@ -383,12 +413,20 @@ public:
 
 	void InvalidateAll()
 	{
+		_rf->InvalidateUICommand (cmdBridgeTabGroup, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_ContextAvailable);
+
 		_rf->InvalidateUICommand (cmdBridgeAddress, UI_INVALIDATIONS_VALUE | UI_INVALIDATIONS_STATE, nullptr);
 		_rf->InvalidateUICommand (cmdStpEnabled, UI_INVALIDATIONS_VALUE | UI_INVALIDATIONS_STATE, nullptr);
-		_rf->InvalidateUICommand (cmdStpVersion, UI_INVALIDATIONS_VALUE | UI_INVALIDATIONS_STATE | UI_INVALIDATIONS_PROPERTY, &UI_PKEY_SelectedItem);
+
+		// It seems that the order of invalidation is important. The framework calls our Update function in the same order,
+		// and it somehow screws up if UI_PKEY_Enabled isn't first.
+		//_rf->InvalidateUICommand (cmdStpVersion, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_Enabled);
+		//_rf->InvalidateUICommand (cmdStpVersion, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_ItemsSource);
+		_rf->InvalidateUICommand (cmdStpVersion, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_SelectedItem);
+		_rf->InvalidateUICommand (cmdStpVersion, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_StringValue);
+		//_rf->InvalidateUICommand (cmdStpVersion, UI_INVALIDATIONS_VALUE | UI_INVALIDATIONS_STATE, nullptr);
 		_rf->InvalidateUICommand (cmdEnableSTP, UI_INVALIDATIONS_STATE, nullptr);
 		_rf->InvalidateUICommand (cmdDisableSTP, UI_INVALIDATIONS_STATE, nullptr);
-		_rf->InvalidateUICommand (cmdBridgeTabGroup, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_ContextAvailable);
 		_rf->InvalidateUICommand (cmdPortCount, UI_INVALIDATIONS_VALUE | UI_INVALIDATIONS_STATE | UI_INVALIDATIONS_PROPERTY, &UI_PKEY_SelectedItem);
 		_rf->InvalidateUICommand (cmdTreeCount, UI_INVALIDATIONS_VALUE | UI_INVALIDATIONS_STATE | UI_INVALIDATIONS_PROPERTY, &UI_PKEY_SelectedItem);
 		_rf->InvalidateUICommand (cmdBridgePropertiesGroup, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_Label);
@@ -440,7 +478,7 @@ const RCHInfo BridgePropertiesRCH::_info (
 	{
 		{ cmdBridgeAddress,  { static_cast<RCHUpdate>(&Update_cmdBridgeAddress), static_cast<RCHExecute>(&Execute_cmdBridgeAddress) } },
 		{ cmdBridgeTabGroup, { static_cast<RCHUpdate>(&Update_cmdBridgeTabGroup), nullptr } },
-		{ cmdBridgePropertiesGroup, { static_cast<RCHUpdate>(&Update_cmdBridgePropertiesGroup), nullptr } },
+		//{ cmdBridgePropertiesGroup, { static_cast<RCHUpdate>(&Update_cmdBridgePropertiesGroup), nullptr } },
 		{ cmdEnableSTP,      { static_cast<RCHUpdate>(&Update_cmdEnableDisableSTP), static_cast<RCHExecute>(&Execute_cmdEnableDisableSTP) } },
 		{ cmdDisableSTP,     { static_cast<RCHUpdate>(&Update_cmdEnableDisableSTP), static_cast<RCHExecute>(&Execute_cmdEnableDisableSTP) } },
 		{ cmdStpEnabled,     { static_cast<RCHUpdate>(&Update_cmdStpEnabled), static_cast<RCHExecute>(&Execute_cmdStpEnabled) } },

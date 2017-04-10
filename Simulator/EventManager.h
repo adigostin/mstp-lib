@@ -106,7 +106,11 @@ struct Event<TEventType, void(Args...)> abstract : EventBase
 		if (longList.empty())
 		{
 			for (size_t i = 0; i < shortListSize; i++)
-				((callback_t)shortList[i].callback) (shortList[i].callbackArg, args...);
+			{
+				auto callback = (callback_t)shortList[i].callback;
+				auto arg = shortList[i].callbackArg;
+				callback (arg, args...);
+			}
 		}
 		else
 		{

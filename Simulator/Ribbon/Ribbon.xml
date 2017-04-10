@@ -78,7 +78,7 @@
 		<Command Name="BridgeTabGroup" Symbol="cmdBridgeTabGroup" LabelTitle="Bridge" />
 		<Command Name="BridgePropertiesTab" Symbol="cmdBridgePropertiesTab" LabelTitle="Properties" />
 
-		<Command Name="BridgePropertiesGroup" Symbol="cmdBridgePropertiesGroup" LabelTitle="Bridge Properties (Disable STP to change)"/>
+		<Command Name="BridgePropertiesGroup" Symbol="cmdBridgePropertiesGroup" LabelTitle="Bridge Properties (Changing these will restart STP)"/>
 
 		<Command Name="BridgeAddress" Symbol="cmdBridgeAddress"/> <!--LabelTitle="MAC Address"-->
 		<Command Name="StpEnabled" Symbol="cmdStpEnabled" LabelTitle="STP Enabled"/>

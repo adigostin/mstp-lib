@@ -329,7 +329,8 @@ public:
 		if ((uMsg == WM_LBUTTONDOWN) || (uMsg == WM_RBUTTONDOWN))
 		{
 			auto button = (uMsg == WM_LBUTTONDOWN) ? MouseButton::Left : MouseButton::Right;
-			auto result = ProcessMouseButtonDown (button, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
+			UINT modifierKeysDown = (UINT) wParam;
+			auto result = ProcessMouseButtonDown (button, modifierKeysDown, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
 			return result ? result.value() : base::WindowProc (hwnd, uMsg, wParam, lParam);
 		}
 		else if ((uMsg == WM_LBUTTONUP) || (uMsg == WM_RBUTTONUP))
@@ -449,7 +450,7 @@ public:
 		return nullopt;
 	}
 
-	std::optional<LRESULT> ProcessMouseButtonDown (MouseButton button, POINT pt)
+	std::optional<LRESULT> ProcessMouseButtonDown (MouseButton button, UINT modifierKeysDown, POINT pt)
 	{
 		::SetFocus(GetHWnd());
 
@@ -458,7 +459,7 @@ public:
 
 		if (_beginningDrag)
 		{
-			// user began dragging with a mouse button, not he pressed a second button.
+			// user began dragging with a mouse button, now he pressed a second button.
 			return nullopt;
 		}
 
@@ -478,7 +479,12 @@ public:
 		if (ht.object == nullptr)
 			_selection->Clear();
 		else
-			_selection->Select(ht.object);
+		{
+			if (modifierKeysDown & MK_CONTROL)
+				_selection->Add(ht.object);
+			else
+				_selection->Select(ht.object);
+		}
 
 		_beginningDrag = BeginningDrag();
 		_beginningDrag->location.pt = pt;

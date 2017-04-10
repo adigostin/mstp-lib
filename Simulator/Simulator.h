@@ -44,6 +44,7 @@ struct ISelection abstract : public IUnknown
 	virtual const std::vector<ComPtr<Object>>& GetObjects() const = 0;
 	virtual void Select (Object* o) = 0;
 	virtual void Clear() = 0;
+	virtual void Add (Object* o) = 0;
 	virtual AddedToSelectionEvent::Subscriber GetAddedToSelectionEvent() = 0;
 	virtual RemovingFromSelectionEvent::Subscriber GetRemovingFromSelectionEvent() = 0;
 	virtual SelectionChangedEvent::Subscriber GetSelectionChangedEvent() = 0;

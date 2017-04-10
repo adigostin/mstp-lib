@@ -14,7 +14,7 @@ static constexpr UINT WM_PACKET_RECEIVED = WM_APP + 3;
 static constexpr uint8_t BpduDestAddress[6] = { 1, 0x80, 0xC2, 0, 0, 0 };
 
 Bridge::Bridge (IProject* project, unsigned int portCount, const std::array<uint8_t, 6>& macAddress)
-	: _project(project), _macAddress(macAddress), _guiThreadId(this_thread::get_id())
+	: _project(project), _config({macAddress}), _guiThreadId(this_thread::get_id())
 {
 	float offset = 0;
 
@@ -198,10 +198,10 @@ void Bridge::EnableStp (uint32_t timestamp)
 	if (_stpBridge != nullptr)
 		throw runtime_error ("STP is already enabled on this bridge.");
 
-	if ((_treeCount != 1) && (_stpVersion != STP_VERSION_MSTP))
+	if ((_config._treeCount != 1) && (_config._stpVersion != STP_VERSION_MSTP))
 		throw runtime_error ("The Tree Count must be set to 1 when not using MSTP.");
 
-	_stpBridge = STP_CreateBridge ((unsigned int) _ports.size(), _treeCount, &StpCallbacks, _stpVersion, &_macAddress[0], 256);
+	_stpBridge = STP_CreateBridge ((unsigned int) _ports.size(), _config._treeCount, &StpCallbacks, _config._stpVersion, &_config._macAddress[0], 256);
 	STP_SetApplicationContext (_stpBridge, this);
 	STP_EnableLogging (_stpBridge, true);
 
@@ -249,9 +249,9 @@ void Bridge::SetStpVersion (STP_VERSION stpVersion, uint32_t timestamp)
 	if (_stpBridge != nullptr)
 		throw runtime_error ("Setting the protocol version while STP is enabled is not supported by the library.");
 
-	if (_stpVersion != stpVersion)
+	if (_config._stpVersion != stpVersion)
 	{
-		_stpVersion = stpVersion;
+		_config._stpVersion = stpVersion;
 		StpVersionChangedEvent::InvokeHandlers(_em, this);
 	}
 }
@@ -264,9 +264,9 @@ void Bridge::SetStpTreeCount (size_t treeCount)
 	if (_stpBridge != nullptr)
 		throw runtime_error ("Setting the tree count while STP is enabled is not supported by the library.");
 
-	if (_treeCount != treeCount)
+	if (_config._treeCount != treeCount)
 	{
-		_treeCount = treeCount;
+		_config._treeCount = treeCount;
 	}
 }
 
@@ -380,17 +380,17 @@ void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, uint16_t 
 	{
 		auto treeIndex = STP_GetTreeIndexFromVlanNumber(_stpBridge, vlanNumber);
 		ss << uppercase << setfill(L'0') << setw(4) << hex << STP_GetBridgePriority(_stpBridge, treeIndex) << L'.'
-			<< setw(2) << _macAddress[0] << setw(2) << _macAddress[1] << setw(2) << _macAddress[2]
-			<< setw(2) << _macAddress[3] << setw(2) << _macAddress[4] << setw(2) << _macAddress[5] << endl
-			<< L"STP enabled (" << STP_GetVersionString(_stpVersion) << L")" << endl
+			<< setw(2) << _config._macAddress[0] << setw(2) << _config._macAddress[1] << setw(2) << _config._macAddress[2]
+			<< setw(2) << _config._macAddress[3] << setw(2) << _config._macAddress[4] << setw(2) << _config._macAddress[5] << endl
+			<< L"STP enabled (" << STP_GetVersionString(_config._stpVersion) << L")" << endl
 			<< L"VLAN " << dec << vlanNumber << L" (spanning tree " << treeIndex << L")" << endl
 			<< (isRootBridge ? L"Root Bridge\r\n" : L"");
 	}
 	else
 	{
 		ss << uppercase << setfill(L'0') << hex
-			<< setw(2) << _macAddress[0] << setw(2) << _macAddress[1] << setw(2) << _macAddress[2]
-			<< setw(2) << _macAddress[3] << setw(2) << _macAddress[4] << setw(2) << _macAddress[5] << endl
+			<< setw(2) << _config._macAddress[0] << setw(2) << _config._macAddress[1] << setw(2) << _config._macAddress[2]
+			<< setw(2) << _config._macAddress[3] << setw(2) << _config._macAddress[4] << setw(2) << _config._macAddress[5] << endl
 			<< L"STP disabled\r\n(right-click to enable)";
 	}
 
@@ -446,6 +446,18 @@ bool Bridge::IsStpRootBridge() const
 		throw runtime_error ("STP was not enabled on this bridge.");
 
 	return STP_IsRootBridge(_stpBridge);
+}
+
+//static
+wstring Bridge::GetStpVersionString (STP_VERSION stpVersion)
+{
+	static wstring_convert<codecvt_utf8<wchar_t>> converter;
+	return converter.from_bytes (STP_GetVersionString(stpVersion));
+}
+
+wstring Bridge::GetStpVersionString() const
+{
+	return GetStpVersionString(_config._stpVersion);
 }
 
 #pragma region STP Callbacks
