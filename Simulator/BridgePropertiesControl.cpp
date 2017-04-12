@@ -58,5 +58,8 @@ BridgePropertiesControl::Result BridgePropertiesControl::DialogProc (UINT msg, W
 	if (msg == WM_CTLCOLORDLG)
 		return { reinterpret_cast<INT_PTR>(GetSysColorBrush(COLOR_WINDOW)), 0 };
 
+	if (msg == WM_CTLCOLORSTATIC)
+		return { reinterpret_cast<INT_PTR>(GetSysColorBrush(COLOR_WINDOW)), 0 };
+
 	return { FALSE, 0 };
 }
