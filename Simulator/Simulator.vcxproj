@@ -113,6 +113,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Bridge.h" />
+    <ClInclude Include="BridgePropertiesControl.h" />
     <ClInclude Include="D2DWindow.h" />
     <ClInclude Include="EditStates\EditState.h" />
     <ClInclude Include="EventManager.h" />
@@ -138,6 +139,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Bridge.cpp" />
+    <ClCompile Include="BridgePropertiesControl.cpp" />
     <ClCompile Include="D2DWindow.cpp" />
     <ClCompile Include="DockContainer.cpp" />
     <ClCompile Include="EditArea.cpp" />

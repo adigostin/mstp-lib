@@ -60,6 +60,7 @@
     <ClInclude Include="Port.h" />
     <ClInclude Include="Simulator.h" />
     <ClInclude Include="UtilityFunctions.h" />
+    <ClInclude Include="BridgePropertiesControl.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -161,6 +162,7 @@
       <Filter>Ribbon</Filter>
     </ClCompile>
     <ClCompile Include="RibbonCommandHandlers\PortPropertiesRCH.cpp" />
+    <ClCompile Include="BridgePropertiesControl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc">

@@ -5,6 +5,7 @@
 #include "RibbonCommandHandlers/RCHBase.h"
 #include "Bridge.h"
 #include "Port.h"
+#include "BridgePropertiesControl.h"
 
 using namespace std;
 
@@ -25,6 +26,7 @@ class ProjectWindow : public IProjectWindow, IUIApplication
 	ComPtr<IEditArea> _editArea;
 	unique_ptr<IDockContainer> _dockContainer;
 	ComPtr<ILogArea> _logArea;
+	BridgePropertiesControl* _bridgeProps;
 	ComPtr<IUIFramework> _rf;
 	HWND _hwnd;
 	SIZE _clientSize;
@@ -83,7 +85,7 @@ public:
 		if (!read)
 			::GetWindowRect(_hwnd, &_restoreBounds);
 		::ShowWindow (_hwnd, nCmdShow);
-		
+
 		if ((rfResourceHInstance != nullptr) && (rfResourceName != nullptr))
 		{
 			auto hr = CoCreateInstance(CLSID_UIRibbonFramework, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&_rf));
@@ -94,6 +96,9 @@ public:
 
 		auto logPanel = _dockContainer->GetOrCreateDockablePanel(Side::Right, L"STP Log");
 		_logArea = logAreaFactory (logPanel->GetHWnd(), 0xFFFF, logPanel->GetContentRect(), deviceContext, dWriteFactory);
+
+		auto propsPanel = _dockContainer->GetOrCreateDockablePanel (Side::Left, L"Properties");
+		_bridgeProps = new BridgePropertiesControl (propsPanel->GetHWnd(), propsPanel->GetContentRect());
 
 		_editArea = editAreaFactory (project, this, selection, _rf, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), deviceContext, dWriteFactory);
 

@@ -24,7 +24,7 @@ public:
 			&& all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(),
 					   [](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get()) != nullptr; });
 	}
-	
+
 	template<typename T>
 	optional<T> AllBridgesSameValue (function<T(Bridge*)> getter)
 	{
@@ -98,12 +98,13 @@ public:
 	{
 		OutputDebugString (GetPKeyName(key));
 		OutputDebugString (L"\r\n");
-
+		/*
 		if (key == UI_PKEY_Enabled)
 		{
 			bool enable = !_selection->GetObjects().empty()
 				&& all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [](auto& o) { return dynamic_cast<Bridge*>(o.Get()) != nullptr; });
-			return UIInitPropertyFromBoolean (key, enable ? TRUE : FALSE, newValue); 
+			return UIInitPropertyFromBoolean (key, enable ? TRUE : FALSE, newValue);
+			return E_NOTIMPL;
 		}
 
 		if (key == UI_PKEY_StringValue)
@@ -122,7 +123,7 @@ public:
 
 			return UIInitPropertyFromString (key, Bridge::GetStpVersionString(version).c_str(), newValue);
 		}
-
+		*/
 		if (key == UI_PKEY_SelectedItem)
 		{
 			// Workaround:
@@ -131,7 +132,7 @@ public:
 			optional<STP_VERSION> stpVersion = AllBridgesSameValue<STP_VERSION>([](Bridge* b) { return b->GetStpVersion(); });
 
 			if (!stpVersion)
-				return UIInitPropertyFromUInt32 (key, -1, newValue);
+				return UIInitPropertyFromUInt32 (key, 0, newValue);//-1, newValue);
 			else if (stpVersion == STP_VERSION_LEGACY_STP)
 				return UIInitPropertyFromUInt32 (key, 0, newValue);
 			else if (stpVersion == STP_VERSION_RSTP)
@@ -151,21 +152,20 @@ public:
 			auto hr = UIPropertyToInterface (key, *currentValue, &collection);
 			if (FAILED(hr))
 				return hr;
-			/*
+
 			UINT32 count;
 			hr = collection->GetCount(&count);
 			if (FAILED(hr))
 				return hr;
 			if (count == 3)
 				return S_OK;
-				*/
+
 			collection->Clear();
 			collection->Add (ItemPropertySet::Make (Bridge::GetStpVersionString(STP_VERSION_LEGACY_STP)));
 			collection->Add (ItemPropertySet::Make (Bridge::GetStpVersionString(STP_VERSION_RSTP)));
 			collection->Add (ItemPropertySet::Make (Bridge::GetStpVersionString(STP_VERSION_MSTP)));
 
-			//return S_OK;
-			return UIInitPropertyFromInterface (key, collection, newValue);
+			return S_OK;
 		}
 
 		return E_NOTIMPL;
@@ -178,7 +178,7 @@ public:
 
 		UINT32 index;
 		auto hr = UIPropertyToUInt32(*key, *currentValue, &index); ThrowIfFailed(hr);
-		
+
 		STP_VERSION newVersion;
 		if (index == 0)
 			newVersion = STP_VERSION_LEGACY_STP;
@@ -256,7 +256,7 @@ public:
 	{
 		return E_NOTIMPL;
 	}
-	
+
 	// ========================================================================
 
 	HRESULT Update_cmdEnableDisableSTP (UINT32 commandId, REFPROPERTYKEY key, const PROPVARIANT *currentValue, PROPVARIANT *newValue)
@@ -408,7 +408,7 @@ public:
 		*/
 		return E_NOTIMPL;
 	}
-	
+
 	// ========================================================================
 
 	void InvalidateAll()
@@ -421,9 +421,9 @@ public:
 		// It seems that the order of invalidation is important. The framework calls our Update function in the same order,
 		// and it somehow screws up if UI_PKEY_Enabled isn't first.
 		//_rf->InvalidateUICommand (cmdStpVersion, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_Enabled);
-		//_rf->InvalidateUICommand (cmdStpVersion, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_ItemsSource);
+		_rf->InvalidateUICommand (cmdStpVersion, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_ItemsSource);
 		_rf->InvalidateUICommand (cmdStpVersion, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_SelectedItem);
-		_rf->InvalidateUICommand (cmdStpVersion, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_StringValue);
+		//_rf->InvalidateUICommand (cmdStpVersion, UI_INVALIDATIONS_PROPERTY, &UI_PKEY_StringValue);
 		//_rf->InvalidateUICommand (cmdStpVersion, UI_INVALIDATIONS_VALUE | UI_INVALIDATIONS_STATE, nullptr);
 		_rf->InvalidateUICommand (cmdEnableSTP, UI_INVALIDATIONS_STATE, nullptr);
 		_rf->InvalidateUICommand (cmdDisableSTP, UI_INVALIDATIONS_STATE, nullptr);

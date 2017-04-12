@@ -64,6 +64,40 @@ END
 
 #endif    // APSTUDIO_INVOKED
 
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_PROPPAGE_BRIDGE DIALOGEX 0, 0, 157, 178
+STYLE DS_SETFONT | DS_CONTROL | WS_CHILD | WS_DISABLED
+EXSTYLE WS_EX_NOACTIVATE
+FONT 9, "Segoe UI", 400, 0, 0xEE
+BEGIN
+    LTEXT           "Bridge Address",IDC_STATIC,0,0,60,12,SS_CENTERIMAGE
+    EDITTEXT        IDC_EDIT_BRIDGE_ADDRESS,68,0,84,12,ES_AUTOHSCROLL
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_PROPPAGE_BRIDGE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 150
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 171
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 
