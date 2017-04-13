@@ -5,7 +5,6 @@
 #include "RibbonCommandHandlers/RCHBase.h"
 #include "Bridge.h"
 #include "Port.h"
-#include "BridgePropertiesControl.h"
 
 using namespace std;
 
@@ -26,7 +25,8 @@ class ProjectWindow : public IProjectWindow, IUIApplication
 	ComPtr<IEditArea> _editArea;
 	unique_ptr<IDockContainer> _dockContainer;
 	ComPtr<ILogArea> _logArea;
-	BridgePropertiesControl* _bridgeProps;
+	//BridgePropertiesControl* _bridgeProps;
+	ComPtr<IPropertiesWindow> _propsWindow;
 	ComPtr<IUIFramework> _rf;
 	HWND _hwnd;
 	SIZE _clientSize;
@@ -52,7 +52,7 @@ public:
 			{
 				sizeof(wndClassEx),
 				CS_DBLCLKS, // style
-				&ProjectWindow::WindowProcStatic, // lpfnWndProc
+				&WindowProcStatic, // lpfnWndProc
 				0, // cbClsExtra
 				0, // cbWndExtra
 				hInstance, // hInstance
@@ -98,7 +98,7 @@ public:
 		_logArea = logAreaFactory (logPanel->GetHWnd(), 0xFFFF, logPanel->GetContentRect(), deviceContext, dWriteFactory);
 
 		auto propsPanel = _dockContainer->GetOrCreateDockablePanel (Side::Left, L"Properties");
-		_bridgeProps = new BridgePropertiesControl (propsPanel->GetHWnd(), propsPanel->GetContentRect());
+		_propsWindow = propertiesWindowFactory (propsPanel->GetHWnd(), propsPanel->GetContentRect(), _selection);
 
 		_editArea = editAreaFactory (project, this, selection, _rf, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), deviceContext, dWriteFactory);
 

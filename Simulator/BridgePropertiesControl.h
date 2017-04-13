@@ -10,6 +10,8 @@ public:
 	BridgePropertiesControl (HWND hwndParent, const RECT& rect);
 	~BridgePropertiesControl();
 
+	HWND GetHWnd() const { return _hwnd; }
+
 private:
 
 	struct Result

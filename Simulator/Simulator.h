@@ -194,3 +194,13 @@ struct IProject abstract : public IUnknown
 
 using ProjectFactory = ComPtr<IProject>(*const)();
 extern const ProjectFactory projectFactory;
+
+// ============================================================================
+
+struct IPropertiesWindow : public IWin32Window
+{
+
+};
+
+using PropertiesWindowFactory = ComPtr<IPropertiesWindow>(*const)(HWND hWndParent, const RECT& rect, ISelection* selection);
+extern const PropertiesWindowFactory propertiesWindowFactory;

@@ -163,6 +163,7 @@
     </ClCompile>
     <ClCompile Include="RibbonCommandHandlers\PortPropertiesRCH.cpp" />
     <ClCompile Include="BridgePropertiesControl.cpp" />
+    <ClCompile Include="PropertiesWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Ribbon\RibbonRes.rc">
