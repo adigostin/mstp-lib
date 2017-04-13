@@ -142,7 +142,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 		MSG msg;
 		while (GetMessage(&msg, nullptr, 0, 0))
 		{
-			//TranslateMessage(&msg);
+			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
 

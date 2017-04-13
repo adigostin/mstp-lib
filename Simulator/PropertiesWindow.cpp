@@ -34,7 +34,7 @@ public:
 				hInstance, // hInstance
 				nullptr, // hIcon
 				LoadCursor(nullptr, IDC_ARROW), // hCursor
-				nullptr,//(HBRUSH)(COLOR_WINDOW + 1), // hbrBackground
+				(HBRUSH)(COLOR_WINDOW + 1), // hbrBackground
 				nullptr, // lpszMenuName
 				PropertiesWindowWndClassName, // lpszClassName
 				nullptr
@@ -51,7 +51,7 @@ public:
 			throw win32_exception(GetLastError());
 		assert(hwnd == _hwnd);
 
-		_bridgePropsControl = new BridgePropertiesControl (_hwnd, GetClientRectPixels());
+		_bridgePropsControl = new BridgePropertiesControl (_hwnd, GetClientRectPixels(), selection);
 	}
 
 	~PropertiesWindow()
@@ -107,6 +107,7 @@ public:
 				::MoveWindow (_bridgePropsControl->GetHWnd(), 0, 0, LOWORD(lParam), HIWORD(lParam), FALSE);
 			return 0;
 		}
+		/*
 		else if (msg == WM_ERASEBKGND)
 		{
 			return 1;
@@ -119,7 +120,7 @@ public:
 			::EndPaint (_hwnd, &ps);
 			return 0;
 		}
-
+		*/
 		return DefWindowProc (_hwnd, msg, wParam, lParam);
 	}
 

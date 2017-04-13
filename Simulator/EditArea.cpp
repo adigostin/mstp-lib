@@ -453,6 +453,9 @@ public:
 	std::optional<LRESULT> ProcessMouseButtonDown (MouseButton button, UINT modifierKeysDown, POINT pt)
 	{
 		::SetFocus(GetHWnd());
+		if (::GetFocus() != GetHWnd())
+			// Some validation code (maybe in the Properties Window) must have failed and taken focus back.
+			return nullopt;
 
 		auto dLocation = GetDipLocationFromPixelLocation(pt);
 		auto wLocation = GetWLocationFromDLocation(dLocation);
