@@ -59,17 +59,20 @@ INT_PTR CALLBACK BridgePropertiesControl::DialogProcStatic (HWND hwnd, UINT uMsg
 	return result.dialogProcResult;
 }
 
+static const UINT_PTR BridgeAddressSubClassId = 1;
+
 BridgePropertiesControl::Result BridgePropertiesControl::DialogProc (UINT msg, WPARAM wParam , LPARAM lParam)
 {
-	if (msg == WM_COMMAND)
+	if (msg == WM_INITDIALOG)
 	{
-		if (((HWND) lParam == _bridgeAddressEdit) && (HIWORD(wParam) == EN_KILLFOCUS))
-		{
-			MessageBox (_hwnd, L"sss", L"rrr", 0);
-			::SetFocus (_hwnd);
-			return { TRUE, 0 };
-		}
-		
+		_bridgeAddressEdit = GetDlgItem (_hwnd, IDC_EDIT_BRIDGE_ADDRESS);
+		BOOL bRes = SetWindowSubclass (_bridgeAddressEdit, BridgeAddressEditSubclassProc, BridgeAddressSubClassId, (DWORD_PTR) this); assert (bRes);
+		return { FALSE, 0 };
+	}
+	
+	if (msg == WM_DESTROY)
+	{
+		BOOL bRes = RemoveWindowSubclass (_bridgeAddressEdit, BridgeAddressEditSubclassProc, BridgeAddressSubClassId); assert (bRes);
 		return { FALSE, 0 };
 	}
 
@@ -79,13 +82,43 @@ BridgePropertiesControl::Result BridgePropertiesControl::DialogProc (UINT msg, W
 	if (msg == WM_CTLCOLORSTATIC)
 		return { reinterpret_cast<INT_PTR>(GetSysColorBrush(COLOR_WINDOW)), 0 };
 
-	if (msg == WM_INITDIALOG)
+	return { FALSE, 0 };
+}
+
+//static
+LRESULT CALLBACK BridgePropertiesControl::BridgeAddressEditSubclassProc (HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	auto dialog = (BridgePropertiesControl*) (void*) dwRefData;
+	
+	if (msg == WM_KEYDOWN)
 	{
-		_bridgeAddressEdit = GetDlgItem (_hwnd, IDC_EDIT_BRIDGE_ADDRESS);
-		return { FALSE, 0 };
+		if (wParam == VK_RETURN)
+		{
+			dialog->ValidateAndSetBridgeAddress();
+			return 0;
+		}
+
+		return DefSubclassProc (hWnd, msg, wParam, lParam);
 	}
 
-	return { FALSE, 0 };
+	if (msg == WM_KILLFOCUS)
+	{
+		bool validated = dialog->ValidateAndSetBridgeAddress();
+		if (!validated)
+			return 0;
+
+		return DefSubclassProc (hWnd, msg, wParam, lParam);
+	}
+
+	return DefSubclassProc (hWnd, msg, wParam, lParam);
+}
+
+bool BridgePropertiesControl::ValidateAndSetBridgeAddress()
+{
+	//MessageBox (_hwnd, L"sss", L"rrr", 0);
+	SetFocus (_bridgeAddressEdit);
+	Edit_SetSel (_bridgeAddressEdit, 0, -1);
+	return false;
 }
 
 //static
