@@ -3,6 +3,8 @@
 #include "resource.h"
 #include "Bridge.h"
 
+static const UINT WM_WORK = WM_APP + 1;
+
 BridgePropertiesControl::BridgePropertiesControl (HWND hwndParent, const RECT& rect, ISelection* selection)
 	: _selection(selection)
 {
@@ -82,6 +84,13 @@ BridgePropertiesControl::Result BridgePropertiesControl::DialogProc (UINT msg, W
 	if (msg == WM_CTLCOLORSTATIC)
 		return { reinterpret_cast<INT_PTR>(GetSysColorBrush(COLOR_WINDOW)), 0 };
 
+	if (msg == WM_WORK)
+	{
+		_workQueue.front()();
+		_workQueue.pop();
+		return { TRUE, 0 };
+	}
+
 	return { FALSE, 0 };
 }
 
@@ -90,11 +99,30 @@ LRESULT CALLBACK BridgePropertiesControl::BridgeAddressEditSubclassProc (HWND hW
 {
 	auto dialog = (BridgePropertiesControl*) (void*) dwRefData;
 	
+	if ((msg == WM_CHAR) && (wParam == VK_RETURN))
+	{
+		Edit_SetSel (dialog->_bridgeAddressEdit, 0, -1);
+		return 0;
+	}
+
 	if (msg == WM_KEYDOWN)
 	{
 		if (wParam == VK_RETURN)
 		{
-			dialog->ValidateAndSetBridgeAddress();
+			if (!dialog->_validating)
+			{
+				dialog->_validating = true;
+				std::wstring errorMessage;
+				bool valid = dialog->ValidateAndSetBridgeAddress(errorMessage);
+				if (!valid)
+				{
+					MessageBox (dialog->_hwnd, errorMessage.c_str(), 0, 0);
+					SetFocus (dialog->_bridgeAddressEdit);
+					Edit_SetSel (dialog->_bridgeAddressEdit, 0, -1);
+				}
+				dialog->_validating = false;
+			}
+
 			return 0;
 		}
 
@@ -103,9 +131,27 @@ LRESULT CALLBACK BridgePropertiesControl::BridgeAddressEditSubclassProc (HWND hW
 
 	if (msg == WM_KILLFOCUS)
 	{
-		bool validated = dialog->ValidateAndSetBridgeAddress();
-		if (!validated)
-			return 0;
+		if (!dialog->_validating)
+		{
+			dialog->_validating = true;
+			std::wstring errorMessage;
+			bool valid = dialog->ValidateAndSetBridgeAddress(errorMessage);
+			if (valid)
+			{
+				dialog->_validating = false;
+			}
+			else
+			{
+				::SetFocus(nullptr);
+				dialog->PostWork ([dialog, errorMessage]
+				{
+					MessageBox (dialog->_hwnd, errorMessage.c_str(), 0, 0);
+					SetFocus (dialog->_bridgeAddressEdit);
+					Edit_SetSel (dialog->_bridgeAddressEdit, 0, -1);
+					dialog->_validating = false;
+				});
+			}
+		}
 
 		return DefSubclassProc (hWnd, msg, wParam, lParam);
 	}
@@ -113,12 +159,19 @@ LRESULT CALLBACK BridgePropertiesControl::BridgeAddressEditSubclassProc (HWND hW
 	return DefSubclassProc (hWnd, msg, wParam, lParam);
 }
 
-bool BridgePropertiesControl::ValidateAndSetBridgeAddress()
+bool BridgePropertiesControl::ValidateAndSetBridgeAddress (std::wstring& errorMessageOut)
 {
-	//MessageBox (_hwnd, L"sss", L"rrr", 0);
-	SetFocus (_bridgeAddressEdit);
-	Edit_SetSel (_bridgeAddressEdit, 0, -1);
-	return false;
+	std::wstring str;
+	str.resize(GetWindowTextLength (_bridgeAddressEdit) + 1);
+	GetWindowText (_bridgeAddressEdit, str.data(), str.size());
+
+	if (!iswxdigit(str[0]) || !iswxdigit(str[1]))
+	{
+		errorMessageOut = L"Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX.";
+		return false;
+	}
+
+	return true;
 }
 
 //static
@@ -152,3 +205,8 @@ void BridgePropertiesControl::OnSelectionChanged (void* callbackArg, ISelection*
 		::ShowWindow (window->GetHWnd(), SW_HIDE);
 }
 
+void BridgePropertiesControl::PostWork (std::function<void()>&& work)
+{
+	_workQueue.push(move(work));
+	PostMessage (_hwnd, WM_WORK, 0, 0);
+}
