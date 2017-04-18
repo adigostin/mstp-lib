@@ -460,6 +460,16 @@ wstring Bridge::GetStpVersionString() const
 	return GetStpVersionString(_config._stpVersion);
 }
 
+std::wstring Bridge::GetMacAddressAsString() const
+{
+	std::wstring str;
+	str.resize(18);
+	swprintf_s (str.data(), str.size(), L"%02X:%02X:%02X:%02X:%02X:%02X",
+				_config._macAddress[0], _config._macAddress[1], _config._macAddress[2],
+				_config._macAddress[3], _config._macAddress[4], _config._macAddress[5]);
+	return str;
+}
+
 #pragma region STP Callbacks
 const STP_CALLBACKS Bridge::StpCallbacks =
 {

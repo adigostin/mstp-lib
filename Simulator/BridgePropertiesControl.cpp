@@ -61,20 +61,20 @@ INT_PTR CALLBACK BridgePropertiesControl::DialogProcStatic (HWND hwnd, UINT uMsg
 	return result.dialogProcResult;
 }
 
-static const UINT_PTR BridgeAddressSubClassId = 1;
+static const UINT_PTR EditSubClassId = 1;
 
 BridgePropertiesControl::Result BridgePropertiesControl::DialogProc (UINT msg, WPARAM wParam , LPARAM lParam)
 {
 	if (msg == WM_INITDIALOG)
 	{
 		_bridgeAddressEdit = GetDlgItem (_hwnd, IDC_EDIT_BRIDGE_ADDRESS);
-		BOOL bRes = SetWindowSubclass (_bridgeAddressEdit, BridgeAddressEditSubclassProc, BridgeAddressSubClassId, (DWORD_PTR) this); assert (bRes);
+		BOOL bRes = SetWindowSubclass (_bridgeAddressEdit, EditSubclassProc, EditSubClassId, (DWORD_PTR) this); assert (bRes);
 		return { FALSE, 0 };
 	}
 	
 	if (msg == WM_DESTROY)
 	{
-		BOOL bRes = RemoveWindowSubclass (_bridgeAddressEdit, BridgeAddressEditSubclassProc, BridgeAddressSubClassId); assert (bRes);
+		BOOL bRes = RemoveWindowSubclass (_bridgeAddressEdit, EditSubclassProc, EditSubClassId); assert (bRes);
 		return { FALSE, 0 };
 	}
 
@@ -95,32 +95,45 @@ BridgePropertiesControl::Result BridgePropertiesControl::DialogProc (UINT msg, W
 }
 
 //static
-LRESULT CALLBACK BridgePropertiesControl::BridgeAddressEditSubclassProc (HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+LRESULT CALLBACK BridgePropertiesControl::EditSubclassProc (HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
-	auto dialog = (BridgePropertiesControl*) (void*) dwRefData;
+	auto dialog = reinterpret_cast<BridgePropertiesControl*>(dwRefData);
 	
-	if ((msg == WM_CHAR) && (wParam == VK_RETURN))
+	if (msg == WM_CHAR)
 	{
-		Edit_SetSel (dialog->_bridgeAddressEdit, 0, -1);
-		return 0;
+		if ((wParam == VK_RETURN) || (wParam == VK_ESCAPE))
+			return 0;
+
+		return DefSubclassProc (hWnd, msg, wParam, lParam);
 	}
 
 	if (msg == WM_KEYDOWN)
 	{
-		if (wParam == VK_RETURN)
+		if (wParam == VK_ESCAPE)
 		{
-			if (!dialog->_validating)
+			auto text = dialog->GetEditPropertyText(hWnd);
+			::SetWindowText (hWnd, text.c_str());
+			::SendMessage (hWnd, EM_SETSEL, 0, -1);
+			return 0;
+		}
+		else if (wParam == VK_RETURN)
+		{
+			std::wstring str;
+			str.resize(GetWindowTextLength (hWnd) + 1);
+			GetWindowText (hWnd, str.data(), str.size());
+
+			if ((dialog->GetEditPropertyText(hWnd) != str) && (dialog->_controlBeingValidated == nullptr))
 			{
-				dialog->_validating = true;
+				dialog->_controlBeingValidated = hWnd;
 				std::wstring errorMessage;
-				bool valid = dialog->ValidateAndSetBridgeAddress(errorMessage);
+				bool valid = dialog->ValidateAndSetProperty(hWnd, str, errorMessage);
 				if (!valid)
 				{
-					MessageBox (dialog->_hwnd, errorMessage.c_str(), 0, 0);
-					SetFocus (dialog->_bridgeAddressEdit);
-					Edit_SetSel (dialog->_bridgeAddressEdit, 0, -1);
+					::MessageBox (dialog->_hwnd, errorMessage.c_str(), 0, 0);
+					::SetFocus (hWnd);
 				}
-				dialog->_validating = false;
+				::SendMessage (hWnd, EM_SETSEL, 0, -1);
+				dialog->_controlBeingValidated = nullptr;
 			}
 
 			return 0;
@@ -131,24 +144,29 @@ LRESULT CALLBACK BridgePropertiesControl::BridgeAddressEditSubclassProc (HWND hW
 
 	if (msg == WM_KILLFOCUS)
 	{
-		if (!dialog->_validating)
+		std::wstring str;
+		str.resize(GetWindowTextLength (hWnd) + 1);
+		GetWindowText (hWnd, str.data(), str.size());
+
+		if ((dialog->GetEditPropertyText(hWnd) != str) && (dialog->_controlBeingValidated == nullptr))
 		{
-			dialog->_validating = true;
+			dialog->_controlBeingValidated = hWnd;
+
 			std::wstring errorMessage;
-			bool valid = dialog->ValidateAndSetBridgeAddress(errorMessage);
+			bool valid = dialog->ValidateAndSetProperty(hWnd, str, errorMessage);
 			if (valid)
 			{
-				dialog->_validating = false;
+				dialog->_controlBeingValidated = nullptr;
 			}
 			else
 			{
 				::SetFocus(nullptr);
-				dialog->PostWork ([dialog, errorMessage]
+				dialog->PostWork ([dialog, hWnd, message=move(errorMessage)]
 				{
-					MessageBox (dialog->_hwnd, errorMessage.c_str(), 0, 0);
-					SetFocus (dialog->_bridgeAddressEdit);
-					Edit_SetSel (dialog->_bridgeAddressEdit, 0, -1);
-					dialog->_validating = false;
+					::MessageBox (dialog->_hwnd, message.c_str(), 0, 0);
+					::SetFocus (hWnd);
+					::SendMessage (hWnd, EM_SETSEL, 0, -1);
+					dialog->_controlBeingValidated = nullptr;
 				});
 			}
 		}
@@ -157,21 +175,6 @@ LRESULT CALLBACK BridgePropertiesControl::BridgeAddressEditSubclassProc (HWND hW
 	}
 
 	return DefSubclassProc (hWnd, msg, wParam, lParam);
-}
-
-bool BridgePropertiesControl::ValidateAndSetBridgeAddress (std::wstring& errorMessageOut)
-{
-	std::wstring str;
-	str.resize(GetWindowTextLength (_bridgeAddressEdit) + 1);
-	GetWindowText (_bridgeAddressEdit, str.data(), str.size());
-
-	if (!iswxdigit(str[0]) || !iswxdigit(str[1]))
-	{
-		errorMessageOut = L"Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX.";
-		return false;
-	}
-
-	return true;
 }
 
 //static
@@ -187,10 +190,7 @@ void BridgePropertiesControl::OnSelectionChanged (void* callbackArg, ISelection*
 		if (selection->GetObjects().size() == 1)
 		{
 			auto bridge = dynamic_cast<Bridge*>(selection->GetObjects()[0].Get());
-			auto addr = bridge->GetMacAddress();
-			wchar_t str[32];
-			swprintf_s (str, L"%02X:%02X:%02X:%02X:%02X:%02X", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
-			::SetWindowText (window->_bridgeAddressEdit, str);
+			::SetWindowText (window->_bridgeAddressEdit, bridge->GetMacAddressAsString().c_str());
 			::EnableWindow (window->_bridgeAddressEdit, TRUE);
 		}
 		else
@@ -209,4 +209,31 @@ void BridgePropertiesControl::PostWork (std::function<void()>&& work)
 {
 	_workQueue.push(move(work));
 	PostMessage (_hwnd, WM_WORK, 0, 0);
+}
+
+std::wstring BridgePropertiesControl::GetEditPropertyText(HWND hwnd) const
+{
+	if (hwnd == _bridgeAddressEdit)
+	{
+		auto bridge = dynamic_cast<Bridge*>(_selection->GetObjects()[0].Get());
+		return bridge->GetMacAddressAsString();
+	}
+	else
+		throw not_implemented_exception();
+}
+
+bool BridgePropertiesControl::ValidateAndSetProperty (HWND hwnd, const std::wstring& str, std::wstring& errorMessageOut)
+{
+	if (hwnd == _bridgeAddressEdit)
+	{
+		if (!iswxdigit(str[0]) || !iswxdigit(str[1]))
+		{
+			errorMessageOut = L"Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX.";
+			return false;
+		}
+
+		return true;
+	}
+	else
+		throw not_implemented_exception();
 }
