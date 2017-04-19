@@ -74,6 +74,11 @@ BridgePropertiesControl::Result BridgePropertiesControl::DialogProc (UINT msg, W
 		_bridgeAddressEdit = GetDlgItem (_hwnd, IDC_EDIT_BRIDGE_ADDRESS);
 		BOOL bRes = SetWindowSubclass (_bridgeAddressEdit, EditSubclassProc, EditSubClassId, (DWORD_PTR) this); assert (bRes);
 		_checkStpEnabled = GetDlgItem (_hwnd, IDC_CHECK_STP_ENABLED);
+		_comboStpVersion = GetDlgItem (_hwnd, IDC_COMBO_STP_VERSION);
+		ComboBox_AddString (_comboStpVersion, Bridge::GetStpVersionString(STP_VERSION_LEGACY_STP).c_str());
+		ComboBox_AddString (_comboStpVersion, Bridge::GetStpVersionString(STP_VERSION_RSTP).c_str());
+		ComboBox_AddString (_comboStpVersion, Bridge::GetStpVersionString(STP_VERSION_MSTP).c_str());
+		ComboBox_SetMinVisible (_comboStpVersion, 5);
 		return { FALSE, 0 };
 	}
 
@@ -101,6 +106,12 @@ BridgePropertiesControl::Result BridgePropertiesControl::DialogProc (UINT msg, W
 		if ((HIWORD(wParam) == BN_CLICKED) && ((HWND) lParam == _checkStpEnabled))
 		{
 			ProcessStpEnabledClicked();
+			return { TRUE, 0 };
+		}
+
+		if ((HIWORD(wParam) == CBN_SELCHANGE) && ((HWND) lParam == _comboStpVersion))
+		{
+			ProcessStpVersionSelChanged();
 			return { TRUE, 0 };
 		}
 
@@ -133,6 +144,39 @@ void BridgePropertiesControl::ProcessStpEnabledClicked()
 			if (b->IsStpEnabled())
 				b->DisableStp(timestamp);
 		}
+	}
+}
+
+void BridgePropertiesControl::ProcessStpVersionSelChanged()
+{
+	int index = ComboBox_GetCurSel(_comboStpVersion);
+	if (index == -1)
+		return;
+
+	assert ((index >= 0) && (index < 3));
+
+	STP_VERSION newVersion;
+	if (index == 0)
+		newVersion = STP_VERSION_LEGACY_STP;
+	else if (index == 1)
+		newVersion = STP_VERSION_RSTP;
+	else
+		newVersion = STP_VERSION_MSTP;
+
+	auto timestamp = GetTimestampMilliseconds();
+
+	for (auto& o : _selection->GetObjects())
+	{
+		auto b = dynamic_cast<Bridge*>(o.Get()); assert (b != nullptr);
+
+		if (b->IsStpEnabled())
+		{
+			b->DisableStp(timestamp);
+			b->SetStpVersion(newVersion, timestamp);
+			b->EnableStp(timestamp);
+		}
+		else
+			b->SetStpVersion(newVersion, timestamp);
 	}
 }
 
@@ -227,8 +271,9 @@ void BridgePropertiesControl::OnAddedToSelection (void* callbackArg, ISelection*
 	auto bridge = dynamic_cast<Bridge*>(o);
 	if (bridge != nullptr)
 	{
-		window->LoadStpEnabledCheckBox();
-		bridge->GetStpEnabledChangedEvent().AddHandler (&OnSelectedBridgeStpEnabledChangedEvent, window);
+		bridge->GetBridgeAddressChangedEvent().AddHandler (&OnSelectedBridgeAddressChanged, window);
+		bridge->GetStpEnabledChangedEvent().AddHandler (&OnSelectedBridgeStpEnabledChanged, window);
+		bridge->GetStpVersionChangedEvent().AddHandler (&OnSelectedBridgeStpVersionChanged, window);
 	}
 }
 
@@ -240,20 +285,54 @@ void BridgePropertiesControl::OnRemovingFromSelection (void* callbackArg, ISelec
 	auto bridge = dynamic_cast<Bridge*>(o);
 	if (bridge != nullptr)
 	{
-		bridge->GetStpEnabledChangedEvent().RemoveHandler (&OnSelectedBridgeStpEnabledChangedEvent, window);
-		window->LoadStpEnabledCheckBox();
+		bridge->GetStpEnabledChangedEvent().RemoveHandler (&OnSelectedBridgeStpEnabledChanged, window);
+		bridge->GetStpVersionChangedEvent().RemoveHandler (&OnSelectedBridgeStpVersionChanged, window);
+		bridge->GetBridgeAddressChangedEvent().RemoveHandler (&OnSelectedBridgeAddressChanged, window);
 	}
 }
 
 //static
-void BridgePropertiesControl::OnSelectedBridgeStpEnabledChangedEvent (void* callbackArg, Bridge* b)
+void BridgePropertiesControl::OnSelectedBridgeAddressChanged (void* callbackArg, Bridge* b)
+{
+	auto window = static_cast<BridgePropertiesControl*>(callbackArg);
+	window->LoadBridgeAddressTextBox();
+}
+
+//static
+void BridgePropertiesControl::OnSelectedBridgeStpEnabledChanged (void* callbackArg, Bridge* b)
 {
 	auto window = static_cast<BridgePropertiesControl*>(callbackArg);
 	window->LoadStpEnabledCheckBox();
 }
 
+//static
+void BridgePropertiesControl::OnSelectedBridgeStpVersionChanged (void* callbackArg, Bridge* b)
+{
+	auto window = static_cast<BridgePropertiesControl*>(callbackArg);
+	window->LoadStpVersionCheckBox();
+}
+
+void BridgePropertiesControl::LoadBridgeAddressTextBox()
+{
+	assert (BridgesSelected());
+
+	if (_selection->GetObjects().size() == 1)
+	{
+		auto bridge = dynamic_cast<Bridge*>(_selection->GetObjects()[0].Get());
+		::SetWindowText (_bridgeAddressEdit, bridge->GetMacAddressAsString().c_str());
+		::EnableWindow (_bridgeAddressEdit, TRUE);
+	}
+	else
+	{
+		::SetWindowText (_bridgeAddressEdit, L"(multiple selection)");
+		::EnableWindow (_bridgeAddressEdit, FALSE);
+	}
+}
+
 void BridgePropertiesControl::LoadStpEnabledCheckBox()
 {
+	assert (BridgesSelected());
+
 	auto isStpEnabled = [](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get())->IsStpEnabled(); };
 
 	if (none_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), isStpEnabled))
@@ -262,6 +341,28 @@ void BridgePropertiesControl::LoadStpEnabledCheckBox()
 		::SendMessage (_checkStpEnabled, BM_SETCHECK, BST_CHECKED, 0);
 	else
 		::SendMessage (_checkStpEnabled, BM_SETCHECK, BST_INDETERMINATE, 0);
+}
+
+void BridgePropertiesControl::LoadStpVersionCheckBox()
+{
+	assert (BridgesSelected());
+
+	auto getStpVersion = [](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get())->GetStpVersion(); };
+
+	int index = -1;
+
+	auto version = getStpVersion(_selection->GetObjects()[0]);
+	if (all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](const ComPtr<Object>& o) { return getStpVersion(o) == version; }))
+	{
+		if (version == STP_VERSION_LEGACY_STP)
+			index = 0;
+		else if (version == STP_VERSION_RSTP)
+			index = 1;
+		else if (version == STP_VERSION_MSTP)
+			index = 2;
+	}
+
+	ComboBox_SetCurSel (_comboStpVersion, index);
 }
 
 //static
@@ -275,24 +376,15 @@ void BridgePropertiesControl::OnSelectionChanged (void* callbackArg, ISelection*
 	if (!bridgesSelected)
 	{
 		::ShowWindow (window->GetHWnd(), SW_HIDE);
-		return;
-	}
-
-	if (selection->GetObjects().size() == 1)
-	{
-		auto bridge = dynamic_cast<Bridge*>(selection->GetObjects()[0].Get());
-		::SetWindowText (window->_bridgeAddressEdit, bridge->GetMacAddressAsString().c_str());
-		::EnableWindow (window->_bridgeAddressEdit, TRUE);
 	}
 	else
 	{
-		::SetWindowText (window->_bridgeAddressEdit, L"(multiple selection)");
-		::EnableWindow (window->_bridgeAddressEdit, FALSE);
+		window->LoadBridgeAddressTextBox();
+		window->LoadStpEnabledCheckBox();
+		window->LoadStpVersionCheckBox();
+
+		::ShowWindow (window->GetHWnd(), SW_SHOW);
 	}
-
-	window->LoadStpEnabledCheckBox();
-
-	::ShowWindow (window->GetHWnd(), SW_SHOW);
 }
 
 void BridgePropertiesControl::PostWork (std::function<void()>&& work)
@@ -327,3 +419,10 @@ bool BridgePropertiesControl::ValidateAndSetProperty (HWND hwnd, const std::wstr
 	else
 		throw not_implemented_exception();
 }
+
+bool BridgePropertiesControl::BridgesSelected() const
+{
+	return !_selection->GetObjects().empty()
+		&& all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get()) != nullptr; });
+}
+

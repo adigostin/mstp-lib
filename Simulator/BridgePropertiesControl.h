@@ -23,6 +23,7 @@ private:
 	HWND _bridgeAddressEdit = nullptr;
 	WNDPROC _bridgeAddressEditOriginalProc;
 	HWND _checkStpEnabled = nullptr;
+	HWND _comboStpVersion = nullptr;
 	HWND _controlBeingValidated = nullptr;
 	std::queue<std::function<void()>> _workQueue;
 
@@ -31,12 +32,18 @@ private:
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection);
 	static void OnAddedToSelection (void* callbackArg, ISelection* selection, Object* o);
 	static void OnRemovingFromSelection (void* callbackArg, ISelection* selection, Object* o);
-	static void OnSelectedBridgeStpEnabledChangedEvent (void* callbackArg, Bridge* b);
+	static void OnSelectedBridgeAddressChanged (void* callbackArg, Bridge* b);
+	static void OnSelectedBridgeStpEnabledChanged (void* callbackArg, Bridge* b);
+	static void OnSelectedBridgeStpVersionChanged (void* callbackArg, Bridge* b);
 	static LRESULT CALLBACK EditSubclassProc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 	void PostWork (std::function<void()>&& work);
 	std::wstring GetEditPropertyText (HWND hwnd) const;
 	bool ValidateAndSetProperty (HWND hwnd, const std::wstring& newText, std::wstring& errorMessageOut);
+	void LoadBridgeAddressTextBox();
 	void LoadStpEnabledCheckBox();
+	void LoadStpVersionCheckBox();
 	void ProcessStpEnabledClicked();
+	void ProcessStpVersionSelChanged();
+	bool BridgesSelected() const;
 };
 
