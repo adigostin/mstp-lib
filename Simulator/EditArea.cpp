@@ -2,7 +2,7 @@
 #include "pch.h"
 #include "Simulator.h"
 #include "ZoomableWindow.h"
-#include "Ribbon/RibbonIds.h"
+#include "Resource.h"
 #include "EditStates/EditState.h"
 #include "Bridge.h"
 #include "Port.h"
@@ -376,6 +376,12 @@ public:
 		{
 			return ProcessKeyOrSysKeyUp ((UINT) wParam, GetModifierKeys());
 		}
+		else if (uMsg == WM_COMMAND)
+		{
+			if ((HIWORD(wParam) == 0) && (LOWORD(wParam) == ID_NEW_BRIDGE) && (lParam == 0))
+				EnterState (CreateStateCreateBridge(MakeEditStateDeps()));
+			return 0;
+		}
 
 		return base::WindowProc (hwnd, uMsg, wParam, lParam);
 	}
@@ -661,19 +667,17 @@ public:
 		//_elementsAtContextMenuLocation.clear();
 		//GetElementsAt(_project->GetInnerRootElement(), { dipLocation.x, dipLocation.y }, _elementsAtContextMenuLocation);
 
-		UINT32 viewId;
+		HMENU hMenu;
 		if (_selection->GetObjects().empty())
-			viewId = cmdContextMenuBlankArea;
+			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_EMPTY_SPACE));
 		else if (dynamic_cast<Bridge*>(_selection->GetObjects()[0].Get()) != nullptr)
-			viewId = cmdContextMenuBridge;
+			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_BRIDGE));
 		else if (dynamic_cast<Port*>(_selection->GetObjects()[0].Get()) != nullptr)
-			viewId = cmdContextMenuPort;
+			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_PORT));
 		else
 			throw not_implemented_exception();
 
-		ComPtr<IUIContextualUI> ui;
-		auto hr = _rf->GetView(viewId, IID_PPV_ARGS(&ui)); ThrowIfFailed(hr);
-		hr = ui->ShowAtLocation(pt.x, pt.y); ThrowIfFailed(hr);
+		TrackPopupMenuEx (GetSubMenu(hMenu, 0), 0, pt.x, pt.y, GetHWnd(), nullptr);
 		return 0;
 	}
 
