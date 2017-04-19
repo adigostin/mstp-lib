@@ -188,7 +188,7 @@ LRESULT CALLBACK BridgePropertiesControl::EditSubclassProc (HWND hWnd, UINT msg,
 	if (msg == WM_CHAR)
 	{
 		if ((wParam == VK_RETURN) || (wParam == VK_ESCAPE))
-			return 0;
+			return 0; // disable the beep on these keys
 
 		return DefSubclassProc (hWnd, msg, wParam, lParam);
 	}
