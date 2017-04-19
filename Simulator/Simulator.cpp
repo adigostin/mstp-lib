@@ -139,7 +139,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 		//auto actionList = actionListFactory();
 		auto project = projectFactory();//move(actionList));
 		auto selection = selectionFactory(project);
-		auto projectWindow = projectWindowFactory(project, hInstance, L"APPLICATION_RIBBON", selection, editAreaFactory, nCmdShow, regKeyPath.c_str(), deviceContext1, dWriteFactory);
+		auto projectWindow = projectWindowFactory(project, selection, editAreaFactory, nCmdShow, regKeyPath.c_str(), deviceContext1, dWriteFactory);
 
 		MSG msg;
 		while (GetMessage(&msg, nullptr, 0, 0))

@@ -2,7 +2,6 @@
 #include "Simulator.h"
 #include "Win32Defs.h"
 #include "Resource.h"
-#include "RibbonCommandHandlers/RCHBase.h"
 #include "Bridge.h"
 #include "Port.h"
 
@@ -16,7 +15,7 @@ static constexpr wchar_t RegValueNameWindowTop[] = L"WindowTop";
 static constexpr wchar_t RegValueNameWindowRight[] = L"WindowRight";
 static constexpr wchar_t RegValueNameWindowBottom[] = L"WindowBottom";
 
-class ProjectWindow : public IProjectWindow, IUIApplication
+class ProjectWindow : public IProjectWindow
 {
 	ULONG _refCount = 1;
 	ComPtr<IProject> const _project;
@@ -27,18 +26,15 @@ class ProjectWindow : public IProjectWindow, IUIApplication
 	ComPtr<ILogArea> _logArea;
 	//BridgePropertiesControl* _bridgeProps;
 	ComPtr<IPropertiesWindow> _propsWindow;
-	ComPtr<IUIFramework> _rf;
 	HWND _hwnd;
 	SIZE _clientSize;
 	EventManager _em;
 	RECT _restoreBounds;
-	unordered_map<UINT32, ComPtr<RCHBase>> _commandHandlerMap;
 	uint16_t _selectedVlanNumber = 1;
 
 public:
-	ProjectWindow (IProject* project, HINSTANCE rfResourceHInstance, const wchar_t* rfResourceName,
-				   ISelection* selection, EditAreaFactory editAreaFactory, int nCmdShow, const wchar_t* regKeyPath,
-				   ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory)
+	ProjectWindow (IProject* project, ISelection* selection, EditAreaFactory editAreaFactory, int nCmdShow,
+				   const wchar_t* regKeyPath, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory)
 		: _project(project), _selection(selection), _regKeyPath(regKeyPath)
 	{
 		HINSTANCE hInstance;
@@ -59,8 +55,8 @@ public:
 				LoadIcon(hInstance, MAKEINTRESOURCE(IDI_DESIGNER)), // hIcon
 				LoadCursor(nullptr, IDC_ARROW), // hCursor
 				nullptr,//(HBRUSH)(COLOR_WINDOW + 1), // hbrBackground
-				nullptr, // lpszMenuName
-				ProjectWindowWndClassName, // lpszClassName
+				MAKEINTRESOURCE(IDR_MAIN_MENU), // lpszMenuName
+				ProjectWindowWndClassName,      // lpszClassName
 				LoadIcon(hInstance, MAKEINTRESOURCE(IDI_DESIGNER))
 			};
 
@@ -86,12 +82,6 @@ public:
 			::GetWindowRect(_hwnd, &_restoreBounds);
 		::ShowWindow (_hwnd, nCmdShow);
 
-		if ((rfResourceHInstance != nullptr) && (rfResourceName != nullptr))
-		{
-			auto hr = CoCreateInstance(CLSID_UIRibbonFramework, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&_rf));
-			ThrowIfFailed(hr);
-		}
-
 		_dockContainer = dockPanelFactory (_hwnd, 0xFFFF, GetClientRectPixels());
 
 		auto logPanel = _dockContainer->GetOrCreateDockablePanel(Side::Right, L"STP Log");
@@ -100,24 +90,7 @@ public:
 		auto propsPanel = _dockContainer->GetOrCreateDockablePanel (Side::Left, L"Properties");
 		_propsWindow = propertiesWindowFactory (propsPanel->GetHWnd(), propsPanel->GetContentRect(), _selection);
 
-		_editArea = editAreaFactory (project, this, selection, _rf, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), deviceContext, dWriteFactory);
-
-		if ((rfResourceHInstance != nullptr) && (rfResourceName != nullptr))
-		{
-			const RCHDeps deps = { this, _rf, _project, _editArea, _selection };
-
-			for (auto& info : GetRCHInfos())
-			{
-				auto handler = info->_factory(deps);
-				for (auto p : info->_commands)
-					_commandHandlerMap.insert ({ p.first, handler });
-			}
-
-			auto hr = _rf->Initialize(hwnd, this); ThrowIfFailed(hr);
-			hr = _rf->LoadUI(rfResourceHInstance, rfResourceName); ThrowIfFailed(hr);
-
-			this->ResizeDockContainer();
-		}
+		_editArea = editAreaFactory (project, this, selection, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), deviceContext, dWriteFactory);
 
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
 	}
@@ -211,8 +184,6 @@ public:
 		if (msg == WM_DESTROY)
 		{
 			_dockContainer = nullptr; // destroy it early to avoid doing layout-related processing
-			if (_rf != nullptr)
-				_rf->Destroy();
 			return 0;
 		}
 
@@ -223,7 +194,7 @@ public:
 
 			_clientSize = { LOWORD(lParam), HIWORD(lParam) };
 			if (_dockContainer != nullptr)
-				ResizeDockContainer();
+				::MoveWindow (_dockContainer->GetHWnd(), 0, 0, _clientSize.cx, _clientSize.cy, TRUE);
 
 			return 0;
 		}
@@ -249,25 +220,6 @@ public:
 		}
 
 		return DefWindowProc(_hwnd, msg, wParam, lParam);
-	}
-
-	void ResizeDockContainer()
-	{
-		int x = 0, y = 0, w = _clientSize.cx, h = _clientSize.cy;
-
-		if (_rf != nullptr)
-		{
-			ComPtr<IUIRibbon> ribbon;
-			auto hr = _rf->GetView(0, IID_PPV_ARGS(&ribbon)); ThrowIfFailed(hr);
-
-			UINT32 ribbonHeight;
-			hr = ribbon->GetHeight(&ribbonHeight); ThrowIfFailed(hr);
-
-			y += ribbonHeight;
-			h -= ribbonHeight;
-		}
-
-		::MoveWindow (_dockContainer->GetHWnd(), x, y, w, h, TRUE);
 	}
 
 	bool TryGetSavedWindowLocation (_Out_ RECT* restoreBounds, _Out_ int* nCmdShow)
@@ -361,31 +313,6 @@ public:
 		//}
 	}
 	*/
-	#pragma region IUIApplication
-	virtual HRESULT STDMETHODCALLTYPE OnViewChanged(UINT32 viewId, UI_VIEWTYPE typeID, IUnknown *view, UI_VIEWVERB verb, INT32 uReasonCode) override final
-	{
-		if (_dockContainer != nullptr)
-			ResizeDockContainer();
-		return S_OK;
-	}
-
-	virtual HRESULT STDMETHODCALLTYPE OnCreateUICommand(UINT32 commandId, UI_COMMANDTYPE typeID, IUICommandHandler **commandHandler) override final
-	{
-		auto it = _commandHandlerMap.find(commandId);
-		if (it == _commandHandlerMap.end())
-			return E_NOTIMPL;
-
-		*commandHandler = it->second;
-		it->second->AddRef();
-		return S_OK;
-	}
-
-	virtual HRESULT STDMETHODCALLTYPE OnDestroyUICommand(UINT32 commandId, UI_COMMANDTYPE typeID, IUICommandHandler *commandHandler) override final
-	{
-		return E_NOTIMPL;
-	}
-	#pragma endregion
-
 	#pragma region IUnknown
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override
 	{
@@ -396,12 +323,6 @@ public:
 		if (riid == __uuidof(IUnknown))
 		{
 			*ppvObject = static_cast<IUnknown*>((IProjectWindow*) this);
-			AddRef();
-			return S_OK;
-		}
-		else if (riid == __uuidof(IUIApplication))
-		{
-			*ppvObject = static_cast<IUIApplication*>(this);
 			AddRef();
 			return S_OK;
 		}

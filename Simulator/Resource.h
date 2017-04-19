@@ -8,6 +8,7 @@
 #define IDR_CONTEXT_MENU_EMPTY_SPACE    130
 #define IDR_CONTEXT_MENU_BRIDGE         131
 #define IDR_CONTEXT_MENU_PORT           132
+#define IDR_MAIN_MENU                   133
 #define IDC_EDIT_BRIDGE_ADDRESS         1000
 #define IDC_CHECK_STP_ENABLED           1001
 #define IDC_COMBO_STP_VERSION           1002
@@ -27,7 +28,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        133
+#define _APS_NEXT_RESOURCE_VALUE        134
 #define _APS_NEXT_COMMAND_VALUE         32778
 #define _APS_NEXT_CONTROL_VALUE         1006
 #define _APS_NEXT_SYMED_VALUE           110

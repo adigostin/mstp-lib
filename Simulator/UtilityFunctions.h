@@ -67,4 +67,3 @@ D2D1_RECT_F InflateRect (const D2D1_RECT_F& rect, float distance);
 void InflateRect (D2D1_RECT_F* rect, float distance);
 D2D1_ROUNDED_RECT InflateRoundedRect (const D2D1_ROUNDED_RECT& rr, float distance);
 void InflateRoundedRect (D2D1_ROUNDED_RECT* rr, float distance);
-const wchar_t* GetPKeyName (REFPROPERTYKEY key);

@@ -199,35 +199,3 @@ bool TryParseMacAddress (const wchar_t* text, unsigned char* addressOut6Bytes)
 	return true;
 }
 */
-
-const wchar_t* GetPKeyName (REFPROPERTYKEY key)
-{
-	if (key == UI_PKEY_Enabled)
-		return L"UI_PKEY_Enabled";
-
-	if (key == UI_PKEY_ItemsSource)
-		return L"UI_PKEY_ItemsSource";
-
-	if (key == UI_PKEY_Categories)
-		return L"UI_PKEY_Categories";
-
-	if (key == UI_PKEY_SelectedItem)
-		return L"UI_PKEY_SelectedItem";
-
-	if (key == UI_PKEY_LargeImage)
-		return L"UI_PKEY_LargeImage";
-
-	if (key == UI_PKEY_SmallImage)
-		return L"UI_PKEY_SmallImage";
-
-	if (key == UI_PKEY_RepresentativeString)
-		return L"UI_PKEY_RepresentativeString";
-
-	if (key == UI_PKEY_StringValue)
-		return L"UI_PKEY_StringValue";
-
-	if (key == UI_PKEY_TooltipDescription)
-		return L"UI_PKEY_TooltipDescription";
-
-	return L"(other pkey)";
-}

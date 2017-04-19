@@ -130,7 +130,7 @@ struct IEditArea abstract : public IUnknown
 	virtual D2D1::Matrix3x2F GetZoomTransform() const = 0;
 };
 
-using EditAreaFactory = ComPtr<IEditArea>(*const)(IProject* project, IProjectWindow* pw, ISelection* selection, IUIFramework* rf, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory);
+using EditAreaFactory = ComPtr<IEditArea>(*const)(IProject* project, IProjectWindow* pw, ISelection* selection, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory);
 extern const EditAreaFactory editAreaFactory;
 
 // ============================================================================
@@ -145,8 +145,6 @@ struct IProjectWindow : public IWin32Window
 };
 
 using ProjectWindowFactory = ComPtr<IProjectWindow>(*const)(IProject* project,
-															HINSTANCE rfResourceHInstance,
-															const wchar_t* rfResourceName,
 															ISelection* selection,
 															EditAreaFactory editAreaFactory,
 															int nCmdShow,

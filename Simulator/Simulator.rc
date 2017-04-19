@@ -57,6 +57,14 @@ BEGIN
     END
 END
 
+IDR_MAIN_MENU MENU
+BEGIN
+    MENUITEM "&File",                       0
+    MENUITEM "&Edit",                       0
+    MENUITEM "&View",                       0
+    MENUITEM "&Help",                       0
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //

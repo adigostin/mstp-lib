@@ -17,7 +17,6 @@ class EditArea : public ZoomableWindow, public IEditArea
 
 	ULONG _refCount = 1;
 	IProjectWindow* const _pw;
-	IUIFramework* const _rf;
 	ComPtr<ISelection> const _selection;
 	ComPtr<IProject> const _project;
 	ComPtr<IDWriteTextFormat> _legendFont;
@@ -37,9 +36,9 @@ class EditArea : public ZoomableWindow, public IEditArea
 	optional<BeginningDrag> _beginningDrag;
 
 public:
-	EditArea(IProject* project, IProjectWindow* pw, ISelection* selection, IUIFramework* rf, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory)
+	EditArea(IProject* project, IProjectWindow* pw, ISelection* selection, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory)
 		: base (WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, hWndParent, 0xFFFF, deviceContext, dWriteFactory)
-		, _project(project), _pw(pw), _rf(rf), _selection(selection)
+		, _project(project), _pw(pw), _selection(selection)
 	{
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
 		_project->GetBridgeRemovingEvent().AddHandler (&OnBridgeRemoving, this);

@@ -128,8 +128,6 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="Port.h" />
     <ClInclude Include="Resource.h" />
-    <ClInclude Include="RibbonCommandHandlers\RCHBase.h" />
-    <ClInclude Include="Ribbon\RibbonIds.h" />
     <ClInclude Include="Simulator.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="UtilityFunctions.h" />
@@ -228,17 +226,6 @@
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="PropertiesWindow.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\BridgePropertiesRCH.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\CreateRCH.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\CutCopyPasteDeleteRCH.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\OptionsRCH.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="RibbonCommandHandlers\PortPropertiesRCH.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\RCHBase.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\UndoRedoRCH.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\VlanRCH.cpp" />
     <ClCompile Include="Selection.cpp" />
     <ClCompile Include="DockablePanel.cpp" />
     <ClCompile Include="Simulator.cpp" />
@@ -247,19 +234,7 @@
     <ClCompile Include="ZoomableWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="Ribbon\RibbonRes.rc" />
     <ResourceCompile Include="Simulator.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="Ribbon\Ribbon.xml">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">uicc.exe "$(ProjectDir)Ribbon\Ribbon.xml" "$(ProjectDir)Ribbon\Ribbon.bml" /header:"$(ProjectDir)Ribbon\RibbonIds.h" /res:"$(ProjectDir)Ribbon\RibbonRes.rc"</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compiling "$(ProjectDir)Ribbon\Ribbon.xml"</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)Ribbon\Ribbon.bml;$(ProjectDir)Ribbon\RibbonRes.rc;$(ProjectDir)Ribbon\RibbonIds.h;%(Outputs)</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">uicc.exe "$(ProjectDir)Ribbon\Ribbon.xml" "$(ProjectDir)Ribbon\Ribbon.bml" /header:"$(ProjectDir)Ribbon\RibbonIds.h" /res:"$(ProjectDir)Ribbon\RibbonRes.rc"</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compiling "$(ProjectDir)Ribbon\Ribbon.xml"</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)Ribbon\Ribbon.bml;$(ProjectDir)Ribbon\RibbonRes.rc;$(ProjectDir)Ribbon\RibbonIds.h;%(Outputs)</Outputs>
-      <SubType>Designer</SubType>
-    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Simulator.ico" />
