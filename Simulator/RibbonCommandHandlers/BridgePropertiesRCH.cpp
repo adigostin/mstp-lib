@@ -443,8 +443,7 @@ public:
 		base::OnAddedToSelection(o);
 		if (auto b = dynamic_cast<Bridge*>(o))
 		{
-			b->GetStpEnabledEvent().AddHandler (&OnStpEnabledOrDisabling, this);
-			b->GetStpDisablingEvent().AddHandler (&OnStpEnabledOrDisabling, this);
+			b->GetStpEnabledChangedEvent().AddHandler (&OnSelectedBridgeStpEnabledChanged, this);
 			b->GetStpVersionChangedEvent().AddHandler (&OnStpVersionChanged, this);
 		}
 	}
@@ -453,14 +452,13 @@ public:
 	{
 		if (auto b = dynamic_cast<Bridge*>(o))
 		{
-			b->GetStpEnabledEvent().RemoveHandler (&OnStpEnabledOrDisabling, this);
-			b->GetStpDisablingEvent().RemoveHandler (&OnStpEnabledOrDisabling, this);
 			b->GetStpVersionChangedEvent().RemoveHandler (&OnStpVersionChanged, this);
+			b->GetStpEnabledChangedEvent().RemoveHandler (&OnSelectedBridgeStpEnabledChanged, this);
 		}
 		base::OnRemovingFromSelection(o);
 	}
 
-	static void OnStpEnabledOrDisabling (void* callbackArg, Bridge* b)
+	static void OnSelectedBridgeStpEnabledChanged (void* callbackArg, Bridge* b)
 	{
 		static_cast<BridgePropertiesRCH*>(callbackArg)->InvalidateAll();
 	}

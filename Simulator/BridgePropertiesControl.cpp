@@ -18,11 +18,15 @@ BridgePropertiesControl::BridgePropertiesControl (HWND hwndParent, const RECT& r
 	::MoveWindow (_hwnd, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE);
 
 	_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
+	_selection->GetAddedToSelectionEvent().AddHandler (&OnAddedToSelection, this);
+	_selection->GetRemovingFromSelectionEvent().AddHandler (&OnRemovingFromSelection, this);
 }
 
 
 BridgePropertiesControl::~BridgePropertiesControl()
 {
+	_selection->GetRemovingFromSelectionEvent().RemoveHandler (&OnRemovingFromSelection, this);
+	_selection->GetAddedToSelectionEvent().RemoveHandler (&OnAddedToSelection, this);
 	_selection->GetSelectionChangedEvent().RemoveHandler (&OnSelectionChanged, this);
 
 	if (_hwnd != nullptr)
@@ -69,9 +73,10 @@ BridgePropertiesControl::Result BridgePropertiesControl::DialogProc (UINT msg, W
 	{
 		_bridgeAddressEdit = GetDlgItem (_hwnd, IDC_EDIT_BRIDGE_ADDRESS);
 		BOOL bRes = SetWindowSubclass (_bridgeAddressEdit, EditSubclassProc, EditSubClassId, (DWORD_PTR) this); assert (bRes);
+		_checkStpEnabled = GetDlgItem (_hwnd, IDC_CHECK_STP_ENABLED);
 		return { FALSE, 0 };
 	}
-	
+
 	if (msg == WM_DESTROY)
 	{
 		BOOL bRes = RemoveWindowSubclass (_bridgeAddressEdit, EditSubclassProc, EditSubClassId); assert (bRes);
@@ -91,14 +96,51 @@ BridgePropertiesControl::Result BridgePropertiesControl::DialogProc (UINT msg, W
 		return { TRUE, 0 };
 	}
 
+	if (msg == WM_COMMAND)
+	{
+		if ((HIWORD(wParam) == BN_CLICKED) && ((HWND) lParam == _checkStpEnabled))
+		{
+			ProcessStpEnabledClicked();
+			return { TRUE, 0 };
+		}
+
+		return { FALSE, 0 };
+	}
+
 	return { FALSE, 0 };
+}
+
+void BridgePropertiesControl::ProcessStpEnabledClicked()
+{
+	auto timestamp = GetTimestampMilliseconds();
+
+	if (Button_GetCheck(_checkStpEnabled) == BST_UNCHECKED)
+	{
+		// enable stp for all
+		for (auto& o : _selection->GetObjects())
+		{
+			auto b = dynamic_cast<Bridge*>(o.Get());
+			if (!b->IsStpEnabled())
+				b->EnableStp(timestamp);
+		}
+	}
+	else
+	{
+		// disable stp for all
+		for (auto& o : _selection->GetObjects())
+		{
+			auto b = dynamic_cast<Bridge*>(o.Get());
+			if (b->IsStpEnabled())
+				b->DisableStp(timestamp);
+		}
+	}
 }
 
 //static
 LRESULT CALLBACK BridgePropertiesControl::EditSubclassProc (HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
 	auto dialog = reinterpret_cast<BridgePropertiesControl*>(dwRefData);
-	
+
 	if (msg == WM_CHAR)
 	{
 		if ((wParam == VK_RETURN) || (wParam == VK_ESCAPE))
@@ -178,6 +220,51 @@ LRESULT CALLBACK BridgePropertiesControl::EditSubclassProc (HWND hWnd, UINT msg,
 }
 
 //static
+void BridgePropertiesControl::OnAddedToSelection (void* callbackArg, ISelection* selection, Object* o)
+{
+	auto window = static_cast<BridgePropertiesControl*>(callbackArg);
+
+	auto bridge = dynamic_cast<Bridge*>(o);
+	if (bridge != nullptr)
+	{
+		window->LoadStpEnabledCheckBox();
+		bridge->GetStpEnabledChangedEvent().AddHandler (&OnSelectedBridgeStpEnabledChangedEvent, window);
+	}
+}
+
+//static
+void BridgePropertiesControl::OnRemovingFromSelection (void* callbackArg, ISelection* selection, Object* o)
+{
+	auto window = static_cast<BridgePropertiesControl*>(callbackArg);
+
+	auto bridge = dynamic_cast<Bridge*>(o);
+	if (bridge != nullptr)
+	{
+		bridge->GetStpEnabledChangedEvent().RemoveHandler (&OnSelectedBridgeStpEnabledChangedEvent, window);
+		window->LoadStpEnabledCheckBox();
+	}
+}
+
+//static
+void BridgePropertiesControl::OnSelectedBridgeStpEnabledChangedEvent (void* callbackArg, Bridge* b)
+{
+	auto window = static_cast<BridgePropertiesControl*>(callbackArg);
+	window->LoadStpEnabledCheckBox();
+}
+
+void BridgePropertiesControl::LoadStpEnabledCheckBox()
+{
+	auto isStpEnabled = [](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get())->IsStpEnabled(); };
+
+	if (none_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), isStpEnabled))
+		::SendMessage (_checkStpEnabled, BM_SETCHECK, BST_UNCHECKED, 0);
+	else if (all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), isStpEnabled))
+		::SendMessage (_checkStpEnabled, BM_SETCHECK, BST_CHECKED, 0);
+	else
+		::SendMessage (_checkStpEnabled, BM_SETCHECK, BST_INDETERMINATE, 0);
+}
+
+//static
 void BridgePropertiesControl::OnSelectionChanged (void* callbackArg, ISelection* selection)
 {
 	auto window = static_cast<BridgePropertiesControl*>(callbackArg);
@@ -185,24 +272,27 @@ void BridgePropertiesControl::OnSelectionChanged (void* callbackArg, ISelection*
 	bool bridgesSelected = !selection->GetObjects().empty()
 		&& all_of (selection->GetObjects().begin(), selection->GetObjects().end(), [](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get()) != nullptr; });
 
-	if (bridgesSelected)
+	if (!bridgesSelected)
 	{
-		if (selection->GetObjects().size() == 1)
-		{
-			auto bridge = dynamic_cast<Bridge*>(selection->GetObjects()[0].Get());
-			::SetWindowText (window->_bridgeAddressEdit, bridge->GetMacAddressAsString().c_str());
-			::EnableWindow (window->_bridgeAddressEdit, TRUE);
-		}
-		else
-		{
-			::SetWindowText (window->_bridgeAddressEdit, L"(multiple selection)");
-			::EnableWindow (window->_bridgeAddressEdit, FALSE);
-		}
+		::ShowWindow (window->GetHWnd(), SW_HIDE);
+		return;
+	}
 
-		::ShowWindow (window->GetHWnd(), SW_SHOW);
+	if (selection->GetObjects().size() == 1)
+	{
+		auto bridge = dynamic_cast<Bridge*>(selection->GetObjects()[0].Get());
+		::SetWindowText (window->_bridgeAddressEdit, bridge->GetMacAddressAsString().c_str());
+		::EnableWindow (window->_bridgeAddressEdit, TRUE);
 	}
 	else
-		::ShowWindow (window->GetHWnd(), SW_HIDE);
+	{
+		::SetWindowText (window->_bridgeAddressEdit, L"(multiple selection)");
+		::EnableWindow (window->_bridgeAddressEdit, FALSE);
+	}
+
+	window->LoadStpEnabledCheckBox();
+
+	::ShowWindow (window->GetHWnd(), SW_SHOW);
 }
 
 void BridgePropertiesControl::PostWork (std::function<void()>&& work)

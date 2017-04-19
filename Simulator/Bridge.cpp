@@ -213,7 +213,6 @@ void Bridge::EnableStp (uint32_t timestamp)
 	}
 
 	STP_StartBridge (_stpBridge, timestamp);
-	StpEnabledEvent::InvokeHandlers (_em, this);
 
 	for (size_t portIndex = 0; portIndex < _ports.size(); portIndex++)
 	{
@@ -222,6 +221,7 @@ void Bridge::EnableStp (uint32_t timestamp)
 			STP_OnPortEnabled (_stpBridge, portIndex, 100, true, timestamp);
 	}
 
+	StpEnabledChangedEvent::InvokeHandlers (_em, this);
 	InvalidateEvent::InvokeHandlers(_em, this);
 }
 
@@ -233,11 +233,11 @@ void Bridge::DisableStp (uint32_t timestamp)
 	if (_stpBridge == nullptr)
 		throw runtime_error ("STP was not enabled on this bridge.");
 
-	StpDisablingEvent::InvokeHandlers(_em, this);
 	STP_StopBridge(_stpBridge, timestamp);
 	STP_DestroyBridge (_stpBridge);
 	_stpBridge = nullptr;
 
+	StpEnabledChangedEvent::InvokeHandlers(_em, this);
 	InvalidateEvent::InvokeHandlers(_em, this);
 }
 
@@ -328,7 +328,7 @@ void Bridge::SetPortAdminEdge (size_t portIndex, bool adminEdge)
 	if (_ports[portIndex]->_config.adminEdge != adminEdge)
 	{
 		_ports[portIndex]->_config.adminEdge = adminEdge;
-		
+
 		if (_stpBridge != nullptr)
 			STP_SetPortAdminEdge (_stpBridge, portIndex, adminEdge, GetTimestampMilliseconds());
 	}

@@ -11,8 +11,8 @@ struct BridgeLogLine
 	int treeIndex;
 };
 
-struct StpEnabledEvent : public Event<StpEnabledEvent, void(Bridge*)> { };
-struct StpDisablingEvent : public Event<StpDisablingEvent, void(Bridge*)> { };
+struct BridgeAddressChangedEvent : public Event<BridgeAddressChangedEvent, void(Bridge*)> { };
+struct StpEnabledChangedEvent : public Event<StpEnabledChangedEvent, void(Bridge*)> { };
 struct StpVersionChangedEvent : public Event<StpVersionChangedEvent, void(Bridge*)> { };
 struct BridgeLogLineGenerated : public Event<BridgeLogLineGenerated, void(Bridge*, const BridgeLogLine& line)> { };
 
@@ -86,8 +86,8 @@ public:
 	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const override final;
 	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
 
-	StpEnabledEvent::Subscriber GetStpEnabledEvent() { return StpEnabledEvent::Subscriber(_em); }
-	StpDisablingEvent::Subscriber GetStpDisablingEvent() { return StpDisablingEvent::Subscriber(_em); }
+	BridgeAddressChangedEvent::Subscriber GetBridgeAddressChangedEvent() { return BridgeAddressChangedEvent::Subscriber(_em); }
+	StpEnabledChangedEvent::Subscriber GetStpEnabledChangedEvent() { return StpEnabledChangedEvent::Subscriber(_em); }
 	StpVersionChangedEvent::Subscriber GetStpVersionChangedEvent() { return StpVersionChangedEvent::Subscriber(_em); }
 	BridgeLogLineGenerated::Subscriber GetBridgeLogLineGeneratedEvent() { return BridgeLogLineGenerated::Subscriber(_em); }
 
