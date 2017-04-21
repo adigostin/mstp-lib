@@ -15,6 +15,8 @@ struct BridgeAddressChangedEvent : public Event<BridgeAddressChangedEvent, void(
 struct StpEnabledChangedEvent : public Event<StpEnabledChangedEvent, void(Bridge*)> { };
 struct StpVersionChangedEvent : public Event<StpVersionChangedEvent, void(Bridge*)> { };
 struct BridgeLogLineGenerated : public Event<BridgeLogLineGenerated, void(Bridge*, const BridgeLogLine& line)> { };
+struct PortCountChangedEvent : public Event<PortCountChangedEvent, void(Bridge*)> { };
+struct TreeCountChangedEvent : public Event<TreeCountChangedEvent, void(Bridge*)> { };
 
 class Bridge : public Object
 {
@@ -90,6 +92,8 @@ public:
 	StpEnabledChangedEvent::Subscriber GetStpEnabledChangedEvent() { return StpEnabledChangedEvent::Subscriber(_em); }
 	StpVersionChangedEvent::Subscriber GetStpVersionChangedEvent() { return StpVersionChangedEvent::Subscriber(_em); }
 	BridgeLogLineGenerated::Subscriber GetBridgeLogLineGeneratedEvent() { return BridgeLogLineGenerated::Subscriber(_em); }
+	PortCountChangedEvent::Subscriber GetPortCountChangedEvent() { return PortCountChangedEvent::Subscriber(_em); }
+	TreeCountChangedEvent::Subscriber GetTreeCountChangedEvent() { return TreeCountChangedEvent::Subscriber(_em); }
 
 	bool IsPowered() const { return _powered; }
 	void EnableStp (uint32_t timestamp);

@@ -3,6 +3,8 @@
 #include "Simulator.h"
 #include "BridgePropertiesControl.h"
 
+using namespace std;
+
 static ATOM wndClassAtom;
 static constexpr wchar_t PropertiesWindowWndClassName[] = L"PropertiesWindow-{24B42526-2970-4B3C-A753-2DABD22C4BB0}";
 
@@ -11,7 +13,7 @@ class PropertiesWindow : public IPropertiesWindow
 	ULONG _refCount = 1;
 	ComPtr<ISelection> const _selection;
 	HWND _hwnd = nullptr;
-	BridgePropertiesControl* _bridgePropsControl = nullptr;
+	unique_ptr<IBridgePropertiesControl> _bridgePropsControl;
 
 public:
 	PropertiesWindow (HWND hWndParent, const RECT& rect, ISelection* selection)
@@ -51,7 +53,7 @@ public:
 			throw win32_exception(GetLastError());
 		assert(hwnd == _hwnd);
 
-		_bridgePropsControl = new BridgePropertiesControl (_hwnd, GetClientRectPixels(), selection);
+		_bridgePropsControl = bridgePropertiesControlFactory (_hwnd, GetClientRectPixels(), selection);
 	}
 
 	~PropertiesWindow()
