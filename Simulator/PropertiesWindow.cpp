@@ -1,7 +1,6 @@
 
 #include "pch.h"
 #include "Simulator.h"
-#include "BridgePropertiesControl.h"
 
 using namespace std;
 

@@ -54,7 +54,6 @@
     <ClInclude Include="Port.h" />
     <ClInclude Include="Simulator.h" />
     <ClInclude Include="UtilityFunctions.h" />
-    <ClInclude Include="BridgePropertiesControl.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />

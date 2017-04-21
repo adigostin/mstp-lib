@@ -113,7 +113,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Bridge.h" />
-    <ClInclude Include="BridgePropertiesControl.h" />
     <ClInclude Include="D2DWindow.h" />
     <ClInclude Include="EditStates\EditState.h" />
     <ClInclude Include="EventManager.h" />

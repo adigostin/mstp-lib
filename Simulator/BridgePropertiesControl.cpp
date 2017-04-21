@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "BridgePropertiesControl.h"
+#include "Simulator.h"
 #include "resource.h"
 #include "Bridge.h"
 
