@@ -11,7 +11,6 @@ class LogArea : public D2DWindow, public ILogArea
 {
 	typedef D2DWindow base;
 
-	LONG _refCount = 1;
 	ComPtr<IDWriteTextFormat> _textFormat;
 	ComPtr<ID2D1SolidColorBrush> _windowBrush;
 	ComPtr<ID2D1SolidColorBrush> _windowTextBrush;
@@ -412,23 +411,6 @@ public:
 
 		ProcessUserScroll (newTopLineIndex);
 	}
-
-	#pragma region IUnknown
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final { return E_NOTIMPL; }
-
-	virtual ULONG STDMETHODCALLTYPE AddRef() override final
-	{
-		return InterlockedIncrement(&_refCount);
-	}
-
-	virtual ULONG STDMETHODCALLTYPE Release() override final
-	{
-		auto newRefCount = InterlockedDecrement(&_refCount);
-		if (newRefCount == 0)
-			delete this;
-		return newRefCount;
-	}
-	#pragma endregion
 };
 
-extern const LogAreaFactory logAreaFactory = [](auto... params) { return ComPtr<ILogArea>(new LogArea(params...), false); };
+extern const LogAreaFactory logAreaFactory = [](auto... params) { return unique_ptr<ILogArea>(new LogArea(params...)); };

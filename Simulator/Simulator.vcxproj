@@ -225,6 +225,7 @@
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="PropertiesWindow.cpp" />
+    <ClCompile Include="VlanWindow.cpp" />
     <ClCompile Include="Selection.cpp" />
     <ClCompile Include="DockablePanel.cpp" />
     <ClCompile Include="Simulator.cpp" />

@@ -9,7 +9,6 @@ static constexpr wchar_t PropertiesWindowWndClassName[] = L"PropertiesWindow-{24
 
 class PropertiesWindow : public IPropertiesWindow
 {
-	ULONG _refCount = 1;
 	ComPtr<ISelection> const _selection;
 	HWND _hwnd = nullptr;
 	unique_ptr<IBridgePropertiesControl> _bridgePropsControl;
@@ -76,8 +75,6 @@ public:
 			window = reinterpret_cast<PropertiesWindow*>(lpcs->lpCreateParams);
 			window->_hwnd = hwnd;
 			SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(window));
-			// GDI now holds a pointer to this object, so let's call AddRef.
-			window->AddRef();
 		}
 		else
 			window = reinterpret_cast<PropertiesWindow*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
@@ -94,7 +91,6 @@ public:
 		{
 			window->_hwnd = nullptr;
 			SetWindowLongPtr(hwnd, GWLP_USERDATA, 0);
-			window->Release(); // Release the reference we added on WM_NCCREATE.
 		}
 
 		return result;
@@ -126,37 +122,6 @@ public:
 	}
 
 	virtual HWND GetHWnd() const override final { return _hwnd; }
-
-	#pragma region IUnknown
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override
-	{
-		if (!ppvObject)
-			return E_INVALIDARG;
-
-		*ppvObject = NULL;
-		if (riid == __uuidof(IUnknown))
-		{
-			*ppvObject = static_cast<IUnknown*>((IProjectWindow*) this);
-			AddRef();
-			return S_OK;
-		}
-
-		return E_NOINTERFACE;
-	}
-
-	virtual ULONG STDMETHODCALLTYPE AddRef() override
-	{
-		return InterlockedIncrement(&_refCount);
-	}
-
-	virtual ULONG STDMETHODCALLTYPE Release() override
-	{
-		ULONG newRefCount = InterlockedDecrement(&_refCount);
-		if (newRefCount == 0)
-			delete this;
-		return newRefCount;
-	}
-	#pragma endregion
 };
 
-const PropertiesWindowFactory propertiesWindowFactory = [](auto... params) { return ComPtr<IPropertiesWindow>(new PropertiesWindow(params...), false); };
+const PropertiesWindowFactory propertiesWindowFactory = [](auto... params) { return unique_ptr<IPropertiesWindow>(new PropertiesWindow(params...)); };

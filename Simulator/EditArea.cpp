@@ -15,7 +15,6 @@ class EditArea : public ZoomableWindow, public IEditArea
 {
 	typedef ZoomableWindow base;
 
-	ULONG _refCount = 1;
 	IProjectWindow* const _pw;
 	ComPtr<ISelection> const _selection;
 	ComPtr<IProject> const _project;
@@ -81,7 +80,6 @@ public:
 
 	virtual ~EditArea()
 	{
-		assert (_refCount == 0);
 		_project->GetProjectInvalidateEvent().RemoveHandler(&OnProjectInvalidate, this);
 		_project->GetWireRemovingEvent().RemoveHandler (&OnWireRemoving, this);
 		_project->GetBridgeRemovingEvent().RemoveHandler (&OnBridgeRemoving, this);
@@ -278,19 +276,6 @@ public:
 	virtual void Render(ID2D1DeviceContext* dc) const override final
 	{
 		dc->Clear(GetD2DSystemColor(COLOR_WINDOW));
-
-		auto clientSizeDips = GetClientSizeDips();
-
-		if (!_project->GetWires().empty())
-		{
-			bool anyMstpBridge = any_of (_project->GetBridges().begin(), _project->GetBridges().end(), [](const ComPtr<Bridge>& b) { return b->GetStpVersion() == STP_VERSION_MSTP; });
-			if (anyMstpBridge)
-			{
-				wstringstream ss;
-				ss << L"Showing network topology for VLAN " << to_wstring(_pw->GetSelectedVlanNumber()) << L".";
-				RenderHint (dc, clientSizeDips.width / 2, 4, ss.str().c_str());
-			}
-		}
 
 		RenderLegend(dc);
 		RenderObjects(dc);
@@ -683,23 +668,6 @@ public:
 	virtual const DrawingObjects& GetDrawingObjects() const override final { return _drawingObjects; }
 
 	virtual D2D1::Matrix3x2F GetZoomTransform() const override final { return base::GetZoomTransform(); }
-
-	#pragma region IUnknown
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final { return E_NOTIMPL; }
-
-	virtual ULONG STDMETHODCALLTYPE AddRef() override final
-	{
-		return InterlockedIncrement(&_refCount);
-	}
-
-	virtual ULONG STDMETHODCALLTYPE Release() override final
-	{
-		auto newRefCount = InterlockedDecrement(&_refCount);
-		if (newRefCount == 0)
-			delete this;
-		return newRefCount;
-	}
-	#pragma endregion
 };
 
-extern const EditAreaFactory editAreaFactory = [](auto... params) { return ComPtr<IEditArea>(new EditArea(params...), false); };
+extern const EditAreaFactory editAreaFactory = [](auto... params) { return unique_ptr<IEditArea>(new EditArea(params...)); };

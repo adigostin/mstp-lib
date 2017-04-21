@@ -139,6 +139,7 @@
     </ClCompile>
     <ClCompile Include="BridgePropertiesControl.cpp" />
     <ClCompile Include="PropertiesWindow.cpp" />
+    <ClCompile Include="VlanWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Simulator.rc" />

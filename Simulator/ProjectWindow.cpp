@@ -17,15 +17,14 @@ static constexpr wchar_t RegValueNameWindowBottom[] = L"WindowBottom";
 
 class ProjectWindow : public IProjectWindow
 {
-	ULONG _refCount = 1;
 	ComPtr<IProject> const _project;
 	ComPtr<ISelection> const _selection;
 	wstring const _regKeyPath;
-	ComPtr<IEditArea> _editArea;
+	unique_ptr<IEditArea> _editArea;
 	unique_ptr<IDockContainer> _dockContainer;
-	ComPtr<ILogArea> _logArea;
-	//BridgePropertiesControl* _bridgeProps;
-	ComPtr<IPropertiesWindow> _propsWindow;
+	unique_ptr<ILogArea> _logArea;
+	unique_ptr<IPropertiesWindow> _propsWindow;
+	unique_ptr<IVlanWindow> _vlanWindow;
 	HWND _hwnd;
 	SIZE _clientSize;
 	EventManager _em;
@@ -90,6 +89,10 @@ public:
 		auto propsPanel = _dockContainer->GetOrCreateDockablePanel (Side::Left, L"Properties");
 		_propsWindow = propertiesWindowFactory (propsPanel->GetHWnd(), propsPanel->GetContentRect(), _selection);
 
+		auto vlanPanel = _dockContainer->GetOrCreateDockablePanel (Side::Top, L"VLAN");
+		_vlanWindow = vlanWindowFactory (vlanPanel->GetHWnd(), vlanPanel->GetContentLocation(), _project, this, _selection);
+		_dockContainer->ResizePanel (vlanPanel, vlanPanel->GetPanelSizeFromContentSize(_vlanWindow->GetClientSize()));
+
 		_editArea = editAreaFactory (project, this, selection, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), deviceContext, dWriteFactory);
 
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
@@ -141,8 +144,6 @@ public:
 			window = reinterpret_cast<ProjectWindow*>(lpcs->lpCreateParams);
 			window->_hwnd = hwnd;
 			SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(window));
-			// GDI now holds a pointer to this object, so let's call AddRef.
-			window->AddRef();
 		}
 		else
 			window = reinterpret_cast<ProjectWindow*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
@@ -159,7 +160,6 @@ public:
 		{
 			window->_hwnd = nullptr;
 			SetWindowLongPtr(hwnd, GWLP_USERDATA, 0);
-			window->Release(); // Release the reference we added on WM_NCCREATE.
 		}
 
 		return result;
@@ -269,6 +269,9 @@ public:
 
 	virtual void SelectVlan (uint16_t vlanNumber) override final
 	{
+		if ((vlanNumber == 0) || (vlanNumber > 4095))
+			throw invalid_argument (u8"Invalid VLAN number.");
+
 		if (_selectedVlanNumber != vlanNumber)
 		{
 			_selectedVlanNumber = vlanNumber;
@@ -313,36 +316,6 @@ public:
 		//}
 	}
 	*/
-	#pragma region IUnknown
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override
-	{
-		if (!ppvObject)
-			return E_INVALIDARG;
-
-		*ppvObject = NULL;
-		if (riid == __uuidof(IUnknown))
-		{
-			*ppvObject = static_cast<IUnknown*>((IProjectWindow*) this);
-			AddRef();
-			return S_OK;
-		}
-
-		return E_NOINTERFACE;
-	}
-
-	virtual ULONG STDMETHODCALLTYPE AddRef() override
-	{
-		return InterlockedIncrement(&_refCount);
-	}
-
-	virtual ULONG STDMETHODCALLTYPE Release() override
-	{
-		ULONG newRefCount = InterlockedDecrement(&_refCount);
-		if (newRefCount == 0)
-			delete this;
-		return newRefCount;
-	}
-	#pragma endregion
 };
 
-extern const ProjectWindowFactory projectWindowFactory = [](auto... params) { return ComPtr<IProjectWindow>(new ProjectWindow(params...), false); };
+extern const ProjectWindowFactory projectWindowFactory = [](auto... params) { return unique_ptr<IProjectWindow>(new ProjectWindow(params...)); };

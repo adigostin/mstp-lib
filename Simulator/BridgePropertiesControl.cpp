@@ -21,12 +21,6 @@ class BridgePropertiesControl : public IBridgePropertiesControl
 	HWND _controlBeingValidated = nullptr;
 	std::queue<std::function<void()>> _workQueue;
 
-	struct Result
-	{
-		INT_PTR dialogProcResult;
-		LRESULT messageResult;
-	};
-
 public:
 	BridgePropertiesControl (HWND hwndParent, const RECT& rect, ISelection* selection)
 		: _selection(selection)
@@ -77,7 +71,7 @@ private:
 			return DefWindowProc (hwnd, uMsg, wParam, lParam);
 		}
 
-		Result result = window->DialogProc (uMsg, wParam, lParam);
+		DialogProcResult result = window->DialogProc (uMsg, wParam, lParam);
 
 		if (uMsg == WM_NCDESTROY)
 		{
@@ -91,7 +85,7 @@ private:
 
 	static const UINT_PTR EditSubClassId = 1;
 
-	Result DialogProc (UINT msg, WPARAM wParam , LPARAM lParam)
+	DialogProcResult DialogProc (UINT msg, WPARAM wParam , LPARAM lParam)
 	{
 		if (msg == WM_INITDIALOG)
 		{

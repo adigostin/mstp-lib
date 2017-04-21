@@ -22,10 +22,11 @@ class DockablePanel : public IDockablePanel
 	bool _draggingSplitter = false;
 	POINT _draggingSplitterLastMouseScreenLocation;
 	EventManager _em;
+	wstring _title;
 
 public:
-	DockablePanel (HWND hWndParent, DWORD controlId, const RECT& rect, Side side, const wchar_t* title)
-		: _side(side)
+	DockablePanel (HWND hWndParent, const RECT& rect, Side side, const wchar_t* title)
+		: _side(side), _title(title)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) WndClassName, &hInstance);
@@ -52,9 +53,9 @@ public:
 				throw win32_exception(GetLastError());
 		}
 
-		auto hwnd = ::CreateWindow (WndClassName, title, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN,
+		auto hwnd = ::CreateWindow (WndClassName, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN,
 									rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,
-									hWndParent, (HMENU) controlId, hInstance, this);
+									hWndParent, nullptr, hInstance, this);
 		if (hwnd == nullptr)
 			throw win32_exception(GetLastError());
 		assert (hwnd == _hwnd);
@@ -80,82 +81,82 @@ public:
 
 	virtual Side GetSide() const override final { return _side; }
 
-	virtual RECT GetContentRect() const override final
+	LONG SplitterSizePixels()   const { return (LONG) (SplitterWidthDips  * _dpiX / 96.0); }
+
+	LONG TitleBarHeightPixels() const { return (LONG) (TitleBarHeightDips * _dpiY / 96.0); }
+
+	virtual POINT GetContentLocation() const override final
+	{
+		switch (_side)
+		{
+			case Side::Left:
+				return POINT { 0, TitleBarHeightPixels() };
+
+			case Side::Right:
+				return POINT { SplitterSizePixels(), TitleBarHeightPixels() };
+
+			case Side::Top:
+				return POINT { 0, TitleBarHeightPixels() };
+
+			default:
+				throw not_implemented_exception();
+		}
+	}
+
+	virtual SIZE GetContentSize() const override final
 	{
 		if ((_side == Side::Left) || (_side == Side::Right))
-		{
-			LONG splitterWidthPixels = (LONG) (SplitterWidthDips * _dpiX / 96.0);
-			LONG titleBarHeightPixels = (LONG) (TitleBarHeightDips * _dpiY / 96.0);
-			if (_side == Side::Left)
-				return RECT { 0, titleBarHeightPixels, _clientSize.cx - splitterWidthPixels, _clientSize.cy };
-			else
-				return RECT { splitterWidthPixels, titleBarHeightPixels, _clientSize.cx, _clientSize.cy };
-		}
+			return SIZE { _clientSize.cx - SplitterSizePixels(), _clientSize.cy - TitleBarHeightPixels() };
 		else
-			throw not_implemented_exception();
+			return SIZE { _clientSize.cx, _clientSize.cy - SplitterSizePixels() - TitleBarHeightPixels() };
 	}
 
 	RECT GetSplitterRect()
 	{
-		if ((_side == Side::Left) || (_side == Side::Right))
+		switch (_side)
 		{
-			LONG splitterWidthPixels = (LONG) (SplitterWidthDips * _dpiX / 96.0);
-			if (_side == Side::Left)
-				return RECT { _clientSize.cx - splitterWidthPixels, 0, _clientSize.cx, _clientSize.cy };
-			else
-				return RECT { 0, 0, splitterWidthPixels, _clientSize.cy };
+			case Side::Left:
+				return RECT { _clientSize.cx - SplitterSizePixels(), 0, _clientSize.cx, _clientSize.cy };
+
+			case Side::Right:
+				return RECT { 0, 0, SplitterSizePixels(), _clientSize.cy };
+
+			case Side::Top:
+				return RECT { 0, _clientSize.cy - SplitterSizePixels(), _clientSize.cx, _clientSize.cy };
+
+			default:
+				throw not_implemented_exception();
 		}
-		else
-			throw not_implemented_exception();
 	}
 
 	RECT GetTitleBarRect()
 	{
-		if ((_side == Side::Left) || (_side == Side::Right))
+		switch (_side)
 		{
-			LONG splitterWidthPixels = (LONG) (SplitterWidthDips * _dpiX / 96.0);
-			LONG titleBarHeightPixels = (LONG) (TitleBarHeightDips * _dpiY / 96.0);
-			if (_side == Side::Left)
-				return RECT { 0, 0, _clientSize.cx - splitterWidthPixels, titleBarHeightPixels };
-			else
-				return RECT { splitterWidthPixels, 0, _clientSize.cx, titleBarHeightPixels };
+			case Side::Left:
+				return RECT { 0, 0, _clientSize.cx - SplitterSizePixels(), TitleBarHeightPixels() };
+
+			case Side::Right:
+				return RECT { SplitterSizePixels(), 0, _clientSize.cx, TitleBarHeightPixels() };
+
+			case Side::Top:
+				return RECT { 0, 0, _clientSize.cx, TitleBarHeightPixels() };
+
+			default:
+				throw not_implemented_exception();
 		}
-		else
-			throw not_implemented_exception();
 	}
 
 	RECT GetCloseButtonRect()
 	{
-		if ((_side == Side::Left) || (_side == Side::Right))
-		{
-			LONG closeButtonMarginPixels = (LONG) (CloseButtonMarginDips * _dpiY / 96.0);
+		LONG closeButtonMarginPixels = (LONG) (CloseButtonMarginDips * _dpiY / 96.0);
 
-			auto rect = GetTitleBarRect();
-			rect.right -= closeButtonMarginPixels;
-			rect.top += closeButtonMarginPixels;
-			rect.bottom -= closeButtonMarginPixels;
-			rect.left = rect.right - (rect.bottom - rect.top);
-			return rect;
-		}
-		else
-			throw not_implemented_exception();
-	}
-
-	void ResizeContent()
-	{
-		auto contentHWnd = ::GetWindow (_hwnd, GW_CHILD);
-		if (contentHWnd != nullptr)
-		{
-			LONG titleBarHeightPixels = (LONG) (TitleBarHeightDips * _dpiY / 96.0);
-			LONG splitterWidthPixels  = (LONG) (SplitterWidthDips * _dpiX / 96.0);
-
-			if (_side == Side::Left)
-				::MoveWindow (contentHWnd, 0, titleBarHeightPixels, _clientSize.cx - splitterWidthPixels, _clientSize.cy - titleBarHeightPixels, TRUE);
-			else if (_side == Side::Right)
-				::MoveWindow (contentHWnd, splitterWidthPixels, titleBarHeightPixels, _clientSize.cx - splitterWidthPixels, _clientSize.cy - titleBarHeightPixels, TRUE);
-			else
-				throw not_implemented_exception();
-		}
+		auto rect = GetTitleBarRect();
+		rect.right -= closeButtonMarginPixels;
+		rect.top += closeButtonMarginPixels;
+		rect.bottom -= closeButtonMarginPixels;
+		rect.left = rect.right - (rect.bottom - rect.top);
+		return rect;
 	}
 
 	static LRESULT CALLBACK WindowProcStatic (HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -202,7 +203,14 @@ public:
 		else if (msg == WM_SIZE)
 		{
 			_clientSize = { LOWORD(lParam), HIWORD(lParam) };
-			ResizeContent();
+
+			auto contentHWnd = ::GetWindow (_hwnd, GW_CHILD);
+			if (contentHWnd != nullptr)
+			{
+				auto cr = GetContentRect();
+				::MoveWindow (contentHWnd, cr.left, cr.top, cr.right - cr.left, cr.bottom - cr.top, TRUE);
+			}
+
 			return 0;
 		}
 		else if (msg == WM_ERASEBKGND)
@@ -257,7 +265,10 @@ public:
 		auto splitterRect = GetSplitterRect();
 		if (PtInRect (&splitterRect, pt))
 		{
-			SetCursor (LoadCursor (nullptr, IDC_SIZEWE));
+			if ((_side == Side::Left) || (_side == Side::Right))
+				SetCursor (LoadCursor (nullptr, IDC_SIZEWE));
+			else
+				SetCursor (LoadCursor (nullptr, IDC_SIZENS));
 			return;
 		}
 
@@ -283,18 +294,14 @@ public:
 		UINT buttonStateValue = DFCS_CAPTIONCLOSE | DFCS_FLAT | (_closeButtonDown ? DFCS_PUSHED : 0);
 		DrawFrameControl (ps.hdc, &closeButtonRect, DFC_CAPTION, buttonStateValue);
 
-		int textLength = GetWindowTextLength (_hwnd);
-		if (textLength > 0)
+		if (_title.length() > 0)
 		{
-			unique_ptr<wchar_t[]> text (new wchar_t[textLength + 1]);
-			GetWindowText (_hwnd, text.get(), textLength + 1);
-
 			SetBkMode (ps.hdc, TRANSPARENT);
 			SetTextColor (ps.hdc, GetSysColor (COLOR_CAPTIONTEXT));
 
-			RECT titleBarTextRect = { titleBarRect.left + 10, titleBarRect.top, titleBarRect.right, titleBarRect.bottom };
+			RECT titleBarTextRect = { titleBarRect.left + 6, titleBarRect.top, titleBarRect.right, titleBarRect.bottom };
 			auto oldSelectedFont = SelectObject (ps.hdc, _titleBarFont.get());
-			DrawTextW (ps.hdc, text.get(), -1, &titleBarTextRect, DT_SINGLELINE | DT_VCENTER);
+			DrawTextW (ps.hdc, _title.c_str(), _title.length(), &titleBarTextRect, DT_SINGLELINE | DT_VCENTER);
 			SelectObject (ps.hdc, oldSelectedFont);
 		}
 
@@ -376,6 +383,8 @@ public:
 				proposedSize = { _clientSize.cx + offset.cx, _clientSize.cy };
 			else if (_side == Side::Right)
 				proposedSize = { _clientSize.cx - offset.cx, _clientSize.cy };
+			else if (_side == Side::Top)
+				proposedSize = { _clientSize.cx, _clientSize.cy + offset.cy };
 			else
 				throw not_implemented_exception();
 
@@ -390,6 +399,14 @@ public:
 	virtual CloseButtonClicked::Subscriber GetCloseButtonClickedEvent() override final { return CloseButtonClicked::Subscriber(_em); }
 
 	virtual SplitterDragging::Subscriber GetSplitterDraggingEvent() override final { return SplitterDragging::Subscriber(_em); }
+
+	virtual SIZE GetPanelSizeFromContentSize (SIZE contentSize) const override final
+	{
+		if (_side == Side::Top)
+			return SIZE { contentSize.cx, TitleBarHeightPixels() + contentSize.cy + SplitterSizePixels() };
+
+		throw not_implemented_exception();
+	}
 };
 
 extern const DockablePanelFactory dockablePanelFactory = [](auto... params) { return unique_ptr<IDockablePanel>(new DockablePanel(params...)); };
