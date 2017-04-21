@@ -9,7 +9,8 @@ class VlanWindow : public IVlanWindow
 	IProjectWindow* const _projectWindow;
 	ISelection* const _selection;
 	HWND _hwnd = nullptr;
-	HWND _comboVlan = nullptr;
+	HWND _comboSelectedVlan = nullptr;
+	HWND _comboNewWindowVlan = nullptr;
 
 public:
 	VlanWindow (HWND hWndParent, POINT location, IProject* project, IProjectWindow* projectWindow, ISelection* selection)
@@ -71,10 +72,15 @@ private:
 	{
 		if (msg == WM_INITDIALOG)
 		{
-			_comboVlan = GetDlgItem (_hwnd, IDC_COMBO_SELECTED_VLAN);
-			for (size_t i = 1; i <= 4095; i++)
-				ComboBox_AddString(_comboVlan, std::to_wstring(i).c_str());
-			LoadVlanCombo();
+			_comboSelectedVlan  = GetDlgItem (_hwnd, IDC_COMBO_SELECTED_VLAN);
+			_comboNewWindowVlan = GetDlgItem (_hwnd, IDC_COMBO_NEW_WINDOW_VLAN);
+			for (size_t i = 1; i <= 16; i++)
+			{
+				auto str = std::to_wstring(i);
+				ComboBox_AddString(_comboSelectedVlan, str.c_str());
+				ComboBox_AddString(_comboNewWindowVlan, str.c_str());
+			}
+			LoadSelectedVlanCombo();
 			return { FALSE, 0 };
 		}
 
@@ -87,9 +93,9 @@ private:
 		return { FALSE, 0 };
 	}
 
-	void LoadVlanCombo()
+	void LoadSelectedVlanCombo()
 	{
-		ComboBox_SetCurSel (_comboVlan, _projectWindow->GetSelectedVlanNumber() - 1);
+		ComboBox_SetCurSel (_comboSelectedVlan, _projectWindow->GetSelectedVlanNumber() - 1);
 	}
 };
 

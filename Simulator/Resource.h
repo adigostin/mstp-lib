@@ -17,6 +17,7 @@
 #define IDC_BUTTON_EDIT_MST_CONFIG_TABLE 1005
 #define IDC_COMBO_SELECTED_VLAN         1006
 #define IDC_EDIT_SELECTED_TREE          1007
+#define IDC_COMBO_NEW_WINDOW_VLAN       1008
 #define ID_NEW_BRIDGE                   32772
 #define ID_PORT_AUTO_EDGE               32773
 #define ID_PORT_ADMIN_EDGE              32774
@@ -32,7 +33,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        135
 #define _APS_NEXT_COMMAND_VALUE         32778
-#define _APS_NEXT_CONTROL_VALUE         1008
+#define _APS_NEXT_CONTROL_VALUE         1009
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif
