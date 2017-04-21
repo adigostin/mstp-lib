@@ -3,6 +3,7 @@
 #include "Win32Defs.h"
 #include "UtilityFunctions.h"
 
+struct ISimulatorApp;
 struct IProject;
 struct IProjectWindow;
 struct ISelection;
@@ -158,18 +159,17 @@ struct SelectedVlanNumerChangedEvent : public Event<SelectedVlanNumerChangedEven
 struct IProjectWindow : public IWin32Window
 {
 	virtual ~IProjectWindow() { }
+	virtual IProject* GetProject() const = 0;
 	virtual void SelectVlan (uint16_t vlanNumber) = 0;
 	virtual uint16_t GetSelectedVlanNumber() const = 0;
 	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() = 0;
 };
 
-using ProjectWindowFactory = std::unique_ptr<IProjectWindow>(*const)(IProject* project,
+using ProjectWindowFactory = std::unique_ptr<IProjectWindow>(*const)(ISimulatorApp* app,
+																	 IProject* project,
 																	 ISelection* selection,
 																	 EditAreaFactory editAreaFactory,
-																	 int nCmdShow,
-																	 const wchar_t* regKeyPath,
-																	 ID3D11DeviceContext1* deviceContext,
-																	 IDWriteFactory* dWriteFactory);
+																	 int nCmdShow);
 extern const ProjectWindowFactory projectWindowFactory;
 
 // ============================================================================
@@ -224,13 +224,13 @@ extern const PropertiesWindowFactory propertiesWindowFactory;
 
 // ============================================================================
 
-struct IBridgePropertiesControl : public IWin32Window
+struct IBridgePropsWindow : public IWin32Window
 {
-	virtual ~IBridgePropertiesControl() { }
+	virtual ~IBridgePropsWindow() { }
 };
 
-using BridgePropertiesControlFactory = std::unique_ptr<IBridgePropertiesControl>(*const)(HWND hwndParent, const RECT& rect, ISelection* selection);
-extern const BridgePropertiesControlFactory bridgePropertiesControlFactory;
+using BridgePropsWindowFactory = std::unique_ptr<IBridgePropsWindow>(*const)(HWND hwndParent, const RECT& rect, ISelection* selection);
+extern const BridgePropsWindowFactory bridgePropertiesControlFactory;
 
 // ============================================================================
 
@@ -239,5 +239,16 @@ struct IVlanWindow : public IWin32Window
 	virtual ~IVlanWindow() { }
 };
 
-using VlanWindowFactory = std::unique_ptr<IVlanWindow>(*const)(HWND hWndParent, POINT location, IProject* project, IProjectWindow* projectWindow, ISelection* selection);
+using VlanWindowFactory = std::unique_ptr<IVlanWindow>(*const)(HWND hWndParent, POINT location, ISimulatorApp* app, IProject* project, IProjectWindow* projectWindow, ISelection* selection);
 extern const VlanWindowFactory vlanWindowFactory;
+
+// ============================================================================
+
+struct ISimulatorApp
+{
+	virtual ID3D11DeviceContext1* GetD3DDeviceContext() const = 0;
+	virtual IDWriteFactory* GetDWriteFactory() const = 0;
+	virtual const wchar_t* GetRegKeyPath() const = 0;
+	virtual void AddProjectWindow (std::unique_ptr<IProjectWindow>&& pw) = 0;
+	virtual const std::vector<std::unique_ptr<IProjectWindow>>& GetProjectWindows() const = 0;
+};

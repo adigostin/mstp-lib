@@ -83,6 +83,72 @@ void IProject::Remove (Wire* w)
 	RemoveWire (it - wires.begin());
 }
 
+class SimulatorApp : public ISimulatorApp
+{
+	ComPtr<ID3D11Device1> _d3dDevice;
+	ComPtr<ID3D11DeviceContext1> _d3dDeviceContext;
+	ComPtr<IDWriteFactory> _dWriteFactory;
+
+	wstring _regKeyPath;
+	std::vector<std::unique_ptr<IProjectWindow>> _projectWindows;
+
+public:
+	SimulatorApp()
+	{
+		wstringstream ss;
+		ss << L"SOFTWARE\\" << CompanyName << L"\\" << ::AppName << L"\\" << ::AppVersion;
+		_regKeyPath = ss.str();
+
+		bool tryDebugFirst = false;
+		#ifdef _DEBUG
+		tryDebugFirst = true;
+		#endif
+
+		auto d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
+		ComPtr<ID3D11Device> device;
+		ComPtr<ID3D11DeviceContext> deviceContext;
+
+		HRESULT hr;
+		if (tryDebugFirst)
+		{
+			hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
+								   D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_DEBUG,
+								   &d3dFeatureLevel, 1,
+								   D3D11_SDK_VERSION, &device, nullptr, &deviceContext);
+		}
+
+		if (!tryDebugFirst || FAILED(hr))
+		{
+			hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
+								   D3D11_CREATE_DEVICE_BGRA_SUPPORT,
+								   &d3dFeatureLevel, 1,
+								   D3D11_SDK_VERSION, &device, nullptr, &deviceContext);
+			ThrowIfFailed(hr);
+		}
+
+		hr = device->QueryInterface(IID_PPV_ARGS(&_d3dDevice)); ThrowIfFailed(hr);
+
+		hr = deviceContext->QueryInterface(IID_PPV_ARGS(&_d3dDeviceContext)); ThrowIfFailed(hr);
+
+		hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof (IDWriteFactory), reinterpret_cast<IUnknown**>(&_dWriteFactory)); ThrowIfFailed(hr);
+
+		//ComPtr<IWICImagingFactory2> wicFactory;
+		//hr = CoCreateInstance(CLSID_WICImagingFactory2, NULL, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory2), (void**)&wicFactory); ThrowIfFailed(hr);
+	}
+
+	virtual void AddProjectWindow (std::unique_ptr<IProjectWindow>&& pw) override final
+	{
+		_projectWindows.push_back(move(pw));
+	}
+
+	virtual const std::vector<std::unique_ptr<IProjectWindow>>& GetProjectWindows() const override final { return _projectWindows; }
+
+	virtual ID3D11DeviceContext1* GetD3DDeviceContext() const override final { return _d3dDeviceContext; }
+
+	virtual IDWriteFactory* GetDWriteFactory() const override final { return _dWriteFactory; }
+
+	virtual const wchar_t* GetRegKeyPath() const override final { return _regKeyPath.c_str(); }
+};
 
 int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
@@ -91,54 +157,17 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 
 	HRESULT hr = CoInitialize(0);
 
-	bool tryDebugFirst = false;
-	#ifdef _DEBUG
-	tryDebugFirst = true;
-	#endif
-
-	auto d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
-	ComPtr<ID3D11Device> device;
-	ComPtr<ID3D11DeviceContext> deviceContext;
-
-	if (tryDebugFirst)
-	{
-		hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
-							   D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_DEBUG,
-							   &d3dFeatureLevel, 1,
-							   D3D11_SDK_VERSION, &device, nullptr, &deviceContext);
-	}
-
-	if (!tryDebugFirst || FAILED(hr))
-	{
-		hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
-							   D3D11_CREATE_DEVICE_BGRA_SUPPORT,
-							   &d3dFeatureLevel, 1,
-							   D3D11_SDK_VERSION, &device, nullptr, &deviceContext);
-		ThrowIfFailed(hr);
-	}
-
 	int processExitValue;
 	{
-		ComPtr<ID3D11Device1> d3dDevice;
-		hr = device->QueryInterface(IID_PPV_ARGS(&d3dDevice)); ThrowIfFailed(hr);
+		SimulatorApp app;
 
-		ComPtr<ID3D11DeviceContext1> deviceContext1;
-		hr = deviceContext->QueryInterface(IID_PPV_ARGS(&deviceContext1)); ThrowIfFailed(hr);
-
-		ComPtr<IDWriteFactory> dWriteFactory;
-		hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof (IDWriteFactory), reinterpret_cast<IUnknown**>(&dWriteFactory)); ThrowIfFailed(hr);
-
-		ComPtr<IWICImagingFactory2> wicFactory;
-		hr = CoCreateInstance(CLSID_WICImagingFactory2, NULL, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory2), (void**)&wicFactory); ThrowIfFailed(hr);
-
-		wstringstream ss;
-		ss << L"SOFTWARE\\" << CompanyName << L"\\" << ::AppName << L"\\" << ::AppVersion;
-		auto regKeyPath = ss.str();
-
-		//auto actionList = actionListFactory();
-		auto project = projectFactory();//move(actionList));
-		auto selection = selectionFactory(project);
-		auto projectWindow = projectWindowFactory(project, selection, editAreaFactory, nCmdShow, regKeyPath.c_str(), deviceContext1, dWriteFactory);
+		{
+			//auto actionList = actionListFactory();
+			auto project = projectFactory();//move(actionList));
+			auto selection = selectionFactory(project);
+			auto projectWindow = projectWindowFactory (&app, project, selection, editAreaFactory, nCmdShow);
+			app.AddProjectWindow(move(projectWindow));
+		}
 
 		MSG msg;
 		while (GetMessage(&msg, nullptr, 0, 0))

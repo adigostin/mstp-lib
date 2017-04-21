@@ -11,7 +11,7 @@ class PropertiesWindow : public IPropertiesWindow
 {
 	ComPtr<ISelection> const _selection;
 	HWND _hwnd = nullptr;
-	unique_ptr<IBridgePropertiesControl> _bridgePropsControl;
+	unique_ptr<IBridgePropsWindow> _bridgePropsControl;
 
 public:
 	PropertiesWindow (HWND hWndParent, const RECT& rect, ISelection* selection)

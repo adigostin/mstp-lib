@@ -3,8 +3,11 @@
 #include "Simulator.h"
 #include "Resource.h"
 
+using namespace std;
+
 class VlanWindow : public IVlanWindow
 {
+	ISimulatorApp* const _app;
 	IProject* const _project;
 	IProjectWindow* const _projectWindow;
 	ISelection* const _selection;
@@ -13,8 +16,8 @@ class VlanWindow : public IVlanWindow
 	HWND _comboNewWindowVlan = nullptr;
 
 public:
-	VlanWindow (HWND hWndParent, POINT location, IProject* project, IProjectWindow* projectWindow, ISelection* selection)
-		: _project(project), _projectWindow(projectWindow), _selection(selection)
+	VlanWindow (HWND hWndParent, POINT location, ISimulatorApp* app, IProject* project, IProjectWindow* projectWindow, ISelection* selection)
+		: _app(app), _project(project), _projectWindow(projectWindow), _selection(selection)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &DialogProcStatic, &hInstance);
@@ -90,7 +93,38 @@ private:
 		if (msg == WM_CTLCOLORSTATIC)
 			return { reinterpret_cast<INT_PTR>(GetSysColorBrush(COLOR_WINDOW)), 0 };
 
+		if (msg == WM_COMMAND)
+		{
+			if ((HIWORD(wParam) == CBN_SELCHANGE) && ((HWND) lParam == _comboNewWindowVlan))
+			{
+				ProcessNewWindowVlanSelChanged();
+				return { TRUE, 0 };
+			}
+
+			return { FALSE, 0 };
+		}
+
 		return { FALSE, 0 };
+	}
+
+	void ProcessNewWindowVlanSelChanged()
+	{
+		auto index = ComboBox_GetCurSel(_comboNewWindowVlan);
+		uint16_t vlanNumber = (uint16_t) (index + 1);
+		auto& pws = _app->GetProjectWindows();
+		auto it = find_if (pws.begin(), pws.end(), [this, vlanNumber](const std::unique_ptr<IProjectWindow>& pw)
+			{ return (pw->GetProject() == _project) && (pw->GetSelectedVlanNumber() == vlanNumber); });
+		if (it != pws.end())
+		{
+			// bring to front and flash
+			throw not_implemented_exception();
+		}
+		else
+		{
+			auto selection = selectionFactory(_project);
+			auto pw = projectWindowFactory(_app, _project, selection, editAreaFactory, SW_SHOWNORMAL);
+			_app->AddProjectWindow(move(pw));
+		}
 	}
 
 	void LoadSelectedVlanCombo()

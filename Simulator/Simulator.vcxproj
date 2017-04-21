@@ -136,7 +136,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Bridge.cpp" />
-    <ClCompile Include="BridgePropertiesControl.cpp" />
+    <ClCompile Include="BridgePropsWindow.cpp" />
     <ClCompile Include="D2DWindow.cpp" />
     <ClCompile Include="DockContainer.cpp" />
     <ClCompile Include="EditArea.cpp" />

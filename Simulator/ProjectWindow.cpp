@@ -17,9 +17,9 @@ static constexpr wchar_t RegValueNameWindowBottom[] = L"WindowBottom";
 
 class ProjectWindow : public IProjectWindow
 {
+	ISimulatorApp* const _app;
 	ComPtr<IProject> const _project;
 	ComPtr<ISelection> const _selection;
-	wstring const _regKeyPath;
 	unique_ptr<IEditArea> _editArea;
 	unique_ptr<IDockContainer> _dockContainer;
 	unique_ptr<ILogArea> _logArea;
@@ -32,9 +32,8 @@ class ProjectWindow : public IProjectWindow
 	uint16_t _selectedVlanNumber = 1;
 
 public:
-	ProjectWindow (IProject* project, ISelection* selection, EditAreaFactory editAreaFactory, int nCmdShow,
-				   const wchar_t* regKeyPath, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory)
-		: _project(project), _selection(selection), _regKeyPath(regKeyPath)
+	ProjectWindow (ISimulatorApp* app, IProject* project, ISelection* selection, EditAreaFactory editAreaFactory, int nCmdShow)
+		: _app(app), _project(project), _selection(selection)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR)&wndClassAtom, &hInstance);
@@ -84,16 +83,16 @@ public:
 		_dockContainer = dockPanelFactory (_hwnd, 0xFFFF, GetClientRectPixels());
 
 		auto logPanel = _dockContainer->GetOrCreateDockablePanel(Side::Right, L"STP Log");
-		_logArea = logAreaFactory (logPanel->GetHWnd(), 0xFFFF, logPanel->GetContentRect(), deviceContext, dWriteFactory);
+		_logArea = logAreaFactory (logPanel->GetHWnd(), 0xFFFF, logPanel->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory());
 
 		auto propsPanel = _dockContainer->GetOrCreateDockablePanel (Side::Left, L"Properties");
 		_propsWindow = propertiesWindowFactory (propsPanel->GetHWnd(), propsPanel->GetContentRect(), _selection);
 
 		auto vlanPanel = _dockContainer->GetOrCreateDockablePanel (Side::Top, L"VLAN");
-		_vlanWindow = vlanWindowFactory (vlanPanel->GetHWnd(), vlanPanel->GetContentLocation(), _project, this, _selection);
+		_vlanWindow = vlanWindowFactory (vlanPanel->GetHWnd(), vlanPanel->GetContentLocation(), _app, _project, this, _selection);
 		_dockContainer->ResizePanel (vlanPanel, vlanPanel->GetPanelSizeFromContentSize(_vlanWindow->GetClientSize()));
 
-		_editArea = editAreaFactory (project, this, selection, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), deviceContext, dWriteFactory);
+		_editArea = editAreaFactory (project, this, selection, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory());
 
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
 	}
@@ -227,7 +226,7 @@ public:
 		auto ReadDword = [this](const wchar_t* valueName, DWORD* valueOut) -> bool
 		{
 			DWORD dataSize = 4;
-			auto lresult = RegGetValue(HKEY_CURRENT_USER, _regKeyPath.c_str(), valueName, RRF_RT_REG_DWORD, nullptr, valueOut, &dataSize);
+			auto lresult = RegGetValue(HKEY_CURRENT_USER, _app->GetRegKeyPath(), valueName, RRF_RT_REG_DWORD, nullptr, valueOut, &dataSize);
 			return lresult == ERROR_SUCCESS;
 		};
 
@@ -254,7 +253,7 @@ public:
 		if (bRes && ((wp.showCmd == SW_NORMAL) || (wp.showCmd == SW_MAXIMIZE)))
 		{
 			HKEY key;
-			auto lstatus = RegCreateKeyEx(HKEY_CURRENT_USER, _regKeyPath.c_str(), 0, NULL, 0, KEY_WRITE, NULL, &key, NULL);
+			auto lstatus = RegCreateKeyEx(HKEY_CURRENT_USER, _app->GetRegKeyPath(), 0, NULL, 0, KEY_WRITE, NULL, &key, NULL);
 			if (lstatus == ERROR_SUCCESS)
 			{
 				RegSetValueEx(key, RegValueNameWindowLeft, 0, REG_DWORD, (BYTE*)&_restoreBounds.left, 4);
@@ -283,6 +282,8 @@ public:
 	virtual uint16_t GetSelectedVlanNumber() const override final { return _selectedVlanNumber; }
 
 	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() override final { return SelectedVlanNumerChangedEvent::Subscriber(_em); }
+
+	virtual IProject* GetProject() const override final { return _project; }
 
 	/*
 	LRESULT ProcessWmClose()

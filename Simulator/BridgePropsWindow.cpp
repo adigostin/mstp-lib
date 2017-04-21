@@ -8,7 +8,7 @@ using namespace std;
 static constexpr UINT WM_WORK = WM_APP + 1;
 static constexpr size_t FirstPortCount = 2;
 
-class BridgePropertiesControl : public IBridgePropertiesControl
+class BridgePropsWindow : public IBridgePropsWindow
 {
 	ISelection* const _selection;
 	HWND _hwnd = nullptr;
@@ -22,7 +22,7 @@ class BridgePropertiesControl : public IBridgePropertiesControl
 	std::queue<std::function<void()>> _workQueue;
 
 public:
-	BridgePropertiesControl (HWND hwndParent, const RECT& rect, ISelection* selection)
+	BridgePropsWindow (HWND hwndParent, const RECT& rect, ISelection* selection)
 		: _selection(selection)
 	{
 		HINSTANCE hInstance;
@@ -39,7 +39,7 @@ public:
 		_selection->GetRemovingFromSelectionEvent().AddHandler (&OnObjectRemovingFromSelection, this);
 	}
 
-	~BridgePropertiesControl()
+	~BridgePropsWindow()
 	{
 		_selection->GetRemovingFromSelectionEvent().RemoveHandler (&OnObjectRemovingFromSelection, this);
 		_selection->GetAddedToSelectionEvent().RemoveHandler (&OnObjectAddedToSelection, this);
@@ -54,16 +54,16 @@ public:
 private:
 	static INT_PTR CALLBACK DialogProcStatic (HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
-		BridgePropertiesControl* window;
+		BridgePropsWindow* window;
 		if (uMsg == WM_INITDIALOG)
 		{
-			window = reinterpret_cast<BridgePropertiesControl*>(lParam);
+			window = reinterpret_cast<BridgePropsWindow*>(lParam);
 			window->_hwnd = hwnd;
 			assert (GetWindowLongPtr(hwnd, GWLP_USERDATA) == 0);
 			SetWindowLongPtr (hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(window));
 		}
 		else
-			window = reinterpret_cast<BridgePropertiesControl*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+			window = reinterpret_cast<BridgePropsWindow*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
 
 		if (window == nullptr)
 		{
@@ -205,7 +205,7 @@ private:
 
 	static LRESULT CALLBACK EditSubclassProc (HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 	{
-		auto dialog = reinterpret_cast<BridgePropertiesControl*>(dwRefData);
+		auto dialog = reinterpret_cast<BridgePropsWindow*>(dwRefData);
 
 		if (msg == WM_CHAR)
 		{
@@ -287,7 +287,7 @@ private:
 
 	static void OnObjectAddedToSelection (void* callbackArg, ISelection* selection, Object* o)
 	{
-		auto window = static_cast<BridgePropertiesControl*>(callbackArg);
+		auto window = static_cast<BridgePropsWindow*>(callbackArg);
 
 		auto bridge = dynamic_cast<Bridge*>(o);
 		if (bridge != nullptr)
@@ -302,7 +302,7 @@ private:
 
 	static void OnObjectRemovingFromSelection (void* callbackArg, ISelection* selection, Object* o)
 	{
-		auto window = static_cast<BridgePropertiesControl*>(callbackArg);
+		auto window = static_cast<BridgePropsWindow*>(callbackArg);
 
 		auto bridge = dynamic_cast<Bridge*>(o);
 		if (bridge != nullptr)
@@ -317,29 +317,29 @@ private:
 
 	static void OnSelectedBridgeAddressChanged (void* callbackArg, Bridge* b)
 	{
-		auto window = static_cast<BridgePropertiesControl*>(callbackArg);
+		auto window = static_cast<BridgePropsWindow*>(callbackArg);
 		window->LoadBridgeAddressTextBox();
 	}
 
 	static void OnSelectedBridgeStpEnabledChanged (void* callbackArg, Bridge* b)
 	{
-		auto window = static_cast<BridgePropertiesControl*>(callbackArg);
+		auto window = static_cast<BridgePropsWindow*>(callbackArg);
 		window->LoadStpEnabledCheckBox();
 	}
 
 	static void OnSelectedBridgeStpVersionChanged (void* callbackArg, Bridge* b)
 	{
-		static_cast<BridgePropertiesControl*>(callbackArg)->LoadStpVersionComboBox();
+		static_cast<BridgePropsWindow*>(callbackArg)->LoadStpVersionComboBox();
 	}
 
 	static void OnSelectedBridgePortCountChanged (void* callbackArg, Bridge* b)
 	{
-		static_cast<BridgePropertiesControl*>(callbackArg)->LoadPortCountComboBox();
+		static_cast<BridgePropsWindow*>(callbackArg)->LoadPortCountComboBox();
 	}
 
 	static void OnSelectedBridgeTreeCountChanged (void* callbackArg, Bridge* b)
 	{
-		static_cast<BridgePropertiesControl*>(callbackArg)->LoadTreeCountComboBox();
+		static_cast<BridgePropsWindow*>(callbackArg)->LoadTreeCountComboBox();
 	}
 
 	void LoadBridgeAddressTextBox()
@@ -425,7 +425,7 @@ private:
 
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
 	{
-		auto window = static_cast<BridgePropertiesControl*>(callbackArg);
+		auto window = static_cast<BridgePropsWindow*>(callbackArg);
 
 		bool bridgesSelected = !selection->GetObjects().empty()
 			&& all_of (selection->GetObjects().begin(), selection->GetObjects().end(), [](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get()) != nullptr; });
@@ -486,5 +486,5 @@ private:
 	}
 };
 
-const BridgePropertiesControlFactory bridgePropertiesControlFactory =
-	[](auto... params) { return unique_ptr<IBridgePropertiesControl>(new BridgePropertiesControl(params...)); };
+const BridgePropsWindowFactory bridgePropertiesControlFactory =
+	[](auto... params) { return unique_ptr<IBridgePropsWindow>(new BridgePropsWindow(params...)); };
