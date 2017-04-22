@@ -122,7 +122,7 @@ private:
 		else
 		{
 			auto selection = selectionFactory(_project);
-			auto pw = projectWindowFactory(_app, _project, selection, editAreaFactory, SW_SHOWNORMAL);
+			auto pw = projectWindowFactory(_app, _project, selection, editAreaFactory, SW_SHOWNORMAL, vlanNumber);
 			_app->AddProjectWindow(move(pw));
 		}
 	}

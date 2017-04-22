@@ -32,8 +32,8 @@ class ProjectWindow : public IProjectWindow
 	uint16_t _selectedVlanNumber = 1;
 
 public:
-	ProjectWindow (ISimulatorApp* app, IProject* project, ISelection* selection, EditAreaFactory editAreaFactory, int nCmdShow)
-		: _app(app), _project(project), _selection(selection)
+	ProjectWindow (ISimulatorApp* app, IProject* project, ISelection* selection, EditAreaFactory editAreaFactory, int nCmdShow, uint16_t selectedVlan)
+		: _app(app), _project(project), _selection(selection), _selectedVlanNumber(selectedVlan)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR)&wndClassAtom, &hInstance);

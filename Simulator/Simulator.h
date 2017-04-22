@@ -169,7 +169,8 @@ using ProjectWindowFactory = std::unique_ptr<IProjectWindow>(*const)(ISimulatorA
 																	 IProject* project,
 																	 ISelection* selection,
 																	 EditAreaFactory editAreaFactory,
-																	 int nCmdShow);
+																	 int nCmdShow,
+																	 uint16_t selectedVlan);
 extern const ProjectWindowFactory projectWindowFactory;
 
 // ============================================================================
