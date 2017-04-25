@@ -9,13 +9,16 @@ static constexpr wchar_t PropertiesWindowWndClassName[] = L"PropertiesWindow-{24
 
 class PropertiesWindow : public IPropertiesWindow
 {
-	ComPtr<ISelection> const _selection;
+	ISimulatorApp* const _app;
+	IProject* const _project;
+	IProjectWindow* const _projectWindow;
+	ISelection* const _selection;
 	HWND _hwnd = nullptr;
 	unique_ptr<IBridgePropsWindow> _bridgePropsControl;
 
 public:
-	PropertiesWindow (HWND hWndParent, const RECT& rect, ISelection* selection)
-		: _selection(selection)
+	PropertiesWindow (HWND hWndParent, const RECT& rect, ISimulatorApp* app, IProject* project, IProjectWindow* projectWindow, ISelection* selection)
+		: _app(app), _project(project), _projectWindow(projectWindow), _selection(selection)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR)&wndClassAtom, &hInstance);
@@ -51,7 +54,7 @@ public:
 			throw win32_exception(GetLastError());
 		assert(hwnd == _hwnd);
 
-		_bridgePropsControl = bridgePropertiesControlFactory (_hwnd, GetClientRectPixels(), selection);
+		_bridgePropsControl = bridgePropertiesControlFactory (_hwnd, GetClientRectPixels(), _app, _project, _projectWindow, _selection);
 	}
 
 	~PropertiesWindow()

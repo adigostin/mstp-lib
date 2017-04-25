@@ -220,7 +220,7 @@ struct IPropertiesWindow : public IWin32Window
 	virtual ~IPropertiesWindow() { }
 };
 
-using PropertiesWindowFactory = std::unique_ptr<IPropertiesWindow>(*const)(HWND hWndParent, const RECT& rect, ISelection* selection);
+using PropertiesWindowFactory = std::unique_ptr<IPropertiesWindow>(*const)(HWND hWndParent, const RECT& rect, ISimulatorApp* app, IProject* project, IProjectWindow* projectWindow, ISelection* selection);
 extern const PropertiesWindowFactory propertiesWindowFactory;
 
 // ============================================================================
@@ -230,7 +230,7 @@ struct IBridgePropsWindow : public IWin32Window
 	virtual ~IBridgePropsWindow() { }
 };
 
-using BridgePropsWindowFactory = std::unique_ptr<IBridgePropsWindow>(*const)(HWND hwndParent, const RECT& rect, ISelection* selection);
+using BridgePropsWindowFactory = std::unique_ptr<IBridgePropsWindow>(*const)(HWND hwndParent, const RECT& rect, ISimulatorApp* app, IProject* project, IProjectWindow* projectWindow, ISelection* selection);
 extern const BridgePropsWindowFactory bridgePropertiesControlFactory;
 
 // ============================================================================
@@ -253,3 +253,13 @@ struct ISimulatorApp
 	virtual void AddProjectWindow (std::unique_ptr<IProjectWindow>&& pw) = 0;
 	virtual const std::vector<std::unique_ptr<IProjectWindow>>& GetProjectWindows() const = 0;
 };
+
+// ============================================================================
+
+struct IMSTConfigIdDialog
+{
+	virtual UINT ShowModal (HWND hWndParent) = 0; // return IDOK, IDCANCEL, -1 (some error), 0 (hWndParent invalid or closed)
+};
+
+using MSTConfigIdDialogFactory = std::unique_ptr<IMSTConfigIdDialog>(*const)(ISimulatorApp* app, IProject* project, IProjectWindow* projectWindow, ISelection* selection);
+extern const MSTConfigIdDialogFactory mstConfigIdDialogFactory;

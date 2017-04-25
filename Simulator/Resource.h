@@ -9,6 +9,7 @@
 #define IDR_CONTEXT_MENU_BRIDGE         131
 #define IDR_CONTEXT_MENU_PORT           132
 #define IDR_MAIN_MENU                   133
+#define IDD_DIALOG_MST_CONFIG_ID        134
 #define IDC_EDIT_BRIDGE_ADDRESS         1000
 #define IDC_CHECK_STP_ENABLED           1001
 #define IDC_COMBO_STP_VERSION           1002
@@ -18,6 +19,15 @@
 #define IDC_COMBO_SELECTED_VLAN         1006
 #define IDC_EDIT_SELECTED_TREE          1007
 #define IDC_COMBO_NEW_WINDOW_VLAN       1008
+#define IDC_EDIT_NAME                   1009
+#define IDC_EDIT_REV_LEVEL              1010
+#define IDC_SPIN_REV_LEVEL              1011
+#define IDC_LIST_CONFIG_TABLE           1012
+#define IDC_BUTTON_LOAD_DEFAULT_CONFIG_TABLE 1013
+#define IDC_BUTTON_LOAD_TEST1_CONFIG_TABLE 1014
+#define IDC_STATIC_NAME                 1015
+#define IDC_STATIC_REV_LEVEL            1016
+#define IDC_STATIC_CONFIG_TABLE         1017
 #define ID_NEW_BRIDGE                   32772
 #define ID_PORT_AUTO_EDGE               32773
 #define ID_PORT_ADMIN_EDGE              32774
@@ -33,7 +43,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        135
 #define _APS_NEXT_COMMAND_VALUE         32778
-#define _APS_NEXT_CONTROL_VALUE         1009
+#define _APS_NEXT_CONTROL_VALUE         1018
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif
