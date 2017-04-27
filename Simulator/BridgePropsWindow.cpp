@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "Simulator.h"
-#include "resource.h"
+#include "Resource.h"
 #include "Bridge.h"
 
 using namespace std;
@@ -10,6 +10,9 @@ static constexpr size_t FirstPortCount = 2;
 
 class BridgePropsWindow : public IBridgePropsWindow
 {
+	ISimulatorApp* const _app;
+	IProject* const _project;
+	IProjectWindow* const _projectWindow;
 	ISelection* const _selection;
 	HWND _hwnd = nullptr;
 	HWND _bridgeAddressEdit = nullptr;
@@ -18,12 +21,13 @@ class BridgePropsWindow : public IBridgePropsWindow
 	HWND _comboStpVersion = nullptr;
 	HWND _comboPortCount = nullptr;
 	HWND _comboTreeCount = nullptr;
+	HWND _buttonEditMstConfigId = nullptr;
 	HWND _controlBeingValidated = nullptr;
 	std::queue<std::function<void()>> _workQueue;
 
 public:
-	BridgePropsWindow (HWND hwndParent, const RECT& rect, ISelection* selection)
-		: _selection(selection)
+	BridgePropsWindow (HWND hwndParent, const RECT& rect, ISimulatorApp* app, IProject* project, IProjectWindow* projectWindow, ISelection* selection)
+		: _app(app), _project(project), _projectWindow(projectWindow), _selection(selection)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &DialogProcStatic, &hInstance);
@@ -102,6 +106,7 @@ private:
 			_comboTreeCount = GetDlgItem (_hwnd, IDC_COMBO_TREE_COUNT);
 			for (size_t i = 1; i <= 8; i++)
 				ComboBox_AddString(_comboTreeCount, std::to_wstring(i).c_str());
+			_buttonEditMstConfigId = GetDlgItem (_hwnd, IDC_BUTTON_EDIT_MST_CONFIG_TABLE);
 			return { FALSE, 0 };
 		}
 
@@ -126,16 +131,28 @@ private:
 
 		if (msg == WM_COMMAND)
 		{
-			if ((HIWORD(wParam) == BN_CLICKED) && ((HWND) lParam == _checkStpEnabled))
+			if (HIWORD(wParam) == BN_CLICKED)
 			{
-				ProcessStpEnabledClicked();
-				return { TRUE, 0 };
-			}
+				if ((HWND) lParam == _checkStpEnabled)
+				{
+					ProcessStpEnabledClicked();
+					return { TRUE, 0 };
+				}
 
-			if ((HIWORD(wParam) == CBN_SELCHANGE) && ((HWND) lParam == _comboStpVersion))
+				if ((HWND) lParam == _buttonEditMstConfigId)
+				{
+					auto dialog = mstConfigIdDialogFactory(_app, _project, _projectWindow, _selection);
+					dialog->ShowModal(_projectWindow->GetHWnd());
+					return { TRUE, 0 };
+				}
+			}
+			else if (HIWORD(wParam) == CBN_SELCHANGE)
 			{
-				ProcessStpVersionSelChanged();
-				return { TRUE, 0 };
+				if ((HWND) lParam == _comboStpVersion)
+				{
+					ProcessStpVersionSelChanged();
+					return { TRUE, 0 };
+				}
 			}
 
 			return { FALSE, 0 };

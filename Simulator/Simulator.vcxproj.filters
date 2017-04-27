@@ -140,6 +140,7 @@
     <ClCompile Include="PropertiesWindow.cpp" />
     <ClCompile Include="VlanWindow.cpp" />
     <ClCompile Include="BridgePropsWindow.cpp" />
+    <ClCompile Include="MSTConfigIdDialog.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Simulator.rc" />
