@@ -17,6 +17,7 @@ struct StpVersionChangedEvent : public Event<StpVersionChangedEvent, void(Bridge
 struct BridgeLogLineGenerated : public Event<BridgeLogLineGenerated, void(Bridge*, const BridgeLogLine& line)> { };
 struct PortCountChangedEvent : public Event<PortCountChangedEvent, void(Bridge*)> { };
 struct TreeCountChangedEvent : public Event<TreeCountChangedEvent, void(Bridge*)> { };
+struct MstConfigNameChangedEvent : public Event<MstConfigNameChangedEvent, void(Bridge*)> { };
 
 class Bridge : public Object
 {
@@ -42,7 +43,11 @@ class Bridge : public Object
 		std::array<uint8_t, 6> _macAddress;
 		STP_VERSION _stpVersion = STP_VERSION_RSTP;
 		size_t _treeCount = 1;
+		std::string _mstConfigName;
+
+		Config (const std::array<uint8_t, 6>& macAddress);
 	};
+
 	Config _config;
 
 	struct RxPacketInfo
@@ -94,6 +99,7 @@ public:
 	BridgeLogLineGenerated::Subscriber GetBridgeLogLineGeneratedEvent() { return BridgeLogLineGenerated::Subscriber(_em); }
 	PortCountChangedEvent::Subscriber GetPortCountChangedEvent() { return PortCountChangedEvent::Subscriber(_em); }
 	TreeCountChangedEvent::Subscriber GetTreeCountChangedEvent() { return TreeCountChangedEvent::Subscriber(_em); }
+	MstConfigNameChangedEvent::Subscriber GetMstConfigNameChangedEvent() { return MstConfigNameChangedEvent::Subscriber(_em); }
 
 	bool IsPowered() const { return _powered; }
 	void EnableStp (uint32_t timestamp);
@@ -118,6 +124,8 @@ public:
 	void SetStpTreeCount (size_t treeCount);
 	std::wstring GetStpVersionString() const;
 	static std::wstring GetStpVersionString (STP_VERSION stpVersion);
+	std::string GetMstConfigName() const { return _config._mstConfigName; }
+	void SetMstConfigName (const char* name, unsigned int timestamp);
 
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);

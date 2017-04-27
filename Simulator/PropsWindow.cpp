@@ -19,7 +19,7 @@ class PropertiesWindow : public IPropertiesWindow
 	unique_ptr<IBridgePropsWindow> _bridgePropsControl;
 
 public:
-	PropertiesWindow (HWND hWndParent, const RECT& rect, ISimulatorApp* app, IProject* project, IProjectWindow* projectWindow, ISelection* selection)
+	PropertiesWindow (HWND hWndParent, POINT location, ISimulatorApp* app, IProject* project, IProjectWindow* projectWindow, ISelection* selection)
 		: _app(app), _project(project), _projectWindow(projectWindow), _selection(selection)
 	{
 		HINSTANCE hInstance;
@@ -51,7 +51,7 @@ public:
 		}
 
 		auto hwnd = ::CreateWindow(PropertiesWindowWndClassName, L"Properties", WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
-								   rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, hWndParent, 0, hInstance, this);
+								   location.x, location.y, 0, 0, hWndParent, 0, hInstance, this);
 		if (hwnd == nullptr)
 			throw win32_exception(GetLastError());
 		assert(hwnd == _hwnd);
@@ -60,7 +60,10 @@ public:
 		SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0);
 		_font = ::CreateFontIndirect (&ncm.lfMessageFont);
 
-		_bridgePropsControl = bridgePropertiesControlFactory (_hwnd, GetClientRectPixels(), _app, _project, _projectWindow, _selection);
+		_bridgePropsControl = bridgePropertiesControlFactory (_hwnd, { 0, 0 }, _app, _project, _projectWindow, _selection);
+
+		SIZE ws = _bridgePropsControl->GetWindowSize();
+		::MoveWindow (_hwnd, 0, 0, ws.cx, ws.cy, TRUE);
 	}
 
 	~PropertiesWindow()
@@ -136,7 +139,7 @@ public:
 			::EndPaint (_hwnd, &ps);
 			return 0;
 		}
-		
+
 		return DefWindowProc (_hwnd, msg, wParam, lParam);
 	}
 

@@ -14,7 +14,7 @@
     <ProjectGuid>{072C8C7E-79FA-413C-A33C-EDDB256D72BE}</ProjectGuid>
     <RootNamespace>StpSimulator</RootNamespace>
     <Keyword>MFCProj</Keyword>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
     <ProjectName>Simulator</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -225,7 +225,7 @@
     <ClCompile Include="Port.cpp" />
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
-    <ClCompile Include="PropertiesWindow.cpp" />
+    <ClCompile Include="PropsWindow.cpp" />
     <ClCompile Include="VlanWindow.cpp" />
     <ClCompile Include="Selection.cpp" />
     <ClCompile Include="DockablePanel.cpp" />

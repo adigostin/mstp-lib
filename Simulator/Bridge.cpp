@@ -3,6 +3,7 @@
 #include "Win32Defs.h"
 #include "Port.h"
 #include "Wire.h"
+#include "UtilityFunctions.h"
 
 using namespace std;
 using namespace D2D1;
@@ -12,6 +13,14 @@ static constexpr UINT WM_MAC_OPERATIONAL_TIMER = WM_APP + 2;
 static constexpr UINT WM_PACKET_RECEIVED = WM_APP + 3;
 
 static constexpr uint8_t BpduDestAddress[6] = { 1, 0x80, 0xC2, 0, 0, 0 };
+
+Bridge::Config::Config (const std::array<uint8_t, 6>& macAddress)
+{
+	_macAddress = macAddress;
+	_mstConfigName.resize(18);
+	STP_GetDefaultMstConfigName(&macAddress[0], _mstConfigName.data());
+}
+
 
 Bridge::Bridge (IProject* project, unsigned int portCount, const std::array<uint8_t, 6>& macAddress)
 	: _project(project), _config({macAddress}), _guiThreadId(this_thread::get_id())
@@ -470,6 +479,14 @@ std::wstring Bridge::GetMacAddressAsString() const
 	return str;
 }
 
+void Bridge::SetMstConfigName (const char* name, unsigned int timestamp)
+{
+	_config._mstConfigName = name;
+	if (_stpBridge != nullptr)
+		STP_SetMstConfigName (_stpBridge, name, timestamp);
+	MstConfigNameChangedEvent::InvokeHandlers(_em, this);
+}
+
 #pragma region STP Callbacks
 const STP_CALLBACKS Bridge::StpCallbacks =
 {
@@ -600,4 +617,3 @@ void Bridge::StpCallback_OnPortRoleChanged (STP_BRIDGE* bridge, unsigned int por
 }
 
 #pragma endregion
-

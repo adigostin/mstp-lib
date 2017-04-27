@@ -402,6 +402,9 @@ public:
 
 	virtual SIZE GetPanelSizeFromContentSize (SIZE contentSize) const override final
 	{
+		if (_side == Side::Left)
+			return { contentSize.cx + SplitterSizePixels(), TitleBarHeightPixels() + contentSize.cy };
+
 		if (_side == Side::Top)
 			return SIZE { contentSize.cx, TitleBarHeightPixels() + contentSize.cy + SplitterSizePixels() };
 

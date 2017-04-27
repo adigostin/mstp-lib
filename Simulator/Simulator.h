@@ -220,7 +220,7 @@ struct IPropertiesWindow : public IWin32Window
 	virtual ~IPropertiesWindow() { }
 };
 
-using PropertiesWindowFactory = std::unique_ptr<IPropertiesWindow>(*const)(HWND hWndParent, const RECT& rect, ISimulatorApp* app, IProject* project, IProjectWindow* projectWindow, ISelection* selection);
+using PropertiesWindowFactory = std::unique_ptr<IPropertiesWindow>(*const)(HWND hWndParent, POINT location, ISimulatorApp* app, IProject* project, IProjectWindow* projectWindow, ISelection* selection);
 extern const PropertiesWindowFactory propertiesWindowFactory;
 
 // ============================================================================
@@ -230,7 +230,7 @@ struct IBridgePropsWindow : public IWin32Window
 	virtual ~IBridgePropsWindow() { }
 };
 
-using BridgePropsWindowFactory = std::unique_ptr<IBridgePropsWindow>(*const)(HWND hwndParent, const RECT& rect, ISimulatorApp* app, IProject* project, IProjectWindow* projectWindow, ISelection* selection);
+using BridgePropsWindowFactory = std::unique_ptr<IBridgePropsWindow>(*const)(HWND hwndParent, POINT location, ISimulatorApp* app, IProject* project, IProjectWindow* projectWindow, ISelection* selection);
 extern const BridgePropsWindowFactory bridgePropertiesControlFactory;
 
 // ============================================================================

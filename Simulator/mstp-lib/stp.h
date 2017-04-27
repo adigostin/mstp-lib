@@ -137,6 +137,7 @@ bool STP_GetPortForwarding			(STP_BRIDGE* bridge, unsigned int portIndex, unsign
 bool STP_GetPortOperEdge			(STP_BRIDGE* bridge, unsigned int portIndex);
 bool STP_GetPortOperPointToPointMAC	(STP_BRIDGE* bridge, unsigned int portIndex);
 
+void STP_GetDefaultMstConfigName (const unsigned char bridgeAddress[6], char nameOut[18]);
 void STP_GetMstConfigName (STP_BRIDGE* bridge, char nameOut [33]);
 void STP_SetMstConfigName (STP_BRIDGE* bridge, const char* name, unsigned int timestamp);
 

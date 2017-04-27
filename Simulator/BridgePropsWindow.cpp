@@ -21,12 +21,15 @@ class BridgePropsWindow : public IBridgePropsWindow
 	HWND _comboStpVersion = nullptr;
 	HWND _comboPortCount = nullptr;
 	HWND _comboTreeCount = nullptr;
+	HWND _mstConfigNameEdit = nullptr;
+	HWND _mstConfigRevLevelEdit = nullptr;
 	HWND _buttonEditMstConfigId = nullptr;
 	HWND _controlBeingValidated = nullptr;
+	bool _editChangedByUser = false;
 	std::queue<std::function<void()>> _workQueue;
 
 public:
-	BridgePropsWindow (HWND hwndParent, const RECT& rect, ISimulatorApp* app, IProject* project, IProjectWindow* projectWindow, ISelection* selection)
+	BridgePropsWindow (HWND hwndParent, POINT location, ISimulatorApp* app, IProject* project, IProjectWindow* projectWindow, ISelection* selection)
 		: _app(app), _project(project), _projectWindow(projectWindow), _selection(selection)
 	{
 		HINSTANCE hInstance;
@@ -36,7 +39,9 @@ public:
 
 		_hwnd = CreateDialogParam (hInstance, MAKEINTRESOURCE(IDD_PROPPAGE_BRIDGE), hwndParent, &DialogProcStatic, reinterpret_cast<LPARAM>(this));
 
-		::MoveWindow (_hwnd, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE);
+		RECT rc;
+		::GetWindowRect(_hwnd, &rc);
+		::MoveWindow (_hwnd, location.x, location.y, rc.right - rc.left, rc.bottom - rc.top, TRUE);
 
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
 		_selection->GetAddedToSelectionEvent().AddHandler (&OnObjectAddedToSelection, this);
@@ -106,6 +111,8 @@ private:
 			_comboTreeCount = GetDlgItem (_hwnd, IDC_COMBO_TREE_COUNT);
 			for (size_t i = 1; i <= 8; i++)
 				ComboBox_AddString(_comboTreeCount, std::to_wstring(i).c_str());
+			_mstConfigNameEdit = GetDlgItem (_hwnd, IDC_EDIT_MST_CONFIG_NAME);
+			bRes = SetWindowSubclass (_mstConfigNameEdit, EditSubclassProc, EditSubClassId, (DWORD_PTR) this); assert (bRes);
 			_buttonEditMstConfigId = GetDlgItem (_hwnd, IDC_BUTTON_EDIT_MST_CONFIG_TABLE);
 			return { FALSE, 0 };
 		}
@@ -153,6 +160,11 @@ private:
 					ProcessStpVersionSelChanged();
 					return { TRUE, 0 };
 				}
+			}
+			else if (HIWORD(wParam) == EN_CHANGE)
+			{
+				_editChangedByUser = true;
+				return { TRUE, 0 };
 			}
 
 			return { FALSE, 0 };
@@ -236,9 +248,15 @@ private:
 		{
 			if (wParam == VK_ESCAPE)
 			{
-				auto text = dialog->GetEditPropertyText(hWnd);
-				::SetWindowText (hWnd, text.c_str());
+				if (hWnd == dialog->_bridgeAddressEdit)
+					dialog->LoadBridgeAddressTextBox();
+				else if (hWnd == dialog->_mstConfigNameEdit)
+					dialog->LoadMstConfigNameTextBox();
+				else
+					throw not_implemented_exception();
+
 				::SendMessage (hWnd, EM_SETSEL, 0, -1);
+				dialog->_editChangedByUser = false;
 				return 0;
 			}
 			else if (wParam == VK_RETURN)
@@ -247,7 +265,7 @@ private:
 				str.resize(GetWindowTextLength (hWnd) + 1);
 				GetWindowText (hWnd, str.data(), str.size());
 
-				if ((dialog->GetEditPropertyText(hWnd) != str) && (dialog->_controlBeingValidated == nullptr))
+				if (dialog->_editChangedByUser && (dialog->_controlBeingValidated == nullptr))
 				{
 					dialog->_controlBeingValidated = hWnd;
 					std::wstring errorMessage;
@@ -257,6 +275,9 @@ private:
 						::MessageBox (dialog->_hwnd, errorMessage.c_str(), 0, 0);
 						::SetFocus (hWnd);
 					}
+					else
+						dialog->_editChangedByUser = false;
+
 					::SendMessage (hWnd, EM_SETSEL, 0, -1);
 					dialog->_controlBeingValidated = nullptr;
 				}
@@ -273,7 +294,7 @@ private:
 			str.resize(GetWindowTextLength (hWnd) + 1);
 			GetWindowText (hWnd, str.data(), str.size());
 
-			if ((dialog->GetEditPropertyText(hWnd) != str) && (dialog->_controlBeingValidated == nullptr))
+			if (dialog->_editChangedByUser && (dialog->_controlBeingValidated == nullptr))
 			{
 				dialog->_controlBeingValidated = hWnd;
 
@@ -282,6 +303,7 @@ private:
 				if (valid)
 				{
 					dialog->_controlBeingValidated = nullptr;
+					dialog->_editChangedByUser = false;
 				}
 				else
 				{
@@ -314,6 +336,7 @@ private:
 			bridge->GetStpVersionChangedEvent().AddHandler (&OnSelectedBridgeStpVersionChanged, window);
 			bridge->GetPortCountChangedEvent().AddHandler (&OnSelectedBridgePortCountChanged, window);
 			bridge->GetTreeCountChangedEvent().AddHandler (&OnSelectedBridgeTreeCountChanged, window);
+			bridge->GetMstConfigNameChangedEvent().AddHandler (&OnSelectedBridgeMstConfigNameChanged, window);
 		}
 	}
 
@@ -324,6 +347,7 @@ private:
 		auto bridge = dynamic_cast<Bridge*>(o);
 		if (bridge != nullptr)
 		{
+			bridge->GetMstConfigNameChangedEvent().RemoveHandler (&OnSelectedBridgeMstConfigNameChanged, window);
 			bridge->GetTreeCountChangedEvent().RemoveHandler (&OnSelectedBridgeTreeCountChanged, window);
 			bridge->GetPortCountChangedEvent().RemoveHandler (&OnSelectedBridgePortCountChanged, window);
 			bridge->GetStpVersionChangedEvent().RemoveHandler (&OnSelectedBridgeStpVersionChanged, window);
@@ -357,6 +381,11 @@ private:
 	static void OnSelectedBridgeTreeCountChanged (void* callbackArg, Bridge* b)
 	{
 		static_cast<BridgePropsWindow*>(callbackArg)->LoadTreeCountComboBox();
+	}
+
+	static void OnSelectedBridgeMstConfigNameChanged (void* callbackArg, Bridge* b)
+	{
+		static_cast<BridgePropsWindow*>(callbackArg)->LoadMstConfigNameTextBox();
 	}
 
 	void LoadBridgeAddressTextBox()
@@ -440,6 +469,19 @@ private:
 		ComboBox_SetCurSel (_comboTreeCount, index);
 	}
 
+	void LoadMstConfigNameTextBox()
+	{
+		auto name = dynamic_cast<Bridge*>(_selection->GetObjects()[0].Get())->GetMstConfigName();
+
+		bool allSame = all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(),
+							   [&name](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get())->GetMstConfigName() == name; });
+
+		if (allSame)
+			::SetWindowTextA (_mstConfigNameEdit, name.c_str());
+		else
+			::SetWindowTextA (_mstConfigNameEdit, "(multiple selection)");
+	}
+
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
 	{
 		auto window = static_cast<BridgePropsWindow*>(callbackArg);
@@ -458,6 +500,7 @@ private:
 			window->LoadStpVersionComboBox();
 			window->LoadPortCountComboBox();
 			window->LoadTreeCountComboBox();
+			window->LoadMstConfigNameTextBox();
 
 			::ShowWindow (window->GetHWnd(), SW_SHOW);
 		}
@@ -469,17 +512,6 @@ private:
 		PostMessage (_hwnd, WM_WORK, 0, 0);
 	}
 
-	std::wstring GetEditPropertyText(HWND hwnd) const
-	{
-		if (hwnd == _bridgeAddressEdit)
-		{
-			auto bridge = dynamic_cast<Bridge*>(_selection->GetObjects()[0].Get());
-			return bridge->GetMacAddressAsString();
-		}
-		else
-			throw not_implemented_exception();
-	}
-
 	bool ValidateAndSetProperty (HWND hwnd, const std::wstring& str, std::wstring& errorMessageOut)
 	{
 		if (hwnd == _bridgeAddressEdit)
@@ -489,6 +521,32 @@ private:
 				errorMessageOut = L"Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX.";
 				return false;
 			}
+
+			return true;
+		}
+		if (hwnd == _mstConfigNameEdit)
+		{
+			if (str.length() > 32)
+			{
+				errorMessageOut = L"Invalid MST Config Name: more than 32 characters.";
+				return false;
+			}
+
+			string ascii;
+			for (wchar_t ch : str)
+			{
+				if (ch >= 128)
+				{
+					errorMessageOut = L"Invalid MST Config Name: non-ASCII characters.";
+					return false;
+				}
+
+				ascii.push_back((char) ch);
+			}
+
+			auto timestamp = GetTimestampMilliseconds();
+			for (auto& o : _selection->GetObjects())
+				dynamic_cast<Bridge*>(o.Get())->SetMstConfigName(ascii.c_str(), timestamp);
 
 			return true;
 		}

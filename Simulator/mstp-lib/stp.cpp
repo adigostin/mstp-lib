@@ -154,10 +154,8 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	//bridge->MstConfigId.ConfigurationIdentifierFormatSelector = 0;
 	//bridge->MstConfigId.RevisionLevel = 0;
 
-	// Let's set a default name for the MST Config. Cisco uses lowercase letters here, so let's do the same
-	sprintf (bridge->MstConfigId.ConfigurationName, "%02x:%02x:%02x:%02x:%02x:%02x",
-		bridgeAddress [0], bridgeAddress [1], bridgeAddress [2],
-		bridgeAddress [3], bridgeAddress [4], bridgeAddress [5]);
+	// Let's set a default name for the MST Config.
+	STP_GetDefaultMstConfigName (bridgeAddress, bridge->MstConfigId.ConfigurationName);
 
 	// The config table is all zeroes now, so all VIDs map to the CIST, no VID mapped to any MSTI.
 	ComputeMstConfigDigest (bridge);
@@ -760,6 +758,14 @@ unsigned short STP_GetPortIdentifier (STP_BRIDGE* bridge, unsigned int portIndex
 
 // ============================================================================
 
+void STP_GetDefaultMstConfigName (const unsigned char bridgeAddress[6], char nameOut[18])
+{
+	// Cisco uses lowercase letters here; let's do the same.
+	sprintf (nameOut, "%02x:%02x:%02x:%02x:%02x:%02x",
+			 bridgeAddress [0], bridgeAddress [1], bridgeAddress [2],
+			 bridgeAddress [3], bridgeAddress [4], bridgeAddress [5]);
+}
+
 void STP_GetMstConfigName (STP_BRIDGE* bridge, char nameOut [33])
 {
 	assert (bridge->ForceProtocolVersion >= STP_VERSION_MSTP);
@@ -770,7 +776,6 @@ void STP_GetMstConfigName (STP_BRIDGE* bridge, char nameOut [33])
 
 void STP_SetMstConfigName (STP_BRIDGE* bridge, const char* name, unsigned int timestamp)
 {
-	assert (bridge->ForceProtocolVersion >= STP_VERSION_MSTP);
 	assert (strlen (name) <= 32);
 
 	LOG (bridge, -1, -1, "{T}: Setting MST Config Name to \"{S}\"...\r\n", timestamp, name);
@@ -780,10 +785,19 @@ void STP_SetMstConfigName (STP_BRIDGE* bridge, const char* name, unsigned int ti
 
 	if (bridge->started)
 	{
-		bridge->BEGIN = true;
-		RunStateMachines (bridge, timestamp);
-		bridge->BEGIN = false;
-		RunStateMachines (bridge, timestamp);
+		if (bridge->ForceProtocolVersion >= STP_VERSION_MSTP)
+		{
+			bridge->BEGIN = true;
+			RunStateMachines (bridge, timestamp);
+			bridge->BEGIN = false;
+			RunStateMachines (bridge, timestamp);
+		}
+		else
+		{
+			STP_Indent(bridge);
+			LOG (bridge, -1, -1, "(This has no effect right now as the bridge isn't configured for MSTP.\r\n");
+			STP_Unindent(bridge);
+		}
 	}
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");

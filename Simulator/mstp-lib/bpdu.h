@@ -1,5 +1,5 @@
 
-// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/ 
+// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/
 // Copyright (c) 2011-2017 Adrian Gostin, distributed under the GNU General Public License v3.
 
 #ifndef MSTP_LIB_BPDU_H
@@ -65,8 +65,8 @@ struct MST_CONFIG_ID
 	char ConfigurationName [32];						// 2)
 	INV_UINT2 RevisionLevel;							// 3)
 	unsigned char ConfigurationDigest [16];				// 4)
-	
-	bool operator== (const MST_CONFIG_ID& rhs) const;	
+
+	bool operator== (const MST_CONFIG_ID& rhs) const;
 	void Dump (STP_BRIDGE* bridge, int port, int tree) const;
 };
 
@@ -79,27 +79,27 @@ struct MST_CONFIG_ID
 struct MSTP_BPDU : public BPDU_HEADER
 {
 	unsigned char cistFlags;			// octet 5
-	
+
 	BRIDGE_ID	cistRootId;				// octets 6 to 13
 	INV_UINT4	cistExternalPathCost;	// octets 14 to 17
 	BRIDGE_ID	cistRegionalRootId;		// octets 18 to 25
 	PORT_ID		cistPortId;				// octets 26 to 27
-	
+
 	INV_UINT2	MessageAge;		// octets 28 to 29
 	INV_UINT2	MaxAge;			// octets 30 to 31
 	INV_UINT2	HelloTime;		// octets 32 to 33
 	INV_UINT2	ForwardDelay;	// octets 34 to 35
-	
+
 	unsigned char Version1Length;
 	INV_UINT2 Version3Length;
-	
+
 	MST_CONFIG_ID	mstConfigId;
-	
+
 	INV_UINT4		cistInternalRootPathCost;
 	BRIDGE_ID		cistBridgeId;
-	
+
 	unsigned char	cistRemainingHops;
-	
+
 	// MSTI_CONFIG_MESSAGE mstiConfigMessages [0];
 };
 

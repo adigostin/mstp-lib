@@ -86,7 +86,8 @@ public:
 		_logArea = logAreaFactory (logPanel->GetHWnd(), 0xFFFF, logPanel->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory());
 
 		auto propsPanel = _dockContainer->GetOrCreateDockablePanel (Side::Left, L"Properties");
-		_propsWindow = propertiesWindowFactory (propsPanel->GetHWnd(), propsPanel->GetContentRect(), _app, _project, this, _selection);
+		_propsWindow = propertiesWindowFactory (propsPanel->GetHWnd(), propsPanel->GetContentLocation(), _app, _project, this, _selection);
+		_dockContainer->ResizePanel (propsPanel, propsPanel->GetPanelSizeFromContentSize(_propsWindow->GetClientSize()));
 
 		auto vlanPanel = _dockContainer->GetOrCreateDockablePanel (Side::Top, L"VLAN");
 		_vlanWindow = vlanWindowFactory (vlanPanel->GetHWnd(), vlanPanel->GetContentLocation(), _app, _project, this, _selection);

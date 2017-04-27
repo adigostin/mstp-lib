@@ -2,6 +2,9 @@
 #include "pch.h"
 #include "Simulator.h"
 #include "Resource.h"
+#include "Bridge.h"
+
+using namespace std;
 
 class MSTConfigIdDialog : public IMSTConfigIdDialog
 {
@@ -9,12 +12,24 @@ class MSTConfigIdDialog : public IMSTConfigIdDialog
 	IProject* const _project;
 	IProjectWindow* const _projectWindow;
 	ISelection* const _selection;
+	vector<Bridge*> _bridges;
 	HWND _hwnd = nullptr;
 
 public:
 	MSTConfigIdDialog (ISimulatorApp* app, IProject* project, IProjectWindow* projectWindow, ISelection* selection)
 		: _app(app), _project(project), _projectWindow(projectWindow), _selection(selection)
-	{ }
+	{
+		if (_selection->GetObjects().empty())
+			throw invalid_argument ("Selection must not be empty.");
+
+		for (auto& o : _selection->GetObjects())
+		{
+			auto b = dynamic_cast<Bridge*>(o.Get());
+			if (b == nullptr)
+				throw invalid_argument ("Selection must consists only of bridges.");
+			_bridges.push_back(b);
+		}
+	}
 
 	virtual UINT ShowModal (HWND hWndParent) override final
 	{
@@ -55,11 +70,23 @@ public:
 
 	DialogProcResult DialogProc (UINT msg, WPARAM wParam , LPARAM lParam)
 	{
+		if (msg == WM_INITDIALOG)
+		{
+			ProcessWmInitDialog();
+			return { FALSE, 0 };
+		}
+
 		if (msg == WM_COMMAND)
 		{
-			if ((wParam == IDOK) || (wParam == IDCANCEL))
+			if (wParam == IDOK)
 			{
-				::EndDialog (_hwnd, wParam);
+				if (ValidateAndApply())
+					::EndDialog (_hwnd, IDOK);
+				return { TRUE, 0 };
+			}
+			else if (wParam == IDCANCEL)
+			{
+				::EndDialog (_hwnd, IDCANCEL);
 				return { TRUE, 0 };
 			}
 
@@ -68,6 +95,16 @@ public:
 
 		return { FALSE, 0 };
 	}
+
+	void ProcessWmInitDialog()
+	{
+	}
+
+	bool ValidateAndApply()
+	{
+		return true;
+	}
+
 };
 
 const MSTConfigIdDialogFactory mstConfigIdDialogFactory = [](auto... params) { return std::unique_ptr<IMSTConfigIdDialog>(new MSTConfigIdDialog(params...)); };
