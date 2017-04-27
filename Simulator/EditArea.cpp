@@ -47,7 +47,7 @@ public:
 		_drawingObjects._dWriteFactory = dWriteFactory;
 		auto hr = dc->CreateSolidColorBrush (ColorF (ColorF::PaleGreen), &_drawingObjects._poweredFillBrush); ThrowIfFailed(hr);
 		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray), &_drawingObjects._unpoweredBrush); ThrowIfFailed(hr);
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Red), &_drawingObjects._brushDiscardingPort); ThrowIfFailed(hr);
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray), &_drawingObjects._brushDiscardingPort); ThrowIfFailed(hr);
 		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gold), &_drawingObjects._brushLearningPort); ThrowIfFailed(hr);
 		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Green), &_drawingObjects._brushForwarding); ThrowIfFailed(hr);
 		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray), &_drawingObjects._brushNoForwardingWire); ThrowIfFailed(hr);
@@ -362,8 +362,27 @@ public:
 		}
 		else if (uMsg == WM_COMMAND)
 		{
-			if ((HIWORD(wParam) == 0) && (LOWORD(wParam) == ID_NEW_BRIDGE) && (lParam == 0))
+			if (wParam == ID_NEW_BRIDGE)
+			{
 				EnterState (CreateStateCreateBridge(MakeEditStateDeps()));
+			}
+			else if ((wParam == ID_BRIDGE_ENABLE_STP) || (wParam == ID_BRIDGE_DISABLE_STP))
+			{
+				bool enable = (wParam == ID_BRIDGE_ENABLE_STP);
+				auto timestamp = GetTimestampMilliseconds();
+				for (auto& o : _selection->GetObjects())
+				{
+					auto b = dynamic_cast<Bridge*>(o.Get());
+					if (b != nullptr)
+					{
+						if (enable && !b->IsStpEnabled())
+							b->EnableStp(timestamp);
+						else if (!enable && b->IsStpEnabled())
+							b->DisableStp(timestamp);
+					}
+				}
+			}
+
 			return 0;
 		}
 

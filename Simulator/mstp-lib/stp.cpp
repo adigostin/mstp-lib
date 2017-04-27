@@ -808,25 +808,29 @@ void STP_SetMstConfigName (STP_BRIDGE* bridge, const char* name, unsigned int ti
 
 void STP_SetMstConfigRevisionLevel (STP_BRIDGE* bridge, unsigned short revisionLevel, unsigned int timestamp)
 {
-	assert (bridge->ForceProtocolVersion >= STP_VERSION_MSTP);
+	LOG (bridge, -1, -1, "{T}: Setting MST Config Revision Level to {D}...\r\n", timestamp, (int) revisionLevel);
 
-	if (bridge->MstConfigId.RevisionLevel != revisionLevel)
+	bridge->MstConfigId.RevisionLevel = revisionLevel;
+
+	if (bridge->started)
 	{
-		LOG (bridge, -1, -1, "{T}: Setting MST Config Revision Level to {D}...\r\n", timestamp, (int) revisionLevel);
-
-		bridge->MstConfigId.RevisionLevel = revisionLevel;
-
-		if (bridge->started)
+		if (bridge->ForceProtocolVersion >= STP_VERSION_MSTP)
 		{
 			bridge->BEGIN = true;
 			RunStateMachines (bridge, timestamp);
 			bridge->BEGIN = false;
 			RunStateMachines (bridge, timestamp);
 		}
-
-		LOG (bridge, -1, -1, "------------------------------------\r\n");
-		FLUSH_LOG (bridge);
+		else
+		{
+			STP_Indent(bridge);
+			LOG (bridge, -1, -1, "(This has no effect right now as the bridge isn't configured for MSTP.\r\n");
+			STP_Unindent(bridge);
+		}
 	}
+
+	LOG (bridge, -1, -1, "------------------------------------\r\n");
+	FLUSH_LOG (bridge);
 }
 
 unsigned short STP_GetMstConfigRevisionLevel (STP_BRIDGE* bridge)

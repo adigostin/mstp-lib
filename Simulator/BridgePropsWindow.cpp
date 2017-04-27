@@ -111,8 +111,13 @@ private:
 			_comboTreeCount = GetDlgItem (_hwnd, IDC_COMBO_TREE_COUNT);
 			for (size_t i = 1; i <= 8; i++)
 				ComboBox_AddString(_comboTreeCount, std::to_wstring(i).c_str());
+
 			_mstConfigNameEdit = GetDlgItem (_hwnd, IDC_EDIT_MST_CONFIG_NAME);
 			bRes = SetWindowSubclass (_mstConfigNameEdit, EditSubclassProc, EditSubClassId, (DWORD_PTR) this); assert (bRes);
+
+			_mstConfigRevLevelEdit = GetDlgItem (_hwnd, IDC_EDIT_MST_CONFIG_REV_LEVEL);
+			bRes = SetWindowSubclass (_mstConfigRevLevelEdit, EditSubclassProc, EditSubClassId, (DWORD_PTR) this); assert (bRes);
+
 			_buttonEditMstConfigId = GetDlgItem (_hwnd, IDC_BUTTON_EDIT_MST_CONFIG_TABLE);
 			return { FALSE, 0 };
 		}
@@ -252,6 +257,8 @@ private:
 					dialog->LoadBridgeAddressTextBox();
 				else if (hWnd == dialog->_mstConfigNameEdit)
 					dialog->LoadMstConfigNameTextBox();
+				else if (hWnd == dialog->_mstConfigRevLevelEdit)
+					dialog->LoadMstConfigRevLevelTextBox();
 				else
 					throw not_implemented_exception();
 
@@ -337,6 +344,7 @@ private:
 			bridge->GetPortCountChangedEvent().AddHandler (&OnSelectedBridgePortCountChanged, window);
 			bridge->GetTreeCountChangedEvent().AddHandler (&OnSelectedBridgeTreeCountChanged, window);
 			bridge->GetMstConfigNameChangedEvent().AddHandler (&OnSelectedBridgeMstConfigNameChanged, window);
+			bridge->GetMstConfigRevLevelChangedEvent().AddHandler (&OnSelectedBridgeMstConfigRevLevelChanged, window);
 		}
 	}
 
@@ -347,6 +355,7 @@ private:
 		auto bridge = dynamic_cast<Bridge*>(o);
 		if (bridge != nullptr)
 		{
+			bridge->GetMstConfigRevLevelChangedEvent().RemoveHandler (&OnSelectedBridgeMstConfigRevLevelChanged, window);
 			bridge->GetMstConfigNameChangedEvent().RemoveHandler (&OnSelectedBridgeMstConfigNameChanged, window);
 			bridge->GetTreeCountChangedEvent().RemoveHandler (&OnSelectedBridgeTreeCountChanged, window);
 			bridge->GetPortCountChangedEvent().RemoveHandler (&OnSelectedBridgePortCountChanged, window);
@@ -386,6 +395,11 @@ private:
 	static void OnSelectedBridgeMstConfigNameChanged (void* callbackArg, Bridge* b)
 	{
 		static_cast<BridgePropsWindow*>(callbackArg)->LoadMstConfigNameTextBox();
+	}
+
+	static void OnSelectedBridgeMstConfigRevLevelChanged (void* callbackArg, Bridge* b)
+	{
+		static_cast<BridgePropsWindow*>(callbackArg)->LoadMstConfigRevLevelTextBox();
 	}
 
 	void LoadBridgeAddressTextBox()
@@ -482,6 +496,19 @@ private:
 			::SetWindowTextA (_mstConfigNameEdit, "(multiple selection)");
 	}
 
+	void LoadMstConfigRevLevelTextBox()
+	{
+		uint16_t level = dynamic_cast<Bridge*>(_selection->GetObjects()[0].Get())->GetMstConfigRevLevel();
+
+		bool allSame = all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(),
+							   [level](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get())->GetMstConfigRevLevel() == level; });
+
+		if (allSame)
+			::SetWindowTextA (_mstConfigRevLevelEdit, to_string(level).c_str());
+		else
+			::SetWindowTextA (_mstConfigRevLevelEdit, "(multiple selection)");
+	}
+
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
 	{
 		auto window = static_cast<BridgePropsWindow*>(callbackArg);
@@ -501,6 +528,7 @@ private:
 			window->LoadPortCountComboBox();
 			window->LoadTreeCountComboBox();
 			window->LoadMstConfigNameTextBox();
+			window->LoadMstConfigRevLevelTextBox();
 
 			::ShowWindow (window->GetHWnd(), SW_SHOW);
 		}
@@ -524,6 +552,7 @@ private:
 
 			return true;
 		}
+
 		if (hwnd == _mstConfigNameEdit)
 		{
 			if (str.length() > 32)
@@ -550,8 +579,11 @@ private:
 
 			return true;
 		}
-		else
+
+		if (hwnd == _mstConfigRevLevelEdit)
 			throw not_implemented_exception();
+
+		throw not_implemented_exception();
 	}
 
 	bool BridgesSelected() const

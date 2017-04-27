@@ -214,6 +214,9 @@ void Bridge::EnableStp (uint32_t timestamp)
 	STP_SetApplicationContext (_stpBridge, this);
 	STP_EnableLogging (_stpBridge, true);
 
+	STP_SetMstConfigName (_stpBridge, _config._mstConfigName.c_str(), timestamp);
+	STP_SetMstConfigRevisionLevel (_stpBridge, _config._mstConfigRevLevel, timestamp);
+
 	for (size_t portIndex = 0; portIndex < _ports.size(); portIndex++)
 	{
 		auto& port = _ports[portIndex];
@@ -481,10 +484,24 @@ std::wstring Bridge::GetMacAddressAsString() const
 
 void Bridge::SetMstConfigName (const char* name, unsigned int timestamp)
 {
-	_config._mstConfigName = name;
-	if (_stpBridge != nullptr)
-		STP_SetMstConfigName (_stpBridge, name, timestamp);
-	MstConfigNameChangedEvent::InvokeHandlers(_em, this);
+	if (_config._mstConfigName != name)
+	{
+		_config._mstConfigName = name;
+		if (_stpBridge != nullptr)
+			STP_SetMstConfigName (_stpBridge, name, timestamp);
+		MstConfigNameChangedEvent::InvokeHandlers(_em, this);
+	}
+}
+
+void Bridge::SetMstConfigRevLevel (uint16_t revLevel, unsigned int timestamp)
+{
+	if (_config._mstConfigRevLevel != revLevel)
+	{
+		_config._mstConfigRevLevel = revLevel;
+		if (_stpBridge != nullptr)
+			STP_SetMstConfigRevisionLevel (_stpBridge, revLevel, timestamp);
+		MstConfigRevLevelChangedEvent::InvokeHandlers(_em, this);
+	}
 }
 
 #pragma region STP Callbacks
