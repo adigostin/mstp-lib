@@ -204,7 +204,7 @@ void Port::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, uint16_t vl
 	float interiorPortOutlineWidth = OutlineWidth;
 	if (_bridge->IsStpEnabled())
 	{
-		uint16_t treeIndex = _bridge->GetStpTreeIndexFromVlanNumber(vlanNumber);
+		size_t treeIndex   = _bridge->GetStpTreeIndexFromVlanNumber(vlanNumber);
 		STP_PORT_ROLE role = _bridge->GetStpPortRole (_portIndex, treeIndex);
 		bool learning      = _bridge->GetStpPortLearning (_portIndex, treeIndex);
 		bool forwarding    = _bridge->GetStpPortForwarding (_portIndex, treeIndex);

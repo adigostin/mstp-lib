@@ -16,9 +16,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
-    <ClInclude Include="Ribbon\RibbonIds.h">
-      <Filter>Ribbon</Filter>
-    </ClInclude>
     <ClInclude Include="Win32Defs.h" />
     <ClInclude Include="EventManager.h" />
     <ClInclude Include="Resource.h" />
@@ -53,9 +50,6 @@
     <ClInclude Include="Bridge.h" />
     <ClInclude Include="EditStates\EditState.h">
       <Filter>EditStates</Filter>
-    </ClInclude>
-    <ClInclude Include="RibbonCommandHandlers\RCHBase.h">
-      <Filter>Ribbon</Filter>
     </ClInclude>
     <ClInclude Include="Port.h" />
     <ClInclude Include="Simulator.h" />
@@ -133,15 +127,6 @@
       <Filter>EditStates</Filter>
     </ClCompile>
     <ClCompile Include="LogArea.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\BridgePropertiesRCH.cpp">
-      <Filter>Ribbon</Filter>
-    </ClCompile>
-    <ClCompile Include="RibbonCommandHandlers\CreateRCH.cpp">
-      <Filter>Ribbon</Filter>
-    </ClCompile>
-    <ClCompile Include="RibbonCommandHandlers\RCHBase.cpp">
-      <Filter>Ribbon</Filter>
-    </ClCompile>
     <ClCompile Include="Port.cpp" />
     <ClCompile Include="UtilityFunctions.cpp" />
     <ClCompile Include="DockablePanel.cpp" />
@@ -152,25 +137,13 @@
     <ClCompile Include="EditStates\CreateWireES.cpp">
       <Filter>EditStates</Filter>
     </ClCompile>
-    <ClCompile Include="RibbonCommandHandlers\UndoRedoRCH.cpp">
-      <Filter>Ribbon</Filter>
-    </ClCompile>
-    <ClCompile Include="RibbonCommandHandlers\OptionsRCH.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\VlanRCH.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\CutCopyPasteDeleteRCH.cpp">
-      <Filter>Ribbon</Filter>
-    </ClCompile>
+    <ClCompile Include="PropertiesWindow.cpp" />
+    <ClCompile Include="VlanWindow.cpp" />
+    <ClCompile Include="BridgePropsWindow.cpp" />
+    <ClCompile Include="MSTConfigIdDialog.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="Ribbon\RibbonRes.rc">
-      <Filter>Ribbon</Filter>
-    </ResourceCompile>
     <ResourceCompile Include="Simulator.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="Ribbon\Ribbon.xml">
-      <Filter>Ribbon</Filter>
-    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Simulator.ico" />

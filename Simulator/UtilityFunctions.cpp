@@ -60,7 +60,7 @@ bool HitTestLine (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tole
 	float s = sin(angle);
 	float c = cos(angle);
 
-	array<D2D1_POINT_2F, 4> vertices = 
+	array<D2D1_POINT_2F, 4> vertices =
 	{
 		D2D1_POINT_2F { fd.x + s * halfw, fd.y - c * halfw },
 		D2D1_POINT_2F { fd.x - s * halfw, fd.y + c * halfw },
@@ -110,7 +110,7 @@ D2D1_ROUNDED_RECT InflateRoundedRect (const D2D1_ROUNDED_RECT& rr, float distanc
 void InflateRoundedRect (D2D1_ROUNDED_RECT* rr, float distance)
 {
 	InflateRect (&rr->rect, distance);
-	
+
 	rr->radiusX += distance;
 	if (rr->radiusX < 0)
 		rr->radiusX = 0;

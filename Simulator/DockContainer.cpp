@@ -143,6 +143,11 @@ public:
 				contentRect->right -= proposedSize.cx;
 				return panelRect;
 
+			case Side::Top:
+				panelRect = { contentRect->left, contentRect->top, contentRect->right, contentRect->top + proposedSize.cy };
+				contentRect->top += proposedSize.cy;
+				return panelRect;
+
 			default:
 				throw not_implemented_exception();
 
@@ -156,7 +161,7 @@ public:
 
 		for (auto& panel : _dockablePanels)
 		{
-			SIZE proposedSize = (getProposedSize != nullptr) ? getProposedSize(panel.get()) : (proposedSize = panel->GetWindowSize());
+			SIZE proposedSize = (getProposedSize != nullptr) ? getProposedSize(panel.get()) : panel->GetWindowSize();
 			RECT panelRect = LayOutPanel (panel->GetSide(), proposedSize, &contentRect);
 			if (fn != nullptr)
 				fn (panel.get(), panelRect);
@@ -194,7 +199,7 @@ public:
 		
 		LayOutContent (contentRect);
 
-		auto panel = dockablePanelFactory(_hwnd, 0xFFFF, panelRect, side, title);
+		auto panel = dockablePanelFactory(_hwnd, panelRect, side, title);
 		panel->GetSplitterDraggingEvent().AddHandler (&OnSidePanelSplitterDragging, this);
 		auto result = panel.get();
 		_dockablePanels.push_back(move(panel));
@@ -207,14 +212,20 @@ public:
 
 		auto getProposedSize = [panel, proposedSize](IDockablePanel* p) { return (p != panel) ? p->GetWindowSize() : proposedSize; };
 		auto layOutFunction = [](IDockablePanel* sp, const RECT& rect)
-		{
-			::MoveWindow(sp->GetHWnd(), rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE);
-			RECT rc;
-			::GetWindowRect (sp->GetHWnd(), &rc);
-		};
+			{ ::MoveWindow(sp->GetHWnd(), rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE); };
 
 		auto contentRect = container->LayOutPanels(getProposedSize, layOutFunction);
 		container->LayOutContent(contentRect);
+	}
+
+	virtual void ResizePanel (IDockablePanel* panel, SIZE size) override final
+	{
+		auto getProposedSize = [panel, proposedSize=size](IDockablePanel* p) { return (p != panel) ? p->GetWindowSize() : proposedSize; };
+		auto layOutFunction = [](IDockablePanel* sp, const RECT& rect)
+			{ ::MoveWindow(sp->GetHWnd(), rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE); };
+
+		auto contentRect = LayOutPanels(getProposedSize, layOutFunction);
+		LayOutContent(contentRect);
 	}
 };
 

@@ -2,7 +2,7 @@
 #include "pch.h"
 #include "Simulator.h"
 #include "ZoomableWindow.h"
-#include "Ribbon/RibbonIds.h"
+#include "Resource.h"
 #include "EditStates/EditState.h"
 #include "Bridge.h"
 #include "Port.h"
@@ -15,9 +15,7 @@ class EditArea : public ZoomableWindow, public IEditArea
 {
 	typedef ZoomableWindow base;
 
-	ULONG _refCount = 1;
 	IProjectWindow* const _pw;
-	IUIFramework* const _rf;
 	ComPtr<ISelection> const _selection;
 	ComPtr<IProject> const _project;
 	ComPtr<IDWriteTextFormat> _legendFont;
@@ -37,9 +35,9 @@ class EditArea : public ZoomableWindow, public IEditArea
 	optional<BeginningDrag> _beginningDrag;
 
 public:
-	EditArea(IProject* project, IProjectWindow* pw, ISelection* selection, IUIFramework* rf, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory)
+	EditArea(IProject* project, IProjectWindow* pw, ISelection* selection, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory)
 		: base (WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, hWndParent, 0xFFFF, deviceContext, dWriteFactory)
-		, _project(project), _pw(pw), _rf(rf), _selection(selection)
+		, _project(project), _pw(pw), _selection(selection)
 	{
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
 		_project->GetBridgeRemovingEvent().AddHandler (&OnBridgeRemoving, this);
@@ -82,7 +80,6 @@ public:
 
 	virtual ~EditArea()
 	{
-		assert (_refCount == 0);
 		_project->GetProjectInvalidateEvent().RemoveHandler(&OnProjectInvalidate, this);
 		_project->GetWireRemovingEvent().RemoveHandler (&OnWireRemoving, this);
 		_project->GetBridgeRemovingEvent().RemoveHandler (&OnBridgeRemoving, this);
@@ -280,19 +277,6 @@ public:
 	{
 		dc->Clear(GetD2DSystemColor(COLOR_WINDOW));
 
-		auto clientSizeDips = GetClientSizeDips();
-
-		if (!_project->GetWires().empty())
-		{
-			bool anyMstpBridge = any_of (_project->GetBridges().begin(), _project->GetBridges().end(), [](const ComPtr<Bridge>& b) { return b->GetStpVersion() == STP_VERSION_MSTP; });
-			if (anyMstpBridge)
-			{
-				wstringstream ss;
-				ss << L"Showing network topology for VLAN " << to_wstring(_pw->GetSelectedVlanNumber()) << L".";
-				RenderHint (dc, clientSizeDips.width / 2, 4, ss.str().c_str());
-			}
-		}
-
 		RenderLegend(dc);
 		RenderObjects(dc);
 
@@ -329,7 +313,8 @@ public:
 		if ((uMsg == WM_LBUTTONDOWN) || (uMsg == WM_RBUTTONDOWN))
 		{
 			auto button = (uMsg == WM_LBUTTONDOWN) ? MouseButton::Left : MouseButton::Right;
-			auto result = ProcessMouseButtonDown (button, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
+			UINT modifierKeysDown = (UINT) wParam;
+			auto result = ProcessMouseButtonDown (button, modifierKeysDown, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
 			return result ? result.value() : base::WindowProc (hwnd, uMsg, wParam, lParam);
 		}
 		else if ((uMsg == WM_LBUTTONUP) || (uMsg == WM_RBUTTONUP))
@@ -374,6 +359,12 @@ public:
 		else if ((uMsg == WM_KEYUP) || (uMsg == WM_SYSKEYUP))
 		{
 			return ProcessKeyOrSysKeyUp ((UINT) wParam, GetModifierKeys());
+		}
+		else if (uMsg == WM_COMMAND)
+		{
+			if ((HIWORD(wParam) == 0) && (LOWORD(wParam) == ID_NEW_BRIDGE) && (lParam == 0))
+				EnterState (CreateStateCreateBridge(MakeEditStateDeps()));
+			return 0;
 		}
 
 		return base::WindowProc (hwnd, uMsg, wParam, lParam);
@@ -449,16 +440,19 @@ public:
 		return nullopt;
 	}
 
-	std::optional<LRESULT> ProcessMouseButtonDown (MouseButton button, POINT pt)
+	std::optional<LRESULT> ProcessMouseButtonDown (MouseButton button, UINT modifierKeysDown, POINT pt)
 	{
 		::SetFocus(GetHWnd());
+		if (::GetFocus() != GetHWnd())
+			// Some validation code (maybe in the Properties Window) must have failed and taken focus back.
+			return nullopt;
 
 		auto dLocation = GetDipLocationFromPixelLocation(pt);
 		auto wLocation = GetWLocationFromDLocation(dLocation);
 
 		if (_beginningDrag)
 		{
-			// user began dragging with a mouse button, not he pressed a second button.
+			// user began dragging with a mouse button, now he pressed a second button.
 			return nullopt;
 		}
 
@@ -478,7 +472,12 @@ public:
 		if (ht.object == nullptr)
 			_selection->Clear();
 		else
-			_selection->Select(ht.object);
+		{
+			if (modifierKeysDown & MK_CONTROL)
+				_selection->Add(ht.object);
+			else
+				_selection->Select(ht.object);
+		}
 
 		_beginningDrag = BeginningDrag();
 		_beginningDrag->location.pt = pt;
@@ -652,42 +651,23 @@ public:
 		//_elementsAtContextMenuLocation.clear();
 		//GetElementsAt(_project->GetInnerRootElement(), { dipLocation.x, dipLocation.y }, _elementsAtContextMenuLocation);
 
-		UINT32 viewId;
+		HMENU hMenu;
 		if (_selection->GetObjects().empty())
-			viewId = cmdContextMenuBlankArea;
+			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_EMPTY_SPACE));
 		else if (dynamic_cast<Bridge*>(_selection->GetObjects()[0].Get()) != nullptr)
-			viewId = cmdContextMenuBridge;
+			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_BRIDGE));
 		else if (dynamic_cast<Port*>(_selection->GetObjects()[0].Get()) != nullptr)
-			viewId = cmdContextMenuPort;
+			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_PORT));
 		else
 			throw not_implemented_exception();
 
-		ComPtr<IUIContextualUI> ui;
-		auto hr = _rf->GetView(viewId, IID_PPV_ARGS(&ui)); ThrowIfFailed(hr);
-		hr = ui->ShowAtLocation(pt.x, pt.y); ThrowIfFailed(hr);
+		TrackPopupMenuEx (GetSubMenu(hMenu, 0), 0, pt.x, pt.y, GetHWnd(), nullptr);
 		return 0;
 	}
 
 	virtual const DrawingObjects& GetDrawingObjects() const override final { return _drawingObjects; }
 
 	virtual D2D1::Matrix3x2F GetZoomTransform() const override final { return base::GetZoomTransform(); }
-
-	#pragma region IUnknown
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final { return E_NOTIMPL; }
-
-	virtual ULONG STDMETHODCALLTYPE AddRef() override final
-	{
-		return InterlockedIncrement(&_refCount);
-	}
-
-	virtual ULONG STDMETHODCALLTYPE Release() override final
-	{
-		auto newRefCount = InterlockedDecrement(&_refCount);
-		if (newRefCount == 0)
-			delete this;
-		return newRefCount;
-	}
-	#pragma endregion
 };
 
-extern const EditAreaFactory editAreaFactory = [](auto... params) { return ComPtr<IEditArea>(new EditArea(params...), false); };
+extern const EditAreaFactory editAreaFactory = [](auto... params) { return unique_ptr<IEditArea>(new EditArea(params...)); };

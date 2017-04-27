@@ -53,12 +53,12 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <MinimalRebuild>false</MinimalRebuild>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Range-V3-VS2015\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <StringPooling>true</StringPooling>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -85,11 +85,11 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Range-V3-VS2015\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <StringPooling>true</StringPooling>
       <LanguageStandard>stdcpplatest</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -127,8 +127,6 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="Port.h" />
     <ClInclude Include="Resource.h" />
-    <ClInclude Include="RibbonCommandHandlers\RCHBase.h" />
-    <ClInclude Include="Ribbon\RibbonIds.h" />
     <ClInclude Include="Simulator.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="UtilityFunctions.h" />
@@ -138,6 +136,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Bridge.cpp" />
+    <ClCompile Include="BridgePropsWindow.cpp" />
     <ClCompile Include="D2DWindow.cpp" />
     <ClCompile Include="DockContainer.cpp" />
     <ClCompile Include="EditArea.cpp" />
@@ -146,6 +145,7 @@
     <ClCompile Include="EditStates\MoveBridgesES.cpp" />
     <ClCompile Include="EditStates\MoveWirePointES.cpp" />
     <ClCompile Include="LogArea.cpp" />
+    <ClCompile Include="MSTConfigIdDialog.cpp" />
     <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_procedures.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
@@ -225,16 +225,8 @@
     <ClCompile Include="Port.cpp" />
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\BridgePropertiesRCH.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\CreateRCH.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\CutCopyPasteDeleteRCH.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\OptionsRCH.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="RibbonCommandHandlers\RCHBase.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\UndoRedoRCH.cpp" />
-    <ClCompile Include="RibbonCommandHandlers\VlanRCH.cpp" />
+    <ClCompile Include="PropertiesWindow.cpp" />
+    <ClCompile Include="VlanWindow.cpp" />
     <ClCompile Include="Selection.cpp" />
     <ClCompile Include="DockablePanel.cpp" />
     <ClCompile Include="Simulator.cpp" />
@@ -243,19 +235,7 @@
     <ClCompile Include="ZoomableWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="Ribbon\RibbonRes.rc" />
     <ResourceCompile Include="Simulator.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="Ribbon\Ribbon.xml">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">uicc.exe "$(ProjectDir)Ribbon\Ribbon.xml" "$(ProjectDir)Ribbon\Ribbon.bml" /header:"$(ProjectDir)Ribbon\RibbonIds.h" /res:"$(ProjectDir)Ribbon\RibbonRes.rc"</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compiling "$(ProjectDir)Ribbon\Ribbon.xml"</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)Ribbon\Ribbon.bml;$(ProjectDir)Ribbon\RibbonRes.rc;$(ProjectDir)Ribbon\RibbonIds.h;%(Outputs)</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">uicc.exe "$(ProjectDir)Ribbon\Ribbon.xml" "$(ProjectDir)Ribbon\Ribbon.bml" /header:"$(ProjectDir)Ribbon\RibbonIds.h" /res:"$(ProjectDir)Ribbon\RibbonRes.rc"</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compiling "$(ProjectDir)Ribbon\Ribbon.xml"</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)Ribbon\Ribbon.bml;$(ProjectDir)Ribbon\RibbonRes.rc;$(ProjectDir)Ribbon\RibbonIds.h;%(Outputs)</Outputs>
-      <SubType>Designer</SubType>
-    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Simulator.ico" />

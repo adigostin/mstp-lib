@@ -17,25 +17,28 @@ public:
 	Selection (IProject* project)
 		: _project(project)
 	{
-		_project->GetWireRemovingEvent().AddHandler (&OnWireRemoving, this);
-		_project->GetBridgeRemovingEvent().AddHandler (&OnBridgeRemoving, this);
+		_project->GetWireRemovingEvent().AddHandler (&OnWireRemovingFromProject, this);
+		_project->GetBridgeRemovingEvent().AddHandler (&OnBridgeRemovingFromProject, this);
 	}
 
 	virtual ~Selection()
 	{
-		_project->GetBridgeRemovingEvent().RemoveHandler (&OnBridgeRemoving, this);
-		_project->GetWireRemovingEvent().RemoveHandler (&OnWireRemoving, this);
+		_project->GetBridgeRemovingEvent().RemoveHandler (&OnBridgeRemovingFromProject, this);
+		_project->GetWireRemovingEvent().RemoveHandler (&OnWireRemovingFromProject, this);
 	}
 
-	static void OnBridgeRemoving (void* callbackArg, IProject* project, size_t index, Bridge* b) { static_cast<Selection*>(callbackArg)->OnObjectRemoving(b); }
+	static void OnBridgeRemovingFromProject (void* callbackArg, IProject* project, size_t index, Bridge* b) { static_cast<Selection*>(callbackArg)->OnObjectRemovingFromProject(b); }
 
-	static void OnWireRemoving (void* callbackArg, IProject* project, size_t index, Wire* w) { static_cast<Selection*>(callbackArg)->OnObjectRemoving(w); }
+	static void OnWireRemovingFromProject (void* callbackArg, IProject* project, size_t index, Wire* w) { static_cast<Selection*>(callbackArg)->OnObjectRemovingFromProject(w); }
 
-	void OnObjectRemoving (Object* o)
+	void OnObjectRemovingFromProject (Object* o)
 	{
 		auto it = find (_objects.begin(), _objects.end(), o);
 		if (it != _objects.end())
+		{
 			RemoveInternal(it - _objects.begin());
+			SelectionChangedEvent::InvokeHandlers(_em, this);
+		}
 	}
 
 	virtual const vector<ComPtr<Object>>& GetObjects() const override final { return _objects; }
@@ -44,8 +47,6 @@ public:
 	{
 		_objects.push_back(ComPtr<Object>(o));
 		AddedToSelectionEvent::InvokeHandlers(_em, this, o);
-
-		SelectionChangedEvent::InvokeHandlers(_em, this);
 	}
 
 	void RemoveInternal (size_t index)
@@ -53,14 +54,16 @@ public:
 		auto o = _objects[index].Get();
 		RemovingFromSelectionEvent::InvokeHandlers (_em, this, o);
 		_objects.erase(_objects.begin() + index);
-
-		SelectionChangedEvent::InvokeHandlers(_em, this);
 	}
 
 	virtual void Clear() override final
 	{
-		while (!_objects.empty())
-			RemoveInternal (_objects.size() - 1);
+		if (!_objects.empty())
+		{
+			while (!_objects.empty())
+				RemoveInternal (_objects.size() - 1);
+			SelectionChangedEvent::InvokeHandlers(_em, this);
+		}
 	}
 
 	virtual void Select(Object* o) override final
@@ -70,9 +73,23 @@ public:
 
 		if ((_objects.size() != 1) || (_objects[0] != o))
 		{
-			this->Clear();
+			while (!_objects.empty())
+				RemoveInternal(_objects.size() - 1);
 			AddInternal(o);
+			SelectionChangedEvent::InvokeHandlers(_em, this);
 		}
+	}
+
+	virtual void Add (Object* o) override final
+	{
+		if (o == nullptr)
+			throw invalid_argument("Parameter may not be nullptr.");
+
+		if (std::find (_objects.begin(), _objects.end(), o) != _objects.end())
+			throw invalid_argument("Object was already added to selection.");
+
+		AddInternal(o);
+		SelectionChangedEvent::InvokeHandlers(_em, this);
 	}
 
 	virtual AddedToSelectionEvent::Subscriber GetAddedToSelectionEvent() override final { return AddedToSelectionEvent::Subscriber(_em); }

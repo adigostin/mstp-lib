@@ -48,11 +48,10 @@
 #include <stdlib.h>
 #include <thread>
 #include <typeindex>
-#include <UIRibbon.h>
-#include <UIRibbonPropertyHelpers.h>
 #include <Unknwn.h>
 #include <unordered_map>
 #include <unordered_set>
 #include <variant>
 #include <wincodec.h>
+
 #include "Win32Defs.h"
