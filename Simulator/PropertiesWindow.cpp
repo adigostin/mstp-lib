@@ -11,6 +11,8 @@ class PropertiesWindow : public IPropertiesWindow
 {
 	ComPtr<ISelection> const _selection;
 	HWND _hwnd = nullptr;
+	SIZE _clientSize;
+	HFONT _font;
 	unique_ptr<IBridgePropsWindow> _bridgePropsControl;
 
 public:
@@ -51,11 +53,16 @@ public:
 			throw win32_exception(GetLastError());
 		assert(hwnd == _hwnd);
 
+		NONCLIENTMETRICS ncm = { sizeof(NONCLIENTMETRICS) };
+		SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0);
+		_font = ::CreateFontIndirect (&ncm.lfMessageFont);
+
 		_bridgePropsControl = bridgePropertiesControlFactory (_hwnd, GetClientRectPixels(), selection);
 	}
 
 	~PropertiesWindow()
 	{
+		::DeleteObject(_font);
 		if (_hwnd)
 			::DestroyWindow(_hwnd);
 	}
@@ -98,26 +105,35 @@ public:
 
 	LRESULT WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
 	{
-		if (msg == WM_SIZE)
+		if (msg == WM_CREATE)
 		{
-			if (_bridgePropsControl != nullptr)
-				::MoveWindow (_bridgePropsControl->GetHWnd(), 0, 0, LOWORD(lParam), HIWORD(lParam), FALSE);
+			_clientSize.cx = ((LPCREATESTRUCT) lParam)->cx;
+			_clientSize.cy = ((LPCREATESTRUCT) lParam)->cy;
 			return 0;
 		}
-		/*
-		else if (msg == WM_ERASEBKGND)
+
+		if (msg == WM_SIZE)
 		{
-			return 1;
+			_clientSize.cx = LOWORD(lParam);
+			_clientSize.cy = HIWORD(lParam);
+			if (_bridgePropsControl != nullptr)
+				::MoveWindow (_bridgePropsControl->GetHWnd(), 0, 0, _clientSize.cx, _clientSize.cy, FALSE);
+			return 0;
 		}
-		else if (msg == WM_PAINT)
+
+		if (msg == WM_PAINT)
 		{
 			PAINTSTRUCT ps;
 			::BeginPaint (_hwnd, &ps);
-			::RoundRect (ps.hdc, 10, 10, 100, 100, 5, 5);
+			auto oldFont = ::SelectObject (ps.hdc, _font);
+			static constexpr wchar_t Text[] = L"(nothing selected)";
+			RECT rc = { 0, 0, _clientSize.cx, _clientSize.cy };
+			::DrawTextW (ps.hdc, Text, -1, &rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE);
+			::SelectObject (ps.hdc, oldFont);
 			::EndPaint (_hwnd, &ps);
 			return 0;
 		}
-		*/
+		
 		return DefWindowProc (_hwnd, msg, wParam, lParam);
 	}
 
