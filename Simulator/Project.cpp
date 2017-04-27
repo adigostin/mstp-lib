@@ -54,7 +54,13 @@ public:
 
 	virtual void RemoveWire (size_t index) override final
 	{
-		throw not_implemented_exception();
+		if (index >= _wires.size())
+			throw invalid_argument("index");
+
+		WireRemovingEvent::InvokeHandlers(_em, this, index, _wires[index]);
+		_wires[index]->GetInvalidateEvent().RemoveHandler (&OnObjectInvalidate, this);
+		_wires.erase(_wires.begin() + index);
+		ProjectInvalidateEvent::InvokeHandlers (_em, this);
 	}
 
 	static void OnObjectInvalidate (void* callbackArg, Object* object)

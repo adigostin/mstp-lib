@@ -57,11 +57,13 @@ class Bridge : public Object
 		std::vector<uint8_t> data;
 		unsigned int portIndex;
 		unsigned int timestamp;
+		std::vector<std::array<uint8_t, 6>> txPortPath;
 	};
 	std::queue<RxPacketInfo> _rxQueue;
 
 	// variables used by TransmitGetBuffer/ReleaseBuffer
 	std::vector<uint8_t> _txPacketData;
+	Port*                _txTransmittingPort;
 	Port*                _txReceivingPort;
 	unsigned int         _txTimestamp;
 
@@ -77,6 +79,8 @@ public:
 	static constexpr float OutlineWidth = 2;
 	static constexpr float MinWidth = 180;
 	static constexpr float RoundRadius = 8;
+
+	IProject* GetProject() const { return _project; }
 
 	float GetLeft() const { return _x; }
 	float GetRight() const { return _x + _width; }
@@ -138,6 +142,7 @@ private:
 	static LRESULT CALLBACK HelperWindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 	void ComputeMacOperational();
 	void ProcessReceivedPacket();
+	std::array<uint8_t, 6> GetPortMacAddress (size_t portIndex) const;
 
 	static void* StpCallback_AllocAndZeroMemory (unsigned int size);
 	static void  StpCallback_FreeMemory (void* p);

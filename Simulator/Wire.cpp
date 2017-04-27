@@ -57,21 +57,77 @@ D2D1_POINT_2F Wire::GetPointCoords (size_t pointIndex) const
 		return get<ConnectedWireEnd>(_points[pointIndex])->GetCPLocation();
 }
 
-void Wire::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, uint16_t vlanNumber) const
+bool Wire::IsForwardingOnVlan (uint16_t vlanNumber, _Out_opt_ bool* hasLoop) const
 {
-	bool forwarding = false;
 	if (holds_alternative<ConnectedWireEnd>(_points[0]) && holds_alternative<ConnectedWireEnd>(_points[1]))
 	{
 		auto portA = get<ConnectedWireEnd>(_points[0]);
 		auto portB = get<ConnectedWireEnd>(_points[1]);
 		bool portAFw = portA->GetBridge()->IsPortForwardingOnVlan(portA->GetPortIndex(), vlanNumber);
 		bool portBFw = portB->GetBridge()->IsPortForwardingOnVlan(portB->GetPortIndex(), vlanNumber);
-		forwarding = portAFw && portBFw;
+		if (portAFw && portBFw)
+		{
+			if (hasLoop != nullptr)
+			{
+				unordered_set<Port*> txPorts;
+
+				function<bool(Port* txPort)> transmitsTo = [vlanNumber, &txPorts, &transmitsTo, targetPort=portA](Port* txPort) -> bool
+				{
+					txPorts.insert(txPort);
+
+					auto rx = txPort->GetBridge()->GetProject()->FindReceivingPort(txPort);
+					if ((rx == nullptr) || !rx->GetBridge()->IsPortForwardingOnVlan(rx->GetPortIndex(), vlanNumber))
+						return false;
+
+					for (size_t i = 0; i < rx->GetBridge()->GetPorts().size(); i++)
+					{
+						if ((i != rx->GetPortIndex()) && rx->GetBridge()->IsPortForwardingOnVlan(i, vlanNumber))
+						{
+							auto otherTxPort = rx->GetBridge()->GetPorts()[i].Get();
+							if (otherTxPort == targetPort)
+								return true;
+
+							if (txPorts.find(otherTxPort) != txPorts.end())
+								return false;
+
+							if (transmitsTo(otherTxPort))
+								return true;
+						}
+					}
+
+					return false;
+				};
+
+				*hasLoop = transmitsTo(portA);
+			}
+
+			return true;
+		}
 	}
 
-	auto brush = forwarding ? dos._brushForwarding.Get() : dos._brushNoForwardingWire.Get();
+	return false;
+}
+
+void Wire::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, uint16_t vlanNumber) const
+{
+	bool hasLoop;
+	bool forwarding = IsForwardingOnVlan(vlanNumber, &hasLoop);
+
+	float width = WireThickness;
+	ID2D1Brush* brush;
+
+	if (!forwarding)
+		brush = dos._brushNoForwardingWire;
+	else if (!hasLoop)
+		brush = dos._brushForwarding;
+	else
+	{
+		brush = dos._brushLoop;
+		width *= 2;
+	}
+
 	auto ss = forwarding ? dos._strokeStyleForwardingWire : dos._strokeStyleNoForwardingWire.Get();
-	rt->DrawLine (GetP0Coords(), GetP1Coords(), brush, WireThickness, ss);
+	rt->DrawLine (GetP0Coords(), GetP1Coords(), brush, width, ss);
 }
 
 void Wire::RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const
@@ -84,7 +140,7 @@ void Wire::RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, co
 	float s = sin(angle);
 	float c = cos(angle);
 
-	array<D2D1_POINT_2F, 4> vertices = 
+	array<D2D1_POINT_2F, 4> vertices =
 	{
 		D2D1_POINT_2F { fd.x + s * halfw, fd.y - c * halfw },
 		D2D1_POINT_2F { fd.x - s * halfw, fd.y + c * halfw },

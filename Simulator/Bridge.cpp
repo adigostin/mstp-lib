@@ -182,16 +182,28 @@ void Bridge::ProcessReceivedPacket()
 		else
 		{
 			// broadcast it to the other ports.
-			for (auto& txPort : _ports)
+			for (size_t i = 0; i < _ports.size(); i++)
 			{
-				if (txPort->_portIndex != rp.portIndex)
+				if (i != rp.portIndex)
 				{
-					auto rxPort = _project->FindReceivingPort(txPort);
-					if (rxPort != nullptr)
+					auto txPortAddress = GetPortMacAddress(i);
+
+					// If it already went through this port, we have a loop that would hang our UI.
+					if (find (rp.txPortPath.begin(), rp.txPortPath.end(), txPortAddress) != rp.txPortPath.end())
 					{
-						RxPacketInfo info = { rp.data, rxPort->_portIndex, rp.timestamp };
-						rxPort->_bridge->_rxQueue.push(move(info));
-						::PostMessage (rxPort->_bridge->_helperWindow.get(), WM_PACKET_RECEIVED, (WPARAM)(void*)rxPort->_bridge, 0);
+						// We don't do anything here; we have code in Wire.cpp that shows loops to the user - as thick red wires.
+					}
+					else
+					{
+						auto rxPort = _project->FindReceivingPort(_ports[i]);
+						if (rxPort != nullptr)
+						{
+							RxPacketInfo info = rp;
+							info.portIndex = rxPort->_portIndex;
+							info.txPortPath.push_back(txPortAddress);
+							rxPort->_bridge->_rxQueue.push(move(info));
+							::PostMessage (rxPort->_bridge->_helperWindow.get(), WM_PACKET_RECEIVED, (WPARAM)(void*)rxPort->_bridge, 0);
+						}
 					}
 				}
 			}
@@ -504,6 +516,24 @@ void Bridge::SetMstConfigRevLevel (uint16_t revLevel, unsigned int timestamp)
 	}
 }
 
+std::array<uint8_t, 6> Bridge::GetPortMacAddress (size_t portIndex) const
+{
+	std::array<uint8_t, 6> pa = _config._macAddress;
+	pa[5]++;
+	if (pa[5] == 0)
+	{
+		pa[4]++;
+		if (pa[4] == 0)
+		{
+			pa[3]++;
+			if (pa[3] == 0)
+				throw not_implemented_exception();
+		}
+	}
+
+	return pa;
+}
+
 #pragma region STP Callbacks
 const STP_CALLBACKS Bridge::StpCallbacks =
 {
@@ -543,6 +573,8 @@ void* Bridge::StpCallback_TransmitGetBuffer (STP_BRIDGE* bridge, unsigned int po
 
 	b->_txPacketData.resize (bpduSize + 21);
 	memcpy (&b->_txPacketData[0], BpduDestAddress, 6);
+	memcpy (&b->_txPacketData[6], &b->GetPortMacAddress(portIndex)[0], 6);
+	b->_txTransmittingPort = txPort;
 	b->_txReceivingPort = rxPort;
 	b->_txTimestamp = timestamp;
 	return &b->_txPacketData[21];
@@ -550,14 +582,14 @@ void* Bridge::StpCallback_TransmitGetBuffer (STP_BRIDGE* bridge, unsigned int po
 
 void Bridge::StpCallback_TransmitReleaseBuffer (STP_BRIDGE* bridge, void* bufferReturnedByGetBuffer)
 {
-	auto transmittingBridge = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
+	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 
 	RxPacketInfo info;
-	info.data = move(transmittingBridge->_txPacketData);
-	info.portIndex = transmittingBridge->_txReceivingPort->_portIndex;
-	info.timestamp = transmittingBridge->_txTimestamp;
-
-	Bridge* receivingBridge = transmittingBridge->_txReceivingPort->_bridge;
+	info.data = move(b->_txPacketData);
+	info.portIndex = b->_txReceivingPort->_portIndex;
+	info.timestamp = b->_txTimestamp;
+	info.txPortPath.push_back (b->GetPortMacAddress(b->_txTransmittingPort->GetPortIndex()));
+	Bridge* receivingBridge = b->_txReceivingPort->_bridge;
 	receivingBridge->_rxQueue.push (move(info));
 	::PostMessage (receivingBridge->_helperWindow.get(), WM_PACKET_RECEIVED, (WPARAM)(void*)receivingBridge, 0);
 }

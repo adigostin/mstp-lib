@@ -7,6 +7,8 @@
 
 using namespace std;
 
+static size_t nextWireIndex = 1;
+
 class CreateWireES : public EditState
 {
 	typedef EditState base;
@@ -51,6 +53,7 @@ public:
 				_wire = ComPtr<Wire>(new Wire(), false);
 				_wire->SetP0 (fromPort);
 				_wire->SetP1 (fromPort->GetCPLocation());
+				_wire->SetDebugName ((string("Wire") + to_string(nextWireIndex++)).c_str());
 				_subState  = WaitingFirstUp;
 			}
 		}

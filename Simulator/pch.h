@@ -33,6 +33,7 @@
 #include <d3d11_1.h>
 #include <dwrite_1.h>
 #include <functional>
+#include <intrin.h>
 #include <iomanip>
 #include <locale>
 #include <memory>

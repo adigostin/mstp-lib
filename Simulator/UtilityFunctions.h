@@ -21,6 +21,7 @@ struct DrawingObjects
 	ComPtr<ID2D1SolidColorBrush> _brushLearningPort;
 	ComPtr<ID2D1SolidColorBrush> _brushForwarding;
 	ComPtr<ID2D1SolidColorBrush> _brushNoForwardingWire;
+	ComPtr<ID2D1SolidColorBrush> _brushLoop;
 	ComPtr<ID2D1SolidColorBrush> _brushTempWire;
 	ComPtr<ID2D1StrokeStyle> _strokeStyleForwardingWire;
 	ComPtr<ID2D1StrokeStyle> _strokeStyleNoForwardingWire;
