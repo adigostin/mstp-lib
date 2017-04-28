@@ -39,6 +39,18 @@ public:
 		_completed = true;
 	}
 
+	virtual std::optional<LRESULT> OnKeyDown (UINT virtualKey, UINT modifierKeys) override final
+	{
+		if (virtualKey == VK_ESCAPE)
+		{
+			_completed = true;
+			::InvalidateRect (_area->GetHWnd(), nullptr, FALSE);
+			return 0;
+		}
+
+		return nullopt;
+	}
+
 	virtual void Render (ID2D1RenderTarget* rt) override final
 	{
 		if (_bridge != nullptr)
