@@ -35,13 +35,27 @@ public:
 			throw invalid_argument("index");
 
 		auto& b = _bridges[index];
-		for (auto&w : _wires)
+
+		size_t wireIndex = 0;
+		while (wireIndex < _wires.size())
 		{
-			for (size_t i = 0; i < w->GetPoints().size(); i++)
+			Wire* w = _wires[wireIndex].Get();
+
+			bool allWirePointsOnBridgeBeingDeleted = all_of (w->GetPoints().begin(), w->GetPoints().end(),
+				[&b](const WireEnd& we) { return holds_alternative<ConnectedWireEnd>(we) && (get<ConnectedWireEnd>(we)->GetBridge() == b); });
+
+			if (allWirePointsOnBridgeBeingDeleted)
+				this->RemoveWire(wireIndex);
+			else
 			{
-				auto& point = w->GetPoints()[i];
-				if (holds_alternative<ConnectedWireEnd>(point) && (get<ConnectedWireEnd>(point)->GetBridge() == b))
-					w->SetPoint(i, w->GetPointCoords(i));
+				for (size_t i = 0; i < w->GetPoints().size(); i++)
+				{
+					auto& point = w->GetPoints()[i];
+					if (holds_alternative<ConnectedWireEnd>(point) && (get<ConnectedWireEnd>(point)->GetBridge() == b))
+						w->SetPoint(i, w->GetPointCoords(i));
+				}
+		
+				wireIndex++;
 			}
 		}
 

@@ -30,14 +30,7 @@ class CreateWireES : public EditState
 public:
 	CreateWireES (const EditStateDeps& deps, Port* fromPort)
 		: base(deps)
-	{
-		/*if (fromPort != nullptr)
-		{
-			_wire = ComPtr<Wire>(new Wire(), false);
-			_wire->SetP0 (fromPort);
-			_wire->SetP1 (fromPort->GetCPLocation());
-		}*/
-	}
+	{ }
 
 	virtual void OnMouseDown (const MouseLocation& location, MouseButton button) override final
 	{

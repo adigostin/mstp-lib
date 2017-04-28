@@ -437,7 +437,16 @@ public:
 		}
 
 		if (_state != nullptr)
-			return _state->OnKeyDown (virtualKey, modifierKeys);
+		{
+			auto res = _state->OnKeyDown (virtualKey, modifierKeys);
+			if (_state->Completed())
+			{
+				_state = nullptr;
+				::SetCursor (LoadCursor (nullptr, IDC_ARROW));
+			};
+
+			return res;
+		}
 
 		if (virtualKey == VK_DELETE)
 		{
