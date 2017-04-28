@@ -3,6 +3,7 @@
 #include "Simulator.h"
 #include "Wire.h"
 #include "Bridge.h"
+#include "Port.h"
 
 using namespace std;
 
@@ -32,6 +33,17 @@ public:
 	{
 		if (index >= _bridges.size())
 			throw invalid_argument("index");
+
+		auto& b = _bridges[index];
+		for (auto&w : _wires)
+		{
+			for (size_t i = 0; i < w->GetPoints().size(); i++)
+			{
+				auto& point = w->GetPoints()[i];
+				if (holds_alternative<ConnectedWireEnd>(point) && (get<ConnectedWireEnd>(point)->GetBridge() == b))
+					w->SetPoint(i, w->GetPointCoords(i));
+			}
+		}
 
 		BridgeRemovingEvent::InvokeHandlers(_em, this, index, _bridges[index]);
 		_bridges[index]->GetInvalidateEvent().RemoveHandler (&OnObjectInvalidate, this);
