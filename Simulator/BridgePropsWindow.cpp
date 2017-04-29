@@ -23,6 +23,7 @@ class BridgePropsWindow : public IBridgePropsWindow
 	HWND _comboTreeCount = nullptr;
 	HWND _mstConfigNameEdit = nullptr;
 	HWND _mstConfigRevLevelEdit = nullptr;
+	HWND _mstConfigDigestEdit = nullptr;
 	HWND _buttonEditMstConfigId = nullptr;
 	HWND _controlBeingValidated = nullptr;
 	bool _editChangedByUser = false;
@@ -118,6 +119,8 @@ private:
 			_mstConfigRevLevelEdit = GetDlgItem (_hwnd, IDC_EDIT_MST_CONFIG_REV_LEVEL);
 			bRes = SetWindowSubclass (_mstConfigRevLevelEdit, EditSubclassProc, EditSubClassId, (DWORD_PTR) this); assert (bRes);
 
+			_mstConfigDigestEdit = GetDlgItem (_hwnd, IDC_EDIT_MST_CONFIG_TABLE_HASH);
+			
 			_buttonEditMstConfigId = GetDlgItem (_hwnd, IDC_BUTTON_EDIT_MST_CONFIG_TABLE);
 			return { FALSE, 0 };
 		}
@@ -509,6 +512,27 @@ private:
 			::SetWindowTextA (_mstConfigRevLevelEdit, "(multiple selection)");
 	}
 
+	void LoadMstConfigTableHashEdit()
+	{
+		auto digest = dynamic_cast<Bridge*>(_selection->GetObjects()[0].Get())->GetMstConfigDigest();
+
+		bool allSame = all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(),
+							   [&digest](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get())->GetMstConfigDigest() == digest; });
+
+		if (allSame)
+		{
+			wstringstream ss;
+			ss << uppercase << setfill(L'0') << hex
+				<< setw(2) << digest[0]  << setw(2) << digest[1]  << setw(2) << digest[2]  << setw(2) << digest[3] 
+				<< setw(2) << digest[4]  << setw(2) << digest[5]  << setw(2) << digest[6]  << setw(2) << digest[7] 
+				<< setw(2) << digest[8]  << setw(2) << digest[9]  << setw(2) << digest[10] << setw(2) << digest[11] 
+				<< setw(2) << digest[12] << setw(2) << digest[13] << setw(2) << digest[14] << setw(2) << digest[15];
+			::SetWindowText (_mstConfigDigestEdit, ss.str().c_str());
+		}
+		else
+			::SetWindowTextA (_mstConfigRevLevelEdit, "(multiple selection)");
+	}
+
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
 	{
 		auto window = static_cast<BridgePropsWindow*>(callbackArg);
@@ -529,6 +553,7 @@ private:
 			window->LoadTreeCountComboBox();
 			window->LoadMstConfigNameTextBox();
 			window->LoadMstConfigRevLevelTextBox();
+			window->LoadMstConfigTableHashEdit();
 
 			::ShowWindow (window->GetHWnd(), SW_SHOW);
 		}

@@ -4,6 +4,7 @@
 #include "Port.h"
 #include "Wire.h"
 #include "UtilityFunctions.h"
+#include "mstp-lib/hmac_md5.h"
 
 using namespace std;
 using namespace D2D1;
@@ -15,15 +16,22 @@ static constexpr UINT WM_PACKET_RECEIVED = WM_APP + 3;
 static constexpr uint8_t BpduDestAddress[6] = { 1, 0x80, 0xC2, 0, 0, 0 };
 
 Bridge::Config::Config (const std::array<uint8_t, 6>& macAddress)
+	: _macAddress(macAddress)
 {
-	_macAddress = macAddress;
 	_mstConfigName.resize(18);
 	STP_GetDefaultMstConfigName(&macAddress[0], _mstConfigName.data());
+
+	HMAC_MD5_CONTEXT context;
+	HMAC_MD5_Init (&context);
+	HMAC_MD5_Update (&context, &_mstConfigTable[0], 2 * 4096);
+	HMAC_MD5_End (&context);
+
+	memcpy (_mstConfigTableHash.data(), context.digest, 16);
 }
 
 
 Bridge::Bridge (IProject* project, unsigned int portCount, const std::array<uint8_t, 6>& macAddress)
-	: _project(project), _config({macAddress}), _guiThreadId(this_thread::get_id())
+	: _project(project), _config({macAddress})
 {
 	float offset = 0;
 
@@ -124,8 +132,6 @@ LRESULT CALLBACK Bridge::HelperWindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, 
 
 void Bridge::ComputeMacOperational()
 {
-	assert (this_thread::get_id() == _guiThreadId);
-
 	auto timestamp = GetTimestampMilliseconds();
 
 	bool invalidate = false;
@@ -213,9 +219,6 @@ void Bridge::ProcessReceivedPacket()
 
 void Bridge::EnableStp (uint32_t timestamp)
 {
-	if (this_thread::get_id() != _guiThreadId)
-		throw runtime_error ("This function may be called only on the main thread.");
-
 	if (_stpBridge != nullptr)
 		throw runtime_error ("STP is already enabled on this bridge.");
 
@@ -251,9 +254,6 @@ void Bridge::EnableStp (uint32_t timestamp)
 
 void Bridge::DisableStp (uint32_t timestamp)
 {
-	if (this_thread::get_id() != _guiThreadId)
-		throw runtime_error ("This function may be called only on the main thread.");
-
 	if (_stpBridge == nullptr)
 		throw runtime_error ("STP was not enabled on this bridge.");
 
@@ -267,9 +267,6 @@ void Bridge::DisableStp (uint32_t timestamp)
 
 void Bridge::SetStpVersion (STP_VERSION stpVersion, uint32_t timestamp)
 {
-	if (this_thread::get_id() != _guiThreadId)
-		throw runtime_error ("This function may be called only on the main thread.");
-
 	if (_stpBridge != nullptr)
 		throw runtime_error ("Setting the protocol version while STP is enabled is not supported by the library.");
 
@@ -282,9 +279,6 @@ void Bridge::SetStpVersion (STP_VERSION stpVersion, uint32_t timestamp)
 
 void Bridge::SetStpTreeCount (size_t treeCount)
 {
-	if (this_thread::get_id() != _guiThreadId)
-		throw runtime_error ("This function may be called only on the main thread.");
-
 	if (_stpBridge != nullptr)
 		throw runtime_error ("Setting the tree count while STP is enabled is not supported by the library.");
 
@@ -614,9 +608,6 @@ void Bridge::StpCallback_FlushFdb (STP_BRIDGE* bridge, unsigned int portIndex, u
 void Bridge::StpCallback_DebugStrOut (STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, bool flush)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
-
-	if (this_thread::get_id() != b->_guiThreadId)
-		throw std::runtime_error("Logging-related code does not yet support multithreading.");
 
 	if (stringLength > 0)
 	{

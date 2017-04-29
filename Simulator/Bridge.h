@@ -30,14 +30,18 @@ class Bridge : public Object
 	std::vector<ComPtr<Port>> _ports;
 	bool _powered = true;
 	STP_BRIDGE* _stpBridge = nullptr;
-	std::mutex _stpBridgeMutex;
-	std::thread::id _guiThreadId;
 	static const STP_CALLBACKS StpCallbacks;
 	std::vector<BridgeLogLine> _logLines;
 	BridgeLogLine _currentLogLine;
 	TimerQueueTimer_unique_ptr _oneSecondTimerHandle;
 	TimerQueueTimer_unique_ptr _macOperationalTimerHandle;
 	HWND_unique_ptr _helperWindow;
+
+	struct u16be
+	{
+		uint8_t h;
+		uint8_t l;
+	};
 
 	struct Config
 	{
@@ -46,6 +50,8 @@ class Bridge : public Object
 		size_t _treeCount = 1;
 		std::string _mstConfigName;
 		uint16_t _mstConfigRevLevel = 0;
+		std::array<u16be, 4096> _mstConfigTable { { 0, 0 } };
+		std::array<uint8_t, 16> _mstConfigTableHash;
 
 		Config (const std::array<uint8_t, 6>& macAddress);
 	};
@@ -135,6 +141,7 @@ public:
 	void SetMstConfigName (const char* name, unsigned int timestamp);
 	uint16_t GetMstConfigRevLevel() const { return _config._mstConfigRevLevel; }
 	void SetMstConfigRevLevel (uint16_t revLevel, unsigned int timestamp);
+	std::array<uint8_t, 16> GetMstConfigDigest() { return _config._mstConfigTableHash; }
 
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
