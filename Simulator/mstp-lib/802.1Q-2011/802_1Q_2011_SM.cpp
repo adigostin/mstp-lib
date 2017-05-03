@@ -2,7 +2,7 @@
 // This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/ 
 // Copyright (c) 2011-2017 Adrian Gostin, distributed under the GNU General Public License v3.
 
-#include "../bridge.h"
+#include "../stp_bridge.h"
 
 const char*	PortTimers_802_1Q_2011_GetStateName (SM_STATE state);
 SM_STATE	PortTimers_802_1Q_2011_CheckConditions	(STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);

@@ -7,9 +7,8 @@
 
 // All references of the kind XX.YY are to sections in 802.1Q-2011 pdf.
 
-#include "base_types.h"
-#include "port.h"
-#include "stp.h"
+#include "stp_base_types.h"
+#include "stp_port.h"
 
 typedef const char* (*SM_GET_STATE_NAME) (SM_STATE state);
 typedef SM_STATE (*SM_CHECK_CONDITIONS) (STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);

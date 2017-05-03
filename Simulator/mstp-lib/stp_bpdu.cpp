@@ -4,10 +4,10 @@
 
 #define _CRT_SECURE_NO_WARNINGS
 
-#include "bpdu.h"
-#include "log.h"
-#include "base_types.h"
+#include "stp_bridge.h"
+#include "stp_log.h"
 #include <stddef.h>
+#include <string.h>
 
 #ifdef __GNUC__
 	// disable the warning for accessing a field of a non-POD NULL object

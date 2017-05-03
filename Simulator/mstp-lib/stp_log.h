@@ -5,7 +5,7 @@
 #ifndef MSTP_LIB_LOG_H
 #define MSTP_LIB_LOG_H
 
-#include "bridge.h"
+struct STP_BRIDGE;
 
 void STP_Log (STP_BRIDGE* bridge, int port, int tree, const char* format, ...);
 void STP_FlushLog (STP_BRIDGE* bridge);

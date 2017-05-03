@@ -5,7 +5,7 @@
 #ifndef MSTP_LIB_BPDU_H
 #define MSTP_LIB_BPDU_H
 
-#include "base_types.h"
+#include "stp_base_types.h"
 #include "stp.h"
 
 // 14.2.1

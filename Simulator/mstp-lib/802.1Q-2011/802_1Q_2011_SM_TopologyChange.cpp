@@ -3,10 +3,9 @@
 // Copyright (c) 2011-2017 Adrian Gostin, distributed under the GNU General Public License v3.
 
 #include "802_1Q_2011_procedures.h"
-#include "../bridge.h"
-#include "../port.h"
-#include "../log.h"
-#include "assert.h"
+#include "../stp_bridge.h"
+#include "../stp_log.h"
+#include <assert.h>
 
 // See 13.37 in 802.1Q-2011
 

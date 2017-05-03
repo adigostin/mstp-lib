@@ -6,8 +6,6 @@
 #define MSTP_LIB_BASE_TYPES_H
 
 #include "stp.h"
-#include <string.h>
-#include <stdio.h>
 #include <assert.h>
 
 // ============================================================================

@@ -4,11 +4,12 @@
 
 #define _CRT_SECURE_NO_WARNINGS
 
-#include "log.h"
-#include "bridge.h"
+#include "stp_log.h"
+#include "stp_bridge.h"
 #include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 
 #ifdef _MSC_VER
 	#define snprintf _snprintf

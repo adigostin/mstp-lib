@@ -4,7 +4,7 @@
 #include "Port.h"
 #include "Wire.h"
 #include "UtilityFunctions.h"
-#include "mstp-lib/hmac_md5.h"
+#include "mstp-lib/stp_md5.h"
 
 using namespace std;
 using namespace D2D1;

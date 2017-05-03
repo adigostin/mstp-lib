@@ -212,12 +212,12 @@
     <ClInclude Include="EditStates\EditState.h" />
     <ClInclude Include="EventManager.h" />
     <ClInclude Include="mstp-lib\802.1Q-2011\802_1Q_2011_procedures.h" />
-    <ClInclude Include="mstp-lib\base_types.h" />
-    <ClInclude Include="mstp-lib\bpdu.h" />
-    <ClInclude Include="mstp-lib\bridge.h" />
-    <ClInclude Include="mstp-lib\hmac_md5.h" />
-    <ClInclude Include="mstp-lib\log.h" />
-    <ClInclude Include="mstp-lib\port.h" />
+    <ClInclude Include="mstp-lib\stp_base_types.h" />
+    <ClInclude Include="mstp-lib\stp_bpdu.h" />
+    <ClInclude Include="mstp-lib\stp_bridge.h" />
+    <ClInclude Include="mstp-lib\stp_md5.h" />
+    <ClInclude Include="mstp-lib\stp_log.h" />
+    <ClInclude Include="mstp-lib\stp_port.h" />
     <ClInclude Include="mstp-lib\stp.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Port.h" />
@@ -319,25 +319,25 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="mstp-lib\base_types.cpp">
+    <ClCompile Include="mstp-lib\stp_base_types.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="mstp-lib\bpdu.cpp">
+    <ClCompile Include="mstp-lib\stp_bpdu.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="mstp-lib\hmac_md5.cpp">
+    <ClCompile Include="mstp-lib\stp_md5.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="mstp-lib\log.cpp">
+    <ClCompile Include="mstp-lib\stp_log.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>

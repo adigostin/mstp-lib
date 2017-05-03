@@ -5,9 +5,11 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include "stp.h"
-#include "bridge.h"
-#include "log.h"
-#include "hmac_md5.h"
+#include "stp_bridge.h"
+#include "stp_log.h"
+#include "stp_md5.h"
+#include <string.h>
+#include <stdio.h>
 
 static void RunStateMachines (STP_BRIDGE* bridge, unsigned int timestamp);
 static unsigned int GetInstanceCountForStateMachine (const SM_INFO* smInfo, unsigned int portCount, unsigned int treeCount);
@@ -226,7 +228,7 @@ void STP_SetBridgeAddress (STP_BRIDGE* bridge, const unsigned char* address, uns
 		bridge->trees [treeIndex]->SetBridgeIdentifier (bid);
 	}
 
-	if (bridge->started && (treeIndex < bridge->treeCount()))
+	if (bridge->started)
 	{
 		if (bridge->ForceProtocolVersion < STP_VERSION_MSTP)
 		{
