@@ -33,7 +33,7 @@ public:
 		{
 			_project->Add(_bridge);
 			_selection->Select(_bridge);
-			_bridge->EnableStp(GetTimestampMilliseconds());
+			_bridge->StartStp(GetTimestampMilliseconds());
 		}
 
 		_completed = true;

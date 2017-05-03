@@ -103,7 +103,7 @@ public:
 
 	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() override final { return ProjectInvalidateEvent::Subscriber(_em); }
 
-	virtual Port* FindReceivingPort (Port* txPort) const override final
+	virtual Port* FindConnectedPort (Port* txPort) const override final
 	{
 		for (auto& w : _wires)
 		{

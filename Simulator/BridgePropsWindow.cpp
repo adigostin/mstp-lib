@@ -89,7 +89,7 @@ private:
 			SetWindowLongPtr (hwnd, GWLP_USERDATA, 0);
 		}
 
-		::SetWindowLong (hwnd, DWL_MSGRESULT, result.messageResult);
+		::SetWindowLongPtr (hwnd, DWLP_MSGRESULT, result.messageResult);
 		return result.dialogProcResult;
 	}
 
@@ -150,7 +150,7 @@ private:
 			{
 				if ((HWND) lParam == _checkStpEnabled)
 				{
-					ProcessStpEnabledClicked();
+					ProcessStpStartedClicked();
 					return { TRUE, 0 };
 				}
 
@@ -181,7 +181,7 @@ private:
 		return { FALSE, 0 };
 	}
 
-	void ProcessStpEnabledClicked()
+	void ProcessStpStartedClicked()
 	{
 		auto timestamp = GetTimestampMilliseconds();
 
@@ -191,8 +191,8 @@ private:
 			for (auto& o : _selection->GetObjects())
 			{
 				auto b = dynamic_cast<Bridge*>(o.Get());
-				if (!b->IsStpEnabled())
-					b->EnableStp(timestamp);
+				if (!b->IsStpStarted())
+					b->StartStp(timestamp);
 			}
 		}
 		else
@@ -201,8 +201,8 @@ private:
 			for (auto& o : _selection->GetObjects())
 			{
 				auto b = dynamic_cast<Bridge*>(o.Get());
-				if (b->IsStpEnabled())
-					b->DisableStp(timestamp);
+				if (b->IsStpStarted())
+					b->StopStp(timestamp);
 			}
 		}
 	}
@@ -229,11 +229,11 @@ private:
 		{
 			auto b = dynamic_cast<Bridge*>(o.Get()); assert (b != nullptr);
 
-			if (b->IsStpEnabled())
+			if (b->IsStpStarted())
 			{
-				b->DisableStp(timestamp);
+				b->StopStp(timestamp);
 				b->SetStpVersion(newVersion, timestamp);
-				b->EnableStp(timestamp);
+				b->StartStp(timestamp);
 			}
 			else
 				b->SetStpVersion(newVersion, timestamp);
@@ -273,7 +273,7 @@ private:
 			{
 				std::wstring str;
 				str.resize(GetWindowTextLength (hWnd) + 1);
-				GetWindowText (hWnd, str.data(), str.size());
+				GetWindowText (hWnd, str.data(), (int) str.size());
 
 				if (dialog->_editChangedByUser && (dialog->_controlBeingValidated == nullptr))
 				{
@@ -302,7 +302,7 @@ private:
 		{
 			std::wstring str;
 			str.resize(GetWindowTextLength (hWnd) + 1);
-			GetWindowText (hWnd, str.data(), str.size());
+			GetWindowText (hWnd, str.data(), (int) str.size());
 
 			if (dialog->_editChangedByUser && (dialog->_controlBeingValidated == nullptr))
 			{
@@ -376,8 +376,7 @@ private:
 
 	static void OnSelectedBridgeStpEnabledChanged (void* callbackArg, Bridge* b)
 	{
-		auto window = static_cast<BridgePropsWindow*>(callbackArg);
-		window->LoadStpEnabledCheckBox();
+		static_cast<BridgePropsWindow*>(callbackArg)->LoadStpStartedCheckBox();
 	}
 
 	static void OnSelectedBridgeStpVersionChanged (void* callbackArg, Bridge* b)
@@ -412,7 +411,7 @@ private:
 		if (_selection->GetObjects().size() == 1)
 		{
 			auto bridge = dynamic_cast<Bridge*>(_selection->GetObjects()[0].Get());
-			::SetWindowText (_bridgeAddressEdit, bridge->GetMacAddressAsString().c_str());
+			::SetWindowText (_bridgeAddressEdit, bridge->GetBridgeAddressAsString().c_str());
 			::EnableWindow (_bridgeAddressEdit, TRUE);
 		}
 		else
@@ -422,15 +421,15 @@ private:
 		}
 	}
 
-	void LoadStpEnabledCheckBox()
+	void LoadStpStartedCheckBox()
 	{
 		assert (BridgesSelected());
 
-		auto isStpEnabled = [](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get())->IsStpEnabled(); };
+		auto getStpStarted = [](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get())->IsStpStarted(); };
 
-		if (none_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), isStpEnabled))
+		if (none_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), getStpStarted))
 			::SendMessage (_checkStpEnabled, BM_SETCHECK, BST_UNCHECKED, 0);
-		else if (all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), isStpEnabled))
+		else if (all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), getStpStarted))
 			::SendMessage (_checkStpEnabled, BM_SETCHECK, BST_CHECKED, 0);
 		else
 			::SendMessage (_checkStpEnabled, BM_SETCHECK, BST_INDETERMINATE, 0);
@@ -467,7 +466,7 @@ private:
 		int index = -1;
 		auto portCount = getPortCount(_selection->GetObjects()[0]);
 		if (all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](const ComPtr<Object>& o) { return getPortCount(o) == portCount; }))
-			index = portCount - FirstPortCount;
+			index = (int) (portCount - FirstPortCount);
 
 		ComboBox_SetCurSel (_comboPortCount, index);
 	}
@@ -547,7 +546,7 @@ private:
 		else
 		{
 			window->LoadBridgeAddressTextBox();
-			window->LoadStpEnabledCheckBox();
+			window->LoadStpStartedCheckBox();
 			window->LoadStpVersionComboBox();
 			window->LoadPortCountComboBox();
 			window->LoadTreeCountComboBox();

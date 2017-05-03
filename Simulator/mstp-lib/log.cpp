@@ -6,8 +6,7 @@
 
 #include "log.h"
 #include "bridge.h"
-#include "assert.h"
-
+#include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 

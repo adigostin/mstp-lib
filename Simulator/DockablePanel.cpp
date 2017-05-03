@@ -301,7 +301,7 @@ public:
 
 			RECT titleBarTextRect = { titleBarRect.left + 6, titleBarRect.top, titleBarRect.right, titleBarRect.bottom };
 			auto oldSelectedFont = SelectObject (ps.hdc, _titleBarFont.get());
-			DrawTextW (ps.hdc, _title.c_str(), _title.length(), &titleBarTextRect, DT_SINGLELINE | DT_VCENTER);
+			DrawTextW (ps.hdc, _title.c_str(), (int) _title.length(), &titleBarTextRect, DT_SINGLELINE | DT_VCENTER);
 			SelectObject (ps.hdc, oldSelectedFont);
 		}
 

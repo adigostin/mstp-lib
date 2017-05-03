@@ -5,8 +5,6 @@
 #ifndef MSTP_LIB_HMAC_MD5_H
 #define MSTP_LIB_HMAC_MD5_H
 
-#include <stdlib.h>
-
 // Data structure for MD5 (Message Digest) computation
 struct MD5_CTX
 {

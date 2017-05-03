@@ -266,7 +266,7 @@ void STP_GetBridgeAddress (STP_BRIDGE* bridge, unsigned char* addressOut6Bytes)
 
 // ============================================================================
 
-void STP_OnPortEnabled (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int speedMegabitsPerSecond, bool detectedPointToPointMAC, unsigned int timestamp)
+void STP_OnPortEnabled (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int speedMegabitsPerSecond, unsigned int detectedPointToPointMAC, unsigned int timestamp)
 {
 	LOG (bridge, -1, -1, "{T}: Port {D} good\r\n", timestamp, 1 + portIndex);
 
@@ -413,21 +413,21 @@ void STP_OnBpduReceived (STP_BRIDGE* bridge, unsigned int portIndex, const unsig
 
 // ============================================================================
 
-bool STP_IsBridgeStarted (STP_BRIDGE* bridge)
+unsigned int STP_IsBridgeStarted (STP_BRIDGE* bridge)
 {
 	return bridge->started;
 }
 
 // ============================================================================
 
-void STP_EnableLogging (STP_BRIDGE* bridge, bool enable)
+void STP_EnableLogging (STP_BRIDGE* bridge, unsigned int enable)
 {
 	bridge->loggingEnabled = enable;
 }
 
 // ============================================================================
 
-bool STP_IsLoggingEnabled (STP_BRIDGE* bridge)
+unsigned int STP_IsLoggingEnabled (STP_BRIDGE* bridge)
 {
 	return bridge->loggingEnabled;
 }
@@ -557,24 +557,24 @@ static unsigned int GetInstanceCountForStateMachine (const SM_INFO* smInfo, unsi
 
 // ============================================================================
 
-void STP_SetPortAdminEdge (STP_BRIDGE* bridge, unsigned int portIndex, bool newAdminEdge, unsigned int timestamp)
+void STP_SetPortAdminEdge (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int newAdminEdge, unsigned int timestamp)
 {
 	bridge->ports [portIndex]->AdminEdge = newAdminEdge;
 }
 
-bool STP_GetPortAdminEdge (STP_BRIDGE* bridge, unsigned int portIndex)
+unsigned int STP_GetPortAdminEdge (STP_BRIDGE* bridge, unsigned int portIndex)
 {
 	return bridge->ports [portIndex]->AdminEdge;
 }
 
 // ============================================================================
 
-void STP_SetPortAutoEdge (STP_BRIDGE* bridge, unsigned int portIndex, bool newAutoEdge, unsigned int timestamp)
+void STP_SetPortAutoEdge (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int newAutoEdge, unsigned int timestamp)
 {
 	bridge->ports [portIndex]->AutoEdge = newAutoEdge;
 }
 
-bool STP_GetPortAutoEdge (STP_BRIDGE* bridge, unsigned int portIndex)
+unsigned int STP_GetPortAutoEdge (STP_BRIDGE* bridge, unsigned int portIndex)
 {
 	return bridge->ports [portIndex]->AutoEdge;
 }
@@ -768,8 +768,6 @@ void STP_GetDefaultMstConfigName (const unsigned char bridgeAddress[6], char nam
 
 void STP_GetMstConfigName (STP_BRIDGE* bridge, char nameOut [33])
 {
-	assert (bridge->ForceProtocolVersion >= STP_VERSION_MSTP);
-
 	memcpy (nameOut, bridge->MstConfigId.ConfigurationName, 32);
 	nameOut [32] = 0;
 }
@@ -835,8 +833,6 @@ void STP_SetMstConfigRevisionLevel (STP_BRIDGE* bridge, unsigned short revisionL
 
 unsigned short STP_GetMstConfigRevisionLevel (STP_BRIDGE* bridge)
 {
-	assert (bridge->ForceProtocolVersion >= STP_VERSION_MSTP);
-
 	return bridge->MstConfigId.RevisionLevel;
 }
 
@@ -987,11 +983,14 @@ void STP_SetMstConfigTableAndComputeDigest (STP_BRIDGE* bridge, const struct VLA
 	FLUSH_LOG (bridge);
 }
 
-const unsigned char* STP_GetMstConfigTableDigest (STP_BRIDGE* bridge)
+void STP_GetMstConfigTableDigest (STP_BRIDGE* bridge, unsigned char digestOut[16])
 {
-	assert (bridge->ForceProtocolVersion >= STP_VERSION_MSTP);
+	memcpy (digestOut, bridge->MstConfigId.ConfigurationDigest, 16);
+}
 
-	return bridge->MstConfigId.ConfigurationDigest;
+void STP_SetMstConfigTableDigest (STP_BRIDGE* bridge, const unsigned char digest[16], unsigned int debugTimestamp)
+{
+	assert(false); // not implemented
 }
 
 // ============================================================================
@@ -1011,37 +1010,41 @@ enum STP_VERSION STP_GetStpVersion (STP_BRIDGE* bridge)
 	return bridge->ForceProtocolVersion;
 }
 
-void STP_SetStpVersion (STP_BRIDGE* bridge, enum STP_VERSION version)
+void STP_SetStpVersion (STP_BRIDGE* bridge, enum STP_VERSION version, unsigned int timestamp)
 {
 	assert (false); // not implemented
 }
 
-bool STP_GetPortEnabled (STP_BRIDGE* bridge, unsigned int portIndex)
+unsigned int STP_GetPortEnabled (STP_BRIDGE* bridge, unsigned int portIndex)
 {
 	return bridge->ports [portIndex]->portEnabled;
 }
 
 STP_PORT_ROLE STP_GetPortRole (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
 {
+	assert (bridge->started);
 	return bridge->ports [portIndex]->trees [treeIndex]->role;
 }
 
-bool STP_GetPortLearning (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
+unsigned int STP_GetPortLearning (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
 {
+	assert (bridge->started);
 	return bridge->ports [portIndex]->trees [treeIndex]->learning;
 }
 
-bool STP_GetPortForwarding (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
+unsigned int STP_GetPortForwarding (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
 {
+	assert (bridge->started);
 	return bridge->ports [portIndex]->trees [treeIndex]->forwarding;
 }
 
-bool STP_GetPortOperEdge (STP_BRIDGE* bridge, unsigned int portIndex)
+unsigned int STP_GetPortOperEdge (STP_BRIDGE* bridge, unsigned int portIndex)
 {
+	assert (bridge->started);
 	return bridge->ports [portIndex]->operEdge;
 }
 
-bool STP_GetPortOperPointToPointMAC (STP_BRIDGE* bridge, unsigned int portIndex)
+unsigned int STP_GetPortOperPointToPointMAC (STP_BRIDGE* bridge, unsigned int portIndex)
 {
 	return bridge->ports [portIndex]->operPointToPointMAC;
 }
@@ -1146,14 +1149,16 @@ void STP_GetRootTimes (STP_BRIDGE* bridge,
 
 // ============================================================================
 
-bool STP_IsRootBridge (STP_BRIDGE* bridge)
+unsigned int STP_IsRootBridge (STP_BRIDGE* bridge)
 {
+	assert (bridge->started);
 	BRIDGE_TREE* cist = bridge->trees[CIST_INDEX];
 	return cist->rootPriority.RootId == cist->GetBridgeIdentifier();
 }
 
-bool STP_IsRegionalRootBridge (STP_BRIDGE* bridge, unsigned int treeIndex)
+unsigned int STP_IsRegionalRootBridge (STP_BRIDGE* bridge, unsigned int treeIndex)
 {
+	assert (bridge->started);
 	assert (treeIndex < bridge->treeCount);
 	BRIDGE_TREE* tree = bridge->trees [treeIndex];
 	return tree->rootPriority.RegionalRootId == tree->GetBridgeIdentifier();

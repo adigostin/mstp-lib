@@ -8,7 +8,7 @@
 #include "stp.h"
 #include <string.h>
 #include <stdio.h>
-#include "assert.h"
+#include <assert.h>
 
 // ============================================================================
 

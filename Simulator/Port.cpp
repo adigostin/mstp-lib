@@ -6,6 +6,10 @@
 using namespace std;
 using namespace D2D1;
 
+Port::Port (Bridge* bridge, unsigned int portIndex, Side side, float offset)
+	: _bridge(bridge), _portIndex(portIndex), _side(side), _offset(offset)
+{ }
+
 D2D1_POINT_2F Port::GetCPLocation() const
 {
 	auto bounds = _bridge->GetBounds();
@@ -202,9 +206,9 @@ void Port::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, uint16_t vl
 
 	// Draw the exterior of the port.
 	float interiorPortOutlineWidth = OutlineWidth;
-	if (_bridge->IsStpEnabled())
+	if (_bridge->IsStpStarted())
 	{
-		size_t treeIndex   = _bridge->GetStpTreeIndexFromVlanNumber(vlanNumber);
+		unsigned int treeIndex = _bridge->GetStpTreeIndexFromVlanNumber(vlanNumber);
 		STP_PORT_ROLE role = _bridge->GetStpPortRole (_portIndex, treeIndex);
 		bool learning      = _bridge->GetStpPortLearning (_portIndex, treeIndex);
 		bool forwarding    = _bridge->GetStpPortForwarding (_portIndex, treeIndex);

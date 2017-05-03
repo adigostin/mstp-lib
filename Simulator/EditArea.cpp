@@ -36,7 +36,7 @@ class EditArea : public ZoomableWindow, public IEditArea
 
 public:
 	EditArea(IProject* project, IProjectWindow* pw, ISelection* selection, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory)
-		: base (WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, hWndParent, 0xFFFF, deviceContext, dWriteFactory)
+		: base (WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, hWndParent, nullptr, deviceContext, dWriteFactory)
 		, _project(project), _pw(pw), _selection(selection)
 	{
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
@@ -152,7 +152,7 @@ public:
 		for (auto& info : LegendInfo)
 		{
 			ComPtr<IDWriteTextLayout> tl;
-			auto hr = GetDWriteFactory()->CreateTextLayout (info.text, wcslen(info.text), _legendFont, 1000, 1000, &tl); ThrowIfFailed(hr);
+			auto hr = GetDWriteFactory()->CreateTextLayout (info.text, (UINT32) wcslen(info.text), _legendFont, 1000, 1000, &tl); ThrowIfFailed(hr);
 
 			DWRITE_TEXT_METRICS metrics;
 			tl->GetMetrics (&metrics);
@@ -376,10 +376,10 @@ public:
 					auto b = dynamic_cast<Bridge*>(o.Get());
 					if (b != nullptr)
 					{
-						if (enable && !b->IsStpEnabled())
-							b->EnableStp(timestamp);
-						else if (!enable && b->IsStpEnabled())
-							b->DisableStp(timestamp);
+						if (enable && !b->IsStpStarted())
+							b->StartStp(timestamp);
+						else if (!enable && b->IsStpStarted())
+							b->StopStp(timestamp);
 					}
 				}
 			}

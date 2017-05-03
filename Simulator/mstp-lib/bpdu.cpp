@@ -7,7 +7,6 @@
 #include "bpdu.h"
 #include "log.h"
 #include "base_types.h"
-
 #include <stddef.h>
 
 #ifdef __GNUC__

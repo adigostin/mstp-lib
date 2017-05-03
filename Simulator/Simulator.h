@@ -76,7 +76,6 @@ struct IDockablePanel abstract
 
 	struct CloseButtonClicked : public Event<CloseButtonClicked, void(IDockablePanel* panel)> {};
 	struct SplitterDragging : public Event<SplitterDragging, void(IDockablePanel* panel, SIZE proposedSize)> {};
-	struct SplitterDragComplete : public Event<SplitterDragComplete, void(IDockablePanel* panel)> {};
 
 	virtual HWND GetHWnd() const = 0;
 	virtual Side GetSide() const = 0;
@@ -114,7 +113,7 @@ struct ILogArea abstract : public IWin32Window
 	virtual void SelectBridge (Bridge* b) = 0;
 };
 
-using LogAreaFactory = std::unique_ptr<ILogArea>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory);
+using LogAreaFactory = std::unique_ptr<ILogArea>(*const)(HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory);
 extern const LogAreaFactory logAreaFactory;
 
 // ============================================================================
@@ -207,7 +206,7 @@ struct IProject abstract : public IUnknown
 
 	virtual std::array<uint8_t, 6> AllocMacAddressRange (size_t count) = 0;
 	virtual std::pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const = 0;
-	virtual Port* FindReceivingPort (Port* txPort) const = 0;
+	virtual Port* FindConnectedPort (Port* txPort) const = 0;
 };
 
 using ProjectFactory = ComPtr<IProject>(*const)();

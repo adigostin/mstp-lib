@@ -83,7 +83,7 @@ public:
 		_dockContainer = dockPanelFactory (_hwnd, 0xFFFF, GetClientRectPixels());
 
 		auto logPanel = _dockContainer->GetOrCreateDockablePanel(Side::Right, L"STP Log");
-		_logArea = logAreaFactory (logPanel->GetHWnd(), 0xFFFF, logPanel->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory());
+		_logArea = logAreaFactory (logPanel->GetHWnd(), logPanel->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory());
 
 		auto propsPanel = _dockContainer->GetOrCreateDockablePanel (Side::Left, L"Properties");
 		_propsWindow = propertiesWindowFactory (propsPanel->GetHWnd(), propsPanel->GetContentLocation(), _app, _project, this, _selection);

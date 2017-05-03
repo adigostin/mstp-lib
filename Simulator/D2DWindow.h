@@ -21,7 +21,7 @@ class D2DWindow abstract
 	ComPtr<ID2D1DeviceContext> _d2dDeviceContext;
 
 public:
-	D2DWindow (DWORD exStyle, DWORD style, const RECT& rect, HWND hWndParent, DWORD controlId, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory);
+	D2DWindow (DWORD exStyle, DWORD style, const RECT& rect, HWND hWndParent, HMENU hMenuOrControlId, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory);
 	~D2DWindow();
 
 	HWND GetHWnd() const { return _hwnd; }

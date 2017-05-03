@@ -13,7 +13,7 @@ using namespace D2D1;
 static ATOM WndClassAtom;
 static const wchar_t WndClassName[] = L"D2DWindow-{175802BE-0628-45C0-BC8A-3D27C6F4F0BE}";
 
-D2DWindow::D2DWindow (DWORD exStyle, DWORD style, const RECT& rect, HWND hWndParent, DWORD controlId, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory)
+D2DWindow::D2DWindow (DWORD exStyle, DWORD style, const RECT& rect, HWND hWndParent, HMENU hMenuOrControlId, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory)
 	: _d3dDeviceContext(deviceContext)
 	, _dWriteFactory(dWriteFactory)
 {
@@ -54,7 +54,11 @@ D2DWindow::D2DWindow (DWORD exStyle, DWORD style, const RECT& rect, HWND hWndPar
 			throw win32_exception(GetLastError());
 	}
 
-	auto hwnd = ::CreateWindowEx (exStyle, WndClassName, L"", style, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, hWndParent, (HMENU) controlId, hInstance, this);
+	int x = rect.left;
+	int y = rect.top;
+	int w = rect.right - rect.left;
+	int h = rect.bottom - rect.top;
+	auto hwnd = ::CreateWindowEx (exStyle, WndClassName, L"", style, x, y, w, h, hWndParent, hMenuOrControlId, hInstance, this);
 	if (hwnd == nullptr)
 		throw win32_exception(GetLastError());
 	assert (hwnd == _hwnd);

@@ -20,6 +20,8 @@ struct TreeCountChangedEvent : public Event<TreeCountChangedEvent, void(Bridge*)
 struct MstConfigNameChangedEvent : public Event<MstConfigNameChangedEvent, void(Bridge*)> { };
 struct MstConfigRevLevelChangedEvent : public Event<MstConfigRevLevelChangedEvent, void(Bridge*)> { };
 
+constexpr unsigned int MaxVlanNumber = 4094;
+
 class Bridge : public Object
 {
 	IProject* const _project;
@@ -35,28 +37,8 @@ class Bridge : public Object
 	BridgeLogLine _currentLogLine;
 	TimerQueueTimer_unique_ptr _oneSecondTimerHandle;
 	TimerQueueTimer_unique_ptr _macOperationalTimerHandle;
-	HWND_unique_ptr _helperWindow;
-
-	struct u16be
-	{
-		uint8_t h;
-		uint8_t l;
-	};
-
-	struct Config
-	{
-		std::array<uint8_t, 6> _macAddress;
-		STP_VERSION _stpVersion = STP_VERSION_RSTP;
-		size_t _treeCount = 1;
-		std::string _mstConfigName;
-		uint16_t _mstConfigRevLevel = 0;
-		std::array<u16be, 4096> _mstConfigTable { { 0, 0 } };
-		std::array<uint8_t, 16> _mstConfigTableHash;
-
-		Config (const std::array<uint8_t, 6>& macAddress);
-	};
-
-	Config _config;
+	static HWND _helperWindow;
+	static uint32_t _helperWindowRefCount;
 
 	struct RxPacketInfo
 	{
@@ -98,8 +80,8 @@ public:
 
 	D2D1_RECT_F GetBounds() const { return { _x, _y, _x + _width, _y + _height }; }
 	const std::vector<ComPtr<Port>>& GetPorts() const { return _ports; }
-	std::array<uint8_t, 6> GetMacAddress() const { return _config._macAddress; }
-	std::wstring GetMacAddressAsString() const;
+	std::array<uint8_t, 6> GetBridgeAddress() const;
+	std::wstring GetBridgeAddressAsString() const;
 
 	virtual void Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, uint16_t vlanNumber) const override final;
 	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const override final;
@@ -115,33 +97,31 @@ public:
 	MstConfigRevLevelChangedEvent::Subscriber GetMstConfigRevLevelChangedEvent() { return MstConfigRevLevelChangedEvent::Subscriber(_em); }
 
 	bool IsPowered() const { return _powered; }
-	void EnableStp (uint32_t timestamp);
-	void DisableStp (uint32_t timestamp);
-	bool IsStpEnabled() const { return _stpBridge != nullptr; }
-	size_t GetTreeCount() const { return _config._treeCount; }
-	STP_PORT_ROLE GetStpPortRole (size_t portIndex, size_t treeIndex) const;
-	bool GetStpPortLearning (size_t portIndex, size_t treeIndex) const;
-	bool GetStpPortForwarding (size_t portIndex, size_t treeIndex) const;
-	bool GetStpPortOperEdge (size_t portIndex) const;
-	bool GetPortAdminEdge (size_t portIndex) const;
-	void SetPortAdminEdge (size_t portIndex, bool adminEdge);
-	bool GetPortAutoEdge  (size_t portIndex) const;
-	void SetPortAutoEdge  (size_t portIndex, bool autoEdge);
-	uint16_t GetStpBridgePriority (size_t treeIndex) const;
-	size_t GetStpTreeIndexFromVlanNumber (uint16_t vlanNumber) const;
+	void StartStp (unsigned int timestamp);
+	void StopStp (unsigned int timestamp);
+	bool IsStpStarted() const;
+	STP_PORT_ROLE GetStpPortRole (unsigned int portIndex, unsigned int treeIndex) const;
+	bool GetStpPortLearning      (unsigned int portIndex, unsigned int treeIndex) const;
+	bool GetStpPortForwarding    (unsigned int portIndex, unsigned int treeIndex) const;
+	bool GetStpPortOperEdge      (unsigned int portIndex) const;
+	bool GetPortAdminEdge (unsigned int portIndex) const;
+	void SetPortAdminEdge (unsigned int portIndex, bool adminEdge, unsigned int timestamp);
+	bool GetPortAutoEdge  (unsigned int portIndex) const;
+	void SetPortAutoEdge  (unsigned int portIndex, bool autoEdge, unsigned int timestamp);
+	uint16_t GetStpBridgePriority (unsigned int treeIndex) const;
+	unsigned int GetStpTreeIndexFromVlanNumber (uint16_t vlanNumber) const;
 	const std::vector<BridgeLogLine>& GetLogLines() const { return _logLines; }
 	bool IsPortForwardingOnVlan (unsigned int portIndex, uint16_t vlanNumber) const;
 	bool IsStpRootBridge() const;
-	STP_VERSION GetStpVersion() const { return _config._stpVersion; }
-	void SetStpVersion (STP_VERSION stpVersion, uint32_t timestamp);
-	void SetStpTreeCount (size_t treeCount);
+	STP_VERSION GetStpVersion() const;
+	void SetStpVersion (STP_VERSION stpVersion, unsigned int timestamp);
 	std::wstring GetStpVersionString() const;
 	static std::wstring GetStpVersionString (STP_VERSION stpVersion);
-	std::string GetMstConfigName() const { return _config._mstConfigName; }
+	std::string GetMstConfigName() const;
 	void SetMstConfigName (const char* name, unsigned int timestamp);
-	uint16_t GetMstConfigRevLevel() const { return _config._mstConfigRevLevel; }
-	void SetMstConfigRevLevel (uint16_t revLevel, unsigned int timestamp);
-	std::array<uint8_t, 16> GetMstConfigDigest() { return _config._mstConfigTableHash; }
+	unsigned short GetMstConfigRevLevel() const;
+	void SetMstConfigRevLevel (unsigned short revLevel, unsigned int timestamp);
+	std::array<uint8_t, 16> GetMstConfigDigest();
 
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
@@ -149,16 +129,16 @@ private:
 	static LRESULT CALLBACK HelperWindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 	void ComputeMacOperational();
 	void ProcessReceivedPacket();
-	std::array<uint8_t, 6> GetPortMacAddress (size_t portIndex) const;
+	std::array<uint8_t, 6> GetPortAddress (size_t portIndex) const;
 
 	static void* StpCallback_AllocAndZeroMemory (unsigned int size);
 	static void  StpCallback_FreeMemory (void* p);
 	static void* StpCallback_TransmitGetBuffer (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int bpduSize, unsigned int timestamp);
 	static void  StpCallback_TransmitReleaseBuffer (STP_BRIDGE* bridge, void* bufferReturnedByGetBuffer);
-	static void  StpCallback_EnableLearning (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable);
-	static void  StpCallback_EnableForwarding (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable);
+	static void  StpCallback_EnableLearning (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable);
+	static void  StpCallback_EnableForwarding (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable);
 	static void  StpCallback_FlushFdb (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType);
-	static void  StpCallback_DebugStrOut (STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, bool flush);
+	static void  StpCallback_DebugStrOut (STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, unsigned int flush);
 	static void  StpCallback_OnTopologyChange (STP_BRIDGE* bridge);
 	static void  StpCallback_OnNotifiedTopologyChange (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
 	static void  StpCallback_OnPortRoleChanged (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role);

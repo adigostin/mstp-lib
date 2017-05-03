@@ -75,11 +75,11 @@ bool Wire::IsForwardingOnVlan (uint16_t vlanNumber, _Out_opt_ bool* hasLoop) con
 				{
 					txPorts.insert(txPort);
 
-					auto rx = txPort->GetBridge()->GetProject()->FindReceivingPort(txPort);
+					auto rx = txPort->GetBridge()->GetProject()->FindConnectedPort(txPort);
 					if ((rx == nullptr) || !rx->GetBridge()->IsPortForwardingOnVlan(rx->GetPortIndex(), vlanNumber))
 						return false;
 
-					for (size_t i = 0; i < rx->GetBridge()->GetPorts().size(); i++)
+					for (unsigned int i = 0; i < (unsigned int) rx->GetBridge()->GetPorts().size(); i++)
 					{
 						if ((i != rx->GetPortIndex()) && rx->GetBridge()->IsPortForwardingOnVlan(i, vlanNumber))
 						{

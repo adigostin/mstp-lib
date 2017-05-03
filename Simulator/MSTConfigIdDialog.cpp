@@ -64,7 +64,7 @@ public:
 			SetWindowLongPtr (hwnd, GWLP_USERDATA, 0);
 		}
 
-		::SetWindowLong (hwnd, DWL_MSGRESULT, result.messageResult);
+		::SetWindowLongPtr (hwnd, DWLP_MSGRESULT, result.messageResult);
 		return result.dialogProcResult;
 	}
 

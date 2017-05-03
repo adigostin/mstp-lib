@@ -24,7 +24,7 @@ documentation and/or software.
  */
 
 #include "hmac_md5.h"
-#include "assert.h"
+#include <assert.h>
 #include <string.h>
 
 static void Transform (unsigned int *buf, unsigned int* in);

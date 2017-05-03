@@ -15,27 +15,14 @@ static constexpr UINT WM_PACKET_RECEIVED = WM_APP + 3;
 
 static constexpr uint8_t BpduDestAddress[6] = { 1, 0x80, 0xC2, 0, 0, 0 };
 
-Bridge::Config::Config (const std::array<uint8_t, 6>& macAddress)
-	: _macAddress(macAddress)
-{
-	_mstConfigName.resize(18);
-	STP_GetDefaultMstConfigName(&macAddress[0], _mstConfigName.data());
-
-	HMAC_MD5_CONTEXT context;
-	HMAC_MD5_Init (&context);
-	HMAC_MD5_Update (&context, &_mstConfigTable[0], 2 * 4096);
-	HMAC_MD5_End (&context);
-
-	memcpy (_mstConfigTableHash.data(), context.digest, 16);
-}
-
-
+HWND     Bridge::_helperWindow;
+uint32_t Bridge::_helperWindowRefCount;
 Bridge::Bridge (IProject* project, unsigned int portCount, const std::array<uint8_t, 6>& macAddress)
-	: _project(project), _config({macAddress})
+	: _project(project)
 {
 	float offset = 0;
 
-	for (size_t i = 0; i < portCount; i++)
+	for (unsigned int i = 0; i < portCount; i++)
 	{
 		offset += (Port::PortToPortSpacing / 2 + Port::InteriorWidth / 2);
 		auto port = ComPtr<Port>(new Port(this, i, Side::Bottom, offset), false);
@@ -48,32 +35,40 @@ Bridge::Bridge (IProject* project, unsigned int portCount, const std::array<uint
 	_width = max (offset, MinWidth);
 	_height = DefaultHeight;
 
-	HINSTANCE hInstance;
-	BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &StpCallbacks, &hInstance);
-	if (!bRes)
-		throw win32_exception(GetLastError());
+	if (_helperWindow == nullptr)
+	{
+		HINSTANCE hInstance;
+		BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &StpCallbacks, &hInstance);
+		if (!bRes)
+			throw win32_exception(GetLastError());
 
-	auto hwnd = CreateWindow (L"STATIC", L"", 0, 0, 0, 0, 0, HWND_MESSAGE, 0, hInstance, 0);
-	if (hwnd == nullptr)
-		throw win32_exception(GetLastError());
-	_helperWindow.reset (hwnd);
+		_helperWindow = CreateWindow (L"STATIC", L"", 0, 0, 0, 0, 0, HWND_MESSAGE, 0, hInstance, 0);
+		if (_helperWindow == nullptr)
+			throw win32_exception(GetLastError());
 
-	bRes = SetWindowSubclass (hwnd, HelperWindowProc, 0, 0);
-	if (!bRes)
-		throw win32_exception(GetLastError());
+		bRes = SetWindowSubclass (_helperWindow, HelperWindowProc, 0, 0);
+		if (!bRes)
+			throw win32_exception(GetLastError());
+	}
+
+	_helperWindowRefCount++;
 
 	DWORD period = 950 + (std::random_device()() % 100);
 	HANDLE handle;
-	bRes = CreateTimerQueueTimer (&handle, nullptr, OneSecondTimerCallback, this, period, period, 0);
+	BOOL bRes = ::CreateTimerQueueTimer (&handle, nullptr, OneSecondTimerCallback, this, period, period, 0);
 	if (!bRes)
 		throw win32_exception(GetLastError());
 	_oneSecondTimerHandle.reset(handle);
 
 	period = 45 + (std::random_device()() % 10);
-	bRes = CreateTimerQueueTimer (&handle, nullptr, MacOperationalTimerCallback, this, period, period, 0);
+	bRes = ::CreateTimerQueueTimer (&handle, nullptr, MacOperationalTimerCallback, this, period, period, 0);
 	if (!bRes)
 		throw win32_exception(GetLastError());
 	_macOperationalTimerHandle.reset(handle);
+
+	_stpBridge = STP_CreateBridge ((unsigned int) _ports.size(), 1, &StpCallbacks, STP_VERSION_RSTP, &macAddress[0], 256);
+	STP_EnableLogging (_stpBridge, true);
+	STP_SetApplicationContext (_stpBridge, this);
 }
 
 Bridge::~Bridge()
@@ -82,24 +77,28 @@ Bridge::~Bridge()
 	_macOperationalTimerHandle = nullptr;
 	_oneSecondTimerHandle = nullptr;
 
-	RemoveWindowSubclass (_helperWindow.get(), HelperWindowProc, 0);
+	_helperWindowRefCount--;
+	if (_helperWindowRefCount == 0)
+	{
+		::RemoveWindowSubclass (_helperWindow, HelperWindowProc, 0);
+		::DestroyWindow (_helperWindow);
+	}
 
-	if (_stpBridge != nullptr)
-		STP_DestroyBridge (_stpBridge);
+	STP_DestroyBridge (_stpBridge);
 }
 
 //static
 void CALLBACK Bridge::OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired)
 {
 	auto bridge = static_cast<Bridge*>(lpParameter);
-	::PostMessage (bridge->_helperWindow.get(), WM_ONE_SECOND_TIMER, (WPARAM) bridge, 0);
+	::PostMessage (bridge->_helperWindow, WM_ONE_SECOND_TIMER, (WPARAM) bridge, 0);
 }
 
 //static
 void CALLBACK Bridge::MacOperationalTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired)
 {
 	auto bridge = static_cast<Bridge*>(lpParameter);
-	::PostMessage (bridge->_helperWindow.get(), WM_MAC_OPERATIONAL_TIMER, (WPARAM) bridge, 0);
+	::PostMessage (bridge->_helperWindow, WM_MAC_OPERATIONAL_TIMER, (WPARAM) bridge, 0);
 }
 
 // static
@@ -109,7 +108,7 @@ LRESULT CALLBACK Bridge::HelperWindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, 
 	{
 		auto bridge = static_cast<Bridge*>((void*)wParam);
 
-		if (bridge->_stpBridge != nullptr)
+		if (STP_IsBridgeStarted(bridge->_stpBridge))
 			STP_OnOneSecondTick (bridge->_stpBridge, GetTimestampMilliseconds());
 
 		return 0;
@@ -130,22 +129,23 @@ LRESULT CALLBACK Bridge::HelperWindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, 
 	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
 }
 
+// Checks the wires and computes macOperational for each port on this bridge.
 void Bridge::ComputeMacOperational()
 {
 	auto timestamp = GetTimestampMilliseconds();
 
 	bool invalidate = false;
-	for (size_t portIndex = 0; portIndex < _ports.size(); portIndex++)
+	for (unsigned int portIndex = 0; portIndex < _ports.size(); portIndex++)
 	{
 		auto& port = _ports[portIndex];
 
-		bool newMacOperational = (_project->FindReceivingPort(port) != nullptr);
+		bool newMacOperational = (_project->FindConnectedPort(port) != nullptr);
 		if (port->_macOperational != newMacOperational)
 		{
 			if (port->_macOperational)
 			{
 				// port just disconnected
-				if (_stpBridge)
+				if (STP_IsBridgeStarted(_stpBridge))
 					STP_OnPortDisabled (_stpBridge, portIndex, timestamp);
 			}
 
@@ -154,7 +154,7 @@ void Bridge::ComputeMacOperational()
 			if (port->_macOperational)
 			{
 				// port just connected
-				if (_stpBridge)
+				if (STP_IsBridgeStarted(_stpBridge))
 					STP_OnPortEnabled (_stpBridge, portIndex, 100, true, timestamp);
 			}
 
@@ -171,16 +171,22 @@ void Bridge::ProcessReceivedPacket()
 	auto rp = move(_rxQueue.front());
 	_rxQueue.pop();
 
+	bool invalidate = false;
+	if (!_ports[rp.portIndex]->_macOperational)
+	{
+		_ports[rp.portIndex]->_macOperational = true;
+		invalidate = true;
+	}
+
 	if (memcmp (&rp.data[0], BpduDestAddress, 6) == 0)
 	{
 		// It's a BPDU.
-		if (_stpBridge != nullptr)
+		if (STP_IsBridgeStarted(_stpBridge))
 		{
-			if (!_ports[rp.portIndex]->_macOperational)
+			if (!STP_GetPortEnabled(_stpBridge, rp.portIndex))
 			{
-				_ports[rp.portIndex]->_macOperational = true;
 				STP_OnPortEnabled (_stpBridge, rp.portIndex, 100, true, rp.timestamp);
-				InvalidateEvent::InvokeHandlers (_em, this);
+				invalidate = true;
 			}
 
 			STP_OnBpduReceived (_stpBridge, rp.portIndex, &rp.data[21], (unsigned int) (rp.data.size() - 21), rp.timestamp);
@@ -192,7 +198,7 @@ void Bridge::ProcessReceivedPacket()
 			{
 				if (i != rp.portIndex)
 				{
-					auto txPortAddress = GetPortMacAddress(i);
+					auto txPortAddress = GetPortAddress(i);
 
 					// If it already went through this port, we have a loop that would hang our UI.
 					if (find (rp.txPortPath.begin(), rp.txPortPath.end(), txPortAddress) != rp.txPortPath.end())
@@ -201,90 +207,61 @@ void Bridge::ProcessReceivedPacket()
 					}
 					else
 					{
-						auto rxPort = _project->FindReceivingPort(_ports[i]);
+						auto rxPort = _project->FindConnectedPort(_ports[i]);
 						if (rxPort != nullptr)
 						{
 							RxPacketInfo info = rp;
 							info.portIndex = rxPort->_portIndex;
 							info.txPortPath.push_back(txPortAddress);
 							rxPort->_bridge->_rxQueue.push(move(info));
-							::PostMessage (rxPort->_bridge->_helperWindow.get(), WM_PACKET_RECEIVED, (WPARAM)(void*)rxPort->_bridge, 0);
+							::PostMessage (rxPort->_bridge->_helperWindow, WM_PACKET_RECEIVED, (WPARAM)(void*)rxPort->_bridge, 0);
 						}
 					}
 				}
 			}
 		}
 	}
+
+	if (invalidate)
+		InvalidateEvent::InvokeHandlers(_em, this);
 }
 
-void Bridge::EnableStp (uint32_t timestamp)
+void Bridge::StartStp (unsigned int timestamp)
 {
-	if (_stpBridge != nullptr)
-		throw runtime_error ("STP is already enabled on this bridge.");
-
-	if ((_config._treeCount != 1) && (_config._stpVersion != STP_VERSION_MSTP))
-		throw runtime_error ("The Tree Count must be set to 1 when not using MSTP.");
-
-	_stpBridge = STP_CreateBridge ((unsigned int) _ports.size(), _config._treeCount, &StpCallbacks, _config._stpVersion, &_config._macAddress[0], 256);
-	STP_SetApplicationContext (_stpBridge, this);
-	STP_EnableLogging (_stpBridge, true);
-
-	STP_SetMstConfigName (_stpBridge, _config._mstConfigName.c_str(), timestamp);
-	STP_SetMstConfigRevisionLevel (_stpBridge, _config._mstConfigRevLevel, timestamp);
-
-	for (size_t portIndex = 0; portIndex < _ports.size(); portIndex++)
-	{
-		auto& port = _ports[portIndex];
-		STP_SetPortAdminEdge (_stpBridge, (unsigned int) portIndex, port->_config.adminEdge, timestamp);
-		STP_SetPortAutoEdge (_stpBridge, (unsigned int) portIndex, port->_config.autoEdge, timestamp);
-	}
+	if (STP_IsBridgeStarted(_stpBridge))
+		throw runtime_error ("Already enabled.");
 
 	STP_StartBridge (_stpBridge, timestamp);
-
-	for (size_t portIndex = 0; portIndex < _ports.size(); portIndex++)
-	{
-		auto& port = _ports[portIndex];
-		if (_project->FindReceivingPort(port) != nullptr)
-			STP_OnPortEnabled (_stpBridge, portIndex, 100, true, timestamp);
-	}
+	//if ((_config._treeCount != 1) && (_config._stpVersion != STP_VERSION_MSTP))
+	//	throw runtime_error ("The Tree Count must be set to 1 when not using MSTP.");
 
 	StpEnabledChangedEvent::InvokeHandlers (_em, this);
 	InvalidateEvent::InvokeHandlers(_em, this);
 }
 
-void Bridge::DisableStp (uint32_t timestamp)
+void Bridge::StopStp (unsigned int timestamp)
 {
-	if (_stpBridge == nullptr)
-		throw runtime_error ("STP was not enabled on this bridge.");
-
 	STP_StopBridge(_stpBridge, timestamp);
-	STP_DestroyBridge (_stpBridge);
-	_stpBridge = nullptr;
-
 	StpEnabledChangedEvent::InvokeHandlers(_em, this);
 	InvalidateEvent::InvokeHandlers(_em, this);
 }
 
-void Bridge::SetStpVersion (STP_VERSION stpVersion, uint32_t timestamp)
+bool Bridge::IsStpStarted() const
 {
-	if (_stpBridge != nullptr)
-		throw runtime_error ("Setting the protocol version while STP is enabled is not supported by the library.");
-
-	if (_config._stpVersion != stpVersion)
-	{
-		_config._stpVersion = stpVersion;
-		StpVersionChangedEvent::InvokeHandlers(_em, this);
-	}
+	return STP_IsBridgeStarted(_stpBridge);
 }
 
-void Bridge::SetStpTreeCount (size_t treeCount)
+STP_VERSION Bridge::GetStpVersion() const
 {
-	if (_stpBridge != nullptr)
-		throw runtime_error ("Setting the tree count while STP is enabled is not supported by the library.");
+	return STP_GetStpVersion(_stpBridge);
+}
 
-	if (_config._treeCount != treeCount)
+void Bridge::SetStpVersion (STP_VERSION stpVersion, uint32_t timestamp)
+{
+	if (STP_GetStpVersion(_stpBridge) != stpVersion)
 	{
-		_config._treeCount = treeCount;
+		STP_SetStpVersion(_stpBridge, stpVersion, timestamp);
+		StpVersionChangedEvent::InvokeHandlers(_em, this);
 	}
 }
 
@@ -299,83 +276,65 @@ void Bridge::SetLocation(float x, float y)
 	}
 }
 
-STP_PORT_ROLE Bridge::GetStpPortRole (size_t portIndex, size_t treeIndex) const
+STP_PORT_ROLE Bridge::GetStpPortRole (unsigned int portIndex, unsigned int treeIndex) const
 {
-	if (_stpBridge == nullptr)
+	if (!STP_IsBridgeStarted(_stpBridge))
 		throw runtime_error ("STP was not enabled on this bridge.");
 
 	return STP_GetPortRole (_stpBridge, portIndex, treeIndex);
 }
 
-bool Bridge::GetStpPortLearning (size_t portIndex, size_t treeIndex) const
+bool Bridge::GetStpPortLearning (unsigned int portIndex, unsigned int treeIndex) const
 {
-	if (_stpBridge == nullptr)
+	if (!STP_IsBridgeStarted(_stpBridge))
 		throw runtime_error ("STP was not enabled on this bridge.");
 
 	return STP_GetPortLearning (_stpBridge, portIndex, treeIndex);
 }
 
-bool Bridge::GetStpPortForwarding (size_t portIndex, size_t treeIndex) const
+bool Bridge::GetStpPortForwarding (unsigned int portIndex, unsigned int treeIndex) const
 {
-	if (_stpBridge == nullptr)
+	if (!STP_IsBridgeStarted(_stpBridge))
 		throw runtime_error ("STP was not enabled on this bridge.");
 
 	return STP_GetPortForwarding (_stpBridge, portIndex, treeIndex);
 }
 
-bool Bridge::GetStpPortOperEdge (size_t portIndex) const
+bool Bridge::GetStpPortOperEdge (unsigned int portIndex) const
 {
-	if (_stpBridge == nullptr)
+	if (!STP_IsBridgeStarted(_stpBridge))
 		throw runtime_error ("STP was not enabled on this bridge.");
 
 	return STP_GetPortOperEdge (_stpBridge, portIndex);
 }
 
-bool Bridge::GetPortAdminEdge (size_t portIndex) const
+bool Bridge::GetPortAdminEdge (unsigned int portIndex) const
 {
-	return _ports[portIndex]->_config.adminEdge;
+	return STP_GetPortAdminEdge(_stpBridge, portIndex);
 }
 
-bool Bridge::GetPortAutoEdge (size_t portIndex) const
+bool Bridge::GetPortAutoEdge (unsigned int portIndex) const
 {
-	return _ports[portIndex]->_config.autoEdge;
+	return STP_GetPortAutoEdge(_stpBridge, portIndex);
 }
 
-void Bridge::SetPortAdminEdge (size_t portIndex, bool adminEdge)
+void Bridge::SetPortAdminEdge (unsigned int portIndex, bool adminEdge, unsigned int timestamp)
 {
-	if (_ports[portIndex]->_config.adminEdge != adminEdge)
-	{
-		_ports[portIndex]->_config.adminEdge = adminEdge;
-
-		if (_stpBridge != nullptr)
-			STP_SetPortAdminEdge (_stpBridge, portIndex, adminEdge, GetTimestampMilliseconds());
-	}
+	STP_SetPortAdminEdge (_stpBridge, portIndex, adminEdge ? 1 : 0, timestamp);
 }
 
-void Bridge::SetPortAutoEdge (size_t portIndex, bool autoEdge)
+void Bridge::SetPortAutoEdge (unsigned int portIndex, bool autoEdge, unsigned int timestamp)
 {
-	if (_ports[portIndex]->_config.autoEdge != autoEdge)
-	{
-		_ports[portIndex]->_config.autoEdge = autoEdge;
-
-		if (_stpBridge != nullptr)
-			STP_SetPortAutoEdge (_stpBridge, portIndex, autoEdge, GetTimestampMilliseconds());
-	}
+	STP_SetPortAutoEdge (_stpBridge, portIndex, autoEdge ? 1 : 0, timestamp);
 }
 
-unsigned short Bridge::GetStpBridgePriority (size_t treeIndex) const
+unsigned short Bridge::GetStpBridgePriority (unsigned int treeIndex) const
 {
-	if (_stpBridge == nullptr)
-		throw runtime_error ("STP was not enabled on this bridge.");
-
 	return STP_GetBridgePriority(_stpBridge, treeIndex);
 }
 
-size_t Bridge::GetStpTreeIndexFromVlanNumber (uint16_t vlanNumber) const
+unsigned int Bridge::GetStpTreeIndexFromVlanNumber (uint16_t vlanNumber) const
 {
-	if (_stpBridge == nullptr)
-		throw runtime_error ("STP was not enabled on this bridge.");
-
 	if ((vlanNumber == 0) || (vlanNumber > 4094))
 		throw invalid_argument ("The VLAN number must be >=1 and <=4094.");
 
@@ -384,7 +343,7 @@ size_t Bridge::GetStpTreeIndexFromVlanNumber (uint16_t vlanNumber) const
 
 void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, uint16_t vlanNumber) const
 {
-	bool isRootBridge = ((_stpBridge != nullptr) && STP_IsRootBridge(_stpBridge));
+	bool isRootBridge = STP_IsBridgeStarted(_stpBridge) && STP_IsRootBridge(_stpBridge);
 	// Draw bridge outline.
 	D2D1_ROUNDED_RECT rr = RoundedRect (GetBounds(), RoundRadius, RoundRadius);
 	float ow = OutlineWidth * (isRootBridge ? 2 : 1);
@@ -392,23 +351,28 @@ void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, uint16_t 
 	dc->FillRoundedRectangle (&rr, _powered ? dos._poweredFillBrush : dos._unpoweredBrush);
 	dc->DrawRoundedRectangle (&rr, dos._brushWindowText, ow);
 
+	auto stpVersion = STP_GetStpVersion(_stpBridge);
+
+	array<uint8_t, 6> macAddress;
+	STP_GetBridgeAddress(_stpBridge, macAddress.data());
+
 	// Draw bridge name.
 	wstringstream ss;
-	if (IsStpEnabled())
+	if (IsStpStarted())
 	{
 		auto treeIndex = STP_GetTreeIndexFromVlanNumber(_stpBridge, vlanNumber);
 		ss << uppercase << setfill(L'0') << setw(4) << hex << STP_GetBridgePriority(_stpBridge, treeIndex) << L'.'
-			<< setw(2) << _config._macAddress[0] << setw(2) << _config._macAddress[1] << setw(2) << _config._macAddress[2]
-			<< setw(2) << _config._macAddress[3] << setw(2) << _config._macAddress[4] << setw(2) << _config._macAddress[5] << endl
-			<< L"STP enabled (" << STP_GetVersionString(_config._stpVersion) << L")" << endl
+			<< setw(2) << macAddress[0] << setw(2) << macAddress[1] << setw(2) << macAddress[2]
+			<< setw(2) << macAddress[3] << setw(2) << macAddress[4] << setw(2) << macAddress[5] << endl
+			<< L"STP enabled (" << STP_GetVersionString(stpVersion) << L")" << endl
 			<< L"VLAN " << dec << vlanNumber << L" (spanning tree " << treeIndex << L")" << endl
 			<< (isRootBridge ? L"Root Bridge\r\n" : L"");
 	}
 	else
 	{
 		ss << uppercase << setfill(L'0') << hex
-			<< setw(2) << _config._macAddress[0] << setw(2) << _config._macAddress[1] << setw(2) << _config._macAddress[2]
-			<< setw(2) << _config._macAddress[3] << setw(2) << _config._macAddress[4] << setw(2) << _config._macAddress[5] << endl
+			<< setw(2) << macAddress[0] << setw(2) << macAddress[1] << setw(2) << macAddress[2]
+			<< setw(2) << macAddress[3] << setw(2) << macAddress[4] << setw(2) << macAddress[5] << endl
 			<< L"STP disabled\r\n(right-click to enable)";
 	}
 
@@ -451,7 +415,7 @@ HTResult Bridge::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, fl
 
 bool Bridge::IsPortForwardingOnVlan (unsigned int portIndex, uint16_t vlanNumber) const
 {
-	if (_stpBridge == nullptr)
+	if (IsStpStarted())
 		return true;
 
 	auto treeIndex = STP_GetTreeIndexFromVlanNumber(_stpBridge, vlanNumber);
@@ -460,7 +424,7 @@ bool Bridge::IsPortForwardingOnVlan (unsigned int portIndex, uint16_t vlanNumber
 
 bool Bridge::IsStpRootBridge() const
 {
-	if (_stpBridge == nullptr)
+	if (!IsStpStarted())
 		throw runtime_error ("STP was not enabled on this bridge.");
 
 	return STP_IsRootBridge(_stpBridge);
@@ -475,44 +439,61 @@ wstring Bridge::GetStpVersionString (STP_VERSION stpVersion)
 
 wstring Bridge::GetStpVersionString() const
 {
-	return GetStpVersionString(_config._stpVersion);
+	auto stpVersion = STP_GetStpVersion(_stpBridge);
+	return GetStpVersionString(stpVersion);
 }
 
-std::wstring Bridge::GetMacAddressAsString() const
+std::array<uint8_t, 6> Bridge::GetBridgeAddress() const
 {
+	std::array<uint8_t, 6> address;
+	STP_GetBridgeAddress (_stpBridge, address.data());
+	return address;
+}
+
+std::wstring Bridge::GetBridgeAddressAsString() const
+{
+	auto address = GetBridgeAddress();
 	std::wstring str;
 	str.resize(18);
-	swprintf_s (str.data(), str.size(), L"%02X:%02X:%02X:%02X:%02X:%02X",
-				_config._macAddress[0], _config._macAddress[1], _config._macAddress[2],
-				_config._macAddress[3], _config._macAddress[4], _config._macAddress[5]);
+	swprintf_s (str.data(), str.size(), L"%02X:%02X:%02X:%02X:%02X:%02X", address[0], address[1], address[2], address[3], address[4], address[5]);
 	return str;
+}
+
+string Bridge::GetMstConfigName() const
+{
+	string name;
+	name.resize(33);
+	STP_GetMstConfigName(_stpBridge, name.data());
+	return name;
 }
 
 void Bridge::SetMstConfigName (const char* name, unsigned int timestamp)
 {
-	if (_config._mstConfigName != name)
-	{
-		_config._mstConfigName = name;
-		if (_stpBridge != nullptr)
-			STP_SetMstConfigName (_stpBridge, name, timestamp);
-		MstConfigNameChangedEvent::InvokeHandlers(_em, this);
-	}
+	STP_SetMstConfigName (_stpBridge, name, timestamp);
+	MstConfigNameChangedEvent::InvokeHandlers(_em, this);
 }
 
-void Bridge::SetMstConfigRevLevel (uint16_t revLevel, unsigned int timestamp)
+unsigned short Bridge::GetMstConfigRevLevel() const
 {
-	if (_config._mstConfigRevLevel != revLevel)
-	{
-		_config._mstConfigRevLevel = revLevel;
-		if (_stpBridge != nullptr)
-			STP_SetMstConfigRevisionLevel (_stpBridge, revLevel, timestamp);
-		MstConfigRevLevelChangedEvent::InvokeHandlers(_em, this);
-	}
+	return STP_GetMstConfigRevisionLevel(_stpBridge);
 }
 
-std::array<uint8_t, 6> Bridge::GetPortMacAddress (size_t portIndex) const
+void Bridge::SetMstConfigRevLevel (unsigned short revLevel, unsigned int timestamp)
 {
-	std::array<uint8_t, 6> pa = _config._macAddress;
+	STP_SetMstConfigRevisionLevel (_stpBridge, revLevel, timestamp);
+	MstConfigRevLevelChangedEvent::InvokeHandlers(_em, this);
+}
+
+array<uint8_t, 16> Bridge::GetMstConfigDigest()
+{
+	array<uint8_t, 16> digest;
+	STP_GetMstConfigTableDigest(_stpBridge, digest.data());
+	return digest;
+}
+
+std::array<uint8_t, 6> Bridge::GetPortAddress (size_t portIndex) const
+{
+	std::array<uint8_t, 6> pa = GetBridgeAddress();
 	pa[5]++;
 	if (pa[5] == 0)
 	{
@@ -561,13 +542,13 @@ void* Bridge::StpCallback_TransmitGetBuffer (STP_BRIDGE* bridge, unsigned int po
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 	auto txPort = b->_ports[portIndex].Get();
-	auto rxPort = b->_project->FindReceivingPort(txPort);
+	auto rxPort = b->_project->FindConnectedPort(txPort);
 	if (rxPort == nullptr)
 		return nullptr; // The port was disconnected and our port polling code hasn't reacted yet. This is what happens in a real system too.
 
 	b->_txPacketData.resize (bpduSize + 21);
 	memcpy (&b->_txPacketData[0], BpduDestAddress, 6);
-	memcpy (&b->_txPacketData[6], &b->GetPortMacAddress(portIndex)[0], 6);
+	memcpy (&b->_txPacketData[6], &b->GetPortAddress(portIndex)[0], 6);
 	b->_txTransmittingPort = txPort;
 	b->_txReceivingPort = rxPort;
 	b->_txTimestamp = timestamp;
@@ -582,19 +563,19 @@ void Bridge::StpCallback_TransmitReleaseBuffer (STP_BRIDGE* bridge, void* buffer
 	info.data = move(b->_txPacketData);
 	info.portIndex = b->_txReceivingPort->_portIndex;
 	info.timestamp = b->_txTimestamp;
-	info.txPortPath.push_back (b->GetPortMacAddress(b->_txTransmittingPort->GetPortIndex()));
+	info.txPortPath.push_back (b->GetPortAddress(b->_txTransmittingPort->GetPortIndex()));
 	Bridge* receivingBridge = b->_txReceivingPort->_bridge;
 	receivingBridge->_rxQueue.push (move(info));
-	::PostMessage (receivingBridge->_helperWindow.get(), WM_PACKET_RECEIVED, (WPARAM)(void*)receivingBridge, 0);
+	::PostMessage (receivingBridge->_helperWindow, WM_PACKET_RECEIVED, (WPARAM)(void*)receivingBridge, 0);
 }
 
-void Bridge::StpCallback_EnableLearning(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable)
+void Bridge::StpCallback_EnableLearning(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 	InvalidateEvent::InvokeHandlers (b->_em, b);
 }
 
-void Bridge::StpCallback_EnableForwarding(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable)
+void Bridge::StpCallback_EnableForwarding(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 	InvalidateEvent::InvokeHandlers(b->_em, b);
@@ -605,7 +586,7 @@ void Bridge::StpCallback_FlushFdb (STP_BRIDGE* bridge, unsigned int portIndex, u
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 }
 
-void Bridge::StpCallback_DebugStrOut (STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, bool flush)
+void Bridge::StpCallback_DebugStrOut (STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, unsigned int flush)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 

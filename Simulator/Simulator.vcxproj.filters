@@ -20,24 +20,6 @@
     <ClInclude Include="mstp-lib\802.1Q-2011\802_1Q_2011_procedures.h">
       <Filter>mstp-lib\802.1Q-2011</Filter>
     </ClInclude>
-    <ClInclude Include="mstp-lib\log.h">
-      <Filter>mstp-lib</Filter>
-    </ClInclude>
-    <ClInclude Include="mstp-lib\hmac_md5.h">
-      <Filter>mstp-lib</Filter>
-    </ClInclude>
-    <ClInclude Include="mstp-lib\bridge.h">
-      <Filter>mstp-lib</Filter>
-    </ClInclude>
-    <ClInclude Include="mstp-lib\bpdu.h">
-      <Filter>mstp-lib</Filter>
-    </ClInclude>
-    <ClInclude Include="mstp-lib\base_types.h">
-      <Filter>mstp-lib</Filter>
-    </ClInclude>
-    <ClInclude Include="mstp-lib\port.h">
-      <Filter>mstp-lib</Filter>
-    </ClInclude>
     <ClInclude Include="mstp-lib\stp.h">
       <Filter>mstp-lib</Filter>
     </ClInclude>
@@ -51,6 +33,24 @@
     <ClInclude Include="Port.h" />
     <ClInclude Include="Simulator.h" />
     <ClInclude Include="UtilityFunctions.h" />
+    <ClInclude Include="mstp-lib\base_types.h">
+      <Filter>mstp-lib</Filter>
+    </ClInclude>
+    <ClInclude Include="mstp-lib\bpdu.h">
+      <Filter>mstp-lib</Filter>
+    </ClInclude>
+    <ClInclude Include="mstp-lib\bridge.h">
+      <Filter>mstp-lib</Filter>
+    </ClInclude>
+    <ClInclude Include="mstp-lib\hmac_md5.h">
+      <Filter>mstp-lib</Filter>
+    </ClInclude>
+    <ClInclude Include="mstp-lib\log.h">
+      <Filter>mstp-lib</Filter>
+    </ClInclude>
+    <ClInclude Include="mstp-lib\port.h">
+      <Filter>mstp-lib</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -96,18 +96,6 @@
     <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_TopologyChange.cpp">
       <Filter>mstp-lib\802.1Q-2011</Filter>
     </ClCompile>
-    <ClCompile Include="mstp-lib\log.cpp">
-      <Filter>mstp-lib</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\hmac_md5.cpp">
-      <Filter>mstp-lib</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\bpdu.cpp">
-      <Filter>mstp-lib</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\base_types.cpp">
-      <Filter>mstp-lib</Filter>
-    </ClCompile>
     <ClCompile Include="mstp-lib\stp.cpp">
       <Filter>mstp-lib</Filter>
     </ClCompile>
@@ -138,6 +126,19 @@
     <ClCompile Include="BridgePropsWindow.cpp" />
     <ClCompile Include="MSTConfigIdDialog.cpp" />
     <ClCompile Include="PropsWindow.cpp" />
+    <ClCompile Include="Test.c" />
+    <ClCompile Include="mstp-lib\base_types.cpp">
+      <Filter>mstp-lib</Filter>
+    </ClCompile>
+    <ClCompile Include="mstp-lib\bpdu.cpp">
+      <Filter>mstp-lib</Filter>
+    </ClCompile>
+    <ClCompile Include="mstp-lib\hmac_md5.cpp">
+      <Filter>mstp-lib</Filter>
+    </ClCompile>
+    <ClCompile Include="mstp-lib\log.cpp">
+      <Filter>mstp-lib</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Simulator.rc" />
