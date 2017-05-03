@@ -148,8 +148,7 @@ void Bridge::ComputeMacOperational()
 			if (port->_macOperational)
 			{
 				// port just disconnected
-				if (STP_IsBridgeStarted(_stpBridge))
-					STP_OnPortDisabled (_stpBridge, portIndex, timestamp);
+				STP_OnPortDisabled (_stpBridge, portIndex, timestamp);
 			}
 
 			port->_macOperational = newMacOperational;
@@ -157,8 +156,7 @@ void Bridge::ComputeMacOperational()
 			if (port->_macOperational)
 			{
 				// port just connected
-				if (STP_IsBridgeStarted(_stpBridge))
-					STP_OnPortEnabled (_stpBridge, portIndex, 100, true, timestamp);
+				STP_OnPortEnabled (_stpBridge, portIndex, 100, true, timestamp);
 			}
 
 			invalidate = true;
@@ -418,7 +416,7 @@ HTResult Bridge::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, fl
 
 bool Bridge::IsPortForwardingOnVlan (unsigned int portIndex, uint16_t vlanNumber) const
 {
-	if (IsStpStarted())
+	if (!IsStpStarted())
 		return true;
 
 	auto treeIndex = STP_GetTreeIndexFromVlanNumber(_stpBridge, vlanNumber);
