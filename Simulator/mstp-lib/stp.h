@@ -94,7 +94,7 @@ void STP_EnableLogging (struct STP_BRIDGE* bridge, unsigned int enable);
 unsigned int STP_IsLoggingEnabled (struct STP_BRIDGE* bridge);
 
 unsigned int STP_GetPortCount (struct STP_BRIDGE* bridge);
-unsigned int STP_GetTreeCount (struct STP_BRIDGE* bridge);
+unsigned int STP_GetMstiCount (struct STP_BRIDGE* bridge);
 
 enum STP_VERSION STP_GetStpVersion (struct STP_BRIDGE* bridge);
 void STP_SetStpVersion (struct STP_BRIDGE* bridge, enum STP_VERSION version, unsigned int timestamp);

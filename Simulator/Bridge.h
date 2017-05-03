@@ -16,7 +16,7 @@ struct StpEnabledChangedEvent : public Event<StpEnabledChangedEvent, void(Bridge
 struct StpVersionChangedEvent : public Event<StpVersionChangedEvent, void(Bridge*)> { };
 struct BridgeLogLineGenerated : public Event<BridgeLogLineGenerated, void(Bridge*, const BridgeLogLine& line)> { };
 struct PortCountChangedEvent : public Event<PortCountChangedEvent, void(Bridge*)> { };
-struct TreeCountChangedEvent : public Event<TreeCountChangedEvent, void(Bridge*)> { };
+struct MstiCountChangedEvent : public Event<MstiCountChangedEvent, void(Bridge*)> { };
 struct MstConfigNameChangedEvent : public Event<MstConfigNameChangedEvent, void(Bridge*)> { };
 struct MstConfigRevLevelChangedEvent : public Event<MstConfigRevLevelChangedEvent, void(Bridge*)> { };
 
@@ -90,7 +90,7 @@ public:
 	StpVersionChangedEvent::Subscriber GetStpVersionChangedEvent() { return StpVersionChangedEvent::Subscriber(_em); }
 	BridgeLogLineGenerated::Subscriber GetBridgeLogLineGeneratedEvent() { return BridgeLogLineGenerated::Subscriber(_em); }
 	PortCountChangedEvent::Subscriber GetPortCountChangedEvent() { return PortCountChangedEvent::Subscriber(_em); }
-	TreeCountChangedEvent::Subscriber GetTreeCountChangedEvent() { return TreeCountChangedEvent::Subscriber(_em); }
+	MstiCountChangedEvent::Subscriber GetMstiCountChangedEvent() { return MstiCountChangedEvent::Subscriber(_em); }
 	MstConfigNameChangedEvent::Subscriber GetMstConfigNameChangedEvent() { return MstConfigNameChangedEvent::Subscriber(_em); }
 	MstConfigRevLevelChangedEvent::Subscriber GetMstConfigRevLevelChangedEvent() { return MstConfigRevLevelChangedEvent::Subscriber(_em); }
 
@@ -106,7 +106,7 @@ public:
 	void SetPortAdminEdge (unsigned int portIndex, bool adminEdge, unsigned int timestamp);
 	bool GetPortAutoEdge  (unsigned int portIndex) const;
 	void SetPortAutoEdge  (unsigned int portIndex, bool autoEdge, unsigned int timestamp);
-	unsigned int GetTreeCount() const { return STP_GetTreeCount(_stpBridge); }
+	unsigned int GetMstiCount() const { return STP_GetMstiCount(_stpBridge); }
 	uint16_t GetStpBridgePriority (unsigned int treeIndex) const;
 	unsigned int GetStpTreeIndexFromVlanNumber (uint16_t vlanNumber) const;
 	const std::vector<BridgeLogLine>& GetLogLines() const { return _logLines; }

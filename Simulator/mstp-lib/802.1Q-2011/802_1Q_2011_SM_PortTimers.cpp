@@ -91,7 +91,7 @@ void PortTimers_802_1Q_2011_InitState (STP_BRIDGE* bridge, int givenPort, int gi
 		if (port->txCount        > 0) port->txCount--;
 		if (port->pseudoInfoHelloWhen > 0) port->pseudoInfoHelloWhen--;
 
-		for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount; treeIndex++)
+		for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount(); treeIndex++)
 		{
 			PORT_TREE* portTree = port->trees [treeIndex];
 

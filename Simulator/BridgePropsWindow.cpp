@@ -20,7 +20,7 @@ class BridgePropsWindow : public IBridgePropsWindow
 	HWND _checkStpEnabled = nullptr;
 	HWND _comboStpVersion = nullptr;
 	HWND _comboPortCount = nullptr;
-	HWND _comboTreeCount = nullptr;
+	HWND _comboMstiCount = nullptr;
 	HWND _mstConfigNameEdit = nullptr;
 	HWND _mstConfigRevLevelEdit = nullptr;
 	HWND _mstConfigDigestEdit = nullptr;
@@ -109,9 +109,9 @@ private:
 			_comboPortCount = GetDlgItem (_hwnd, IDC_COMBO_PORT_COUNT);
 			for (size_t i = FirstPortCount; i <= 16; i++)
 				ComboBox_AddString(_comboPortCount, std::to_wstring(i).c_str());
-			_comboTreeCount = GetDlgItem (_hwnd, IDC_COMBO_TREE_COUNT);
-			for (size_t i = 1; i <= 8; i++)
-				ComboBox_AddString(_comboTreeCount, std::to_wstring(i).c_str());
+			_comboMstiCount = GetDlgItem (_hwnd, IDC_COMBO_MSTI_COUNT);
+			for (size_t i = 0; i <= 64; i++)
+				ComboBox_AddString(_comboMstiCount, std::to_wstring(i).c_str());
 
 			_mstConfigNameEdit = GetDlgItem (_hwnd, IDC_EDIT_MST_CONFIG_NAME);
 			bRes = SetWindowSubclass (_mstConfigNameEdit, EditSubclassProc, EditSubClassId, (DWORD_PTR) this); assert (bRes);
@@ -345,7 +345,7 @@ private:
 			bridge->GetStpEnabledChangedEvent().AddHandler (&OnSelectedBridgeStpEnabledChanged, window);
 			bridge->GetStpVersionChangedEvent().AddHandler (&OnSelectedBridgeStpVersionChanged, window);
 			bridge->GetPortCountChangedEvent().AddHandler (&OnSelectedBridgePortCountChanged, window);
-			bridge->GetTreeCountChangedEvent().AddHandler (&OnSelectedBridgeTreeCountChanged, window);
+			bridge->GetMstiCountChangedEvent().AddHandler (&OnSelectedBridgeMstiCountChanged, window);
 			bridge->GetMstConfigNameChangedEvent().AddHandler (&OnSelectedBridgeMstConfigNameChanged, window);
 			bridge->GetMstConfigRevLevelChangedEvent().AddHandler (&OnSelectedBridgeMstConfigRevLevelChanged, window);
 		}
@@ -360,7 +360,7 @@ private:
 		{
 			bridge->GetMstConfigRevLevelChangedEvent().RemoveHandler (&OnSelectedBridgeMstConfigRevLevelChanged, window);
 			bridge->GetMstConfigNameChangedEvent().RemoveHandler (&OnSelectedBridgeMstConfigNameChanged, window);
-			bridge->GetTreeCountChangedEvent().RemoveHandler (&OnSelectedBridgeTreeCountChanged, window);
+			bridge->GetMstiCountChangedEvent().RemoveHandler (&OnSelectedBridgeMstiCountChanged, window);
 			bridge->GetPortCountChangedEvent().RemoveHandler (&OnSelectedBridgePortCountChanged, window);
 			bridge->GetStpVersionChangedEvent().RemoveHandler (&OnSelectedBridgeStpVersionChanged, window);
 			bridge->GetStpEnabledChangedEvent().RemoveHandler (&OnSelectedBridgeStpEnabledChanged, window);
@@ -389,9 +389,9 @@ private:
 		static_cast<BridgePropsWindow*>(callbackArg)->LoadPortCountComboBox();
 	}
 
-	static void OnSelectedBridgeTreeCountChanged (void* callbackArg, Bridge* b)
+	static void OnSelectedBridgeMstiCountChanged (void* callbackArg, Bridge* b)
 	{
-		static_cast<BridgePropsWindow*>(callbackArg)->LoadTreeCountComboBox();
+		static_cast<BridgePropsWindow*>(callbackArg)->LoadMstiCountComboBox();
 	}
 
 	static void OnSelectedBridgeMstConfigNameChanged (void* callbackArg, Bridge* b)
@@ -471,18 +471,18 @@ private:
 		ComboBox_SetCurSel (_comboPortCount, index);
 	}
 
-	void LoadTreeCountComboBox()
+	void LoadMstiCountComboBox()
 	{
 		assert (BridgesSelected());
 
-		auto getTreeCount = [](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get())->GetTreeCount(); };
+		auto getMstiCount = [](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get())->GetMstiCount(); };
 
 		int index = -1;
-		auto treeCount = getTreeCount(_selection->GetObjects()[0]);
-		if (all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](const ComPtr<Object>& o) { return getTreeCount(o) == treeCount; }))
-			index = treeCount - 1;
+		auto mstiCount = getMstiCount(_selection->GetObjects()[0]);
+		if (all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](const ComPtr<Object>& o) { return getMstiCount(o) == mstiCount; }))
+			index = mstiCount;
 
-		ComboBox_SetCurSel (_comboTreeCount, index);
+		ComboBox_SetCurSel (_comboMstiCount, index);
 	}
 
 	void LoadMstConfigNameTextBox()
@@ -549,7 +549,7 @@ private:
 			window->LoadStpStartedCheckBox();
 			window->LoadStpVersionComboBox();
 			window->LoadPortCountComboBox();
-			window->LoadTreeCountComboBox();
+			window->LoadMstiCountComboBox();
 			window->LoadMstConfigNameTextBox();
 			window->LoadMstConfigRevLevelTextBox();
 			window->LoadMstConfigTableHashEdit();

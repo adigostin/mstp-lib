@@ -125,8 +125,10 @@ struct STP_BRIDGE
 	STP_CALLBACKS callbacks;
 
 	unsigned int portCount;
-	unsigned int treeCount;
+	unsigned int mstiCount;
 	unsigned int maxVlanNumber;
+
+	unsigned int treeCount() const { return 1 + ((ForceProtocolVersion >= STP_VERSION_MSTP) ? mstiCount : 0); }
 
 	BRIDGE_TREE** trees;
 	PORT** ports;

@@ -60,7 +60,7 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	bridge->smInterface = &smInterface_802_1Q_2011;
 	bridge->callbacks = *callbacks;
 	bridge->portCount = portCount;
-	bridge->treeCount = 1 + mstiCount;
+	bridge->mstiCount = mstiCount;
 	bridge->maxVlanNumber = maxVlanNumber;
 
 	bridge->logBuffer = (char*) callbacks->allocAndZeroMemory (debugLogBufferSize);
@@ -74,16 +74,16 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	// alloc space for state array
 	unsigned int stateMachineInstanceCount = 0;
 	for (unsigned int i = 0; i < bridge->smInterface->smInfoCount; i++)
-		stateMachineInstanceCount += GetInstanceCountForStateMachine (&bridge->smInterface->smInfo [i], portCount, bridge->treeCount);
+		stateMachineInstanceCount += GetInstanceCountForStateMachine (&bridge->smInterface->smInfo [i], portCount, (1 + bridge->mstiCount));
 
-	stateMachineInstanceCount += GetInstanceCountForStateMachine (bridge->smInterface->transmitSmInfo, portCount, bridge->treeCount);
+	stateMachineInstanceCount += GetInstanceCountForStateMachine (bridge->smInterface->transmitSmInfo, portCount, (1 + bridge->mstiCount));
 
 	bridge->states = (SM_STATE*) callbacks->allocAndZeroMemory (stateMachineInstanceCount * sizeof(SM_STATE));
 	assert (bridge->states != NULL);
 
 	// ------------------------------------------------------------------------
 
-	bridge->trees = (BRIDGE_TREE**) callbacks->allocAndZeroMemory (bridge->treeCount * sizeof (BRIDGE_TREE*));
+	bridge->trees = (BRIDGE_TREE**) callbacks->allocAndZeroMemory ((1 + bridge->mstiCount) * sizeof (BRIDGE_TREE*));
 	assert (bridge->trees != NULL);
 
 	bridge->ports = (PORT**) callbacks->allocAndZeroMemory (portCount * sizeof (PORT*));
@@ -101,7 +101,7 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	bridge->trees [CIST_INDEX]->BridgeTimes.MessageAge		= 0;
 
 	// per-bridge MSTI vars
-	for (unsigned int treeIndex = 1; treeIndex < bridge->treeCount; treeIndex++)
+	for (unsigned int treeIndex = 1; treeIndex < (1 + bridge->mstiCount); treeIndex++)
 	{
 		bridge->trees [treeIndex] = (BRIDGE_TREE*) callbacks->allocAndZeroMemory (sizeof (BRIDGE_TREE));
 		assert (bridge->trees [treeIndex] != NULL);
@@ -117,11 +117,11 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 
 		PORT* port = bridge->ports [portIndex];
 
-		port->trees = (PORT_TREE**) callbacks->allocAndZeroMemory (bridge->treeCount * sizeof (PORT_TREE*));
+		port->trees = (PORT_TREE**) callbacks->allocAndZeroMemory ((1 + bridge->mstiCount) * sizeof (PORT_TREE*));
 		assert (port->trees != NULL);
 
 		// per-port CIST and MSTI vars
-		for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount; treeIndex++)
+		for (unsigned int treeIndex = 0; treeIndex < (1 + bridge->mstiCount); treeIndex++)
 		{
 			port->trees [treeIndex] = (PORT_TREE*) callbacks->allocAndZeroMemory (sizeof (PORT_TREE));
 			assert (port->trees [treeIndex] != NULL);
@@ -162,7 +162,7 @@ void STP_DestroyBridge (STP_BRIDGE* bridge)
 
 	for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
 	{
-		for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount; treeIndex++)
+		for (unsigned int treeIndex = 0; treeIndex < (1 + bridge->mstiCount); treeIndex++)
 			bridge->callbacks.freeMemory (bridge->ports [portIndex]->trees [treeIndex]);
 
 		bridge->callbacks.freeMemory (bridge->ports [portIndex]->trees);
@@ -170,7 +170,7 @@ void STP_DestroyBridge (STP_BRIDGE* bridge)
 		bridge->callbacks.freeMemory (bridge->ports [portIndex]);
 	}
 
-	for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount; treeIndex++)
+	for (unsigned int treeIndex = 0; treeIndex < (1 + bridge->mstiCount); treeIndex++)
 		bridge->callbacks.freeMemory (bridge->trees [treeIndex]);
 
 	bridge->callbacks.freeMemory (bridge->ports);
@@ -218,7 +218,7 @@ void STP_SetBridgeAddress (STP_BRIDGE* bridge, const unsigned char* address, uns
 {
 	LOG (bridge, -1, -1, "{T}: Setting bridge MAC address to {BA}...\r\n", timestamp, address);
 
-	for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount; treeIndex++)
+	for (unsigned int treeIndex = 0; treeIndex < (1 + bridge->mstiCount); treeIndex++)
 	{
 		// change the MAC address without changing the priority
 		BRIDGE_ID bid = bridge->trees [treeIndex]->GetBridgeIdentifier ();
@@ -226,17 +226,14 @@ void STP_SetBridgeAddress (STP_BRIDGE* bridge, const unsigned char* address, uns
 		bridge->trees [treeIndex]->SetBridgeIdentifier (bid);
 	}
 
-	if (bridge->ForceProtocolVersion < STP_VERSION_MSTP)
+	if (bridge->started && (treeIndex < bridge->treeCount()))
 	{
-		if (bridge->started)
+		if (bridge->ForceProtocolVersion < STP_VERSION_MSTP)
 		{
 			// STP or RSTP mode. I think there's no need to assert BEGIN, only to recompute priorities.
 			RecomputePrioritiesAndPortRoles (bridge, CIST_INDEX, timestamp);
 		}
-	}
-	else
-	{
-		if (bridge->started)
+		else
 		{
 			// BEGIN used to be asserted when the MST Config Name was generated from the bridge address.
 			// Now that we don't generate a default name anymore, I don't know if it's still needed, but I'll leave it for now.
@@ -246,7 +243,7 @@ void STP_SetBridgeAddress (STP_BRIDGE* bridge, const unsigned char* address, uns
 			RunStateMachines (bridge, timestamp);
 		}
 	}
-
+	
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
 	FLUSH_LOG (bridge);
 }
@@ -478,7 +475,7 @@ static bool RunStateMachineInstances (STP_BRIDGE* bridge, const SM_INFO* smInfo,
 			break;
 
 		case SM_INFO::PER_BRIDGE_PER_TREE:
-			for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount; treeIndex++)
+			for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount(); treeIndex++)
 			{
 				changed |= RunStateMachineInstance (bridge, smInfo, -1, treeIndex, *statePtr, timestamp);
 				(*statePtr)++;
@@ -494,7 +491,7 @@ static bool RunStateMachineInstances (STP_BRIDGE* bridge, const SM_INFO* smInfo,
 			break;
 
 		case SM_INFO::PER_PORT_PER_TREE:
-			for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount; treeIndex++)
+			for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount(); treeIndex++)
 			{
 				for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
 				{
@@ -630,7 +627,7 @@ static void RecomputePrioritiesAndPortRoles (STP_BRIDGE* bridge, unsigned int tr
 	{
 		// Recompute all trees.
 		// Note that callers of this function expect recomputation for all trees when CIST_INDEX is passed, so don't change this functionality.
-		for (treeIndex = 0; treeIndex < bridge->treeCount; treeIndex++)
+		for (treeIndex = 0; treeIndex < bridge->treeCount(); treeIndex++)
 		{
 			for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
 			{
@@ -674,7 +671,7 @@ void STP_SetBridgePriority (STP_BRIDGE* bridge, unsigned int treeIndex, unsigned
 
 	assert ((bridgePriority & 0x0FFF) == 0);
 
-	assert (treeIndex < bridge->treeCount);
+	assert (treeIndex <= bridge->mstiCount);
 
 	LOG (bridge, -1, -1, "{T}: Setting bridge priority: tree {TN} prio = {D}...\r\n",
 		 timestamp,
@@ -685,7 +682,7 @@ void STP_SetBridgePriority (STP_BRIDGE* bridge, unsigned int treeIndex, unsigned
 	bid.SetPriority (bridgePriority, treeIndex);
 	bridge->trees [treeIndex]->SetBridgeIdentifier (bid);
 
-	if (bridge->started)
+	if (bridge->started && (treeIndex < bridge->treeCount()))
 		RecomputePrioritiesAndPortRoles (bridge, treeIndex, timestamp);
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
@@ -694,7 +691,7 @@ void STP_SetBridgePriority (STP_BRIDGE* bridge, unsigned int treeIndex, unsigned
 
 unsigned short STP_GetBridgePriority (STP_BRIDGE* bridge, unsigned int treeIndex)
 {
-	assert (treeIndex < bridge->treeCount);
+	assert (treeIndex <= bridge->mstiCount);
 
 	return bridge->trees [treeIndex]->GetBridgeIdentifier ().GetPriority () & 0xF000;
 }
@@ -707,9 +704,8 @@ void STP_SetPortPriority (STP_BRIDGE* bridge, unsigned int portIndex, unsigned i
 	// See 13.25.32 in 802.1Q-2011
 
 	assert ((portPriority % 16) == 0);
-
 	assert (portIndex < bridge->portCount);
-	assert (treeIndex < bridge->treeCount);
+	assert (treeIndex <= bridge->mstiCount);
 
 	LOG (bridge, -1, -1, "{T}: Setting port priority: port {D} tree {TN} prio = {D}...\r\n",
 		 timestamp,
@@ -722,7 +718,7 @@ void STP_SetPortPriority (STP_BRIDGE* bridge, unsigned int portIndex, unsigned i
 	// It would make sense that stuff is recomputed also when the port priority in the portId variable
 	// is changed (as it is recomputed for the bridge priority), but either the spec does not mention this, or I'm not seeing it.
 	// Anyway, information about the new port priority can only be propagated by such a recomputation, so let's do that.
-	if (bridge->started)
+	if (bridge->started && (treeIndex < bridge->treeCount()))
 		RecomputePrioritiesAndPortRoles (bridge, treeIndex, timestamp);
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
@@ -734,16 +730,16 @@ unsigned char STP_GetPortPriority (STP_BRIDGE* bridge, unsigned int portIndex, u
 	// See 13.25.32 in 802.1Q-2011
 
 	assert (portIndex < bridge->portCount);
-	assert (treeIndex < bridge->treeCount);
+	assert (treeIndex <= bridge->mstiCount);
 
-	unsigned char priority = bridge->ports [portIndex]->trees [treeIndex]->portId.GetPriority ();
+	unsigned char priority = bridge->ports [portIndex]->trees [treeIndex]->portId.GetPriority();
 	return priority;
 }
 
 unsigned short STP_GetPortIdentifier (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
 {
 	assert (portIndex < bridge->portCount);
-	assert (treeIndex < bridge->treeCount);
+	assert (treeIndex <= bridge->mstiCount);
 
 	unsigned short id = bridge->ports [portIndex]->trees [treeIndex]->portId.GetPortIdentifier ();
 	return id;
@@ -923,10 +919,10 @@ void STP_SetMstConfigTableAndComputeDigest1 (STP_BRIDGE* bridge, const unsigned 
 
 	for (int i = 0; i < 4094; i++)
 	{
-		unsigned char mstid = mstids [i];
+		unsigned char mstid = mstids[i];
 
 		// Check that the caller is not trying to map a VLAN to a too-large tree number.
-		assert (mstid < bridge->treeCount);
+		assert (mstid <= bridge->mstiCount);
 
 		// write it in BE format
 		bridge->mstConfigTable [i + 1] = mstid;
@@ -960,7 +956,7 @@ void STP_SetMstConfigTableAndComputeDigest (STP_BRIDGE* bridge, const struct VLA
 		assert ((vlan > 0) && (vlan <= 4094));
 
 		// Check that the caller is not trying to map a VLAN to a too-large tree number.
-		assert (entry->mstid <= bridge->treeCount);
+		assert (entry->mstid <= bridge->mstiCount);
 
 		assert (bridge->mstConfigTable [vlan] == (unsigned short) 0); // trying to set twice the mstid for the same vlan
 
@@ -998,9 +994,9 @@ unsigned int STP_GetPortCount (STP_BRIDGE* bridge)
 	return bridge->portCount;
 }
 
-unsigned int STP_GetTreeCount (STP_BRIDGE* bridge)
+unsigned int STP_GetMstiCount (STP_BRIDGE* bridge)
 {
-	return bridge->treeCount;
+	return bridge->mstiCount;
 }
 
 enum STP_VERSION STP_GetStpVersion (STP_BRIDGE* bridge)
@@ -1126,7 +1122,9 @@ void STP_GetRootTimes (STP_BRIDGE* bridge,
 	// These values are meaningful only as long as the bridge is running, hence the following assert.
 	assert (bridge->started);
 
-	assert (treeIndex < bridge->treeCount);
+	// A MSTI can be specified (as opposed to the CIST) only while running MSTP.
+	assert (treeIndex < bridge->treeCount());
+
 	BRIDGE_TREE* tree = bridge->trees [treeIndex];
 
 	if (forwardDelayOutOrNull != NULL)
@@ -1157,7 +1155,7 @@ unsigned int STP_IsRootBridge (STP_BRIDGE* bridge)
 unsigned int STP_IsRegionalRootBridge (STP_BRIDGE* bridge, unsigned int treeIndex)
 {
 	assert (bridge->started);
-	assert (treeIndex < bridge->treeCount);
+	assert (treeIndex < bridge->treeCount());
 	BRIDGE_TREE* tree = bridge->trees [treeIndex];
 	return tree->rootPriority.RegionalRootId == tree->GetBridgeIdentifier();
 }
