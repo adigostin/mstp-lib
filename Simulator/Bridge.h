@@ -20,8 +20,6 @@ struct TreeCountChangedEvent : public Event<TreeCountChangedEvent, void(Bridge*)
 struct MstConfigNameChangedEvent : public Event<MstConfigNameChangedEvent, void(Bridge*)> { };
 struct MstConfigRevLevelChangedEvent : public Event<MstConfigRevLevelChangedEvent, void(Bridge*)> { };
 
-constexpr unsigned int MaxVlanNumber = 4094;
-
 class Bridge : public Object
 {
 	IProject* const _project;
@@ -56,7 +54,7 @@ class Bridge : public Object
 	unsigned int         _txTimestamp;
 
 public:
-	Bridge (IProject* project, unsigned int portCount, const std::array<uint8_t, 6>& macAddress);
+	Bridge (IProject* project, unsigned int portCount, unsigned int mstiCount, const std::array<uint8_t, 6>& macAddress);
 protected:
 	~Bridge();
 
@@ -108,6 +106,7 @@ public:
 	void SetPortAdminEdge (unsigned int portIndex, bool adminEdge, unsigned int timestamp);
 	bool GetPortAutoEdge  (unsigned int portIndex) const;
 	void SetPortAutoEdge  (unsigned int portIndex, bool autoEdge, unsigned int timestamp);
+	unsigned int GetTreeCount() const { return STP_GetTreeCount(_stpBridge); }
 	uint16_t GetStpBridgePriority (unsigned int treeIndex) const;
 	unsigned int GetStpTreeIndexFromVlanNumber (uint16_t vlanNumber) const;
 	const std::vector<BridgeLogLine>& GetLogLines() const { return _logLines; }

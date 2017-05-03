@@ -126,13 +126,11 @@ struct STP_BRIDGE
 
 	unsigned int portCount;
 	unsigned int treeCount;
+	unsigned int maxVlanNumber;
 
 	BRIDGE_TREE** trees;
 	PORT** ports;
-	
-	//VLAN_TO_MSTID mstConfigTable [STP_MST_CONFIG_TABLE_ENTRY_COUNT_MAX];
-	//unsigned int mstConfigTableEntryCount;
-	INV_UINT2 mstConfigTable [4096];
+	INV_UINT2* mstConfigTable;
 
 	// 13.24 Per bridge variables
 	// There is one instance per bridge component of the following variable(s):

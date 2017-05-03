@@ -79,11 +79,11 @@ extern "C" {
 #endif
 
 struct STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
-						  unsigned int treeCount,
-						  const struct STP_CALLBACKS* callbacks,
-						  enum STP_VERSION protocolVersion,
-						  const unsigned char bridgeAddress [6],
-						  unsigned int debugLogBufferSize);
+									 unsigned int mstiCount,
+									 unsigned int maxVlanNumber,
+									 const struct STP_CALLBACKS* callbacks,
+									 const unsigned char bridgeAddress[6],
+									 unsigned int debugLogBufferSize);
 void STP_DestroyBridge (struct STP_BRIDGE* bridge);
 
 void STP_StartBridge (struct STP_BRIDGE* bridge, unsigned int timestamp);

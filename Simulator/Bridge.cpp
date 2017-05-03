@@ -15,9 +15,12 @@ static constexpr UINT WM_PACKET_RECEIVED = WM_APP + 3;
 
 static constexpr uint8_t BpduDestAddress[6] = { 1, 0x80, 0xC2, 0, 0, 0 };
 
+static constexpr unsigned int MaxVlanNumber = 16;
+
 HWND     Bridge::_helperWindow;
 uint32_t Bridge::_helperWindowRefCount;
-Bridge::Bridge (IProject* project, unsigned int portCount, const std::array<uint8_t, 6>& macAddress)
+
+Bridge::Bridge (IProject* project, unsigned int portCount, unsigned int mstiCount, const std::array<uint8_t, 6>& macAddress)
 	: _project(project)
 {
 	float offset = 0;
@@ -66,7 +69,7 @@ Bridge::Bridge (IProject* project, unsigned int portCount, const std::array<uint
 		throw win32_exception(GetLastError());
 	_macOperationalTimerHandle.reset(handle);
 
-	_stpBridge = STP_CreateBridge ((unsigned int) _ports.size(), 1, &StpCallbacks, STP_VERSION_RSTP, &macAddress[0], 256);
+	_stpBridge = STP_CreateBridge (portCount, mstiCount, MaxVlanNumber, &StpCallbacks, &macAddress[0], 256);
 	STP_EnableLogging (_stpBridge, true);
 	STP_SetApplicationContext (_stpBridge, this);
 }

@@ -18,17 +18,19 @@ static void ComputeMstConfigDigest (STP_BRIDGE* bridge);
 // ============================================================================
 
 STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
-						  unsigned int treeCount,
-						  const STP_CALLBACKS* callbacks,
-						  STP_VERSION protocolVersion,
-						  const unsigned char bridgeAddress [6],
-						  unsigned int debugLogBufferSize)
+							  unsigned int mstiCount,
+							  unsigned int maxVlanNumber,
+							  const STP_CALLBACKS* callbacks,
+							  const unsigned char bridgeAddress[6],
+							  unsigned int debugLogBufferSize)
 {
 	// Let's make a few checks on the data types, because we might be compiled with strange
 	// compiler options which will turn upside down all our assumptions about structure layouts.
 	// These really should use static_assert, but I'm not sure all compilers support static_assert.
 	// If you get one of these asserts, you should reset your compiler options to their defaults,
 	// at least those options related to structure layouts, at least for the files belonging to the STP library.
+	assert (sizeof (unsigned char) == 1);
+	assert (sizeof (unsigned short) == 2);
 	assert (sizeof (unsigned int) == 4);
 	assert (sizeof (INV_UINT2) == 2);
 	assert (sizeof (INV_UINT4) == 4);
@@ -40,40 +42,26 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 
 	assert (debugLogBufferSize >= 2); // one byte for the data, one for the null terminator of the string passed to the callback
 
-	STP_BRIDGE* bridge = (STP_BRIDGE*) callbacks->allocAndZeroMemory (sizeof (STP_BRIDGE));
-	assert (bridge != NULL);
-
-	if (protocolVersion == STP_VERSION_LEGACY_STP)
-	{
-		assert (treeCount == 1);
-	}
-	else if (protocolVersion == STP_VERSION_RSTP)
-	{
-		assert (treeCount == 1);
-	}
-	else if (protocolVersion == STP_VERSION_MSTP)
-	{
-		// Upper limit for number of MSTIs is defined in 802.1Q-2011, page 342, top paragraph:
-		//		"No more than 64 MSTI Configuration Messages shall be encoded in an MST
-		//		BPDU, and no more than 64 MSTIs shall be supported by an MST Bridge."
-		// So CIST + 64 MSTIs = 65 trees.
-
-		assert ((treeCount >= 1) && (treeCount <= 65));
-	}
-	else
-		assert (false);
+	// Upper limit for number of MSTIs is defined in 802.1Q-2011, page 342, top paragraph:
+	//		"No more than 64 MSTI Configuration Messages shall be encoded in an MST
+	//		BPDU, and no more than 64 MSTIs shall be supported by an MST Bridge."
+	assert (mstiCount <= 64);
 
 	// As specified in 12.3.i) in 802.1Q-2011, valid port numbers are 1..4095, so our valid port indexes will be 0..4094.
 	// This means a maximum of 4095 ports.
 	assert ((portCount >= 1) && (portCount < 4096));
 
+	STP_BRIDGE* bridge = (STP_BRIDGE*) callbacks->allocAndZeroMemory (sizeof (STP_BRIDGE));
+	assert (bridge != NULL);
+
 	// See "13.6.2 Force Protocol Version" on page 332
-	bridge->ForceProtocolVersion = protocolVersion;
+	bridge->ForceProtocolVersion = STP_VERSION_RSTP;
 
 	bridge->smInterface = &smInterface_802_1Q_2011;
 	bridge->callbacks = *callbacks;
 	bridge->portCount = portCount;
-	bridge->treeCount = treeCount;
+	bridge->treeCount = 1 + mstiCount;
+	bridge->maxVlanNumber = maxVlanNumber;
 
 	bridge->logBuffer = (char*) callbacks->allocAndZeroMemory (debugLogBufferSize);
 	assert (bridge->logBuffer != NULL);
@@ -86,16 +74,16 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	// alloc space for state array
 	unsigned int stateMachineInstanceCount = 0;
 	for (unsigned int i = 0; i < bridge->smInterface->smInfoCount; i++)
-		stateMachineInstanceCount += GetInstanceCountForStateMachine (&bridge->smInterface->smInfo [i], portCount, treeCount);
+		stateMachineInstanceCount += GetInstanceCountForStateMachine (&bridge->smInterface->smInfo [i], portCount, bridge->treeCount);
 
-	stateMachineInstanceCount += GetInstanceCountForStateMachine (bridge->smInterface->transmitSmInfo, portCount, treeCount);
+	stateMachineInstanceCount += GetInstanceCountForStateMachine (bridge->smInterface->transmitSmInfo, portCount, bridge->treeCount);
 
-	bridge->states = (SM_STATE*) callbacks->allocAndZeroMemory (stateMachineInstanceCount * sizeof (SM_STATE));
+	bridge->states = (SM_STATE*) callbacks->allocAndZeroMemory (stateMachineInstanceCount * sizeof(SM_STATE));
 	assert (bridge->states != NULL);
 
 	// ------------------------------------------------------------------------
 
-	bridge->trees = (BRIDGE_TREE**) callbacks->allocAndZeroMemory (treeCount * sizeof (BRIDGE_TREE*));
+	bridge->trees = (BRIDGE_TREE**) callbacks->allocAndZeroMemory (bridge->treeCount * sizeof (BRIDGE_TREE*));
 	assert (bridge->trees != NULL);
 
 	bridge->ports = (PORT**) callbacks->allocAndZeroMemory (portCount * sizeof (PORT*));
@@ -113,7 +101,7 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	bridge->trees [CIST_INDEX]->BridgeTimes.MessageAge		= 0;
 
 	// per-bridge MSTI vars
-	for (unsigned int treeIndex = 1; treeIndex < treeCount; treeIndex++)
+	for (unsigned int treeIndex = 1; treeIndex < bridge->treeCount; treeIndex++)
 	{
 		bridge->trees [treeIndex] = (BRIDGE_TREE*) callbacks->allocAndZeroMemory (sizeof (BRIDGE_TREE));
 		assert (bridge->trees [treeIndex] != NULL);
@@ -129,11 +117,11 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 
 		PORT* port = bridge->ports [portIndex];
 
-		port->trees = (PORT_TREE**) callbacks->allocAndZeroMemory (treeCount * sizeof (PORT_TREE*));
+		port->trees = (PORT_TREE**) callbacks->allocAndZeroMemory (bridge->treeCount * sizeof (PORT_TREE*));
 		assert (port->trees != NULL);
 
 		// per-port CIST and MSTI vars
-		for (unsigned int treeIndex = 0; treeIndex < treeCount; treeIndex++)
+		for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount; treeIndex++)
 		{
 			port->trees [treeIndex] = (PORT_TREE*) callbacks->allocAndZeroMemory (sizeof (PORT_TREE));
 			assert (port->trees [treeIndex] != NULL);
@@ -157,6 +145,9 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	// Let's set a default name for the MST Config.
 	STP_GetDefaultMstConfigName (bridgeAddress, bridge->MstConfigId.ConfigurationName);
 
+	bridge->mstConfigTable = (INV_UINT2*) callbacks->allocAndZeroMemory ((1 + maxVlanNumber) * 2);
+	assert (bridge->mstConfigTable != NULL);
+
 	// The config table is all zeroes now, so all VIDs map to the CIST, no VID mapped to any MSTI.
 	ComputeMstConfigDigest (bridge);
 
@@ -167,6 +158,8 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 
 void STP_DestroyBridge (STP_BRIDGE* bridge)
 {
+	bridge->callbacks.freeMemory (bridge->mstConfigTable);
+
 	for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
 	{
 		for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount; treeIndex++)
@@ -911,7 +904,12 @@ static void ComputeMstConfigDigest (STP_BRIDGE* bridge)
 {
 	HMAC_MD5_CONTEXT context;
 	HMAC_MD5_Init (&context);
-	HMAC_MD5_Update (&context, bridge->mstConfigTable, 2 * 4096);
+	HMAC_MD5_Update (&context, bridge->mstConfigTable, 2 * (1 + bridge->maxVlanNumber));
+
+	unsigned short zero = 0;
+	for (int i = (1 + bridge->maxVlanNumber); i < 4096; i++)
+		HMAC_MD5_Update (&context, &zero, 2);
+
 	HMAC_MD5_End (&context);
 
 	memcpy (bridge->MstConfigId.ConfigurationDigest, context.digest, 16);
