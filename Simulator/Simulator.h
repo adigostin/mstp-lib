@@ -16,6 +16,8 @@ class Bridge;
 class Port;
 class Wire;
 
+static constexpr unsigned int MaxVlanNumber = 16;
+
 enum class MouseButton
 {
 	None = 0,
@@ -159,8 +161,8 @@ struct IProjectWindow : public IWin32Window
 {
 	virtual ~IProjectWindow() { }
 	virtual IProject* GetProject() const = 0;
-	virtual void SelectVlan (uint16_t vlanNumber) = 0;
-	virtual uint16_t GetSelectedVlanNumber() const = 0;
+	virtual void SelectVlan (unsigned short vlanNumber) = 0;
+	virtual unsigned short GetSelectedVlanNumber() const = 0;
 	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() = 0;
 };
 
@@ -169,7 +171,7 @@ using ProjectWindowFactory = std::unique_ptr<IProjectWindow>(*const)(ISimulatorA
 																	 ISelection* selection,
 																	 EditAreaFactory editAreaFactory,
 																	 int nCmdShow,
-																	 uint16_t selectedVlan);
+																	 unsigned short selectedVlan);
 extern const ProjectWindowFactory projectWindowFactory;
 
 // ============================================================================

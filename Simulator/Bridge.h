@@ -108,7 +108,7 @@ public:
 	void SetPortAutoEdge  (unsigned int portIndex, bool autoEdge, unsigned int timestamp);
 	unsigned int GetMstiCount() const { return STP_GetMstiCount(_stpBridge); }
 	uint16_t GetStpBridgePriority (unsigned int treeIndex) const;
-	unsigned int GetStpTreeIndexFromVlanNumber (uint16_t vlanNumber) const;
+	unsigned int GetStpTreeIndexFromVlanNumber (unsigned short vlanNumber) const;
 	const std::vector<BridgeLogLine>& GetLogLines() const { return _logLines; }
 	bool IsPortForwardingOnVlan (unsigned int portIndex, uint16_t vlanNumber) const;
 	bool IsStpRootBridge() const;

@@ -48,6 +48,9 @@ public:
 	virtual void Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, uint16_t vlanNumber) const = 0;
 	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const = 0;
 	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) = 0;
+
+	template<typename T>
+	bool Is() const { return dynamic_cast<const T*>(this) != nullptr; }
 };
 
 enum class Side { Left, Top, Right, Bottom };

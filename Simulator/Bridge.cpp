@@ -15,8 +15,6 @@ static constexpr UINT WM_PACKET_RECEIVED = WM_APP + 3;
 
 static constexpr uint8_t BpduDestAddress[6] = { 1, 0x80, 0xC2, 0, 0, 0 };
 
-static constexpr unsigned int MaxVlanNumber = 16;
-
 HWND     Bridge::_helperWindow;
 uint32_t Bridge::_helperWindowRefCount;
 
@@ -334,7 +332,7 @@ unsigned short Bridge::GetStpBridgePriority (unsigned int treeIndex) const
 	return STP_GetBridgePriority(_stpBridge, treeIndex);
 }
 
-unsigned int Bridge::GetStpTreeIndexFromVlanNumber (uint16_t vlanNumber) const
+unsigned int Bridge::GetStpTreeIndexFromVlanNumber (unsigned short vlanNumber) const
 {
 	if ((vlanNumber == 0) || (vlanNumber > 4094))
 		throw invalid_argument ("The VLAN number must be >=1 and <=4094.");

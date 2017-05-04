@@ -29,10 +29,10 @@ class ProjectWindow : public IProjectWindow
 	SIZE _clientSize;
 	EventManager _em;
 	RECT _restoreBounds;
-	uint16_t _selectedVlanNumber = 1;
+	unsigned short _selectedVlanNumber = 1;
 
 public:
-	ProjectWindow (ISimulatorApp* app, IProject* project, ISelection* selection, EditAreaFactory editAreaFactory, int nCmdShow, uint16_t selectedVlan)
+	ProjectWindow (ISimulatorApp* app, IProject* project, ISelection* selection, EditAreaFactory editAreaFactory, int nCmdShow, unsigned short selectedVlan)
 		: _app(app), _project(project), _selection(selection), _selectedVlanNumber(selectedVlan)
 	{
 		HINSTANCE hInstance;
@@ -280,7 +280,7 @@ public:
 		}
 	};
 
-	virtual uint16_t GetSelectedVlanNumber() const override final { return _selectedVlanNumber; }
+	virtual unsigned short GetSelectedVlanNumber() const override final { return _selectedVlanNumber; }
 
 	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() override final { return SelectedVlanNumerChangedEvent::Subscriber(_em); }
 

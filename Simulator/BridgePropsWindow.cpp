@@ -25,6 +25,7 @@ class BridgePropsWindow : public IBridgePropsWindow
 	HWND _mstConfigRevLevelEdit = nullptr;
 	HWND _mstConfigDigestEdit = nullptr;
 	HWND _buttonEditMstConfigId = nullptr;
+	HWND _staticTreeProps = nullptr;
 	HWND _controlBeingValidated = nullptr;
 	bool _editChangedByUser = false;
 	std::queue<std::function<void()>> _workQueue;
@@ -122,6 +123,17 @@ private:
 			_mstConfigDigestEdit = GetDlgItem (_hwnd, IDC_EDIT_MST_CONFIG_TABLE_HASH);
 			
 			_buttonEditMstConfigId = GetDlgItem (_hwnd, IDC_BUTTON_EDIT_MST_CONFIG_TABLE);
+
+			_staticTreeProps = GetDlgItem(_hwnd, IDC_STATIC_TREE_PROPS);
+
+			auto comboBridgePrio = GetDlgItem (_hwnd, IDC_COMBO_BRIDGE_PRIORITY); assert (comboBridgePrio != nullptr);
+			for (int i = 0; i < 65536; i += 4096)
+			{
+				wstringstream ss;
+				ss << L"0x" << hex << uppercase << setw(4) << setfill(L'0') << i << L" -- " << dec << i;
+				ComboBox_AddString (comboBridgePrio, ss.str().c_str());
+			}
+
 			return { FALSE, 0 };
 		}
 
@@ -135,7 +147,12 @@ private:
 			return { reinterpret_cast<INT_PTR>(GetSysColorBrush(COLOR_WINDOW)), 0 };
 
 		if (msg == WM_CTLCOLORSTATIC)
-			return { reinterpret_cast<INT_PTR>(GetSysColorBrush(COLOR_WINDOW)), 0 };
+		{
+			if (reinterpret_cast<HWND>(lParam) == _staticTreeProps)
+				return { FALSE, 0 };
+			else
+				return { reinterpret_cast<INT_PTR>(GetSysColorBrush(COLOR_WINDOW)), 0 };
+		}
 
 		if (msg == WM_WORK)
 		{
@@ -530,6 +547,11 @@ private:
 		}
 		else
 			::SetWindowTextA (_mstConfigRevLevelEdit, "(multiple selection)");
+	}
+
+	void LoadStaticTreeProps()
+	{
+
 	}
 
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)

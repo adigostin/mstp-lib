@@ -2,6 +2,8 @@
 #include "pch.h"
 #include "Simulator.h"
 #include "Resource.h"
+#include "Bridge.h"
+#include "Port.h"
 
 using namespace std;
 
@@ -29,17 +31,20 @@ public:
 		RECT rc;
 		::GetWindowRect(_hwnd, &rc);
 		::MoveWindow (_hwnd, location.x, location.y, rc.right - rc.left, rc.bottom - rc.top, TRUE);
+
+		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
 	}
 
 	virtual ~VlanWindow()
 	{
+		_selection->GetSelectionChangedEvent().RemoveHandler (&OnSelectionChanged, this);
+
 		if (_hwnd != nullptr)
 			::DestroyWindow(_hwnd);
 	}
 
 	virtual HWND GetHWnd() const override final { return _hwnd; }
 
-private:
 	static INT_PTR CALLBACK DialogProcStatic (HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
 		VlanWindow* window;
@@ -77,13 +82,14 @@ private:
 		{
 			_comboSelectedVlan  = GetDlgItem (_hwnd, IDC_COMBO_SELECTED_VLAN);
 			_comboNewWindowVlan = GetDlgItem (_hwnd, IDC_COMBO_NEW_WINDOW_VLAN);
-			for (size_t i = 1; i <= 16; i++)
+			for (size_t i = 1; i <= MaxVlanNumber; i++)
 			{
 				auto str = std::to_wstring(i);
 				ComboBox_AddString(_comboSelectedVlan, str.c_str());
 				ComboBox_AddString(_comboNewWindowVlan, str.c_str());
 			}
 			LoadSelectedVlanCombo();
+			LoadSelectedTreeEdit();
 			return { FALSE, 0 };
 		}
 
@@ -105,6 +111,11 @@ private:
 		}
 
 		return { FALSE, 0 };
+	}
+
+	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
+	{
+		static_cast<VlanWindow*>(callbackArg)->LoadSelectedTreeEdit();
 	}
 
 	void ProcessNewWindowVlanSelChanged()
@@ -130,6 +141,38 @@ private:
 	void LoadSelectedVlanCombo()
 	{
 		ComboBox_SetCurSel (_comboSelectedVlan, _projectWindow->GetSelectedVlanNumber() - 1);
+	}
+
+	void LoadSelectedTreeEdit()
+	{
+		auto edit = GetDlgItem (_hwnd, IDC_EDIT_SELECTED_TREE); assert (edit != nullptr);
+		auto& objects = _selection->GetObjects();
+		
+		if (_selection->GetObjects().empty())
+		{
+			::SetWindowText (edit, L"(no selection)");
+			return;
+		}
+
+		if (_selection->GetObjects().size() > 1)
+		{
+			::SetWindowText (edit, L"(multiple selection)");
+			return;
+		}
+
+		if (_selection->GetObjects()[0]->Is<Bridge>() || _selection->GetObjects()[0]->Is<Port>())
+		{
+			Object* obj = _selection->GetObjects()[0];
+			auto bridge = obj->Is<Bridge>() ? dynamic_cast<Bridge*>(obj) : dynamic_cast<Port*>(obj)->GetBridge();
+			auto treeIndex = bridge->GetStpTreeIndexFromVlanNumber(_projectWindow->GetSelectedVlanNumber());
+			if (treeIndex == 0)
+				::SetWindowText (edit, L"CIST");
+			else
+				::SetWindowText (edit, (wstring(L"MSTI ") + to_wstring(treeIndex)).c_str());
+			return;
+		}
+
+		::SetWindowText (edit, L"(no selection)");
 	}
 };
 
