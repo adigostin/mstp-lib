@@ -166,7 +166,7 @@ public:
 			auto bridge = obj->Is<Bridge>() ? dynamic_cast<Bridge*>(obj) : dynamic_cast<Port*>(obj)->GetBridge();
 			auto treeIndex = bridge->GetStpTreeIndexFromVlanNumber(_projectWindow->GetSelectedVlanNumber());
 			if (treeIndex == 0)
-				::SetWindowText (edit, L"CIST");
+				::SetWindowText (edit, L"CIST (0)");
 			else
 				::SetWindowText (edit, (wstring(L"MSTI ") + to_wstring(treeIndex)).c_str());
 			return;
