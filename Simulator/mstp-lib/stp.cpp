@@ -701,11 +701,20 @@ void STP_SetBridgePriority (STP_BRIDGE* bridge, unsigned int treeIndex, unsigned
 		 bridgePriority);
 
 	BRIDGE_ID bid = bridge->trees [treeIndex]->GetBridgeIdentifier ();
-	bid.SetPriority (bridgePriority, treeIndex);
-	bridge->trees [treeIndex]->SetBridgeIdentifier (bid);
+	if (bid.GetPriority() != bridgePriority)
+	{
+		LOG (bridge, -1, -1, "\r\n");
 
-	if (bridge->started && (treeIndex < bridge->treeCount()))
-		RecomputePrioritiesAndPortRoles (bridge, treeIndex, timestamp);
+		bid.SetPriority (bridgePriority, treeIndex);
+		bridge->trees [treeIndex]->SetBridgeIdentifier (bid);
+
+		bridge->callbacks.onConfigChanged (bridge, timestamp);
+
+		if (bridge->started && (treeIndex < bridge->treeCount()))
+			RecomputePrioritiesAndPortRoles (bridge, treeIndex, timestamp);
+	}
+	else
+		LOG (bridge, -1, -1, " nothing changed.\r\n");
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
 	FLUSH_LOG (bridge);
@@ -1113,7 +1122,7 @@ unsigned int STP_IsRootBridge (STP_BRIDGE* bridge)
 unsigned int STP_IsRegionalRootBridge (STP_BRIDGE* bridge, unsigned int treeIndex)
 {
 	assert (bridge->started);
-	assert (treeIndex < bridge->treeCount());
+	assert ((treeIndex > 0) && (treeIndex < bridge->treeCount()));
 	BRIDGE_TREE* tree = bridge->trees [treeIndex];
 	return tree->rootPriority.RegionalRootId == tree->GetBridgeIdentifier();
 }

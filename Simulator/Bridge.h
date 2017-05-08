@@ -11,7 +11,7 @@ struct BridgeLogLine
 	int treeIndex;
 };
 
-struct BridgeLogLineGenerated : public Event<BridgeLogLineGenerated, void(Bridge*, const BridgeLogLine& line)> { };
+struct BridgeLogLineGenerated : public Event<BridgeLogLineGenerated, void(Bridge*, const BridgeLogLine* line)> { };
 struct BridgeConfigChangedEvent : public Event<BridgeConfigChangedEvent, void(Bridge*)> { };
 
 class Bridge : public Object
@@ -25,7 +25,7 @@ class Bridge : public Object
 	bool _powered = true;
 	STP_BRIDGE* _stpBridge = nullptr;
 	static const STP_CALLBACKS StpCallbacks;
-	std::vector<BridgeLogLine> _logLines;
+	std::vector<std::unique_ptr<BridgeLogLine>> _logLines;
 	BridgeLogLine _currentLogLine;
 	TimerQueueTimer_unique_ptr _oneSecondTimerHandle;
 	TimerQueueTimer_unique_ptr _macOperationalTimerHandle;
@@ -85,7 +85,7 @@ public:
 	BridgeConfigChangedEvent::Subscriber GetBridgeConfigChangedEvent() { return BridgeConfigChangedEvent::Subscriber(_em); }
 
 	bool IsPowered() const { return _powered; }
-	const std::vector<BridgeLogLine>& GetLogLines() const { return _logLines; }
+	const std::vector<std::unique_ptr<BridgeLogLine>>& GetLogLines() const { return _logLines; }
 
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);

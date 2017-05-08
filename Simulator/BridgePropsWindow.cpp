@@ -18,7 +18,6 @@ class BridgePropsWindow : public IBridgePropsWindow
 	HWND _bridgeAddressEdit = nullptr;
 	WNDPROC _bridgeAddressEditOriginalProc;
 	HWND _checkStpEnabled = nullptr;
-	HWND _comboStpVersion = nullptr;
 	HWND _comboPortCount = nullptr;
 	HWND _comboMstiCount = nullptr;
 	HWND _mstConfigNameEdit = nullptr;
@@ -104,10 +103,10 @@ private:
 			_bridgeAddressEdit = GetDlgItem (_hwnd, IDC_EDIT_BRIDGE_ADDRESS);
 			BOOL bRes = SetWindowSubclass (_bridgeAddressEdit, EditSubclassProc, EditSubClassId, (DWORD_PTR) this); assert (bRes);
 			_checkStpEnabled = GetDlgItem (_hwnd, IDC_CHECK_STP_ENABLED);
-			_comboStpVersion = GetDlgItem (_hwnd, IDC_COMBO_STP_VERSION);
-			::SendMessageA (_comboStpVersion, CB_ADDSTRING, 0, (LPARAM) STP_GetVersionString(STP_VERSION_LEGACY_STP));
-			::SendMessageA (_comboStpVersion, CB_ADDSTRING, 0, (LPARAM) STP_GetVersionString(STP_VERSION_RSTP));
-			::SendMessageA (_comboStpVersion, CB_ADDSTRING, 0, (LPARAM) STP_GetVersionString(STP_VERSION_MSTP));
+			auto comboStpVersion = GetDlgItem (_hwnd, IDC_COMBO_STP_VERSION);
+			::SendMessageA (comboStpVersion, CB_ADDSTRING, 0, (LPARAM) STP_GetVersionString(STP_VERSION_LEGACY_STP));
+			::SendMessageA (comboStpVersion, CB_ADDSTRING, 0, (LPARAM) STP_GetVersionString(STP_VERSION_RSTP));
+			::SendMessageA (comboStpVersion, CB_ADDSTRING, 0, (LPARAM) STP_GetVersionString(STP_VERSION_MSTP));
 			_comboPortCount = GetDlgItem (_hwnd, IDC_COMBO_PORT_COUNT);
 			for (size_t i = FirstPortCount; i <= 16; i++)
 				ComboBox_AddString(_comboPortCount, std::to_wstring(i).c_str());
@@ -178,9 +177,14 @@ private:
 			}
 			else if (HIWORD(wParam) == CBN_SELCHANGE)
 			{
-				if ((HWND) lParam == _comboStpVersion)
+				if (LOWORD(wParam) == IDC_COMBO_STP_VERSION)
 				{
-					ProcessStpVersionSelChanged();
+					ProcessStpVersionSelChanged ((HWND) lParam);
+					return { TRUE, 0 };
+				}
+				else if (LOWORD(wParam) == IDC_COMBO_BRIDGE_PRIORITY)
+				{
+					ProcessBridgePrioritySelChange ((HWND) lParam);
 					return { TRUE, 0 };
 				}
 			}
@@ -222,9 +226,9 @@ private:
 		}
 	}
 
-	void ProcessStpVersionSelChanged()
+	void ProcessStpVersionSelChanged (HWND hwnd)
 	{
-		int index = ComboBox_GetCurSel(_comboStpVersion);
+		int index = ComboBox_GetCurSel(hwnd);
 		if (index == -1)
 			return;
 
@@ -366,6 +370,7 @@ private:
 
 	void LoadAll()
 	{
+		assert (BridgesSelected());
 		LoadBridgeAddressTextBox();
 		LoadStpStartedCheckBox();
 		LoadStpVersionComboBox();
@@ -374,12 +379,11 @@ private:
 		LoadMstConfigNameTextBox();
 		LoadMstConfigRevLevelTextBox();
 		LoadMstConfigTableHashEdit();
+		LoadBridgePriorityCombo();
 	}
 
 	void LoadBridgeAddressTextBox()
 	{
-		assert (BridgesSelected());
-
 		if (_selection->GetObjects().size() == 1)
 		{
 			auto bridge = dynamic_cast<Bridge*>(_selection->GetObjects()[0].Get());
@@ -397,8 +401,6 @@ private:
 
 	void LoadStpStartedCheckBox()
 	{
-		assert (BridgesSelected());
-
 		auto getStpStarted = [](const ComPtr<Object>& o) { return STP_IsBridgeStarted(dynamic_cast<Bridge*>(o.Get())->GetStpBridge()); };
 
 		if (none_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), getStpStarted))
@@ -411,8 +413,6 @@ private:
 
 	void LoadStpVersionComboBox()
 	{
-		assert (BridgesSelected());
-
 		auto getStpVersion = [](const ComPtr<Object>& o) { return STP_GetStpVersion (dynamic_cast<Bridge*>(o.Get())->GetStpBridge()); };
 
 		int index = -1;
@@ -428,13 +428,11 @@ private:
 				index = 2;
 		}
 
-		ComboBox_SetCurSel (_comboStpVersion, index);
+		ComboBox_SetCurSel (GetDlgItem (_hwnd, IDC_COMBO_STP_VERSION), index);
 	}
 
 	void LoadPortCountComboBox()
 	{
-		assert (BridgesSelected());
-
 		auto getPortCount = [](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get())->GetPorts().size(); };
 
 		int index = -1;
@@ -447,8 +445,6 @@ private:
 
 	void LoadMstiCountComboBox()
 	{
-		assert (BridgesSelected());
-
 		auto getMstiCount = [](const ComPtr<Object>& o) { return STP_GetMstiCount(dynamic_cast<Bridge*>(o.Get())->GetStpBridge()); };
 
 		int index = -1;
@@ -461,8 +457,6 @@ private:
 
 	void LoadMstConfigNameTextBox()
 	{
-		assert (BridgesSelected());
-
 		auto getName = [](const ComPtr<Object>& o)
 		{
 			char name[33];
@@ -481,8 +475,6 @@ private:
 
 	void LoadMstConfigRevLevelTextBox()
 	{
-		assert (BridgesSelected());
-
 		auto getLevel = [](const ComPtr<Object>& o) { return STP_GetMstConfigRevisionLevel(dynamic_cast<Bridge*>(o.Get())->GetStpBridge()); };
 
 		auto level = getLevel(_selection->GetObjects()[0]);
@@ -541,10 +533,52 @@ private:
 		SendMessage (_configTableDigestToolTip, TTM_ADDTOOL, 0, (LPARAM)&toolInfo);
 	}
 
-	void LoadStaticTreeProps()
-	{
+	// ========================================================================
 
+	void LoadBridgePriorityCombo()
+	{
+		auto vlanNumber = _projectWindow->GetSelectedVlanNumber();
+		auto getPrio = [vlanNumber](const ComPtr<Object>& o)
+		{
+			auto stpb = dynamic_cast<Bridge*>(o.Get())->GetStpBridge();
+			auto treeIndex = STP_GetTreeIndexFromVlanNumber(stpb, vlanNumber);
+			return STP_GetBridgePriority(stpb, treeIndex);
+		};
+		auto prio = getPrio(_selection->GetObjects()[0]);
+		bool allSamePrio = all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](const ComPtr<Object>& o) { return getPrio(o) == prio; });
+		
+		auto combo = GetDlgItem(_hwnd, IDC_COMBO_BRIDGE_PRIORITY);
+		if (allSamePrio)
+		{
+			ComboBox_SetCurSel (combo, prio / 4096);
+			::EnableWindow (combo, TRUE);
+		}
+		else
+		{
+			ComboBox_SetCurSel (combo, -1);
+			::EnableWindow (combo, FALSE);
+		}
 	}
+
+	void ProcessBridgePrioritySelChange (HWND hwnd)
+	{
+		int index = ComboBox_GetCurSel(hwnd);
+		if (index == -1)
+			return;
+
+		auto newPrio = (unsigned int) index * 4096u;
+		auto timestamp = GetTimestampMilliseconds();
+
+		for (auto& o : _selection->GetObjects())
+		{
+			auto b = dynamic_cast<Bridge*>(o.Get());
+			auto stpb = b->GetStpBridge();
+			auto treeIndex = STP_GetTreeIndexFromVlanNumber(stpb, _projectWindow->GetSelectedVlanNumber());
+			STP_SetBridgePriority (stpb, treeIndex, newPrio, timestamp);
+		}
+	}
+
+	// ========================================================================
 
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
 	{

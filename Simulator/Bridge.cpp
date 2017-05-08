@@ -238,10 +238,11 @@ void Bridge::SetLocation(float x, float y)
 
 void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned int vlanNumber) const
 {
-	bool isRootBridge = STP_IsBridgeStarted(_stpBridge) && STP_IsRootBridge(_stpBridge);
+	auto treeIndex = STP_GetTreeIndexFromVlanNumber (_stpBridge, vlanNumber);
+	bool isRoot = STP_IsBridgeStarted(_stpBridge) && STP_IsRootBridge(_stpBridge);
 	// Draw bridge outline.
 	D2D1_ROUNDED_RECT rr = RoundedRect (GetBounds(), RoundRadius, RoundRadius);
-	float ow = OutlineWidth * (isRootBridge ? 2 : 1);
+	float ow = OutlineWidth * (isRoot ? 2 : 1);
 	InflateRoundedRect (&rr, -ow / 2);
 	dc->FillRoundedRectangle (&rr, _powered ? dos._poweredFillBrush : dos._unpoweredBrush);
 	dc->DrawRoundedRectangle (&rr, dos._brushWindowText, ow);
@@ -256,11 +257,15 @@ void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned 
 	if (STP_IsBridgeStarted(_stpBridge))
 	{
 		auto treeIndex = STP_GetTreeIndexFromVlanNumber(_stpBridge, vlanNumber);
+
+		bool isRegionalRoot = STP_IsBridgeStarted(_stpBridge) && (treeIndex > 0) && STP_IsRegionalRootBridge (_stpBridge, treeIndex);
+
 		ss << uppercase << setfill(L'0') << setw(4) << hex << STP_GetBridgePriority(_stpBridge, treeIndex) << L'.'
 			<< GetBridgeAddressAsString() << endl
 			<< L"STP enabled (" << STP_GetVersionString(stpVersion) << L")" << endl
 			<< L"VLAN " << dec << vlanNumber << L" (spanning tree " << treeIndex << L")" << endl
-			<< (isRootBridge ? L"Root Bridge\r\n" : L"");
+			<< (isRoot ? ((stpVersion >= STP_VERSION_MSTP) ? L"CIST Root\r\n" : L"Root Bridge\r\n") : L"")
+			<< (isRegionalRoot ? L"Regional Root\r\n" : L"");
 	}
 	else
 	{
@@ -428,8 +433,8 @@ void Bridge::StpCallback_DebugStrOut (STP_BRIDGE* bridge, int portIndex, int tre
 		{
 			if ((b->_currentLogLine.portIndex != portIndex) || (b->_currentLogLine.treeIndex != treeIndex))
 			{
-				b->_logLines.push_back(move(b->_currentLogLine));
-				BridgeLogLineGenerated::InvokeHandlers (b->_em, b, b->_logLines.back());
+				b->_logLines.push_back(make_unique<BridgeLogLine>(move(b->_currentLogLine)));
+				BridgeLogLineGenerated::InvokeHandlers (b->_em, b, b->_logLines.back().get());
 			}
 
 			b->_currentLogLine.text.append (nullTerminatedString, (size_t) stringLength);
@@ -437,15 +442,15 @@ void Bridge::StpCallback_DebugStrOut (STP_BRIDGE* bridge, int portIndex, int tre
 
 		if (!b->_currentLogLine.text.empty() && (b->_currentLogLine.text.back() == L'\n'))
 		{
-			b->_logLines.push_back(move(b->_currentLogLine));
-			BridgeLogLineGenerated::InvokeHandlers (b->_em, b, b->_logLines.back());
+			b->_logLines.push_back(make_unique<BridgeLogLine>(move(b->_currentLogLine)));
+			BridgeLogLineGenerated::InvokeHandlers (b->_em, b, b->_logLines.back().get());
 		}
 	}
 
 	if (flush && !b->_currentLogLine.text.empty())
 	{
-		b->_logLines.push_back(move(b->_currentLogLine));
-		BridgeLogLineGenerated::InvokeHandlers (b->_em, b, b->_logLines.back());
+		b->_logLines.push_back(make_unique<BridgeLogLine>(move(b->_currentLogLine)));
+		BridgeLogLineGenerated::InvokeHandlers (b->_em, b, b->_logLines.back().get());
 	}
 }
 

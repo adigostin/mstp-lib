@@ -14,8 +14,6 @@ class VlanWindow : public IVlanWindow
 	IProjectWindow* const _projectWindow;
 	ISelection* const _selection;
 	HWND _hwnd = nullptr;
-	HWND _comboSelectedVlan = nullptr;
-	HWND _comboNewWindowVlan = nullptr;
 
 public:
 	VlanWindow (HWND hWndParent, POINT location, ISimulatorApp* app, IProject* project, IProjectWindow* projectWindow, ISelection* selection)
@@ -80,13 +78,13 @@ public:
 	{
 		if (msg == WM_INITDIALOG)
 		{
-			_comboSelectedVlan  = GetDlgItem (_hwnd, IDC_COMBO_SELECTED_VLAN);
-			_comboNewWindowVlan = GetDlgItem (_hwnd, IDC_COMBO_NEW_WINDOW_VLAN);
+			auto comboSelectedVlan  = GetDlgItem (_hwnd, IDC_COMBO_SELECTED_VLAN);
+			auto comboNewWindowVlan = GetDlgItem (_hwnd, IDC_COMBO_NEW_WINDOW_VLAN);
 			for (size_t i = 1; i <= MaxVlanNumber; i++)
 			{
 				auto str = std::to_wstring(i);
-				ComboBox_AddString(_comboSelectedVlan, str.c_str());
-				ComboBox_AddString(_comboNewWindowVlan, str.c_str());
+				ComboBox_AddString(comboSelectedVlan, str.c_str());
+				ComboBox_AddString(comboNewWindowVlan, str.c_str());
 			}
 			LoadSelectedVlanCombo();
 			LoadSelectedTreeEdit();
@@ -101,9 +99,9 @@ public:
 
 		if (msg == WM_COMMAND)
 		{
-			if ((HIWORD(wParam) == CBN_SELCHANGE) && ((HWND) lParam == _comboNewWindowVlan))
+			if ((HIWORD(wParam) == CBN_SELCHANGE) && (LOWORD(wParam) == IDC_COMBO_NEW_WINDOW_VLAN))
 			{
-				ProcessNewWindowVlanSelChanged();
+				ProcessNewWindowVlanSelChanged ((HWND) lParam);
 				return { TRUE, 0 };
 			}
 
@@ -118,9 +116,9 @@ public:
 		static_cast<VlanWindow*>(callbackArg)->LoadSelectedTreeEdit();
 	}
 
-	void ProcessNewWindowVlanSelChanged()
+	void ProcessNewWindowVlanSelChanged (HWND hwnd)
 	{
-		auto index = ComboBox_GetCurSel(_comboNewWindowVlan);
+		auto index = ComboBox_GetCurSel(hwnd);
 		auto vlanNumber = (unsigned int) (index + 1);
 		auto& pws = _app->GetProjectWindows();
 		auto it = find_if (pws.begin(), pws.end(), [this, vlanNumber](const std::unique_ptr<IProjectWindow>& pw)
@@ -136,11 +134,13 @@ public:
 			auto pw = projectWindowFactory(_app, _project, selection, editAreaFactory, SW_SHOWNORMAL, vlanNumber);
 			_app->AddProjectWindow(move(pw));
 		}
+
+		ComboBox_SetCurSel (hwnd, -1);
 	}
 
 	void LoadSelectedVlanCombo()
 	{
-		ComboBox_SetCurSel (_comboSelectedVlan, _projectWindow->GetSelectedVlanNumber() - 1);
+		ComboBox_SetCurSel (GetDlgItem (_hwnd, IDC_COMBO_SELECTED_VLAN), _projectWindow->GetSelectedVlanNumber() - 1);
 	}
 
 	void LoadSelectedTreeEdit()

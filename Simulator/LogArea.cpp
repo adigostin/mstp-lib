@@ -17,7 +17,7 @@ class LogArea : public D2DWindow, public ILogArea
 	ComPtr<Bridge> _bridge;
 	int _selectedPort = -1;
 	int _selectedTree = -1;
-	vector<string> _lines;
+	vector<const BridgeLogLine*> _lines;
 	UINT_PTR _timerId = 0;
 	int _animationCurrentLineCount = 0;
 	int _animationEndLineCount = 0;
@@ -75,13 +75,12 @@ public:
 		else
 		{
 			wstring_convert<codecvt_utf8<wchar_t>> converter;
-			wstring line;
 
 			float y = 0;
 			float lineHeight = 0;
 			for (int lineIndex = _topLineIndex; (lineIndex < _animationCurrentLineCount) && (y < clientSize.height); lineIndex++)
 			{
-				line = converter.from_bytes(_lines[lineIndex]);
+				auto& line = converter.from_bytes(_lines[lineIndex]->text);
 
 				if ((line.length() >= 2) && (line[line.length() - 2] == '\r') && (line[line.length() - 1] == '\n'))
 					line.resize (line.length() - 2);
@@ -105,17 +104,17 @@ public:
 		}
 	}
 
-	static void OnLogLineGeneratedStatic (void* callbackArg, Bridge* b, const BridgeLogLine& ll)
+	static void OnLogLineGeneratedStatic (void* callbackArg, Bridge* b, const BridgeLogLine* ll)
 	{
 		static_cast<LogArea*>(callbackArg)->OnLogLineGenerated(ll);
 	}
 
-	void OnLogLineGenerated (const BridgeLogLine& ll)
+	void OnLogLineGenerated (const BridgeLogLine* ll)
 	{
-		if (((_selectedPort == -1) || (_selectedPort == ll.portIndex))
-			&& ((_selectedTree == -1) || (_selectedTree == ll.treeIndex)))
+		if (((_selectedPort == -1) || (_selectedPort == ll->portIndex))
+			&& ((_selectedTree == -1) || (_selectedTree == ll->treeIndex)))
 		{
-			_lines.push_back(ll.text);
+			_lines.push_back(ll);
 
 			bool lastLineVisible = (_topLineIndex + _numberOfLinesFitting >= _animationCurrentLineCount);
 
@@ -178,10 +177,10 @@ public:
 			{
 				for (auto& ll : _bridge->GetLogLines())
 				{
-					if (((_selectedPort == -1) || (_selectedPort == ll.portIndex))
-						&& ((_selectedTree == -1) || (_selectedTree == ll.treeIndex)))
+					if (((_selectedPort == -1) || (_selectedPort == ll->portIndex))
+						&& ((_selectedTree == -1) || (_selectedTree == ll->treeIndex)))
 					{
-						_lines.push_back(ll.text);
+						_lines.push_back(ll.get());
 					}
 				}
 
