@@ -17,7 +17,8 @@ class Port;
 class Wire;
 
 static constexpr std::array<uint8_t, 16> DefaultConfigTableDigest = { 0xAC, 0x36, 0x17, 0x7F, 0x50, 0x28, 0x3C, 0xD4, 0xB8, 0x38, 0x21, 0xD8, 0xAB, 0x26, 0xDE, 0x62 };
-static constexpr unsigned int MaxVlanNumber = 16;
+
+static constexpr unsigned int MaxVlanNumber = 16; // 4094 must be maximum
 
 enum class MouseButton
 {

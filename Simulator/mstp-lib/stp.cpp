@@ -12,10 +12,9 @@
 #include <stdio.h>
 
 static void RunStateMachines (STP_BRIDGE* bridge, unsigned int timestamp);
-static unsigned int GetInstanceCountForStateMachine (const SM_INFO* smInfo, unsigned int portCount, unsigned int treeCount);
+static unsigned int GetInstanceCountForAllStateMachines (STP_BRIDGE* bridge);
 static void RecomputePrioritiesAndPortRoles (STP_BRIDGE* bridge, unsigned int treeIndex, unsigned int timestamp);
 static void ComputeMstConfigDigest (STP_BRIDGE* bridge);
-//static void GetMstConfigDigest (STP_BRIDGE* bridge, const struct VLAN_TO_MSTID* table, unsigned int tableEntryCount, unsigned char digestOut [16]);
 
 // ============================================================================
 
@@ -74,12 +73,8 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 
 	// ------------------------------------------------------------------------
 	// alloc space for state array
-	unsigned int stateMachineInstanceCount = 0;
-	for (unsigned int i = 0; i < bridge->smInterface->smInfoCount; i++)
-		stateMachineInstanceCount += GetInstanceCountForStateMachine (&bridge->smInterface->smInfo [i], portCount, (1 + bridge->mstiCount));
 
-	stateMachineInstanceCount += GetInstanceCountForStateMachine (bridge->smInterface->transmitSmInfo, portCount, (1 + bridge->mstiCount));
-
+	unsigned int stateMachineInstanceCount = GetInstanceCountForAllStateMachines(bridge);
 	bridge->states = (SM_STATE*) callbacks->allocAndZeroMemory (stateMachineInstanceCount * sizeof(SM_STATE));
 	assert (bridge->states != NULL);
 
@@ -535,6 +530,16 @@ static void RunStateMachines (STP_BRIDGE* bridge, unsigned int timestamp)
 	} while (changed);
 }
 
+static void RestartStateMachines (STP_BRIDGE* bridge, unsigned int timestamp)
+{
+	assert (bridge->states);
+	memset (bridge->states, 0, GetInstanceCountForAllStateMachines(bridge) * sizeof(SM_STATE));
+	bridge->BEGIN = true;
+	RunStateMachines (bridge, timestamp);
+	bridge->BEGIN = false;
+	RunStateMachines (bridge, timestamp);
+}
+
 // ============================================================================
 
 static unsigned int GetInstanceCountForStateMachine (const SM_INFO* smInfo, unsigned int portCount, unsigned int treeCount)
@@ -549,6 +554,17 @@ static unsigned int GetInstanceCountForStateMachine (const SM_INFO* smInfo, unsi
 			assert (false);
 			return 0;
 	}
+}
+
+static unsigned int GetInstanceCountForAllStateMachines (STP_BRIDGE* bridge)
+{
+	unsigned int count = 0;
+	for (unsigned int i = 0; i < bridge->smInterface->smInfoCount; i++)
+		count += GetInstanceCountForStateMachine (&bridge->smInterface->smInfo [i], bridge->portCount, (1 + bridge->mstiCount));
+
+	count += GetInstanceCountForStateMachine (bridge->smInterface->transmitSmInfo, bridge->portCount, (1 + bridge->mstiCount));
+
+	return count;
 }
 
 // ============================================================================
@@ -850,78 +866,47 @@ static void ComputeMstConfigDigest (STP_BRIDGE* bridge)
 
 	memcpy (bridge->MstConfigId.ConfigurationDigest, context.digest, 16);
 }
-/*
-void STP_SetMstConfigTableAndComputeDigest1 (STP_BRIDGE* bridge, const unsigned char mstids [4094], unsigned int timestamp)
-{
-	assert (bridge->ForceProtocolVersion >= STP_VERSION_MSTP);
 
-	LOG (bridge, -1, -1, "{T}: Setting MST Config Table...\r\n", timestamp);
-
-	for (int i = 0; i < 4094; i++)
-	{
-		unsigned char mstid = mstids[i];
-
-		// Check that the caller is not trying to map a VLAN to a too-large tree number.
-		assert (mstid <= bridge->mstiCount);
-
-		// write it in BE format
-		bridge->mstConfigTable [i + 1] = mstid;
-	}
-
-	ComputeMstConfigDigest (bridge);
-
-	if (bridge->started)
-	{
-		bridge->BEGIN = true;
-		RunStateMachines (bridge, timestamp);
-		bridge->BEGIN = false;
-		RunStateMachines (bridge, timestamp);
-	}
-
-	LOG (bridge, -1, -1, "------------------------------------\r\n");
-	FLUSH_LOG (bridge);
-}
-
-void STP_SetMstConfigTableAndComputeDigest (STP_BRIDGE* bridge, const struct VLAN_TO_MSTID* table, unsigned int tableEntryCount, unsigned int timestamp)
-{
-	assert (bridge->ForceProtocolVersion >= STP_VERSION_MSTP);
-
-	LOG (bridge, -1, -1, "{T}: Setting MST Config Table...\r\n", timestamp);
-
-	memset (bridge->mstConfigTable, 0, sizeof bridge->mstConfigTable);
-	for (unsigned int i = 0; i < tableEntryCount; i++)
-	{
-		const VLAN_TO_MSTID* entry = &table [i];
-		unsigned short vlan = entry->vlanLow | (entry->vlanHigh << 8);
-		assert ((vlan > 0) && (vlan <= 4094));
-
-		// Check that the caller is not trying to map a VLAN to a too-large tree number.
-		assert (entry->mstid <= bridge->mstiCount);
-
-		assert (bridge->mstConfigTable [vlan] == (unsigned short) 0); // trying to set twice the mstid for the same vlan
-
-		bridge->mstConfigTable [vlan] = entry->mstid;
-	}
-
-	ComputeMstConfigDigest (bridge);
-
-	if (bridge->started)
-	{
-		bridge->BEGIN = true;
-		RunStateMachines (bridge, timestamp);
-		bridge->BEGIN = false;
-		RunStateMachines (bridge, timestamp);
-	}
-
-	LOG (bridge, -1, -1, "------------------------------------\r\n");
-	FLUSH_LOG (bridge);
-}
-*/
-
-void STP_SetMstConfigTable (struct STP_BRIDGE* bridge, const struct STP_CONFIG_TABLE_ENTRY* entries, unsigned int entryCount, unsigned int timestamp)
+void STP_SetMstConfigTable (struct STP_BRIDGE* bridge, const STP_CONFIG_TABLE_ENTRY* entries, unsigned int entryCount, unsigned int timestamp)
 {
 	assert (entryCount == 1 + bridge->maxVlanNumber);
-	assert(false); // not implemented
+
+	LOG (bridge, -1, -1, "{T}: Setting MST Config Table... ", timestamp);
+
+	if (memcmp (bridge->mstConfigTable, entries, entryCount * 2) == 0)
+	{
+		LOG (bridge, -1, -1, "... nothing changed.\r\n");
+	}
+	else
+	{
+		// Check that the caller is not trying to map a VLAN to a too-large tree number.
+		assert (entries[0].unused == 0);
+		assert (entries[0].treeIndex == 0);
+		for (unsigned int vlan = 1; vlan < entryCount; vlan++)
+		{
+			assert (entries[vlan].unused == 0);
+			assert (entries[vlan].treeIndex < (1 + bridge->mstiCount));
+		}
+
+		if (entryCount == 4096)
+			assert (entries[4095].treeIndex == 0);
+
+		memcpy (bridge->mstConfigTable, entries, entryCount * 2);
+
+		ComputeMstConfigDigest (bridge);
+
+		LOG (bridge, -1, -1, "New digest: 0x{X2}{X2}...{X2}{X2}.\r\n",
+			 bridge->MstConfigId.ConfigurationDigest[0], bridge->MstConfigId.ConfigurationDigest[1],
+			 bridge->MstConfigId.ConfigurationDigest[14], bridge->MstConfigId.ConfigurationDigest[15]);
+
+		if (bridge->started)
+			RestartStateMachines(bridge, timestamp);
+
+		bridge->callbacks.onConfigChanged (bridge, timestamp);
+	}
+
+	LOG (bridge, -1, -1, "------------------------------------\r\n");
+	FLUSH_LOG (bridge);
 }
 
 const STP_CONFIG_TABLE_ENTRY* STP_GetMstConfigTable (STP_BRIDGE* bridge, unsigned int* entryCountOut)
@@ -955,11 +940,26 @@ enum STP_VERSION STP_GetStpVersion (STP_BRIDGE* bridge)
 
 void STP_SetStpVersion (STP_BRIDGE* bridge, enum STP_VERSION version, unsigned int timestamp)
 {
-	// LOG...
-	if (bridge->ForceProtocolVersion == version)
-		return;
+	LOG (bridge, -1, -1, "{T}: Switching to {S}... ", timestamp, STP_GetVersionString(version));
 
-	assert (false); // not implemented
+	if (bridge->ForceProtocolVersion == version)
+	{
+		LOG (bridge, -1, -1, "... bridge was already running {S}.\r\n", STP_GetVersionString(version));
+	}
+	else
+	{
+		LOG (bridge, -1, -1, "\r\n");
+
+		bridge->ForceProtocolVersion = version;
+
+		if (bridge->started)
+			RestartStateMachines (bridge, timestamp);
+
+		bridge->callbacks.onConfigChanged(bridge, timestamp);
+	}
+
+	LOG (bridge, -1, -1, "------------------------------------\r\n");
+	FLUSH_LOG (bridge);
 }
 
 unsigned int STP_GetPortEnabled (STP_BRIDGE* bridge, unsigned int portIndex)

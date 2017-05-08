@@ -89,6 +89,16 @@ public:
 				::EndDialog (_hwnd, IDCANCEL);
 				return { TRUE, 0 };
 			}
+			else if (wParam == IDC_BUTTON_USE_DEFAULT_CONFIG_TABLE)
+			{
+				LoadDefaultConfig();
+				return { TRUE, 0 };
+			}
+			else if (wParam == IDC_BUTTON_USE_TEST1_CONFIG_TABLE)
+			{
+				LoadTestConfig1();
+				return { TRUE, 0 };
+			}
 
 			return { FALSE, 0 };
 		}
@@ -105,6 +115,40 @@ public:
 		return true;
 	}
 
+	void LoadDefaultConfig()
+	{
+		auto timestamp = GetTimestampMilliseconds();
+
+		vector<STP_CONFIG_TABLE_ENTRY> entries;
+		entries.resize(1 + MaxVlanNumber);
+
+		for (auto b : _bridges)
+			STP_SetMstConfigTable (b->GetStpBridge(), &entries[0], (unsigned int) entries.size(), timestamp);
+	}
+
+	void LoadTestConfig1()
+	{
+		auto timestamp = GetTimestampMilliseconds();
+
+		for (auto b : _bridges)
+		{
+			auto treeCount = 1 + STP_GetMstiCount(b->GetStpBridge());
+
+			vector<STP_CONFIG_TABLE_ENTRY> entries;
+			entries.resize(1 + MaxVlanNumber);
+
+			entries[0] = { 0, 0 }; // VLAN0 does not exist.
+
+			unsigned char treeIndex = 1;
+			for (unsigned int vid = 1; vid <= MaxVlanNumber; vid++)
+			{
+				entries[vid].unused = 0;
+				entries[vid].treeIndex = (vid - 1) % treeCount;
+			}
+
+			STP_SetMstConfigTable (b->GetStpBridge(), &entries[0], (unsigned int) entries.size(), timestamp);
+		}
+	}
 };
 
 const MSTConfigIdDialogFactory mstConfigIdDialogFactory = [](auto... params) { return std::unique_ptr<IMSTConfigIdDialog>(new MSTConfigIdDialog(params...)); };

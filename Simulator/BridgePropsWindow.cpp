@@ -529,7 +529,7 @@ private:
 		}
 		else
 		{
-			::SetWindowTextA (_mstConfigRevLevelEdit, "(multiple selection)");
+			::SetWindowTextA (_mstConfigDigestEdit, "(multiple selection)");
 			tooltipText = L"";
 		}
 

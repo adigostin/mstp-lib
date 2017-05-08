@@ -1,5 +1,5 @@
 
-// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/ 
+// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/
 // Copyright (c) 2011-2017 Adrian Gostin, distributed under the GNU General Public License v3.
 
 #define _CRT_SECURE_NO_WARNINGS
@@ -55,7 +55,7 @@ static void WriteChar (STP_BRIDGE* bridge, int port, int tree, char c)
 	}
 	else
 	{
-		// Some other char. 
+		// Some other char.
 
 		if (bridge->logLineStarting)
 		{
@@ -92,7 +92,7 @@ static void WriteChar (STP_BRIDGE* bridge, int port, int tree, char c)
 			bridge->callbacks.debugStrOut (bridge, port, tree, bridge->logBuffer, bridge->logBufferUsedSize, false);
 			bridge->logBufferUsedSize = 0;
 		}
-	}	
+	}
 }
 
 void STP_Indent (STP_BRIDGE* bridge)
@@ -110,7 +110,7 @@ void STP_Unindent (STP_BRIDGE* bridge)
 
 	// We're not supposed to Unindent more than we Indent-ed.
 	assert (bridge->logIndent >= STP_BRIDGE::LogIndentSize); // Trying to Unindent() more times than Indent()-ed.
-	
+
 	bridge->logIndent -= STP_BRIDGE::LogIndentSize;
 }
 
@@ -168,17 +168,17 @@ void STP_Log (STP_BRIDGE* bridge, int port, int tree, const char* format, ...)
 				char ch = *format;
 				if ((ch < '0') || (ch > '9'))
 					break;
-				
+
 				size = 10 * size + ch - '0';
 				format++;
 			}
-			
+
 			assert (*format == '}');
 			format++;
-			
+
 			const char* str = va_arg (ap, const char*);
 			size_t strLen = strlen (str);
-			
+
 			size_t paddingSize = (strLen >= size) ? 0 : (size - strLen);
 			for (size_t i = 0; i < paddingSize; i++)
 				WriteChar (bridge, port, tree, ' ');
@@ -197,7 +197,7 @@ void STP_Log (STP_BRIDGE* bridge, int port, int tree, const char* format, ...)
 			int i = va_arg (ap, int);
 			while (i--)
 				WriteChar (bridge, port, tree, ' ');
-			
+
 			format += 3;
 		}
 		*/

@@ -1,5 +1,5 @@
 
-// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/ 
+// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/
 // Copyright (c) 2011-2017 Adrian Gostin, distributed under the GNU General Public License v3.
 
 #include "../stp_bridge.h"
@@ -134,7 +134,7 @@ static const SM_INFO smInfo [] =
 };
 
 static const SM_INFO transmitSmInfo =
-{	
+{
 	SM_INFO::PER_PORT,
 	"PortTransmit",
 	PortTransmit_802_1Q_2011_GetStateName,
