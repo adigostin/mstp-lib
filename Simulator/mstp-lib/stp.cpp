@@ -254,10 +254,10 @@ void STP_SetBridgeAddress (STP_BRIDGE* bridge, const unsigned char* address, uns
 	FLUSH_LOG (bridge);
 }
 
-void STP_GetBridgeAddress (STP_BRIDGE* bridge, unsigned char* addressOut6Bytes)
+void STP_GetBridgeAddress (STP_BRIDGE* bridge, unsigned char addressOut[6])
 {
 	const unsigned char* address = (const unsigned char*) bridge->trees [CIST_INDEX]->GetBridgeIdentifier ().GetAddress ();
-	memcpy (addressOut6Bytes, address, 6);
+	memcpy (addressOut, address, 6);
 }
 
 // ============================================================================

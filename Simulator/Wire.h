@@ -36,5 +36,5 @@ public:
 	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
 
 private:
-	bool IsForwardingOnVlan (unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const;
+	bool IsForwarding (unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const;
 };

@@ -106,7 +106,7 @@ void STP_OnBpduReceived (struct STP_BRIDGE* bridge, unsigned int portIndex, cons
 
 // Call this every time the bridge's MAC address changes during bridge operation.
 void STP_SetBridgeAddress (struct STP_BRIDGE* bridge, const unsigned char* address, unsigned int timestamp);
-void STP_GetBridgeAddress (struct STP_BRIDGE* bridge, unsigned char* addressOut6Bytes);
+void STP_GetBridgeAddress (struct STP_BRIDGE* bridge, unsigned char addressOut[6]);
 
 // Call these whenever one of the ports your ports changes state. See 13.25.31 portEnabled in 802.1Q-2011 for details.
 void STP_OnPortEnabled (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int speedMegabitsPerSecond, unsigned int detectedPointToPointMAC, unsigned int timestamp);

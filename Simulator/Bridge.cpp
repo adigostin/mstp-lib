@@ -225,11 +225,6 @@ void Bridge::ProcessReceivedPacket()
 		InvalidateEvent::InvokeHandlers(_em, this);
 }
 
-STP_VERSION Bridge::GetStpVersion() const
-{
-	return STP_GetStpVersion(_stpBridge);
-}
-
 void Bridge::SetLocation(float x, float y)
 {
 	if ((_x != x) || (_y != y))
@@ -262,18 +257,14 @@ void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned 
 	{
 		auto treeIndex = STP_GetTreeIndexFromVlanNumber(_stpBridge, vlanNumber);
 		ss << uppercase << setfill(L'0') << setw(4) << hex << STP_GetBridgePriority(_stpBridge, treeIndex) << L'.'
-			<< setw(2) << macAddress[0] << setw(2) << macAddress[1] << setw(2) << macAddress[2]
-			<< setw(2) << macAddress[3] << setw(2) << macAddress[4] << setw(2) << macAddress[5] << endl
+			<< GetBridgeAddressAsString() << endl
 			<< L"STP enabled (" << STP_GetVersionString(stpVersion) << L")" << endl
 			<< L"VLAN " << dec << vlanNumber << L" (spanning tree " << treeIndex << L")" << endl
 			<< (isRootBridge ? L"Root Bridge\r\n" : L"");
 	}
 	else
 	{
-		ss << uppercase << setfill(L'0') << hex
-			<< setw(2) << macAddress[0] << setw(2) << macAddress[1] << setw(2) << macAddress[2]
-			<< setw(2) << macAddress[3] << setw(2) << macAddress[4] << setw(2) << macAddress[5] << endl
-			<< L"STP disabled\r\n(right-click to enable)";
+		ss << uppercase << setfill(L'0') << hex << GetBridgeAddressAsString() << endl << L"STP disabled\r\n(right-click to enable)";
 	}
 
 	auto tl = TextLayout::Make (dos._dWriteFactory, dos._regularTextFormat, ss.str().c_str());
@@ -313,7 +304,7 @@ HTResult Bridge::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, fl
 	return {};
 }
 
-bool Bridge::IsPortForwardingOnVlan (unsigned int portIndex, unsigned int vlanNumber) const
+bool Bridge::IsPortForwarding (unsigned int portIndex, unsigned int vlanNumber) const
 {
 	if (!STP_IsBridgeStarted(_stpBridge))
 		return true;
@@ -322,56 +313,22 @@ bool Bridge::IsPortForwardingOnVlan (unsigned int portIndex, unsigned int vlanNu
 	return STP_GetPortForwarding(_stpBridge, portIndex, treeIndex);
 }
 
-bool Bridge::IsStpRootBridge() const
-{
-	if (!STP_IsBridgeStarted(_stpBridge))
-		throw runtime_error ("STP was not enabled on this bridge.");
-
-	return STP_IsRootBridge(_stpBridge);
-}
-
-//static
-wstring Bridge::GetStpVersionString (STP_VERSION stpVersion)
-{
-	static wstring_convert<codecvt_utf8<wchar_t>> converter;
-	return converter.from_bytes (STP_GetVersionString(stpVersion));
-}
-
-wstring Bridge::GetStpVersionString() const
-{
-	auto stpVersion = STP_GetStpVersion(_stpBridge);
-	return GetStpVersionString(stpVersion);
-}
-
-std::array<uint8_t, 6> Bridge::GetBridgeAddress() const
-{
-	std::array<uint8_t, 6> address;
-	STP_GetBridgeAddress (_stpBridge, address.data());
-	return address;
-}
-
 std::wstring Bridge::GetBridgeAddressAsString() const
 {
-	auto address = GetBridgeAddress();
-	std::wstring str;
-	str.resize(18);
-	swprintf_s (str.data(), str.size(), L"%02X:%02X:%02X:%02X:%02X:%02X", address[0], address[1], address[2], address[3], address[4], address[5]);
-	return str;
-}
+	array<unsigned char, 6> address;
+	STP_GetBridgeAddress (_stpBridge, address.data());
 
-array<uint8_t, 16> Bridge::GetMstConfigDigest()
-{
-	unsigned int digestLength;
-	auto digest = STP_GetMstConfigTableDigest(_stpBridge, &digestLength);
-	assert (digestLength == 16);
-	array<uint8_t, 16> result;
-	memcpy (result.data(), digest, 16);
-	return result;
+	wstringstream ss;
+	ss << uppercase << setfill(L'0') << hex
+		<< setw(2) << address[0] << setw(2) << address[1] << setw(2) << address[2]
+		<< setw(2) << address[3] << setw(2) << address[4] << setw(2) << address[5];
+	return ss.str();
 }
 
 std::array<uint8_t, 6> Bridge::GetPortAddress (size_t portIndex) const
 {
-	std::array<uint8_t, 6> pa = GetBridgeAddress();
+	std::array<uint8_t, 6> pa;
+	STP_GetBridgeAddress (_stpBridge, pa.data());
 	pa[5]++;
 	if (pa[5] == 0)
 	{
@@ -519,5 +476,6 @@ void Bridge::StpCallback_OnConfigChanged (struct STP_BRIDGE* bridge, unsigned in
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 	BridgeConfigChangedEvent::InvokeHandlers (b->_em, b);
+	InvalidateEvent::InvokeHandlers(b->_em, b);
 }
 #pragma endregion

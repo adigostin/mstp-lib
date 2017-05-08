@@ -105,9 +105,9 @@ private:
 			BOOL bRes = SetWindowSubclass (_bridgeAddressEdit, EditSubclassProc, EditSubClassId, (DWORD_PTR) this); assert (bRes);
 			_checkStpEnabled = GetDlgItem (_hwnd, IDC_CHECK_STP_ENABLED);
 			_comboStpVersion = GetDlgItem (_hwnd, IDC_COMBO_STP_VERSION);
-			ComboBox_AddString (_comboStpVersion, Bridge::GetStpVersionString(STP_VERSION_LEGACY_STP).c_str());
-			ComboBox_AddString (_comboStpVersion, Bridge::GetStpVersionString(STP_VERSION_RSTP).c_str());
-			ComboBox_AddString (_comboStpVersion, Bridge::GetStpVersionString(STP_VERSION_MSTP).c_str());
+			::SendMessageA (_comboStpVersion, CB_ADDSTRING, 0, (LPARAM) STP_GetVersionString(STP_VERSION_LEGACY_STP));
+			::SendMessageA (_comboStpVersion, CB_ADDSTRING, 0, (LPARAM) STP_GetVersionString(STP_VERSION_RSTP));
+			::SendMessageA (_comboStpVersion, CB_ADDSTRING, 0, (LPARAM) STP_GetVersionString(STP_VERSION_MSTP));
 			_comboPortCount = GetDlgItem (_hwnd, IDC_COMBO_PORT_COUNT);
 			for (size_t i = FirstPortCount; i <= 16; i++)
 				ComboBox_AddString(_comboPortCount, std::to_wstring(i).c_str());
@@ -383,6 +383,8 @@ private:
 		if (_selection->GetObjects().size() == 1)
 		{
 			auto bridge = dynamic_cast<Bridge*>(_selection->GetObjects()[0].Get());
+			std::array<unsigned char, 6> ba;
+			STP_GetBridgeAddress(bridge->GetStpBridge(), ba.data());
 			::SetWindowText (_bridgeAddressEdit, bridge->GetBridgeAddressAsString().c_str());
 			::EnableWindow (_bridgeAddressEdit, TRUE);
 		}
@@ -411,7 +413,7 @@ private:
 	{
 		assert (BridgesSelected());
 
-		auto getStpVersion = [](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get())->GetStpVersion(); };
+		auto getStpVersion = [](const ComPtr<Object>& o) { return STP_GetStpVersion (dynamic_cast<Bridge*>(o.Get())->GetStpBridge()); };
 
 		int index = -1;
 
@@ -494,10 +496,20 @@ private:
 
 	void LoadMstConfigTableHashEdit()
 	{
-		auto digest = dynamic_cast<Bridge*>(_selection->GetObjects()[0].Get())->GetMstConfigDigest();
+		auto getDigest = [](const ComPtr<Object>& o)
+		{
+			auto b = dynamic_cast<Bridge*>(o.Get());
+			unsigned int digestLength;
+			auto digest = STP_GetMstConfigTableDigest (b->GetStpBridge(), &digestLength);
+			assert (digestLength == 16);
+			array<uint8_t, 16> result;
+			memcpy (result.data(), digest, 16);
+			return result;
+		};
 
-		bool allSame = all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(),
-							   [&digest](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get())->GetMstConfigDigest() == digest; });
+		auto digest = getDigest(_selection->GetObjects()[0].Get());
+
+		bool allSame = all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](const ComPtr<Object>& o) { return getDigest(o) == digest; });
 
 		const wchar_t* tooltipText;
 		if (allSame)

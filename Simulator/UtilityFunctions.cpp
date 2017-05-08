@@ -130,43 +130,6 @@ TextLayout TextLayout::Make (IDWriteFactory* dWriteFactory, IDWriteTextFormat* f
 }
 
 /*
-unsigned long long GetMacAddressValueFromBytes (unsigned char* address)
-{
-	unsigned int high = ((unsigned int)address[0] << 8) | (unsigned int)address[1];
-	unsigned int low = ((unsigned int)address[2] << 24) | ((unsigned int)address[3] << 16) | ((unsigned int)address[4] << 8) | (unsigned int)address[5];
-
-	return (((unsigned long long) high) << 32) | low;
-}
-
-void GetMacAddressBytesFromValue (unsigned long long value, unsigned char* addressOut6Bytes)
-{
-	unsigned int low = (unsigned int)value;
-	unsigned int high = (unsigned int)(value >> 32);
-	addressOut6Bytes[0] = (unsigned char)(high >> 8);
-	addressOut6Bytes[1] = (unsigned char)high;
-	addressOut6Bytes[2] = (unsigned char)(low >> 24);
-	addressOut6Bytes[3] = (unsigned char)(low >> 16);
-	addressOut6Bytes[4] = (unsigned char)(low >> 8);
-	addressOut6Bytes[5] = (unsigned char)low;
-}
-
-void MacAddressToString (unsigned long long address, wchar_t* bufferOut18WChars)
-{
-	_snwprintf_s (bufferOut18WChars, 18, 18, L"%02X:%02X:%02X:%02X:%02X:%02X",
-		(unsigned int)(address >> 40) & 0xFF,
-				  (unsigned int)(address >> 32) & 0xFF,
-				  ((unsigned int)address >> 24) & 0xFF,
-				  ((unsigned int)address >> 16) & 0xFF,
-				  ((unsigned int)address >> 8) & 0xFF,
-				  ((unsigned int)address & 0xFF));
-}
-
-void MacAddressToString (unsigned char* address6Bytes, wchar_t* bufferOut18WChars)
-{
-	_snwprintf_s (bufferOut18WChars, 18, 18, L"%02X:%02X:%02X:%02X:%02X:%02X",
-				  address6Bytes[0], address6Bytes[1], address6Bytes[2], address6Bytes[3], address6Bytes[4], address6Bytes[5]);
-}
-
 bool TryParseMacAddress (const wchar_t* text, unsigned long long* addressOut)
 {
 	if ((wcslen (text) == 17)

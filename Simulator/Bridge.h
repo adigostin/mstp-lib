@@ -72,7 +72,6 @@ public:
 
 	D2D1_RECT_F GetBounds() const { return { _x, _y, _x + _width, _y + _height }; }
 	const std::vector<ComPtr<Port>>& GetPorts() const { return _ports; }
-	std::array<uint8_t, 6> GetBridgeAddress() const;
 	std::wstring GetBridgeAddressAsString() const;
 
 	virtual void Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned int vlanNumber) const override final;
@@ -86,12 +85,7 @@ public:
 
 	bool IsPowered() const { return _powered; }
 	const std::vector<BridgeLogLine>& GetLogLines() const { return _logLines; }
-	bool IsPortForwardingOnVlan (unsigned int portIndex, unsigned int vlanNumber) const;
-	bool IsStpRootBridge() const;
-	STP_VERSION GetStpVersion() const;
-	std::wstring GetStpVersionString() const;
-	static std::wstring GetStpVersionString (STP_VERSION stpVersion);
-	std::array<uint8_t, 16> GetMstConfigDigest();
+	bool IsPortForwarding (unsigned int portIndex, unsigned int vlanNumber) const;
 
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);

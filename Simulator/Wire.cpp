@@ -57,14 +57,14 @@ D2D1_POINT_2F Wire::GetPointCoords (size_t pointIndex) const
 		return get<ConnectedWireEnd>(_points[pointIndex])->GetCPLocation();
 }
 
-bool Wire::IsForwardingOnVlan (unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const
+bool Wire::IsForwarding (unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const
 {
 	if (holds_alternative<ConnectedWireEnd>(_points[0]) && holds_alternative<ConnectedWireEnd>(_points[1]))
 	{
 		auto portA = get<ConnectedWireEnd>(_points[0]);
 		auto portB = get<ConnectedWireEnd>(_points[1]);
-		bool portAFw = portA->GetBridge()->IsPortForwardingOnVlan(portA->GetPortIndex(), vlanNumber);
-		bool portBFw = portB->GetBridge()->IsPortForwardingOnVlan(portB->GetPortIndex(), vlanNumber);
+		bool portAFw = portA->GetBridge()->IsPortForwarding (portA->GetPortIndex(), vlanNumber);
+		bool portBFw = portB->GetBridge()->IsPortForwarding (portB->GetPortIndex(), vlanNumber);
 		if (portAFw && portBFw)
 		{
 			if (hasLoop != nullptr)
@@ -73,16 +73,16 @@ bool Wire::IsForwardingOnVlan (unsigned int vlanNumber, _Out_opt_ bool* hasLoop)
 
 				function<bool(Port* txPort)> transmitsTo = [vlanNumber, &txPorts, &transmitsTo, targetPort=portA](Port* txPort) -> bool
 				{
-					if (txPort->GetBridge()->IsPortForwardingOnVlan (txPort->GetPortIndex(), vlanNumber))
+					if (txPort->GetBridge()->IsPortForwarding (txPort->GetPortIndex(), vlanNumber))
 					{
 						auto rx = txPort->GetBridge()->GetProject()->FindConnectedPort(txPort);
-						if ((rx != nullptr) && rx->GetBridge()->IsPortForwardingOnVlan(rx->GetPortIndex(), vlanNumber))
+						if ((rx != nullptr) && rx->GetBridge()->IsPortForwarding (rx->GetPortIndex(), vlanNumber))
 						{
 							txPorts.insert(txPort);
 
 							for (unsigned int i = 0; i < (unsigned int) rx->GetBridge()->GetPorts().size(); i++)
 							{
-								if ((i != rx->GetPortIndex()) && rx->GetBridge()->IsPortForwardingOnVlan(i, vlanNumber))
+								if ((i != rx->GetPortIndex()) && rx->GetBridge()->IsPortForwarding (i, vlanNumber))
 								{
 									auto otherTxPort = rx->GetBridge()->GetPorts()[i].Get();
 									if (otherTxPort == targetPort)
@@ -114,7 +114,7 @@ bool Wire::IsForwardingOnVlan (unsigned int vlanNumber, _Out_opt_ bool* hasLoop)
 void Wire::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, unsigned int vlanNumber) const
 {
 	bool hasLoop;
-	bool forwarding = IsForwardingOnVlan(vlanNumber, &hasLoop);
+	bool forwarding = IsForwarding (vlanNumber, &hasLoop);
 
 	float width = WireThickness;
 	ID2D1Brush* brush;
