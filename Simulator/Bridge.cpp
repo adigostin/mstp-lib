@@ -304,15 +304,6 @@ HTResult Bridge::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, fl
 	return {};
 }
 
-bool Bridge::IsPortForwarding (unsigned int portIndex, unsigned int vlanNumber) const
-{
-	if (!STP_IsBridgeStarted(_stpBridge))
-		return true;
-
-	auto treeIndex = STP_GetTreeIndexFromVlanNumber(_stpBridge, vlanNumber);
-	return STP_GetPortForwarding(_stpBridge, portIndex, treeIndex);
-}
-
 std::wstring Bridge::GetBridgeAddressAsString() const
 {
 	array<unsigned char, 6> address;

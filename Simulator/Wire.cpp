@@ -63,8 +63,8 @@ bool Wire::IsForwarding (unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const
 	{
 		auto portA = get<ConnectedWireEnd>(_points[0]);
 		auto portB = get<ConnectedWireEnd>(_points[1]);
-		bool portAFw = portA->GetBridge()->IsPortForwarding (portA->GetPortIndex(), vlanNumber);
-		bool portBFw = portB->GetBridge()->IsPortForwarding (portB->GetPortIndex(), vlanNumber);
+		bool portAFw = portA->IsForwarding(vlanNumber);
+		bool portBFw = portB->IsForwarding(vlanNumber);
 		if (portAFw && portBFw)
 		{
 			if (hasLoop != nullptr)
@@ -73,16 +73,16 @@ bool Wire::IsForwarding (unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const
 
 				function<bool(Port* txPort)> transmitsTo = [vlanNumber, &txPorts, &transmitsTo, targetPort=portA](Port* txPort) -> bool
 				{
-					if (txPort->GetBridge()->IsPortForwarding (txPort->GetPortIndex(), vlanNumber))
+					if (txPort->IsForwarding(vlanNumber))
 					{
 						auto rx = txPort->GetBridge()->GetProject()->FindConnectedPort(txPort);
-						if ((rx != nullptr) && rx->GetBridge()->IsPortForwarding (rx->GetPortIndex(), vlanNumber))
+						if ((rx != nullptr) && rx->IsForwarding(vlanNumber))
 						{
 							txPorts.insert(txPort);
 
 							for (unsigned int i = 0; i < (unsigned int) rx->GetBridge()->GetPorts().size(); i++)
 							{
-								if ((i != rx->GetPortIndex()) && rx->GetBridge()->IsPortForwarding (i, vlanNumber))
+								if ((i != rx->GetPortIndex()) && rx->IsForwarding(vlanNumber))
 								{
 									auto otherTxPort = rx->GetBridge()->GetPorts()[i].Get();
 									if (otherTxPort == targetPort)

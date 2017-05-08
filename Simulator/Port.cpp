@@ -287,3 +287,13 @@ HTResult Port::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, floa
 	return { };
 }
 
+bool Port::IsForwarding (unsigned int vlanNumber) const
+{
+	auto stpb = _bridge->GetStpBridge();
+	if (!STP_IsBridgeStarted(stpb))
+		return true;
+
+	auto treeIndex = STP_GetTreeIndexFromVlanNumber(stpb, vlanNumber);
+	return STP_GetPortForwarding (stpb, _portIndex, treeIndex);
+}
+

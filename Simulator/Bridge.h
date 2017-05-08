@@ -69,9 +69,10 @@ public:
 	float GetWidth() const { return _width; }
 	float GetHeight() const { return _height; }
 	void SetLocation (float x, float y);
-
 	D2D1_RECT_F GetBounds() const { return { _x, _y, _x + _width, _y + _height }; }
+
 	const std::vector<ComPtr<Port>>& GetPorts() const { return _ports; }
+
 	std::wstring GetBridgeAddressAsString() const;
 
 	virtual void Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned int vlanNumber) const override final;
@@ -85,7 +86,6 @@ public:
 
 	bool IsPowered() const { return _powered; }
 	const std::vector<BridgeLogLine>& GetLogLines() const { return _logLines; }
-	bool IsPortForwarding (unsigned int portIndex, unsigned int vlanNumber) const;
 
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);

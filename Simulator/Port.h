@@ -37,6 +37,7 @@ public:
 	bool GetMacOperational() const { return _macOperational; }
 	D2D1::Matrix3x2F GetPortTransform() const;
 	D2D1_RECT_F GetInnerRect() const;
+	bool IsForwarding (unsigned int vlanNumber) const;
 
 	static void RenderExteriorNonStpPort (ID2D1RenderTarget* dc, const DrawingObjects& dos, bool macOperational);
 	static void RenderExteriorStpPort (ID2D1RenderTarget* dc, const DrawingObjects& dos, STP_PORT_ROLE role, bool learning, bool forwarding, bool operEdge);
