@@ -57,7 +57,7 @@ D2D1_POINT_2F Wire::GetPointCoords (size_t pointIndex) const
 		return get<ConnectedWireEnd>(_points[pointIndex])->GetCPLocation();
 }
 
-bool Wire::IsForwardingOnVlan (uint16_t vlanNumber, _Out_opt_ bool* hasLoop) const
+bool Wire::IsForwardingOnVlan (unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const
 {
 	if (holds_alternative<ConnectedWireEnd>(_points[0]) && holds_alternative<ConnectedWireEnd>(_points[1]))
 	{
@@ -111,7 +111,7 @@ bool Wire::IsForwardingOnVlan (uint16_t vlanNumber, _Out_opt_ bool* hasLoop) con
 	return false;
 }
 
-void Wire::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, uint16_t vlanNumber) const
+void Wire::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, unsigned int vlanNumber) const
 {
 	bool hasLoop;
 	bool forwarding = IsForwardingOnVlan(vlanNumber, &hasLoop);

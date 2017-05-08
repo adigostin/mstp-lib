@@ -225,43 +225,9 @@ void Bridge::ProcessReceivedPacket()
 		InvalidateEvent::InvokeHandlers(_em, this);
 }
 
-void Bridge::StartStp (unsigned int timestamp)
-{
-	if (STP_IsBridgeStarted(_stpBridge))
-		throw runtime_error ("Already enabled.");
-
-	STP_StartBridge (_stpBridge, timestamp);
-	//if ((_config._treeCount != 1) && (_config._stpVersion != STP_VERSION_MSTP))
-	//	throw runtime_error ("The Tree Count must be set to 1 when not using MSTP.");
-
-	StpEnabledChangedEvent::InvokeHandlers (_em, this);
-	InvalidateEvent::InvokeHandlers(_em, this);
-}
-
-void Bridge::StopStp (unsigned int timestamp)
-{
-	STP_StopBridge(_stpBridge, timestamp);
-	StpEnabledChangedEvent::InvokeHandlers(_em, this);
-	InvalidateEvent::InvokeHandlers(_em, this);
-}
-
-bool Bridge::IsStpStarted() const
-{
-	return STP_IsBridgeStarted(_stpBridge);
-}
-
 STP_VERSION Bridge::GetStpVersion() const
 {
 	return STP_GetStpVersion(_stpBridge);
-}
-
-void Bridge::SetStpVersion (STP_VERSION stpVersion, uint32_t timestamp)
-{
-	if (STP_GetStpVersion(_stpBridge) != stpVersion)
-	{
-		STP_SetStpVersion(_stpBridge, stpVersion, timestamp);
-		StpVersionChangedEvent::InvokeHandlers(_em, this);
-	}
 }
 
 void Bridge::SetLocation(float x, float y)
@@ -275,72 +241,7 @@ void Bridge::SetLocation(float x, float y)
 	}
 }
 
-STP_PORT_ROLE Bridge::GetStpPortRole (unsigned int portIndex, unsigned int treeIndex) const
-{
-	if (!STP_IsBridgeStarted(_stpBridge))
-		throw runtime_error ("STP was not enabled on this bridge.");
-
-	return STP_GetPortRole (_stpBridge, portIndex, treeIndex);
-}
-
-bool Bridge::GetStpPortLearning (unsigned int portIndex, unsigned int treeIndex) const
-{
-	if (!STP_IsBridgeStarted(_stpBridge))
-		throw runtime_error ("STP was not enabled on this bridge.");
-
-	return STP_GetPortLearning (_stpBridge, portIndex, treeIndex);
-}
-
-bool Bridge::GetStpPortForwarding (unsigned int portIndex, unsigned int treeIndex) const
-{
-	if (!STP_IsBridgeStarted(_stpBridge))
-		throw runtime_error ("STP was not enabled on this bridge.");
-
-	return STP_GetPortForwarding (_stpBridge, portIndex, treeIndex);
-}
-
-bool Bridge::GetStpPortOperEdge (unsigned int portIndex) const
-{
-	if (!STP_IsBridgeStarted(_stpBridge))
-		throw runtime_error ("STP was not enabled on this bridge.");
-
-	return STP_GetPortOperEdge (_stpBridge, portIndex);
-}
-
-bool Bridge::GetPortAdminEdge (unsigned int portIndex) const
-{
-	return STP_GetPortAdminEdge(_stpBridge, portIndex);
-}
-
-bool Bridge::GetPortAutoEdge (unsigned int portIndex) const
-{
-	return STP_GetPortAutoEdge(_stpBridge, portIndex);
-}
-
-void Bridge::SetPortAdminEdge (unsigned int portIndex, bool adminEdge, unsigned int timestamp)
-{
-	STP_SetPortAdminEdge (_stpBridge, portIndex, adminEdge ? 1 : 0, timestamp);
-}
-
-void Bridge::SetPortAutoEdge (unsigned int portIndex, bool autoEdge, unsigned int timestamp)
-{
-	STP_SetPortAutoEdge (_stpBridge, portIndex, autoEdge ? 1 : 0, timestamp);
-}
-
-unsigned short Bridge::GetStpBridgePriority (unsigned int treeIndex) const
-{
-	return STP_GetBridgePriority(_stpBridge, treeIndex);
-}
-
-unsigned int Bridge::GetStpTreeIndexFromVlanNumber (unsigned short vlanNumber) const
-{
-	if ((vlanNumber == 0) || (vlanNumber > 4094))
-		throw invalid_argument ("The VLAN number must be >=1 and <=4094.");
-
-	return STP_GetTreeIndexFromVlanNumber(_stpBridge, vlanNumber);
-}
-
-void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, uint16_t vlanNumber) const
+void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned int vlanNumber) const
 {
 	bool isRootBridge = STP_IsBridgeStarted(_stpBridge) && STP_IsRootBridge(_stpBridge);
 	// Draw bridge outline.
@@ -357,7 +258,7 @@ void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, uint16_t 
 
 	// Draw bridge name.
 	wstringstream ss;
-	if (IsStpStarted())
+	if (STP_IsBridgeStarted(_stpBridge))
 	{
 		auto treeIndex = STP_GetTreeIndexFromVlanNumber(_stpBridge, vlanNumber);
 		ss << uppercase << setfill(L'0') << setw(4) << hex << STP_GetBridgePriority(_stpBridge, treeIndex) << L'.'
@@ -412,9 +313,9 @@ HTResult Bridge::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, fl
 	return {};
 }
 
-bool Bridge::IsPortForwardingOnVlan (unsigned int portIndex, uint16_t vlanNumber) const
+bool Bridge::IsPortForwardingOnVlan (unsigned int portIndex, unsigned int vlanNumber) const
 {
-	if (!IsStpStarted())
+	if (!STP_IsBridgeStarted(_stpBridge))
 		return true;
 
 	auto treeIndex = STP_GetTreeIndexFromVlanNumber(_stpBridge, vlanNumber);
@@ -423,7 +324,7 @@ bool Bridge::IsPortForwardingOnVlan (unsigned int portIndex, uint16_t vlanNumber
 
 bool Bridge::IsStpRootBridge() const
 {
-	if (!IsStpStarted())
+	if (!STP_IsBridgeStarted(_stpBridge))
 		throw runtime_error ("STP was not enabled on this bridge.");
 
 	return STP_IsRootBridge(_stpBridge);
@@ -458,36 +359,14 @@ std::wstring Bridge::GetBridgeAddressAsString() const
 	return str;
 }
 
-string Bridge::GetMstConfigName() const
-{
-	string name;
-	name.resize(33);
-	STP_GetMstConfigName(_stpBridge, name.data());
-	return name;
-}
-
-void Bridge::SetMstConfigName (const char* name, unsigned int timestamp)
-{
-	STP_SetMstConfigName (_stpBridge, name, timestamp);
-	MstConfigNameChangedEvent::InvokeHandlers(_em, this);
-}
-
-unsigned short Bridge::GetMstConfigRevLevel() const
-{
-	return STP_GetMstConfigRevisionLevel(_stpBridge);
-}
-
-void Bridge::SetMstConfigRevLevel (unsigned short revLevel, unsigned int timestamp)
-{
-	STP_SetMstConfigRevisionLevel (_stpBridge, revLevel, timestamp);
-	MstConfigRevLevelChangedEvent::InvokeHandlers(_em, this);
-}
-
 array<uint8_t, 16> Bridge::GetMstConfigDigest()
 {
-	array<uint8_t, 16> digest;
-	STP_GetMstConfigTableDigest(_stpBridge, digest.data());
-	return digest;
+	unsigned int digestLength;
+	auto digest = STP_GetMstConfigTableDigest(_stpBridge, &digestLength);
+	assert (digestLength == 16);
+	array<uint8_t, 16> result;
+	memcpy (result.data(), digest, 16);
+	return result;
 }
 
 std::array<uint8_t, 6> Bridge::GetPortAddress (size_t portIndex) const
@@ -520,10 +399,10 @@ const STP_CALLBACKS Bridge::StpCallbacks =
 	StpCallback_OnTopologyChange,
 	StpCallback_OnNotifiedTopologyChange,
 	StpCallback_OnPortRoleChanged,
+	StpCallback_OnConfigChanged,
 	StpCallback_AllocAndZeroMemory,
 	StpCallback_FreeMemory,
 };
-
 
 void* Bridge::StpCallback_AllocAndZeroMemory(unsigned int size)
 {
@@ -622,18 +501,23 @@ void Bridge::StpCallback_DebugStrOut (STP_BRIDGE* bridge, int portIndex, int tre
 	}
 }
 
-void Bridge::StpCallback_OnTopologyChange (STP_BRIDGE* bridge)
+void Bridge::StpCallback_OnTopologyChange (STP_BRIDGE* bridgetimestamp)
 {
 }
 
-void Bridge::StpCallback_OnNotifiedTopologyChange (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
+void Bridge::StpCallback_OnNotifiedTopologyChange (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp)
 {
 }
 
-void Bridge::StpCallback_OnPortRoleChanged (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role)
+void Bridge::StpCallback_OnPortRoleChanged (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role, unsigned int timestamp)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 	InvalidateEvent::InvokeHandlers(b->_em, b);
 }
 
+void Bridge::StpCallback_OnConfigChanged (struct STP_BRIDGE* bridge, unsigned int timestamp)
+{
+	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
+	BridgeConfigChangedEvent::InvokeHandlers (b->_em, b);
+}
 #pragma endregion

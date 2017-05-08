@@ -376,10 +376,10 @@ public:
 					auto b = dynamic_cast<Bridge*>(o.Get());
 					if (b != nullptr)
 					{
-						if (enable && !b->IsStpStarted())
-							b->StartStp(timestamp);
-						else if (!enable && b->IsStpStarted())
-							b->StopStp(timestamp);
+						if (enable && !STP_IsBridgeStarted(b->GetStpBridge()))
+							STP_StartBridge (b->GetStpBridge(), timestamp);
+						else if (!enable && STP_IsBridgeStarted(b->GetStpBridge()))
+							STP_StopBridge (b->GetStpBridge(), timestamp);
 					}
 				}
 			}

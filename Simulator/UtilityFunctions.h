@@ -45,7 +45,7 @@ public:
 	struct InvalidateEvent : public Event<InvalidateEvent, void(Object*)> { };
 	InvalidateEvent::Subscriber GetInvalidateEvent() { return InvalidateEvent::Subscriber(_em); }
 
-	virtual void Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, uint16_t vlanNumber) const = 0;
+	virtual void Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, unsigned int vlanNumber) const = 0;
 	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const = 0;
 	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) = 0;
 

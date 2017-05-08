@@ -85,6 +85,7 @@ void IProject::Remove (Wire* w)
 
 class SimulatorApp : public ISimulatorApp
 {
+	HINSTANCE const _hInstance;
 	ComPtr<ID3D11Device1> _d3dDevice;
 	ComPtr<ID3D11DeviceContext1> _d3dDeviceContext;
 	ComPtr<IDWriteFactory> _dWriteFactory;
@@ -93,7 +94,8 @@ class SimulatorApp : public ISimulatorApp
 	std::vector<std::unique_ptr<IProjectWindow>> _projectWindows;
 
 public:
-	SimulatorApp()
+	SimulatorApp (HINSTANCE hInstance)
+		: _hInstance(hInstance)
 	{
 		wstringstream ss;
 		ss << L"SOFTWARE\\" << CompanyName << L"\\" << ::AppName << L"\\" << ::AppVersion;
@@ -136,6 +138,8 @@ public:
 		//hr = CoCreateInstance(CLSID_WICImagingFactory2, NULL, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory2), (void**)&wicFactory); ThrowIfFailed(hr);
 	}
 
+	virtual HINSTANCE GetHInstance() const override final { return _hInstance; }
+
 	virtual void AddProjectWindow (std::unique_ptr<IProjectWindow>&& pw) override final
 	{
 		_projectWindows.push_back(move(pw));
@@ -159,7 +163,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 
 	int processExitValue;
 	{
-		SimulatorApp app;
+		SimulatorApp app (hInstance);
 
 		{
 			//auto actionList = actionListFactory();

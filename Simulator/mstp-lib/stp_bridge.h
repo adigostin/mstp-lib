@@ -1,5 +1,5 @@
 
-// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/ 
+// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/
 // Copyright (c) 2011-2017 Adrian Gostin, distributed under the GNU General Public License v3.
 
 #ifndef MSTP_LIB_BRIDGE_H
@@ -109,7 +109,7 @@ public:
 struct STP_BRIDGE
 {
 	static const unsigned int LogIndentSize = 2;
-	
+
 	char* logBuffer;
 	unsigned int logBufferMaxSize;
 	unsigned int logBufferUsedSize;
@@ -120,7 +120,7 @@ struct STP_BRIDGE
 	bool started;
 	int logCurrentPort;
 	int logCurrentTree;
-	
+
 	STP_CALLBACKS callbacks;
 
 	unsigned int portCount;
@@ -148,17 +148,17 @@ struct STP_BRIDGE
 	static const unsigned short BridgeMaxAge = 20;		// 13.22.i in 802.1Q-2005 --- 17.14 in 802.1D-2004
 	static const unsigned short BridgeForwardDelay = 15;// 13.22.f in 802.1Q-2005 --- 17.14 in 802.1D-2004
 	static const unsigned short MaxHops = 20;			// 13.22.1 in 802.1Q-2005 --- 13.23.7 --- 13.37.3
-	
+
 	// Not from the standard. See long comment in 802_1Q_2011_procedures.cpp, just above CallTcCallback().
-	static const unsigned short TcIgnoreMax = 6; 
+	static const unsigned short TcIgnoreMax = 6;
 	unsigned short tcIgnore;
 
 	void* applicationContext;
-	
+
 	SM_STATE* states;
 
 	const SM_INTERFACE* smInterface;
-	
+
 	// This variable is supposed to be be accessed only while a received BPDU is being handled.
 	// When there's no received BPDU, we set it to the invalid value NULL, to cause a crash on access and signal the programming error early.
 	// (Note that the crash won't happen on some microcontrollers for which address 0 is

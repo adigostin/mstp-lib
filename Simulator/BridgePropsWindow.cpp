@@ -27,6 +27,7 @@ class BridgePropsWindow : public IBridgePropsWindow
 	HWND _buttonEditMstConfigId = nullptr;
 	HWND _staticTreeProps = nullptr;
 	HWND _controlBeingValidated = nullptr;
+	HWND _configTableDigestToolTip = nullptr;
 	bool _editChangedByUser = false;
 	std::queue<std::function<void()>> _workQueue;
 
@@ -121,7 +122,10 @@ private:
 			bRes = SetWindowSubclass (_mstConfigRevLevelEdit, EditSubclassProc, EditSubClassId, (DWORD_PTR) this); assert (bRes);
 
 			_mstConfigDigestEdit = GetDlgItem (_hwnd, IDC_EDIT_MST_CONFIG_TABLE_HASH);
-			
+
+			DWORD ttStyle = WS_POPUP | TTS_ALWAYSTIP | TTS_BALLOON;
+			_configTableDigestToolTip = CreateWindowEx(NULL, TOOLTIPS_CLASS, NULL, ttStyle, 0, 0, 0, 0, _hwnd, NULL, _app->GetHInstance(), NULL);
+
 			_buttonEditMstConfigId = GetDlgItem (_hwnd, IDC_BUTTON_EDIT_MST_CONFIG_TABLE);
 
 			_staticTreeProps = GetDlgItem(_hwnd, IDC_STATIC_TREE_PROPS);
@@ -134,12 +138,6 @@ private:
 				ComboBox_AddString (comboBridgePrio, ss.str().c_str());
 			}
 
-			return { FALSE, 0 };
-		}
-
-		if (msg == WM_DESTROY)
-		{
-			BOOL bRes = RemoveWindowSubclass (_bridgeAddressEdit, EditSubclassProc, EditSubClassId); assert (bRes);
 			return { FALSE, 0 };
 		}
 
@@ -208,8 +206,8 @@ private:
 			for (auto& o : _selection->GetObjects())
 			{
 				auto b = dynamic_cast<Bridge*>(o.Get());
-				if (!b->IsStpStarted())
-					b->StartStp(timestamp);
+				if (!STP_IsBridgeStarted(b->GetStpBridge()))
+					STP_StartBridge (b->GetStpBridge(), timestamp);
 			}
 		}
 		else
@@ -218,8 +216,8 @@ private:
 			for (auto& o : _selection->GetObjects())
 			{
 				auto b = dynamic_cast<Bridge*>(o.Get());
-				if (b->IsStpStarted())
-					b->StopStp(timestamp);
+				if (STP_IsBridgeStarted(b->GetStpBridge()))
+					STP_StopBridge (b->GetStpBridge(), timestamp);
 			}
 		}
 	}
@@ -245,15 +243,7 @@ private:
 		for (auto& o : _selection->GetObjects())
 		{
 			auto b = dynamic_cast<Bridge*>(o.Get()); assert (b != nullptr);
-
-			if (b->IsStpStarted())
-			{
-				b->StopStp(timestamp);
-				b->SetStpVersion(newVersion, timestamp);
-				b->StartStp(timestamp);
-			}
-			else
-				b->SetStpVersion(newVersion, timestamp);
+			STP_SetStpVersion (b->GetStpBridge(), newVersion, timestamp);
 		}
 	}
 
@@ -357,15 +347,7 @@ private:
 
 		auto bridge = dynamic_cast<Bridge*>(o);
 		if (bridge != nullptr)
-		{
-			bridge->GetBridgeAddressChangedEvent().AddHandler (&OnSelectedBridgeAddressChanged, window);
-			bridge->GetStpEnabledChangedEvent().AddHandler (&OnSelectedBridgeStpEnabledChanged, window);
-			bridge->GetStpVersionChangedEvent().AddHandler (&OnSelectedBridgeStpVersionChanged, window);
-			bridge->GetPortCountChangedEvent().AddHandler (&OnSelectedBridgePortCountChanged, window);
-			bridge->GetMstiCountChangedEvent().AddHandler (&OnSelectedBridgeMstiCountChanged, window);
-			bridge->GetMstConfigNameChangedEvent().AddHandler (&OnSelectedBridgeMstConfigNameChanged, window);
-			bridge->GetMstConfigRevLevelChangedEvent().AddHandler (&OnSelectedBridgeMstConfigRevLevelChanged, window);
-		}
+			bridge->GetBridgeConfigChangedEvent().AddHandler (&OnBridgeConfigChanged, window);
 	}
 
 	static void OnObjectRemovingFromSelection (void* callbackArg, ISelection* selection, Object* o)
@@ -374,51 +356,24 @@ private:
 
 		auto bridge = dynamic_cast<Bridge*>(o);
 		if (bridge != nullptr)
-		{
-			bridge->GetMstConfigRevLevelChangedEvent().RemoveHandler (&OnSelectedBridgeMstConfigRevLevelChanged, window);
-			bridge->GetMstConfigNameChangedEvent().RemoveHandler (&OnSelectedBridgeMstConfigNameChanged, window);
-			bridge->GetMstiCountChangedEvent().RemoveHandler (&OnSelectedBridgeMstiCountChanged, window);
-			bridge->GetPortCountChangedEvent().RemoveHandler (&OnSelectedBridgePortCountChanged, window);
-			bridge->GetStpVersionChangedEvent().RemoveHandler (&OnSelectedBridgeStpVersionChanged, window);
-			bridge->GetStpEnabledChangedEvent().RemoveHandler (&OnSelectedBridgeStpEnabledChanged, window);
-			bridge->GetBridgeAddressChangedEvent().RemoveHandler (&OnSelectedBridgeAddressChanged, window);
-		}
+			bridge->GetBridgeConfigChangedEvent().RemoveHandler (&OnBridgeConfigChanged, window);
 	}
 
-	static void OnSelectedBridgeAddressChanged (void* callbackArg, Bridge* b)
+	static void OnBridgeConfigChanged (void* callbackArg, Bridge* b)
 	{
-		auto window = static_cast<BridgePropsWindow*>(callbackArg);
-		window->LoadBridgeAddressTextBox();
+		static_cast<BridgePropsWindow*>(callbackArg)->LoadAll();
 	}
 
-	static void OnSelectedBridgeStpEnabledChanged (void* callbackArg, Bridge* b)
+	void LoadAll()
 	{
-		static_cast<BridgePropsWindow*>(callbackArg)->LoadStpStartedCheckBox();
-	}
-
-	static void OnSelectedBridgeStpVersionChanged (void* callbackArg, Bridge* b)
-	{
-		static_cast<BridgePropsWindow*>(callbackArg)->LoadStpVersionComboBox();
-	}
-
-	static void OnSelectedBridgePortCountChanged (void* callbackArg, Bridge* b)
-	{
-		static_cast<BridgePropsWindow*>(callbackArg)->LoadPortCountComboBox();
-	}
-
-	static void OnSelectedBridgeMstiCountChanged (void* callbackArg, Bridge* b)
-	{
-		static_cast<BridgePropsWindow*>(callbackArg)->LoadMstiCountComboBox();
-	}
-
-	static void OnSelectedBridgeMstConfigNameChanged (void* callbackArg, Bridge* b)
-	{
-		static_cast<BridgePropsWindow*>(callbackArg)->LoadMstConfigNameTextBox();
-	}
-
-	static void OnSelectedBridgeMstConfigRevLevelChanged (void* callbackArg, Bridge* b)
-	{
-		static_cast<BridgePropsWindow*>(callbackArg)->LoadMstConfigRevLevelTextBox();
+		LoadBridgeAddressTextBox();
+		LoadStpStartedCheckBox();
+		LoadStpVersionComboBox();
+		LoadPortCountComboBox();
+		LoadMstiCountComboBox();
+		LoadMstConfigNameTextBox();
+		LoadMstConfigRevLevelTextBox();
+		LoadMstConfigTableHashEdit();
 	}
 
 	void LoadBridgeAddressTextBox()
@@ -442,7 +397,7 @@ private:
 	{
 		assert (BridgesSelected());
 
-		auto getStpStarted = [](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get())->IsStpStarted(); };
+		auto getStpStarted = [](const ComPtr<Object>& o) { return STP_IsBridgeStarted(dynamic_cast<Bridge*>(o.Get())->GetStpBridge()); };
 
 		if (none_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), getStpStarted))
 			::SendMessage (_checkStpEnabled, BM_SETCHECK, BST_UNCHECKED, 0);
@@ -492,7 +447,7 @@ private:
 	{
 		assert (BridgesSelected());
 
-		auto getMstiCount = [](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get())->GetMstiCount(); };
+		auto getMstiCount = [](const ComPtr<Object>& o) { return STP_GetMstiCount(dynamic_cast<Bridge*>(o.Get())->GetStpBridge()); };
 
 		int index = -1;
 		auto mstiCount = getMstiCount(_selection->GetObjects()[0]);
@@ -504,12 +459,19 @@ private:
 
 	void LoadMstConfigNameTextBox()
 	{
-		auto name = dynamic_cast<Bridge*>(_selection->GetObjects()[0].Get())->GetMstConfigName();
+		assert (BridgesSelected());
 
-		bool allSame = all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(),
-							   [&name](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get())->GetMstConfigName() == name; });
+		auto getName = [](const ComPtr<Object>& o)
+		{
+			char name[33];
+			STP_GetMstConfigName(dynamic_cast<Bridge*>(o.Get())->GetStpBridge(), name);
+			return std::string(name);
+		};
 
-		if (allSame)
+		auto name = getName(_selection->GetObjects()[0]);
+
+		bool allSameName = all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](const ComPtr<Object>& o) { return getName(o) == name; });
+		if (allSameName)
 			::SetWindowTextA (_mstConfigNameEdit, name.c_str());
 		else
 			::SetWindowTextA (_mstConfigNameEdit, "(multiple selection)");
@@ -517,12 +479,14 @@ private:
 
 	void LoadMstConfigRevLevelTextBox()
 	{
-		uint16_t level = dynamic_cast<Bridge*>(_selection->GetObjects()[0].Get())->GetMstConfigRevLevel();
+		assert (BridgesSelected());
 
-		bool allSame = all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(),
-							   [level](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get())->GetMstConfigRevLevel() == level; });
+		auto getLevel = [](const ComPtr<Object>& o) { return STP_GetMstConfigRevisionLevel(dynamic_cast<Bridge*>(o.Get())->GetStpBridge()); };
 
-		if (allSame)
+		auto level = getLevel(_selection->GetObjects()[0]);
+
+		bool allSameLevel = all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](const ComPtr<Object>& o) { return getLevel(o) == level; });
+		if (allSameLevel)
 			::SetWindowTextA (_mstConfigRevLevelEdit, to_string(level).c_str());
 		else
 			::SetWindowTextA (_mstConfigRevLevelEdit, "(multiple selection)");
@@ -535,18 +499,34 @@ private:
 		bool allSame = all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(),
 							   [&digest](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get())->GetMstConfigDigest() == digest; });
 
+		const wchar_t* tooltipText;
 		if (allSame)
 		{
 			wstringstream ss;
 			ss << uppercase << setfill(L'0') << hex
-				<< setw(2) << digest[0]  << setw(2) << digest[1]  << setw(2) << digest[2]  << setw(2) << digest[3] 
-				<< setw(2) << digest[4]  << setw(2) << digest[5]  << setw(2) << digest[6]  << setw(2) << digest[7] 
-				<< setw(2) << digest[8]  << setw(2) << digest[9]  << setw(2) << digest[10] << setw(2) << digest[11] 
+				<< setw(2) << digest[0]  << setw(2) << digest[1]  << setw(2) << digest[2]  << setw(2) << digest[3]
+				<< setw(2) << digest[4]  << setw(2) << digest[5]  << setw(2) << digest[6]  << setw(2) << digest[7]
+				<< setw(2) << digest[8]  << setw(2) << digest[9]  << setw(2) << digest[10] << setw(2) << digest[11]
 				<< setw(2) << digest[12] << setw(2) << digest[13] << setw(2) << digest[14] << setw(2) << digest[15];
 			::SetWindowText (_mstConfigDigestEdit, ss.str().c_str());
+
+			if (digest == DefaultConfigTableDigest)
+				tooltipText = L"All VLANs assigned to the CIST, no VLAN assigned to any MSTI.";
+			else
+				tooltipText = L"Customized config table.";
 		}
 		else
+		{
 			::SetWindowTextA (_mstConfigRevLevelEdit, "(multiple selection)");
+			tooltipText = L"";
+		}
+
+		TOOLINFO toolInfo = { sizeof(toolInfo) };
+		toolInfo.hwnd = _hwnd;
+		toolInfo.uFlags = TTF_IDISHWND | TTF_SUBCLASS;
+		toolInfo.uId = (UINT_PTR) GetDlgItem (_hwnd, IDC_STATIC_CONFIG_TABLE_TIP);
+		toolInfo.lpszText = const_cast<wchar_t*>(tooltipText);
+		SendMessage (_configTableDigestToolTip, TTM_ADDTOOL, 0, (LPARAM)&toolInfo);
 	}
 
 	void LoadStaticTreeProps()
@@ -567,15 +547,7 @@ private:
 		}
 		else
 		{
-			window->LoadBridgeAddressTextBox();
-			window->LoadStpStartedCheckBox();
-			window->LoadStpVersionComboBox();
-			window->LoadPortCountComboBox();
-			window->LoadMstiCountComboBox();
-			window->LoadMstConfigNameTextBox();
-			window->LoadMstConfigRevLevelTextBox();
-			window->LoadMstConfigTableHashEdit();
-
+			window->LoadAll();
 			::ShowWindow (window->GetHWnd(), SW_SHOW);
 		}
 	}
@@ -621,7 +593,10 @@ private:
 
 			auto timestamp = GetTimestampMilliseconds();
 			for (auto& o : _selection->GetObjects())
-				dynamic_cast<Bridge*>(o.Get())->SetMstConfigName(ascii.c_str(), timestamp);
+			{
+				auto stpBridge = dynamic_cast<Bridge*>(o.Get())->GetStpBridge();
+				STP_SetMstConfigName (stpBridge, ascii.c_str(), timestamp);
+			}
 
 			return true;
 		}

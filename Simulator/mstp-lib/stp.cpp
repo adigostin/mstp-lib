@@ -198,6 +198,8 @@ void STP_StartBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 	bridge->BEGIN = false;
 	RunStateMachines (bridge, timestamp);
 
+	bridge->callbacks.onConfigChanged (bridge, timestamp);
+
 	LOG (bridge, -1, -1, "Bridge started.\r\n");
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
 	FLUSH_LOG (bridge);
@@ -208,6 +210,8 @@ void STP_StartBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 void STP_StopBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 {
 	bridge->started = false;
+
+	bridge->callbacks.onConfigChanged (bridge, timestamp);
 
 	LOG (bridge, -1, -1, "{T}: Bridge stopped.\r\n", timestamp);
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
@@ -245,7 +249,7 @@ void STP_SetBridgeAddress (STP_BRIDGE* bridge, const unsigned char* address, uns
 			RunStateMachines (bridge, timestamp);
 		}
 	}
-	
+
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
 	FLUSH_LOG (bridge);
 }
@@ -789,6 +793,8 @@ void STP_SetMstConfigName (STP_BRIDGE* bridge, const char* name, unsigned int ti
 		}
 	}
 
+	bridge->callbacks.onConfigChanged (bridge, timestamp);
+
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
 	FLUSH_LOG (bridge);
 }
@@ -818,6 +824,8 @@ void STP_SetMstConfigRevisionLevel (STP_BRIDGE* bridge, unsigned short revisionL
 		}
 	}
 
+	bridge->callbacks.onConfigChanged (bridge, timestamp);
+
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
 	FLUSH_LOG (bridge);
 }
@@ -827,76 +835,6 @@ unsigned short STP_GetMstConfigRevisionLevel (STP_BRIDGE* bridge)
 	return bridge->MstConfigId.RevisionLevel;
 }
 
-// ============================================================================
-/*
-static void GetMstConfigDigest (STP_BRIDGE* bridge, const struct VLAN_TO_MSTID* table, unsigned int tableEntryCount, unsigned char digestOut [16])
-{
-	static const int EntriesInBlock = 16;
-
-	INV_UINT2 mstids [EntriesInBlock];
-
-	HMAC_MD5_CONTEXT context;
-	HMAC_MD5_Init (&context);
-
-	for (int vlan = 0; vlan < 4096; vlan += EntriesInBlock)
-	{
-		memset (mstids, 0, sizeof (mstids));
-
-		for (unsigned int entryIndex = 0; entryIndex < tableEntryCount; entryIndex++)
-		{
-			unsigned short entryVlan = table [entryIndex].vlan;
-			unsigned short entryMstid = table [entryIndex].mstid;
-
-			assert (entryVlan > 0); // vlan0 is always assigned to the CIST, as per 802.1Q-2011, 13.7-4), so there shouldn't be any entry for it
-			assert (entryVlan <= 4094);
-
-			assert (entryMstid < bridge->treeCount);
-
-			if ((entryVlan >= vlan) && (entryVlan < vlan + EntriesInBlock))
-			{
-				assert (mstids [entryVlan - vlan].GetValue () == 0); // trying to map the same vlan twice
-
-				mstids [entryVlan - vlan] = entryMstid;
-			}
-		}
-
-		HMAC_MD5_Update (&context, mstids, sizeof (mstids));
-	}
-
-	HMAC_MD5_End (&context);
-
-	memcpy (digestOut, context.digest, 16);
-}
-*/
-// ============================================================================
-/*
-void STP_SetMstConfigTable (STP_BRIDGE* bridge, const struct VLAN_TO_MSTID* table, unsigned int tableEntryCount)
-{
-	assert (bridge->ForceProtocolVersion >= STP_VERSION_MSTP);
-	assert (tableEntryCount <= STP_MST_CONFIG_TABLE_ENTRY_COUNT_MAX);
-
-	GetMstConfigDigest (bridge, table, tableEntryCount, bridge->MstConfigId.ConfigurationDigest);
-
-	memcpy (bridge->mstConfigTable, table, tableEntryCount * sizeof (VLAN_TO_MSTID));
-	bridge->mstConfigTableEntryCount = tableEntryCount;
-
-	// we should assert BEGIN here, but we don't yet support setting the config id while the bridge is running
-	assert (bridge->started == false);
-}
-
-const struct VLAN_TO_MSTID* STP_GetMstConfigTable (STP_BRIDGE* bridge, unsigned int* tableEntryCountOut)
-{
-	assert (bridge->ForceProtocolVersion >= STP_VERSION_MSTP);
-
-	*tableEntryCountOut = bridge->mstConfigTableEntryCount;
-	return bridge->mstConfigTable;
-}
-*/
-void STP_GetMstConfigTable (STP_BRIDGE* bridge, unsigned char mstidsOut [4094])
-{
-	for (int i = 0; i < 4094; i++)
-		mstidsOut [i] = (unsigned char) bridge->mstConfigTable [i + 1].GetValue ();
-}
 
 static void ComputeMstConfigDigest (STP_BRIDGE* bridge)
 {
@@ -912,7 +850,7 @@ static void ComputeMstConfigDigest (STP_BRIDGE* bridge)
 
 	memcpy (bridge->MstConfigId.ConfigurationDigest, context.digest, 16);
 }
-
+/*
 void STP_SetMstConfigTableAndComputeDigest1 (STP_BRIDGE* bridge, const unsigned char mstids [4094], unsigned int timestamp)
 {
 	assert (bridge->ForceProtocolVersion >= STP_VERSION_MSTP);
@@ -978,15 +916,24 @@ void STP_SetMstConfigTableAndComputeDigest (STP_BRIDGE* bridge, const struct VLA
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
 	FLUSH_LOG (bridge);
 }
+*/
 
-void STP_GetMstConfigTableDigest (STP_BRIDGE* bridge, unsigned char digestOut[16])
+void STP_SetMstConfigTable (struct STP_BRIDGE* bridge, const struct STP_CONFIG_TABLE_ENTRY* entries, unsigned int entryCount, unsigned int timestamp)
 {
-	memcpy (digestOut, bridge->MstConfigId.ConfigurationDigest, 16);
+	assert (entryCount == 1 + bridge->maxVlanNumber);
+	assert(false); // not implemented
 }
 
-void STP_SetMstConfigTableDigest (STP_BRIDGE* bridge, const unsigned char digest[16], unsigned int debugTimestamp)
+const STP_CONFIG_TABLE_ENTRY* STP_GetMstConfigTable (STP_BRIDGE* bridge, unsigned int* entryCountOut)
 {
-	assert(false); // not implemented
+	*entryCountOut = 1 + bridge->maxVlanNumber;
+	return (const STP_CONFIG_TABLE_ENTRY*) bridge->mstConfigTable;
+}
+
+const unsigned char* STP_GetMstConfigTableDigest (struct STP_BRIDGE* bridge, unsigned int* digestLengthOut)
+{
+	*digestLengthOut = 16;
+	return bridge->MstConfigId.ConfigurationDigest;
 }
 
 // ============================================================================
@@ -1008,6 +955,10 @@ enum STP_VERSION STP_GetStpVersion (STP_BRIDGE* bridge)
 
 void STP_SetStpVersion (STP_BRIDGE* bridge, enum STP_VERSION version, unsigned int timestamp)
 {
+	// LOG...
+	if (bridge->ForceProtocolVersion == version)
+		return;
+
 	assert (false); // not implemented
 }
 
@@ -1045,7 +996,12 @@ unsigned int STP_GetPortOperPointToPointMAC (STP_BRIDGE* bridge, unsigned int po
 	return bridge->ports [portIndex]->operPointToPointMAC;
 }
 
-unsigned int STP_GetTreeIndexFromVlanNumber (STP_BRIDGE* bridge, unsigned short vlanNumber)
+unsigned int STP_GetMaxVlanNumber (STP_BRIDGE* bridge)
+{
+	return bridge->maxVlanNumber;
+}
+
+unsigned int STP_GetTreeIndexFromVlanNumber (STP_BRIDGE* bridge, unsigned int vlanNumber)
 {
 	assert ((vlanNumber >= 1) && (vlanNumber <= 4094));
 

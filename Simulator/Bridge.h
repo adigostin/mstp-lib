@@ -11,14 +11,8 @@ struct BridgeLogLine
 	int treeIndex;
 };
 
-struct BridgeAddressChangedEvent : public Event<BridgeAddressChangedEvent, void(Bridge*)> { };
-struct StpEnabledChangedEvent : public Event<StpEnabledChangedEvent, void(Bridge*)> { };
-struct StpVersionChangedEvent : public Event<StpVersionChangedEvent, void(Bridge*)> { };
 struct BridgeLogLineGenerated : public Event<BridgeLogLineGenerated, void(Bridge*, const BridgeLogLine& line)> { };
-struct PortCountChangedEvent : public Event<PortCountChangedEvent, void(Bridge*)> { };
-struct MstiCountChangedEvent : public Event<MstiCountChangedEvent, void(Bridge*)> { };
-struct MstConfigNameChangedEvent : public Event<MstConfigNameChangedEvent, void(Bridge*)> { };
-struct MstConfigRevLevelChangedEvent : public Event<MstConfigRevLevelChangedEvent, void(Bridge*)> { };
+struct BridgeConfigChangedEvent : public Event<BridgeConfigChangedEvent, void(Bridge*)> { };
 
 class Bridge : public Object
 {
@@ -81,45 +75,22 @@ public:
 	std::array<uint8_t, 6> GetBridgeAddress() const;
 	std::wstring GetBridgeAddressAsString() const;
 
-	virtual void Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, uint16_t vlanNumber) const override final;
+	virtual void Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned int vlanNumber) const override final;
 	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const override final;
 	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
 
-	BridgeAddressChangedEvent::Subscriber GetBridgeAddressChangedEvent() { return BridgeAddressChangedEvent::Subscriber(_em); }
-	StpEnabledChangedEvent::Subscriber GetStpEnabledChangedEvent() { return StpEnabledChangedEvent::Subscriber(_em); }
-	StpVersionChangedEvent::Subscriber GetStpVersionChangedEvent() { return StpVersionChangedEvent::Subscriber(_em); }
+	STP_BRIDGE* GetStpBridge() const { return _stpBridge; }
+
 	BridgeLogLineGenerated::Subscriber GetBridgeLogLineGeneratedEvent() { return BridgeLogLineGenerated::Subscriber(_em); }
-	PortCountChangedEvent::Subscriber GetPortCountChangedEvent() { return PortCountChangedEvent::Subscriber(_em); }
-	MstiCountChangedEvent::Subscriber GetMstiCountChangedEvent() { return MstiCountChangedEvent::Subscriber(_em); }
-	MstConfigNameChangedEvent::Subscriber GetMstConfigNameChangedEvent() { return MstConfigNameChangedEvent::Subscriber(_em); }
-	MstConfigRevLevelChangedEvent::Subscriber GetMstConfigRevLevelChangedEvent() { return MstConfigRevLevelChangedEvent::Subscriber(_em); }
+	BridgeConfigChangedEvent::Subscriber GetBridgeConfigChangedEvent() { return BridgeConfigChangedEvent::Subscriber(_em); }
 
 	bool IsPowered() const { return _powered; }
-	void StartStp (unsigned int timestamp);
-	void StopStp (unsigned int timestamp);
-	bool IsStpStarted() const;
-	STP_PORT_ROLE GetStpPortRole (unsigned int portIndex, unsigned int treeIndex) const;
-	bool GetStpPortLearning      (unsigned int portIndex, unsigned int treeIndex) const;
-	bool GetStpPortForwarding    (unsigned int portIndex, unsigned int treeIndex) const;
-	bool GetStpPortOperEdge      (unsigned int portIndex) const;
-	bool GetPortAdminEdge (unsigned int portIndex) const;
-	void SetPortAdminEdge (unsigned int portIndex, bool adminEdge, unsigned int timestamp);
-	bool GetPortAutoEdge  (unsigned int portIndex) const;
-	void SetPortAutoEdge  (unsigned int portIndex, bool autoEdge, unsigned int timestamp);
-	unsigned int GetMstiCount() const { return STP_GetMstiCount(_stpBridge); }
-	uint16_t GetStpBridgePriority (unsigned int treeIndex) const;
-	unsigned int GetStpTreeIndexFromVlanNumber (unsigned short vlanNumber) const;
 	const std::vector<BridgeLogLine>& GetLogLines() const { return _logLines; }
-	bool IsPortForwardingOnVlan (unsigned int portIndex, uint16_t vlanNumber) const;
+	bool IsPortForwardingOnVlan (unsigned int portIndex, unsigned int vlanNumber) const;
 	bool IsStpRootBridge() const;
 	STP_VERSION GetStpVersion() const;
-	void SetStpVersion (STP_VERSION stpVersion, unsigned int timestamp);
 	std::wstring GetStpVersionString() const;
 	static std::wstring GetStpVersionString (STP_VERSION stpVersion);
-	std::string GetMstConfigName() const;
-	void SetMstConfigName (const char* name, unsigned int timestamp);
-	unsigned short GetMstConfigRevLevel() const;
-	void SetMstConfigRevLevel (unsigned short revLevel, unsigned int timestamp);
 	std::array<uint8_t, 16> GetMstConfigDigest();
 
 private:
@@ -139,7 +110,8 @@ private:
 	static void  StpCallback_FlushFdb (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType);
 	static void  StpCallback_DebugStrOut (STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, unsigned int flush);
 	static void  StpCallback_OnTopologyChange (STP_BRIDGE* bridge);
-	static void  StpCallback_OnNotifiedTopologyChange (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
-	static void  StpCallback_OnPortRoleChanged (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role);
+	static void  StpCallback_OnNotifiedTopologyChange (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp);
+	static void  StpCallback_OnPortRoleChanged (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role, unsigned int timestamp);
+	static void  StpCallback_OnConfigChanged (struct STP_BRIDGE* bridge, unsigned int timestamp);
 };
 

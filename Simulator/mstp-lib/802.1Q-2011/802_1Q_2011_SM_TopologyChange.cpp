@@ -1,5 +1,5 @@
 
-// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/ 
+// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/
 // Copyright (c) 2011-2017 Adrian Gostin, distributed under the GNU General Public License v3.
 
 #include "802_1Q_2011_procedures.h"
@@ -47,13 +47,13 @@ SM_STATE TopologyChange_802_1Q_2011_CheckConditions (STP_BRIDGE* bridge, int giv
 {
 	assert (givenPort != -1);
 	assert (givenTree != -1);
-	
+
 	PORT* port = bridge->ports [givenPort];
 	PORT_TREE* portTree = port->trees [givenTree];
 
 	// ------------------------------------------------------------------------
 	// Check global conditions.
-	
+
 	if (bridge->BEGIN)
 	{
 		if (state == INACTIVE)
@@ -61,13 +61,13 @@ SM_STATE TopologyChange_802_1Q_2011_CheckConditions (STP_BRIDGE* bridge, int giv
 			// The entry block for this state has been executed already.
 			return 0;
 		}
-		
+
 		return INACTIVE;
 	}
-	
+
 	// ------------------------------------------------------------------------
 	// Check exit conditions from each state.
-	
+
 	if (state == ACTIVE)
 	{
 		if (((portTree->role != STP_PORT_ROLE_ROOT) && (portTree->role != STP_PORT_ROLE_DESIGNATED) && (portTree->role != STP_PORT_ROLE_MASTER)) || port->operEdge)
@@ -79,19 +79,19 @@ SM_STATE TopologyChange_802_1Q_2011_CheckConditions (STP_BRIDGE* bridge, int giv
 
 			return LEARNING;
 		}
-		
+
 		if (port->rcvdTcn)
 			return NOTIFIED_TCN;
-		
+
 		if (portTree->rcvdTc)
 			return NOTIFIED_TC;
-		
+
 		if (portTree->tcProp && !port->operEdge)
 			return PROPAGATING;
-		
+
 		if (port->rcvdTcAck)
 			return ACKNOWLEDGED;
-		
+
 		return 0;
 	}
 
@@ -99,7 +99,7 @@ SM_STATE TopologyChange_802_1Q_2011_CheckConditions (STP_BRIDGE* bridge, int giv
 	{
 		if (portTree->learn && !portTree->fdbFlush)
 			return LEARNING;
-		
+
 		return 0;
 	}
 
@@ -107,31 +107,31 @@ SM_STATE TopologyChange_802_1Q_2011_CheckConditions (STP_BRIDGE* bridge, int giv
 	{
 		if (((portTree->role == STP_PORT_ROLE_ROOT) || (portTree->role == STP_PORT_ROLE_DESIGNATED) || (portTree->role == STP_PORT_ROLE_MASTER)) && portTree->forward && !port->operEdge)
 			return DETECTED;
-		
+
 		if ((portTree->role != STP_PORT_ROLE_ROOT) && (portTree->role != STP_PORT_ROLE_DESIGNATED) && (portTree->role != STP_PORT_ROLE_MASTER) && !(portTree->learn || portTree->learning) && !(portTree->rcvdTc || port->rcvdTcn || port->rcvdTcAck || portTree->tcProp))
 			return INACTIVE;
-		
+
 		if (portTree->rcvdTc || port->rcvdTcn || port->rcvdTcAck || portTree->tcProp)
 			return LEARNING;
-		
+
 		return 0;
 	}
-	
+
 	if (state == DETECTED)
 		return ACTIVE;
-	
+
 	if (state == NOTIFIED_TCN)
 		return NOTIFIED_TC;
-	
+
 	if (state == NOTIFIED_TC)
 		return ACTIVE;
-	
+
 	if (state == PROPAGATING)
 		return ACTIVE;
-	
+
 	if (state == ACKNOWLEDGED)
 		return ACTIVE;
-	
+
 	assert (false);
 	return 0;
 }
@@ -142,7 +142,7 @@ void TopologyChange_802_1Q_2011_InitState (STP_BRIDGE* bridge, int givenPort, in
 {
 	assert (givenPort != -1);
 	assert (givenTree != -1);
-	
+
 	PORT* port = bridge->ports [givenPort];
 	PORT_TREE* portTree = port->trees [givenTree];
 
@@ -174,7 +174,7 @@ void TopologyChange_802_1Q_2011_InitState (STP_BRIDGE* bridge, int givenPort, in
 
 			bridge->callbacks.flushFdb (bridge, givenPort, givenTree, rstpVersion (bridge) ? STP_FLUSH_FDB_TYPE_IMMEDIATE : STP_FLUSH_FDB_TYPE_RAPID_AGEING);
 		}
-		
+
 		portTree->tcDetected = 0;
 		portTree->tcWhile = 0;
 		if (givenTree == CIST_INDEX)
@@ -207,7 +207,7 @@ void TopologyChange_802_1Q_2011_InitState (STP_BRIDGE* bridge, int givenPort, in
 	else if (state == NOTIFIED_TC)
 	{
 		// Note AG: Added by me, see comment at the top of the function.
-		CallNotifiedTcCallback (bridge, (unsigned int) givenTree);
+		CallNotifiedTcCallback (bridge, (unsigned int) givenTree, timestamp);
 
 		if (givenTree == CIST_INDEX)
 			port->rcvdTcn = false;
@@ -219,7 +219,7 @@ void TopologyChange_802_1Q_2011_InitState (STP_BRIDGE* bridge, int givenPort, in
 	else if (state == PROPAGATING)
 	{
 		newTcWhile (bridge, givenPort, givenTree);
-		
+
 		//portTree->fdbFlush = true;
 		// See comments for the INACTIVE state above in this function.
 		if (port->operEdge == false)
@@ -228,7 +228,7 @@ void TopologyChange_802_1Q_2011_InitState (STP_BRIDGE* bridge, int givenPort, in
 
 			bridge->callbacks.flushFdb (bridge, givenPort, givenTree, rstpVersion (bridge) ? STP_FLUSH_FDB_TYPE_IMMEDIATE : STP_FLUSH_FDB_TYPE_RAPID_AGEING);
 		}
-		
+
 		portTree->tcProp = false;
 	}
 	else if (state == ACKNOWLEDGED)

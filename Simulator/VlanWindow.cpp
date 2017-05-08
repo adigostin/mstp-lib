@@ -121,7 +121,7 @@ public:
 	void ProcessNewWindowVlanSelChanged()
 	{
 		auto index = ComboBox_GetCurSel(_comboNewWindowVlan);
-		uint16_t vlanNumber = (uint16_t) (index + 1);
+		auto vlanNumber = (unsigned int) (index + 1);
 		auto& pws = _app->GetProjectWindows();
 		auto it = find_if (pws.begin(), pws.end(), [this, vlanNumber](const std::unique_ptr<IProjectWindow>& pw)
 			{ return (pw->GetProject() == _project) && (pw->GetSelectedVlanNumber() == vlanNumber); });
@@ -147,7 +147,7 @@ public:
 	{
 		auto edit = GetDlgItem (_hwnd, IDC_EDIT_SELECTED_TREE); assert (edit != nullptr);
 		auto& objects = _selection->GetObjects();
-		
+
 		if (_selection->GetObjects().empty())
 		{
 			::SetWindowText (edit, L"(no selection)");
@@ -164,7 +164,7 @@ public:
 		{
 			Object* obj = _selection->GetObjects()[0];
 			auto bridge = obj->Is<Bridge>() ? dynamic_cast<Bridge*>(obj) : dynamic_cast<Port*>(obj)->GetBridge();
-			auto treeIndex = bridge->GetStpTreeIndexFromVlanNumber(_projectWindow->GetSelectedVlanNumber());
+			auto treeIndex = STP_GetTreeIndexFromVlanNumber (bridge->GetStpBridge(), _projectWindow->GetSelectedVlanNumber());
 			if (treeIndex == 0)
 				::SetWindowText (edit, L"CIST (0)");
 			else

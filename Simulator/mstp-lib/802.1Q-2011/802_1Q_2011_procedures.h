@@ -69,6 +69,6 @@ bool updtXstInfo		(STP_BRIDGE*, int givenPort, int givenTree); // not in the sta
 
 // Not from the standard. See long comment in 802_1Q_2011_procedures.cpp, just above CallTcCallback().
 void CallTcCallback (STP_BRIDGE* bridge);
-void CallNotifiedTcCallback (STP_BRIDGE* bridge, unsigned int treeIndex);
+void CallNotifiedTcCallback (STP_BRIDGE* bridge, unsigned int treeIndex, unsigned int timestamp);
 
 #endif

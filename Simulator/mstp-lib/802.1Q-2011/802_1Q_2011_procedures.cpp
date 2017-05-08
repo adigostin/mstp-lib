@@ -329,7 +329,7 @@ void rcvMsgs (STP_BRIDGE* bridge, int givenPort)
 			portCistTree->msgFlagsTc            = GetBpduFlagTc    (bridge->receivedBpduContent->cistFlags);
 			portCistTree->msgFlagsTcAckOrMaster = GetBpduFlagTcAck (bridge->receivedBpduContent->cistFlags);
 
-			// From the note at the end of 13.27.12 in 802.1Q-2011: 
+			// From the note at the end of 13.27.12 in 802.1Q-2011:
 			// A Configuration BPDU implicitly conveys a Designated Port Role.
 			portCistTree->msgFlagsPortRole      = BPDU_PORT_ROLE_DESIGNATED;
 
@@ -1813,14 +1813,14 @@ void CallTcCallback (STP_BRIDGE* bridge)
 // So we don't have to take here special precautions for MSTIs.
 
 // Function not from the the standard. It is meant to be called from the entry block of NOTIFIED_TC.
-void CallNotifiedTcCallback (STP_BRIDGE* bridge, unsigned int treeIndex)
+void CallNotifiedTcCallback (STP_BRIDGE* bridge, unsigned int treeIndex, unsigned int timestamp)
 {
 	for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
 	{
 		PORT* port = bridge->ports [portIndex];
 		if (!port->operEdge)
 		{
-			bridge->callbacks.onNotifiedTopologyChange (bridge, portIndex, treeIndex);
+			bridge->callbacks.onNotifiedTopologyChange (bridge, portIndex, treeIndex, timestamp);
 		}
 	}
 }

@@ -1,5 +1,5 @@
 
-// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/ 
+// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/
 // Copyright (c) 2011-2017 Adrian Gostin, distributed under the GNU General Public License v3.
 
 #ifndef MSTP_LIB_BASE_TYPES_H
@@ -26,13 +26,13 @@ struct INV_UINT2
 private:
 	unsigned char vh;
 	unsigned char vl;
-	
+
 public:
 	unsigned short GetValue () const
 	{
 		return (vh << 8) | vl;
 	}
-	
+
 	void operator= (unsigned short value)
 	{
 		vh = value >> 8;
@@ -65,13 +65,13 @@ private:
 	unsigned char vhl;
 	unsigned char vlh;
 	unsigned char vll;
-	
+
 public:
 	unsigned int GetValue () const
 	{
 		return (vhh << 24) | (vhl << 16) | (vlh << 8) | vll;
 	}
-	
+
 	void operator= (unsigned int newValue)
 	{
 		vhh = (unsigned char) (newValue >> 24);
@@ -111,7 +111,7 @@ struct BRIDGE_ADDRESS
 
 	bool operator== (const BRIDGE_ADDRESS& rhs) const;
 	bool operator != (const BRIDGE_ADDRESS& rhs) const;
-	
+
 	operator const unsigned char* () const
 	{
 		return &a0;
@@ -132,35 +132,35 @@ public:
 	{
 		return ((this->_priority == rhs._priority) && (this->_address == rhs._address));
 	}
-	
+
 	bool operator != (const BRIDGE_ID& rhs) const
 	{
 		return !this->operator== (rhs);
 	}
-	
+
 	void SetPriority (unsigned short settablePriorityComponent, unsigned short mstid)
 	{
 		assert ((settablePriorityComponent % 4096) == 0);
-		
+
 		_priority = settablePriorityComponent | mstid;
 	}
-	
+
 	void SetAddress (const unsigned char address[6])
 	{
 		_address.SetValue (address);
 	}
-	
+
 	void Set (unsigned short settablePriorityComponent, unsigned short mstid, const unsigned char address[6])
 	{
 		SetPriority (settablePriorityComponent, mstid);
 		SetAddress (address);
 	}
-	
+
 	unsigned short GetPriority () const
 	{
 		return _priority.GetValue ();
 	}
-	
+
 	const BRIDGE_ADDRESS& GetAddress () const
 	{
 		return _address;
@@ -208,27 +208,27 @@ struct PRIORITY_VECTOR
 	{
 		return Cmp (this, &rhs, sizeof (*this)) == 0;
 	}
-	
+
 	bool operator!= (const PRIORITY_VECTOR& rhs) const
 	{
 		return Cmp (this, &rhs, sizeof (*this)) != 0;
 	}
-	
+
 	bool IsBetterThan (const PRIORITY_VECTOR& rhs) const
 	{
 		return (Cmp (this, &rhs, sizeof (*this)) < 0);
 	}
-	
+
 	bool IsBetterThanOrSameAs (const PRIORITY_VECTOR& rhs) const
 	{
 		return (Cmp (this, &rhs, sizeof (*this)) <= 0);
 	}
-	
+
 	bool IsWorseThan (const PRIORITY_VECTOR& rhs) const
 	{
 		return (Cmp (this, &rhs, sizeof (*this)) > 0);
 	}
-	
+
 	bool IsWorseThanOrSameAs (const PRIORITY_VECTOR& rhs) const
 	{
 		return (Cmp (this, &rhs, sizeof (*this)) >= 0);
@@ -238,7 +238,7 @@ struct PRIORITY_VECTOR
 	{
 		return this->IsWorseThanOrSameAs (rhs);
 	}
-	
+
 	// 13.9, page 336 in 802.1Q-2011:
 	// A received CIST message priority vector is superior to the port priority vector if, and only if, the message
 	// priority vector is better than the port priority vector, or the Designated Bridge Identifier Bridge Address and
@@ -250,13 +250,13 @@ struct PRIORITY_VECTOR
 	{
 		if (this->IsBetterThan (rhs))
 			return true;
-		
+
 		if ((this->DesignatedBridgeId.GetAddress () == rhs.DesignatedBridgeId.GetAddress ())
 			&& (this->DesignatedPortId.GetPortNumber () == rhs.DesignatedPortId.GetPortNumber ()))
 		{
 			return true;
 		}
-		
+
 		return false;
 	}
 };
@@ -270,12 +270,12 @@ struct TIMES
 	unsigned short MaxAge;
 	unsigned short MessageAge;
 	unsigned char remainingHops;
-	
+
 	bool operator!= (const TIMES& rhs) const
 	{
 		return Cmp (this, &rhs, sizeof (*this)) != 0;
 	}
-	
+
 	bool operator== (const TIMES& rhs) const
 	{
 		return Cmp (this, &rhs, sizeof (*this)) == 0;
@@ -303,7 +303,7 @@ enum RCVD_INFO
 	RCVD_INFO_INFERIOR_DESIGNATED,
 	RCVD_INFO_INFERIOR_ROOT_ALTERNATE,
 	RCVD_INFO_OTHER,
-	
+
 	RCVD_INFO_CONFIRMED_ROOT_MSG, // used by 802.1w-2001
 };
 

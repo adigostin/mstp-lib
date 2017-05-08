@@ -16,6 +16,7 @@ class Bridge;
 class Port;
 class Wire;
 
+static constexpr std::array<uint8_t, 16> DefaultConfigTableDigest = { 0xAC, 0x36, 0x17, 0x7F, 0x50, 0x28, 0x3C, 0xD4, 0xB8, 0x38, 0x21, 0xD8, 0xAB, 0x26, 0xDE, 0x62 };
 static constexpr unsigned int MaxVlanNumber = 16;
 
 enum class MouseButton
@@ -155,14 +156,14 @@ extern const EditAreaFactory editAreaFactory;
 
 // ============================================================================
 
-struct SelectedVlanNumerChangedEvent : public Event<SelectedVlanNumerChangedEvent, void(IProjectWindow* pw, uint16_t vlanNumber)> { };
+struct SelectedVlanNumerChangedEvent : public Event<SelectedVlanNumerChangedEvent, void(IProjectWindow* pw, unsigned int vlanNumber)> { };
 
 struct IProjectWindow : public IWin32Window
 {
 	virtual ~IProjectWindow() { }
 	virtual IProject* GetProject() const = 0;
-	virtual void SelectVlan (unsigned short vlanNumber) = 0;
-	virtual unsigned short GetSelectedVlanNumber() const = 0;
+	virtual void SelectVlan (unsigned int vlanNumber) = 0;
+	virtual unsigned int GetSelectedVlanNumber() const = 0;
 	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() = 0;
 };
 
@@ -171,7 +172,7 @@ using ProjectWindowFactory = std::unique_ptr<IProjectWindow>(*const)(ISimulatorA
 																	 ISelection* selection,
 																	 EditAreaFactory editAreaFactory,
 																	 int nCmdShow,
-																	 unsigned short selectedVlan);
+																	 unsigned int selectedVlan);
 extern const ProjectWindowFactory projectWindowFactory;
 
 // ============================================================================
@@ -248,6 +249,7 @@ extern const VlanWindowFactory vlanWindowFactory;
 
 struct ISimulatorApp
 {
+	virtual HINSTANCE GetHInstance() const = 0;
 	virtual ID3D11DeviceContext1* GetD3DDeviceContext() const = 0;
 	virtual IDWriteFactory* GetDWriteFactory() const = 0;
 	virtual const wchar_t* GetRegKeyPath() const = 0;

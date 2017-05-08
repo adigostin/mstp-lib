@@ -121,7 +121,7 @@ void Port::RenderExteriorStpPort (ID2D1RenderTarget* dc, const DrawingObjects& d
 		// designated forwarding operEdge
 		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
 		dc->FillEllipse (&ellipseFill, dos._brushForwarding);
-		static constexpr D2D1_POINT_2F points[] = 
+		static constexpr D2D1_POINT_2F points[] =
 		{
 			{ 0, circleDiameter },
 			{ -edw / 2 + 1, circleDiameter + (edh - circleDiameter) / 2 },
@@ -198,7 +198,7 @@ void Port::RenderExteriorStpPort (ID2D1RenderTarget* dc, const DrawingObjects& d
 	dc->SetAntialiasMode(oldaa);
 }
 
-void Port::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, uint16_t vlanNumber) const
+void Port::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, unsigned int vlanNumber) const
 {
 	D2D1_MATRIX_3X2_F oldtr;
 	rt->GetTransform(&oldtr);
@@ -206,13 +206,14 @@ void Port::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, uint16_t vl
 
 	// Draw the exterior of the port.
 	float interiorPortOutlineWidth = OutlineWidth;
-	if (_bridge->IsStpStarted())
+	auto b = _bridge->GetStpBridge();
+	if (STP_IsBridgeStarted (b))
 	{
-		unsigned int treeIndex = _bridge->GetStpTreeIndexFromVlanNumber(vlanNumber);
-		STP_PORT_ROLE role = _bridge->GetStpPortRole (_portIndex, treeIndex);
-		bool learning      = _bridge->GetStpPortLearning (_portIndex, treeIndex);
-		bool forwarding    = _bridge->GetStpPortForwarding (_portIndex, treeIndex);
-		bool operEdge      = _bridge->GetStpPortOperEdge (_portIndex);
+		auto treeIndex  = STP_GetTreeIndexFromVlanNumber(b, vlanNumber);
+		auto role       = STP_GetPortRole (b, _portIndex, treeIndex);
+		auto learning   = STP_GetPortLearning (b, _portIndex, treeIndex);
+		auto forwarding = STP_GetPortForwarding (b, _portIndex, treeIndex);
+		auto operEdge   = STP_GetPortOperEdge (b, _portIndex);
 		RenderExteriorStpPort (rt, dos, role, learning, forwarding, operEdge);
 
 		if (role == STP_PORT_ROLE_ROOT)
@@ -250,11 +251,11 @@ void Port::RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, co
 
 	auto oldaa = rt->GetAntialiasMode();
 	rt->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-	
+
 	auto lt = zoomable->GetDLocationFromWLocation ({ ir.left, ir.top });
 	auto rb = zoomable->GetDLocationFromWLocation ({ ir.right, ir.bottom });
 	rt->DrawRectangle ({ lt.x - 10, lt.y - 10, rb.x + 10, rb.y + 10 }, dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
-	
+
 	rt->SetAntialiasMode(oldaa);
 }
 
@@ -262,7 +263,7 @@ bool Port::HitTestCP (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float 
 {
 	auto cpWLocation = GetCPLocation();
 	auto cpDLocation = zoomable->GetDLocationFromWLocation(cpWLocation);
-	
+
 	return (abs (cpDLocation.x - dLocation.x) <= tolerance)
 		&& (abs (cpDLocation.y - dLocation.y) <= tolerance);
 }

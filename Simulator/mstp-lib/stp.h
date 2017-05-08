@@ -38,8 +38,9 @@ typedef void  (*STP_CALLBACK_TRANSMIT_RELEASE_BUFFER)		(struct STP_BRIDGE* bridg
 typedef void  (*STP_CALLBACK_FLUSH_FDB)						(struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType);
 typedef void  (*STP_CALLBACK_DEBUG_STR_OUT)					(struct STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, unsigned int flush);
 typedef void  (*STP_CALLBACK_ON_TOPOLOGY_CHANGE)			(struct STP_BRIDGE* bridge);
-typedef void  (*STP_CALLBACK_ON_NOTIFIED_TOPOLOGY_CHANGE)	(struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
-typedef void  (*STP_CALLBACK_PORT_ROLE_CHANGED)             (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_PORT_ROLE role);
+typedef void  (*STP_CALLBACK_ON_NOTIFIED_TOPOLOGY_CHANGE)	(struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp);
+typedef void  (*STP_CALLBACK_PORT_ROLE_CHANGED)             (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_PORT_ROLE role, unsigned int timestamp);
+typedef void  (*STP_CALLBACK_CONFIG_CHANGED)                (struct STP_BRIDGE* bridge, unsigned int timestamp);
 typedef void* (*STP_CALLBACK_ALLOC_AND_ZERO_MEMORY) (unsigned int size);
 typedef void  (*STP_CALLBACK_FREE_MEMORY) (void* p);
 
@@ -54,6 +55,7 @@ struct STP_CALLBACKS
 	STP_CALLBACK_ON_TOPOLOGY_CHANGE			 onTopologyChange;
 	STP_CALLBACK_ON_NOTIFIED_TOPOLOGY_CHANGE onNotifiedTopologyChange;
 	STP_CALLBACK_PORT_ROLE_CHANGED           onPortRoleChanged;
+	STP_CALLBACK_CONFIG_CHANGED              onConfigChanged;
 	STP_CALLBACK_ALLOC_AND_ZERO_MEMORY		 allocAndZeroMemory;
 	STP_CALLBACK_FREE_MEMORY				 freeMemory;
 };
@@ -144,20 +146,17 @@ void STP_SetMstConfigName (struct STP_BRIDGE* bridge, const char* name, unsigned
 void STP_SetMstConfigRevisionLevel (struct STP_BRIDGE* bridge, unsigned short revisionLevel, unsigned int debugTimestamp);
 unsigned short STP_GetMstConfigRevisionLevel (struct STP_BRIDGE* bridge);
 
-void STP_GetMstConfigTableDigest (struct STP_BRIDGE* bridge, unsigned char digestOut[16]);
-void STP_SetMstConfigTableDigest (struct STP_BRIDGE* bridge, const unsigned char digest[16], unsigned int debugTimestamp);
-
-struct VLAN_TO_MSTID
+struct STP_CONFIG_TABLE_ENTRY
 {
-	unsigned char vlanLow;
-	unsigned char vlanHigh;
-	unsigned char mstid;
+	unsigned char unused;
+	unsigned char treeIndex; // 0=CIST, 1=MSTI1, 2=MSTI2...
 };
 
-void STP_SetMstConfigTableAndComputeDigest1 (struct STP_BRIDGE* bridge, const unsigned char mstids [4094], unsigned int timestamp);
-void STP_SetMstConfigTableAndComputeDigest  (struct STP_BRIDGE* bridge, const struct VLAN_TO_MSTID* table, unsigned int tableEntryCount, unsigned int timestamp);
-void STP_GetMstConfigTable (struct STP_BRIDGE* bridge, unsigned char mstidsOut [4094]);
-unsigned int STP_GetTreeIndexFromVlanNumber (struct STP_BRIDGE* bridge, unsigned short vlanNumber);
+void STP_SetMstConfigTable (struct STP_BRIDGE* bridge, const struct STP_CONFIG_TABLE_ENTRY* entries, unsigned int entryCount, unsigned int timestamp);
+const struct STP_CONFIG_TABLE_ENTRY* STP_GetMstConfigTable (struct STP_BRIDGE* bridge, unsigned int* entryCountOut);
+const unsigned char* STP_GetMstConfigTableDigest (struct STP_BRIDGE* bridge, unsigned int* digestLengthOut);
+unsigned int STP_GetMaxVlanNumber (struct STP_BRIDGE* bridge);
+unsigned int STP_GetTreeIndexFromVlanNumber (struct STP_BRIDGE* bridge, unsigned int vlanNumber);
 
 const char* STP_GetPortRoleString (enum STP_PORT_ROLE portRole);
 const char* STP_GetVersionString (enum STP_VERSION version);
