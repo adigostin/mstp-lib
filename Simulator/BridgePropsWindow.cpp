@@ -17,13 +17,11 @@ class BridgePropsWindow : public IBridgePropsWindow
 	HWND _hwnd = nullptr;
 	HWND _bridgeAddressEdit = nullptr;
 	WNDPROC _bridgeAddressEditOriginalProc;
-	HWND _checkStpEnabled = nullptr;
 	HWND _comboPortCount = nullptr;
 	HWND _comboMstiCount = nullptr;
 	HWND _mstConfigNameEdit = nullptr;
 	HWND _mstConfigRevLevelEdit = nullptr;
 	HWND _mstConfigDigestEdit = nullptr;
-	HWND _buttonEditMstConfigId = nullptr;
 	HWND _staticTreeProps = nullptr;
 	HWND _controlBeingValidated = nullptr;
 	HWND _configTableDigestToolTip = nullptr;
@@ -102,7 +100,6 @@ private:
 		{
 			_bridgeAddressEdit = GetDlgItem (_hwnd, IDC_EDIT_BRIDGE_ADDRESS);
 			BOOL bRes = SetWindowSubclass (_bridgeAddressEdit, EditSubclassProc, EditSubClassId, (DWORD_PTR) this); assert (bRes);
-			_checkStpEnabled = GetDlgItem (_hwnd, IDC_CHECK_STP_ENABLED);
 			auto comboStpVersion = GetDlgItem (_hwnd, IDC_COMBO_STP_VERSION);
 			::SendMessageA (comboStpVersion, CB_ADDSTRING, 0, (LPARAM) STP_GetVersionString(STP_VERSION_LEGACY_STP));
 			::SendMessageA (comboStpVersion, CB_ADDSTRING, 0, (LPARAM) STP_GetVersionString(STP_VERSION_RSTP));
@@ -124,8 +121,6 @@ private:
 
 			DWORD ttStyle = WS_POPUP | TTS_ALWAYSTIP | TTS_BALLOON;
 			_configTableDigestToolTip = CreateWindowEx(NULL, TOOLTIPS_CLASS, NULL, ttStyle, 0, 0, 0, 0, _hwnd, NULL, _app->GetHInstance(), NULL);
-
-			_buttonEditMstConfigId = GetDlgItem (_hwnd, IDC_BUTTON_EDIT_MST_CONFIG_TABLE);
 
 			_staticTreeProps = GetDlgItem(_hwnd, IDC_STATIC_TREE_PROPS);
 
@@ -162,13 +157,13 @@ private:
 		{
 			if (HIWORD(wParam) == BN_CLICKED)
 			{
-				if ((HWND) lParam == _checkStpEnabled)
+				if (LOWORD(wParam) == IDC_CHECK_STP_ENABLED)
 				{
 					ProcessStpStartedClicked();
 					return { TRUE, 0 };
 				}
 
-				if ((HWND) lParam == _buttonEditMstConfigId)
+				if (LOWORD(wParam) == IDC_BUTTON_EDIT_MST_CONFIG_TABLE)
 				{
 					auto dialog = mstConfigIdDialogFactory(_app, _project, _projectWindow, _selection);
 					dialog->ShowModal(_projectWindow->GetHWnd());
@@ -204,7 +199,8 @@ private:
 	{
 		auto timestamp = GetTimestampMilliseconds();
 
-		if (Button_GetCheck(_checkStpEnabled) == BST_UNCHECKED)
+		auto checkStpEnabled = GetDlgItem (_hwnd, IDC_CHECK_STP_ENABLED);
+		if (Button_GetCheck(checkStpEnabled) == BST_UNCHECKED)
 		{
 			// enable stp for all
 			for (auto& o : _selection->GetObjects())
@@ -403,12 +399,14 @@ private:
 	{
 		auto getStpStarted = [](const ComPtr<Object>& o) { return STP_IsBridgeStarted(dynamic_cast<Bridge*>(o.Get())->GetStpBridge()); };
 
+		auto checkStpEnabled = GetDlgItem (_hwnd, IDC_CHECK_STP_ENABLED);
+
 		if (none_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), getStpStarted))
-			::SendMessage (_checkStpEnabled, BM_SETCHECK, BST_UNCHECKED, 0);
+			::SendMessage (checkStpEnabled, BM_SETCHECK, BST_UNCHECKED, 0);
 		else if (all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), getStpStarted))
-			::SendMessage (_checkStpEnabled, BM_SETCHECK, BST_CHECKED, 0);
+			::SendMessage (checkStpEnabled, BM_SETCHECK, BST_CHECKED, 0);
 		else
-			::SendMessage (_checkStpEnabled, BM_SETCHECK, BST_INDETERMINATE, 0);
+			::SendMessage (checkStpEnabled, BM_SETCHECK, BST_INDETERMINATE, 0);
 	}
 
 	void LoadStpVersionComboBox()
