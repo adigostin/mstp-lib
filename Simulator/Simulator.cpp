@@ -55,6 +55,7 @@ RECT IWin32Window::GetClientRectPixels() const
 };
 #pragma endregion
 
+#pragma region IProject
 void IProject::Remove (Object* o)
 {
 	if (auto b = dynamic_cast<Bridge*>(o))
@@ -82,6 +83,41 @@ void IProject::Remove (Wire* w)
 		throw invalid_argument("w");
 	RemoveWire (it - wires.begin());
 }
+
+pair<Wire*, size_t> IProject::GetWireConnectedToPort (const Port* port) const
+{
+	for (auto& w : GetWires())
+	{
+		if (holds_alternative<ConnectedWireEnd>(w->GetP0()) && (get<ConnectedWireEnd>(w->GetP0()) == port))
+			return { w, 0 };
+		else if (holds_alternative<ConnectedWireEnd>(w->GetP1()) && (get<ConnectedWireEnd>(w->GetP1()) == port))
+			return { w, 1 };
+	}
+
+	return { };
+}
+
+Port* IProject::FindConnectedPort (Port* txPort) const
+{
+	for (auto& w : GetWires())
+	{
+		for (size_t i = 0; i < 2; i++)
+		{
+			auto& thisEnd = w->GetPoints()[i];
+			if (holds_alternative<ConnectedWireEnd>(thisEnd) && (get<ConnectedWireEnd>(thisEnd) == txPort))
+			{
+				auto& otherEnd = w->GetPoints()[1 - i];
+				if (holds_alternative<ConnectedWireEnd>(otherEnd))
+					return get<ConnectedWireEnd>(otherEnd);
+				else
+					return nullptr;
+			}
+		}
+	}
+
+	return nullptr;
+}
+#pragma endregion
 
 class SimulatorApp : public ISimulatorApp
 {

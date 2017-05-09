@@ -103,27 +103,6 @@ public:
 
 	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() override final { return ProjectInvalidateEvent::Subscriber(_em); }
 
-	virtual Port* FindConnectedPort (Port* txPort) const override final
-	{
-		for (auto& w : _wires)
-		{
-			for (size_t i = 0; i < 2; i++)
-			{
-				auto& thisEnd = w->GetPoints()[i];
-				if (holds_alternative<ConnectedWireEnd>(thisEnd) && (get<ConnectedWireEnd>(thisEnd) == txPort))
-				{
-					auto& otherEnd = w->GetPoints()[1 - i];
-					if (holds_alternative<ConnectedWireEnd>(otherEnd))
-						return get<ConnectedWireEnd>(otherEnd);
-					else
-						return nullptr;
-				}
-			}
-		}
-
-		return nullptr;
-	}
-
 	virtual array<uint8_t, 6> AllocMacAddressRange (size_t count) override final
 	{
 		if (count >= 128)
@@ -139,19 +118,6 @@ public:
 		}
 
 		return result;
-	}
-
-	virtual pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const override final
-	{
-		for (auto& w : _wires)
-		{
-			if (holds_alternative<ConnectedWireEnd>(w->GetP0()) && (get<ConnectedWireEnd>(w->GetP0()) == port))
-				return { w, 0 };
-			else if (holds_alternative<ConnectedWireEnd>(w->GetP1()) && (get<ConnectedWireEnd>(w->GetP1()) == port))
-				return { w, 1 };
-		}
-
-		return { };
 	}
 
 	#pragma region IUnknown

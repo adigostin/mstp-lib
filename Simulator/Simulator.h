@@ -193,24 +193,23 @@ struct IProject abstract : public IUnknown
 	virtual void RemoveBridge (size_t index) = 0;
 	virtual BridgeInsertedEvent::Subscriber GetBridgeInsertedEvent() = 0;
 	virtual BridgeRemovingEvent::Subscriber GetBridgeRemovingEvent() = 0;
-	void Add (Bridge* bridge) { InsertBridge (GetBridges().size(), bridge); }
 
 	virtual const std::vector<ComPtr<Wire>>& GetWires() const = 0;
 	virtual void InsertWire (size_t index, Wire* wire) = 0;
 	virtual void RemoveWire (size_t index) = 0;
 	virtual WireInsertedEvent::Subscriber GetWireInsertedEvent() = 0;
 	virtual WireRemovingEvent::Subscriber GetWireRemovingEvent() = 0;
-	void Add (Wire* wire) { InsertWire (GetWires().size(), wire); }
+	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() = 0;
+	virtual std::array<uint8_t, 6> AllocMacAddressRange (size_t count) = 0;
 
+	void Add (Bridge* bridge) { InsertBridge (GetBridges().size(), bridge); }
+	void Add (Wire* wire) { InsertWire (GetWires().size(), wire); }
 	void Remove (Bridge* b);
 	void Remove (Wire* w);
 	void Remove (Object* o);
 
-	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() = 0;
-
-	virtual std::array<uint8_t, 6> AllocMacAddressRange (size_t count) = 0;
-	virtual std::pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const = 0;
-	virtual Port* FindConnectedPort (Port* txPort) const = 0;
+	std::pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const;
+	Port* FindConnectedPort (Port* txPort) const;
 };
 
 using ProjectFactory = ComPtr<IProject>(*const)();
