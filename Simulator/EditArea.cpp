@@ -18,6 +18,7 @@ class EditArea : public ZoomableWindow, public IEditArea
 	IProjectWindow* const _pw;
 	ComPtr<ISelection> const _selection;
 	ComPtr<IProject> const _project;
+	shared_ptr<IEditActionList> const _actionList;
 	ComPtr<IDWriteTextFormat> _legendFont;
 	DrawingObjects _drawingObjects;
 	unique_ptr<EditState> _state;
@@ -35,9 +36,9 @@ class EditArea : public ZoomableWindow, public IEditArea
 	optional<BeginningDrag> _beginningDrag;
 
 public:
-	EditArea(IProject* project, IProjectWindow* pw, ISelection* selection, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory)
+	EditArea(IProject* project, const std::shared_ptr<IEditActionList>& actionList, IProjectWindow* pw, ISelection* selection, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory)
 		: base (WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, hWndParent, nullptr, deviceContext, dWriteFactory)
-		, _project(project), _pw(pw), _selection(selection)
+		, _project(project), _actionList(actionList), _pw(pw), _selection(selection)
 	{
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
 		_project->GetBridgeRemovingEvent().AddHandler (&OnBridgeRemoving, this);

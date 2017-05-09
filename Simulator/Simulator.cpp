@@ -202,10 +202,10 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 		SimulatorApp app (hInstance);
 
 		{
-			//auto actionList = actionListFactory();
-			auto project = projectFactory();//move(actionList));
+			auto actionList = shared_ptr<IEditActionList>(editActionListFactory());
+			auto project = projectFactory();
 			auto selection = selectionFactory(project);
-			auto projectWindow = projectWindowFactory (&app, project, selection, editAreaFactory, nCmdShow, 1);
+			auto projectWindow = projectWindowFactory (&app, project, actionList, selection, editAreaFactory, nCmdShow, 1);
 			app.AddProjectWindow(move(projectWindow));
 		}
 

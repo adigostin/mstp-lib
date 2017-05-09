@@ -139,6 +139,7 @@
     <ClCompile Include="mstp-lib\stp_base_types.cpp">
       <Filter>mstp-lib</Filter>
     </ClCompile>
+    <ClCompile Include="EditActionList.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Simulator.rc" />

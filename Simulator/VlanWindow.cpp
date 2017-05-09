@@ -11,13 +11,18 @@ class VlanWindow : public IVlanWindow
 {
 	ISimulatorApp* const _app;
 	IProject* const _project;
+	std::shared_ptr<IEditActionList> const _actionList;
 	IProjectWindow* const _projectWindow;
 	ISelection* const _selection;
 	HWND _hwnd = nullptr;
 
 public:
-	VlanWindow (HWND hWndParent, POINT location, ISimulatorApp* app, IProject* project, IProjectWindow* projectWindow, ISelection* selection)
-		: _app(app), _project(project), _projectWindow(projectWindow), _selection(selection)
+	VlanWindow (HWND hWndParent, POINT location, ISimulatorApp* app, IProject* project, const std::shared_ptr<IEditActionList>& actionList, IProjectWindow* projectWindow, ISelection* selection)
+		: _app(app)
+		, _project(project)
+		, _actionList(actionList)
+		, _projectWindow(projectWindow)
+		, _selection(selection)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &DialogProcStatic, &hInstance);
@@ -131,7 +136,7 @@ public:
 		else
 		{
 			auto selection = selectionFactory(_project);
-			auto pw = projectWindowFactory(_app, _project, selection, editAreaFactory, SW_SHOWNORMAL, vlanNumber);
+			auto pw = projectWindowFactory(_app, _project, _actionList, selection, editAreaFactory, SW_SHOWNORMAL, vlanNumber);
 			_app->AddProjectWindow(move(pw));
 		}
 

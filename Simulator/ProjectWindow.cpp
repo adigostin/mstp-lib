@@ -20,6 +20,7 @@ class ProjectWindow : public IProjectWindow
 	ISimulatorApp* const _app;
 	ComPtr<IProject> const _project;
 	ComPtr<ISelection> const _selection;
+	shared_ptr<IEditActionList> const _actionList;
 	unique_ptr<IEditArea> _editArea;
 	unique_ptr<IDockContainer> _dockContainer;
 	IDockablePanel* _logPanel;
@@ -35,8 +36,8 @@ class ProjectWindow : public IProjectWindow
 	unsigned int _selectedVlanNumber = 1;
 
 public:
-	ProjectWindow (ISimulatorApp* app, IProject* project, ISelection* selection, EditAreaFactory editAreaFactory, int nCmdShow, unsigned int selectedVlan)
-		: _app(app), _project(project), _selection(selection), _selectedVlanNumber(selectedVlan)
+	ProjectWindow (ISimulatorApp* app, IProject* project, const std::shared_ptr<IEditActionList>& actionList, ISelection* selection, EditAreaFactory editAreaFactory, int nCmdShow, unsigned int selectedVlan)
+		: _app(app), _project(project), _actionList(actionList), _selection(selection), _selectedVlanNumber(selectedVlan)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR)&wndClassAtom, &hInstance);
@@ -97,12 +98,12 @@ public:
 		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
 
 		_vlanPanel = _dockContainer->GetOrCreateDockablePanel (Side::Top, L"VLAN");
-		_vlanWindow = vlanWindowFactory (_vlanPanel->GetHWnd(), _vlanPanel->GetContentLocation(), _app, _project, this, _selection);
+		_vlanWindow = vlanWindowFactory (_vlanPanel->GetHWnd(), _vlanPanel->GetContentLocation(), _app, _project, _actionList, this, _selection);
 		_dockContainer->ResizePanel (_vlanPanel, _vlanPanel->GetPanelSizeFromContentSize(_vlanWindow->GetClientSize()));
 		_vlanPanel->GetVisibleChangedEvent().AddHandler (&OnVlanPanelVisibleChanged, this);
 		SetMainMenuItemCheck (ID_VIEW_VLANS, true);
 
-		_editArea = editAreaFactory (project, this, selection, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory());
+		_editArea = editAreaFactory (project, actionList, this, selection, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory());
 
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
 	}

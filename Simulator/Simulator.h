@@ -10,6 +10,7 @@ struct ISelection;
 struct ILogArea;
 struct IDockablePanel;
 struct IDockContainer;
+struct IEditActionList;
 struct DrawingObjects;
 class Object;
 class Bridge;
@@ -152,7 +153,7 @@ struct IEditArea abstract
 	virtual D2D1::Matrix3x2F GetZoomTransform() const = 0;
 };
 
-using EditAreaFactory = std::unique_ptr<IEditArea>(*const)(IProject* project, IProjectWindow* pw, ISelection* selection, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory);
+using EditAreaFactory = std::unique_ptr<IEditArea>(*const)(IProject* project, const std::shared_ptr<IEditActionList>& actionList, IProjectWindow* pw, ISelection* selection, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory);
 extern const EditAreaFactory editAreaFactory;
 
 // ============================================================================
@@ -170,6 +171,7 @@ struct IProjectWindow : public IWin32Window
 
 using ProjectWindowFactory = std::unique_ptr<IProjectWindow>(*const)(ISimulatorApp* app,
 																	 IProject* project,
+																	 const std::shared_ptr<IEditActionList>& actionList,
 																	 ISelection* selection,
 																	 EditAreaFactory editAreaFactory,
 																	 int nCmdShow,
@@ -244,7 +246,13 @@ struct IVlanWindow : public IWin32Window
 	virtual ~IVlanWindow() { }
 };
 
-using VlanWindowFactory = std::unique_ptr<IVlanWindow>(*const)(HWND hWndParent, POINT location, ISimulatorApp* app, IProject* project, IProjectWindow* projectWindow, ISelection* selection);
+using VlanWindowFactory = std::unique_ptr<IVlanWindow>(*const)(HWND hWndParent,
+															   POINT location,
+															   ISimulatorApp* app,
+															   IProject* project,
+															   const std::shared_ptr<IEditActionList>& actionList,
+															   IProjectWindow* projectWindow,
+															   ISelection* selection);
 extern const VlanWindowFactory vlanWindowFactory;
 
 // ============================================================================
@@ -268,3 +276,14 @@ struct IMSTConfigIdDialog
 
 using MSTConfigIdDialogFactory = std::unique_ptr<IMSTConfigIdDialog>(*const)(ISimulatorApp* app, IProject* project, IProjectWindow* projectWindow, ISelection* selection);
 extern const MSTConfigIdDialogFactory mstConfigIdDialogFactory;
+
+// ============================================================================
+
+enum class UndoOrRedo { Undo, Redo };
+
+struct IEditActionList
+{
+	virtual void AddAndPerformEditAction (std::function<void(UndoOrRedo which)>&& action) = 0;
+};
+using EditActionListFactory = IEditActionList*(*const)();
+extern const EditActionListFactory editActionListFactory;
