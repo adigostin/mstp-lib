@@ -22,8 +22,11 @@ class ProjectWindow : public IProjectWindow
 	ComPtr<ISelection> const _selection;
 	unique_ptr<IEditArea> _editArea;
 	unique_ptr<IDockContainer> _dockContainer;
+	IDockablePanel* _logPanel;
 	unique_ptr<ILogArea> _logArea;
+	IDockablePanel* _propsPanel;
 	unique_ptr<IPropertiesWindow> _propsWindow;
+	IDockablePanel* _vlanPanel;
 	unique_ptr<IVlanWindow> _vlanWindow;
 	HWND _hwnd;
 	SIZE _clientSize;
@@ -82,16 +85,22 @@ public:
 
 		_dockContainer = dockPanelFactory (_hwnd, 0xFFFF, GetClientRectPixels());
 
-		auto logPanel = _dockContainer->GetOrCreateDockablePanel(Side::Right, L"STP Log");
-		_logArea = logAreaFactory (logPanel->GetHWnd(), logPanel->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory());
+		_logPanel = _dockContainer->GetOrCreateDockablePanel(Side::Right, L"STP Log");
+		_logArea = logAreaFactory (_logPanel->GetHWnd(), _logPanel->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory());
+		_logPanel->GetVisibleChangedEvent().AddHandler (&OnLogPanelVisibleChanged, this);
+		SetMainMenuItemCheck (ID_VIEW_STPLOG, true);
 
-		auto propsPanel = _dockContainer->GetOrCreateDockablePanel (Side::Left, L"Properties");
-		_propsWindow = propertiesWindowFactory (propsPanel->GetHWnd(), propsPanel->GetContentLocation(), _app, _project, this, _selection);
-		_dockContainer->ResizePanel (propsPanel, propsPanel->GetPanelSizeFromContentSize(_propsWindow->GetClientSize()));
+		_propsPanel = _dockContainer->GetOrCreateDockablePanel (Side::Left, L"Properties");
+		_propsWindow = propertiesWindowFactory (_propsPanel->GetHWnd(), _propsPanel->GetContentLocation(), _app, _project, this, _selection);
+		_dockContainer->ResizePanel (_propsPanel, _propsPanel->GetPanelSizeFromContentSize(_propsWindow->GetClientSize()));
+		_propsPanel->GetVisibleChangedEvent().AddHandler (&OnPropsPanelVisibleChanged, this);
+		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
 
-		auto vlanPanel = _dockContainer->GetOrCreateDockablePanel (Side::Top, L"VLAN");
-		_vlanWindow = vlanWindowFactory (vlanPanel->GetHWnd(), vlanPanel->GetContentLocation(), _app, _project, this, _selection);
-		_dockContainer->ResizePanel (vlanPanel, vlanPanel->GetPanelSizeFromContentSize(_vlanWindow->GetClientSize()));
+		_vlanPanel = _dockContainer->GetOrCreateDockablePanel (Side::Top, L"VLAN");
+		_vlanWindow = vlanWindowFactory (_vlanPanel->GetHWnd(), _vlanPanel->GetContentLocation(), _app, _project, this, _selection);
+		_dockContainer->ResizePanel (_vlanPanel, _vlanPanel->GetPanelSizeFromContentSize(_vlanWindow->GetClientSize()));
+		_vlanPanel->GetVisibleChangedEvent().AddHandler (&OnVlanPanelVisibleChanged, this);
+		SetMainMenuItemCheck (ID_VIEW_VLANS, true);
 
 		_editArea = editAreaFactory (project, this, selection, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory());
 
@@ -104,6 +113,30 @@ public:
 
 		if (_hwnd != nullptr)
 			::DestroyWindow(_hwnd);
+	}
+
+	void SetMainMenuItemCheck (UINT item, bool checked)
+	{
+		auto menu = ::GetMenu(_hwnd);
+		MENUITEMINFO mii = { sizeof(mii) };
+		mii.fMask = MIIM_STATE;
+		mii.fState = checked ? MFS_CHECKED : MFS_UNCHECKED;
+		::SetMenuItemInfo (menu, item, FALSE, &mii);
+	}
+
+	static void OnPropsPanelVisibleChanged (void* callbackArg, IDockablePanel* panel, bool visible)
+	{
+		static_cast<ProjectWindow*>(callbackArg)->SetMainMenuItemCheck (ID_VIEW_PROPERTIES, visible);
+	}
+
+	static void OnLogPanelVisibleChanged (void* callbackArg, IDockablePanel* panel, bool visible)
+	{
+		static_cast<ProjectWindow*>(callbackArg)->SetMainMenuItemCheck (ID_VIEW_STPLOG, visible);
+	}
+
+	static void OnVlanPanelVisibleChanged (void* callbackArg, IDockablePanel* panel, bool visible)
+	{
+		static_cast<ProjectWindow*>(callbackArg)->SetMainMenuItemCheck (ID_VIEW_VLANS, visible);
 	}
 
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
@@ -217,6 +250,20 @@ public:
 			BeginPaint(GetHWnd(), &ps);
 			EndPaint(GetHWnd(), &ps);
 			return 0;
+		}
+
+		if (msg == WM_COMMAND)
+		{
+			if ((wParam == ID_VIEW_PROPERTIES) || (wParam == ID_VIEW_STPLOG) || (wParam == ID_VIEW_VLANS))
+			{
+				auto panel = (wParam == ID_VIEW_PROPERTIES) ? _propsPanel : ((wParam == ID_VIEW_STPLOG) ? _logPanel : _vlanPanel);
+				auto style = (DWORD) GetWindowLongPtr(panel->GetHWnd(), GWL_STYLE);
+				style ^= WS_VISIBLE;
+				SetWindowLongPtr (panel->GetHWnd(), GWL_STYLE, style);
+				return 0;
+			}
+
+			return DefWindowProc(_hwnd, msg, wParam, lParam);
 		}
 
 		return DefWindowProc(_hwnd, msg, wParam, lParam);

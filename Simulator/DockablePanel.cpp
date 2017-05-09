@@ -200,7 +200,8 @@ public:
 			_clientSize = { cs->cx, cs->cy };
 			return 0;
 		}
-		else if (msg == WM_SIZE)
+		
+		if (msg == WM_SIZE)
 		{
 			_clientSize = { LOWORD(lParam), HIWORD(lParam) };
 
@@ -213,31 +214,35 @@ public:
 
 			return 0;
 		}
-		else if (msg == WM_ERASEBKGND)
-		{
+		
+		if (msg == WM_ERASEBKGND)
 			return 1;
-		}
-		else if (msg == WM_PAINT)
+
+		if (msg == WM_PAINT)
 		{
 			ProcessWmPaint();
 			return 0;
 		}
-		else if (msg == WM_LBUTTONDOWN)
+		
+		if (msg == WM_LBUTTONDOWN)
 		{
 			ProcessLButtonDown ((DWORD) wParam, POINT { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)});
 			return 0;
 		}
-		else if (msg == WM_LBUTTONUP)
+		
+		if (msg == WM_LBUTTONUP)
 		{
 			ProcessLButtonUp ((DWORD) wParam, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
 			return 0;
 		}
-		else if (msg == WM_MOUSEMOVE)
+		
+		if (msg == WM_MOUSEMOVE)
 		{
 			ProcessMouseMove ((DWORD) wParam, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
 			return 0;
 		}
-		else if (msg == WM_SETCURSOR)
+		
+		if (msg == WM_SETCURSOR)
 		{
 			if (((HWND) wParam == _hwnd) && (LOWORD (lParam) == HTCLIENT))
 			{
@@ -255,6 +260,19 @@ public:
 			}
 
 			return nullopt;
+		}
+
+		if (msg == WM_STYLECHANGED)
+		{
+			const STYLESTRUCT* ss = (const STYLESTRUCT*) lParam;
+			if (wParam == GWL_STYLE)
+			{
+				auto changed = ss->styleNew ^ ss->styleOld;
+				if (changed & WS_VISIBLE)
+					VisibleChangedEvent::InvokeHandlers (_em, this, (ss->styleNew & WS_VISIBLE) != 0);
+			}
+
+			return 0;
 		}
 
 		return nullopt;
@@ -339,8 +357,9 @@ public:
 		if (_closeButtonDown)
 		{
 			_closeButtonDown = false;
-			::InvalidateRect (_hwnd, nullptr, FALSE);
-			CloseButtonClicked::InvokeHandlers (_em, this);
+			auto style = GetWindowLongPtr(_hwnd, GWL_STYLE);
+			style ^= WS_VISIBLE;
+			::SetWindowLongPtr (_hwnd, GWL_STYLE, style);
 		}
 		else if (_draggingSplitter)
 		{
@@ -396,7 +415,7 @@ public:
 
 	virtual HWND GetHWnd() const override final { return _hwnd; }
 
-	virtual CloseButtonClicked::Subscriber GetCloseButtonClickedEvent() override final { return CloseButtonClicked::Subscriber(_em); }
+	virtual VisibleChangedEvent::Subscriber GetVisibleChangedEvent() override final { return VisibleChangedEvent::Subscriber(_em); }
 
 	virtual SplitterDragging::Subscriber GetSplitterDraggingEvent() override final { return SplitterDragging::Subscriber(_em); }
 

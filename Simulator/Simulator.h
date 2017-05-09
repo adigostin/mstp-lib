@@ -78,14 +78,14 @@ struct IDockablePanel abstract
 {
 	virtual ~IDockablePanel() { }
 
-	struct CloseButtonClicked : public Event<CloseButtonClicked, void(IDockablePanel* panel)> {};
+	struct VisibleChangedEvent : public Event<VisibleChangedEvent, void(IDockablePanel* panel, bool visible)> {};
 	struct SplitterDragging : public Event<SplitterDragging, void(IDockablePanel* panel, SIZE proposedSize)> {};
 
 	virtual HWND GetHWnd() const = 0;
 	virtual Side GetSide() const = 0;
 	virtual POINT GetContentLocation() const = 0;
 	virtual SIZE GetContentSize() const = 0;
-	virtual CloseButtonClicked::Subscriber GetCloseButtonClickedEvent() = 0;
+	virtual VisibleChangedEvent::Subscriber GetVisibleChangedEvent() = 0;
 	virtual SplitterDragging::Subscriber GetSplitterDraggingEvent() = 0;
 	virtual SIZE GetPanelSizeFromContentSize (SIZE contentSize) const = 0;
 

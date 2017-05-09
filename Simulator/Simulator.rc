@@ -59,9 +59,14 @@ END
 
 IDR_MAIN_MENU MENU
 BEGIN
-    MENUITEM "&File",                       0
+    MENUITEM "&File",                       ID_FILE
     MENUITEM "&Edit",                       0
-    MENUITEM "&View",                       0
+    POPUP "&View"
+    BEGIN
+        MENUITEM "&Properties",                 ID_VIEW_PROPERTIES
+        MENUITEM "STP &Log",                    ID_VIEW_STPLOG
+        MENUITEM "&VLANs",                      ID_VIEW_VLANS
+    END
     MENUITEM "&Help",                       0
 END
 

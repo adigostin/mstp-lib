@@ -98,9 +98,7 @@ public:
 	{
 		if (msg == WM_SIZE)
 		{
-			auto layOutFunction = [](IDockablePanel* sp, const RECT& rect)
-				{ ::MoveWindow(sp->GetHWnd(), rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE); };
-			auto contentRect = LayOutPanels (nullptr, layOutFunction);
+			auto contentRect = LayOutPanels (nullptr, true);
 			LayOutContent(contentRect);
 			return 0;
 		}
@@ -154,17 +152,20 @@ public:
 		}
 	}
 
-	RECT LayOutPanels (function<SIZE(IDockablePanel*)> getProposedSize, function<void(IDockablePanel* sp, const RECT& panelRect)> fn) const
+	RECT LayOutPanels (function<SIZE(IDockablePanel*)> getProposedSize, bool movePanelWindows) const
 	{
 		RECT contentRect;
 		BOOL bRes = ::GetClientRect(_hwnd, &contentRect); ThrowWin32IfFailed(bRes);
 
 		for (auto& panel : _dockablePanels)
 		{
-			SIZE proposedSize = (getProposedSize != nullptr) ? getProposedSize(panel.get()) : panel->GetWindowSize();
-			RECT panelRect = LayOutPanel (panel->GetSide(), proposedSize, &contentRect);
-			if (fn != nullptr)
-				fn (panel.get(), panelRect);
+			if (GetWindowLongPtr (panel->GetHWnd(), GWL_STYLE) & WS_VISIBLE)
+			{
+				SIZE proposedSize = (getProposedSize != nullptr) ? getProposedSize(panel.get()) : panel->GetWindowSize();
+				RECT panelRect = LayOutPanel (panel->GetSide(), proposedSize, &contentRect);
+				if (movePanelWindows)
+					::MoveWindow(panel->GetHWnd(), panelRect.left, panelRect.top, panelRect.right - panelRect.left, panelRect.bottom - panelRect.top, TRUE);
+			}
 		}
 
 		return contentRect;
@@ -200,31 +201,33 @@ public:
 		LayOutContent (contentRect);
 
 		auto panel = dockablePanelFactory(_hwnd, panelRect, side, title);
+		panel->GetVisibleChangedEvent().AddHandler (&OnPanelVisibleChanged, this);
 		panel->GetSplitterDraggingEvent().AddHandler (&OnSidePanelSplitterDragging, this);
 		auto result = panel.get();
 		_dockablePanels.push_back(move(panel));
 		return result;
 	}
 	
+	static void OnPanelVisibleChanged (void* callbackArg, IDockablePanel* panel, bool visible)
+	{
+		auto container = static_cast<DockContainer*>(callbackArg);
+		auto contentRect = container->LayOutPanels (nullptr, true);
+		container->LayOutContent (contentRect);
+	}
+
 	static void OnSidePanelSplitterDragging (void* callbackArg, IDockablePanel* panel, SIZE proposedSize)
 	{
 		auto container = static_cast<DockContainer*>(callbackArg);
 
 		auto getProposedSize = [panel, proposedSize](IDockablePanel* p) { return (p != panel) ? p->GetWindowSize() : proposedSize; };
-		auto layOutFunction = [](IDockablePanel* sp, const RECT& rect)
-			{ ::MoveWindow(sp->GetHWnd(), rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE); };
-
-		auto contentRect = container->LayOutPanels(getProposedSize, layOutFunction);
+		auto contentRect = container->LayOutPanels(getProposedSize, true);
 		container->LayOutContent(contentRect);
 	}
 
 	virtual void ResizePanel (IDockablePanel* panel, SIZE size) override final
 	{
 		auto getProposedSize = [panel, proposedSize=size](IDockablePanel* p) { return (p != panel) ? p->GetWindowSize() : proposedSize; };
-		auto layOutFunction = [](IDockablePanel* sp, const RECT& rect)
-			{ ::MoveWindow(sp->GetHWnd(), rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE); };
-
-		auto contentRect = LayOutPanels(getProposedSize, layOutFunction);
+		auto contentRect = LayOutPanels(getProposedSize, true);
 		LayOutContent(contentRect);
 	}
 };
