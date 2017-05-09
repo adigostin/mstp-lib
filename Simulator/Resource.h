@@ -40,6 +40,11 @@
 #define ID_VIEW_PROPERTIES              32780
 #define ID_VIEW_STPLOG                  32781
 #define ID_VIEW_VLANS                   32782
+#define ID_FILE_NEW                     32783
+#define ID_FILE_OPEN                    32784
+#define ID_FILE_SAVEAS                  32785
+#define ID_FILE_EXIT                    32786
+#define ID_FILE_SAVE                    32787
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -48,7 +53,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        135
-#define _APS_NEXT_COMMAND_VALUE         32783
+#define _APS_NEXT_COMMAND_VALUE         32788
 #define _APS_NEXT_CONTROL_VALUE         1018
 #define _APS_NEXT_SYMED_VALUE           110
 #endif

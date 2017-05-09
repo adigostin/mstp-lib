@@ -202,6 +202,8 @@ struct IProject abstract : public IUnknown
 	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() = 0;
 	virtual std::array<uint8_t, 6> AllocMacAddressRange (size_t count) = 0;
 
+	virtual void Save (const wchar_t* path) const = 0;
+
 	void Add (Bridge* bridge) { InsertBridge (GetBridges().size(), bridge); }
 	void Add (Wire* wire) { InsertWire (GetWires().size(), wire); }
 	void Remove (Bridge* b);

@@ -1,4 +1,5 @@
 #pragma once
+#include <assert.h>
 
 class com_exception : public std::exception
 {
@@ -96,7 +97,7 @@ public:
 		_Inout_opt_ LPUNKNOWN pUnkOuter = NULL,
 		_In_ DWORD dwClsContext = CLSCTX_ALL) throw()
 	{
-		rassert(m_ComPtr == NULL);
+		assert(m_ComPtr == NULL);
 		return ::CoCreateInstance(rclsid, pUnkOuter, dwClsContext, __uuidof(T), (void**)&m_ComPtr);
 	}
 

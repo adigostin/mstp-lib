@@ -165,4 +165,42 @@ HTResult Wire::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, floa
 	return { };
 }
 
+ComPtr<IXMLDOMElement> Wire::Serialize (IXMLDOMDocument3* doc) const
+{
+	ComPtr<IXMLDOMElement> wireElement;
+	static const _bstr_t WireElementName = "Wire";
+	HRESULT hr = doc->createElement (WireElementName, &wireElement); ThrowIfFailed(hr);
 
+	hr = wireElement->appendChild(SerializeEnd(doc, _points[0]), nullptr); ThrowIfFailed(hr);
+	hr = wireElement->appendChild(SerializeEnd(doc, _points[1]), nullptr); ThrowIfFailed(hr);
+
+	return wireElement;
+}
+
+//static
+ComPtr<IXMLDOMElement> Wire::SerializeEnd (IXMLDOMDocument3* doc, const WireEnd& end)
+{
+	HRESULT hr;
+	ComPtr<IXMLDOMElement> element;
+
+	if (holds_alternative<ConnectedWireEnd>(end))
+	{
+		static const _bstr_t ConnectedEndString = "ConnectedEnd";
+		static const _bstr_t BridgeIndexString = "BridgeIndex";
+		static const _bstr_t PortIndexString = "PortIndex";
+
+		hr = doc->createElement (ConnectedEndString, &element); ThrowIfFailed(hr);
+		auto port = get<ConnectedWireEnd>(end);
+		auto& bridges = port->GetBridge()->GetProject()->GetBridges();
+		auto bridgeIndex = find (bridges.begin(), bridges.end(), port->GetBridge()) - bridges.begin();
+		hr = element->setAttribute (BridgeIndexString, _variant_t(to_string(bridgeIndex).c_str())); ThrowIfFailed(hr);
+		hr = element->setAttribute (PortIndexString, _variant_t(to_string(port->GetPortIndex()).c_str())); ThrowIfFailed(hr);
+	}
+	else
+	{
+		static const _bstr_t LooseEndString = "LooseEnd";
+		hr = doc->createElement (LooseEndString, &element); ThrowIfFailed(hr);
+	}
+
+	return element;
+}

@@ -5,6 +5,8 @@
 #include "Bridge.h"
 #include "Port.h"
 
+#pragma comment (lib, "msxml6.lib")
+
 using namespace std;
 
 class Project : public IProject
@@ -118,6 +120,82 @@ public:
 		}
 
 		return result;
+	}
+
+	virtual void Save (const wchar_t* path) const override final
+	{
+		ComPtr<IXMLDOMDocument3> doc;
+		HRESULT hr = CoCreateInstance (CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(doc), (void**) &doc); ThrowIfFailed(hr);
+
+		ComPtr<IXMLDOMElement> projectElement;
+		hr = doc->createElement (_bstr_t("Project"), &projectElement); ThrowIfFailed(hr);
+		hr = doc->appendChild (projectElement, nullptr); ThrowIfFailed(hr);
+
+		ComPtr<IXMLDOMElement> bridgesElement;
+		hr = doc->createElement (_bstr_t("Bridges"), &bridgesElement); ThrowIfFailed(hr);
+		hr = projectElement->appendChild (bridgesElement, nullptr); ThrowIfFailed(hr);
+		for (auto& b : _bridges)
+		{
+			auto e = b->Serialize(doc);
+			hr = bridgesElement->appendChild (e, nullptr); ThrowIfFailed(hr);
+		}
+
+		ComPtr<IXMLDOMElement> wiresElement;
+		hr = doc->createElement (_bstr_t("Wires"), &wiresElement); ThrowIfFailed(hr);
+		hr = projectElement->appendChild (wiresElement, nullptr); ThrowIfFailed(hr);
+		for (auto& w : _wires)
+		{
+			hr = wiresElement->appendChild (w->Serialize(doc), nullptr);
+			ThrowIfFailed(hr);
+		}
+
+		FormatAndSaveToFile (doc, path);
+	}
+
+	void FormatAndSaveToFile (IXMLDOMDocument3* doc, const wchar_t* path) const
+	{
+		static const char StylesheetText[] =
+			"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+			"<xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"1.0\">\n"
+			"  <xsl:output method=\"xml\" indent=\"yes\" omit-xml-declaration=\"no\" />\n"
+			"  <xsl:template match=\"@* | node()\">\n"
+			"    <xsl:copy>\n"
+			"      <xsl:apply-templates select=\"@* | node()\"/>\n"
+			"    </xsl:copy>\n"
+			"  </xsl:template>\n"
+			"</xsl:stylesheet>\n"
+			"";
+
+		ComPtr<IXMLDOMDocument3> loadXML;
+		HRESULT hr = CoCreateInstance (CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(loadXML), (void**) &loadXML); ThrowIfFailed(hr);
+		VARIANT_BOOL successful;
+		hr = loadXML->loadXML (_bstr_t(StylesheetText), &successful); ThrowIfFailed(hr);
+
+		//Create the final document which will be indented properly
+		ComPtr<IXMLDOMDocument2> pXMLFormattedDoc;
+		hr = pXMLFormattedDoc.CoCreateInstance(__uuidof(DOMDocument60), nullptr, CLSCTX_INPROC_SERVER);
+
+		ComPtr<IDispatch> pDispatch;
+		hr = pXMLFormattedDoc->QueryInterface(IID_IDispatch, (void**)&pDispatch); ThrowIfFailed(hr);
+
+		_variant_t vtOutObject;
+		vtOutObject.vt = VT_DISPATCH;
+		vtOutObject.pdispVal = pDispatch;
+		vtOutObject.pdispVal->AddRef();
+
+		//Apply the transformation to format the final document	
+		hr = doc->transformNodeToObject(loadXML,vtOutObject);
+
+		// By default it is writing the encoding = UTF-16. Let us change the encoding to UTF-8
+		ComPtr<IXMLDOMNode> firstChild;
+		hr = pXMLFormattedDoc->get_firstChild(&firstChild); ThrowIfFailed(hr);
+		ComPtr<IXMLDOMNamedNodeMap> pXMLAttributeMap;
+		hr = firstChild->get_attributes(&pXMLAttributeMap); ThrowIfFailed(hr);
+		ComPtr<IXMLDOMNode> encodingNode;
+		hr = pXMLAttributeMap->getNamedItem(_bstr_t("encoding"), &encodingNode); ThrowIfFailed(hr);
+		encodingNode->put_nodeValue (_variant_t("UTF-8"));
+
+		hr = pXMLFormattedDoc->save(_variant_t(path)); ThrowIfFailed(hr);
 	}
 
 	#pragma region IUnknown

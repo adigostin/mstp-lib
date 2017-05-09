@@ -263,6 +263,12 @@ public:
 				return 0;
 			}
 
+			if (wParam == ID_FILE_SAVE)
+			{
+				_project->Save (L"C:\\Project.stp");
+				return 0;
+			}
+
 			return DefWindowProc(_hwnd, msg, wParam, lParam);
 		}
 

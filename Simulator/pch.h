@@ -37,6 +37,7 @@
 #include <iomanip>
 #include <locale>
 #include <memory>
+#include <MsXml6.h>
 #include <mutex>
 #include <objbase.h>
 #include <optional>
