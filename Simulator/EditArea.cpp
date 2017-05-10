@@ -53,10 +53,6 @@ public:
 		, _selection(selection)
 		, _actionList(actionList)
 	{
-		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
-		_project->GetBridgeRemovingEvent().AddHandler (&OnBridgeRemoving, this);
-		_project->GetWireRemovingEvent().AddHandler (&OnWireRemoving, this);
-		_project->GetProjectInvalidateEvent().AddHandler (&OnProjectInvalidate, this);
 		auto dc = base::GetDeviceContext();
 		_drawingObjects._dWriteFactory = dWriteFactory;
 		auto hr = dc->CreateSolidColorBrush (ColorF (ColorF::PaleGreen), &_drawingObjects._poweredFillBrush); ThrowIfFailed(hr);
@@ -91,14 +87,27 @@ public:
 		ssprops.startCap = D2D1_CAP_STYLE_ROUND;
 		ssprops.endCap = D2D1_CAP_STYLE_ROUND;
 		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawingObjects._strokeStyleForwardingWire); ThrowIfFailed(hr);
+
+		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
+		_project->GetBridgeRemovingEvent().AddHandler (&OnBridgeRemoving, this);
+		_project->GetWireRemovingEvent().AddHandler (&OnWireRemoving, this);
+		_project->GetProjectInvalidateEvent().AddHandler (&OnProjectInvalidate, this);
+		_pw->GetSelectedVlanNumerChangedEvent().AddHandler (&OnSelectedVlanChanged, this);
 	}
 
 	virtual ~EditArea()
 	{
+		_pw->GetSelectedVlanNumerChangedEvent().RemoveHandler (&OnSelectedVlanChanged, this);
 		_project->GetProjectInvalidateEvent().RemoveHandler(&OnProjectInvalidate, this);
 		_project->GetWireRemovingEvent().RemoveHandler (&OnWireRemoving, this);
 		_project->GetBridgeRemovingEvent().RemoveHandler (&OnBridgeRemoving, this);
 		_selection->GetSelectionChangedEvent().RemoveHandler (&OnSelectionChanged, this);
+	}
+
+	static void OnSelectedVlanChanged (void* callbackArg, IProjectWindow* pw, unsigned int vlanNumber)
+	{
+		auto area = static_cast<EditArea*>(callbackArg);
+		::InvalidateRect (area->GetHWnd(), nullptr, FALSE);
 	}
 
 	static void OnBridgeRemoving (void* callbackArg, IProject* project, size_t index, Bridge* b)

@@ -15,7 +15,7 @@ static constexpr wchar_t RegValueNameWindowTop[] = L"WindowTop";
 static constexpr wchar_t RegValueNameWindowRight[] = L"WindowRight";
 static constexpr wchar_t RegValueNameWindowBottom[] = L"WindowBottom";
 
-class ProjectWindow : public IProjectWindow
+class ProjectWindow : public EventManager, public IProjectWindow
 {
 	ISimulatorApp*          const _app;
 	shared_ptr<IProject>    const _project;
@@ -31,7 +31,6 @@ class ProjectWindow : public IProjectWindow
 	unique_ptr<IVlanWindow> _vlanWindow;
 	HWND _hwnd;
 	SIZE _clientSize;
-	EventManager _em;
 	RECT _restoreBounds;
 	unsigned int _selectedVlanNumber = 1;
 
@@ -341,14 +340,14 @@ public:
 		if (_selectedVlanNumber != vlanNumber)
 		{
 			_selectedVlanNumber = vlanNumber;
-			SelectedVlanNumerChangedEvent::InvokeHandlers(_em, this, vlanNumber);
+			SelectedVlanNumerChangedEvent::InvokeHandlers(*this, this, vlanNumber);
 			::InvalidateRect (GetHWnd(), nullptr, FALSE);
 		}
 	};
 
 	virtual unsigned int GetSelectedVlanNumber() const override final { return _selectedVlanNumber; }
 
-	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() override final { return SelectedVlanNumerChangedEvent::Subscriber(_em); }
+	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() override final { return SelectedVlanNumerChangedEvent::Subscriber(*this); }
 
 	virtual IProject* GetProject() const override final { return _project.get(); }
 

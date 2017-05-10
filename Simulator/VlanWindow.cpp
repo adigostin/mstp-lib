@@ -110,9 +110,15 @@ public:
 
 		if (msg == WM_COMMAND)
 		{
+			if ((HIWORD(wParam) == CBN_SELCHANGE) && (LOWORD(wParam) == IDC_COMBO_SELECTED_VLAN))
+			{
+				ProcessVlanSelChange ((HWND) lParam);
+				return { TRUE, 0 };
+			}
+
 			if ((HIWORD(wParam) == CBN_SELCHANGE) && (LOWORD(wParam) == IDC_COMBO_NEW_WINDOW_VLAN))
 			{
-				ProcessNewWindowVlanSelChanged ((HWND) lParam);
+				ProcessNewWindowVlanSelChange ((HWND) lParam);
 				return { TRUE, 0 };
 			}
 
@@ -127,7 +133,13 @@ public:
 		static_cast<VlanWindow*>(callbackArg)->LoadSelectedTreeEdit();
 	}
 
-	void ProcessNewWindowVlanSelChanged (HWND hwnd)
+	void ProcessVlanSelChange (HWND hwnd)
+	{
+		int index = ComboBox_GetCurSel(hwnd);
+		_projectWindow->SelectVlan(index + 1);
+	}
+
+	void ProcessNewWindowVlanSelChange (HWND hwnd)
 	{
 		auto index = ComboBox_GetCurSel(hwnd);
 		auto vlanNumber = (unsigned int) (index + 1);

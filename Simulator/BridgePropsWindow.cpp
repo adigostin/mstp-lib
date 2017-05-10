@@ -57,10 +57,12 @@ public:
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
 		_selection->GetAddedToSelectionEvent().AddHandler (&OnObjectAddedToSelection, this);
 		_selection->GetRemovingFromSelectionEvent().AddHandler (&OnObjectRemovingFromSelection, this);
+		_projectWindow->GetSelectedVlanNumerChangedEvent().AddHandler (&OnSelectedVlanChanged, this);
 	}
 
 	~BridgePropsWindow()
 	{
+		_projectWindow->GetSelectedVlanNumerChangedEvent().RemoveHandler (&OnSelectedVlanChanged, this);
 		_selection->GetRemovingFromSelectionEvent().RemoveHandler (&OnObjectRemovingFromSelection, this);
 		_selection->GetAddedToSelectionEvent().RemoveHandler (&OnObjectAddedToSelection, this);
 		_selection->GetSelectionChangedEvent().RemoveHandler (&OnSelectionChanged, this);
@@ -382,6 +384,7 @@ private:
 		LoadMstConfigNameTextBox();
 		LoadMstConfigRevLevelTextBox();
 		LoadMstConfigTableHashEdit();
+		LoadSelectedTreeEdit();
 		LoadBridgePriorityCombo();
 	}
 
@@ -540,6 +543,29 @@ private:
 
 	// ========================================================================
 
+	void LoadSelectedTreeEdit()
+	{
+		auto edit = GetDlgItem (_hwnd, IDC_EDIT_PROPS_SELECTED_TREE); assert (edit != nullptr);
+
+		auto vlanNumber = _projectWindow->GetSelectedVlanNumber();
+
+		auto getTree = [vlanNumber](Object* o) { return STP_GetTreeIndexFromVlanNumber(dynamic_cast<Bridge*>(o)->GetStpBridge(), vlanNumber); };
+
+		auto treeIndex = getTree(_selection->GetObjects().front());
+
+		if (all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&, treeIndex](Object* o) { return getTree(o) == treeIndex; }))
+		{
+			if (treeIndex == 0)
+				::SetWindowText (edit, L"CIST(0)");
+			else
+				::SetWindowText (edit, (wstring(L"MSTI") + to_wstring(treeIndex)).c_str());
+		}
+		else
+			::SetWindowText (edit, L"(multiple selection)");
+	}
+	
+	// ========================================================================
+
 	void LoadBridgePriorityCombo()
 	{
 		auto vlanNumber = _projectWindow->GetSelectedVlanNumber();
@@ -584,6 +610,16 @@ private:
 	}
 
 	// ========================================================================
+
+	static void OnSelectedVlanChanged (void* callbackArg, IProjectWindow* pw, unsigned int vlanNumber)
+	{
+		auto window = static_cast<BridgePropsWindow*>(callbackArg);
+		if (window->BridgesSelected())
+		{
+			window->LoadSelectedTreeEdit();
+			window->LoadBridgePriorityCombo();
+		}
+	}
 
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
 	{

@@ -263,7 +263,7 @@ void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned 
 		ss << uppercase << setfill(L'0') << setw(4) << hex << STP_GetBridgePriority(_stpBridge, treeIndex) << L'.'
 			<< GetBridgeAddressAsString() << endl
 			<< L"STP enabled (" << STP_GetVersionString(stpVersion) << L")" << endl
-			<< L"VLAN " << dec << vlanNumber << L" (spanning tree " << treeIndex << L")" << endl
+			<< L"VLAN " << dec << vlanNumber << L". Spanning tree: " << ((treeIndex == 0) ? L"CIST(0)" : (wstring(L"MSTI") + to_wstring(treeIndex)).c_str()) << endl
 			<< (isRoot ? ((stpVersion >= STP_VERSION_MSTP) ? L"CIST Root\r\n" : L"Root Bridge\r\n") : L"")
 			<< (isRegionalRoot ? L"Regional Root\r\n" : L"");
 	}
