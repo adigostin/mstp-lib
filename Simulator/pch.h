@@ -43,6 +43,7 @@
 #include <optional>
 #include <queue>
 #include <random>
+#include <set>
 #include <Shlwapi.h>
 #include <signal.h>
 #include <sstream>

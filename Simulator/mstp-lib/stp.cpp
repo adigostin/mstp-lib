@@ -830,7 +830,8 @@ void STP_SetMstConfigRevisionLevel (STP_BRIDGE* bridge, unsigned short revisionL
 {
 	LOG (bridge, -1, -1, "{T}: Setting MST Config Revision Level to {D}...\r\n", timestamp, (int) revisionLevel);
 
-	bridge->MstConfigId.RevisionLevel = revisionLevel;
+	bridge->MstConfigId.RevisionLevelHigh = revisionLevel >> 8;
+	bridge->MstConfigId.RevisionLevelLow = revisionLevel & 0xff;
 
 	if (bridge->started)
 	{
@@ -857,9 +858,8 @@ void STP_SetMstConfigRevisionLevel (STP_BRIDGE* bridge, unsigned short revisionL
 
 unsigned short STP_GetMstConfigRevisionLevel (STP_BRIDGE* bridge)
 {
-	return bridge->MstConfigId.RevisionLevel;
+	return (bridge->MstConfigId.RevisionLevelHigh << 8) | bridge->MstConfigId.RevisionLevelLow;
 }
-
 
 static void ComputeMstConfigDigest (STP_BRIDGE* bridge)
 {
@@ -1028,6 +1028,11 @@ unsigned int STP_GetTreeIndexFromVlanNumber (STP_BRIDGE* bridge, unsigned int vl
 	}
 }
 
+const struct STP_MST_CONFIG_ID* STP_GetMstConfigId (struct STP_BRIDGE* bridge)
+{
+	return &bridge->MstConfigId;
+}
+
 // ============================================================================
 
 const char* STP_GetPortRoleString (STP_PORT_ROLE portRole)
@@ -1139,4 +1144,29 @@ void  STP_SetApplicationContext (STP_BRIDGE* bridge, void* applicationContext)
 void* STP_GetApplicationContext (STP_BRIDGE* bridge)
 {
 	return bridge->applicationContext;
+}
+
+// ============================================================================
+
+void STP_MST_CONFIG_ID::Dump (STP_BRIDGE* bridge, int port, int tree) const
+{
+	char namesz [33];
+	strncpy (namesz, ConfigurationName, 32);
+	namesz [32] = 0;
+	LOG (bridge, port, tree, "Name=\"{S}\", Rev={D}, Digest={X2}{X2}..{X2}{X2}\r\n",
+		 namesz,
+		 (RevisionLevelHigh << 8) | RevisionLevelLow,
+		 ConfigurationDigest [0], ConfigurationDigest [1], ConfigurationDigest [14], ConfigurationDigest [15]);
+}
+
+// ============================================================================
+
+bool STP_MST_CONFIG_ID::operator== (const STP_MST_CONFIG_ID& rhs) const
+{
+	return Cmp (this, &rhs, sizeof (*this)) == 0;
+}
+
+bool STP_MST_CONFIG_ID::operator< (const STP_MST_CONFIG_ID& rhs) const
+{
+	return Cmp (this, &rhs, sizeof(*this)) < 0;
 }

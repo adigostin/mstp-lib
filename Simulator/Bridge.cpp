@@ -236,7 +236,7 @@ void Bridge::SetLocation(float x, float y)
 	}
 }
 
-void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned int vlanNumber) const
+void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned int vlanNumber, const D2D1_COLOR_F& configIdColor) const
 {
 	auto treeIndex = STP_GetTreeIndexFromVlanNumber (_stpBridge, vlanNumber);
 	bool isRoot = STP_IsBridgeStarted(_stpBridge) && STP_IsRootBridge(_stpBridge);
@@ -244,7 +244,9 @@ void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned 
 	D2D1_ROUNDED_RECT rr = RoundedRect (GetBounds(), RoundRadius, RoundRadius);
 	float ow = OutlineWidth * (isRoot ? 2 : 1);
 	InflateRoundedRect (&rr, -ow / 2);
-	dc->FillRoundedRectangle (&rr, _powered ? dos._poweredFillBrush : dos._unpoweredBrush);
+	ID2D1SolidColorBrushPtr brush;
+	dc->CreateSolidColorBrush (configIdColor, &brush);
+	dc->FillRoundedRectangle (&rr, brush/*_powered ? dos._poweredFillBrush : dos._unpoweredBrush*/);
 	dc->DrawRoundedRectangle (&rr, dos._brushWindowText, ow);
 
 	auto stpVersion = STP_GetStpVersion(_stpBridge);
@@ -260,19 +262,19 @@ void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned 
 
 		bool isRegionalRoot = STP_IsBridgeStarted(_stpBridge) && (treeIndex > 0) && STP_IsRegionalRootBridge (_stpBridge, treeIndex);
 
-		ss << uppercase << setfill(L'0') << setw(4) << hex << STP_GetBridgePriority(_stpBridge, treeIndex) << L'.'
-			<< GetBridgeAddressAsString() << endl
-			<< L"STP enabled (" << STP_GetVersionString(stpVersion) << L")" << endl
-			<< L"VLAN " << dec << vlanNumber << L". Spanning tree: " << ((treeIndex == 0) ? L"CIST(0)" : (wstring(L"MSTI") + to_wstring(treeIndex)).c_str()) << endl
-			<< (isRoot ? ((stpVersion >= STP_VERSION_MSTP) ? L"CIST Root\r\n" : L"Root Bridge\r\n") : L"")
-			<< (isRegionalRoot ? L"Regional Root\r\n" : L"");
+		ss << uppercase << setfill(L'0') << setw(4) << hex << STP_GetBridgePriority(_stpBridge, treeIndex) << L'.' << GetBridgeAddressAsString() << endl;
+		ss << L"STP enabled (" << STP_GetVersionString(stpVersion) << L")" << endl;
+		if (STP_GetStpVersion(_stpBridge) >= STP_VERSION_MSTP)
+			ss << L"VLAN " << dec << vlanNumber << L". Spanning tree: " << ((treeIndex == 0) ? L"CIST(0)" : (wstring(L"MSTI") + to_wstring(treeIndex)).c_str()) << endl;
+		ss << (isRoot ? L"CIST Root Bridge\r\n" : L"");
+		ss << (isRegionalRoot ? L"Regional Root\r\n" : L"");
 	}
 	else
 	{
 		ss << uppercase << setfill(L'0') << hex << GetBridgeAddressAsString() << endl << L"STP disabled\r\n(right-click to enable)";
 	}
 
-	auto tl = TextLayout::Make (dos._dWriteFactory, dos._regularTextFormat, ss.str().c_str());
+	auto tl = TextLayout::Create (dos._dWriteFactory, dos._regularTextFormat, ss.str().c_str());
 	dc->DrawTextLayout ({ _x + OutlineWidth * 2 + 3, _y + OutlineWidth * 2 + 3}, tl.layout, dos._brushWindowText);
 
 	for (auto& port : _ports)

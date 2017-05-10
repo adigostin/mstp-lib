@@ -42,7 +42,6 @@ public:
 	struct InvalidateEvent : public Event<InvalidateEvent, void(Object*)> { };
 	InvalidateEvent::Subscriber GetInvalidateEvent() { return InvalidateEvent::Subscriber(_em); }
 
-	virtual void Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, unsigned int vlanNumber) const = 0;
 	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const = 0;
 	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) = 0;
 
@@ -57,7 +56,7 @@ struct TextLayout
 	IDWriteTextLayoutPtr layout;
 	DWRITE_TEXT_METRICS metrics;
 
-	static TextLayout Make (IDWriteFactory* dWriteFactory, IDWriteTextFormat* format, const wchar_t* str);
+	static TextLayout Create (IDWriteFactory* dWriteFactory, IDWriteTextFormat* format, const wchar_t* str);
 };
 
 unsigned int GetTimestampMilliseconds();

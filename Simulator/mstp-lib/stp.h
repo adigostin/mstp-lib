@@ -76,6 +76,22 @@ enum STP_VERSION
 	STP_VERSION_MSTP = 3,
 };
 
+// 13.7
+struct STP_MST_CONFIG_ID
+{
+	unsigned char ConfigurationIdentifierFormatSelector;// 1)
+	char ConfigurationName [32];            // 2)
+	unsigned char RevisionLevelHigh;        // 3)
+	unsigned char RevisionLevelLow;
+	unsigned char ConfigurationDigest [16]; // 4)
+
+	#ifdef __cplusplus
+	bool operator== (const STP_MST_CONFIG_ID& rhs) const;
+	bool operator< (const STP_MST_CONFIG_ID& rhs) const;
+	void Dump (STP_BRIDGE* bridge, int port, int tree) const;
+	#endif
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -157,6 +173,7 @@ const struct STP_CONFIG_TABLE_ENTRY* STP_GetMstConfigTable (struct STP_BRIDGE* b
 const unsigned char* STP_GetMstConfigTableDigest (struct STP_BRIDGE* bridge, unsigned int* digestLengthOut);
 unsigned int STP_GetMaxVlanNumber (struct STP_BRIDGE* bridge);
 unsigned int STP_GetTreeIndexFromVlanNumber (struct STP_BRIDGE* bridge, unsigned int vlanNumber);
+const struct STP_MST_CONFIG_ID* STP_GetMstConfigId (struct STP_BRIDGE* bridge);
 
 const char* STP_GetPortRoleString (enum STP_PORT_ROLE portRole);
 const char* STP_GetVersionString (enum STP_VERSION version);

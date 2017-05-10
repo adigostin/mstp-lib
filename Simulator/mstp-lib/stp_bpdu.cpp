@@ -198,26 +198,6 @@ void DumpConfigBpdu (STP_BRIDGE* bridge, int port, int tree, const MSTP_BPDU* bp
 
 // ============================================================================
 
-void MST_CONFIG_ID::Dump (STP_BRIDGE* bridge, int port, int tree) const
-{
-	char namesz [33];
-	strncpy (namesz, ConfigurationName, 32);
-	namesz [32] = 0;
-	LOG (bridge, port, tree, "Name=\"{S}\", Rev={D}, Digest={X2}{X2}..{X2}{X2}\r\n",
-		 namesz,
-		 RevisionLevel.GetValue (),
-		 ConfigurationDigest [0], ConfigurationDigest [1], ConfigurationDigest [14], ConfigurationDigest [15]);
-}
-
-// ============================================================================
-
-bool MST_CONFIG_ID::operator== (const MST_CONFIG_ID& rhs) const
-{
-	return Cmp (this, &rhs, sizeof (*this)) == 0;
-}
-
-// ============================================================================
-
 void MSTI_CONFIG_MESSAGE::Dump (STP_BRIDGE* bridge, int port, int tree) const
 {
 	LOG (bridge, port, tree, "Flags: TC={D}, Proposal={D}, PortRole={S}, Learning={D}, Forwarding={D}, Agreement={D}, Master={D}\r\n",

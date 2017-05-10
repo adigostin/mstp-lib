@@ -106,7 +106,7 @@ void InflateRoundedRect (D2D1_ROUNDED_RECT* rr, float distance)
 		rr->radiusY = 0;
 }
 
-TextLayout TextLayout::Make (IDWriteFactory* dWriteFactory, IDWriteTextFormat* format, const wchar_t* str)
+TextLayout TextLayout::Create (IDWriteFactory* dWriteFactory, IDWriteTextFormat* format, const wchar_t* str)
 {
 	IDWriteTextLayoutPtr tl;
 	auto hr = dWriteFactory->CreateTextLayout(str, (UINT32) wcslen(str), format, 10000, 10000, &tl); ThrowIfFailed(hr);

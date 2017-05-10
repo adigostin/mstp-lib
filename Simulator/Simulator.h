@@ -2,6 +2,7 @@
 #include "EventManager.h"
 #include "Win32Defs.h"
 #include "UtilityFunctions.h"
+#include "mstp-lib/stp.h"
 
 struct ISimulatorApp;
 struct IProject;

@@ -58,18 +58,6 @@ struct BPDU_HEADER
 
 // ============================================================================
 
-// 13.7
-struct MST_CONFIG_ID
-{
-	unsigned char ConfigurationIdentifierFormatSelector;// 1)
-	char ConfigurationName [32];						// 2)
-	INV_UINT2 RevisionLevel;							// 3)
-	unsigned char ConfigurationDigest [16];				// 4)
-
-	bool operator== (const MST_CONFIG_ID& rhs) const;
-	void Dump (STP_BRIDGE* bridge, int port, int tree) const;
-};
-
 // ============================================================================
 
 // The library uses this structure for STP Config BPDUs, RSTP BPDUs and MSTP BPDUs.
@@ -93,7 +81,7 @@ struct MSTP_BPDU : public BPDU_HEADER
 	unsigned char Version1Length;
 	INV_UINT2 Version3Length;
 
-	MST_CONFIG_ID	mstConfigId;
+	STP_MST_CONFIG_ID	mstConfigId;
 
 	INV_UINT4		cistInternalRootPathCost;
 	BRIDGE_ID		cistBridgeId;

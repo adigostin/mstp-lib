@@ -11,6 +11,19 @@
 using namespace std;
 using namespace D2D1;
 
+static const D2D1_COLOR_F RegionColors[] =
+{
+	ColorF(ColorF::LightBlue),
+	ColorF(ColorF::Green),
+	ColorF(ColorF::LightPink),
+	ColorF(ColorF::Aqua),
+	ColorF(ColorF::YellowGreen),
+	ColorF(ColorF::DarkOrange),
+	ColorF(ColorF::Yellow),
+	ColorF(ColorF::DarkMagenta),
+};
+
+
 class EditArea : public ZoomableWindow, public IEditArea
 {
 	typedef ZoomableWindow base;
@@ -190,9 +203,21 @@ public:
 		}
 
 		float textX = clientSizeDips.width - (5 + maxLineWidth + 5 + Port::ExteriorHeight + 5);
+		float lineX = textX - 3;
 		float bitmapX = clientSizeDips.width - (5 + Port::ExteriorHeight + 5);
 		float rowHeight = 2 + max (maxLineHeight, Port::ExteriorWidth);
 		float y = clientSizeDips.height - _countof(LegendInfo) * rowHeight;
+
+		auto lineWidth = GetDipSizeFromPixelSize({ 0, 1 }).height;
+
+		auto oldaa = dc->GetAntialiasMode();
+		dc->SetAntialiasMode (D2D1_ANTIALIAS_MODE_ALIASED);
+		ID2D1SolidColorBrushPtr brush;
+		dc->CreateSolidColorBrush (GetD2DSystemColor(COLOR_INFOBK), &brush);
+		brush->SetOpacity (0.8f);
+		dc->FillRectangle (D2D1_RECT_F { lineX, y, clientSizeDips.width, clientSizeDips.height }, brush);
+		dc->DrawLine ({ lineX, y }, { lineX, clientSizeDips.height }, _drawingObjects._brushWindowText, lineWidth);
+		dc->SetAntialiasMode (oldaa);
 
 		Matrix3x2F oldTransform;
 		dc->GetTransform (&oldTransform);
@@ -201,11 +226,9 @@ public:
 		{
 			auto& info = LegendInfo[i];
 
-			auto lineWidth = GetDipSizeFromPixelSize({ 0, 1 }).height;
-
 			auto oldaa = dc->GetAntialiasMode();
 			dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-			dc->DrawLine (Point2F (textX, y), Point2F (clientSizeDips.width, y), _drawingObjects._brushWindowText, lineWidth);
+			dc->DrawLine (Point2F (lineX, y), Point2F (clientSizeDips.width, y), _drawingObjects._brushWindowText, lineWidth);
 			dc->SetAntialiasMode(oldaa);
 
 			dc->DrawTextLayout (Point2F (textX, y + 1), layouts[i], _drawingObjects._brushWindowText);
@@ -220,6 +243,70 @@ public:
 			dc->SetTransform (&oldTransform);
 
 			y += rowHeight;
+		}
+	}
+
+	void RenderConfigIdList (ID2D1DeviceContext* dc, const std::set<STP_MST_CONFIG_ID>& configIds) const
+	{
+		size_t colorIndex = 0;
+
+		auto clientSizeDips = GetClientSizeDips();
+
+		float maxLineWidth = 0;
+		float lineHeight = 0;
+		vector<pair<TextLayout, D2D1_COLOR_F>> lines;
+		for (const STP_MST_CONFIG_ID& configId : configIds)
+		{
+			wstringstream ss;
+			ss << configId.ConfigurationName << " -- " << (configId.RevisionLevelLow | (configId.RevisionLevelHigh << 8)) << " -- "
+				<< uppercase << setfill(L'0') << hex
+				<< setw(2) << configId.ConfigurationDigest[0] << setw(2) << configId.ConfigurationDigest[1] << ".."
+				<< setw(2) << configId.ConfigurationDigest[14] << setw(2) << configId.ConfigurationDigest[15];
+			wstring line = ss.str();
+			auto tl = TextLayout::Create (GetDWriteFactory(), _legendFont, line.c_str());
+
+			if (tl.metrics.width > maxLineWidth)
+				maxLineWidth = tl.metrics.width;
+
+			if (tl.metrics.height > lineHeight)
+				lineHeight = tl.metrics.height;
+
+			lines.push_back ({ move(tl), RegionColors[colorIndex] });
+			colorIndex = (colorIndex + 1) % _countof(RegionColors);
+		}
+
+		float LeftRightPadding = 3;
+		float UpDownPadding = 2;
+		float coloredRectWidth = lineHeight * 2;
+
+		auto title = TextLayout::Create (GetDWriteFactory(), _legendFont, L"MST Config IDs:");
+
+		float y = clientSizeDips.height - lines.size() * (lineHeight + 2 * UpDownPadding) - title.metrics.height - 2 * UpDownPadding;
+
+		auto oldaa = dc->GetAntialiasMode();
+		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
+		float lineWidth = GetDipSizeFromPixelSize({ 0, 1 }).height;
+		float lineX = LeftRightPadding + coloredRectWidth + LeftRightPadding + maxLineWidth + LeftRightPadding;
+		ID2D1SolidColorBrushPtr brush;
+		dc->CreateSolidColorBrush (GetD2DSystemColor(COLOR_INFOBK), &brush);
+		brush->SetOpacity (0.8f);
+		dc->FillRectangle ({ 0, y, lineX, clientSizeDips.height }, brush);
+		dc->DrawLine ({ 0, y }, { lineX, y }, _drawingObjects._brushWindowText, lineWidth);
+		dc->DrawLine ({ lineX, y }, { lineX, clientSizeDips.height }, _drawingObjects._brushWindowText, lineWidth);
+		dc->SetAntialiasMode(oldaa);
+
+		dc->DrawTextLayout ({ LeftRightPadding, y + UpDownPadding }, title.layout, _drawingObjects._brushWindowText);
+		y += (title.metrics.height + 2 * UpDownPadding);
+
+		for (auto& p : lines)
+		{
+			ID2D1SolidColorBrushPtr brush;
+			dc->CreateSolidColorBrush (p.second, &brush);
+			D2D1_RECT_F rect = { LeftRightPadding, y + UpDownPadding, LeftRightPadding + coloredRectWidth, y + UpDownPadding + lineHeight };
+			dc->FillRectangle (&rect, brush);
+			D2D1_POINT_2F pt = { LeftRightPadding + coloredRectWidth + LeftRightPadding, y + UpDownPadding };
+			dc->DrawTextLayout (pt, p.first.layout, _drawingObjects._brushWindowText);
+			y += (lineHeight + 2 * UpDownPadding);
 		}
 	}
 
@@ -239,7 +326,7 @@ public:
 	void RenderHint (ID2D1DeviceContext* dc, float centerX, float topY, const wchar_t* text) const
 	{
 		float padding = 3.0f;
-		auto tl = TextLayout::Make (GetDWriteFactory(), _drawingObjects._regularTextFormat, text);
+		auto tl = TextLayout::Create (GetDWriteFactory(), _drawingObjects._regularTextFormat, text);
 
 		D2D1_ROUNDED_RECT rr;
 		rr.rect.left = centerX - tl.metrics.width / 2 - padding;
@@ -255,21 +342,36 @@ public:
 		dc->DrawTextLayout ({ rr.rect.left + padding, rr.rect.top + padding }, tl.layout, brush);
 	}
 
-	void RenderObjects (ID2D1DeviceContext* dc) const
+	void RenderBridges (ID2D1DeviceContext* dc, const std::set<STP_MST_CONFIG_ID>& configIds) const
 	{
 		D2D1_MATRIX_3X2_F oldtr;
 		dc->GetTransform(&oldtr);
 		dc->SetTransform(GetZoomTransform());
 
-		bool anyPortConnected = false;
-
-		for (const unique_ptr<Bridge>& b : _project->GetBridges())
+		for (const unique_ptr<Bridge>& bridge : _project->GetBridges())
 		{
-			b->Render (dc, _drawingObjects, _pw->GetSelectedVlanNumber());
+			D2D1_COLOR_F color = ColorF(ColorF::LightGreen);
+			if (STP_GetStpVersion(bridge->GetStpBridge()) >= STP_VERSION_MSTP)
+			{
+				auto it = find (configIds.begin(), configIds.end(), *STP_GetMstConfigId(bridge->GetStpBridge()));
+				if (it != configIds.end())
+				{
+					size_t colorIndex = (std::distance (configIds.begin(), it)) % _countof(RegionColors);
+					color = RegionColors[colorIndex];
+				}
+			}
 
-			anyPortConnected |= any_of (b->GetPorts().begin(), b->GetPorts().end(),
-										[this](const unique_ptr<Port>& p) { return _project->GetWireConnectedToPort(p.get()).first != nullptr; });
+			bridge->Render (dc, _drawingObjects, _pw->GetSelectedVlanNumber(), color);
 		}
+
+		dc->SetTransform(oldtr);
+	}
+
+	void RenderWires (ID2D1DeviceContext* dc) const
+	{
+		D2D1_MATRIX_3X2_F oldtr;
+		dc->GetTransform(&oldtr);
+		dc->SetTransform(GetZoomTransform());
 
 		for (const unique_ptr<Wire>& w : _project->GetWires())
 			w->Render (dc, _drawingObjects, _pw->GetSelectedVlanNumber());
@@ -286,6 +388,11 @@ public:
 		}
 		else
 		{
+			bool anyPortConnected = false;
+			for (auto& b : _project->GetBridges())
+				anyPortConnected |= any_of (b->GetPorts().begin(), b->GetPorts().end(),
+											[this](const unique_ptr<Port>& p) { return _project->GetWireConnectedToPort(p.get()).first != nullptr; });
+
 			if (!anyPortConnected)
 			{
 				Bridge* b = _project->GetBridges().front().get();
@@ -299,13 +406,27 @@ public:
 
 	virtual void Render(ID2D1DeviceContext* dc) const override final
 	{
+		std::set<STP_MST_CONFIG_ID> configIds;
+		for (auto& bridge : _project->GetBridges())
+		{
+			auto stpb = bridge->GetStpBridge();
+			if (STP_GetStpVersion(stpb) >= STP_VERSION_MSTP)
+				configIds.insert (*STP_GetMstConfigId(stpb));
+		}
+
 		dc->Clear(GetD2DSystemColor(COLOR_WINDOW));
 
-		RenderLegend(dc);
-		RenderObjects(dc);
+		RenderBridges (dc, configIds);
+
+		RenderWires (dc);
 
 		for (auto& o : _selection->GetObjects())
 			o->RenderSelection(this, dc, _drawingObjects);
+
+		RenderLegend(dc);
+
+		if (!configIds.empty())
+			RenderConfigIdList (dc, configIds);
 
 		if (_hoverPort != nullptr)
 			RenderHoverCP (dc, _hoverPort);

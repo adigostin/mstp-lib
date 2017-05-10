@@ -138,7 +138,7 @@ struct STP_BRIDGE
 	STP_VERSION ForceProtocolVersion;				// 13.24.a) - 13.24.4
 	static const unsigned int TxHoldCount = 6;		// 13.24.b) - 13.24.10
 	static const unsigned short MigrateTime = 3;	// 13.24.c) - 13.24.5
-	MST_CONFIG_ID MstConfigId;						// 13.24.d) - 13.24.6
+	STP_MST_CONFIG_ID MstConfigId;					// 13.24.d) - 13.24.6
 	// The above parameters ((a) through (d)) are not modified by the operation of the spanning tree protocols, but
 	// are treated as constants by the state machines. If ForceProtocolVersion or MSTConfigId are modified by
 	// management, BEGIN shall be asserted for all state machines.

@@ -4,6 +4,7 @@
 #include "Bridge.h"
 
 using namespace std;
+using namespace D2D1;
 
 class CreateBridgeES : public EditState
 {
@@ -60,7 +61,7 @@ public:
 			D2D1_MATRIX_3X2_F oldtr;
 			rt->GetTransform(&oldtr);
 			rt->SetTransform(_area->GetZoomTransform());
-			_bridge->Render (rt, _area->GetDrawingObjects(), _pw->GetSelectedVlanNumber());
+			_bridge->Render (rt, _area->GetDrawingObjects(), _pw->GetSelectedVlanNumber(), ColorF(ColorF::LightGreen));
 			rt->SetTransform(&oldtr);
 		}
 	}

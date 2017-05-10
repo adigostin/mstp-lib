@@ -2,7 +2,6 @@
 #pragma once
 #include "EventManager.h"
 #include "Simulator.h"
-#include "mstp-lib/stp.h"
 
 struct BridgeLogLine
 {
@@ -74,7 +73,8 @@ public:
 
 	std::wstring GetBridgeAddressAsString() const;
 
-	virtual void Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned int vlanNumber) const override final;
+	void Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned int vlanNumber, const D2D1_COLOR_F& configIdColor) const;
+
 	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const override final;
 	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
 
