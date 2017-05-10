@@ -288,6 +288,7 @@ struct ISimulatorApp
 	virtual const wchar_t* GetRegKeyPath() const = 0;
 	virtual void AddProjectWindow (std::unique_ptr<IProjectWindow>&& pw) = 0;
 	virtual const std::vector<std::unique_ptr<IProjectWindow>>& GetProjectWindows() const = 0;
+	virtual const wchar_t* GetAppName() const = 0;
 };
 
 // ============================================================================

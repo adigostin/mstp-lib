@@ -188,6 +188,8 @@ public:
 	virtual IDWriteFactory* GetDWriteFactory() const override final { return _dWriteFactory; }
 
 	virtual const wchar_t* GetRegKeyPath() const override final { return _regKeyPath.c_str(); }
+
+	virtual const wchar_t* GetAppName() const override final { return AppName; }
 };
 
 int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
