@@ -10,7 +10,7 @@ class Selection : public ISelection
 {
 	shared_ptr<IProject> const _project;
 	ULONG _refCount = 1;
-	vector<ComPtr<Object>> _objects;
+	vector<Object*> _objects;
 	EventManager _em;
 
 public:
@@ -41,18 +41,17 @@ public:
 		}
 	}
 
-	virtual const vector<ComPtr<Object>>& GetObjects() const override final { return _objects; }
+	virtual const vector<Object*>& GetObjects() const override final { return _objects; }
 
 	void AddInternal (Object* o)
 	{
-		_objects.push_back(ComPtr<Object>(o));
+		_objects.push_back(o);
 		AddedToSelectionEvent::InvokeHandlers(_em, this, o);
 	}
 
 	void RemoveInternal (size_t index)
 	{
-		auto o = _objects[index].Get();
-		RemovingFromSelectionEvent::InvokeHandlers (_em, this, o);
+		RemovingFromSelectionEvent::InvokeHandlers (_em, this, _objects[index]);
 		_objects.erase(_objects.begin() + index);
 	}
 

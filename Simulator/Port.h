@@ -15,10 +15,7 @@ class Port : public Object
 
 public:
 	Port (Bridge* bridge, unsigned int portIndex, Side side, float offset);
-protected:
-	virtual ~Port() = default;
 
-public:
 	static constexpr int HTCodeInner = 1;
 	static constexpr int HTCodeCP = 2;
 

@@ -48,7 +48,7 @@ struct SelectionChangedEvent : public Event<SelectionChangedEvent, void(ISelecti
 struct ISelection
 {
 	virtual ~ISelection() { }
-	virtual const std::vector<ComPtr<Object>>& GetObjects() const = 0;
+	virtual const std::vector<Object*>& GetObjects() const = 0;
 	virtual void Select (Object* o) = 0;
 	virtual void Clear() = 0;
 	virtual void Add (Object* o) = 0;
@@ -201,15 +201,15 @@ struct IProject abstract
 {
 	virtual ~IProject() { }
 
-	virtual const std::vector<ComPtr<Bridge>>& GetBridges() const = 0;
-	virtual void InsertBridge (size_t index, Bridge* bridge) = 0;
-	virtual void RemoveBridge (size_t index) = 0;
+	virtual const std::vector<std::unique_ptr<Bridge>>& GetBridges() const = 0;
+	virtual void InsertBridge (size_t index, std::unique_ptr<Bridge>&& bridge) = 0;
+	virtual std::unique_ptr<Bridge> RemoveBridge (size_t index) = 0;
 	virtual BridgeInsertedEvent::Subscriber GetBridgeInsertedEvent() = 0;
 	virtual BridgeRemovingEvent::Subscriber GetBridgeRemovingEvent() = 0;
 
-	virtual const std::vector<ComPtr<Wire>>& GetWires() const = 0;
-	virtual void InsertWire (size_t index, Wire* wire) = 0;
-	virtual void RemoveWire (size_t index) = 0;
+	virtual const std::vector<std::unique_ptr<Wire>>& GetWires() const = 0;
+	virtual void InsertWire (size_t index, std::unique_ptr<Wire>&& wire) = 0;
+	virtual std::unique_ptr<Wire> RemoveWire (size_t index) = 0;
 	virtual WireInsertedEvent::Subscriber GetWireInsertedEvent() = 0;
 	virtual WireRemovingEvent::Subscriber GetWireRemovingEvent() = 0;
 	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() = 0;
@@ -217,11 +217,11 @@ struct IProject abstract
 
 	virtual void Save (const wchar_t* path) const = 0;
 
-	void Add (Bridge* bridge) { InsertBridge (GetBridges().size(), bridge); }
-	void Add (Wire* wire) { InsertWire (GetWires().size(), wire); }
-	void Remove (Bridge* b);
-	void Remove (Wire* w);
-	void Remove (Object* o);
+	void Add (std::unique_ptr<Bridge>&& bridge) { InsertBridge (GetBridges().size(), std::move(bridge)); }
+	void Add (std::unique_ptr<Wire>&& wire)     { InsertWire   (GetWires().size(),   std::move(wire));   }
+	std::unique_ptr<Bridge> Remove (Bridge* b);
+	std::unique_ptr<Wire> Remove (Wire* w);
+	std::unique_ptr<Object> Remove (Object* o);
 
 	std::pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const;
 	Port* FindConnectedPort (Port* txPort) const;

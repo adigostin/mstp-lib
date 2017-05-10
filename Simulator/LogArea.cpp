@@ -14,7 +14,7 @@ class LogArea : public D2DWindow, public ILogArea
 	ComPtr<IDWriteTextFormat> _textFormat;
 	ComPtr<ID2D1SolidColorBrush> _windowBrush;
 	ComPtr<ID2D1SolidColorBrush> _windowTextBrush;
-	ComPtr<Bridge> _bridge;
+	Bridge* _bridge = nullptr;
 	int _selectedPort = -1;
 	int _selectedTree = -1;
 	vector<const BridgeLogLine*> _lines;
@@ -159,7 +159,7 @@ public:
 
 	virtual void SelectBridge (Bridge* b) override final 
 	{
-		if (_bridge.Get() != b)
+		if (_bridge != b)
 		{
 			if (_bridge != nullptr)
 			{

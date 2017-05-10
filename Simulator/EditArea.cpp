@@ -254,15 +254,15 @@ public:
 
 		bool anyPortConnected = false;
 
-		for (const ComPtr<Bridge>& b : _project->GetBridges())
+		for (const unique_ptr<Bridge>& b : _project->GetBridges())
 		{
 			b->Render (dc, _drawingObjects, _pw->GetSelectedVlanNumber());
 
 			anyPortConnected |= any_of (b->GetPorts().begin(), b->GetPorts().end(),
-										[this](const ComPtr<Port>& p) { return _project->GetWireConnectedToPort(p).first != nullptr; });
+										[this](const unique_ptr<Port>& p) { return _project->GetWireConnectedToPort(p.get()).first != nullptr; });
 		}
 
-		for (const ComPtr<Wire>& w : _project->GetWires())
+		for (const unique_ptr<Wire>& w : _project->GetWires())
 			w->Render (dc, _drawingObjects, _pw->GetSelectedVlanNumber());
 
 		dc->SetTransform(oldtr);
@@ -279,7 +279,7 @@ public:
 		{
 			if (!anyPortConnected)
 			{
-				auto b = _project->GetBridges()[0];
+				Bridge* b = _project->GetBridges().front().get();
 				auto text = L"No port connected. You can connect\r\nports by drawing wires with the mouse.";
 				auto wl = D2D1_POINT_2F { b->GetLeft() + b->GetWidth() / 2, b->GetBottom() + Port::ExteriorHeight * 1.5f };
 				auto dl = GetDLocationFromWLocation(wl);
@@ -385,15 +385,21 @@ public:
 			{
 				bool enable = (wParam == ID_BRIDGE_ENABLE_STP);
 				auto timestamp = GetTimestampMilliseconds();
-				for (auto& o : _selection->GetObjects())
+				for (Object* o : _selection->GetObjects())
 				{
-					auto b = dynamic_cast<Bridge*>(o.Get());
+					auto b = dynamic_cast<Bridge*>(o);
 					if (b != nullptr)
 					{
-						if (enable && !STP_IsBridgeStarted(b->GetStpBridge()))
-							STP_StartBridge (b->GetStpBridge(), timestamp);
-						else if (!enable && STP_IsBridgeStarted(b->GetStpBridge()))
-							STP_StopBridge (b->GetStpBridge(), timestamp);
+						if (enable)
+						{
+							if (!STP_IsBridgeStarted(b->GetStpBridge()))
+								STP_StartBridge (b->GetStpBridge(), timestamp);
+						}
+						else
+						{
+							if (STP_IsBridgeStarted(b->GetStpBridge()))
+								STP_StopBridge (b->GetStpBridge(), timestamp);
+						}
 					}
 				}
 			}
@@ -411,7 +417,7 @@ public:
 			for (auto& port : b->GetPorts())
 			{
 				if (port->HitTestCP (this, dLocation, tolerance))
-					return port;
+					return port.get();
 			}
 		}
 
@@ -697,9 +703,9 @@ public:
 		HMENU hMenu;
 		if (_selection->GetObjects().empty())
 			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_EMPTY_SPACE));
-		else if (dynamic_cast<Bridge*>(_selection->GetObjects()[0].Get()) != nullptr)
+		else if (dynamic_cast<Bridge*>(_selection->GetObjects().front()) != nullptr)
 			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_BRIDGE));
-		else if (dynamic_cast<Port*>(_selection->GetObjects()[0].Get()) != nullptr)
+		else if (dynamic_cast<Port*>(_selection->GetObjects().front()) != nullptr)
 			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_PORT));
 		else
 			throw not_implemented_exception();

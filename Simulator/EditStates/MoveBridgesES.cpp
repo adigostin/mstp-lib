@@ -17,7 +17,7 @@ public:
 		: base(deps)
 	{
 		assert (all_of(_selection->GetObjects().begin(), _selection->GetObjects().end(),
-			[](const ComPtr<Object>& so) { return dynamic_cast<Bridge*>(so.Get()); }));
+			[](Object* so) { return dynamic_cast<Bridge*>(so) != nullptr; }));
 	}
 
 	virtual void OnMouseDown (const MouseLocation& location, MouseButton button) override final
@@ -25,7 +25,7 @@ public:
 		_mouseDownWLocation = location.w;
 		for (auto o : _selection->GetObjects())
 		{
-			auto b = dynamic_cast<Bridge*>(o.Get()); assert (b != nullptr);
+			auto b = dynamic_cast<Bridge*>(o); assert (b != nullptr);
 			_offsets.push_back ({ location.w.x - b->GetLeft(), location.w.y - b->GetTop() });
 		}
 	}
@@ -34,7 +34,7 @@ public:
 	{
 		for (size_t i = 0; i < _selection->GetObjects().size(); i++)
 		{
-			auto b = dynamic_cast<Bridge*>(_selection->GetObjects()[i].Get()); assert (b != nullptr);
+			auto b = dynamic_cast<Bridge*>(_selection->GetObjects()[i]); assert (b != nullptr);
 			b->SetLocation (location.w.x - _offsets[i].width, location.w.y - _offsets[i].height);
 		}
 	}

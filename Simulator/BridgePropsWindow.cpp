@@ -211,22 +211,18 @@ private:
 		auto timestamp = GetTimestampMilliseconds();
 
 		auto checkStpEnabled = GetDlgItem (_hwnd, IDC_CHECK_STP_ENABLED);
-		if (Button_GetCheck(checkStpEnabled) == BST_UNCHECKED)
+
+		bool enable = Button_GetCheck(checkStpEnabled) == BST_UNCHECKED;
+		for (auto o : _selection->GetObjects())
 		{
-			// enable stp for all
-			for (auto& o : _selection->GetObjects())
+			auto b = dynamic_cast<Bridge*>(o);
+			if (enable)
 			{
-				auto b = dynamic_cast<Bridge*>(o.Get());
 				if (!STP_IsBridgeStarted(b->GetStpBridge()))
 					STP_StartBridge (b->GetStpBridge(), timestamp);
 			}
-		}
-		else
-		{
-			// disable stp for all
-			for (auto& o : _selection->GetObjects())
+			else
 			{
-				auto b = dynamic_cast<Bridge*>(o.Get());
 				if (STP_IsBridgeStarted(b->GetStpBridge()))
 					STP_StopBridge (b->GetStpBridge(), timestamp);
 			}
@@ -251,9 +247,9 @@ private:
 
 		auto timestamp = GetTimestampMilliseconds();
 
-		for (auto& o : _selection->GetObjects())
+		for (Object* o : _selection->GetObjects())
 		{
-			auto b = dynamic_cast<Bridge*>(o.Get()); assert (b != nullptr);
+			auto b = dynamic_cast<Bridge*>(o); assert (b != nullptr);
 			STP_SetStpVersion (b->GetStpBridge(), newVersion, timestamp);
 		}
 	}
@@ -393,7 +389,7 @@ private:
 	{
 		if (_selection->GetObjects().size() == 1)
 		{
-			auto bridge = dynamic_cast<Bridge*>(_selection->GetObjects()[0].Get());
+			auto bridge = dynamic_cast<Bridge*>(_selection->GetObjects().front());
 			std::array<unsigned char, 6> ba;
 			STP_GetBridgeAddress(bridge->GetStpBridge(), ba.data());
 			::SetWindowText (_bridgeAddressEdit, bridge->GetBridgeAddressAsString().c_str());
@@ -408,7 +404,7 @@ private:
 
 	void LoadStpStartedCheckBox()
 	{
-		auto getStpStarted = [](const ComPtr<Object>& o) { return STP_IsBridgeStarted(dynamic_cast<Bridge*>(o.Get())->GetStpBridge()); };
+		auto getStpStarted = [](Object* o) { return STP_IsBridgeStarted(dynamic_cast<Bridge*>(o)->GetStpBridge()); };
 
 		auto checkStpEnabled = GetDlgItem (_hwnd, IDC_CHECK_STP_ENABLED);
 
@@ -422,12 +418,12 @@ private:
 
 	void LoadStpVersionComboBox()
 	{
-		auto getStpVersion = [](const ComPtr<Object>& o) { return STP_GetStpVersion (dynamic_cast<Bridge*>(o.Get())->GetStpBridge()); };
+		auto getStpVersion = [](Object* o) { return STP_GetStpVersion (dynamic_cast<Bridge*>(o)->GetStpBridge()); };
 
 		int index = -1;
 
 		auto version = getStpVersion(_selection->GetObjects()[0]);
-		if (all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](const ComPtr<Object>& o) { return getStpVersion(o) == version; }))
+		if (all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](Object* o) { return getStpVersion(o) == version; }))
 		{
 			if (version == STP_VERSION_LEGACY_STP)
 				index = 0;
@@ -442,11 +438,11 @@ private:
 
 	void LoadPortCountComboBox()
 	{
-		auto getPortCount = [](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get())->GetPorts().size(); };
+		auto getPortCount = [](Object* o) { return dynamic_cast<Bridge*>(o)->GetPorts().size(); };
 
 		int index = -1;
 		auto portCount = getPortCount(_selection->GetObjects()[0]);
-		if (all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](const ComPtr<Object>& o) { return getPortCount(o) == portCount; }))
+		if (all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](Object* o) { return getPortCount(o) == portCount; }))
 			index = (int) (portCount - FirstPortCount);
 
 		ComboBox_SetCurSel (_comboPortCount, index);
@@ -454,11 +450,11 @@ private:
 
 	void LoadMstiCountComboBox()
 	{
-		auto getMstiCount = [](const ComPtr<Object>& o) { return STP_GetMstiCount(dynamic_cast<Bridge*>(o.Get())->GetStpBridge()); };
+		auto getMstiCount = [](Object* o) { return STP_GetMstiCount(dynamic_cast<Bridge*>(o)->GetStpBridge()); };
 
 		int index = -1;
 		auto mstiCount = getMstiCount(_selection->GetObjects()[0]);
-		if (all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](const ComPtr<Object>& o) { return getMstiCount(o) == mstiCount; }))
+		if (all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](Object* o) { return getMstiCount(o) == mstiCount; }))
 			index = mstiCount;
 
 		ComboBox_SetCurSel (_comboMstiCount, index);
@@ -466,16 +462,16 @@ private:
 
 	void LoadMstConfigNameTextBox()
 	{
-		auto getName = [](const ComPtr<Object>& o)
+		auto getName = [](Object* o)
 		{
 			char name[33];
-			STP_GetMstConfigName(dynamic_cast<Bridge*>(o.Get())->GetStpBridge(), name);
+			STP_GetMstConfigName(dynamic_cast<Bridge*>(o)->GetStpBridge(), name);
 			return std::string(name);
 		};
 
 		auto name = getName(_selection->GetObjects()[0]);
 
-		bool allSameName = all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](const ComPtr<Object>& o) { return getName(o) == name; });
+		bool allSameName = all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](Object* o) { return getName(o) == name; });
 		if (allSameName)
 			::SetWindowTextA (_mstConfigNameEdit, name.c_str());
 		else
@@ -484,11 +480,11 @@ private:
 
 	void LoadMstConfigRevLevelTextBox()
 	{
-		auto getLevel = [](const ComPtr<Object>& o) { return STP_GetMstConfigRevisionLevel(dynamic_cast<Bridge*>(o.Get())->GetStpBridge()); };
+		auto getLevel = [](Object* o) { return STP_GetMstConfigRevisionLevel(dynamic_cast<Bridge*>(o)->GetStpBridge()); };
 
 		auto level = getLevel(_selection->GetObjects()[0]);
 
-		bool allSameLevel = all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](const ComPtr<Object>& o) { return getLevel(o) == level; });
+		bool allSameLevel = all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](Object* o) { return getLevel(o) == level; });
 		if (allSameLevel)
 			::SetWindowTextA (_mstConfigRevLevelEdit, to_string(level).c_str());
 		else
@@ -497,9 +493,9 @@ private:
 
 	void LoadMstConfigTableHashEdit()
 	{
-		auto getDigest = [](const ComPtr<Object>& o)
+		auto getDigest = [](Object* o)
 		{
-			auto b = dynamic_cast<Bridge*>(o.Get());
+			auto b = dynamic_cast<Bridge*>(o); assert (b != nullptr);
 			unsigned int digestLength;
 			auto digest = STP_GetMstConfigTableDigest (b->GetStpBridge(), &digestLength);
 			assert (digestLength == 16);
@@ -508,9 +504,9 @@ private:
 			return result;
 		};
 
-		auto digest = getDigest(_selection->GetObjects()[0].Get());
+		auto digest = getDigest(_selection->GetObjects().front());
 
-		bool allSame = all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](const ComPtr<Object>& o) { return getDigest(o) == digest; });
+		bool allSame = all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](Object* o) { return getDigest(o) == digest; });
 
 		const wchar_t* tooltipText;
 		if (allSame)
@@ -547,14 +543,14 @@ private:
 	void LoadBridgePriorityCombo()
 	{
 		auto vlanNumber = _projectWindow->GetSelectedVlanNumber();
-		auto getPrio = [vlanNumber](const ComPtr<Object>& o)
+		auto getPrio = [vlanNumber](Object* o)
 		{
-			auto stpb = dynamic_cast<Bridge*>(o.Get())->GetStpBridge();
+			auto stpb = dynamic_cast<Bridge*>(o)->GetStpBridge();
 			auto treeIndex = STP_GetTreeIndexFromVlanNumber(stpb, vlanNumber);
 			return STP_GetBridgePriority(stpb, treeIndex);
 		};
 		auto prio = getPrio(_selection->GetObjects()[0]);
-		bool allSamePrio = all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](const ComPtr<Object>& o) { return getPrio(o) == prio; });
+		bool allSamePrio = all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](Object* o) { return getPrio(o) == prio; });
 		
 		auto combo = GetDlgItem(_hwnd, IDC_COMBO_BRIDGE_PRIORITY);
 		if (allSamePrio)
@@ -578,9 +574,9 @@ private:
 		auto newPrio = (unsigned int) index * 4096u;
 		auto timestamp = GetTimestampMilliseconds();
 
-		for (auto& o : _selection->GetObjects())
+		for (Object* o : _selection->GetObjects())
 		{
-			auto b = dynamic_cast<Bridge*>(o.Get());
+			auto b = dynamic_cast<Bridge*>(o);
 			auto stpb = b->GetStpBridge();
 			auto treeIndex = STP_GetTreeIndexFromVlanNumber(stpb, _projectWindow->GetSelectedVlanNumber());
 			STP_SetBridgePriority (stpb, treeIndex, newPrio, timestamp);
@@ -594,7 +590,7 @@ private:
 		auto window = static_cast<BridgePropsWindow*>(callbackArg);
 
 		bool bridgesSelected = !selection->GetObjects().empty()
-			&& all_of (selection->GetObjects().begin(), selection->GetObjects().end(), [](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get()) != nullptr; });
+			&& all_of (selection->GetObjects().begin(), selection->GetObjects().end(), [](Object* o) { return dynamic_cast<Bridge*>(o) != nullptr; });
 
 		if (!bridgesSelected)
 		{
@@ -647,9 +643,9 @@ private:
 			}
 
 			auto timestamp = GetTimestampMilliseconds();
-			for (auto& o : _selection->GetObjects())
+			for (Object* o : _selection->GetObjects())
 			{
-				auto stpBridge = dynamic_cast<Bridge*>(o.Get())->GetStpBridge();
+				auto stpBridge = dynamic_cast<Bridge*>(o)->GetStpBridge();
 				STP_SetMstConfigName (stpBridge, ascii.c_str(), timestamp);
 			}
 
@@ -665,7 +661,7 @@ private:
 	bool BridgesSelected() const
 	{
 		return !_selection->GetObjects().empty()
-			&& all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [](const ComPtr<Object>& o) { return dynamic_cast<Bridge*>(o.Get()) != nullptr; });
+			&& all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [](Object* o) { return dynamic_cast<Bridge*>(o) != nullptr; });
 	}
 };
 

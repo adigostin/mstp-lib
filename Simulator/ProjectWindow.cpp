@@ -154,10 +154,10 @@ public:
 			pw->_logArea->SelectBridge(nullptr);
 		else
 		{
-			auto b = dynamic_cast<Bridge*>(selection->GetObjects()[0].Get());
+			auto b = dynamic_cast<Bridge*>(selection->GetObjects().front());
 			if (b == nullptr)
 			{
-				auto port = dynamic_cast<Port*>(selection->GetObjects()[0].Get());
+				auto port = dynamic_cast<Port*>(selection->GetObjects().front());
 				if (port != nullptr)
 					b = port->GetBridge();
 			}

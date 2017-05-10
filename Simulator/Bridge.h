@@ -21,7 +21,7 @@ class Bridge : public Object
 	float _y;
 	float _width;
 	float _height;
-	std::vector<ComPtr<Port>> _ports;
+	std::vector<std::unique_ptr<Port>> _ports;
 	bool _powered = true;
 	STP_BRIDGE* _stpBridge = nullptr;
 	static const STP_CALLBACKS StpCallbacks;
@@ -49,8 +49,7 @@ class Bridge : public Object
 
 public:
 	Bridge (IProject* project, unsigned int portCount, unsigned int mstiCount, const std::array<uint8_t, 6>& macAddress);
-protected:
-	~Bridge();
+	virtual ~Bridge();
 
 public:
 	static constexpr int HTCodeInner = 1;
@@ -71,7 +70,7 @@ public:
 	void SetLocation (float x, float y);
 	D2D1_RECT_F GetBounds() const { return { _x, _y, _x + _width, _y + _height }; }
 
-	const std::vector<ComPtr<Port>>& GetPorts() const { return _ports; }
+	const std::vector<std::unique_ptr<Port>>& GetPorts() const { return _ports; }
 
 	std::wstring GetBridgeAddressAsString() const;
 

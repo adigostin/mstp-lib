@@ -56,32 +56,32 @@ RECT IWin32Window::GetClientRectPixels() const
 #pragma endregion
 
 #pragma region IProject
-void IProject::Remove (Object* o)
+unique_ptr<Object> IProject::Remove (Object* o)
 {
 	if (auto b = dynamic_cast<Bridge*>(o))
-		Remove(b);
+		return Remove(b);
 	else if (auto w = dynamic_cast<Wire*>(o))
-		Remove(w);
+		return Remove(w);
 	else
 		throw not_implemented_exception();
 }
 
-void IProject::Remove (Bridge* b)
+std::unique_ptr<Bridge> IProject::Remove (Bridge* b)
 {
 	auto& bridges = GetBridges();
-	auto it = find (bridges.begin(), bridges.end(), b);
+	auto it = find_if (bridges.begin(), bridges.end(), [b](auto& up) { return up.get() == b; });
 	if (it == bridges.end())
 		throw invalid_argument("b");
-	RemoveBridge(it - bridges.begin());
+	return RemoveBridge(it - bridges.begin());
 }
 
-void IProject::Remove (Wire* w)
+std::unique_ptr<Wire> IProject::Remove (Wire* w)
 {
 	auto& wires = GetWires();
-	auto it = find (wires.begin(), wires.end(), w);
+	auto it = find_if (wires.begin(), wires.end(), [w](auto& up) { return up.get() == w; });
 	if (it == wires.end())
 		throw invalid_argument("w");
-	RemoveWire (it - wires.begin());
+	return RemoveWire (it - wires.begin());
 }
 
 pair<Wire*, size_t> IProject::GetWireConnectedToPort (const Port* port) const
@@ -89,9 +89,9 @@ pair<Wire*, size_t> IProject::GetWireConnectedToPort (const Port* port) const
 	for (auto& w : GetWires())
 	{
 		if (holds_alternative<ConnectedWireEnd>(w->GetP0()) && (get<ConnectedWireEnd>(w->GetP0()) == port))
-			return { w, 0 };
+			return { w.get(), 0 };
 		else if (holds_alternative<ConnectedWireEnd>(w->GetP1()) && (get<ConnectedWireEnd>(w->GetP1()) == port))
-			return { w, 1 };
+			return { w.get(), 1 };
 	}
 
 	return { };

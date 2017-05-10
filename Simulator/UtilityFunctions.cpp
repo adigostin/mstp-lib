@@ -5,21 +5,6 @@
 using namespace std;
 using namespace D2D1;
 
-#pragma region Object class
-ULONG STDMETHODCALLTYPE Object::AddRef()
-{
-	return InterlockedIncrement(&_refCount);
-}
-
-ULONG STDMETHODCALLTYPE Object::Release()
-{
-	ULONG newRefCount = InterlockedDecrement(&_refCount);
-	if (newRefCount == 0)
-		delete this;
-	return newRefCount;
-}
-#pragma endregion
-
 unsigned int GetTimestampMilliseconds()
 {
 	SYSTEMTIME currentUtcTime;

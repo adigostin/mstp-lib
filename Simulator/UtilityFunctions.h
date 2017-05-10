@@ -29,18 +29,13 @@ struct DrawingObjects
 	ComPtr<ID2D1StrokeStyle> _strokeStyleSelectionRect;
 };
 
-class Object : public IUnknown
+class Object
 {
-	ULONG _refCount = 1;
 protected:
 	EventManager _em;
-	virtual ~Object() { assert(_refCount == 0); }
 
 public:
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
-
-	virtual ULONG STDMETHODCALLTYPE AddRef() override final;
-	virtual ULONG STDMETHODCALLTYPE Release() override final;
+	virtual ~Object() = default;
 
 	struct InvalidateEvent : public Event<InvalidateEvent, void(Object*)> { };
 	InvalidateEvent::Subscriber GetInvalidateEvent() { return InvalidateEvent::Subscriber(_em); }

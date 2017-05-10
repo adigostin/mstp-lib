@@ -26,7 +26,7 @@ Bridge::Bridge (IProject* project, unsigned int portCount, unsigned int mstiCoun
 	for (unsigned int i = 0; i < portCount; i++)
 	{
 		offset += (Port::PortToPortSpacing / 2 + Port::InteriorWidth / 2);
-		auto port = ComPtr<Port>(new Port(this, i, Side::Bottom, offset), false);
+		auto port = unique_ptr<Port>(new Port(this, i, Side::Bottom, offset));
 		_ports.push_back (move(port));
 		offset += (Port::InteriorWidth / 2 + Port::PortToPortSpacing / 2);
 	}
@@ -138,7 +138,7 @@ void Bridge::ComputeMacOperational()
 	bool invalidate = false;
 	for (unsigned int portIndex = 0; portIndex < _ports.size(); portIndex++)
 	{
-		auto& port = _ports[portIndex];
+		Port* port = _ports[portIndex].get();
 
 		bool newMacOperational = (_project->FindConnectedPort(port) != nullptr);
 		if (port->_macOperational != newMacOperational)
@@ -206,7 +206,7 @@ void Bridge::ProcessReceivedPacket()
 					}
 					else
 					{
-						auto rxPort = _project->FindConnectedPort(_ports[i]);
+						auto rxPort = _project->FindConnectedPort(_ports[i].get());
 						if (rxPort != nullptr)
 						{
 							RxPacketInfo info = rp;
@@ -355,7 +355,8 @@ ComPtr<IXMLDOMElement> Bridge::Serialize (IXMLDOMDocument3* doc) const
 	ComPtr<IXMLDOMElement> element;
 	HRESULT hr = doc->createElement (BridgeString, &element); ThrowIfFailed(hr);
 
-	auto bridgeIndex = find (_project->GetBridges().begin(), _project->GetBridges().end(), this) - _project->GetBridges().begin();
+	auto it = find_if (_project->GetBridges().begin(), _project->GetBridges().end(), [this](auto& up) { return up.get() == this; });
+	auto bridgeIndex = it - _project->GetBridges().begin();
 	hr = element->setAttribute (IndexString, _variant_t(to_string(bridgeIndex).c_str())); ThrowIfFailed(hr);
 
 	hr = element->setAttribute (AddressString, _variant_t(GetBridgeAddressAsString().c_str())); ThrowIfFailed(hr);
@@ -402,9 +403,9 @@ void Bridge::StpCallback_FreeMemory(void* p)
 
 void* Bridge::StpCallback_TransmitGetBuffer (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int bpduSize, unsigned int timestamp)
 {
-	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
-	auto txPort = b->_ports[portIndex].Get();
-	auto rxPort = b->_project->FindConnectedPort(txPort);
+	Bridge* b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
+	Port* txPort = b->_ports[portIndex].get();
+	Port* rxPort = b->_project->FindConnectedPort(txPort);
 	if (rxPort == nullptr)
 		return nullptr; // The port was disconnected and our port polling code hasn't reacted yet. This is what happens in a real system too.
 

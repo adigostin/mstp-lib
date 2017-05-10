@@ -84,7 +84,7 @@ bool Wire::IsForwarding (unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const
 							{
 								if ((i != rx->GetPortIndex()) && rx->IsForwarding(vlanNumber))
 								{
-									auto otherTxPort = rx->GetBridge()->GetPorts()[i].Get();
+									Port* otherTxPort = rx->GetBridge()->GetPorts()[i].get();
 									if (otherTxPort == targetPort)
 										return true;
 
@@ -192,7 +192,8 @@ ComPtr<IXMLDOMElement> Wire::SerializeEnd (IXMLDOMDocument3* doc, const WireEnd&
 		hr = doc->createElement (ConnectedEndString, &element); ThrowIfFailed(hr);
 		auto port = get<ConnectedWireEnd>(end);
 		auto& bridges = port->GetBridge()->GetProject()->GetBridges();
-		auto bridgeIndex = find (bridges.begin(), bridges.end(), port->GetBridge()) - bridges.begin();
+		auto it = find_if (bridges.begin(), bridges.end(), [port](auto& up) { return up.get() == port->GetBridge(); });
+		auto bridgeIndex = it - bridges.begin();
 		hr = element->setAttribute (BridgeIndexString, _variant_t(to_string(bridgeIndex).c_str())); ThrowIfFailed(hr);
 		hr = element->setAttribute (PortIndexString, _variant_t(to_string(port->GetPortIndex()).c_str())); ThrowIfFailed(hr);
 	}

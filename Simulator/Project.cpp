@@ -11,39 +11,39 @@ using namespace std;
 
 class Project : public IProject
 {
-	vector<ComPtr<Bridge>> _bridges;
-	vector<ComPtr<Wire>> _wires;
+	vector<unique_ptr<Bridge>> _bridges;
+	vector<unique_ptr<Wire>> _wires;
 	EventManager _em;
 	std::array<uint8_t, 6> _nextMacAddress = { 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x80 };
 
 public:
-	virtual const vector<ComPtr<Bridge>>& GetBridges() const override final { return _bridges; }
+	virtual const vector<unique_ptr<Bridge>>& GetBridges() const override final { return _bridges; }
 
-	virtual void InsertBridge (size_t index, Bridge* bridge) override final
+	virtual void InsertBridge (size_t index, unique_ptr<Bridge>&& bridge) override final
 	{
 		if (index > _bridges.size())
 			throw invalid_argument("index");
 
-		_bridges.push_back(bridge);
-		bridge->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
-		BridgeInsertedEvent::InvokeHandlers (_em, this, index, bridge);
+		_bridges.push_back(move(bridge));
+		_bridges.back()->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
+		BridgeInsertedEvent::InvokeHandlers (_em, this, index, _bridges.back().get());
 		ProjectInvalidateEvent::InvokeHandlers (_em, this);
 	}
 
-	virtual void RemoveBridge(size_t index) override final
+	virtual unique_ptr<Bridge> RemoveBridge(size_t index) override final
 	{
 		if (index >= _bridges.size())
 			throw invalid_argument("index");
 
-		auto& b = _bridges[index];
+		Bridge* b = _bridges[index].get();
 
 		size_t wireIndex = 0;
 		while (wireIndex < _wires.size())
 		{
-			Wire* w = _wires[wireIndex].Get();
+			Wire* w = _wires[wireIndex].get();
 
 			bool allWirePointsOnBridgeBeingDeleted = all_of (w->GetPoints().begin(), w->GetPoints().end(),
-				[&b](const WireEnd& we) { return holds_alternative<ConnectedWireEnd>(we) && (get<ConnectedWireEnd>(we)->GetBridge() == b); });
+				[b](const WireEnd& we) { return holds_alternative<ConnectedWireEnd>(we) && (get<ConnectedWireEnd>(we)->GetBridge() == b); });
 
 			if (allWirePointsOnBridgeBeingDeleted)
 				this->RemoveWire(wireIndex);
@@ -60,34 +60,38 @@ public:
 			}
 		}
 
-		BridgeRemovingEvent::InvokeHandlers(_em, this, index, _bridges[index]);
+		BridgeRemovingEvent::InvokeHandlers(_em, this, index, _bridges[index].get());
 		_bridges[index]->GetInvalidateEvent().RemoveHandler (&OnObjectInvalidate, this);
+		auto result = move(_bridges[index]);
 		_bridges.erase (_bridges.begin() + index);
 		ProjectInvalidateEvent::InvokeHandlers (_em, this);
+		return result;
 	}
 
-	virtual const vector<ComPtr<Wire>>& GetWires() const override final { return _wires; }
+	virtual const vector<unique_ptr<Wire>>& GetWires() const override final { return _wires; }
 
-	virtual void InsertWire (size_t index, Wire* wire) override final
+	virtual void InsertWire (size_t index, unique_ptr<Wire>&& wire) override final
 	{
 		if (index > _wires.size())
 			throw invalid_argument("index");
 
-		_wires.push_back(wire);
-		wire->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
-		WireInsertedEvent::InvokeHandlers (_em, this, index, wire);
+		_wires.push_back(move(wire));
+		_wires.back()->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
+		WireInsertedEvent::InvokeHandlers (_em, this, index, _wires.back().get());
 		ProjectInvalidateEvent::InvokeHandlers (_em, this);
 	}
 
-	virtual void RemoveWire (size_t index) override final
+	virtual unique_ptr<Wire> RemoveWire (size_t index) override final
 	{
 		if (index >= _wires.size())
 			throw invalid_argument("index");
 
-		WireRemovingEvent::InvokeHandlers(_em, this, index, _wires[index]);
+		WireRemovingEvent::InvokeHandlers(_em, this, index, _wires[index].get());
 		_wires[index]->GetInvalidateEvent().RemoveHandler (&OnObjectInvalidate, this);
+		auto result = move(_wires[index]);
 		_wires.erase(_wires.begin() + index);
 		ProjectInvalidateEvent::InvokeHandlers (_em, this);
+		return result;
 	}
 
 	static void OnObjectInvalidate (void* callbackArg, Object* object)

@@ -22,9 +22,9 @@ public:
 		if (_selection->GetObjects().empty())
 			throw invalid_argument ("Selection must not be empty.");
 
-		for (auto& o : _selection->GetObjects())
+		for (auto o : _selection->GetObjects())
 		{
-			auto b = dynamic_cast<Bridge*>(o.Get());
+			auto b = dynamic_cast<Bridge*>(o);
 			if (b == nullptr)
 				throw invalid_argument ("Selection must consists only of bridges.");
 			_bridges.push_back(b);

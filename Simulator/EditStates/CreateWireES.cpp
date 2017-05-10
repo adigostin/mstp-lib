@@ -13,7 +13,7 @@ class CreateWireES : public EditState
 {
 	typedef EditState base;
 
-	ComPtr<Wire> _wire;
+	unique_ptr<Wire> _wire;
 	POINT _firstDownLocation;
 
 	enum SubState
@@ -43,7 +43,7 @@ public:
 			if (fromPort != nullptr)
 			{
 				_firstDownLocation = location.pt;
-				_wire = ComPtr<Wire>(new Wire(), false);
+				_wire.reset (new Wire());
 				_wire->SetP0 (fromPort);
 				_wire->SetP1 (fromPort->GetCPLocation());
 				_wire->SetDebugName ((string("Wire") + to_string(nextWireIndex++)).c_str());
@@ -83,8 +83,9 @@ public:
 		{
 			if (holds_alternative<ConnectedWireEnd>(_wire->GetP1()))
 			{
-				_project->Add(_wire);
-				_selection->Select(_wire);
+				Wire* w = _wire.get();
+				_project->Add(move(_wire));
+				_selection->Select(w);
 				_subState = Done;
 			}
 		}

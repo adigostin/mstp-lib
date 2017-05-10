@@ -9,7 +9,7 @@ class CreateBridgeES : public EditState
 {
 	typedef EditState base;
 	bool _completed = false;
-	ComPtr<Bridge> _bridge;
+	unique_ptr<Bridge> _bridge;
 
 public:
 	using base::base;
@@ -21,7 +21,7 @@ public:
 			unsigned int portCount = 4;
 			unsigned int mstiCount = 4;
 			size_t macAddressesToReserve = std::max ((size_t) 1 + portCount, (size_t) 16);
-			_bridge = ComPtr<Bridge>(new Bridge (_project, portCount, mstiCount, _project->AllocMacAddressRange(macAddressesToReserve)), false);
+			_bridge.reset (new Bridge (_project, portCount, mstiCount, _project->AllocMacAddressRange(macAddressesToReserve)));
 		}
 
 		_bridge->SetLocation (location.w.x - _bridge->GetWidth() / 2, location.w.y - _bridge->GetHeight() / 2);
@@ -32,9 +32,10 @@ public:
 	{
 		if (_bridge != nullptr)
 		{
-			_project->Add(_bridge);
-			_selection->Select(_bridge);
-			STP_StartBridge (_bridge->GetStpBridge(), GetTimestampMilliseconds());
+			Bridge* b = _bridge.get();
+			_project->Add(move(_bridge));
+			_selection->Select(b);
+			STP_StartBridge (b->GetStpBridge(), GetTimestampMilliseconds());
 		}
 
 		_completed = true;
