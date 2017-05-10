@@ -340,28 +340,28 @@ std::array<uint8_t, 6> Bridge::GetPortAddress (size_t portIndex) const
 	return pa;
 }
 
+static const _bstr_t BridgeString = "Bridge";
+static const _bstr_t IndexString = "Index";
+static const _bstr_t AddressString = "Address";
+static const _bstr_t StpEnabledString = L"STPEnabled";
+static const _bstr_t TrueString = L"True";
+static const _bstr_t FalseString = L"False";
+static const _bstr_t StpVersionString = L"StpVersion";
+static const _bstr_t PortCountString = L"PortCount";
+static const _bstr_t MstiCountString = L"MstiCount";
+
 IXMLDOMElementPtr Bridge::Serialize (IXMLDOMDocument3* doc) const
 {
-	static const _bstr_t BridgeString = "Bridge";
-	static const _bstr_t IndexString = "Index";
-	static const _bstr_t AddressString = "Address";
-	static const _bstr_t StpEnabledString = L"STPEnabled";
-	static const _bstr_t TrueString = L"True";
-	static const _bstr_t FalseString = L"False";
-	static const _bstr_t StpVersionString = L"StpVersion";
-	static const _bstr_t PortCountString = L"PortCount";
-	static const _bstr_t MstiCountString = L"MstiCount";
-
 	IXMLDOMElementPtr element;
 	HRESULT hr = doc->createElement (BridgeString, &element); ThrowIfFailed(hr);
 
 	auto it = find_if (_project->GetBridges().begin(), _project->GetBridges().end(), [this](auto& up) { return up.get() == this; });
 	auto bridgeIndex = it - _project->GetBridges().begin();
-	hr = element->setAttribute (IndexString, _variant_t(to_string(bridgeIndex).c_str())); ThrowIfFailed(hr);
+	hr = element->setAttribute (IndexString, _variant_t(bridgeIndex)); ThrowIfFailed(hr);
 
 	hr = element->setAttribute (AddressString, _variant_t(GetBridgeAddressAsString().c_str())); ThrowIfFailed(hr);
 
-	hr = element->setAttribute (StpEnabledString, _variant_t(STP_IsBridgeStarted(_stpBridge) ? TrueString : FalseString)); ThrowIfFailed(hr);
+	hr = element->setAttribute (StpEnabledString, _variant_t(STP_IsBridgeStarted(_stpBridge))); ThrowIfFailed(hr);
 
 	hr = element->setAttribute (StpVersionString, _variant_t(STP_GetVersionString(STP_GetStpVersion(_stpBridge)))); ThrowIfFailed(hr);
 
@@ -370,6 +370,15 @@ IXMLDOMElementPtr Bridge::Serialize (IXMLDOMDocument3* doc) const
 	hr = element->setAttribute (MstiCountString, _variant_t(STP_GetMstiCount(_stpBridge))); ThrowIfFailed(hr);
 
 	return element;
+}
+
+//static
+unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
+{
+	_variant_t value;
+	HRESULT hr = element->getAttribute (AddressString, &value); ThrowIfFailed(hr);
+	
+	return nullptr;
 }
 
 #pragma region STP Callbacks

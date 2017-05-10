@@ -87,6 +87,7 @@ public:
 	const std::vector<std::unique_ptr<BridgeLogLine>>& GetLogLines() const { return _logLines; }
 
 	IXMLDOMElementPtr Serialize (IXMLDOMDocument3* doc) const;
+	static std::unique_ptr<Bridge> Deserialize (IXMLDOMElement* element);
 
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
