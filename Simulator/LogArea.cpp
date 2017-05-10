@@ -11,9 +11,9 @@ class LogArea : public D2DWindow, public ILogArea
 {
 	typedef D2DWindow base;
 
-	ComPtr<IDWriteTextFormat> _textFormat;
-	ComPtr<ID2D1SolidColorBrush> _windowBrush;
-	ComPtr<ID2D1SolidColorBrush> _windowTextBrush;
+	IDWriteTextFormatPtr _textFormat;
+	ID2D1SolidColorBrushPtr _windowBrush;
+	ID2D1SolidColorBrushPtr _windowTextBrush;
 	Bridge* _bridge = nullptr;
 	int _selectedPort = -1;
 	int _selectedTree = -1;
@@ -64,7 +64,7 @@ public:
 
 			auto oldta = _textFormat->GetTextAlignment();
 			_textFormat->SetTextAlignment (DWRITE_TEXT_ALIGNMENT_CENTER);
-			ComPtr<IDWriteTextLayout> tl;
+			IDWriteTextLayoutPtr tl;
 			auto text = (_bridge == nullptr) ? TextNoBridge : TextNoEntries;
 			auto hr = GetDWriteFactory()->CreateTextLayout (text, (UINT32) wcslen(text), _textFormat, clientSize.width, 10000, &tl); ThrowIfFailed(hr);
 			_textFormat->SetTextAlignment(oldta);
@@ -85,7 +85,7 @@ public:
 				if ((line.length() >= 2) && (line[line.length() - 2] == '\r') && (line[line.length() - 1] == '\n'))
 					line.resize (line.length() - 2);
 
-				ComPtr<IDWriteTextLayout> tl;
+				IDWriteTextLayoutPtr tl;
 				auto hr = GetDWriteFactory()->CreateTextLayout (line.c_str(), (UINT32) line.length(), _textFormat, 10000, 10000, &tl); ThrowIfFailed(hr);
 
 				if (lineHeight == 0)
@@ -276,7 +276,7 @@ public:
 
 	static int CalcNumberOfLinesFitting (IDWriteTextFormat* textFormat, float clientHeightDips, IDWriteFactory* dWriteFactory)
 	{
-		ComPtr<IDWriteTextLayout> tl;
+		IDWriteTextLayoutPtr tl;
 		auto hr = dWriteFactory->CreateTextLayout (L"A", 1, textFormat, 1000, 1000, &tl); ThrowIfFailed(hr);
 		DWRITE_TEXT_METRICS metrics;
 		hr = tl->GetMetrics(&metrics);

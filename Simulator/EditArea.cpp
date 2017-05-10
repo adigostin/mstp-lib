@@ -20,7 +20,7 @@ class EditArea : public ZoomableWindow, public IEditArea
 	shared_ptr<IProject>    const _project;
 	shared_ptr<ISelection>  const _selection;
 	shared_ptr<IActionList> const _actionList;
-	ComPtr<IDWriteTextFormat> _legendFont;
+	IDWriteTextFormatPtr _legendFont;
 	DrawingObjects _drawingObjects;
 	unique_ptr<EditState> _state;
 	Port* _hoverPort = nullptr;
@@ -76,7 +76,7 @@ public:
 		GetDWriteFactory()->CreateTextFormat (L"Tahoma", nullptr,  DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
 										  DWRITE_FONT_STRETCH_CONDENSED, 11, L"en-US", &_legendFont); ThrowIfFailed(hr);
 
-		ComPtr<ID2D1Factory> factory;
+		ID2D1FactoryPtr factory;
 		dc->GetFactory(&factory);
 
 		D2D1_STROKE_STYLE_PROPERTIES ssprops = {};
@@ -162,10 +162,10 @@ public:
 
 		float maxLineWidth = 0;
 		float maxLineHeight = 0;
-		vector<ComPtr<IDWriteTextLayout>> layouts;
+		vector<IDWriteTextLayoutPtr> layouts;
 		for (auto& info : LegendInfo)
 		{
-			ComPtr<IDWriteTextLayout> tl;
+			IDWriteTextLayoutPtr tl;
 			auto hr = GetDWriteFactory()->CreateTextLayout (info.text, (UINT32) wcslen(info.text), _legendFont, 1000, 1000, &tl); ThrowIfFailed(hr);
 
 			DWRITE_TEXT_METRICS metrics;
@@ -238,7 +238,7 @@ public:
 		rr.rect.right = centerX + tl.metrics.width / 2 + padding;
 		rr.rect.bottom = topY + padding + tl.metrics.height + padding;
 		rr.radiusX = rr.radiusY = 4;
-		ComPtr<ID2D1SolidColorBrush> brush;
+		ID2D1SolidColorBrushPtr brush;
 		dc->CreateSolidColorBrush (GetD2DSystemColor(COLOR_INFOBK), &brush);
 		dc->FillRoundedRectangle (&rr, brush);
 		brush->SetColor (GetD2DSystemColor(COLOR_INFOTEXT));

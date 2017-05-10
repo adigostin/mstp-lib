@@ -122,9 +122,9 @@ Port* IProject::FindConnectedPort (Port* txPort) const
 class SimulatorApp : public ISimulatorApp
 {
 	HINSTANCE const _hInstance;
-	ComPtr<ID3D11Device1> _d3dDevice;
-	ComPtr<ID3D11DeviceContext1> _d3dDeviceContext;
-	ComPtr<IDWriteFactory> _dWriteFactory;
+	ID3D11Device1Ptr _d3dDevice;
+	ID3D11DeviceContext1Ptr _d3dDeviceContext;
+	IDWriteFactoryPtr _dWriteFactory;
 
 	wstring _regKeyPath;
 	vector<unique_ptr<IProjectWindow>> _projectWindows;
@@ -143,8 +143,8 @@ public:
 		#endif
 
 		auto d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
-		ComPtr<ID3D11Device> device;
-		ComPtr<ID3D11DeviceContext> deviceContext;
+		ID3D11DevicePtr device;
+		ID3D11DeviceContextPtr deviceContext;
 
 		HRESULT hr;
 		if (tryDebugFirst)
@@ -170,7 +170,7 @@ public:
 
 		hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof (IDWriteFactory), reinterpret_cast<IUnknown**>(&_dWriteFactory)); ThrowIfFailed(hr);
 
-		//ComPtr<IWICImagingFactory2> wicFactory;
+		//IWICImagingFactory2Ptr wicFactory;
 		//hr = CoCreateInstance(CLSID_WICImagingFactory2, NULL, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory2), (void**)&wicFactory); ThrowIfFailed(hr);
 	}
 
@@ -222,7 +222,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 	if (device->GetCreationFlags() & D3D11_CREATE_DEVICE_DEBUG)
 	{
 		deviceContext = nullptr;
-		ComPtr<ID3D11Debug> debug;
+		ID3D11DebugPtr debug;
 		hr = device->QueryInterface(&debug);
 		if (SUCCEEDED(hr))
 			debug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);

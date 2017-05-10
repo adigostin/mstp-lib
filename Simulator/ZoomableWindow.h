@@ -1,6 +1,7 @@
 
 #pragma once
 #include "D2DWindow.h"
+#include "Win32Defs.h"
 
 class ZoomableWindow;
 struct ZoomTransformChangedEvent : public Event<ZoomTransformChangedEvent, void(ZoomableWindow*)> { };

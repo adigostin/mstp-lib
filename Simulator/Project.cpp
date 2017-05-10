@@ -127,14 +127,14 @@ public:
 
 	virtual void Save (const wchar_t* path) const override final
 	{
-		ComPtr<IXMLDOMDocument3> doc;
+		IXMLDOMDocument3Ptr doc;
 		HRESULT hr = CoCreateInstance (CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(doc), (void**) &doc); ThrowIfFailed(hr);
 
-		ComPtr<IXMLDOMElement> projectElement;
+		IXMLDOMElementPtr projectElement;
 		hr = doc->createElement (_bstr_t("Project"), &projectElement); ThrowIfFailed(hr);
 		hr = doc->appendChild (projectElement, nullptr); ThrowIfFailed(hr);
 
-		ComPtr<IXMLDOMElement> bridgesElement;
+		IXMLDOMElementPtr bridgesElement;
 		hr = doc->createElement (_bstr_t("Bridges"), &bridgesElement); ThrowIfFailed(hr);
 		hr = projectElement->appendChild (bridgesElement, nullptr); ThrowIfFailed(hr);
 		for (auto& b : _bridges)
@@ -143,7 +143,7 @@ public:
 			hr = bridgesElement->appendChild (e, nullptr); ThrowIfFailed(hr);
 		}
 
-		ComPtr<IXMLDOMElement> wiresElement;
+		IXMLDOMElementPtr wiresElement;
 		hr = doc->createElement (_bstr_t("Wires"), &wiresElement); ThrowIfFailed(hr);
 		hr = projectElement->appendChild (wiresElement, nullptr); ThrowIfFailed(hr);
 		for (auto& w : _wires)
@@ -169,16 +169,16 @@ public:
 			"</xsl:stylesheet>\n"
 			"";
 
-		ComPtr<IXMLDOMDocument3> loadXML;
+		IXMLDOMDocument3Ptr loadXML;
 		HRESULT hr = CoCreateInstance (CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(loadXML), (void**) &loadXML); ThrowIfFailed(hr);
 		VARIANT_BOOL successful;
 		hr = loadXML->loadXML (_bstr_t(StylesheetText), &successful); ThrowIfFailed(hr);
 
 		//Create the final document which will be indented properly
-		ComPtr<IXMLDOMDocument2> pXMLFormattedDoc;
-		hr = pXMLFormattedDoc.CoCreateInstance(__uuidof(DOMDocument60), nullptr, CLSCTX_INPROC_SERVER);
+		IXMLDOMDocument3Ptr pXMLFormattedDoc;
+		hr = CoCreateInstance(CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(pXMLFormattedDoc), (void**) &pXMLFormattedDoc); ThrowIfFailed(hr);
 
-		ComPtr<IDispatch> pDispatch;
+		IDispatchPtr pDispatch;
 		hr = pXMLFormattedDoc->QueryInterface(IID_IDispatch, (void**)&pDispatch); ThrowIfFailed(hr);
 
 		_variant_t vtOutObject;
@@ -190,11 +190,11 @@ public:
 		hr = doc->transformNodeToObject(loadXML,vtOutObject);
 
 		// By default it is writing the encoding = UTF-16. Let us change the encoding to UTF-8
-		ComPtr<IXMLDOMNode> firstChild;
+		IXMLDOMNodePtr firstChild;
 		hr = pXMLFormattedDoc->get_firstChild(&firstChild); ThrowIfFailed(hr);
-		ComPtr<IXMLDOMNamedNodeMap> pXMLAttributeMap;
+		IXMLDOMNamedNodeMapPtr pXMLAttributeMap;
 		hr = firstChild->get_attributes(&pXMLAttributeMap); ThrowIfFailed(hr);
-		ComPtr<IXMLDOMNode> encodingNode;
+		IXMLDOMNodePtr encodingNode;
 		hr = pXMLAttributeMap->getNamedItem(_bstr_t("encoding"), &encodingNode); ThrowIfFailed(hr);
 		encodingNode->put_nodeValue (_variant_t("UTF-8"));
 

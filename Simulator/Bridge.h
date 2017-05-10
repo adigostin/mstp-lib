@@ -86,7 +86,7 @@ public:
 	bool IsPowered() const { return _powered; }
 	const std::vector<std::unique_ptr<BridgeLogLine>>& GetLogLines() const { return _logLines; }
 
-	ComPtr<IXMLDOMElement> Serialize (IXMLDOMDocument3* doc) const;
+	IXMLDOMElementPtr Serialize (IXMLDOMDocument3* doc) const;
 
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);

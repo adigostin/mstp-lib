@@ -1,6 +1,7 @@
 
 #include "pch.h"
 #include "UtilityFunctions.h"
+#include "Win32Defs.h"
 
 using namespace std;
 using namespace D2D1;
@@ -107,7 +108,7 @@ void InflateRoundedRect (D2D1_ROUNDED_RECT* rr, float distance)
 
 TextLayout TextLayout::Make (IDWriteFactory* dWriteFactory, IDWriteTextFormat* format, const wchar_t* str)
 {
-	ComPtr<IDWriteTextLayout> tl;
+	IDWriteTextLayoutPtr tl;
 	auto hr = dWriteFactory->CreateTextLayout(str, (UINT32) wcslen(str), format, 10000, 10000, &tl); ThrowIfFailed(hr);
 	DWRITE_TEXT_METRICS metrics;
 	hr = tl->GetMetrics(&metrics); ThrowIfFailed(hr);

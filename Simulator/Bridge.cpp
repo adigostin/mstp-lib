@@ -340,7 +340,7 @@ std::array<uint8_t, 6> Bridge::GetPortAddress (size_t portIndex) const
 	return pa;
 }
 
-ComPtr<IXMLDOMElement> Bridge::Serialize (IXMLDOMDocument3* doc) const
+IXMLDOMElementPtr Bridge::Serialize (IXMLDOMDocument3* doc) const
 {
 	static const _bstr_t BridgeString = "Bridge";
 	static const _bstr_t IndexString = "Index";
@@ -352,7 +352,7 @@ ComPtr<IXMLDOMElement> Bridge::Serialize (IXMLDOMDocument3* doc) const
 	static const _bstr_t PortCountString = L"PortCount";
 	static const _bstr_t MstiCountString = L"MstiCount";
 
-	ComPtr<IXMLDOMElement> element;
+	IXMLDOMElementPtr element;
 	HRESULT hr = doc->createElement (BridgeString, &element); ThrowIfFailed(hr);
 
 	auto it = find_if (_project->GetBridges().begin(), _project->GetBridges().end(), [this](auto& up) { return up.get() == this; });

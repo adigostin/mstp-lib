@@ -129,7 +129,7 @@ void Wire::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, unsigned in
 		width *= 2;
 	}
 
-	auto ss = forwarding ? dos._strokeStyleForwardingWire : dos._strokeStyleNoForwardingWire.Get();
+	auto& ss = forwarding ? dos._strokeStyleForwardingWire : dos._strokeStyleNoForwardingWire;
 	rt->DrawLine (GetP0Coords(), GetP1Coords(), brush, width, ss);
 }
 
@@ -165,9 +165,9 @@ HTResult Wire::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, floa
 	return { };
 }
 
-ComPtr<IXMLDOMElement> Wire::Serialize (IXMLDOMDocument3* doc) const
+IXMLDOMElementPtr Wire::Serialize (IXMLDOMDocument3* doc) const
 {
-	ComPtr<IXMLDOMElement> wireElement;
+	IXMLDOMElementPtr wireElement;
 	static const _bstr_t WireElementName = "Wire";
 	HRESULT hr = doc->createElement (WireElementName, &wireElement); ThrowIfFailed(hr);
 
@@ -178,10 +178,10 @@ ComPtr<IXMLDOMElement> Wire::Serialize (IXMLDOMDocument3* doc) const
 }
 
 //static
-ComPtr<IXMLDOMElement> Wire::SerializeEnd (IXMLDOMDocument3* doc, const WireEnd& end)
+IXMLDOMElementPtr Wire::SerializeEnd (IXMLDOMDocument3* doc, const WireEnd& end)
 {
 	HRESULT hr;
-	ComPtr<IXMLDOMElement> element;
+	IXMLDOMElementPtr element;
 
 	if (holds_alternative<ConnectedWireEnd>(end))
 	{

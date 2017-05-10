@@ -1,6 +1,7 @@
 
 #include "pch.h"
 #include "D2DWindow.h"
+#include "Win32Defs.h"
 
 using namespace std;
 using namespace D2D1;
@@ -22,7 +23,7 @@ D2DWindow::D2DWindow (DWORD exStyle, DWORD style, const RECT& rect, HWND hWndPar
 	if (!bRes)
 		throw win32_exception(GetLastError());
 
-	ComPtr<ID3D11Device> device;
+	ID3D11DevicePtr device;
 	deviceContext->GetDevice(&device);
 	auto hr = device->QueryInterface(IID_PPV_ARGS(&_d3dDevice)); ThrowIfFailed(hr);
 
@@ -74,7 +75,7 @@ void D2DWindow::CreateD2DDeviceContext()
 {
 	assert(_d2dDeviceContext == nullptr);
 
-	ComPtr<IDXGISurface2> dxgiSurface;
+	IDXGISurface2Ptr dxgiSurface;
 	auto hr = _swapChain->GetBuffer(0, IID_PPV_ARGS(&dxgiSurface)); ThrowIfFailed(hr);
 
 	D2D1_RENDER_TARGET_PROPERTIES props = {};
@@ -84,7 +85,7 @@ void D2DWindow::CreateD2DDeviceContext()
 	_d2dFactory->GetDesktopDpi (&props.dpiX, &props.dpiY);
 	props.usage = D2D1_RENDER_TARGET_USAGE_NONE;
 	props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
-	ComPtr<ID2D1RenderTarget> rt;
+	ID2D1RenderTargetPtr rt;
 	hr = _d2dFactory->CreateDxgiSurfaceRenderTarget(dxgiSurface, &props, &rt); ThrowIfFailed(hr);
 	hr = rt->QueryInterface(&_d2dDeviceContext); ThrowIfFailed(hr);
 }
@@ -220,7 +221,7 @@ void D2DWindow::ProcessWmPaint()
 
 	_painting = true;
 
-	ComPtr<ID3D11Texture2D> backBuffer;
+	ID3D11Texture2DPtr backBuffer;
 	hr = _swapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer)); ThrowIfFailed(hr);
 
 	_d2dDeviceContext->BeginDraw();

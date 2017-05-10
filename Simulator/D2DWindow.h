@@ -1,6 +1,5 @@
 
 #pragma once
-#include "Win32Defs.h"
 #include "EventManager.h"
 
 class D2DWindow abstract
@@ -10,15 +9,15 @@ class D2DWindow abstract
 	D2D1_SIZE_F _clientSizeDips;
 	bool _painting = false;
 	bool _forceFullPresentation;
-	ComPtr<ID3D11Device1> _d3dDevice;
-	ComPtr<ID3D11DeviceContext1> _d3dDeviceContext;
-	ComPtr<IDWriteFactory> _dWriteFactory;
-	ComPtr<IDXGIDevice2> _dxgiDevice;
-	ComPtr<IDXGIAdapter> _dxgiAdapter;
-	ComPtr<IDXGIFactory2> _dxgiFactory;
-	ComPtr<IDXGISwapChain1> _swapChain;
-	ComPtr<ID2D1Factory1> _d2dFactory;
-	ComPtr<ID2D1DeviceContext> _d2dDeviceContext;
+	ID3D11Device1Ptr _d3dDevice;
+	ID3D11DeviceContext1Ptr _d3dDeviceContext;
+	IDWriteFactoryPtr _dWriteFactory;
+	IDXGIDevice2Ptr _dxgiDevice;
+	IDXGIAdapterPtr _dxgiAdapter;
+	IDXGIFactory2Ptr _dxgiFactory;
+	IDXGISwapChain1Ptr _swapChain;
+	ID2D1Factory1Ptr _d2dFactory;
+	ID2D1DeviceContextPtr _d2dDeviceContext;
 
 public:
 	D2DWindow (DWORD exStyle, DWORD style, const RECT& rect, HWND hWndParent, HMENU hMenuOrControlId, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory);
