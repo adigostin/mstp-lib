@@ -4,7 +4,7 @@
 
 using namespace std;
 
-class EditActionList : public IEditActionList
+class ActionList : public IActionList
 {
 	vector<function<void(UndoOrRedo which)>> _actions;
 	size_t _savePointIndex = 0;
@@ -16,4 +16,10 @@ class EditActionList : public IEditActionList
 	}
 };
 
-const EditActionListFactory editActionListFactory = [](auto... params) { return (IEditActionList*) new EditActionList(params...); };
+template<typename... Args>
+static IActionList* Create (Args... args)
+{
+	return new ActionList (std::forward<Args>(args)...);
+}
+
+const ActionListFactory actionListFactory = &Create;

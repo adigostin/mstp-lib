@@ -16,7 +16,7 @@ class MSTConfigIdDialog : public IMSTConfigIdDialog
 	HWND _hwnd = nullptr;
 
 public:
-	MSTConfigIdDialog (ISimulatorApp* app, IProject* project, IProjectWindow* projectWindow, ISelection* selection)
+	MSTConfigIdDialog (ISimulatorApp* app, IProjectWindow* projectWindow, IProject* project, ISelection* selection)
 		: _app(app), _project(project), _projectWindow(projectWindow), _selection(selection)
 	{
 		if (_selection->GetObjects().empty())
@@ -151,4 +151,10 @@ public:
 	}
 };
 
-const MSTConfigIdDialogFactory mstConfigIdDialogFactory = [](auto... params) { return std::unique_ptr<IMSTConfigIdDialog>(new MSTConfigIdDialog(params...)); };
+template<typename... Args>
+static IMSTConfigIdDialog* Create (Args... args)
+{
+	return new MSTConfigIdDialog (std::forward<Args>(args)...);
+}
+
+const MSTConfigIdDialogFactory mstConfigIdDialogFactory = &Create;

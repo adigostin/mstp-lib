@@ -10,17 +10,28 @@ static constexpr wchar_t PropertiesWindowWndClassName[] = L"PropertiesWindow-{24
 class PropertiesWindow : public IPropertiesWindow
 {
 	ISimulatorApp* const _app;
-	IProject* const _project;
 	IProjectWindow* const _projectWindow;
-	ISelection* const _selection;
+	shared_ptr<IProject> const _project;
+	shared_ptr<ISelection> const _selection;
+	shared_ptr<IActionList> const _actionList;
 	HWND _hwnd = nullptr;
 	SIZE _clientSize;
 	HFONT _font;
 	unique_ptr<IBridgePropsWindow> _bridgePropsControl;
 
 public:
-	PropertiesWindow (HWND hWndParent, POINT location, ISimulatorApp* app, IProject* project, IProjectWindow* projectWindow, ISelection* selection)
-		: _app(app), _project(project), _projectWindow(projectWindow), _selection(selection)
+	PropertiesWindow (ISimulatorApp* app,
+					  IProjectWindow* projectWindow,
+					  const std::shared_ptr<IProject>& project,
+					  const std::shared_ptr<ISelection>& selection,
+					  const std::shared_ptr<IActionList>& actionList,
+					  HWND hWndParent,
+					  POINT location)
+		: _app(app)
+		, _projectWindow(projectWindow)
+		, _project(project)
+		, _selection(selection)
+		, _actionList(actionList)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR)&wndClassAtom, &hInstance);
@@ -60,7 +71,7 @@ public:
 		SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0);
 		_font = ::CreateFontIndirect (&ncm.lfMessageFont);
 
-		_bridgePropsControl = bridgePropertiesControlFactory (_hwnd, { 0, 0 }, _app, _project, _projectWindow, _selection);
+		_bridgePropsControl.reset (bridgePropertiesControlFactory (_app, _projectWindow, _project, _selection, _actionList, _hwnd, { 0, 0 }));
 
 		SIZE ws = _bridgePropsControl->GetWindowSize();
 		::MoveWindow (_hwnd, 0, 0, ws.cx, ws.cy, TRUE);
@@ -146,4 +157,10 @@ public:
 	virtual HWND GetHWnd() const override final { return _hwnd; }
 };
 
-const PropertiesWindowFactory propertiesWindowFactory = [](auto... params) { return unique_ptr<IPropertiesWindow>(new PropertiesWindow(params...)); };
+template <typename... Args>
+static IPropertiesWindow* Create (Args... args)
+{
+	return new PropertiesWindow (std::forward<Args>(args)...);
+};
+
+const PropertiesWindowFactory propertiesWindowFactory = &Create;

@@ -11,9 +11,10 @@ static constexpr size_t FirstPortCount = 2;
 class BridgePropsWindow : public IBridgePropsWindow
 {
 	ISimulatorApp* const _app;
-	IProject* const _project;
 	IProjectWindow* const _projectWindow;
-	ISelection* const _selection;
+	shared_ptr<IProject> const _project;
+	shared_ptr<ISelection> const _selection;
+	shared_ptr<IActionList> const _actionList;
 	HWND _hwnd = nullptr;
 	HWND _bridgeAddressEdit = nullptr;
 	WNDPROC _bridgeAddressEditOriginalProc;
@@ -29,8 +30,18 @@ class BridgePropsWindow : public IBridgePropsWindow
 	std::queue<std::function<void()>> _workQueue;
 
 public:
-	BridgePropsWindow (HWND hwndParent, POINT location, ISimulatorApp* app, IProject* project, IProjectWindow* projectWindow, ISelection* selection)
-		: _app(app), _project(project), _projectWindow(projectWindow), _selection(selection)
+	BridgePropsWindow (ISimulatorApp* app,
+					   IProjectWindow* projectWindow,
+					   const shared_ptr<IProject>& project,
+					   const shared_ptr<ISelection>& selection,
+					   const shared_ptr<IActionList>& actionList,
+					   HWND hwndParent,
+					   POINT location)
+		: _app(app)
+		, _projectWindow(projectWindow)
+		, _project(project)
+		, _selection(selection)
+		, _actionList(actionList)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &DialogProcStatic, &hInstance);
@@ -165,7 +176,7 @@ private:
 
 				if (LOWORD(wParam) == IDC_BUTTON_EDIT_MST_CONFIG_TABLE)
 				{
-					auto dialog = mstConfigIdDialogFactory(_app, _project, _projectWindow, _selection);
+					auto dialog = unique_ptr<IMSTConfigIdDialog>(mstConfigIdDialogFactory(_app, _projectWindow, _project.get(), _selection.get()));
 					dialog->ShowModal(_projectWindow->GetHWnd());
 					return { TRUE, 0 };
 				}
@@ -658,5 +669,10 @@ private:
 	}
 };
 
-const BridgePropsWindowFactory bridgePropertiesControlFactory =
-	[](auto... params) { return unique_ptr<IBridgePropsWindow>(new BridgePropsWindow(params...)); };
+template<typename... Args>
+static IBridgePropsWindow* Create (Args... args)
+{
+	return new BridgePropsWindow (std::forward<Args>(args)...);
+}
+
+const BridgePropsWindowFactory bridgePropertiesControlFactory = Create;

@@ -8,13 +8,13 @@ using namespace std;
 
 class Selection : public ISelection
 {
+	shared_ptr<IProject> const _project;
 	ULONG _refCount = 1;
-	IProject* const _project;
 	vector<ComPtr<Object>> _objects;
 	EventManager _em;
 
 public:
-	Selection (IProject* project)
+	Selection (const shared_ptr<IProject>& project)
 		: _project(project)
 	{
 		_project->GetWireRemovingEvent().AddHandler (&OnWireRemovingFromProject, this);
@@ -97,23 +97,12 @@ public:
 	virtual RemovingFromSelectionEvent::Subscriber GetRemovingFromSelectionEvent() override final { return RemovingFromSelectionEvent::Subscriber(_em); }
 
 	virtual SelectionChangedEvent::Subscriber GetSelectionChangedEvent() override final { return SelectionChangedEvent::Subscriber(_em); }
-
-	#pragma region IUnknown
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final { return E_NOTIMPL; }
-
-	virtual ULONG STDMETHODCALLTYPE AddRef(void) override final
-	{
-		return InterlockedIncrement (&_refCount);
-	}
-
-	virtual ULONG STDMETHODCALLTYPE Release(void) override final
-	{
-		auto newRefCount = InterlockedDecrement (&_refCount);
-		if (newRefCount == 0)
-			delete this;
-		return newRefCount;
-	}
-	#pragma endregion
 };
 
-extern const SelectionFactory selectionFactory = [](auto... params) { return ComPtr<ISelection>(new Selection(params...), false); };
+template<typename... Args>
+static ISelection* Create (Args... args)
+{
+	return new Selection (std::forward<Args>(args)...);
+}
+
+const SelectionFactory selectionFactory = Create;

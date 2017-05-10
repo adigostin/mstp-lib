@@ -9,20 +9,26 @@ using namespace std;
 
 class VlanWindow : public IVlanWindow
 {
-	ISimulatorApp* const _app;
-	IProject* const _project;
-	std::shared_ptr<IEditActionList> const _actionList;
+	ISimulatorApp*  const _app;
 	IProjectWindow* const _projectWindow;
-	ISelection* const _selection;
+	std::shared_ptr<IProject>    const _project;
+	std::shared_ptr<ISelection>  const _selection;
+	std::shared_ptr<IActionList> const _actionList;
 	HWND _hwnd = nullptr;
 
 public:
-	VlanWindow (HWND hWndParent, POINT location, ISimulatorApp* app, IProject* project, const std::shared_ptr<IEditActionList>& actionList, IProjectWindow* projectWindow, ISelection* selection)
+	VlanWindow (ISimulatorApp* app,
+				IProjectWindow* projectWindow,
+				const std::shared_ptr<IProject>& project,
+				const std::shared_ptr<ISelection>& selection,
+				const std::shared_ptr<IActionList>& actionList,
+				HWND hWndParent,
+				POINT location)
 		: _app(app)
-		, _project(project)
-		, _actionList(actionList)
 		, _projectWindow(projectWindow)
+		, _project(project)
 		, _selection(selection)
+		, _actionList(actionList)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &DialogProcStatic, &hInstance);
@@ -127,7 +133,7 @@ public:
 		auto vlanNumber = (unsigned int) (index + 1);
 		auto& pws = _app->GetProjectWindows();
 		auto it = find_if (pws.begin(), pws.end(), [this, vlanNumber](const std::unique_ptr<IProjectWindow>& pw)
-			{ return (pw->GetProject() == _project) && (pw->GetSelectedVlanNumber() == vlanNumber); });
+			{ return (pw->GetProject() == _project.get()) && (pw->GetSelectedVlanNumber() == vlanNumber); });
 		if (it != pws.end())
 		{
 			// bring to front and flash
@@ -135,8 +141,8 @@ public:
 		}
 		else
 		{
-			auto selection = selectionFactory(_project);
-			auto pw = projectWindowFactory(_app, _project, _actionList, selection, editAreaFactory, SW_SHOWNORMAL, vlanNumber);
+			auto selection = shared_ptr<ISelection>(selectionFactory(_project));
+			auto pw = unique_ptr<IProjectWindow>(projectWindowFactory(_app, _project, selection, _actionList, editAreaFactory, SW_SHOWNORMAL, vlanNumber));
 			_app->AddProjectWindow(move(pw));
 		}
 
@@ -181,4 +187,10 @@ public:
 	}
 };
 
-const VlanWindowFactory vlanWindowFactory = [](auto... params) { return std::unique_ptr<IVlanWindow>(new VlanWindow(params...)); };
+template<typename... Args>
+static IVlanWindow* Create (Args... args)
+{
+	return new VlanWindow (std::forward<Args>(args)...);
+}
+
+const VlanWindowFactory vlanWindowFactory = Create;

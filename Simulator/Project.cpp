@@ -11,7 +11,6 @@ using namespace std;
 
 class Project : public IProject
 {
-	ULONG _refCount = 1;
 	vector<ComPtr<Bridge>> _bridges;
 	vector<ComPtr<Wire>> _wires;
 	EventManager _em;
@@ -197,23 +196,6 @@ public:
 
 		hr = pXMLFormattedDoc->save(_variant_t(path)); ThrowIfFailed(hr);
 	}
-
-	#pragma region IUnknown
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final { return E_NOTIMPL; }
-
-	virtual ULONG STDMETHODCALLTYPE AddRef() override final
-	{
-		return InterlockedIncrement(&_refCount);
-	}
-
-	virtual ULONG STDMETHODCALLTYPE Release() override final
-	{
-		auto newRefCount = InterlockedDecrement (&_refCount);
-		if (newRefCount == 0)
-			delete this;
-		return newRefCount;
-	}
-	#pragma endregion
 };
 
-extern const ProjectFactory projectFactory = [] { return ComPtr<IProject>(new Project(), false); };
+extern const ProjectFactory projectFactory = [] { return (IProject*) new Project(); };

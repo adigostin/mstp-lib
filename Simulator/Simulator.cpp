@@ -127,7 +127,7 @@ class SimulatorApp : public ISimulatorApp
 	ComPtr<IDWriteFactory> _dWriteFactory;
 
 	wstring _regKeyPath;
-	std::vector<std::unique_ptr<IProjectWindow>> _projectWindows;
+	vector<unique_ptr<IProjectWindow>> _projectWindows;
 
 public:
 	SimulatorApp (HINSTANCE hInstance)
@@ -202,10 +202,10 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 		SimulatorApp app (hInstance);
 
 		{
-			auto actionList = shared_ptr<IEditActionList>(editActionListFactory());
-			auto project = projectFactory();
-			auto selection = selectionFactory(project);
-			auto projectWindow = projectWindowFactory (&app, project, actionList, selection, editAreaFactory, nCmdShow, 1);
+			auto actionList = shared_ptr<IActionList>(actionListFactory());
+			auto project    = shared_ptr<IProject>(projectFactory());
+			auto selection  = shared_ptr<ISelection>(selectionFactory(project));
+			auto projectWindow = unique_ptr<IProjectWindow>(projectWindowFactory (&app, project, selection, actionList, editAreaFactory, nCmdShow, 1));
 			app.AddProjectWindow(move(projectWindow));
 		}
 

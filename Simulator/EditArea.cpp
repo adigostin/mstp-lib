@@ -15,10 +15,11 @@ class EditArea : public ZoomableWindow, public IEditArea
 {
 	typedef ZoomableWindow base;
 
-	IProjectWindow* const _pw;
-	ComPtr<ISelection> const _selection;
-	ComPtr<IProject> const _project;
-	shared_ptr<IEditActionList> const _actionList;
+	ISimulatorApp*          const _app;
+	IProjectWindow*         const _pw;
+	shared_ptr<IProject>    const _project;
+	shared_ptr<ISelection>  const _selection;
+	shared_ptr<IActionList> const _actionList;
 	ComPtr<IDWriteTextFormat> _legendFont;
 	DrawingObjects _drawingObjects;
 	unique_ptr<EditState> _state;
@@ -36,9 +37,21 @@ class EditArea : public ZoomableWindow, public IEditArea
 	optional<BeginningDrag> _beginningDrag;
 
 public:
-	EditArea(IProject* project, const std::shared_ptr<IEditActionList>& actionList, IProjectWindow* pw, ISelection* selection, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory)
+	EditArea (ISimulatorApp* app,
+			  IProjectWindow* pw, 
+			  const shared_ptr<IProject>& project,
+			  const shared_ptr<ISelection>& selection,
+			  const shared_ptr<IActionList>& actionList,
+			  HWND hWndParent,
+			  const RECT& rect,
+			  ID3D11DeviceContext1* deviceContext,
+			  IDWriteFactory* dWriteFactory)
 		: base (WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, hWndParent, nullptr, deviceContext, dWriteFactory)
-		, _project(project), _actionList(actionList), _pw(pw), _selection(selection)
+		, _app(app)
+		, _pw(pw)
+		, _project(project)
+		, _selection(selection)
+		, _actionList(actionList)
 	{
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
 		_project->GetBridgeRemovingEvent().AddHandler (&OnBridgeRemoving, this);
@@ -594,7 +607,7 @@ public:
 
 	virtual EditStateDeps MakeEditStateDeps() override final
 	{
-		return EditStateDeps { _project, _pw, this, _selection };
+		return EditStateDeps { _project.get(), _pw, this, _selection.get() };
 	}
 
 	virtual void EnterState (std::unique_ptr<EditState>&& state) override final
@@ -700,4 +713,10 @@ public:
 	virtual D2D1::Matrix3x2F GetZoomTransform() const override final { return base::GetZoomTransform(); }
 };
 
-extern const EditAreaFactory editAreaFactory = [](auto... params) { return unique_ptr<IEditArea>(new EditArea(params...)); };
+template<typename... Args>
+static IEditArea* Create (Args... args)
+{
+	return new EditArea (std::forward<Args>(args)...);
+}
+
+extern const EditAreaFactory editAreaFactory = &Create;

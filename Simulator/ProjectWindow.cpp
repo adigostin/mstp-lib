@@ -17,10 +17,10 @@ static constexpr wchar_t RegValueNameWindowBottom[] = L"WindowBottom";
 
 class ProjectWindow : public IProjectWindow
 {
-	ISimulatorApp* const _app;
-	ComPtr<IProject> const _project;
-	ComPtr<ISelection> const _selection;
-	shared_ptr<IEditActionList> const _actionList;
+	ISimulatorApp*          const _app;
+	shared_ptr<IProject>    const _project;
+	shared_ptr<ISelection>  const _selection;
+	shared_ptr<IActionList> const _actionList;
 	unique_ptr<IEditArea> _editArea;
 	unique_ptr<IDockContainer> _dockContainer;
 	IDockablePanel* _logPanel;
@@ -36,7 +36,13 @@ class ProjectWindow : public IProjectWindow
 	unsigned int _selectedVlanNumber = 1;
 
 public:
-	ProjectWindow (ISimulatorApp* app, IProject* project, const std::shared_ptr<IEditActionList>& actionList, ISelection* selection, EditAreaFactory editAreaFactory, int nCmdShow, unsigned int selectedVlan)
+	ProjectWindow (ISimulatorApp* app,
+				   const shared_ptr<IProject>& project,
+				   const shared_ptr<ISelection>& selection,
+				   const shared_ptr<IActionList>& actionList,
+				   EditAreaFactory editAreaFactory,
+				   int nCmdShow,
+				   unsigned int selectedVlan)
 		: _app(app), _project(project), _actionList(actionList), _selection(selection), _selectedVlanNumber(selectedVlan)
 	{
 		HINSTANCE hInstance;
@@ -92,18 +98,18 @@ public:
 		SetMainMenuItemCheck (ID_VIEW_STPLOG, true);
 
 		_propsPanel = _dockContainer->GetOrCreateDockablePanel (Side::Left, L"Properties");
-		_propsWindow = propertiesWindowFactory (_propsPanel->GetHWnd(), _propsPanel->GetContentLocation(), _app, _project, this, _selection);
+		_propsWindow.reset (propertiesWindowFactory (_app, this, project, selection, actionList, _propsPanel->GetHWnd(), _propsPanel->GetContentLocation()));
 		_dockContainer->ResizePanel (_propsPanel, _propsPanel->GetPanelSizeFromContentSize(_propsWindow->GetClientSize()));
 		_propsPanel->GetVisibleChangedEvent().AddHandler (&OnPropsPanelVisibleChanged, this);
 		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
 
 		_vlanPanel = _dockContainer->GetOrCreateDockablePanel (Side::Top, L"VLAN");
-		_vlanWindow = vlanWindowFactory (_vlanPanel->GetHWnd(), _vlanPanel->GetContentLocation(), _app, _project, _actionList, this, _selection);
+		_vlanWindow.reset (vlanWindowFactory (_app, this, _project, selection, actionList, _vlanPanel->GetHWnd(), _vlanPanel->GetContentLocation()));
 		_dockContainer->ResizePanel (_vlanPanel, _vlanPanel->GetPanelSizeFromContentSize(_vlanWindow->GetClientSize()));
 		_vlanPanel->GetVisibleChangedEvent().AddHandler (&OnVlanPanelVisibleChanged, this);
 		SetMainMenuItemCheck (ID_VIEW_VLANS, true);
 
-		_editArea = editAreaFactory (project, actionList, this, selection, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory());
+		_editArea.reset (editAreaFactory (app, this, project, selection, actionList, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory()));
 
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
 	}
@@ -338,7 +344,7 @@ public:
 
 	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() override final { return SelectedVlanNumerChangedEvent::Subscriber(_em); }
 
-	virtual IProject* GetProject() const override final { return _project; }
+	virtual IProject* GetProject() const override final { return _project.get(); }
 
 	/*
 	LRESULT ProcessWmClose()
@@ -374,4 +380,10 @@ public:
 	*/
 };
 
-extern const ProjectWindowFactory projectWindowFactory = [](auto... params) { return unique_ptr<IProjectWindow>(new ProjectWindow(params...)); };
+template<typename... Args>
+static IProjectWindow* Create (Args... args)
+{
+	return new ProjectWindow (std::forward<Args>(args)...);
+}
+
+extern const ProjectWindowFactory projectWindowFactory = Create;
