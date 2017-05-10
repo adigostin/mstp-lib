@@ -168,15 +168,18 @@ extern const EditAreaFactory editAreaFactory;
 
 // ============================================================================
 
-struct SelectedVlanNumerChangedEvent : public Event<SelectedVlanNumerChangedEvent, void(IProjectWindow* pw, unsigned int vlanNumber)> { };
-
 struct IProjectWindow : public IWin32Window
 {
 	virtual ~IProjectWindow() { }
 	virtual IProject* GetProject() const = 0;
 	virtual void SelectVlan (unsigned int vlanNumber) = 0;
 	virtual unsigned int GetSelectedVlanNumber() const = 0;
+
+	struct SelectedVlanNumerChangedEvent : public Event<SelectedVlanNumerChangedEvent, void(IProjectWindow* pw, unsigned int vlanNumber)> { };
 	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() = 0;
+
+	struct ClosingEvent : public Event<ClosingEvent, void(IProjectWindow* pw)> { };
+	virtual ClosingEvent::Subscriber GetClosingEvent() = 0;
 };
 
 using ProjectWindowFactory = IProjectWindow*(*const)(ISimulatorApp* app,

@@ -23,6 +23,8 @@ static const wchar_t CompanyName[] = L"Adi Gostin";
 static const wchar_t AppName[] = L"STP Simulator";
 static const wchar_t AppVersion[] = L"2.0";
 
+constexpr UINT WM_WORK = WM_APP + 1;
+
 #pragma region IWin32Window
 RECT IWin32Window::GetWindowRect() const
 {
@@ -128,6 +130,7 @@ class SimulatorApp : public ISimulatorApp
 
 	wstring _regKeyPath;
 	vector<unique_ptr<IProjectWindow>> _projectWindows;
+	queue<function<void()>> _workQueue;
 
 public:
 	SimulatorApp (HINSTANCE hInstance)
@@ -178,7 +181,26 @@ public:
 
 	virtual void AddProjectWindow (std::unique_ptr<IProjectWindow>&& pw) override final
 	{
+		pw->GetClosingEvent().AddHandler (&OnProjectWindowClosing, this);
 		_projectWindows.push_back(move(pw));
+	}
+
+	static void OnProjectWindowClosing (void* callbackArg, IProjectWindow* pw)
+	{
+		auto app = static_cast<SimulatorApp*>(callbackArg);
+		
+		pw->GetClosingEvent().RemoveHandler (&OnProjectWindowClosing, app);
+
+		app->_workQueue.push ([app, pw]
+		{
+			auto it = find_if (app->_projectWindows.begin(), app->_projectWindows.end(), [pw](auto& p) { return p.get() == pw; });
+			assert (it != app->_projectWindows.end());
+			app->_projectWindows.erase(it);
+			if (app->_projectWindows.empty())
+				PostQuitMessage(0);
+		});
+
+		::PostMessage (nullptr, WM_WORK, 0, 0);
 	}
 
 	virtual const std::vector<std::unique_ptr<IProjectWindow>>& GetProjectWindows() const override final { return _projectWindows; }
@@ -190,6 +212,26 @@ public:
 	virtual const wchar_t* GetRegKeyPath() const override final { return _regKeyPath.c_str(); }
 
 	virtual const wchar_t* GetAppName() const override final { return AppName; }
+
+	WPARAM RunMessageLoop()
+	{
+		MSG msg;
+		while (GetMessage(&msg, nullptr, 0, 0))
+		{
+			if ((msg.hwnd == nullptr) && (msg.message == WM_WORK))
+			{
+				_workQueue.front()();
+				_workQueue.pop();
+			}
+			else
+			{
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
+		}
+
+		return msg.wParam;
+	}
 };
 
 int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
@@ -211,14 +253,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 			app.AddProjectWindow(move(projectWindow));
 		}
 
-		MSG msg;
-		while (GetMessage(&msg, nullptr, 0, 0))
-		{
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}
-
-		processExitValue = (int)msg.wParam;
+		processExitValue = (int)app.RunMessageLoop();
 	}
 	/*
 	if (device->GetCreationFlags() & D3D11_CREATE_DEVICE_DEBUG)

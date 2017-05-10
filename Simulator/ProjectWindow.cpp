@@ -215,8 +215,9 @@ public:
 
 		if (msg == WM_CLOSE)
 		{
+			ClosingEvent::InvokeHandlers(*this, this);
 			SaveWindowLocation();
-			PostQuitMessage(0);
+			::DestroyWindow (_hwnd);
 			return DefWindowProc(_hwnd, msg, wParam, lParam); // this calls DestroyWindow
 		}
 
@@ -348,6 +349,8 @@ public:
 	virtual unsigned int GetSelectedVlanNumber() const override final { return _selectedVlanNumber; }
 
 	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() override final { return SelectedVlanNumerChangedEvent::Subscriber(*this); }
+
+	virtual ClosingEvent::Subscriber GetClosingEvent() override final { return ClosingEvent::Subscriber(*this); }
 
 	virtual IProject* GetProject() const override final { return _project.get(); }
 
