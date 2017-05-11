@@ -42,10 +42,12 @@ public:
 		::MoveWindow (_hwnd, location.x, location.y, rc.right - rc.left, rc.bottom - rc.top, TRUE);
 
 		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
+		_projectWindow->GetSelectedVlanNumerChangedEvent().AddHandler (&OnSelectedVlanChanged, this);
 	}
 
 	virtual ~VlanWindow()
 	{
+		_projectWindow->GetSelectedVlanNumerChangedEvent().RemoveHandler (&OnSelectedVlanChanged, this);
 		_selection->GetSelectionChangedEvent().RemoveHandler (&OnSelectionChanged, this);
 
 		if (_hwnd != nullptr)
@@ -129,6 +131,11 @@ public:
 	}
 
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
+	{
+		static_cast<VlanWindow*>(callbackArg)->LoadSelectedTreeEdit();
+	}
+
+	static void OnSelectedVlanChanged (void* callbackArg, IProjectWindow* pw, unsigned int vlanNumber)
 	{
 		static_cast<VlanWindow*>(callbackArg)->LoadSelectedTreeEdit();
 	}

@@ -156,7 +156,7 @@ struct IEditArea abstract
 };
 
 using EditAreaFactory = IEditArea*(*const)(ISimulatorApp* app,
-										   IProjectWindow* pw, 
+										   IProjectWindow* pw,
 										   const std::shared_ptr<IProject>& project,
 										   const std::shared_ptr<ISelection>& selection,
 										   const std::shared_ptr<IActionList>& actionList,

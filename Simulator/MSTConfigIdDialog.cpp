@@ -76,6 +76,9 @@ public:
 			return { FALSE, 0 };
 		}
 
+		if (msg == WM_CTLCOLORSTATIC)
+			return { (INT_PTR) GetSysColorBrush(COLOR_INFOBK), 0 };
+
 		if (msg == WM_COMMAND)
 		{
 			if (wParam == IDOK)
@@ -108,11 +111,72 @@ public:
 
 	void ProcessWmInitDialog()
 	{
+		auto hdc = GetDC(_hwnd);
+		int dpi = GetDeviceCaps (hdc, LOGPIXELSX);
+		ReleaseDC(_hwnd, hdc);
+
+		HWND list = GetDlgItem (_hwnd, IDC_LIST_CONFIG_TABLE);
+
+		ListView_SetExtendedListViewStyle (list, LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
+		//ListView_SetBkColor (list, GetSysColor(COLOR_3DFACE));
+
+		auto& configId = *STP_GetMstConfigId(_bridges[0]->GetStpBridge());
+		bool allSameConfig = all_of(_bridges.begin(), _bridges.end(), [&](Bridge* b) { return *STP_GetMstConfigId(b->GetStpBridge()) == configId; });
+
+		LVCOLUMN lvc = { 0 };
+		lvc.mask = LVCF_TEXT | LVCF_WIDTH;
+		lvc.pszText = L"VLAN";
+		lvc.cx = (allSameConfig ? 80 : 120) * dpi / 96;
+		ListView_InsertColumn (list, 0, &lvc);
+		lvc.pszText = L"Tree";
+		lvc.cx = (allSameConfig ? 80 : 40) * dpi / 96;
+		ListView_InsertColumn (list, 1, &lvc);
+
+		if (allSameConfig)
+			LoadTable(list);
+		else
+		{
+			LVITEM lvi = { 0 };
+			lvi.mask = LVIF_TEXT;
+			lvi.pszText = L"(multiple selection)";
+			ListView_InsertItem (list, &lvi);
+		}
+
+		HWND hint = GetDlgItem (_hwnd, IDC_STATIC_HINT_NOT_MSTP);
+		bool showHint = any_of (_bridges.begin(), _bridges.end(), [](Bridge* b) { return STP_GetStpVersion(b->GetStpBridge()) < STP_VERSION_MSTP; });
+		auto style = ::GetWindowLongPtr (hint, GWL_STYLE);
+		style = (style & ~WS_VISIBLE) | (showHint ? WS_VISIBLE : 0);
+		::SetWindowLongPtr (hint, GWL_STYLE, style);
 	}
 
 	bool ValidateAndApply()
 	{
 		return true;
+	}
+
+	void LoadTable(HWND list)
+	{
+		LVITEM lvi = { 0 };
+		lvi.mask = LVIF_TEXT;
+
+		unsigned int entryCount;
+		auto entries = STP_GetMstConfigTable (_bridges[0]->GetStpBridge(), &entryCount);
+
+		for (unsigned int vlanNumber = 0; vlanNumber <= MaxVlanNumber; vlanNumber++)
+		{
+			lvi.iItem = vlanNumber;
+
+			wstring text = to_wstring(vlanNumber);
+			lvi.iSubItem = 0;
+			lvi.pszText = const_cast<wchar_t*>(text.c_str());
+			ListView_InsertItem (list, &lvi);
+
+			auto treeIndex = entries[vlanNumber].treeIndex;
+			text = to_wstring (treeIndex);
+			lvi.iSubItem = 1;
+			lvi.pszText = const_cast<wchar_t*>(text.c_str());
+			ListView_SetItem (list, &lvi);
+		}
 	}
 
 	void LoadDefaultConfig()
@@ -124,6 +188,10 @@ public:
 
 		for (auto b : _bridges)
 			STP_SetMstConfigTable (b->GetStpBridge(), &entries[0], (unsigned int) entries.size(), timestamp);
+
+		HWND list = GetDlgItem (_hwnd, IDC_LIST_CONFIG_TABLE);
+		ListView_DeleteAllItems(list);
+		LoadTable(list);
 	}
 
 	void LoadTestConfig1()
@@ -148,6 +216,10 @@ public:
 
 			STP_SetMstConfigTable (b->GetStpBridge(), &entries[0], (unsigned int) entries.size(), timestamp);
 		}
+
+		HWND list = GetDlgItem (_hwnd, IDC_LIST_CONFIG_TABLE);
+		ListView_DeleteAllItems(list);
+		LoadTable(list);
 	}
 };
 

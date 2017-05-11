@@ -181,11 +181,13 @@ STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_VISIBLE | WS_CLIPCH
 CAPTION "MST Configuration Table"
 FONT 9, "Segoe UI", 400, 0, 0xEE
 BEGIN
-    CONTROL         "",IDC_LIST_CONFIG_TABLE,"SysListView32",LVS_REPORT | LVS_ALIGNLEFT | WS_BORDER | WS_TABSTOP,4,4,128,180
+    CONTROL         "",IDC_LIST_CONFIG_TABLE,"SysListView32",LVS_REPORT | LVS_ALIGNLEFT | WS_BORDER | WS_TABSTOP,4,4,128,168
     PUSHBUTTON      "Use default configuration:\r\nall VLANs assigned to the CIST, none to any MSTI",IDC_BUTTON_USE_DEFAULT_CONFIG_TABLE,136,4,108,32,BS_MULTILINE
     PUSHBUTTON      "Use test configuration 1:\r\nVLAN1 to CIST, VLAN2 to MSTI1, VLAN3 to MSTI2 etc.",IDC_BUTTON_USE_TEST1_CONFIG_TABLE,136,40,108,32,BS_MULTILINE
     DEFPUSHBUTTON   "OK",IDOK,136,168,52,16
     PUSHBUTTON      "Cancel",IDCANCEL,192,168,52,16
+    LTEXT           "Some selected bridges are not currently running MSTP; they ignore this table and map all VLANs to the CIST (tree 0)",IDC_STATIC_HINT_NOT_MSTP,136,131,108,33
+    CTEXT           "Editing this table is not yet supported",IDC_STATIC,4,174,128,10
 END
 
 

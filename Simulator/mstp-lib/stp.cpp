@@ -1012,7 +1012,7 @@ unsigned int STP_GetMaxVlanNumber (STP_BRIDGE* bridge)
 
 unsigned int STP_GetTreeIndexFromVlanNumber (STP_BRIDGE* bridge, unsigned int vlanNumber)
 {
-	assert ((vlanNumber >= 1) && (vlanNumber <= 4094));
+	assert (vlanNumber <= bridge->maxVlanNumber);
 
 	switch (bridge->ForceProtocolVersion)
 	{
