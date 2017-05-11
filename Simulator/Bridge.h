@@ -66,7 +66,9 @@ public:
 	float GetBottom() const { return _y + _height; }
 	float GetWidth() const { return _width; }
 	float GetHeight() const { return _height; }
+	D2D1_POINT_2F GetLocation() const { return { _x, _y }; }
 	void SetLocation (float x, float y);
+	void SetLocation (D2D1_POINT_2F location) { SetLocation (location.x, location.y); }
 	D2D1_RECT_F GetBounds() const { return { _x, _y, _x + _width, _y + _height }; }
 
 	const std::vector<std::unique_ptr<Port>>& GetPorts() const { return _ports; }

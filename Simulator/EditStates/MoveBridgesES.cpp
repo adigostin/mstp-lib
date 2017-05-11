@@ -9,6 +9,7 @@ class MoveBridgeES : public EditState
 {
 	typedef EditState base;
 	D2D1_POINT_2F _mouseDownWLocation;
+	vector<D2D1_POINT_2F> _initialLocations;
 	vector<D2D1_SIZE_F> _offsets;
 	bool _completed = false;
 
@@ -26,6 +27,7 @@ public:
 		for (auto o : _selection->GetObjects())
 		{
 			auto b = dynamic_cast<Bridge*>(o); assert (b != nullptr);
+			_initialLocations.push_back (b->GetLocation());
 			_offsets.push_back ({ location.w.x - b->GetLeft(), location.w.y - b->GetTop() });
 		}
 	}
@@ -38,6 +40,22 @@ public:
 			b->SetLocation (location.w.x - _offsets[i].width, location.w.y - _offsets[i].height);
 		}
 	}
+
+	virtual std::optional<LRESULT> OnKeyDown (UINT virtualKey, UINT modifierKeys) override final
+	{
+		if (virtualKey == VK_ESCAPE)
+		{
+			for (size_t i = 0; i < _selection->GetObjects().size(); i++)
+				dynamic_cast<Bridge*>(_selection->GetObjects()[i])->SetLocation (_initialLocations[i]);
+
+			_completed = true;
+			::InvalidateRect (_area->GetHWnd(), nullptr, FALSE);
+			return 0;
+		}
+
+		return nullopt;
+	}
+
 
 	virtual void OnMouseUp (const MouseLocation& location, MouseButton button) override final
 	{
