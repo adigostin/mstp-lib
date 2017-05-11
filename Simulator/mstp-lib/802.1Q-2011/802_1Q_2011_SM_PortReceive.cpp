@@ -1,5 +1,5 @@
 
-// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/ 
+// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/
 // Copyright (c) 2011-2017 Adrian Gostin, distributed under the GNU General Public License v3.
 
 #include "802_1Q_2011_procedures.h"
@@ -35,10 +35,10 @@ SM_STATE PortReceive_802_1Q_2011_CheckConditions (STP_BRIDGE* bridge, int givenP
 	assert (givenTree == -1);
 
 	PORT* port = bridge->ports [givenPort];
-	
+
 	// ------------------------------------------------------------------------
 	// Check global conditions.
-	
+
 	if (bridge->BEGIN
 		|| ((port->rcvdBpdu || (port->edgeDelayWhile != bridge->MigrateTime)) && !port->portEnabled))
 	{
@@ -47,10 +47,10 @@ SM_STATE PortReceive_802_1Q_2011_CheckConditions (STP_BRIDGE* bridge, int givenP
 			// The entry block for this state has been executed already.
 			return 0;
 		}
-		
+
 		return DISCARD;
 	}
-	
+
 	// ------------------------------------------------------------------------
 	// Check exit conditions from each state.
 
@@ -58,18 +58,18 @@ SM_STATE PortReceive_802_1Q_2011_CheckConditions (STP_BRIDGE* bridge, int givenP
 	{
 		if (port->rcvdBpdu && port->portEnabled && port->enableBPDUrx)
 			return RECEIVE;
-		
+
 		return 0;
 	}
-	
+
 	if (state == RECEIVE)
 	{
 		if (port->rcvdBpdu && port->portEnabled && port->enableBPDUrx && !rcvdAnyMsg (bridge, givenPort))
 			return RECEIVE;
-		
+
 		return 0;
 	}
-	
+
 	assert (false);
 	return 0;
 }
@@ -82,7 +82,7 @@ void PortReceive_802_1Q_2011_InitState (STP_BRIDGE* bridge, int givenPort, int g
 	assert (givenTree == -1);
 
 	PORT* port = bridge->ports [givenPort];
-	
+
 	if (state == DISCARD)
 	{
 		port->rcvdBpdu = port->rcvdRSTP = port->rcvdSTP = false;

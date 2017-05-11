@@ -114,7 +114,8 @@ bool fromSameRegion (STP_BRIDGE* bridge, int givenPort)
 
 	assert (bridge->receivedBpduContent != NULL);
 
-	// Note AG: I added the condition "&& ForceProtocolVersion >= MSTP".
+	// Note AG: I added the condition "&& ForceProtocolVersion >= MSTP"
+	// (if we're running STP or RSTP, we shouldn't be looking at our MST Config ID!)
 
 	bool result = port->rcvdRSTP
 		&& (bridge->receivedBpduType == VALIDATED_BPDU_TYPE_MST)
