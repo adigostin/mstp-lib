@@ -71,6 +71,8 @@ public:
 	void SetLocation (D2D1_POINT_2F location) { SetLocation (location.x, location.y); }
 	D2D1_RECT_F GetBounds() const { return { _x, _y, _x + _width, _y + _height }; }
 
+	void SetCoordsForInteriorPort (Port* port, D2D1_POINT_2F proposedLocation);
+
 	const std::vector<std::unique_ptr<Port>>& GetPorts() const { return _ports; }
 
 	std::wstring GetBridgeAddressAsString() const;
@@ -95,6 +97,7 @@ private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
 	static void CALLBACK MacOperationalTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
 	static LRESULT CALLBACK HelperWindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
+	static void OnPortInvalidate (void* callbackArg, Object* object);
 	void ComputeMacOperational();
 	void ProcessReceivedPacket();
 	std::array<uint8_t, 6> GetPortAddress (size_t portIndex) const;

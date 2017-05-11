@@ -70,10 +70,16 @@ Bridge::Bridge (IProject* project, unsigned int portCount, unsigned int mstiCoun
 	_stpBridge = STP_CreateBridge (portCount, mstiCount, MaxVlanNumber, &StpCallbacks, &macAddress[0], 256);
 	STP_EnableLogging (_stpBridge, true);
 	STP_SetApplicationContext (_stpBridge, this);
+
+	for (auto& port : _ports)
+		port->GetInvalidateEvent().AddHandler(&OnPortInvalidate, this);
 }
 
 Bridge::~Bridge()
 {
+	for (auto& port : _ports)
+		port->GetInvalidateEvent().RemoveHandler(&OnPortInvalidate, this);
+
 	// First stop the timers, to be sure the mutex won't be acquired in a background thread (when we'll have background threads).
 	_macOperationalTimerHandle = nullptr;
 	_oneSecondTimerHandle = nullptr;
@@ -86,6 +92,13 @@ Bridge::~Bridge()
 	}
 
 	STP_DestroyBridge (_stpBridge);
+}
+
+//static
+void Bridge::OnPortInvalidate (void* callbackArg, Object* object)
+{
+	auto bridge = static_cast<Bridge*>(callbackArg);
+	InvalidateEvent::InvokeHandlers (bridge->_em, bridge);
 }
 
 //static
@@ -381,6 +394,68 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 	HRESULT hr = element->getAttribute (AddressString, &value); ThrowIfFailed(hr);
 
 	return nullptr;
+}
+
+void Bridge::SetCoordsForInteriorPort (Port* _port, D2D1_POINT_2F proposedLocation)
+{
+	float mouseX = proposedLocation.x - _x;
+	float mouseY = proposedLocation.y - _y;
+
+	float wh = _width / _height;
+
+	// top side
+	if ((mouseX > mouseY * wh) && (_width - mouseX) > mouseY * wh)
+	{
+		_port->_side = Side::Top;
+
+		if (mouseX < Port::InteriorWidth / 2)
+			_port->_offset = Port::InteriorWidth / 2;
+		else if (mouseX > _width - Port::InteriorWidth / 2)
+			_port->_offset = _width - Port::InteriorWidth / 2;
+		else
+			_port->_offset = mouseX;
+	}
+
+	// bottom side
+	else if ((mouseX <= mouseY * wh) && (_width - mouseX) <= mouseY * wh)
+	{
+		_port->_side = Side::Bottom;
+
+		if (mouseX < Port::InteriorWidth / 2 + 1)
+			_port->_offset = Port::InteriorWidth / 2 + 1;
+		else if (mouseX > _width - Port::InteriorWidth / 2)
+			_port->_offset = _width - Port::InteriorWidth / 2;
+		else
+			_port->_offset = mouseX;
+	}
+
+	// left side
+	if ((mouseX <= mouseY * wh) && (_width - mouseX) > mouseY * wh)
+	{
+		_port->_side = Side::Left;
+
+		if (mouseY < Port::InteriorWidth / 2)
+			_port->_offset = Port::InteriorWidth / 2;
+		else if (mouseY > _height - Port::InteriorWidth / 2)
+			_port->_offset = _height - Port::InteriorWidth / 2;
+		else
+			_port->_offset = mouseY;
+	}
+
+	// right side
+	if ((mouseX > mouseY * wh) && (_width - mouseX) <= mouseY * wh)
+	{
+		_port->_side = Side::Right;
+
+		if (mouseY < Port::InteriorWidth / 2)
+			_port->_offset = Port::InteriorWidth / 2;
+		else if (mouseY > _height - Port::InteriorWidth / 2)
+			_port->_offset = _height - Port::InteriorWidth / 2;
+		else
+			_port->_offset = mouseY;
+	}
+
+	InvalidateEvent::InvokeHandlers (_em, this);
 }
 
 #pragma region STP Callbacks

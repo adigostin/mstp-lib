@@ -56,6 +56,9 @@
     <ClCompile Include="PropsWindow.cpp" />
     <ClCompile Include="Test.c" />
     <ClCompile Include="EditActionList.cpp" />
+    <ClCompile Include="EditStates\MovePortES.cpp">
+      <Filter>EditStates</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Simulator.rc" />

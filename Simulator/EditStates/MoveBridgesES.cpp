@@ -56,7 +56,6 @@ public:
 		return nullopt;
 	}
 
-
 	virtual void OnMouseUp (const MouseLocation& location, MouseButton button) override final
 	{
 		_completed = true;

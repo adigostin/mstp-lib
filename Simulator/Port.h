@@ -15,7 +15,7 @@ class Port : public Object
 public:
 	Port (Bridge* bridge, unsigned int portIndex, Side side, float offset);
 
-	static constexpr int HTCodeInner = 1;
+	static constexpr int HTCodeInnerOuter = 1;
 	static constexpr int HTCodeCP = 2;
 
 	static constexpr float InteriorWidth = 30;
@@ -32,8 +32,9 @@ public:
 	D2D1_POINT_2F GetCPLocation() const;
 	bool GetMacOperational() const { return _macOperational; }
 	D2D1::Matrix3x2F GetPortTransform() const;
-	D2D1_RECT_F GetInnerRect() const;
+	D2D1_RECT_F GetInnerOuterRect() const;
 	bool IsForwarding (unsigned int vlanNumber) const;
+	void SetSideAndOffset (Side side, float offset);
 
 	static void RenderExteriorNonStpPort (ID2D1RenderTarget* dc, const DrawingObjects& dos, bool macOperational);
 	static void RenderExteriorStpPort (ID2D1RenderTarget* dc, const DrawingObjects& dos, STP_PORT_ROLE role, bool learning, bool forwarding, bool operEdge);
@@ -43,6 +44,6 @@ public:
 	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const override final;
 	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
 
-	bool HitTestInner (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) const;
+	bool HitTestInnerOuter (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) const;
 	bool HitTestCP (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) const;
 };

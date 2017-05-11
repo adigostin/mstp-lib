@@ -231,6 +231,7 @@
     <ClCompile Include="EditStates\CreateBridgeES.cpp" />
     <ClCompile Include="EditStates\CreateWireES.cpp" />
     <ClCompile Include="EditStates\MoveBridgesES.cpp" />
+    <ClCompile Include="EditStates\MovePortES.cpp" />
     <ClCompile Include="EditStates\MoveWirePointES.cpp" />
     <ClCompile Include="LogArea.cpp" />
     <ClCompile Include="MSTConfigIdDialog.cpp" />

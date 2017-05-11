@@ -34,6 +34,7 @@ public:
 };
 
 std::unique_ptr<EditState> CreateStateMoveBridges (const EditStateDeps& deps);
+std::unique_ptr<EditState> CreateStateMovePort (const EditStateDeps& deps);
 std::unique_ptr<EditState> CreateStateCreateBridge (const EditStateDeps& deps);
 std::unique_ptr<EditState> CreateStateCreateWire (const EditStateDeps& deps, Port* fromPort);
 std::unique_ptr<EditState> CreateStateMoveWirePoint (const EditStateDeps& deps, Wire* wire, size_t pointIndex);

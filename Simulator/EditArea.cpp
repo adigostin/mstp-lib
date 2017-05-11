@@ -51,7 +51,7 @@ class EditArea : public ZoomableWindow, public IEditArea
 
 public:
 	EditArea (ISimulatorApp* app,
-			  IProjectWindow* pw, 
+			  IProjectWindow* pw,
 			  const shared_ptr<IProject>& project,
 			  const shared_ptr<ISelection>& selection,
 			  const shared_ptr<IActionList>& actionList,
@@ -670,26 +670,27 @@ public:
 			// TODO: area selection
 			//stateForMoveThreshold =
 		}
-		else if (auto b = dynamic_cast<Bridge*>(ht.object))
+		else if (dynamic_cast<Bridge*>(ht.object) != nullptr)
 		{
 			if (button == MouseButton::Left)
 				_beginningDrag->stateMoveThreshold = CreateStateMoveBridges (MakeEditStateDeps());
 		}
-		//else if (auto b = dynamic_cast<Port*>(_beginningDrag->clickedObj))
-		//{
-		// TODO: move port
-		//if (_beginningDrag->button == MouseButton::Left)
-		//	_state = CreateStateMovePorts (this, _selection);
-		//}
-		else if (auto p = dynamic_cast<Port*>(ht.object))
+		else if (dynamic_cast<Port*>(ht.object) != nullptr)
 		{
-			if (ht.code == Port::HTCodeCP)
+			auto port = dynamic_cast<Port*>(ht.object);
+
+			if (ht.code == Port::HTCodeInnerOuter)
 			{
-				auto alreadyConnectedWire = _project->GetWireConnectedToPort(p);
+				if (button == MouseButton::Left)
+					_beginningDrag->stateMoveThreshold = CreateStateMovePort (MakeEditStateDeps());
+			}
+			else if (ht.code == Port::HTCodeCP)
+			{
+				auto alreadyConnectedWire = _project->GetWireConnectedToPort(port);
 				if (alreadyConnectedWire.first == nullptr)
 				{
-					_beginningDrag->stateMoveThreshold = CreateStateCreateWire(MakeEditStateDeps(), p);
-					_beginningDrag->stateButtonUp = CreateStateCreateWire(MakeEditStateDeps(), p);
+					_beginningDrag->stateMoveThreshold = CreateStateCreateWire(MakeEditStateDeps(), port);
+					_beginningDrag->stateButtonUp = CreateStateCreateWire(MakeEditStateDeps(), port);
 				}
 				else
 					_beginningDrag->stateMoveThreshold = CreateStateMoveWirePoint(MakeEditStateDeps(), alreadyConnectedWire.first, alreadyConnectedWire.second);

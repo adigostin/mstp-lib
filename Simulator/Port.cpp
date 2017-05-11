@@ -35,7 +35,7 @@ Matrix3x2F Port::GetPortTransform() const
 	{
 		//portTransform = Matrix3x2F::Rotation (90, Point2F (0, 0)) * Matrix3x2F::Translation (bridgeRect.left, bridgeRect.top + port->GetOffset ());
 		// The above calculation is correct but slow. Let's assign the matrix members directly.
-		return { 0, 1, -1, 0, _bridge->GetLeft(), _bridge->GetTop() };
+		return { 0, 1, -1, 0, _bridge->GetLeft(), _bridge->GetTop() + _offset};
 	}
 	else if (_side == Side::Right)
 	{
@@ -231,23 +231,19 @@ void Port::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, unsigned in
 	rt->SetTransform (&oldtr);
 }
 
-D2D1_RECT_F Port::GetInnerRect() const
+D2D1_RECT_F Port::GetInnerOuterRect() const
 {
-	if (_side == Side::Bottom)
-		return D2D1_RECT_F
-		{
-			_bridge->GetLeft() + _offset - InteriorWidth / 2,
-			_bridge->GetBottom() - InteriorDepth,
-			_bridge->GetLeft() + _offset + InteriorWidth / 2,
-			_bridge->GetBottom() + ExteriorHeight
-		};
-
-	throw not_implemented_exception();
+	auto tl = D2D1_POINT_2F { -InteriorWidth / 2, -InteriorDepth };
+	auto br = D2D1_POINT_2F { InteriorWidth / 2, ExteriorHeight };
+	auto tr = GetPortTransform();
+	tl = tr.TransformPoint(tl);
+	br = tr.TransformPoint(br);
+	return { std::min(tl.x, br.x), std::min (tl.y, br.y), std::max(tl.x, br.x), std::max(tl.y, br.y) };
 }
 
 void Port::RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const
 {
-	auto ir = GetInnerRect();
+	auto ir = GetInnerOuterRect();
 
 	auto oldaa = rt->GetAntialiasMode();
 	rt->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
@@ -268,9 +264,9 @@ bool Port::HitTestCP (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float 
 		&& (abs (cpDLocation.y - dLocation.y) <= tolerance);
 }
 
-bool Port::HitTestInner (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) const
+bool Port::HitTestInnerOuter (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) const
 {
-	auto ir = GetInnerRect();
+	auto ir = GetInnerOuterRect();
 	auto lt = zoomable->GetDLocationFromWLocation ({ ir.left, ir.top });
 	auto rb = zoomable->GetDLocationFromWLocation ({ ir.right, ir.bottom });
 	return (dLocation.x >= lt.x) && (dLocation.y >= lt.y) && (dLocation.x < rb.x) && (dLocation.y < rb.y);
@@ -281,8 +277,8 @@ HTResult Port::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, floa
 	if (HitTestCP (zoomable, dLocation, tolerance))
 		return { this, HTCodeCP };
 
-	if (HitTestInner (zoomable, dLocation, tolerance))
-		return { this, HTCodeInner };
+	if (HitTestInnerOuter (zoomable, dLocation, tolerance))
+		return { this, HTCodeInnerOuter };
 
 	return { };
 }
@@ -297,3 +293,12 @@ bool Port::IsForwarding (unsigned int vlanNumber) const
 	return STP_GetPortForwarding (stpb, _portIndex, treeIndex);
 }
 
+void Port::SetSideAndOffset (Side side, float offset)
+{
+	if ((_side != side) || (_offset != offset))
+	{
+		_side = side;
+		_offset = offset;
+		InvalidateEvent::InvokeHandlers (_em, this);
+	}
+}
