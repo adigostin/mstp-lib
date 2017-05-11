@@ -1,12 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="mstp-lib">
-      <UniqueIdentifier>{fc04b78a-9460-4c32-8130-a53110b5023f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="mstp-lib\802.1Q-2011">
-      <UniqueIdentifier>{cfc75957-b41e-4da6-bf54-bb04b411d54e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="EditStates">
       <UniqueIdentifier>{44c75b95-8381-4205-bb9c-ff949707452e}</UniqueIdentifier>
     </Filter>
@@ -27,30 +21,6 @@
     <ClInclude Include="Port.h" />
     <ClInclude Include="Simulator.h" />
     <ClInclude Include="UtilityFunctions.h" />
-    <ClInclude Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_procedures.h">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClInclude>
-    <ClInclude Include="..\mstp-lib\stp.h">
-      <Filter>mstp-lib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\mstp-lib\stp_base_types.h">
-      <Filter>mstp-lib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\mstp-lib\stp_bpdu.h">
-      <Filter>mstp-lib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\mstp-lib\stp_bridge.h">
-      <Filter>mstp-lib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\mstp-lib\stp_log.h">
-      <Filter>mstp-lib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\mstp-lib\stp_md5.h">
-      <Filter>mstp-lib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\mstp-lib\stp_port.h">
-      <Filter>mstp-lib</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -86,60 +56,6 @@
     <ClCompile Include="PropsWindow.cpp" />
     <ClCompile Include="Test.c" />
     <ClCompile Include="EditActionList.cpp" />
-    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_procedures.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_BridgeDetection.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_L2GPReceive.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortInformation.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortProtocolMigration.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortReceive.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortRoleSelection.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortRoleTransitions.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortStateTransition.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortTimers.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortTransmit.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_TopologyChange.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mstp-lib\stp.cpp">
-      <Filter>mstp-lib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mstp-lib\stp_base_types.cpp">
-      <Filter>mstp-lib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mstp-lib\stp_bpdu.cpp">
-      <Filter>mstp-lib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mstp-lib\stp_log.cpp">
-      <Filter>mstp-lib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mstp-lib\stp_md5.cpp">
-      <Filter>mstp-lib</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Simulator.rc" />
