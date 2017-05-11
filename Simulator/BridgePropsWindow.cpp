@@ -23,7 +23,6 @@ class BridgePropsWindow : public IBridgePropsWindow
 	HWND _mstConfigNameEdit = nullptr;
 	HWND _mstConfigRevLevelEdit = nullptr;
 	HWND _mstConfigDigestEdit = nullptr;
-	HWND _staticTreeProps = nullptr;
 	HWND _controlBeingValidated = nullptr;
 	HWND _configTableDigestToolTip = nullptr;
 	bool _editChangedByUser = false;
@@ -135,8 +134,6 @@ private:
 			DWORD ttStyle = WS_POPUP | TTS_ALWAYSTIP | TTS_BALLOON;
 			_configTableDigestToolTip = CreateWindowEx(NULL, TOOLTIPS_CLASS, NULL, ttStyle, 0, 0, 0, 0, _hwnd, NULL, _app->GetHInstance(), NULL);
 
-			_staticTreeProps = GetDlgItem(_hwnd, IDC_STATIC_TREE_PROPS);
-
 			auto comboBridgePrio = GetDlgItem (_hwnd, IDC_COMBO_BRIDGE_PRIORITY); assert (comboBridgePrio != nullptr);
 			for (int i = 0; i < 65536; i += 4096)
 			{
@@ -153,10 +150,21 @@ private:
 
 		if (msg == WM_CTLCOLORSTATIC)
 		{
-			if (reinterpret_cast<HWND>(lParam) == _staticTreeProps)
+			wchar_t className[32];
+			GetClassName ((HWND) lParam, className, _countof(className));
+			if ((_wcsicmp(className, L"EDIT") == 0) && (GetWindowLongPtr((HWND) lParam, GWL_STYLE) & ES_READONLY))
+			{
+				SetBkMode ((HDC) wParam, TRANSPARENT);
+				return { reinterpret_cast<INT_PTR>(GetSysColorBrush(COLOR_3DFACE)), 0 };
+			}
+
+			if (GetWindowLongPtr((HWND)lParam, GWL_ID) == IDC_STATIC_TREE_PROPS)
 				return { FALSE, 0 };
-			else
-				return { reinterpret_cast<INT_PTR>(GetSysColorBrush(COLOR_WINDOW)), 0 };
+
+			if (GetWindowLongPtr((HWND)lParam, GWL_ID) == IDC_STATIC_MSTP_PROPS)
+				return { FALSE, 0 };
+
+			return { reinterpret_cast<INT_PTR>(GetSysColorBrush(COLOR_WINDOW)), 0 };
 		}
 
 		if (msg == WM_WORK)
@@ -193,6 +201,18 @@ private:
 				else if (LOWORD(wParam) == IDC_COMBO_BRIDGE_PRIORITY)
 				{
 					ProcessBridgePrioritySelChange ((HWND) lParam);
+					return { TRUE, 0 };
+				}
+				else if (LOWORD(wParam) == IDC_COMBO_PORT_COUNT)
+				{
+					MessageBox (_hwnd, L"The Simulator does not yet support changing the Port Count for an existing bridge.", _app->GetAppName(), 0);
+					LoadPortCountComboBox();
+					return { TRUE, 0 };
+				}
+				else if (LOWORD(wParam) == IDC_COMBO_MSTI_COUNT)
+				{
+					MessageBox (_hwnd, L"The Simulator does not yet support changing the MSTI Count for an existing bridge.", _app->GetAppName(), 0);
+					LoadMstiCountComboBox();
 					return { TRUE, 0 };
 				}
 			}
@@ -379,6 +399,8 @@ private:
 		LoadBridgeAddressTextBox();
 		LoadStpStartedCheckBox();
 		LoadStpVersionComboBox();
+		LoadCistRootBridgeEdit();
+		LoadCistRootPathCostEdit();
 		LoadPortCountComboBox();
 		LoadMstiCountComboBox();
 		LoadMstConfigNameTextBox();
@@ -462,6 +484,59 @@ private:
 
 		ComboBox_SetCurSel (_comboMstiCount, index);
 	}
+
+	// ========================================================================
+
+	void LoadCistRootBridgeEdit()
+	{
+		auto edit = GetDlgItem (_hwnd, IDC_EDIT_CIST_ROOT);
+		auto getRootBridge = [](Object* o)
+		{
+			auto stpb = dynamic_cast<Bridge*>(o)->GetStpBridge();
+			unsigned char prioVector[36];
+			STP_GetRootPriorityVector(stpb, 0, prioVector);
+			array<unsigned char, 8> rootBridgeId;
+			memcpy (rootBridgeId.data(), &prioVector[0], 8);
+			return rootBridgeId;
+		};
+
+		auto rootBridge = getRootBridge(_selection->GetObjects().front());
+		bool allSameRoot = all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](Object* o) { return getRootBridge(o) == rootBridge; });
+		if (allSameRoot)
+		{
+			wstringstream ss;
+			ss << uppercase << setfill(L'0') << hex << setw(2) << rootBridge[0] << setw(2) << rootBridge[1] << "."
+				<< setw(2) << rootBridge[2] << setw(2) << rootBridge[3] << setw(2) << rootBridge[4]
+				<< setw(2) << rootBridge[5] << setw(2) << rootBridge[6] << setw(2) << rootBridge[7];
+			::SetWindowText (edit, ss.str().c_str());
+		}
+		else
+			::SetWindowText (edit, L"(multiple selection)");
+	}
+
+	// ========================================================================
+
+	void LoadCistRootPathCostEdit()
+	{
+		auto edit = GetDlgItem (_hwnd, IDC_EDIT_CIST_ROOT_PATH_COST);
+		auto getCost = [](Object* o)
+		{
+			auto stpb = dynamic_cast<Bridge*>(o)->GetStpBridge();
+			unsigned char prioVector[36];
+			STP_GetRootPriorityVector(stpb, 0, prioVector);
+			uint32_t rootPathCost = ((uint32_t) prioVector[8] << 24) | ((uint32_t) prioVector[9] << 16) | ((uint32_t) prioVector[10] << 8) | prioVector[11];
+			return rootPathCost;
+		};
+
+		auto cost = getCost(_selection->GetObjects().front());
+		bool allSameCost = all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](Object* o) { return getCost(o) == cost; });
+		if (allSameCost)
+			::SetWindowText (edit, to_wstring(cost).c_str());
+		else
+			::SetWindowText (edit, L"(multiple selection)");
+	}
+
+	// ========================================================================
 
 	void LoadMstConfigNameTextBox()
 	{
@@ -563,7 +638,7 @@ private:
 		else
 			::SetWindowText (edit, L"(multiple selection)");
 	}
-	
+
 	// ========================================================================
 
 	void LoadBridgePriorityCombo()
@@ -577,7 +652,7 @@ private:
 		};
 		auto prio = getPrio(_selection->GetObjects()[0]);
 		bool allSamePrio = all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [&](Object* o) { return getPrio(o) == prio; });
-		
+
 		auto combo = GetDlgItem(_hwnd, IDC_COMBO_BRIDGE_PRIORITY);
 		if (allSamePrio)
 		{
