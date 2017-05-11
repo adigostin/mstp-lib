@@ -1,5 +1,5 @@
 
-// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/ 
+// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/
 // Copyright (c) 2011-2017 Adrian Gostin, distributed under the GNU General Public License v3.
 
 #ifndef MSTP_LIB_802_1Q_2011_PROCEDURES_H
@@ -12,10 +12,10 @@
 bool betterorsameInfo	(STP_BRIDGE*, int givenPort, int givenTree, INFO_IS newInfoIs); // 13.27.a) - 13.27.1
 void clearAllRcvdMsgs	(STP_BRIDGE*, int givenPort); // 13.27.b) - 13.27.2
 void clearReselectTree	(STP_BRIDGE*, int givenTree); // 13.27.c) - 13.27.3
-void disableForwarding	(STP_BRIDGE*, int givenPort, int givenTree);	// 13.27.d) - 13.27.4
-void disableLearning	(STP_BRIDGE*, int givenPort, int givenTree);	// 13.27.e) - 13.27.5
-void enableForwarding	(STP_BRIDGE*, int givenPort, int givenTree);	// 13.27.f) - 13.27.6
-void enableLearning		(STP_BRIDGE*, int givenPort, int givenTree);	// 13.27.g) - 13.27.7
+void disableForwarding	(STP_BRIDGE*, int givenPort, int givenTree, unsigned int timestamp);	// 13.27.d) - 13.27.4
+void disableLearning	(STP_BRIDGE*, int givenPort, int givenTree, unsigned int timestamp);	// 13.27.e) - 13.27.5
+void enableForwarding	(STP_BRIDGE*, int givenPort, int givenTree, unsigned int timestamp);	// 13.27.f) - 13.27.6
+void enableLearning		(STP_BRIDGE*, int givenPort, int givenTree, unsigned int timestamp);	// 13.27.g) - 13.27.7
 bool fromSameRegion		(STP_BRIDGE*, int givenPort);					// 13.27.h) - 13.27.8
 void newTcDetected		(STP_BRIDGE*, int givenPort, int givenTree);	// 13.27.i) - 13.27.9
 void newTcWhile			(STP_BRIDGE*, int givenPort, int givenTree);	// 13.27.j) - 13.27.10

@@ -281,7 +281,7 @@ int main ()
 
 	unsigned int timestamp = Timer_GetTimeMilliseconds();
 
-	STP_BRIDGE* bridge = STP_CreateBridge (3, 1, &Callbacks, STP_VERSION_RSTP, MacAddress, 2);
+	STP_BRIDGE* bridge = STP_CreateBridge (3, 0, 0, &Callbacks, MacAddress, 2);
 
 	STP_EnableLogging (bridge, true);
 
@@ -376,7 +376,7 @@ int main ()
 
 // ============================================================================
 
-static void StpCallback_EnableLearning (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable)
+static void StpCallback_EnableLearning (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
 {
 	unsigned int i = ENET_MIIReadRegister (20, 6);
 
@@ -398,7 +398,7 @@ static void StpCallback_EnableLearning (struct STP_BRIDGE* bridge, unsigned int 
 	ENET_MIIWriteRegister (20, 6, i);
 }
 
-static void StpCallback_EnableForwarding (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable)
+static void StpCallback_EnableForwarding (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
 {
 	unsigned int i = ENET_MIIReadRegister (20, 6);
 
@@ -483,7 +483,7 @@ static void StpCallback_FlushFdb (struct STP_BRIDGE* bridge, unsigned int portIn
 	ENET_MIIWriteRegister (20, 14, 5);
 }
 
-static void StpCallback_DebugStrOut (struct STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, bool flush)
+static void StpCallback_DebugStrOut (struct STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, unsigned int flush)
 {
 	printf ("%s", nullTerminatedString);
 	if (flush)
@@ -498,7 +498,7 @@ static void StpCallback_OnTopologyChange (struct STP_BRIDGE* bridge)
 }
 
 // See long comment at the end of 802_1Q_2011_procedures.cpp.
-static void StpCallback_OnNotifiedTC (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
+static void StpCallback_OnNotifiedTC (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp)
 {
 	// quickly age out everything
 	ENET_MIIWriteRegister (20, 14, 0x60);
@@ -508,6 +508,14 @@ static void StpCallback_OnNotifiedTC (struct STP_BRIDGE* bridge, unsigned int po
 
 	// reenable slow aging (~5 min)
 	ENET_MIIWriteRegister (20, 14, 5);
+}
+
+void StpCallback_OnPortRoleChanged (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_PORT_ROLE role, unsigned int timestamp)
+{
+}
+
+void StpCallback_OnConfigChanged (struct STP_BRIDGE* bridge, unsigned int timestamp)
+{
 }
 
 static void* StpCallback_AllocAndZeroMemory (unsigned int size)
@@ -533,6 +541,8 @@ static STP_CALLBACKS const Callbacks =
 	StpCallback_DebugStrOut,
 	StpCallback_OnTopologyChange,
 	StpCallback_OnNotifiedTC,
+	StpCallback_OnPortRoleChanged,
+	StpCallback_OnConfigChanged,
 	StpCallback_AllocAndZeroMemory,
 	StpCallback_FreeMemory
 };

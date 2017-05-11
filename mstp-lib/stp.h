@@ -31,8 +31,8 @@ enum STP_PORT_ROLE
 	STP_PORT_ROLE_MASTER	= 10,
 };
 
-typedef void  (*STP_CALLBACK_ENABLE_LEARNING)				(struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable);
-typedef void  (*STP_CALLBACK_ENABLE_FORWARDING)				(struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable);
+typedef void  (*STP_CALLBACK_ENABLE_LEARNING)				(struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp);
+typedef void  (*STP_CALLBACK_ENABLE_FORWARDING)				(struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp);
 typedef void* (*STP_CALLBACK_TRANSMIT_GET_BUFFER)			(struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int bpduSize, unsigned int timestamp);
 typedef void  (*STP_CALLBACK_TRANSMIT_RELEASE_BUFFER)		(struct STP_BRIDGE* bridge, void* bufferReturnedByGetBuffer);
 typedef void  (*STP_CALLBACK_FLUSH_FDB)						(struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType);

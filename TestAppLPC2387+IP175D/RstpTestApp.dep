@@ -1,0 +1,735 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<project>
+  <fileVersion>2</fileVersion>
+  <fileChecksum>624394204</fileChecksum>
+  <configuration>
+    <name>Debug</name>
+    <outputs>
+      <file>$PROJ_DIR$\drivers\uart.h</file>
+      <file>$PROJ_DIR$\drivers\vic.h</file>
+      <file>$PROJ_DIR$\drivers\timer.cpp</file>
+      <file>$PROJ_DIR$\drivers\uart.cpp</file>
+      <file>$PROJ_DIR$\drivers\timer.h</file>
+      <file>$PROJ_DIR$\drivers\vic.cpp</file>
+      <file>$PROJ_DIR$\drivers\LPC23xx_enet.cpp</file>
+      <file>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_procedures.cpp</file>
+      <file>$PROJ_DIR$\drivers\LPC23xx_enet.h</file>
+      <file>$PROJ_DIR$\RstpTestApp.icf</file>
+      <file>$PROJ_DIR$\_Debug\Obj\stp_bpdu.o</file>
+      <file>$TOOLKIT_DIR$\inc\c\stdlib.h</file>
+      <file>$PROJ_DIR$\_Debug\Obj\stp_md5.pbi</file>
+      <file>$TOOLKIT_DIR$\inc\c\intrinsics.h</file>
+      <file>$TOOLKIT_DIR$\inc\c\stddef.h</file>
+      <file>$TOOLKIT_DIR$\inc\NXP\iolpc2387.h</file>
+      <file>$PROJ_DIR$\_Debug\Obj\stp_md5.o</file>
+      <file>$PROJ_DIR$\_Debug\Obj\stp_base_types.pbi</file>
+      <file>$TOOLKIT_DIR$\inc\c\DLib_Config_Full.h</file>
+      <file>$TOOLKIT_DIR$\inc\c\DLib_Defaults.h</file>
+      <file>$TOOLKIT_DIR$\inc\c\assert.h</file>
+      <file>$TOOLKIT_DIR$\inc\c\stdio.h</file>
+      <file>$PROJ_DIR$\_Debug\Exe\RstpTestApp.out</file>
+      <file>$PROJ_DIR$\_Debug\Obj\stp_base_types.o</file>
+      <file>$TOOLKIT_DIR$\inc\c\ycheck.h</file>
+      <file>$PROJ_DIR$\_Debug\Obj\RstpTestApp.pbd</file>
+      <file>$TOOLKIT_DIR$\inc\c\stdarg.h</file>
+      <file>$PROJ_DIR$\_Debug\Obj\stp_bpdu.pbi</file>
+      <file>$PROJ_DIR$\_Debug\Obj\stp_log.o</file>
+      <file>$PROJ_DIR$\_Debug\Obj\stp_log.pbi</file>
+      <file>$TOOLKIT_DIR$\inc\c\yvals.h</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM_PortProtocolMigration.pbi</file>
+      <file>$TOOLKIT_DIR$\inc\c\ysizet.h</file>
+      <file>$PROJ_DIR$\_Debug\Obj\hmac_md5.pbi</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM_PortTimers.o</file>
+      <file>$TOOLKIT_DIR$\inc\c\ystdio.h</file>
+      <file>$TOOLKIT_DIR$\inc\c\xencoding_limits.h</file>
+      <file>$PROJ_DIR$\_Debug\Obj\main.pbi</file>
+      <file>$TOOLKIT_DIR$\inc\c\DLib_Threads.h</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM_PortTransmit.pbi</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM_PortStateTransition.pbi</file>
+      <file>$TOOLKIT_DIR$\inc\c\DLib_Product.h</file>
+      <file>$PROJ_DIR$\_Debug\Obj\stp.pbi</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM_PortReceive.pbi</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM_PortRoleSelection.pbi</file>
+      <file>$TOOLKIT_DIR$\inc\c\io_macros.h</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM_PortRoleSelection.o</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM_PortInformation.pbi</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM_PortReceive.o</file>
+      <file>$TOOLKIT_DIR$\inc\c\DLib_Product_string.h</file>
+      <file>$PROJ_DIR$\_Debug\Obj\base_types.pbi</file>
+      <file>$PROJ_DIR$\_Debug\Obj\vic.o</file>
+      <file>$PROJ_DIR$\_Debug\Obj\uart.o</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM_L2GPReceive.o</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_procedures.o</file>
+      <file>$PROJ_DIR$\_Debug\Obj\vic.pbi</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM_BridgeDetection.o</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM_PortStateTransition.o</file>
+      <file>$PROJ_DIR$\..\mstp-lib\hmac_md5.cpp</file>
+      <file>$PROJ_DIR$\_Debug\Obj\LPC23xx_enet.o</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM_L2GPReceive.pbi</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM.o</file>
+      <file>$PROJ_DIR$\_Debug\Obj\timer.o</file>
+      <file>$PROJ_DIR$\_Debug\Obj\LPC23xx_enet.pbi</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM_BridgeDetection.pbi</file>
+      <file>$PROJ_DIR$\_Debug\Obj\timer.pbi</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM_PortTimers.pbi</file>
+      <file>$PROJ_DIR$\..\mstp-lib\base_types.cpp</file>
+      <file>$PROJ_DIR$\_Debug\Obj\stp.o</file>
+      <file>$TOOLKIT_DIR$\inc\c\string.h</file>
+      <file>$PROJ_DIR$\_Debug\Obj\log.pbi</file>
+      <file>$PROJ_DIR$\_Debug\Obj\bpdu.pbi</file>
+      <file>$PROJ_DIR$\_Debug\Obj\hmac_md5.o</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM_PortRoleTransitions.pbi</file>
+      <file>$PROJ_DIR$\..\mstp-lib\bpdu.cpp</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM_PortInformation.o</file>
+      <file>$PROJ_DIR$\_Debug\Obj\uart.pbi</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM_PortTransmit.o</file>
+      <file>$PROJ_DIR$\..\mstp-lib\stp_port.h</file>
+      <file>$PROJ_DIR$\..\mstp-lib\log.cpp</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_procedures.pbi</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM_PortRoleTransitions.o</file>
+      <file>$PROJ_DIR$\main.cpp</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM_TopologyChange.pbi</file>
+      <file>$PROJ_DIR$\_Debug\Obj\main.o</file>
+      <file>$PROJ_DIR$\_Debug\Obj\base_types.o</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM_TopologyChange.o</file>
+      <file>$PROJ_DIR$\_Debug\Obj\bpdu.o</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM.pbi</file>
+      <file>$PROJ_DIR$\_Debug\Obj\802_1Q_2011_SM_PortProtocolMigration.o</file>
+      <file>$PROJ_DIR$\_Debug\Obj\log.o</file>
+      <file>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_procedures.h</file>
+      <file>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortStateTransition.cpp</file>
+      <file>$PROJ_DIR$\..\mstp-lib\stp_md5.cpp</file>
+      <file>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_L2GPReceive.cpp</file>
+      <file>$PROJ_DIR$\..\mstp-lib\stp_base_types.cpp</file>
+      <file>$PROJ_DIR$\..\mstp-lib\stp_md5.h</file>
+      <file>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortRoleSelection.cpp</file>
+      <file>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortTransmit.cpp</file>
+      <file>$PROJ_DIR$\..\mstp-lib\stp.h</file>
+      <file>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_BridgeDetection.cpp</file>
+      <file>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortReceive.cpp</file>
+      <file>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortRoleTransitions.cpp</file>
+      <file>$PROJ_DIR$\..\mstp-lib\stp.cpp</file>
+      <file>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortTimers.cpp</file>
+      <file>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortProtocolMigration.cpp</file>
+      <file>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM.cpp</file>
+      <file>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortInformation.cpp</file>
+      <file>$PROJ_DIR$\..\mstp-lib\stp_base_types.h</file>
+      <file>$PROJ_DIR$\..\mstp-lib\stp_bpdu.h</file>
+      <file>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_TopologyChange.cpp</file>
+      <file>$PROJ_DIR$\..\mstp-lib\stp_bpdu.cpp</file>
+      <file>$PROJ_DIR$\..\mstp-lib\stp_log.cpp</file>
+      <file>$PROJ_DIR$\..\mstp-lib\stp_bridge.h</file>
+      <file>$PROJ_DIR$\..\mstp-lib\stp_log.h</file>
+      <file>$TOOLKIT_DIR$\lib\m4t_tl.a</file>
+      <file>$TOOLKIT_DIR$\lib\dlpp4t_tl_fe.a</file>
+      <file>$TOOLKIT_DIR$\lib\rt4t_al.a</file>
+      <file>$PROJ_DIR$\_Debug\List\RstpTestApp.map</file>
+      <file>$TOOLKIT_DIR$\lib\shs_l.a</file>
+      <file>$TOOLKIT_DIR$\lib\dl4t_tlf.a</file>
+    </outputs>
+    <file>
+      <name>$PROJ_DIR$\drivers\timer.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 62</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 65</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 15 45 4 1</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 15 45 4 1</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\drivers\uart.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 52</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 76</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 15 45 21 24 30 19 18 41 36 38 32 35 13 20 0 1</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 15 45 21 24 30 19 18 41 36 38 32 35 13 20 0 1</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\drivers\vic.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 51</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 55</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 20 24 30 19 18 41 36 38 1 15 45</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 20 24 30 19 18 41 36 38 1 15 45</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\drivers\LPC23xx_enet.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 59</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 63</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 15 45 20 24 30 19 18 41 36 38 21 32 35 69 49 8</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 15 45 20 24 30 19 18 41 36 38 21 32 35 69 49 8</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_procedures.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 54</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 80</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 91 108 99 20 24 30 19 18 41 36 38 113 78 109 114 14 32</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 91 108 99 20 24 30 19 18 41 36 38 113 78 109 114 14 32</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>[ROOT_NODE]</name>
+      <outputs>
+        <tool>
+          <name>ILINK</name>
+          <file> 22 118</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\_Debug\Exe\RstpTestApp.out</name>
+      <outputs>
+        <tool>
+          <name>ILINK</name>
+          <file> 118</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ILINK</name>
+          <file> 9 61 56 53 75 89 48 46 81 57 34 77 86 54 59 84 68 23 10 28 16 62 52 51 119 117 116 115 120</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\hmac_md5.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 72</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 33</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\base_types.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 85</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 50</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\bpdu.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 87</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 71</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\log.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 90</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 70</file>
+        </tool>
+      </outputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\main.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 84</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 37</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 15 45 21 24 30 19 18 41 36 38 32 35 11 13 69 49 20 99 0 1 4 8</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 15 45 21 24 30 19 18 41 36 38 32 35 11 13 69 49 20 99 0 1 4 8</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortStateTransition.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 57</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 40</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 91 108 99 20 24 30 19 18 41 36 38 113 78 109</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 91 108 99 20 24 30 19 18 41 36 38 113 78 109</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\stp_md5.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 16</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 12</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 96 20 24 30 19 18 41 36 38 69 32 49</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 96 20 24 30 19 18 41 36 38 69 32 49</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_L2GPReceive.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 53</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 60</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 91 108 99 20 24 30 19 18 41 36 38 113 78 109 14 32</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 91 108 99 20 24 30 19 18 41 36 38 113 78 109 14 32</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\stp_base_types.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 23</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 17</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 108 99 20 24 30 19 18 41 36 38 114 14 32</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 108 99 20 24 30 19 18 41 36 38 114 14 32</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortRoleSelection.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 46</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 44</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 91 108 99 20 24 30 19 18 41 36 38 113 78 109</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 91 108 99 20 24 30 19 18 41 36 38 113 78 109</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortTransmit.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 77</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 39</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 91 108 99 20 24 30 19 18 41 36 38 113 78 109</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 91 108 99 20 24 30 19 18 41 36 38 113 78 109</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_BridgeDetection.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 56</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 64</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 91 108 99 20 24 30 19 18 41 36 38 113 78 109</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 91 108 99 20 24 30 19 18 41 36 38 113 78 109</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortReceive.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 48</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 43</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 91 108 99 20 24 30 19 18 41 36 38 113 78 109</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortRoleTransitions.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 81</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 73</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 91 108 99 20 24 30 19 18 41 36 38 113 78 109 14 32</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 91 108 99 20 24 30 19 18 41 36 38 113 78 109 14 32</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\stp.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 68</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 42</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 99 113 108 20 24 30 19 18 41 36 38 78 109 114 96 69 32 49 21 35</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 99 113 108 20 24 30 19 18 41 36 38 78 109 114 96 69 32 49 21 35</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortTimers.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 34</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 66</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 91 108 99 20 24 30 19 18 41 36 38 113 78 109</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 91 108 99 20 24 30 19 18 41 36 38 113 78 109</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortProtocolMigration.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 89</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 31</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 91 108 99 20 24 30 19 18 41 36 38 113 78 109</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 91 108 99 20 24 30 19 18 41 36 38 113 78 109</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 61</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 88</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 113 108 99 20 24 30 19 18 41 36 38 78 109</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 113 108 99 20 24 30 19 18 41 36 38 78 109</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortInformation.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 75</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 47</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 91 108 99 20 24 30 19 18 41 36 38 113 78 109</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 91 108 99 20 24 30 19 18 41 36 38 113 78 109</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_TopologyChange.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 86</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 83</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 91 108 99 20 24 30 19 18 41 36 38 113 78 109 114</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 91 108 99 20 24 30 19 18 41 36 38 113 78 109 114</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\stp_bpdu.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 10</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 27</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 113 108 99 20 24 30 19 18 41 36 38 78 109 114 14 32 69 49</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 113 108 99 20 24 30 19 18 41 36 38 78 109 114 14 32 69 49</file>
+        </tool>
+      </inputs>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\stp_log.cpp</name>
+      <outputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 28</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 29</file>
+        </tool>
+      </outputs>
+      <inputs>
+        <tool>
+          <name>ICCARM</name>
+          <file> 114 113 108 99 20 24 30 19 18 41 36 38 78 109 26 21 32 35 69 49</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
+          <file> 114 113 108 99 20 24 30 19 18 41 36 38 78 109 26 21 32 35 69 49</file>
+        </tool>
+      </inputs>
+    </file>
+  </configuration>
+</project>
+
+

@@ -1,9 +1,10 @@
 
-// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/ 
+// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/
 // Copyright (c) 2011-2017 Adrian Gostin, distributed under the GNU General Public License v3.
 
 #include "stp_base_types.h"
 #include "stp_log.h"
+#include <stddef.h>
 
 // ============================================================================
 // Does the same as memcmp, but used because the IAR implementation of memcmp has a bug.

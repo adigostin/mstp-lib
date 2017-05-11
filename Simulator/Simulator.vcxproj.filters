@@ -17,12 +17,6 @@
     <ClInclude Include="EventManager.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="mstp-lib\802.1Q-2011\802_1Q_2011_procedures.h">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClInclude>
-    <ClInclude Include="mstp-lib\stp.h">
-      <Filter>mstp-lib</Filter>
-    </ClInclude>
     <ClInclude Include="D2DWindow.h" />
     <ClInclude Include="ZoomableWindow.h" />
     <ClInclude Include="Wire.h" />
@@ -33,22 +27,28 @@
     <ClInclude Include="Port.h" />
     <ClInclude Include="Simulator.h" />
     <ClInclude Include="UtilityFunctions.h" />
-    <ClInclude Include="mstp-lib\stp_port.h">
+    <ClInclude Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_procedures.h">
+      <Filter>mstp-lib\802.1Q-2011</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mstp-lib\stp.h">
       <Filter>mstp-lib</Filter>
     </ClInclude>
-    <ClInclude Include="mstp-lib\stp_log.h">
+    <ClInclude Include="..\mstp-lib\stp_base_types.h">
       <Filter>mstp-lib</Filter>
     </ClInclude>
-    <ClInclude Include="mstp-lib\stp_md5.h">
+    <ClInclude Include="..\mstp-lib\stp_bpdu.h">
       <Filter>mstp-lib</Filter>
     </ClInclude>
-    <ClInclude Include="mstp-lib\stp_bridge.h">
+    <ClInclude Include="..\mstp-lib\stp_bridge.h">
       <Filter>mstp-lib</Filter>
     </ClInclude>
-    <ClInclude Include="mstp-lib\stp_bpdu.h">
+    <ClInclude Include="..\mstp-lib\stp_log.h">
       <Filter>mstp-lib</Filter>
     </ClInclude>
-    <ClInclude Include="mstp-lib\stp_base_types.h">
+    <ClInclude Include="..\mstp-lib\stp_md5.h">
+      <Filter>mstp-lib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mstp-lib\stp_port.h">
       <Filter>mstp-lib</Filter>
     </ClInclude>
   </ItemGroup>
@@ -57,48 +57,6 @@
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="EditArea.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortReceive.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_procedures.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_BridgeDetection.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_L2GPReceive.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortInformation.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortProtocolMigration.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortRoleSelection.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortRoleTransitions.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortStateTransition.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortTimers.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortTransmit.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_TopologyChange.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\stp.cpp">
-      <Filter>mstp-lib</Filter>
-    </ClCompile>
     <ClCompile Include="D2DWindow.cpp" />
     <ClCompile Include="ZoomableWindow.cpp" />
     <ClCompile Include="Selection.cpp" />
@@ -127,19 +85,61 @@
     <ClCompile Include="MSTConfigIdDialog.cpp" />
     <ClCompile Include="PropsWindow.cpp" />
     <ClCompile Include="Test.c" />
-    <ClCompile Include="mstp-lib\stp_log.cpp">
-      <Filter>mstp-lib</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\stp_md5.cpp">
-      <Filter>mstp-lib</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\stp_bpdu.cpp">
-      <Filter>mstp-lib</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\stp_base_types.cpp">
-      <Filter>mstp-lib</Filter>
-    </ClCompile>
     <ClCompile Include="EditActionList.cpp" />
+    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_procedures.cpp">
+      <Filter>mstp-lib\802.1Q-2011</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM.cpp">
+      <Filter>mstp-lib\802.1Q-2011</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_BridgeDetection.cpp">
+      <Filter>mstp-lib\802.1Q-2011</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_L2GPReceive.cpp">
+      <Filter>mstp-lib\802.1Q-2011</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortInformation.cpp">
+      <Filter>mstp-lib\802.1Q-2011</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortProtocolMigration.cpp">
+      <Filter>mstp-lib\802.1Q-2011</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortReceive.cpp">
+      <Filter>mstp-lib\802.1Q-2011</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortRoleSelection.cpp">
+      <Filter>mstp-lib\802.1Q-2011</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortRoleTransitions.cpp">
+      <Filter>mstp-lib\802.1Q-2011</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortStateTransition.cpp">
+      <Filter>mstp-lib\802.1Q-2011</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortTimers.cpp">
+      <Filter>mstp-lib\802.1Q-2011</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortTransmit.cpp">
+      <Filter>mstp-lib\802.1Q-2011</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_TopologyChange.cpp">
+      <Filter>mstp-lib\802.1Q-2011</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mstp-lib\stp.cpp">
+      <Filter>mstp-lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mstp-lib\stp_base_types.cpp">
+      <Filter>mstp-lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mstp-lib\stp_bpdu.cpp">
+      <Filter>mstp-lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mstp-lib\stp_log.cpp">
+      <Filter>mstp-lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mstp-lib\stp_md5.cpp">
+      <Filter>mstp-lib</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Simulator.rc" />

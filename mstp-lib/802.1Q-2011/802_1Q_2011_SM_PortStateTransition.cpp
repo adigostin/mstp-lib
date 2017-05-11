@@ -1,5 +1,5 @@
 
-// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/ 
+// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/
 // Copyright (c) 2011-2017 Adrian Gostin, distributed under the GNU General Public License v3.
 
 #include "802_1Q_2011_procedures.h"
@@ -35,13 +35,13 @@ SM_STATE PortStateTransition_802_1Q_2011_CheckConditions (STP_BRIDGE* bridge, in
 {
 	assert (givenPort != -1);
 	assert (givenTree != -1);
-	
+
 	PORT* port = bridge->ports [givenPort];
 	PORT_TREE* tree = port->trees [givenTree];
 
 	// ------------------------------------------------------------------------
 	// Check global conditions.
-	
+
 	if (bridge->BEGIN)
 	{
 		if (state == DISCARDING)
@@ -49,18 +49,18 @@ SM_STATE PortStateTransition_802_1Q_2011_CheckConditions (STP_BRIDGE* bridge, in
 			// The entry block for this state has been executed already.
 			return 0;
 		}
-		
+
 		return DISCARDING;
 	}
-	
+
 	// ------------------------------------------------------------------------
 	// Check exit conditions from each state.
-	
+
 	if (state == DISCARDING)
 	{
 		if (tree->learn)
 			return LEARNING;
-		
+
 		return 0;
 	}
 
@@ -68,10 +68,10 @@ SM_STATE PortStateTransition_802_1Q_2011_CheckConditions (STP_BRIDGE* bridge, in
 	{
 		if (!tree->learn)
 			return DISCARDING;
-		
+
 		if (tree->forward)
 			return FORWARDING;
-		
+
 		return 0;
 	}
 
@@ -79,10 +79,10 @@ SM_STATE PortStateTransition_802_1Q_2011_CheckConditions (STP_BRIDGE* bridge, in
 	{
 		if (!tree->forward)
 			return DISCARDING;
-		
+
 		return 0;
 	}
-	
+
 	assert (false);
 	return 0;
 }
@@ -93,25 +93,25 @@ void PortStateTransition_802_1Q_2011_InitState (STP_BRIDGE* bridge, int givenPor
 {
 	assert (givenPort != -1);
 	assert (givenTree != -1);
-	
+
 	PORT* port = bridge->ports [givenPort];
 	PORT_TREE* tree = port->trees [givenTree];
 
 	if (state == DISCARDING)
 	{
-		disableLearning (bridge, givenPort, givenTree);
+		disableLearning (bridge, givenPort, givenTree, timestamp);
 		tree->learning = false;
-		disableForwarding (bridge, givenPort, givenTree);
+		disableForwarding (bridge, givenPort, givenTree, timestamp);
 		tree->forwarding = false;
 	}
 	else if (state == LEARNING)
 	{
-		enableLearning (bridge, givenPort, givenTree);
+		enableLearning (bridge, givenPort, givenTree, timestamp);
 		tree->learning = true;
 	}
 	else if (state == FORWARDING)
 	{
-		enableForwarding (bridge, givenPort, givenTree);
+		enableForwarding (bridge, givenPort, givenTree, timestamp);
 		tree->forwarding = true;
 	}
 	else

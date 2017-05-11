@@ -4,7 +4,7 @@
 #include "Port.h"
 #include "Wire.h"
 #include "UtilityFunctions.h"
-#include "mstp-lib/stp_md5.h"
+#include "stp_md5.h"
 
 using namespace std;
 using namespace D2D1;
@@ -368,7 +368,7 @@ IXMLDOMElementPtr Bridge::Serialize (IXMLDOMDocument3* doc) const
 	hr = element->setAttribute (StpVersionString, _variant_t(STP_GetVersionString(STP_GetStpVersion(_stpBridge)))); ThrowIfFailed(hr);
 
 	hr = element->setAttribute (PortCountString, _variant_t(_ports.size())); ThrowIfFailed(hr);
-	
+
 	hr = element->setAttribute (MstiCountString, _variant_t(STP_GetMstiCount(_stpBridge))); ThrowIfFailed(hr);
 
 	return element;
@@ -379,7 +379,7 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 {
 	_variant_t value;
 	HRESULT hr = element->getAttribute (AddressString, &value); ThrowIfFailed(hr);
-	
+
 	return nullptr;
 }
 
@@ -443,13 +443,13 @@ void Bridge::StpCallback_TransmitReleaseBuffer (STP_BRIDGE* bridge, void* buffer
 	::PostMessage (receivingBridge->_helperWindow, WM_PACKET_RECEIVED, (WPARAM)(void*)receivingBridge, 0);
 }
 
-void Bridge::StpCallback_EnableLearning(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable)
+void Bridge::StpCallback_EnableLearning(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 	InvalidateEvent::InvokeHandlers (b->_em, b);
 }
 
-void Bridge::StpCallback_EnableForwarding(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable)
+void Bridge::StpCallback_EnableForwarding(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 	InvalidateEvent::InvokeHandlers(b->_em, b);

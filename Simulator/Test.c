@@ -1,2 +1,2 @@
 
-#include "mstp-lib/stp.h"
+#include "stp.h"

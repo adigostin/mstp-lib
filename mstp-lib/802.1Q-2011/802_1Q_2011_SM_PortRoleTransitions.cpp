@@ -5,6 +5,7 @@
 #include "802_1Q_2011_procedures.h"
 #include "../stp_bridge.h"
 #include <assert.h>
+#include <stddef.h>
 
 // See §13.35 in 802.1Q-2011
 
@@ -408,7 +409,7 @@ void PortRoleTransitions_802_1Q_2011_InitState (STP_BRIDGE* bridge, int givenPor
 	if (state == INIT_PORT)
 	{
 		tree->role = STP_PORT_ROLE_DISABLED;
-		if (bridge->callbacks.onPortRoleChanged != nullptr)
+		if (bridge->callbacks.onPortRoleChanged != NULL)
 			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, STP_PORT_ROLE_DISABLED, timestamp);
 		tree->learn = tree->forward = false;
 		tree->synced = false;
@@ -420,7 +421,7 @@ void PortRoleTransitions_802_1Q_2011_InitState (STP_BRIDGE* bridge, int givenPor
 	else if (state == DISABLE_PORT)
 	{
 		tree->role = STP_PORT_ROLE_DISABLED;
-		if (bridge->callbacks.onPortRoleChanged != nullptr)
+		if (bridge->callbacks.onPortRoleChanged != NULL)
 			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, STP_PORT_ROLE_DISABLED, timestamp);
 		tree->learn = tree->forward = false;
 	}
@@ -438,7 +439,7 @@ void PortRoleTransitions_802_1Q_2011_InitState (STP_BRIDGE* bridge, int givenPor
 	else if (state == MASTER_PORT)
 	{
 		tree->role = STP_PORT_ROLE_MASTER;
-		if (bridge->callbacks.onPortRoleChanged != nullptr)
+		if (bridge->callbacks.onPortRoleChanged != NULL)
 			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, STP_PORT_ROLE_MASTER, timestamp);
 	}
 	else if (state == MASTER_PROPOSED)
@@ -484,7 +485,7 @@ void PortRoleTransitions_802_1Q_2011_InitState (STP_BRIDGE* bridge, int givenPor
 	else if (state == ROOT_PORT)
 	{
 		tree->role = STP_PORT_ROLE_ROOT;
-		if (bridge->callbacks.onPortRoleChanged != nullptr)
+		if (bridge->callbacks.onPortRoleChanged != NULL)
 			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, STP_PORT_ROLE_ROOT, timestamp);
 		tree->rrWhile = FwdDelay (bridge, givenPort);
 	}
@@ -539,7 +540,7 @@ void PortRoleTransitions_802_1Q_2011_InitState (STP_BRIDGE* bridge, int givenPor
 	else if (state == DESIGNATED_PORT)
 	{
 		tree->role = STP_PORT_ROLE_DESIGNATED;
-		if (bridge->callbacks.onPortRoleChanged != nullptr)
+		if (bridge->callbacks.onPortRoleChanged != NULL)
 			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, STP_PORT_ROLE_DESIGNATED, timestamp);
 
 		if (cist (bridge, givenTree))
@@ -627,7 +628,7 @@ void PortRoleTransitions_802_1Q_2011_InitState (STP_BRIDGE* bridge, int givenPor
 	else if (state == BLOCK_PORT)
 	{
 		tree->role = tree->selectedRole;
-		if (bridge->callbacks.onPortRoleChanged != nullptr)
+		if (bridge->callbacks.onPortRoleChanged != NULL)
 			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, tree->role, timestamp);
 		tree->learn = tree->forward = false;
 	}

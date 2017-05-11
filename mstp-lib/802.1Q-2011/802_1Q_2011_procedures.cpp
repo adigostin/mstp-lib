@@ -56,50 +56,50 @@ void clearReselectTree (STP_BRIDGE* bridge, int givenTree)
 
 // ============================================================================
 // 13.27.d - 13.27.4
-void disableForwarding (STP_BRIDGE* bridge, int givenPort, int givenTree)
+void disableForwarding (STP_BRIDGE* bridge, int givenPort, int givenTree, unsigned int timestamp)
 {
 	assert (givenPort != -1);
 	assert (givenTree != -1);
 
 	FLUSH_LOG (bridge);
 
-	bridge->callbacks.enableForwarding (bridge, givenPort, givenTree, false);
+	bridge->callbacks.enableForwarding (bridge, givenPort, givenTree, false, timestamp);
 }
 
 // ============================================================================
 // 13.27.e - 13.27.5
-void disableLearning (STP_BRIDGE* bridge, int givenPort, int givenTree)
+void disableLearning (STP_BRIDGE* bridge, int givenPort, int givenTree, unsigned int timestamp)
 {
 	assert (givenPort != -1);
 	assert (givenTree != -1);
 
 	FLUSH_LOG (bridge);
 
-	bridge->callbacks.enableLearning (bridge, givenPort, givenTree, false);
+	bridge->callbacks.enableLearning (bridge, givenPort, givenTree, false, timestamp);
 }
 
 // ============================================================================
 // 13.27.f - 13.27.6
-void enableForwarding (STP_BRIDGE* bridge, int givenPort, int givenTree)
+void enableForwarding (STP_BRIDGE* bridge, int givenPort, int givenTree, unsigned int timestamp)
 {
 	assert (givenPort != -1);
 	assert (givenTree != -1);
 
 	FLUSH_LOG (bridge);
 
-	bridge->callbacks.enableForwarding (bridge, givenPort, givenTree, true);
+	bridge->callbacks.enableForwarding (bridge, givenPort, givenTree, true, timestamp);
 }
 
 // ============================================================================
 // 13.27.g - 13.27.7
-void enableLearning (STP_BRIDGE* bridge, int givenPort, int givenTree)
+void enableLearning (STP_BRIDGE* bridge, int givenPort, int givenTree, unsigned int timestamp)
 {
 	assert (givenPort != -1);
 	assert (givenTree != -1);
 
 	FLUSH_LOG (bridge);
 
-	bridge->callbacks.enableLearning (bridge, givenPort, givenTree, true);
+	bridge->callbacks.enableLearning (bridge, givenPort, givenTree, true, timestamp);
 }
 
 // ============================================================================

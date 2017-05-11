@@ -1,10 +1,11 @@
 
-// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/ 
+// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/
 // Copyright (c) 2011-2017 Adrian Gostin, distributed under the GNU General Public License v3.
 
 #include "802_1Q_2011_procedures.h"
 #include "../stp_bridge.h"
 #include <assert.h>
+#include <stddef.h>
 
 // See §13.38 in 802.1Q-2011
 
@@ -40,10 +41,10 @@ SM_STATE L2GP_Receive_802_1Q_2011_CheckConditions (STP_BRIDGE* bridge, int given
 	assert (givenTree == -1);
 
 	PORT* port = bridge->ports [givenPort];
-	
+
 	// ------------------------------------------------------------------------
 	// Check global conditions.
-	
+
 	if (bridge->BEGIN || !port->isL2gp || !port->portEnabled)
 	{
 		if (state == INIT)
@@ -51,13 +52,13 @@ SM_STATE L2GP_Receive_802_1Q_2011_CheckConditions (STP_BRIDGE* bridge, int given
 			// The entry block for this state has been executed already.
 			return 0;
 		}
-		
+
 		return INIT;
 	}
 
 	// ------------------------------------------------------------------------
 	// Check exit conditions from each state.
-	
+
 	if (state == INIT)
 		return L2GP;
 
@@ -88,7 +89,7 @@ void L2GP_Receive_802_1Q_2011_InitState (STP_BRIDGE* bridge, int givenPort, int 
 	assert (givenTree == -1);
 
 	PORT* port = bridge->ports [givenPort];
-	
+
 	if (state == INIT)
 	{
 		port->pseudoInfoHelloWhen = 0;

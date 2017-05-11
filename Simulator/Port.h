@@ -1,7 +1,6 @@
 
 #pragma once
 #include "Simulator.h"
-#include "mstp-lib/stp.h"
 
 class Port : public Object
 {
