@@ -188,7 +188,7 @@ public:
 	static void OnProjectWindowClosing (void* callbackArg, IProjectWindow* pw)
 	{
 		auto app = static_cast<SimulatorApp*>(callbackArg);
-		
+
 		pw->GetClosingEvent().RemoveHandler (&OnProjectWindowClosing, app);
 
 		app->_workQueue.push ([app, pw]
@@ -218,6 +218,16 @@ public:
 		MSG msg;
 		while (GetMessage(&msg, nullptr, 0, 0))
 		{
+			if (msg.message == WM_MOUSEWHEEL)
+			{
+				HWND h = WindowFromPoint ({ GET_X_LPARAM(msg.lParam), GET_Y_LPARAM(msg.lParam) });
+				if (h != nullptr)
+				{
+					SendMessage (h, msg.message, msg.wParam, msg.lParam);
+					continue;
+				}
+			}
+
 			if ((msg.hwnd == nullptr) && (msg.message == WM_WORK))
 			{
 				_workQueue.front()();
