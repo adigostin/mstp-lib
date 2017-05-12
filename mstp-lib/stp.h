@@ -120,11 +120,11 @@ void STP_SetStpVersion (struct STP_BRIDGE* bridge, enum STP_VERSION version, uns
 // Call this when you receive a BPDU.
 void STP_OnBpduReceived (struct STP_BRIDGE* bridge, unsigned int portIndex, const unsigned char* bpdu, unsigned int bpduSize, unsigned int timestamp);
 
-// Call this every time the bridge's MAC address changes during bridge operation.
+// Call this every time the bridge's MAC address changes while STP is running.
 void STP_SetBridgeAddress (struct STP_BRIDGE* bridge, const unsigned char* address, unsigned int timestamp);
 void STP_GetBridgeAddress (struct STP_BRIDGE* bridge, unsigned char addressOut[6]);
 
-// Call these whenever one of the ports your ports changes state. See 13.25.31 portEnabled in 802.1Q-2011 for details.
+// Call these whenever one of the ports changes state. See 13.25.31 portEnabled in 802.1Q-2011 for details.
 void STP_OnPortEnabled (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int speedMegabitsPerSecond, unsigned int detectedPointToPointMAC, unsigned int timestamp);
 void STP_OnPortDisabled (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int timestamp);
 
