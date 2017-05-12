@@ -8,13 +8,13 @@ using namespace std;
 
 class Selection : public ISelection
 {
-	shared_ptr<IProject> const _project;
+	IProject* const _project;
 	ULONG _refCount = 1;
 	vector<Object*> _objects;
 	EventManager _em;
 
 public:
-	Selection (const shared_ptr<IProject>& project)
+	Selection (IProject* project)
 		: _project(project)
 	{
 		_project->GetWireRemovingEvent().AddHandler (&OnWireRemovingFromProject, this);
@@ -37,7 +37,7 @@ public:
 		if (it != _objects.end())
 		{
 			RemoveInternal(it - _objects.begin());
-			SelectionChangedEvent::InvokeHandlers(_em, this);
+			ChangedEvent::InvokeHandlers(_em, this);
 		}
 	}
 
@@ -61,7 +61,7 @@ public:
 		{
 			while (!_objects.empty())
 				RemoveInternal (_objects.size() - 1);
-			SelectionChangedEvent::InvokeHandlers(_em, this);
+			ChangedEvent::InvokeHandlers(_em, this);
 		}
 	}
 
@@ -75,7 +75,7 @@ public:
 			while (!_objects.empty())
 				RemoveInternal(_objects.size() - 1);
 			AddInternal(o);
-			SelectionChangedEvent::InvokeHandlers(_em, this);
+			ChangedEvent::InvokeHandlers(_em, this);
 		}
 	}
 
@@ -88,14 +88,14 @@ public:
 			throw invalid_argument("Object was already added to selection.");
 
 		AddInternal(o);
-		SelectionChangedEvent::InvokeHandlers(_em, this);
+		ChangedEvent::InvokeHandlers(_em, this);
 	}
 
 	virtual AddedToSelectionEvent::Subscriber GetAddedToSelectionEvent() override final { return AddedToSelectionEvent::Subscriber(_em); }
 
 	virtual RemovingFromSelectionEvent::Subscriber GetRemovingFromSelectionEvent() override final { return RemovingFromSelectionEvent::Subscriber(_em); }
 
-	virtual SelectionChangedEvent::Subscriber GetSelectionChangedEvent() override final { return SelectionChangedEvent::Subscriber(_em); }
+	virtual ChangedEvent::Subscriber GetChangedEvent() override final { return ChangedEvent::Subscriber(_em); }
 };
 
 template<typename... Args>

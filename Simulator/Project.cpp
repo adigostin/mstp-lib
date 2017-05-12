@@ -11,12 +11,19 @@ using namespace std;
 
 class Project : public IProject
 {
+	ISimulatorApp* const _app;
+	unique_ptr<IActionList> const _actionList;
+	wstring _path;
 	vector<unique_ptr<Bridge>> _bridges;
 	vector<unique_ptr<Wire>> _wires;
 	EventManager _em;
 	std::array<uint8_t, 6> _nextMacAddress = { 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x80 };
 
 public:
+	Project (ISimulatorApp* app, ActionListFactory actionListFactory)
+		: _app(app), _actionList(actionListFactory())
+	{ }
+
 	virtual const vector<unique_ptr<Bridge>>& GetBridges() const override final { return _bridges; }
 
 	virtual void InsertBridge (size_t index, unique_ptr<Bridge>&& bridge) override final
@@ -55,7 +62,7 @@ public:
 					if (holds_alternative<ConnectedWireEnd>(point) && (get<ConnectedWireEnd>(point)->GetBridge() == b))
 						w->SetPoint(i, w->GetPointCoords(i));
 				}
-		
+
 				wireIndex++;
 			}
 		}
@@ -108,6 +115,8 @@ public:
 
 	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() override final { return ProjectInvalidateEvent::Subscriber(_em); }
 
+	virtual IActionList* GetActionList() const override final { return _actionList.get(); }
+
 	virtual array<uint8_t, 6> AllocMacAddressRange (size_t count) override final
 	{
 		if (count >= 128)
@@ -125,10 +134,14 @@ public:
 		return result;
 	}
 
-	virtual void Save (const wchar_t* path) const override final
+	virtual const std::wstring& GetFilePath() const override final { return _path; }
+
+	virtual HRESULT Save (const wchar_t* filePath) override final
 	{
 		IXMLDOMDocument3Ptr doc;
-		HRESULT hr = CoCreateInstance (CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(doc), (void**) &doc); ThrowIfFailed(hr);
+		HRESULT hr = CoCreateInstance (CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(doc), (void**) &doc);
+		if (FAILED(hr))
+			return hr;
 
 		IXMLDOMElementPtr projectElement;
 		hr = doc->createElement (_bstr_t("Project"), &projectElement); ThrowIfFailed(hr);
@@ -152,7 +165,10 @@ public:
 			ThrowIfFailed(hr);
 		}
 
-		FormatAndSaveToFile (doc, path);
+		FormatAndSaveToFile (doc, filePath);
+		_path = filePath;
+
+		return S_OK;
 	}
 
 	void FormatAndSaveToFile (IXMLDOMDocument3* doc, const wchar_t* path) const
@@ -186,7 +202,7 @@ public:
 		vtOutObject.pdispVal = pDispatch;
 		vtOutObject.pdispVal->AddRef();
 
-		//Apply the transformation to format the final document	
+		//Apply the transformation to format the final document
 		hr = doc->transformNodeToObject(loadXML,vtOutObject);
 
 		// By default it is writing the encoding = UTF-16. Let us change the encoding to UTF-8
@@ -202,4 +218,10 @@ public:
 	}
 };
 
-extern const ProjectFactory projectFactory = [] { return (IProject*) new Project(); };
+template<typename... Args>
+static unique_ptr<IProject> Create (Args... args)
+{
+	return unique_ptr<IProject>(new Project(std::forward<Args>(args)...));
+}
+
+extern const ProjectFactory projectFactory = &Create;

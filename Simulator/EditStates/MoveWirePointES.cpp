@@ -15,20 +15,20 @@ class MoveWirePointES : public EditState
 	bool _completed = false;
 
 public:
-	MoveWirePointES (const EditStateDeps& deps, Wire* wire, size_t pointIndex)
-		: base(deps), _wire(wire), _pointIndex(pointIndex), _initialPoint(wire->GetPoints()[pointIndex])
+	MoveWirePointES (IProjectWindow* pw, Wire* wire, size_t pointIndex)
+		: base(pw), _wire(wire), _pointIndex(pointIndex), _initialPoint(wire->GetPoints()[pointIndex])
 	{ }
 
 	virtual bool Completed() const override final { return _completed; }
 
 	virtual void OnMouseMove (const MouseLocation& location) override
 	{
-		auto port = _area->GetCPAt (location.d, SnapDistance);
+		auto port = _pw->GetEditArea()->GetCPAt (location.d, SnapDistance);
 		if (port != nullptr)
 			_wire->SetP1(port);
 		else
 			_wire->SetP1(location.w);
-		::InvalidateRect (_area->GetHWnd(), nullptr, FALSE);
+		::InvalidateRect (_pw->GetEditArea()->GetHWnd(), nullptr, FALSE);
 
 	}
 
@@ -38,7 +38,7 @@ public:
 		{
 			_wire->SetPoint(_pointIndex, _initialPoint);
 			_completed = true;
-			::InvalidateRect (_area->GetHWnd(), nullptr, FALSE);
+			::InvalidateRect (_pw->GetEditArea()->GetHWnd(), nullptr, FALSE);
 			return 0;
 		}
 
@@ -47,7 +47,7 @@ public:
 
 };
 
-unique_ptr<EditState> CreateStateMoveWirePoint (const EditStateDeps& deps, Wire* wire, size_t pointIndex)
+unique_ptr<EditState> CreateStateMoveWirePoint (IProjectWindow* pw, Wire* wire, size_t pointIndex)
 {
-	return unique_ptr<EditState>(new MoveWirePointES(deps, wire, pointIndex));
+	return unique_ptr<EditState>(new MoveWirePointES(pw, wire, pointIndex));
 }

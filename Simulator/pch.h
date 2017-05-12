@@ -44,6 +44,7 @@
 #include <queue>
 #include <random>
 #include <set>
+#include <ShlObj.h>
 #include <Shlwapi.h>
 #include <signal.h>
 #include <sstream>
@@ -81,3 +82,6 @@ _COM_SMARTPTR_TYPEDEF(ID2D1StrokeStyle, __uuidof(ID2D1StrokeStyle));
 _COM_SMARTPTR_TYPEDEF(IDWriteFactory, __uuidof(IDWriteFactory));
 _COM_SMARTPTR_TYPEDEF(IDWriteTextFormat, __uuidof(IDWriteTextFormat));
 _COM_SMARTPTR_TYPEDEF(IDWriteTextLayout, __uuidof(IDWriteTextLayout));
+
+_COM_SMARTPTR_TYPEDEF(IFileSaveDialog, __uuidof(IFileSaveDialog));
+_COM_SMARTPTR_TYPEDEF(IShellItem, __uuidof(IShellItem));

@@ -14,17 +14,18 @@ class MoveBridgeES : public EditState
 	bool _completed = false;
 
 public:
-	MoveBridgeES (const EditStateDeps& deps)
-		: base(deps)
+	MoveBridgeES (IProjectWindow* pw)
+		: base(pw)
 	{
-		assert (all_of(_selection->GetObjects().begin(), _selection->GetObjects().end(),
+		auto& objects = _pw->GetSelection()->GetObjects();
+		assert (all_of(objects.begin(), objects.end(),
 			[](Object* so) { return dynamic_cast<Bridge*>(so) != nullptr; }));
 	}
 
 	virtual void OnMouseDown (const MouseLocation& location, MouseButton button) override final
 	{
 		_mouseDownWLocation = location.w;
-		for (auto o : _selection->GetObjects())
+		for (auto o : _pw->GetSelection()->GetObjects())
 		{
 			auto b = dynamic_cast<Bridge*>(o); assert (b != nullptr);
 			_initialLocations.push_back (b->GetLocation());
@@ -34,9 +35,9 @@ public:
 
 	virtual void OnMouseMove (const MouseLocation& location) override final
 	{
-		for (size_t i = 0; i < _selection->GetObjects().size(); i++)
+		for (size_t i = 0; i < _pw->GetSelection()->GetObjects().size(); i++)
 		{
-			auto b = dynamic_cast<Bridge*>(_selection->GetObjects()[i]); assert (b != nullptr);
+			auto b = dynamic_cast<Bridge*>(_pw->GetSelection()->GetObjects()[i]); assert (b != nullptr);
 			b->SetLocation (location.w.x - _offsets[i].width, location.w.y - _offsets[i].height);
 		}
 	}
@@ -45,11 +46,11 @@ public:
 	{
 		if (virtualKey == VK_ESCAPE)
 		{
-			for (size_t i = 0; i < _selection->GetObjects().size(); i++)
-				dynamic_cast<Bridge*>(_selection->GetObjects()[i])->SetLocation (_initialLocations[i]);
+			for (size_t i = 0; i < _pw->GetSelection()->GetObjects().size(); i++)
+				dynamic_cast<Bridge*>(_pw->GetSelection()->GetObjects()[i])->SetLocation (_initialLocations[i]);
 
 			_completed = true;
-			::InvalidateRect (_area->GetHWnd(), nullptr, FALSE);
+			::InvalidateRect (_pw->GetEditArea()->GetHWnd(), nullptr, FALSE);
 			return 0;
 		}
 
@@ -64,4 +65,4 @@ public:
 	virtual bool Completed() const override final { return _completed; }
 };
 
-unique_ptr<EditState> CreateStateMoveBridges (const EditStateDeps& deps) { return unique_ptr<EditState>(new MoveBridgeES(deps)); }
+unique_ptr<EditState> CreateStateMoveBridges (IProjectWindow* pw) { return unique_ptr<EditState>(new MoveBridgeES(pw)); }

@@ -10,25 +10,16 @@ using namespace std;
 class VlanWindow : public IVlanWindow
 {
 	ISimulatorApp*  const _app;
-	IProjectWindow* const _projectWindow;
-	std::shared_ptr<IProject>    const _project;
-	std::shared_ptr<ISelection>  const _selection;
-	std::shared_ptr<IActionList> const _actionList;
+	IProjectWindow* const _pw;
 	HWND _hwnd = nullptr;
 
 public:
 	VlanWindow (ISimulatorApp* app,
-				IProjectWindow* projectWindow,
-				const std::shared_ptr<IProject>& project,
-				const std::shared_ptr<ISelection>& selection,
-				const std::shared_ptr<IActionList>& actionList,
+				IProjectWindow* pw,
 				HWND hWndParent,
 				POINT location)
 		: _app(app)
-		, _projectWindow(projectWindow)
-		, _project(project)
-		, _selection(selection)
-		, _actionList(actionList)
+		, _pw(pw)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &DialogProcStatic, &hInstance);
@@ -41,14 +32,14 @@ public:
 		::GetWindowRect(_hwnd, &rc);
 		::MoveWindow (_hwnd, location.x, location.y, rc.right - rc.left, rc.bottom - rc.top, TRUE);
 
-		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
-		_projectWindow->GetSelectedVlanNumerChangedEvent().AddHandler (&OnSelectedVlanChanged, this);
+		_pw->GetSelection()->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
+		_pw->GetSelectedVlanNumerChangedEvent().AddHandler (&OnSelectedVlanChanged, this);
 	}
 
 	virtual ~VlanWindow()
 	{
-		_projectWindow->GetSelectedVlanNumerChangedEvent().RemoveHandler (&OnSelectedVlanChanged, this);
-		_selection->GetSelectionChangedEvent().RemoveHandler (&OnSelectionChanged, this);
+		_pw->GetSelectedVlanNumerChangedEvent().RemoveHandler (&OnSelectedVlanChanged, this);
+		_pw->GetSelection()->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
 
 		if (_hwnd != nullptr)
 			::DestroyWindow(_hwnd);
@@ -143,7 +134,7 @@ public:
 	void ProcessVlanSelChange (HWND hwnd)
 	{
 		int index = ComboBox_GetCurSel(hwnd);
-		_projectWindow->SelectVlan(index + 1);
+		_pw->SelectVlan(index + 1);
 	}
 
 	void ProcessNewWindowVlanSelChange (HWND hwnd)
@@ -152,7 +143,7 @@ public:
 		auto vlanNumber = (unsigned int) (index + 1);
 		auto& pws = _app->GetProjectWindows();
 		auto it = find_if (pws.begin(), pws.end(), [this, vlanNumber](const std::unique_ptr<IProjectWindow>& pw)
-			{ return (pw->GetProject() == _project.get()) && (pw->GetSelectedVlanNumber() == vlanNumber); });
+			{ return (pw->GetProject() == _pw->GetProject()) && (pw->GetSelectedVlanNumber() == vlanNumber); });
 		if (it != pws.end())
 		{
 			// bring to front and flash
@@ -160,8 +151,7 @@ public:
 		}
 		else
 		{
-			auto selection = shared_ptr<ISelection>(selectionFactory(_project));
-			auto pw = unique_ptr<IProjectWindow>(projectWindowFactory(_app, _project, selection, _actionList, editAreaFactory, SW_SHOWNORMAL, vlanNumber));
+			auto pw = projectWindowFactory(_app, _pw->GetProjectPtr(), selectionFactory, editAreaFactory, SW_SHOWNORMAL, vlanNumber);
 			_app->AddProjectWindow(move(pw));
 		}
 
@@ -170,31 +160,31 @@ public:
 
 	void LoadSelectedVlanCombo()
 	{
-		ComboBox_SetCurSel (GetDlgItem (_hwnd, IDC_COMBO_SELECTED_VLAN), _projectWindow->GetSelectedVlanNumber() - 1);
+		ComboBox_SetCurSel (GetDlgItem (_hwnd, IDC_COMBO_SELECTED_VLAN), _pw->GetSelectedVlanNumber() - 1);
 	}
 
 	void LoadSelectedTreeEdit()
 	{
 		auto edit = GetDlgItem (_hwnd, IDC_EDIT_SELECTED_TREE); assert (edit != nullptr);
-		auto& objects = _selection->GetObjects();
+		auto& objects = _pw->GetSelection()->GetObjects();
 
-		if (_selection->GetObjects().empty())
+		if (objects.empty())
 		{
 			::SetWindowText (edit, L"(no selection)");
 			return;
 		}
 
-		if (_selection->GetObjects().size() > 1)
+		if (objects.size() > 1)
 		{
 			::SetWindowText (edit, L"(multiple selection)");
 			return;
 		}
 
-		if (_selection->GetObjects()[0]->Is<Bridge>() || _selection->GetObjects()[0]->Is<Port>())
+		if (objects[0]->Is<Bridge>() || objects[0]->Is<Port>())
 		{
-			Object* obj = _selection->GetObjects()[0];
+			Object* obj = objects[0];
 			auto bridge = obj->Is<Bridge>() ? dynamic_cast<Bridge*>(obj) : dynamic_cast<Port*>(obj)->GetBridge();
-			auto treeIndex = STP_GetTreeIndexFromVlanNumber (bridge->GetStpBridge(), _projectWindow->GetSelectedVlanNumber());
+			auto treeIndex = STP_GetTreeIndexFromVlanNumber (bridge->GetStpBridge(), _pw->GetSelectedVlanNumber());
 			if (treeIndex == 0)
 				::SetWindowText (edit, L"CIST (0)");
 			else
@@ -207,9 +197,9 @@ public:
 };
 
 template<typename... Args>
-static IVlanWindow* Create (Args... args)
+static unique_ptr<IVlanWindow> Create (Args... args)
 {
-	return new VlanWindow (std::forward<Args>(args)...);
+	return unique_ptr<IVlanWindow>(new VlanWindow (std::forward<Args>(args)...));
 }
 
-const VlanWindowFactory vlanWindowFactory = Create;
+const VlanWindowFactory vlanWindowFactory = &Create;

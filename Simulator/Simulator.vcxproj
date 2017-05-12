@@ -23,7 +23,7 @@
     <RootNamespace>StpSimulator</RootNamespace>
     <Keyword>MFCProj</Keyword>
     <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
-    <ProjectName>Simulator</ProjectName>
+    <ProjectName>StpSimulator</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -226,7 +226,7 @@
     <ClCompile Include="BridgePropsWindow.cpp" />
     <ClCompile Include="D2DWindow.cpp" />
     <ClCompile Include="DockContainer.cpp" />
-    <ClCompile Include="EditActionList.cpp" />
+    <ClCompile Include="ActionList.cpp" />
     <ClCompile Include="EditArea.cpp" />
     <ClCompile Include="EditStates\CreateBridgeES.cpp" />
     <ClCompile Include="EditStates\CreateWireES.cpp" />

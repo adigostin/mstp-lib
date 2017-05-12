@@ -1,25 +1,14 @@
 #pragma once
 #include "..\Simulator.h"
 
-struct EditStateDeps
-{
-	IProject* project;
-	IProjectWindow* pw;
-	IEditArea* area;
-	ISelection* selection;
-};
-
 class EditState abstract
 {
 protected:
-	IProject* const _project;
 	IProjectWindow* const _pw;
-	IEditArea* const _area;
-	ISelection* const _selection;
 
 public:
-	EditState (const EditStateDeps& deps)
-		: _project(deps.project), _pw(deps.pw), _area(deps.area), _selection(deps.selection)
+	EditState (IProjectWindow* pw)
+		: _pw(pw)
 	{ }
 
 	virtual ~EditState() { }
@@ -33,8 +22,8 @@ public:
 	virtual HCURSOR GetCursor() const { return LoadCursor(nullptr, IDC_ARROW); }
 };
 
-std::unique_ptr<EditState> CreateStateMoveBridges (const EditStateDeps& deps);
-std::unique_ptr<EditState> CreateStateMovePort (const EditStateDeps& deps);
-std::unique_ptr<EditState> CreateStateCreateBridge (const EditStateDeps& deps);
-std::unique_ptr<EditState> CreateStateCreateWire (const EditStateDeps& deps, Port* fromPort);
-std::unique_ptr<EditState> CreateStateMoveWirePoint (const EditStateDeps& deps, Wire* wire, size_t pointIndex);
+std::unique_ptr<EditState> CreateStateMoveBridges (IProjectWindow* pw);
+std::unique_ptr<EditState> CreateStateMovePort (IProjectWindow* pw);
+std::unique_ptr<EditState> CreateStateCreateBridge (IProjectWindow* pw);
+std::unique_ptr<EditState> CreateStateCreateWire (IProjectWindow* pw, Port* fromPort);
+std::unique_ptr<EditState> CreateStateMoveWirePoint (IProjectWindow* pw, Wire* wire, size_t pointIndex);

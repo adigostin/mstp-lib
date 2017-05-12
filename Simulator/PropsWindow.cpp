@@ -11,9 +11,6 @@ class PropertiesWindow : public IPropertiesWindow
 {
 	ISimulatorApp* const _app;
 	IProjectWindow* const _projectWindow;
-	shared_ptr<IProject> const _project;
-	shared_ptr<ISelection> const _selection;
-	shared_ptr<IActionList> const _actionList;
 	HWND _hwnd = nullptr;
 	SIZE _clientSize;
 	HFONT _font;
@@ -22,16 +19,10 @@ class PropertiesWindow : public IPropertiesWindow
 public:
 	PropertiesWindow (ISimulatorApp* app,
 					  IProjectWindow* projectWindow,
-					  const std::shared_ptr<IProject>& project,
-					  const std::shared_ptr<ISelection>& selection,
-					  const std::shared_ptr<IActionList>& actionList,
 					  HWND hWndParent,
 					  POINT location)
 		: _app(app)
 		, _projectWindow(projectWindow)
-		, _project(project)
-		, _selection(selection)
-		, _actionList(actionList)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR)&wndClassAtom, &hInstance);
@@ -71,7 +62,7 @@ public:
 		SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0);
 		_font = ::CreateFontIndirect (&ncm.lfMessageFont);
 
-		_bridgePropsControl.reset (bridgePropertiesControlFactory (_app, _projectWindow, _project, _selection, _actionList, _hwnd, { 0, 0 }));
+		_bridgePropsControl = bridgePropertiesControlFactory (_app, _projectWindow, _hwnd, { 0, 0 });
 
 		SIZE ws = _bridgePropsControl->GetWindowSize();
 		::MoveWindow (_hwnd, 0, 0, ws.cx, ws.cy, TRUE);
@@ -158,9 +149,9 @@ public:
 };
 
 template <typename... Args>
-static IPropertiesWindow* Create (Args... args)
+static unique_ptr<IPropertiesWindow> Create (Args... args)
 {
-	return new PropertiesWindow (std::forward<Args>(args)...);
+	return unique_ptr<IPropertiesWindow>(new PropertiesWindow (std::forward<Args>(args)...));
 };
 
 const PropertiesWindowFactory propertiesWindowFactory = &Create;

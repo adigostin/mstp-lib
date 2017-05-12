@@ -55,10 +55,10 @@
     <ClCompile Include="MSTConfigIdDialog.cpp" />
     <ClCompile Include="PropsWindow.cpp" />
     <ClCompile Include="Test.c" />
-    <ClCompile Include="EditActionList.cpp" />
     <ClCompile Include="EditStates\MovePortES.cpp">
       <Filter>EditStates</Filter>
     </ClCompile>
+    <ClCompile Include="ActionList.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Simulator.rc" />

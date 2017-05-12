@@ -9,20 +9,19 @@ using namespace std;
 class MSTConfigIdDialog : public IMSTConfigIdDialog
 {
 	ISimulatorApp* const _app;
-	IProject* const _project;
 	IProjectWindow* const _projectWindow;
-	ISelection* const _selection;
 	vector<Bridge*> _bridges;
 	HWND _hwnd = nullptr;
 
 public:
-	MSTConfigIdDialog (ISimulatorApp* app, IProjectWindow* projectWindow, IProject* project, ISelection* selection)
-		: _app(app), _project(project), _projectWindow(projectWindow), _selection(selection)
+	MSTConfigIdDialog (ISimulatorApp* app, IProjectWindow* projectWindow)
+		: _app(app), _projectWindow(projectWindow)
 	{
-		if (_selection->GetObjects().empty())
-			throw invalid_argument ("Selection must not be empty.");
+		auto& objects = _projectWindow->GetSelection()->GetObjects();
 
-		for (auto o : _selection->GetObjects())
+		assert (!objects.empty());
+
+		for (auto o : objects)
 		{
 			auto b = dynamic_cast<Bridge*>(o);
 			if (b == nullptr)
@@ -224,9 +223,9 @@ public:
 };
 
 template<typename... Args>
-static IMSTConfigIdDialog* Create (Args... args)
+static unique_ptr<IMSTConfigIdDialog> Create (Args... args)
 {
-	return new MSTConfigIdDialog (std::forward<Args>(args)...);
+	return unique_ptr<IMSTConfigIdDialog>(new MSTConfigIdDialog (std::forward<Args>(args)...));
 }
 
 const MSTConfigIdDialogFactory mstConfigIdDialogFactory = &Create;

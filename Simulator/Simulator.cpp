@@ -58,6 +58,21 @@ RECT IWin32Window::GetClientRectPixels() const
 #pragma endregion
 
 #pragma region IProject
+
+size_t IProject::AddBridge (std::unique_ptr<Bridge>&& bridge)
+{
+	size_t index = GetBridges().size();
+	InsertBridge (index, std::move(bridge));
+	return index;
+}
+
+size_t IProject::AddWire (std::unique_ptr<Wire>&& wire)
+{
+	size_t index = GetWires().size();
+	InsertWire (index, std::move(wire));
+	return index;
+}
+
 unique_ptr<Object> IProject::Remove (Object* o)
 {
 	if (auto b = dynamic_cast<Bridge*>(o))
@@ -66,24 +81,6 @@ unique_ptr<Object> IProject::Remove (Object* o)
 		return Remove(w);
 	else
 		throw not_implemented_exception();
-}
-
-std::unique_ptr<Bridge> IProject::Remove (Bridge* b)
-{
-	auto& bridges = GetBridges();
-	auto it = find_if (bridges.begin(), bridges.end(), [b](auto& up) { return up.get() == b; });
-	if (it == bridges.end())
-		throw invalid_argument("b");
-	return RemoveBridge(it - bridges.begin());
-}
-
-std::unique_ptr<Wire> IProject::Remove (Wire* w)
-{
-	auto& wires = GetWires();
-	auto it = find_if (wires.begin(), wires.end(), [w](auto& up) { return up.get() == w; });
-	if (it == wires.end())
-		throw invalid_argument("w");
-	return RemoveWire (it - wires.begin());
 }
 
 pair<Wire*, size_t> IProject::GetWireConnectedToPort (const Port* port) const
@@ -181,15 +178,15 @@ public:
 
 	virtual void AddProjectWindow (std::unique_ptr<IProjectWindow>&& pw) override final
 	{
-		pw->GetClosingEvent().AddHandler (&OnProjectWindowClosing, this);
+		pw->GetClosedEvent().AddHandler (&OnProjectWindowClosed, this);
 		_projectWindows.push_back(move(pw));
 	}
 
-	static void OnProjectWindowClosing (void* callbackArg, IProjectWindow* pw)
+	static void OnProjectWindowClosed (void* callbackArg, IProjectWindow* pw)
 	{
 		auto app = static_cast<SimulatorApp*>(callbackArg);
 
-		pw->GetClosingEvent().RemoveHandler (&OnProjectWindowClosing, app);
+		pw->GetClosedEvent().RemoveHandler (&OnProjectWindowClosed, app);
 
 		app->_workQueue.push ([app, pw]
 		{
@@ -256,10 +253,8 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 		SimulatorApp app (hInstance);
 
 		{
-			auto actionList = shared_ptr<IActionList>(actionListFactory());
-			auto project    = shared_ptr<IProject>(projectFactory());
-			auto selection  = shared_ptr<ISelection>(selectionFactory(project));
-			auto projectWindow = unique_ptr<IProjectWindow>(projectWindowFactory (&app, project, selection, actionList, editAreaFactory, nCmdShow, 1));
+			auto project = shared_ptr<IProject>(projectFactory(&app, actionListFactory));
+			auto projectWindow = projectWindowFactory (&app, project, selectionFactory, editAreaFactory, nCmdShow, 1);
 			app.AddProjectWindow(move(projectWindow));
 		}
 

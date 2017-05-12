@@ -28,8 +28,8 @@ class CreateWireES : public EditState
 	SubState _subState = WaitingFirstDown;
 
 public:
-	CreateWireES (const EditStateDeps& deps, Port* fromPort)
-		: base(deps)
+	CreateWireES (IProjectWindow* pw, Port* fromPort)
+		: base(pw)
 	{ }
 
 	virtual void OnMouseDown (const MouseLocation& location, MouseButton button) override final
@@ -39,7 +39,7 @@ public:
 
 		if (_subState == WaitingFirstDown)
 		{
-			auto fromPort = _area->GetCPAt(location.d, SnapDistance);
+			auto fromPort = _pw->GetEditArea()->GetCPAt(location.d, SnapDistance);
 			if (fromPort != nullptr)
 			{
 				_firstDownLocation = location.pt;
@@ -61,12 +61,12 @@ public:
 		if (_subState == WaitingFirstDown)
 			return;
 
-		auto port = _area->GetCPAt (location.d, SnapDistance);
+		auto port = _pw->GetEditArea()->GetCPAt (location.d, SnapDistance);
 		if (port != nullptr)
 			_wire->SetP1(port);
 		else
 			_wire->SetP1(location.w);
-		::InvalidateRect (_area->GetHWnd(), nullptr, FALSE);
+		::InvalidateRect (_pw->GetEditArea()->GetHWnd(), nullptr, FALSE);
 
 		if (_subState == WaitingFirstUp)
 		{
@@ -84,8 +84,8 @@ public:
 			if (holds_alternative<ConnectedWireEnd>(_wire->GetP1()))
 			{
 				Wire* w = _wire.get();
-				_project->Add(move(_wire));
-				_selection->Select(w);
+				_pw->GetProject()->AddWire(move(_wire));
+				_pw->GetSelection()->Select(w);
 				_subState = Done;
 			}
 		}
@@ -96,7 +96,7 @@ public:
 		if (virtualKey == VK_ESCAPE)
 		{
 			_subState = Done;
-			::InvalidateRect (_area->GetHWnd(), nullptr, FALSE);
+			::InvalidateRect (_pw->GetEditArea()->GetHWnd(), nullptr, FALSE);
 			::SetCursor (LoadCursor(nullptr, IDC_ARROW));
 			return 0;
 		}
@@ -108,12 +108,12 @@ public:
 	{
 		D2D1_MATRIX_3X2_F oldtr;
 		rt->GetTransform(&oldtr);
-		rt->SetTransform(_area->GetZoomTransform());
-		_wire->Render(rt, _area->GetDrawingObjects(), _pw->GetSelectedVlanNumber());
+		rt->SetTransform(_pw->GetEditArea()->GetZoomTransform());
+		_wire->Render(rt, _pw->GetEditArea()->GetDrawingObjects(), _pw->GetSelectedVlanNumber());
 		rt->SetTransform(&oldtr);
 
 		if (holds_alternative<ConnectedWireEnd>(_wire->GetP1()))
-			_area->RenderHoverCP (rt, get<ConnectedWireEnd>(_wire->GetP1()));
+			_pw->GetEditArea()->RenderHoverCP (rt, get<ConnectedWireEnd>(_wire->GetP1()));
 	}
 
 	virtual bool Completed() const override final
@@ -124,4 +124,4 @@ public:
 	virtual HCURSOR GetCursor() const override final { return LoadCursor(nullptr, IDC_CROSS); }
 };
 
-std::unique_ptr<EditState> CreateStateCreateWire (const EditStateDeps& deps, Port* fromPort)  { return unique_ptr<EditState>(new CreateWireES(deps, fromPort)); }
+std::unique_ptr<EditState> CreateStateCreateWire (IProjectWindow* pw, Port* fromPort)  { return unique_ptr<EditState>(new CreateWireES(pw, fromPort)); }

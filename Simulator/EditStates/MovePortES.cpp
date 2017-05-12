@@ -15,11 +15,11 @@ class MovePortES : public EditState
 	bool _completed = false;
 
 public:
-	MovePortES (const EditStateDeps& deps)
-		: base(deps)
+	MovePortES (IProjectWindow* pw)
+		: base(pw)
 	{
-		assert (deps.selection->GetObjects().size() == 1);
-		_port = dynamic_cast<Port*>(deps.selection->GetObjects().front());
+		assert (_pw->GetSelection()->GetObjects().size() == 1);
+		_port = dynamic_cast<Port*>(_pw->GetSelection()->GetObjects().front());
 		assert (_port != nullptr);
 		_initialSide = _port->GetSide();
 		_initialOffset = _port->GetOffset();
@@ -50,4 +50,4 @@ public:
 	virtual bool Completed() const override final { return _completed; }
 };
 
-unique_ptr<EditState> CreateStateMovePort (const EditStateDeps& deps) { return unique_ptr<EditState>(new MovePortES(deps)); }
+unique_ptr<EditState> CreateStateMovePort (IProjectWindow* pw) { return unique_ptr<EditState>(new MovePortES(pw)); }

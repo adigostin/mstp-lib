@@ -22,20 +22,30 @@ public:
 			unsigned int portCount = 4;
 			unsigned int mstiCount = 4;
 			size_t macAddressesToReserve = std::max ((size_t) 1 + portCount, (size_t) 16);
-			_bridge.reset (new Bridge (_project, portCount, mstiCount, _project->AllocMacAddressRange(macAddressesToReserve)));
+			_bridge = Bridge::Create (_pw->GetProject(), portCount, mstiCount, _pw->GetProject()->AllocMacAddressRange(macAddressesToReserve));
 		}
 
 		_bridge->SetLocation (location.w.x - _bridge->GetWidth() / 2, location.w.y - _bridge->GetHeight() / 2);
-		::InvalidateRect (_area->GetHWnd(), nullptr, FALSE);
+		::InvalidateRect (_pw->GetEditArea()->GetHWnd(), nullptr, FALSE);
 	}
 
 	virtual void OnMouseUp (const MouseLocation& location, MouseButton button) override final
 	{
 		if (_bridge != nullptr)
 		{
+			struct CreateAction : public EditAction
+			{
+				IProject* const _project;
+				unique_ptr<Bridge> _bridge;
+				size_t _insertIndex;
+				CreateAction (IProject* project, unique_ptr<Bridge>&& bridge) : _project(project), _bridge(move(bridge)) { }
+				virtual void Redo() { _insertIndex = _project->AddBridge(move(_bridge)); }
+				virtual void Undo() { _bridge = _project->RemoveBridge(_insertIndex); }
+			};
+
 			Bridge* b = _bridge.get();
-			_project->Add(move(_bridge));
-			_selection->Select(b);
+			_pw->GetProject()->GetActionList()->PerformAndAddUserAction (L"Create Bridge", make_unique<CreateAction>(_pw->GetProject(), move(_bridge)));
+			_pw->GetSelection()->Select(b);
 			STP_StartBridge (b->GetStpBridge(), GetTimestampMilliseconds());
 		}
 
@@ -47,7 +57,7 @@ public:
 		if (virtualKey == VK_ESCAPE)
 		{
 			_completed = true;
-			::InvalidateRect (_area->GetHWnd(), nullptr, FALSE);
+			::InvalidateRect (_pw->GetEditArea()->GetHWnd(), nullptr, FALSE);
 			return 0;
 		}
 
@@ -60,8 +70,8 @@ public:
 		{
 			D2D1_MATRIX_3X2_F oldtr;
 			rt->GetTransform(&oldtr);
-			rt->SetTransform(_area->GetZoomTransform());
-			_bridge->Render (rt, _area->GetDrawingObjects(), _pw->GetSelectedVlanNumber(), ColorF(ColorF::LightGreen));
+			rt->SetTransform(_pw->GetEditArea()->GetZoomTransform());
+			_bridge->Render (rt, _pw->GetEditArea()->GetDrawingObjects(), _pw->GetSelectedVlanNumber(), ColorF(ColorF::LightGreen));
 			rt->SetTransform(&oldtr);
 		}
 	}
@@ -69,4 +79,4 @@ public:
 	virtual bool Completed() const override final { return _completed; }
 };
 
-unique_ptr<EditState> CreateStateCreateBridge (const EditStateDeps& deps) { return unique_ptr<EditState>(new CreateBridgeES(deps)); }
+unique_ptr<EditState> CreateStateCreateBridge (IProjectWindow* pw) { return unique_ptr<EditState>(new CreateBridgeES(pw)); }

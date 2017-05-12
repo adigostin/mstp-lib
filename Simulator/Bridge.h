@@ -46,8 +46,12 @@ class Bridge : public Object
 	Port*                _txReceivingPort;
 	unsigned int         _txTimestamp;
 
-public:
+private:
 	Bridge (IProject* project, unsigned int portCount, unsigned int mstiCount, const std::array<uint8_t, 6>& macAddress);
+public:
+	template<typename... Args>
+	static std::unique_ptr<Bridge> Create (Args... args) { return std::unique_ptr<Bridge>(new Bridge(std::forward<Args>(args)...)); }
+
 	virtual ~Bridge();
 
 public:
