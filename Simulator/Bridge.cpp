@@ -252,42 +252,43 @@ void Bridge::SetLocation(float x, float y)
 void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned int vlanNumber, const D2D1_COLOR_F& configIdColor) const
 {
 	auto treeIndex = STP_GetTreeIndexFromVlanNumber (_stpBridge, vlanNumber);
-	bool isRoot = STP_IsBridgeStarted(_stpBridge) && STP_IsRootBridge(_stpBridge);
-	// Draw bridge outline.
-	D2D1_ROUNDED_RECT rr = RoundedRect (GetBounds(), RoundRadius, RoundRadius);
-	float ow = OutlineWidth * (isRoot ? 2 : 1);
-	InflateRoundedRect (&rr, -ow / 2);
-	ID2D1SolidColorBrushPtr brush;
-	dc->CreateSolidColorBrush (configIdColor, &brush);
-	dc->FillRoundedRectangle (&rr, brush/*_powered ? dos._poweredFillBrush : dos._unpoweredBrush*/);
-	dc->DrawRoundedRectangle (&rr, dos._brushWindowText, ow);
 
-	auto stpVersion = STP_GetStpVersion(_stpBridge);
-
-	array<uint8_t, 6> macAddress;
-	STP_GetBridgeAddress(_stpBridge, macAddress.data());
-
-	// Draw bridge name.
-	wstringstream ss;
+	wstringstream text;
+	float bridgeOutlineWidth = OutlineWidth;
 	if (STP_IsBridgeStarted(_stpBridge))
 	{
+		auto stpVersion = STP_GetStpVersion(_stpBridge);
 		auto treeIndex = STP_GetTreeIndexFromVlanNumber(_stpBridge, vlanNumber);
+		bool isCistRoot = STP_IsRootBridge(_stpBridge);
+		bool isRegionalRoot = (treeIndex > 0) && STP_IsRegionalRootBridge(_stpBridge, treeIndex);
 
-		bool isRegionalRoot = STP_IsBridgeStarted(_stpBridge) && (treeIndex > 0) && STP_IsRegionalRootBridge (_stpBridge, treeIndex);
+		if ((treeIndex == 0) ? isCistRoot : isRegionalRoot)
+			bridgeOutlineWidth *= 2;
 
-		ss << uppercase << setfill(L'0') << setw(4) << hex << STP_GetBridgePriority(_stpBridge, treeIndex) << L'.' << GetBridgeAddressAsString() << endl;
-		ss << L"STP enabled (" << STP_GetVersionString(stpVersion) << L")" << endl;
-		if (STP_GetStpVersion(_stpBridge) >= STP_VERSION_MSTP)
-			ss << L"VLAN " << dec << vlanNumber << L". Spanning tree: " << ((treeIndex == 0) ? L"CIST(0)" : (wstring(L"MSTI") + to_wstring(treeIndex)).c_str()) << endl;
-		ss << (isRoot ? L"CIST Root Bridge\r\n" : L"");
-		ss << (isRegionalRoot ? L"Regional Root\r\n" : L"");
+		text << uppercase << setfill(L'0') << setw(4) << hex << STP_GetBridgePriority(_stpBridge, treeIndex) << L'.' << GetBridgeAddressAsString() << endl;
+		text << L"STP enabled (" << STP_GetVersionString(stpVersion) << L")" << endl;
+		text << (isCistRoot ? L"CIST Root Bridge\r\n" : L"");
+		if (stpVersion >= STP_VERSION_MSTP)
+		{
+			text << L"VLAN " << dec << vlanNumber << L". Spanning tree: " << ((treeIndex == 0) ? L"CIST(0)" : (wstring(L"MSTI") + to_wstring(treeIndex)).c_str()) << endl;
+			text << (isRegionalRoot ? L"Regional Root\r\n" : L"");
+		}
 	}
 	else
 	{
-		ss << uppercase << setfill(L'0') << hex << GetBridgeAddressAsString() << endl << L"STP disabled\r\n(right-click to enable)";
+		text << uppercase << setfill(L'0') << hex << GetBridgeAddressAsString() << endl << L"STP disabled\r\n(right-click to enable)";
 	}
 
-	auto tl = TextLayout::Create (dos._dWriteFactory, dos._regularTextFormat, ss.str().c_str());
+	// Draw bridge outline.
+	D2D1_ROUNDED_RECT rr = RoundedRect (GetBounds(), RoundRadius, RoundRadius);
+	InflateRoundedRect (&rr, -bridgeOutlineWidth / 2);
+	ID2D1SolidColorBrushPtr brush;
+	dc->CreateSolidColorBrush (configIdColor, &brush);
+	dc->FillRoundedRectangle (&rr, brush/*_powered ? dos._poweredFillBrush : dos._unpoweredBrush*/);
+	dc->DrawRoundedRectangle (&rr, dos._brushWindowText, bridgeOutlineWidth);
+
+	// Draw bridge text.
+	auto tl = TextLayout::Create (dos._dWriteFactory, dos._regularTextFormat, text.str().c_str());
 	dc->DrawTextLayout ({ _x + OutlineWidth * 2 + 3, _y + OutlineWidth * 2 + 3}, tl.layout, dos._brushWindowText);
 
 	for (auto& port : _ports)

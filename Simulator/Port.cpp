@@ -238,7 +238,7 @@ D2D1_RECT_F Port::GetInnerOuterRect() const
 	auto tr = GetPortTransform();
 	tl = tr.TransformPoint(tl);
 	br = tr.TransformPoint(br);
-	return { std::min(tl.x, br.x), std::min (tl.y, br.y), std::max(tl.x, br.x), std::max(tl.y, br.y) };
+	return { min(tl.x, br.x), min (tl.y, br.y), max(tl.x, br.x), max(tl.y, br.y) };
 }
 
 void Port::RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const

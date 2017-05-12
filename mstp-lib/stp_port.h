@@ -1,5 +1,5 @@
 
-// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/ 
+// This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/
 // Copyright (c) 2011-2017 Adrian Gostin, distributed under the GNU General Public License v3.
 
 #ifndef MSTP_LIB_PORT_H
@@ -14,7 +14,7 @@
 // 13.25
 struct PORT_TREE
 {
-	bool pseudoRootId:1;	// 13.25.ad) - 13.25.37	
+	bool pseudoRootId:1;	// 13.25.ad) - 13.25.37
 	bool agree		: 1;	// 13.25.ae) - 13.25.3
 	bool agreed		: 1;	// 13.25.af) - 13.25.4
 	bool disputed	: 1;	// 13.25.ai) - 13.25.9
@@ -120,7 +120,7 @@ struct PORT
 	unsigned short edgeDelayWhile;	// c) - 13.23.4
 	// One instance of the following shall be implemented per port when L2GP functionality is provided:
 	unsigned short pseudoInfoHelloWhen; // d) - 13.23.10
-	
+
 	PORT_TREE** trees;
 
 	STP_ADMIN_P2P adminPointToPointMAC;
