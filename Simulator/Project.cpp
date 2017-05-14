@@ -9,13 +9,12 @@
 
 using namespace std;
 
-class Project : public IProject
+class Project : public EventManager, public IProject
 {
 	ULONG _refCount = 1;
 	wstring _path;
 	vector<unique_ptr<Bridge>> _bridges;
 	vector<unique_ptr<Wire>> _wires;
-	EventManager _em;
 	std::array<uint8_t, 6> _nextMacAddress = { 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x80 };
 
 public:
@@ -28,8 +27,8 @@ public:
 
 		_bridges.push_back(move(bridge));
 		_bridges.back()->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
-		BridgeInsertedEvent::InvokeHandlers (_em, this, index, _bridges.back().get());
-		ProjectInvalidateEvent::InvokeHandlers (_em, this);
+		BridgeInsertedEvent::InvokeHandlers (*this, this, index, _bridges.back().get());
+		ProjectInvalidateEvent::InvokeHandlers (*this, this);
 	}
 
 	virtual unique_ptr<Bridge> RemoveBridge(size_t index) override final
@@ -62,11 +61,11 @@ public:
 			}
 		}
 
-		BridgeRemovingEvent::InvokeHandlers(_em, this, index, _bridges[index].get());
+		BridgeRemovingEvent::InvokeHandlers(*this, this, index, _bridges[index].get());
 		_bridges[index]->GetInvalidateEvent().RemoveHandler (&OnObjectInvalidate, this);
 		auto result = move(_bridges[index]);
 		_bridges.erase (_bridges.begin() + index);
-		ProjectInvalidateEvent::InvokeHandlers (_em, this);
+		ProjectInvalidateEvent::InvokeHandlers (*this, this);
 		return result;
 	}
 
@@ -79,8 +78,8 @@ public:
 
 		_wires.push_back(move(wire));
 		_wires.back()->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
-		WireInsertedEvent::InvokeHandlers (_em, this, index, _wires.back().get());
-		ProjectInvalidateEvent::InvokeHandlers (_em, this);
+		WireInsertedEvent::InvokeHandlers (*this, this, index, _wires.back().get());
+		ProjectInvalidateEvent::InvokeHandlers (*this, this);
 	}
 
 	virtual unique_ptr<Wire> RemoveWire (size_t index) override final
@@ -88,27 +87,27 @@ public:
 		if (index >= _wires.size())
 			throw invalid_argument("index");
 
-		WireRemovingEvent::InvokeHandlers(_em, this, index, _wires[index].get());
+		WireRemovingEvent::InvokeHandlers(*this, this, index, _wires[index].get());
 		_wires[index]->GetInvalidateEvent().RemoveHandler (&OnObjectInvalidate, this);
 		auto result = move(_wires[index]);
 		_wires.erase(_wires.begin() + index);
-		ProjectInvalidateEvent::InvokeHandlers (_em, this);
+		ProjectInvalidateEvent::InvokeHandlers (*this, this);
 		return result;
 	}
 
 	static void OnObjectInvalidate (void* callbackArg, Object* object)
 	{
 		auto project = static_cast<Project*>(callbackArg);
-		ProjectInvalidateEvent::InvokeHandlers (project->_em, project);
+		ProjectInvalidateEvent::InvokeHandlers (*project, project);
 	}
 
-	virtual BridgeInsertedEvent::Subscriber GetBridgeInsertedEvent() override final { return BridgeInsertedEvent::Subscriber(_em); }
-	virtual BridgeRemovingEvent::Subscriber GetBridgeRemovingEvent() override final { return BridgeRemovingEvent::Subscriber(_em); }
+	virtual BridgeInsertedEvent::Subscriber GetBridgeInsertedEvent() override final { return BridgeInsertedEvent::Subscriber(*this); }
+	virtual BridgeRemovingEvent::Subscriber GetBridgeRemovingEvent() override final { return BridgeRemovingEvent::Subscriber(*this); }
 
-	virtual WireInsertedEvent::Subscriber GetWireInsertedEvent() override final { return WireInsertedEvent::Subscriber(_em); }
-	virtual WireRemovingEvent::Subscriber GetWireRemovingEvent() override final { return WireRemovingEvent::Subscriber(_em); }
+	virtual WireInsertedEvent::Subscriber GetWireInsertedEvent() override final { return WireInsertedEvent::Subscriber(*this); }
+	virtual WireRemovingEvent::Subscriber GetWireRemovingEvent() override final { return WireRemovingEvent::Subscriber(*this); }
 
-	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() override final { return ProjectInvalidateEvent::Subscriber(_em); }
+	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() override final { return ProjectInvalidateEvent::Subscriber(*this); }
 
 	virtual array<uint8_t, 6> AllocMacAddressRange (size_t count) override final
 	{

@@ -98,7 +98,7 @@ Bridge::~Bridge()
 void Bridge::OnPortInvalidate (void* callbackArg, Object* object)
 {
 	auto bridge = static_cast<Bridge*>(callbackArg);
-	InvalidateEvent::InvokeHandlers (bridge->_em, bridge);
+	InvalidateEvent::InvokeHandlers (*bridge, bridge);
 }
 
 //static
@@ -175,7 +175,7 @@ void Bridge::ComputeMacOperational()
 	}
 
 	if (invalidate)
-		InvalidateEvent::InvokeHandlers(_em, this);
+		InvalidateEvent::InvokeHandlers(*this, this);
 }
 
 void Bridge::ProcessReceivedPacket()
@@ -235,17 +235,16 @@ void Bridge::ProcessReceivedPacket()
 	}
 
 	if (invalidate)
-		InvalidateEvent::InvokeHandlers(_em, this);
+		InvalidateEvent::InvokeHandlers(*this, this);
 }
 
 void Bridge::SetLocation(float x, float y)
 {
 	if ((_x != x) || (_y != y))
 	{
-		InvalidateEvent::InvokeHandlers(_em, this);
 		_x = x;
 		_y = y;
-		InvalidateEvent::InvokeHandlers(_em, this);
+		InvalidateEvent::InvokeHandlers(*this, this);
 	}
 }
 
@@ -456,7 +455,7 @@ void Bridge::SetCoordsForInteriorPort (Port* _port, D2D1_POINT_2F proposedLocati
 			_port->_offset = mouseY;
 	}
 
-	InvalidateEvent::InvokeHandlers (_em, this);
+	InvalidateEvent::InvokeHandlers (*this, this);
 }
 
 #pragma region STP Callbacks
@@ -522,13 +521,13 @@ void Bridge::StpCallback_TransmitReleaseBuffer (STP_BRIDGE* bridge, void* buffer
 void Bridge::StpCallback_EnableLearning(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
-	InvalidateEvent::InvokeHandlers (b->_em, b);
+	InvalidateEvent::InvokeHandlers (*b, b);
 }
 
 void Bridge::StpCallback_EnableForwarding(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
-	InvalidateEvent::InvokeHandlers(b->_em, b);
+	InvalidateEvent::InvokeHandlers(*b, b);
 }
 
 void Bridge::StpCallback_FlushFdb (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType)
@@ -553,7 +552,7 @@ void Bridge::StpCallback_DebugStrOut (STP_BRIDGE* bridge, int portIndex, int tre
 			if ((b->_currentLogLine.portIndex != portIndex) || (b->_currentLogLine.treeIndex != treeIndex))
 			{
 				b->_logLines.push_back(make_unique<BridgeLogLine>(move(b->_currentLogLine)));
-				BridgeLogLineGenerated::InvokeHandlers (b->_em, b, b->_logLines.back().get());
+				BridgeLogLineGenerated::InvokeHandlers (*b, b, b->_logLines.back().get());
 			}
 
 			b->_currentLogLine.text.append (nullTerminatedString, (size_t) stringLength);
@@ -562,14 +561,14 @@ void Bridge::StpCallback_DebugStrOut (STP_BRIDGE* bridge, int portIndex, int tre
 		if (!b->_currentLogLine.text.empty() && (b->_currentLogLine.text.back() == L'\n'))
 		{
 			b->_logLines.push_back(make_unique<BridgeLogLine>(move(b->_currentLogLine)));
-			BridgeLogLineGenerated::InvokeHandlers (b->_em, b, b->_logLines.back().get());
+			BridgeLogLineGenerated::InvokeHandlers (*b, b, b->_logLines.back().get());
 		}
 	}
 
 	if (flush && !b->_currentLogLine.text.empty())
 	{
 		b->_logLines.push_back(make_unique<BridgeLogLine>(move(b->_currentLogLine)));
-		BridgeLogLineGenerated::InvokeHandlers (b->_em, b, b->_logLines.back().get());
+		BridgeLogLineGenerated::InvokeHandlers (*b, b, b->_logLines.back().get());
 	}
 }
 
@@ -584,13 +583,13 @@ void Bridge::StpCallback_OnNotifiedTopologyChange (STP_BRIDGE* bridge, unsigned 
 void Bridge::StpCallback_OnPortRoleChanged (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role, unsigned int timestamp)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
-	InvalidateEvent::InvokeHandlers(b->_em, b);
+	InvalidateEvent::InvokeHandlers(*b, b);
 }
 
 void Bridge::StpCallback_OnConfigChanged (struct STP_BRIDGE* bridge, unsigned int timestamp)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
-	BridgeConfigChangedEvent::InvokeHandlers (b->_em, b);
-	InvalidateEvent::InvokeHandlers(b->_em, b);
+	BridgeConfigChangedEvent::InvokeHandlers (*b, b);
+	InvalidateEvent::InvokeHandlers(*b, b);
 }
 #pragma endregion

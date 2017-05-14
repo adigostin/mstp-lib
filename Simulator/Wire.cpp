@@ -45,7 +45,7 @@ void Wire::SetPoint (size_t pointIndex, const WireEnd& point)
 			auto portB = get<ConnectedWireEnd>(_points[1 - pointIndex]);
 		}
 		*/
-		WireInvalidateEvent::InvokeHandlers(_em, this);
+		WireInvalidateEvent::InvokeHandlers(*this, this);
 	}
 }
 

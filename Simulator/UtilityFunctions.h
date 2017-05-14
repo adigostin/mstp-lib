@@ -31,16 +31,13 @@ struct DrawingObjects
 
 struct IZoomable;
 
-class Object
+class Object : public EventManager
 {
-protected:
-	EventManager _em;
-
 public:
 	virtual ~Object() = default;
 
 	struct InvalidateEvent : public Event<InvalidateEvent, void(Object*)> { };
-	InvalidateEvent::Subscriber GetInvalidateEvent() { return InvalidateEvent::Subscriber(_em); }
+	InvalidateEvent::Subscriber GetInvalidateEvent() { return InvalidateEvent::Subscriber(*this); }
 
 	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const = 0;
 	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) = 0;

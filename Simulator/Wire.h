@@ -11,7 +11,6 @@ struct WireInvalidateEvent : public Event<WireInvalidateEvent, void(Wire*)> { };
 class Wire : public Object
 {
 	std::array<WireEnd, 2> _points;
-	EventManager _em;
 	std::string _debugName;
 
 public:
@@ -29,7 +28,7 @@ public:
 	D2D1_POINT_2F GetP0Coords() const { return GetPointCoords(0); }
 	D2D1_POINT_2F GetP1Coords() const { return GetPointCoords(1); }
 
-	WireInvalidateEvent::Subscriber GetWireInvalidateEvent() { return WireInvalidateEvent::Subscriber(_em); }
+	WireInvalidateEvent::Subscriber GetWireInvalidateEvent() { return WireInvalidateEvent::Subscriber(*this); }
 
 	IXMLDOMElementPtr Serialize (IXMLDOMDocument3* doc) const;
 

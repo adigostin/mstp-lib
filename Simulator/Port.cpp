@@ -299,6 +299,6 @@ void Port::SetSideAndOffset (Side side, float offset)
 	{
 		_side = side;
 		_offset = offset;
-		InvalidateEvent::InvokeHandlers (_em, this);
+		InvalidateEvent::InvokeHandlers (*this, this);
 	}
 }

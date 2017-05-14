@@ -6,12 +6,11 @@
 
 using namespace std;
 
-class Selection : public ISelection
+class Selection : public EventManager, public ISelection
 {
 	IProjectPtr const _project;
 	ULONG _refCount = 1;
 	vector<Object*> _objects;
-	EventManager _em;
 
 public:
 	Selection (IProject* project)
@@ -38,7 +37,7 @@ private:
 		if (it != _objects.end())
 		{
 			RemoveInternal(it - _objects.begin());
-			ChangedEvent::InvokeHandlers(_em, this);
+			ChangedEvent::InvokeHandlers(*this, this);
 		}
 	}
 
@@ -47,12 +46,12 @@ private:
 	void AddInternal (Object* o)
 	{
 		_objects.push_back(o);
-		AddedToSelectionEvent::InvokeHandlers(_em, this, o);
+		AddedToSelectionEvent::InvokeHandlers(*this, this, o);
 	}
 
 	void RemoveInternal (size_t index)
 	{
-		RemovingFromSelectionEvent::InvokeHandlers (_em, this, _objects[index]);
+		RemovingFromSelectionEvent::InvokeHandlers (*this, this, _objects[index]);
 		_objects.erase(_objects.begin() + index);
 	}
 
@@ -62,7 +61,7 @@ private:
 		{
 			while (!_objects.empty())
 				RemoveInternal (_objects.size() - 1);
-			ChangedEvent::InvokeHandlers(_em, this);
+			ChangedEvent::InvokeHandlers(*this, this);
 		}
 	}
 
@@ -76,7 +75,7 @@ private:
 			while (!_objects.empty())
 				RemoveInternal(_objects.size() - 1);
 			AddInternal(o);
-			ChangedEvent::InvokeHandlers(_em, this);
+			ChangedEvent::InvokeHandlers(*this, this);
 		}
 	}
 
@@ -89,14 +88,14 @@ private:
 			throw invalid_argument("Object was already added to selection.");
 
 		AddInternal(o);
-		ChangedEvent::InvokeHandlers(_em, this);
+		ChangedEvent::InvokeHandlers(*this, this);
 	}
 
-	virtual AddedToSelectionEvent::Subscriber GetAddedToSelectionEvent() override final { return AddedToSelectionEvent::Subscriber(_em); }
+	virtual AddedToSelectionEvent::Subscriber GetAddedToSelectionEvent() override final { return AddedToSelectionEvent::Subscriber(*this); }
 
-	virtual RemovingFromSelectionEvent::Subscriber GetRemovingFromSelectionEvent() override final { return RemovingFromSelectionEvent::Subscriber(_em); }
+	virtual RemovingFromSelectionEvent::Subscriber GetRemovingFromSelectionEvent() override final { return RemovingFromSelectionEvent::Subscriber(*this); }
 
-	virtual ChangedEvent::Subscriber GetChangedEvent() override final { return ChangedEvent::Subscriber(_em); }
+	virtual ChangedEvent::Subscriber GetChangedEvent() override final { return ChangedEvent::Subscriber(*this); }
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
 
