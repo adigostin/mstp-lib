@@ -10,18 +10,15 @@ static constexpr wchar_t DockContainerClassName[] = L"DockContainer-{24B42526-29
 class DockContainer : public IDockContainer
 {
 	ULONG _refCount = 1;
+	HINSTANCE const _hInstance;
 	EventManager _em;
 	HWND _hwnd = nullptr;
 	vector<IDockablePanelPtr> _dockablePanels;
 
 public:
-	DockContainer(HWND hWndParent, const RECT& rect)
+	DockContainer (HINSTANCE hInstance, HWND hWndParent, const RECT& rect)
+		: _hInstance(hInstance)
 	{
-		HINSTANCE hInstance;
-		BOOL bRes = GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR)&wndClassAtom, &hInstance);
-		if (!bRes)
-			throw win32_exception(GetLastError());
-
 		if (wndClassAtom == 0)
 		{
 			WNDCLASS wndClass =
@@ -214,7 +211,7 @@ public:
 
 		LayOutContent (contentRect);
 
-		auto panel = dockablePanelFactory (panelUniqueName, _hwnd, panelRect, side, title);
+		auto panel = dockablePanelFactory (_hInstance, panelUniqueName, _hwnd, panelRect, side, title);
 		panel->GetVisibleChangedEvent().AddHandler (&OnPanelVisibleChanged, this);
 		panel->GetSplitterDraggingEvent().AddHandler (&OnSidePanelSplitterDragging, this);
 		_dockablePanels.push_back(panel);

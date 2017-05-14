@@ -30,11 +30,11 @@ enum class MouseButton
 	Middle = 4,
 };
 
-struct __declspec(novtable) IWin32Window
+MIDL_INTERFACE("C5D357E8-4A20-43D8-9C40-0CE4DC7C637C") IWin32Window : public IUnknown
 {
 	virtual HWND GetHWnd() const = 0;
-	virtual RECT GetClientRectPixels() const;
 
+	RECT GetClientRectPixels() const;
 	RECT GetWindowRect() const;
 	SIZE GetWindowSize() const;
 	SIZE GetClientSize() const;
@@ -64,27 +64,25 @@ extern const SelectionFactory selectionFactory;
 
 // ============================================================================
 
-MIDL_INTERFACE("E97899CA-925F-43A7-A0C2-F8743A914BAB") IDockContainer : public IUnknown
+MIDL_INTERFACE("E97899CA-925F-43A7-A0C2-F8743A914BAB") IDockContainer : public IWin32Window
 {
-	virtual HWND GetHWnd() const = 0;
 	virtual RECT GetContentRect() const = 0;
 	virtual IDockablePanel* CreatePanel (const char* panelUniqueName, Side side, const wchar_t* title) = 0;
 	virtual IDockablePanel* GetPanel (const char* panelUniqueName) const = 0;
 	virtual void ResizePanel (IDockablePanel* panel, SIZE size) = 0;
 };
 _COM_SMARTPTR_TYPEDEF(IDockContainer, __uuidof(IDockContainer));
-using DockContainerFactory = IDockContainerPtr(*const)(HWND hWndParent, const RECT& rect);
+using DockContainerFactory = IDockContainerPtr(*const)(HINSTANCE hInstance, HWND hWndParent, const RECT& rect);
 extern const DockContainerFactory dockContainerFactory;
 
 // ============================================================================
 
-MIDL_INTERFACE("EE540D38-79DC-479B-9619-D253EB9BA812") IDockablePanel : public IUnknown
+MIDL_INTERFACE("EE540D38-79DC-479B-9619-D253EB9BA812") IDockablePanel : public IWin32Window
 {
 	struct VisibleChangedEvent : public Event<VisibleChangedEvent, void(IDockablePanel* panel, bool visible)> {};
 	struct SplitterDragging : public Event<SplitterDragging, void(IDockablePanel* panel, SIZE proposedSize)> {};
 
 	virtual const std::string& GetUniqueName() const = 0;
-	virtual HWND GetHWnd() const = 0;
 	virtual Side GetSide() const = 0;
 	virtual POINT GetContentLocation() const = 0;
 	virtual SIZE GetContentSize() const = 0;
@@ -109,7 +107,7 @@ MIDL_INTERFACE("EE540D38-79DC-479B-9619-D253EB9BA812") IDockablePanel : public I
 	}
 };
 _COM_SMARTPTR_TYPEDEF(IDockablePanel, __uuidof(IDockablePanel));
-using DockablePanelFactory = IDockablePanelPtr(*const)(const char* panelUniqueName, HWND hWndParent, const RECT& rect, Side side, const wchar_t* title);
+using DockablePanelFactory = IDockablePanelPtr(*const)(HINSTANCE hInstance, const char* panelUniqueName, HWND hWndParent, const RECT& rect, Side side, const wchar_t* title);
 extern const DockablePanelFactory dockablePanelFactory;
 
 // ============================================================================
@@ -140,9 +138,8 @@ struct MouseLocation
 	D2D1_POINT_2F w;
 };
 
-MIDL_INTERFACE("09C8FD2D-9A51-4B25-A3B4-3BCD3923FB9F") IEditArea : public IUnknown
+MIDL_INTERFACE("09C8FD2D-9A51-4B25-A3B4-3BCD3923FB9F") IEditArea : public IWin32Window
 {
-	virtual HWND GetHWnd() const = 0;
 	virtual const DrawingObjects& GetDrawingObjects() const = 0;
 	virtual void EnterState (std::unique_ptr<EditState>&& state) = 0;
 	virtual Port* GetCPAt (D2D1_POINT_2F dLocation, float tolerance) const = 0;
@@ -163,9 +160,8 @@ extern const EditAreaFactory editAreaFactory;
 
 // ============================================================================
 
-MIDL_INTERFACE("62555843-4CB8-43FB-8C91-F229A4D318BD") IProjectWindow : public IUnknown
+MIDL_INTERFACE("62555843-4CB8-43FB-8C91-F229A4D318BD") IProjectWindow : public IWin32Window
 {
-	virtual HWND GetHWnd() const = 0;
 	virtual IProject* GetProject() const = 0;
 	virtual IEditArea* GetEditArea() const = 0;
 	virtual void SelectVlan (unsigned int vlanNumber) = 0;
@@ -255,7 +251,7 @@ extern const ProjectFactory projectFactory;
 
 // ============================================================================
 
-MIDL_INTERFACE("8C5BA174-3A21-4953-BAA4-D04E8F2EB87F") IPropertiesWindow : public IWin32Window, public IUnknown
+MIDL_INTERFACE("8C5BA174-3A21-4953-BAA4-D04E8F2EB87F") IPropertiesWindow : public IWin32Window
 {
 };
 _COM_SMARTPTR_TYPEDEF(IPropertiesWindow, __uuidof(IPropertiesWindow));
@@ -268,7 +264,7 @@ extern const PropertiesWindowFactory propertiesWindowFactory;
 
 // ============================================================================
 
-MIDL_INTERFACE("6438D8FC-058B-4A83-A4DC-2B48AE028D09") IBridgePropsWindow : public IWin32Window, public IUnknown
+MIDL_INTERFACE("6438D8FC-058B-4A83-A4DC-2B48AE028D09") IBridgePropsWindow : public IWin32Window
 {
 };
 _COM_SMARTPTR_TYPEDEF(IBridgePropsWindow, __uuidof(IBridgePropsWindow));
@@ -281,7 +277,7 @@ extern const BridgePropsWindowFactory bridgePropertiesControlFactory;
 
 // ============================================================================
 
-MIDL_INTERFACE("A6A83670-0AE9-41EC-B98E-C1FD369FEB4D") IVlanWindow : public IWin32Window, public IUnknown
+MIDL_INTERFACE("A6A83670-0AE9-41EC-B98E-C1FD369FEB4D") IVlanWindow : public IWin32Window
 {
 };
 _COM_SMARTPTR_TYPEDEF(IVlanWindow, __uuidof(IVlanWindow));

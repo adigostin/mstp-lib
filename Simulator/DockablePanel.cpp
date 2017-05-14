@@ -1,23 +1,23 @@
 
 #include "pch.h"
 #include "Simulator.h"
+#include "Window.h"
 
 using namespace std;
 
 static ATOM WndClassAtom;
-static constexpr wchar_t WndClassName[] = L"LogArea-{0428F330-C81A-4AC7-AEDA-D4E2BBEFFB03}";
+static constexpr wchar_t WndClassName[] = L"DockablePanel-{669FD954-5F64-4073-ADDC-33AFA47190D8}";
 static const float CloseButtonSizeDips = 16;
 static const float CloseButtonMarginDips = 2;
 static const float TitleBarHeightDips = CloseButtonMarginDips + CloseButtonSizeDips + CloseButtonMarginDips;
 static const int SplitterWidthDips = 4;
 
-class DockablePanel : public EventManager, public IDockablePanel
+class DockablePanel : public Window, public IDockablePanel
 {
+	using base = Window;
+
 	string const _panelUniqueName;
-	ULONG _refCount = 1;
 	Side _side;
-	HWND _hwnd;
-	SIZE _clientSize;
 	HFONT_unique_ptr _titleBarFont;
 	int _dpiX, _dpiY;
 	bool _closeButtonDown = false;
@@ -26,45 +26,16 @@ class DockablePanel : public EventManager, public IDockablePanel
 	wstring _title;
 
 public:
-	DockablePanel (const char* panelUniqueName, HWND hWndParent, const RECT& rect, Side side, const wchar_t* title)
-		: _panelUniqueName(panelUniqueName), _side(side), _title(title)
+	DockablePanel (HINSTANCE hInstance, const char* panelUniqueName, HWND hWndParent, const RECT& rect, Side side, const wchar_t* title)
+		: base (hInstance, WndClassName, 0, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, rect, hWndParent, nullptr)
+		, _panelUniqueName(panelUniqueName)
+		, _side(side)
+		, _title(title)
 	{
-		HINSTANCE hInstance;
-		BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) WndClassName, &hInstance);
-		if (!bRes)
-			throw win32_exception(GetLastError());
-
-		if (WndClassAtom == 0)
-		{
-			WNDCLASSEX wcex;
-			wcex.cbSize = sizeof (wcex);
-			wcex.style = CS_DBLCLKS | CS_HREDRAW | CS_VREDRAW;
-			wcex.lpfnWndProc = &WindowProcStatic;
-			wcex.cbClsExtra = 0;
-			wcex.cbWndExtra = 0;
-			wcex.hInstance = hInstance;
-			wcex.hIcon = nullptr;
-			wcex.hCursor = LoadCursor (nullptr, IDC_ARROW);
-			wcex.hbrBackground = (HBRUSH) (COLOR_WINDOW + 1);
-			wcex.lpszMenuName = nullptr;
-			wcex.lpszClassName = WndClassName;
-			wcex.hIconSm = 0;
-			WndClassAtom = RegisterClassEx (&wcex);
-			if (WndClassAtom == 0)
-				throw win32_exception(GetLastError());
-		}
-
-		auto hwnd = ::CreateWindow (WndClassName, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN,
-									rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,
-									hWndParent, nullptr, hInstance, this);
-		if (hwnd == nullptr)
-			throw win32_exception(GetLastError());
-		assert (hwnd == _hwnd);
-
-		HDC screen = GetDC(0);
+		HDC screen = GetDC(GetHWnd());
 		_dpiX = GetDeviceCaps (screen, LOGPIXELSX);
 		_dpiY = GetDeviceCaps (screen, LOGPIXELSY);
-		ReleaseDC (0, screen);
+		ReleaseDC (GetHWnd(), screen);
 
 		NONCLIENTMETRICS ncMetrics = { sizeof(NONCLIENTMETRICS) };
 		SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncMetrics, 0);
@@ -72,12 +43,6 @@ public:
 		if (f == nullptr)
 			throw win32_exception(GetLastError());
 		_titleBarFont = HFONT_unique_ptr(f);
-	}
-
-	~DockablePanel()
-	{
-		if (_hwnd != nullptr)
-			::DestroyWindow(_hwnd);
 	}
 
 	virtual const std::string& GetUniqueName() const override final { return _panelUniqueName; }
@@ -109,9 +74,9 @@ public:
 	virtual SIZE GetContentSize() const override final
 	{
 		if ((_side == Side::Left) || (_side == Side::Right))
-			return SIZE { _clientSize.cx - SplitterSizePixels(), _clientSize.cy - TitleBarHeightPixels() };
+			return SIZE { GetClientWidthPixels() - SplitterSizePixels(), GetClientHeightPixels() - TitleBarHeightPixels() };
 		else
-			return SIZE { _clientSize.cx, _clientSize.cy - SplitterSizePixels() - TitleBarHeightPixels() };
+			return SIZE { GetClientWidthPixels(), GetClientHeightPixels() - SplitterSizePixels() - TitleBarHeightPixels() };
 	}
 
 	RECT GetSplitterRect()
@@ -119,13 +84,13 @@ public:
 		switch (_side)
 		{
 			case Side::Left:
-				return RECT { _clientSize.cx - SplitterSizePixels(), 0, _clientSize.cx, _clientSize.cy };
+				return RECT { GetClientWidthPixels() - SplitterSizePixels(), 0, GetClientWidthPixels(), GetClientHeightPixels() };
 
 			case Side::Right:
-				return RECT { 0, 0, SplitterSizePixels(), _clientSize.cy };
+				return RECT { 0, 0, SplitterSizePixels(), GetClientHeightPixels() };
 
 			case Side::Top:
-				return RECT { 0, _clientSize.cy - SplitterSizePixels(), _clientSize.cx, _clientSize.cy };
+				return RECT { 0, GetClientHeightPixels() - SplitterSizePixels(), GetClientWidthPixels(), GetClientHeightPixels() };
 
 			default:
 				throw not_implemented_exception();
@@ -137,13 +102,13 @@ public:
 		switch (_side)
 		{
 			case Side::Left:
-				return RECT { 0, 0, _clientSize.cx - SplitterSizePixels(), TitleBarHeightPixels() };
+				return RECT { 0, 0, GetClientWidthPixels() - SplitterSizePixels(), TitleBarHeightPixels() };
 
 			case Side::Right:
-				return RECT { SplitterSizePixels(), 0, _clientSize.cx, TitleBarHeightPixels() };
+				return RECT { SplitterSizePixels(), 0, GetClientWidthPixels(), TitleBarHeightPixels() };
 
 			case Side::Top:
-				return RECT { 0, 0, _clientSize.cx, TitleBarHeightPixels() };
+				return RECT { 0, 0, GetClientWidthPixels(), TitleBarHeightPixels() };
 
 			default:
 				throw not_implemented_exception();
@@ -162,53 +127,13 @@ public:
 		return rect;
 	}
 
-	static LRESULT CALLBACK WindowProcStatic (HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+	virtual std::optional<LRESULT> WindowProc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) override
 	{
-		DockablePanel* panel;
-		if (uMsg == WM_NCCREATE)
-		{
-			LPCREATESTRUCT lpcs = reinterpret_cast<LPCREATESTRUCT>(lParam);
-			panel = reinterpret_cast<DockablePanel*>(lpcs->lpCreateParams);
-			panel->_hwnd = hwnd;
-			SetWindowLongPtr (hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(panel));
-		}
-		else
-			panel = reinterpret_cast<DockablePanel*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
-
-		if (panel == nullptr)
-		{
-			// this must be one of those messages sent before WM_NCCREATE or after WM_NCDESTROY.
-			return DefWindowProc (hwnd, uMsg, wParam, lParam);
-		}
-
-		auto result = panel->WindowProc (hwnd, uMsg, wParam, lParam);
-
-		if (uMsg == WM_NCDESTROY)
-		{
-			panel->_hwnd = nullptr;
-			SetWindowLongPtr (hwnd, GWLP_USERDATA, 0);
-		}
-
-		if (result)
-			return result.value();
-
-		return ::DefWindowProc(hwnd, uMsg, wParam, lParam);
-	}
-
-	std::optional<LRESULT> WindowProc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
-	{
-		if (msg == WM_CREATE)
-		{
-			auto cs = reinterpret_cast<const CREATESTRUCT*>(lParam);
-			_clientSize = { cs->cx, cs->cy };
-			return 0;
-		}
+		auto resultBaseClass = base::WindowProc (hwnd, msg, wParam, lParam);
 
 		if (msg == WM_SIZE)
 		{
-			_clientSize = { LOWORD(lParam), HIWORD(lParam) };
-
-			auto contentHWnd = ::GetWindow (_hwnd, GW_CHILD);
+			auto contentHWnd = ::GetWindow (hwnd, GW_CHILD);
 			if (contentHWnd != nullptr)
 			{
 				auto cr = GetContentRect();
@@ -223,7 +148,7 @@ public:
 
 		if (msg == WM_PAINT)
 		{
-			ProcessWmPaint();
+			ProcessWmPaint(hwnd);
 			return 0;
 		}
 
@@ -247,7 +172,7 @@ public:
 
 		if (msg == WM_SETCURSOR)
 		{
-			if (((HWND) wParam == _hwnd) && (LOWORD (lParam) == HTCLIENT))
+			if (((HWND) wParam == hwnd) && (LOWORD (lParam) == HTCLIENT))
 			{
 				POINT pt;
 				BOOL bRes = GetCursorPos (&pt);
@@ -255,7 +180,7 @@ public:
 				// (happens for example when the monitor goes to sleep and then the lock screen is displayed).
 				if (bRes)
 				{
-					bRes = ScreenToClient (_hwnd, &pt);
+					bRes = ScreenToClient (hwnd, &pt);
 					if (bRes)
 						ProcessWmSetCursor (pt);
 					return 0;
@@ -278,7 +203,7 @@ public:
 			return 0;
 		}
 
-		return nullopt;
+		return resultBaseClass;
 	}
 
 	void ProcessWmSetCursor (POINT pt)
@@ -303,10 +228,10 @@ public:
 		SetCursor (LoadCursor (nullptr, IDC_ARROW));
 	}
 
-	void ProcessWmPaint()
+	void ProcessWmPaint (HWND hwnd)
 	{
 		PAINTSTRUCT ps;
-		auto hdc = BeginPaint(_hwnd, &ps);
+		auto hdc = BeginPaint(hwnd, &ps);
 
 		RECT titleBarRect = GetTitleBarRect();
 		FillRect (ps.hdc, &titleBarRect, GetSysColorBrush (COLOR_ACTIVECAPTION));
@@ -330,18 +255,18 @@ public:
 		HBRUSH splitterBrush = GetSysColorBrush (COLOR_3DFACE);
 		FillRect (ps.hdc, &splitterRect, splitterBrush);
 
-		EndPaint (_hwnd, &ps);
+		EndPaint (hwnd, &ps);
 	}
 
 	void ProcessLButtonDown (DWORD modifierKeys, POINT pt)
 	{
-		SetCapture (_hwnd);
+		SetCapture (GetHWnd());
 
 		auto closeButtonRect = GetCloseButtonRect();
 		if (PtInRect (&closeButtonRect, pt))
 		{
 			_closeButtonDown = true;
-			InvalidateRect (_hwnd, &closeButtonRect, FALSE);
+			InvalidateRect (GetHWnd(), &closeButtonRect, FALSE);
 		}
 
 		auto splitterRect = GetSplitterRect();
@@ -349,7 +274,7 @@ public:
 		{
 			_draggingSplitter = true;
 			_draggingSplitterLastMouseScreenLocation = pt;
-			ClientToScreen (_hwnd, &_draggingSplitterLastMouseScreenLocation);
+			ClientToScreen (GetHWnd(), &_draggingSplitterLastMouseScreenLocation);
 		}
 	}
 
@@ -360,9 +285,9 @@ public:
 		if (_closeButtonDown)
 		{
 			_closeButtonDown = false;
-			auto style = GetWindowLongPtr(_hwnd, GWL_STYLE);
+			auto style = GetWindowLongPtr(GetHWnd(), GWL_STYLE);
 			style ^= WS_VISIBLE;
-			::SetWindowLongPtr (_hwnd, GWL_STYLE, style);
+			::SetWindowLongPtr (GetHWnd(), GWL_STYLE, style);
 		}
 		else if (_draggingSplitter)
 		{
@@ -390,23 +315,23 @@ public:
 			if (!PtInRect (&closeButtonRect, pt))
 			{
 				_closeButtonDown = false;
-				InvalidateRect (_hwnd, &closeButtonRect, FALSE);
+				InvalidateRect (GetHWnd(), &closeButtonRect, FALSE);
 			}
 		}
 		else if (_draggingSplitter)
 		{
 			POINT ptScreen = pt;
-			::ClientToScreen(_hwnd, &ptScreen);
+			::ClientToScreen(GetHWnd(), &ptScreen);
 
 			SIZE offset = { ptScreen.x - _draggingSplitterLastMouseScreenLocation.x, ptScreen.y - _draggingSplitterLastMouseScreenLocation.y };
 
 			SIZE proposedSize;
 			if (_side == Side::Left)
-				proposedSize = { _clientSize.cx + offset.cx, _clientSize.cy };
+				proposedSize = { GetClientWidthPixels() + offset.cx, GetClientHeightPixels() };
 			else if (_side == Side::Right)
-				proposedSize = { _clientSize.cx - offset.cx, _clientSize.cy };
+				proposedSize = { GetClientWidthPixels() - offset.cx, GetClientHeightPixels() };
 			else if (_side == Side::Top)
-				proposedSize = { _clientSize.cx, _clientSize.cy + offset.cy };
+				proposedSize = { GetClientWidthPixels(), GetClientHeightPixels() + offset.cy };
 			else
 				throw not_implemented_exception();
 
@@ -415,8 +340,6 @@ public:
 			_draggingSplitterLastMouseScreenLocation = ptScreen;
 		}
 	}
-
-	virtual HWND GetHWnd() const override final { return _hwnd; }
 
 	virtual VisibleChangedEvent::Subscriber GetVisibleChangedEvent() override final { return VisibleChangedEvent::Subscriber(*this); }
 
@@ -433,21 +356,10 @@ public:
 		throw not_implemented_exception();
 	}
 
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
-
-	virtual ULONG STDMETHODCALLTYPE AddRef() override final
-	{
-		return InterlockedIncrement(&_refCount);
-	}
-
-	virtual ULONG STDMETHODCALLTYPE Release() override final
-	{
-		assert (_refCount > 0);
-		ULONG newRefCount = InterlockedDecrement(&_refCount);
-		if (newRefCount == 0)
-			delete this;
-		return newRefCount;
-	}
+	virtual HWND GetHWnd() const { return base::GetHWnd(); }
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return base::QueryInterface(riid, ppvObject); }
+	virtual ULONG STDMETHODCALLTYPE AddRef() override { return base::AddRef(); }
+	virtual ULONG STDMETHODCALLTYPE Release() override { return base::Release(); }
 };
 
 template<typename... Args>

@@ -53,11 +53,6 @@ public:
 		, _actionList(actionList)
 		, _selectedVlanNumber(selectedVlan)
 	{
-		HINSTANCE hInstance;
-		BOOL bRes = GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR)&wndClassAtom, &hInstance);
-		if (!bRes)
-			throw win32_exception(GetLastError());
-
 		if (wndClassAtom == 0)
 		{
 			WNDCLASSEX wndClassEx =
@@ -67,13 +62,13 @@ public:
 				&WindowProcStatic, // lpfnWndProc
 				0, // cbClsExtra
 				0, // cbWndExtra
-				hInstance, // hInstance
-				LoadIcon(hInstance, MAKEINTRESOURCE(IDI_DESIGNER)), // hIcon
+				_app->GetHInstance(),
+				LoadIcon(_app->GetHInstance(), MAKEINTRESOURCE(IDI_DESIGNER)), // hIcon
 				LoadCursor(nullptr, IDC_ARROW), // hCursor
 				nullptr,//(HBRUSH)(COLOR_WINDOW + 1), // hbrBackground
 				MAKEINTRESOURCE(IDR_MAIN_MENU), // lpszMenuName
 				ProjectWindowWndClassName,      // lpszClassName
-				LoadIcon(hInstance, MAKEINTRESOURCE(IDI_DESIGNER))
+				LoadIcon(_app->GetHInstance(), MAKEINTRESOURCE(IDI_DESIGNER))
 			};
 
 			wndClassAtom = RegisterClassEx(&wndClassEx);
@@ -90,7 +85,7 @@ public:
 			w = _restoreBounds.right - _restoreBounds.left;
 			h = _restoreBounds.bottom - _restoreBounds.top;
 		}
-		auto hwnd = ::CreateWindow(ProjectWindowWndClassName, L"STP Simulator", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, x, y, w, h, nullptr, 0, hInstance, this);
+		auto hwnd = ::CreateWindow(ProjectWindowWndClassName, L"STP Simulator", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, x, y, w, h, nullptr, 0, _app->GetHInstance(), this);
 		if (hwnd == nullptr)
 			throw win32_exception(GetLastError());
 		assert(hwnd == _hwnd);
@@ -99,10 +94,10 @@ public:
 		::ShowWindow (_hwnd, nCmdShow);
 
 		const RECT clientRect = { 0, 0, _clientSize.cx, _clientSize.cy };
-		_dockContainer = dockContainerFactory (_hwnd, clientRect);
+		_dockContainer = dockContainerFactory (_app->GetHInstance(), _hwnd, clientRect);
 
 		auto logPanel = _dockContainer->CreatePanel (LogPanelUniqueName, Side::Right, L"STP Log");
-		auto logArea = logAreaFactory (hInstance, logPanel->GetHWnd(), logPanel->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory(), _selection);
+		auto logArea = logAreaFactory (_app->GetHInstance(), logPanel->GetHWnd(), logPanel->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory(), _selection);
 		logPanel->GetVisibleChangedEvent().AddHandler (&OnLogPanelVisibleChanged, this);
 		SetMainMenuItemCheck (ID_VIEW_STPLOG, true);
 

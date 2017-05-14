@@ -19,7 +19,7 @@ Window::Window (HINSTANCE hInstance, const wchar_t* wndClassName, DWORD exStyle,
 		wcex.hInstance = hInstance;
 		wcex.hIcon = nullptr;
 		wcex.hCursor = LoadCursor (nullptr, IDC_ARROW);
-		wcex.hbrBackground = nullptr;//(HBRUSH) (COLOR_WINDOW + 1);
+		wcex.hbrBackground = (HBRUSH) (COLOR_WINDOW + 1);
 		wcex.lpszMenuName = nullptr;
 		wcex.lpszClassName = wndClassName;
 		wcex.hIconSm = 0;
