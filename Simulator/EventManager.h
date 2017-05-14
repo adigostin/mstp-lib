@@ -1,6 +1,8 @@
 #pragma once
 
-struct EventManager
+// This needs to be a base class (rather than a member variable) because the member variable
+// might be destroyed before subscribers have a chance to unsubscribe themselves.
+struct EventManager abstract
 {
 	friend struct EventBase;
 
