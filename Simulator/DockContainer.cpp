@@ -1,101 +1,30 @@
 
 #include "pch.h"
 #include "Simulator.h"
+#include "Window.h"
 
 using namespace std;
 
 static ATOM wndClassAtom;
 static constexpr wchar_t DockContainerClassName[] = L"DockContainer-{24B42526-2970-4B3C-A753-2DABD22C4BB0}";
 
-class DockContainer : public IDockContainer
+class DockContainer : public Window, public IDockContainer
 {
-	ULONG _refCount = 1;
+	using base = Window;
+
 	HINSTANCE const _hInstance;
-	EventManager _em;
-	HWND _hwnd = nullptr;
 	vector<IDockablePanelPtr> _dockablePanels;
 
 public:
 	DockContainer (HINSTANCE hInstance, HWND hWndParent, const RECT& rect)
-		: _hInstance(hInstance)
+		: base (hInstance, DockContainerClassName, 0, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, rect, hWndParent, nullptr)
+		, _hInstance(hInstance)
+	{ }
+
+	virtual std::optional<LRESULT> WindowProc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) override
 	{
-		if (wndClassAtom == 0)
-		{
-			WNDCLASS wndClass =
-			{
-				CS_DBLCLKS, // style
-				&WindowProcStatic, // lpfnWndProc
-				0, // cbClsExtra
-				0, // cbWndExtra
-				hInstance, // hInstance
-				nullptr, // hIcon
-				nullptr, // hCursor
-				nullptr, //(HBRUSH)(COLOR_WINDOW + 1), // hbrBackground
-				nullptr, // lpszMenuName
-				DockContainerClassName // lpszClassName
-			};
+		auto resultBaseClass = base::WindowProc (hwnd, msg, wParam, lParam);
 
-			wndClassAtom = RegisterClass(&wndClass);
-			if (wndClassAtom == 0)
-				throw win32_exception(GetLastError());
-		}
-
-		LONG x = rect.left;
-		LONG y = rect.top;
-		LONG w = rect.right - rect.left;
-		LONG h = rect.bottom - rect.top;
-		auto hwnd = ::CreateWindowEx(0, DockContainerClassName, L"", WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, x, y, w, h, hWndParent, 0, hInstance, this);
-		if (hwnd == nullptr)
-			throw win32_exception(GetLastError());
-		assert(hwnd == _hwnd);
-	}
-
-	~DockContainer()
-	{
-		if (_hwnd != nullptr)
-			::DestroyWindow(_hwnd);
-	}
-
-	static LRESULT CALLBACK WindowProcStatic(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-	{
-		//if (AssertFunctionRunning)
-		//{
-		//	// Let's try not to run application code while the assertion dialog is shown. We'll probably mess things up even more.
-		//	return DefWindowProc(hwnd, uMsg, wParam, lParam);
-		//}
-
-		DockContainer* window;
-		if (uMsg == WM_NCCREATE)
-		{
-			LPCREATESTRUCT lpcs = reinterpret_cast<LPCREATESTRUCT>(lParam);
-			window = reinterpret_cast<DockContainer*>(lpcs->lpCreateParams);
-			window->AddRef();
-			window->_hwnd = hwnd;
-			SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(window));
-		}
-		else
-			window = reinterpret_cast<DockContainer*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
-
-		if (window == nullptr)
-		{
-			// this must be one of those messages sent before WM_NCCREATE or after WM_NCDESTROY.
-			return DefWindowProc(hwnd, uMsg, wParam, lParam);
-		}
-
-		LRESULT result = window->WindowProc(uMsg, wParam, lParam);
-
-		if (uMsg == WM_NCDESTROY)
-		{
-			window->_hwnd = nullptr;
-			SetWindowLongPtr(hwnd, GWLP_USERDATA, 0);
-			window->Release();
-		}
-
-		return result;
-	}
-
-	LRESULT WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
-	{
 		if (msg == WM_SIZE)
 		{
 			auto contentRect = LayOutPanels (nullptr, true);
@@ -103,14 +32,12 @@ public:
 			return 0;
 		}
 
-		return DefWindowProc(_hwnd, msg, wParam, lParam);
+		return resultBaseClass;
 	}
-
-	virtual HWND GetHWnd() const override final { return _hwnd; }
 
 	HWND FindChild (std::function<bool(HWND child)> predicate)
 	{
-		auto child = ::GetWindow(_hwnd, GW_CHILD);
+		auto child = ::GetWindow(GetHWnd(), GW_CHILD);
 		if (child == nullptr)
 			return nullptr;
 
@@ -155,7 +82,7 @@ public:
 	RECT LayOutPanels (function<SIZE(IDockablePanel*)> getProposedSize, bool movePanelWindows) const
 	{
 		RECT contentRect;
-		BOOL bRes = ::GetClientRect(_hwnd, &contentRect); ThrowWin32IfFailed(bRes);
+		BOOL bRes = ::GetClientRect(GetHWnd(), &contentRect); ThrowWin32IfFailed(bRes);
 
 		for (auto& panel : _dockablePanels)
 		{
@@ -211,7 +138,7 @@ public:
 
 		LayOutContent (contentRect);
 
-		auto panel = dockablePanelFactory (_hInstance, panelUniqueName, _hwnd, panelRect, side, title);
+		auto panel = dockablePanelFactory (_hInstance, panelUniqueName, GetHWnd(), panelRect, side, title);
 		panel->GetVisibleChangedEvent().AddHandler (&OnPanelVisibleChanged, this);
 		panel->GetSplitterDraggingEvent().AddHandler (&OnSidePanelSplitterDragging, this);
 		_dockablePanels.push_back(panel);
@@ -241,21 +168,10 @@ public:
 		LayOutContent(contentRect);
 	}
 
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
-
-	virtual ULONG STDMETHODCALLTYPE AddRef() override final
-	{
-		return InterlockedIncrement(&_refCount);
-	}
-
-	virtual ULONG STDMETHODCALLTYPE Release() override final
-	{
-		assert (_refCount > 0);
-		ULONG newRefCount = InterlockedDecrement(&_refCount);
-		if (newRefCount == 0)
-			delete this;
-		return newRefCount;
-	}
+	virtual HWND GetHWnd() const { return base::GetHWnd(); }
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return base::QueryInterface(riid, ppvObject); }
+	virtual ULONG STDMETHODCALLTYPE AddRef() override { return base::AddRef(); }
+	virtual ULONG STDMETHODCALLTYPE Release() override { return base::Release(); }
 };
 
 template<typename... Args>
