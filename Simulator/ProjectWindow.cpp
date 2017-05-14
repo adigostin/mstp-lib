@@ -102,7 +102,7 @@ public:
 		_dockContainer = dockContainerFactory (_hwnd, clientRect);
 
 		auto logPanel = _dockContainer->CreatePanel (LogPanelUniqueName, Side::Right, L"STP Log");
-		auto logArea = logAreaFactory (logPanel->GetHWnd(), logPanel->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory(), _selection);
+		auto logArea = logAreaFactory (hInstance, logPanel->GetHWnd(), logPanel->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory(), _selection);
 		logPanel->GetVisibleChangedEvent().AddHandler (&OnLogPanelVisibleChanged, this);
 		SetMainMenuItemCheck (ID_VIEW_STPLOG, true);
 

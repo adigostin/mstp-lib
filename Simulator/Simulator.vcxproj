@@ -218,6 +218,7 @@
     <ClInclude Include="targetver.h" />
     <ClInclude Include="UtilityFunctions.h" />
     <ClInclude Include="Win32Defs.h" />
+    <ClInclude Include="Window.h" />
     <ClInclude Include="Wire.h" />
     <ClInclude Include="ZoomableWindow.h" />
   </ItemGroup>
@@ -260,6 +261,7 @@
     <ClCompile Include="DockablePanel.cpp" />
     <ClCompile Include="Simulator.cpp" />
     <ClCompile Include="UtilityFunctions.cpp" />
+    <ClCompile Include="Window.cpp" />
     <ClCompile Include="Wire.cpp" />
     <ClCompile Include="ZoomableWindow.cpp" />
   </ItemGroup>

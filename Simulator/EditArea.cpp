@@ -59,7 +59,7 @@ public:
 			  const RECT& rect,
 			  ID3D11DeviceContext1* deviceContext,
 			  IDWriteFactory* dWriteFactory)
-		: base (WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, hWndParent, nullptr, deviceContext, dWriteFactory)
+		: base (app->GetHInstance(), WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, hWndParent, nullptr, deviceContext, dWriteFactory)
 		, _app(app)
 		, _pw(pw)
 		, _project(project)

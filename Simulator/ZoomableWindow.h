@@ -8,7 +8,7 @@ struct ZoomTransformChangedEvent : public Event<ZoomTransformChangedEvent, void(
 
 class ZoomableWindow abstract : public D2DWindow, public IZoomable
 {
-	typedef D2DWindow base;
+	using base = D2DWindow;
 
 	static constexpr float ZoomFactor = 1.5f;
 	D2D1_POINT_2F _workspaceOrigin = { 0, 0 }; // Location in client area of the point (0;0) of the workspace
@@ -54,14 +54,11 @@ public:
 	virtual D2D1_POINT_2F GetDLocationFromWLocation (D2D1_POINT_2F wLocation) const override final;
 	virtual float GetDLengthFromWLength (float wLength) const override final { return wLength * _zoom; }
 
-	//Vector TransformSizeToProjectCoords(VectorD size);
-	//Vector TransformSizeToProjectCoords(VectorD size, coord_t alignSize);
-
 protected:
 	virtual std::optional<LRESULT> WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
 	virtual void OnBeforeRender() override;
 	virtual void OnAfterRender() override;
-	void OnZoomTransformChanged();
+	virtual void OnZoomTransformChanged();
 
 private:
 	void SetZoomAndOriginInternal (float zoom, float originX, float originY, bool smooth);

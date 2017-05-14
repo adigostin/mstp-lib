@@ -1,12 +1,11 @@
 
 #pragma once
 #include "EventManager.h"
+#include "Window.h"
 
-class D2DWindow abstract : public IUnknown
+class D2DWindow abstract : public Window
 {
-	ULONG _refCount = 1;
-	HWND _hwnd;
-	SIZE _clientSize;
+	using base = Window;
 	D2D1_SIZE_F _clientSizeDips;
 	bool _painting = false;
 	bool _forceFullPresentation;
@@ -21,15 +20,8 @@ class D2DWindow abstract : public IUnknown
 	ID2D1DeviceContextPtr _d2dDeviceContext;
 
 public:
-	D2DWindow (DWORD exStyle, DWORD style, const RECT& rect, HWND hWndParent, HMENU hMenuOrControlId, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory);
-protected:
-	virtual ~D2DWindow();
+	D2DWindow (HINSTANCE hInstance, DWORD exStyle, DWORD style, const RECT& rect, HWND hWndParent, HMENU hMenuOrControlId, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory);
 
-public:
-	HWND GetHWnd() const { return _hwnd; }
-	SIZE GetClientSizePixels() const { return _clientSize; }
-	LONG GetClientWidthPixels() const { return _clientSize.cx; }
-	LONG GetClientHeightPixels() const { return _clientSize.cy; }
 	D2D1_SIZE_F GetClientSizeDips() const { return _clientSizeDips; }
 	float GetClientWidthDips() const { return _clientSizeDips.width; }
 	float GetClientHeightDips() const { return _clientSizeDips.height; }
@@ -41,21 +33,16 @@ public:
 	ID2D1DeviceContext* GetDeviceContext() const { return _d2dDeviceContext; }
 	IDWriteFactory* GetDWriteFactory() const { return _dWriteFactory; }
 
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
-	virtual ULONG STDMETHODCALLTYPE AddRef();
-	virtual ULONG STDMETHODCALLTYPE Release();
-
 protected:
 	EventManager _em;
-	virtual std::optional<LRESULT> WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+	virtual std::optional<LRESULT> WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
 	virtual void OnBeforeRender() { }
 	virtual void Render(ID2D1DeviceContext* dc) const = 0;
 	virtual void OnAfterRender() { }
 private:
-	static LRESULT CALLBACK WindowProcStatic (HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 	void CreateD2DDeviceContext();
 	//void ReleaseD2DDeviceContext();
-	void ProcessWmPaint();
+	void ProcessWmPaint (HWND hwnd);
 };
 

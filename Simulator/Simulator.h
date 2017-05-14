@@ -118,7 +118,7 @@ MIDL_INTERFACE("{47DD7E84-9550-42DD-AECE-296878C0C631}") ILogArea abstract : pub
 {
 };
 _COM_SMARTPTR_TYPEDEF(ILogArea, __uuidof(ILogArea));
-using LogAreaFactory = ILogAreaPtr(*const)(HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, ISelection* selection);
+using LogAreaFactory = ILogAreaPtr(*const)(HINSTANCE hInstance, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, ISelection* selection);
 extern const LogAreaFactory logAreaFactory;
 
 // ============================================================================
