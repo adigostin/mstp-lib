@@ -2,8 +2,9 @@
 #pragma once
 #include "EventManager.h"
 
-class D2DWindow abstract
+class D2DWindow abstract : public IUnknown
 {
+	ULONG _refCount = 1;
 	HWND _hwnd;
 	SIZE _clientSize;
 	D2D1_SIZE_F _clientSizeDips;
@@ -21,8 +22,10 @@ class D2DWindow abstract
 
 public:
 	D2DWindow (DWORD exStyle, DWORD style, const RECT& rect, HWND hWndParent, HMENU hMenuOrControlId, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory);
-	~D2DWindow();
+protected:
+	virtual ~D2DWindow();
 
+public:
 	HWND GetHWnd() const { return _hwnd; }
 	SIZE GetClientSizePixels() const { return _clientSize; }
 	LONG GetClientWidthPixels() const { return _clientSize.cx; }
@@ -37,6 +40,10 @@ public:
 
 	ID2D1DeviceContext* GetDeviceContext() const { return _d2dDeviceContext; }
 	IDWriteFactory* GetDWriteFactory() const { return _dWriteFactory; }
+
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
+	virtual ULONG STDMETHODCALLTYPE AddRef();
+	virtual ULONG STDMETHODCALLTYPE Release();
 
 protected:
 	EventManager _em;

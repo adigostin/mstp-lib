@@ -30,7 +30,7 @@ enum class MouseButton
 	Middle = 4,
 };
 
-struct IWin32Window
+struct __declspec(novtable) IWin32Window
 {
 	virtual HWND GetHWnd() const = 0;
 	virtual RECT GetClientRectPixels() const;
@@ -42,9 +42,8 @@ struct IWin32Window
 
 // ============================================================================
 
-struct ISelection
+MIDL_INTERFACE("3ADCEF4B-9335-4DD7-8016-5958883A4347") ISelection : public IUnknown
 {
-	virtual ~ISelection() { }
 	virtual const std::vector<Object*>& GetObjects() const = 0;
 	virtual void Select (Object* o) = 0;
 	virtual void Clear() = 0;
@@ -59,33 +58,32 @@ struct ISelection
 	struct ChangedEvent : public Event<ChangedEvent, void(ISelection*)> { };
 	virtual ChangedEvent::Subscriber GetChangedEvent() = 0;
 };
-
-using SelectionFactory = ISelection*(*const)(IProject* project);
+_COM_SMARTPTR_TYPEDEF(ISelection, __uuidof(ISelection));
+using SelectionFactory = ISelectionPtr(*const)(IProject* project);
 extern const SelectionFactory selectionFactory;
 
 // ============================================================================
 
-struct IDockContainer abstract
+MIDL_INTERFACE("E97899CA-925F-43A7-A0C2-F8743A914BAB") IDockContainer : public IUnknown
 {
-	virtual ~IDockContainer() { }
 	virtual HWND GetHWnd() const = 0;
 	virtual RECT GetContentRect() const = 0;
-	virtual IDockablePanel* GetOrCreateDockablePanel(Side side, const wchar_t* title) = 0;
+	virtual IDockablePanel* CreatePanel (const char* panelUniqueName, Side side, const wchar_t* title) = 0;
+	virtual IDockablePanel* GetPanel (const char* panelUniqueName) const = 0;
 	virtual void ResizePanel (IDockablePanel* panel, SIZE size) = 0;
 };
-
-using DockContainerFactory = std::unique_ptr<IDockContainer>(*const)(HWND hWndParent, DWORD controlId, const RECT& rect);
-extern const DockContainerFactory dockPanelFactory;
+_COM_SMARTPTR_TYPEDEF(IDockContainer, __uuidof(IDockContainer));
+using DockContainerFactory = IDockContainerPtr(*const)(HWND hWndParent, const RECT& rect);
+extern const DockContainerFactory dockContainerFactory;
 
 // ============================================================================
 
-struct IDockablePanel abstract
+MIDL_INTERFACE("EE540D38-79DC-479B-9619-D253EB9BA812") IDockablePanel : public IUnknown
 {
-	virtual ~IDockablePanel() { }
-
 	struct VisibleChangedEvent : public Event<VisibleChangedEvent, void(IDockablePanel* panel, bool visible)> {};
 	struct SplitterDragging : public Event<SplitterDragging, void(IDockablePanel* panel, SIZE proposedSize)> {};
 
+	virtual const std::string& GetUniqueName() const = 0;
 	virtual HWND GetHWnd() const = 0;
 	virtual Side GetSide() const = 0;
 	virtual POINT GetContentLocation() const = 0;
@@ -110,19 +108,17 @@ struct IDockablePanel abstract
 		return { wr.right - wr.left, wr.bottom - wr.top };
 	}
 };
-
-using DockablePanelFactory = std::unique_ptr<IDockablePanel>(*const)(HWND hWndParent, const RECT& rect, Side side, const wchar_t* title);
+_COM_SMARTPTR_TYPEDEF(IDockablePanel, __uuidof(IDockablePanel));
+using DockablePanelFactory = IDockablePanelPtr(*const)(const char* panelUniqueName, HWND hWndParent, const RECT& rect, Side side, const wchar_t* title);
 extern const DockablePanelFactory dockablePanelFactory;
 
 // ============================================================================
 
-struct ILogArea abstract : public IWin32Window
+MIDL_INTERFACE("{47DD7E84-9550-42DD-AECE-296878C0C631}") ILogArea abstract : public IUnknown
 {
-	virtual ~ILogArea() { }
-	virtual void SelectBridge (Bridge* b) = 0;
 };
-
-using LogAreaFactory = std::unique_ptr<ILogArea>(*const)(HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory);
+_COM_SMARTPTR_TYPEDEF(ILogArea, __uuidof(ILogArea));
+using LogAreaFactory = ILogAreaPtr(*const)(HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, ISelection* selection);
 extern const LogAreaFactory logAreaFactory;
 
 // ============================================================================
@@ -144,9 +140,8 @@ struct MouseLocation
 	D2D1_POINT_2F w;
 };
 
-struct IEditArea abstract
+MIDL_INTERFACE("09C8FD2D-9A51-4B25-A3B4-3BCD3923FB9F") IEditArea : public IUnknown
 {
-	virtual ~IEditArea() { }
 	virtual HWND GetHWnd() const = 0;
 	virtual const DrawingObjects& GetDrawingObjects() const = 0;
 	virtual void EnterState (std::unique_ptr<EditState>&& state) = 0;
@@ -154,23 +149,24 @@ struct IEditArea abstract
 	virtual void RenderHoverCP (ID2D1RenderTarget* rt, Port* port) const = 0;
 	virtual D2D1::Matrix3x2F GetZoomTransform() const = 0;
 };
-
-using EditAreaFactory = std::unique_ptr<IEditArea>(*const)(ISimulatorApp* app,
-														   IProjectWindow* pw,
-														   HWND hWndParent,
-														   const RECT& rect,
-														   ID3D11DeviceContext1* deviceContext,
-														   IDWriteFactory* dWriteFactory);
+_COM_SMARTPTR_TYPEDEF(IEditArea, __uuidof(IEditArea));
+using EditAreaFactory = IEditAreaPtr(*const)(ISimulatorApp* app,
+											 IProjectWindow* pw,
+											 IProject* project,
+											 IActionList* actionList,
+											 ISelection* selection,
+											 HWND hWndParent,
+											 const RECT& rect,
+											 ID3D11DeviceContext1* deviceContext,
+											 IDWriteFactory* dWriteFactory);
 extern const EditAreaFactory editAreaFactory;
 
 // ============================================================================
 
-struct IProjectWindow : public IWin32Window
+MIDL_INTERFACE("62555843-4CB8-43FB-8C91-F229A4D318BD") IProjectWindow : public IUnknown
 {
-	virtual ~IProjectWindow() { }
+	virtual HWND GetHWnd() const = 0;
 	virtual IProject* GetProject() const = 0;
-	virtual const std::shared_ptr<IProject>& GetProjectPtr() const = 0;
-	virtual ISelection* GetSelection() const = 0;
 	virtual IEditArea* GetEditArea() const = 0;
 	virtual void SelectVlan (unsigned int vlanNumber) = 0;
 	virtual unsigned int GetSelectedVlanNumber() const = 0;
@@ -181,13 +177,14 @@ struct IProjectWindow : public IWin32Window
 	struct ClosedEvent : public Event<ClosedEvent, void(IProjectWindow* pw)> { };
 	virtual ClosedEvent::Subscriber GetClosedEvent() = 0;
 };
-
-using ProjectWindowFactory = std::unique_ptr<IProjectWindow>(*const)(ISimulatorApp* app,
-																	 const std::shared_ptr<IProject>& project,
-																	 SelectionFactory selectionFactory,
-																	 EditAreaFactory editAreaFactory,
-																	 int nCmdShow,
-																	 unsigned int selectedVlan);
+_COM_SMARTPTR_TYPEDEF(IProjectWindow, __uuidof(IProjectWindow));
+using ProjectWindowFactory = IProjectWindowPtr(*const)(ISimulatorApp* app,
+													   IProject* project,
+													   SelectionFactory selectionFactory,
+													   IActionList* actionList,
+													   EditAreaFactory editAreaFactory,
+													   int nCmdShow,
+													   unsigned int selectedVlan);
 extern const ProjectWindowFactory projectWindowFactory;
 
 // ============================================================================
@@ -198,10 +195,8 @@ struct EditAction
 	virtual void Redo() = 0;
 };
 
-struct IActionList
+MIDL_INTERFACE("3F68DA7D-68A0-411F-A481-D711F8527292") IActionList : public IUnknown
 {
-	virtual ~IActionList() { }
-
 	struct ChangedEvent : public Event<ChangedEvent, void(IActionList*)> { };
 
 	virtual ChangedEvent::Subscriber GetChangedEvent() = 0;
@@ -210,7 +205,8 @@ struct IActionList
 	virtual size_t GetSavePointIndex() const = 0;
 	virtual size_t GetEditPointIndex() const = 0;
 };
-using ActionListFactory = std::unique_ptr<IActionList>(*const)();
+_COM_SMARTPTR_TYPEDEF(IActionList, __uuidof(IActionList));
+using ActionListFactory = IActionListPtr(*const)();
 extern const ActionListFactory actionListFactory;
 
 // ============================================================================
@@ -225,10 +221,8 @@ struct ProjectInvalidateEvent : public Event<ProjectInvalidateEvent, void(IProje
 
 enum class SaveProjectOption { SaveUnconditionally, SaveIfChangedAskUserFirst };
 
-struct IProject abstract
+MIDL_INTERFACE("A7D9A5A8-DB3F-4147-B488-58D260365F65") IProject : public IUnknown
 {
-	virtual ~IProject() { }
-
 	virtual const std::vector<std::unique_ptr<Bridge>>& GetBridges() const = 0;
 	virtual void InsertBridge (size_t index, std::unique_ptr<Bridge>&& bridge) = 0;
 	virtual std::unique_ptr<Bridge> RemoveBridge (size_t index) = 0;
@@ -240,8 +234,6 @@ struct IProject abstract
 	virtual std::unique_ptr<Wire> RemoveWire (size_t index) = 0;
 	virtual WireInsertedEvent::Subscriber GetWireInsertedEvent() = 0;
 	virtual WireRemovingEvent::Subscriber GetWireRemovingEvent() = 0;
-
-	virtual IActionList* GetActionList() const = 0;
 
 	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() = 0;
 	virtual std::array<uint8_t, 6> AllocMacAddressRange (size_t count) = 0;
@@ -257,47 +249,49 @@ struct IProject abstract
 	std::pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const;
 	Port* FindConnectedPort (Port* txPort) const;
 };
-
-using ProjectFactory = std::unique_ptr<IProject>(*const)(ISimulatorApp* app, ActionListFactory actionListFactory);
+_COM_SMARTPTR_TYPEDEF(IProject, __uuidof(IProject));
+using ProjectFactory = IProjectPtr(*const)();
 extern const ProjectFactory projectFactory;
 
 // ============================================================================
 
-struct IPropertiesWindow : public IWin32Window
+MIDL_INTERFACE("8C5BA174-3A21-4953-BAA4-D04E8F2EB87F") IPropertiesWindow : public IWin32Window, public IUnknown
 {
-	virtual ~IPropertiesWindow() { }
 };
-
-using PropertiesWindowFactory = std::unique_ptr<IPropertiesWindow>(*const)(ISimulatorApp* app,
-																		   IProjectWindow* projectWindow,
-																		   HWND hWndParent,
-																		   POINT location);
+_COM_SMARTPTR_TYPEDEF(IPropertiesWindow, __uuidof(IPropertiesWindow));
+using PropertiesWindowFactory = IPropertiesWindowPtr(*const)(ISimulatorApp* app,
+															 IProjectWindow* projectWindow,
+															 ISelection* selection,
+															 HWND hWndParent,
+															 POINT location);
 extern const PropertiesWindowFactory propertiesWindowFactory;
 
 // ============================================================================
 
-struct IBridgePropsWindow : public IWin32Window
+MIDL_INTERFACE("6438D8FC-058B-4A83-A4DC-2B48AE028D09") IBridgePropsWindow : public IWin32Window, public IUnknown
 {
-	virtual ~IBridgePropsWindow() { }
 };
-
-using BridgePropsWindowFactory = std::unique_ptr<IBridgePropsWindow>(*const)(ISimulatorApp* app,
-																			 IProjectWindow* projectWindow,
-																			 HWND hwndParent,
-																			 POINT location);
+_COM_SMARTPTR_TYPEDEF(IBridgePropsWindow, __uuidof(IBridgePropsWindow));
+using BridgePropsWindowFactory = IBridgePropsWindowPtr(*const)(ISimulatorApp* app,
+															   IProjectWindow* projectWindow,
+															   ISelection* selection,
+															   HWND hwndParent,
+															   POINT location);
 extern const BridgePropsWindowFactory bridgePropertiesControlFactory;
 
 // ============================================================================
 
-struct IVlanWindow : public IWin32Window
+MIDL_INTERFACE("A6A83670-0AE9-41EC-B98E-C1FD369FEB4D") IVlanWindow : public IWin32Window, public IUnknown
 {
-	virtual ~IVlanWindow() { }
 };
-
-using VlanWindowFactory = std::unique_ptr<IVlanWindow>(*const)(ISimulatorApp* app,
-															   IProjectWindow* projectWindow,
-															   HWND hWndParent,
-															   POINT location);
+_COM_SMARTPTR_TYPEDEF(IVlanWindow, __uuidof(IVlanWindow));
+using VlanWindowFactory = IVlanWindowPtr(*const)(ISimulatorApp* app,
+												 IProjectWindow* pw,
+												 IProject* project,
+												 ISelection* selection,
+												 IActionList* actionList,
+												 HWND hWndParent,
+												 POINT location);
 extern const VlanWindowFactory vlanWindowFactory;
 
 // ============================================================================
@@ -308,8 +302,8 @@ struct ISimulatorApp
 	virtual ID3D11DeviceContext1* GetD3DDeviceContext() const = 0;
 	virtual IDWriteFactory* GetDWriteFactory() const = 0;
 	virtual const wchar_t* GetRegKeyPath() const = 0;
-	virtual void AddProjectWindow (std::unique_ptr<IProjectWindow>&& pw) = 0;
-	virtual const std::vector<std::unique_ptr<IProjectWindow>>& GetProjectWindows() const = 0;
+	virtual void AddProjectWindow (IProjectWindow* pw) = 0;
+	virtual const std::vector<IProjectWindowPtr>& GetProjectWindows() const = 0;
 	virtual const wchar_t* GetAppName() const = 0;
 };
 
@@ -321,5 +315,7 @@ struct IMSTConfigIdDialog
 	virtual UINT ShowModal (HWND hWndParent) = 0; // return IDOK, IDCANCEL, -1 (some error), 0 (hWndParent invalid or closed)
 };
 
-using MSTConfigIdDialogFactory = std::unique_ptr<IMSTConfigIdDialog>(*const)(ISimulatorApp* app, IProjectWindow* projectWindow);
+using MSTConfigIdDialogFactory = std::unique_ptr<IMSTConfigIdDialog>(*const)(ISimulatorApp* app,
+																			 IProjectWindow* projectWindow,
+																			 ISelection* selection);
 extern const MSTConfigIdDialogFactory mstConfigIdDialogFactory;

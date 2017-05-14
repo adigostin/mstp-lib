@@ -9,16 +9,18 @@ static constexpr wchar_t PropertiesWindowWndClassName[] = L"PropertiesWindow-{24
 
 class PropertiesWindow : public IPropertiesWindow
 {
+	ULONG _refCount = 1;
 	ISimulatorApp* const _app;
 	IProjectWindow* const _projectWindow;
 	HWND _hwnd = nullptr;
 	SIZE _clientSize;
 	HFONT _font;
-	unique_ptr<IBridgePropsWindow> _bridgePropsControl;
+	IBridgePropsWindowPtr _bridgePropsControl;
 
 public:
 	PropertiesWindow (ISimulatorApp* app,
 					  IProjectWindow* projectWindow,
+					  ISelection* selection,
 					  HWND hWndParent,
 					  POINT location)
 		: _app(app)
@@ -62,7 +64,7 @@ public:
 		SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0);
 		_font = ::CreateFontIndirect (&ncm.lfMessageFont);
 
-		_bridgePropsControl = bridgePropertiesControlFactory (_app, _projectWindow, _hwnd, { 0, 0 });
+		_bridgePropsControl = bridgePropertiesControlFactory (_app, _projectWindow, selection, _hwnd, { 0, 0 });
 
 		SIZE ws = _bridgePropsControl->GetWindowSize();
 		::MoveWindow (_hwnd, 0, 0, ws.cx, ws.cy, TRUE);
@@ -88,6 +90,7 @@ public:
 		{
 			LPCREATESTRUCT lpcs = reinterpret_cast<LPCREATESTRUCT>(lParam);
 			window = reinterpret_cast<PropertiesWindow*>(lpcs->lpCreateParams);
+			window->AddRef();
 			window->_hwnd = hwnd;
 			SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(window));
 		}
@@ -106,6 +109,7 @@ public:
 		{
 			window->_hwnd = nullptr;
 			SetWindowLongPtr(hwnd, GWLP_USERDATA, 0);
+			window->Release();
 		}
 
 		return result;
@@ -146,12 +150,28 @@ public:
 	}
 
 	virtual HWND GetHWnd() const override final { return _hwnd; }
+
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
+
+	virtual ULONG STDMETHODCALLTYPE AddRef() override final
+	{
+		return InterlockedIncrement(&_refCount);
+	}
+
+	virtual ULONG STDMETHODCALLTYPE Release() override final
+	{
+		assert (_refCount > 0);
+		ULONG newRefCount = InterlockedDecrement(&_refCount);
+		if (newRefCount == 0)
+			delete this;
+		return newRefCount;
+	}
 };
 
 template <typename... Args>
-static unique_ptr<IPropertiesWindow> Create (Args... args)
+static IPropertiesWindowPtr Create (Args... args)
 {
-	return unique_ptr<IPropertiesWindow>(new PropertiesWindow (std::forward<Args>(args)...));
+	return IPropertiesWindowPtr(new PropertiesWindow (std::forward<Args>(args)...), false);
 };
 
 const PropertiesWindowFactory propertiesWindowFactory = &Create;

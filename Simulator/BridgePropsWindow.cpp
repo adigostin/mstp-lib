@@ -12,6 +12,8 @@ class BridgePropsWindow : public IBridgePropsWindow
 {
 	ISimulatorApp*  const _app;
 	IProjectWindow* const _projectWindow;
+	ISelectionPtr const _selection;
+	ULONG _refCount = 1;
 	HWND _hwnd = nullptr;
 	HWND _bridgeAddressEdit = nullptr;
 	WNDPROC _bridgeAddressEditOriginalProc;
@@ -28,10 +30,12 @@ class BridgePropsWindow : public IBridgePropsWindow
 public:
 	BridgePropsWindow (ISimulatorApp* app,
 					   IProjectWindow* projectWindow,
+					   ISelection* selection,
 					   HWND hwndParent,
 					   POINT location)
 		: _app(app)
 		, _projectWindow(projectWindow)
+		, _selection(selection)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &DialogProcStatic, &hInstance);
@@ -44,18 +48,19 @@ public:
 		::GetWindowRect(_hwnd, &rc);
 		::MoveWindow (_hwnd, location.x, location.y, rc.right - rc.left, rc.bottom - rc.top, TRUE);
 
-		_projectWindow->GetSelection()->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
-		_projectWindow->GetSelection()->GetAddedToSelectionEvent().AddHandler (&OnObjectAddedToSelection, this);
-		_projectWindow->GetSelection()->GetRemovingFromSelectionEvent().AddHandler (&OnObjectRemovingFromSelection, this);
+		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
+		_selection->GetAddedToSelectionEvent().AddHandler (&OnObjectAddedToSelection, this);
+		_selection->GetRemovingFromSelectionEvent().AddHandler (&OnObjectRemovingFromSelection, this);
 		_projectWindow->GetSelectedVlanNumerChangedEvent().AddHandler (&OnSelectedVlanChanged, this);
 	}
 
+private:
 	~BridgePropsWindow()
 	{
 		_projectWindow->GetSelectedVlanNumerChangedEvent().RemoveHandler (&OnSelectedVlanChanged, this);
-		_projectWindow->GetSelection()->GetRemovingFromSelectionEvent().RemoveHandler (&OnObjectRemovingFromSelection, this);
-		_projectWindow->GetSelection()->GetAddedToSelectionEvent().RemoveHandler (&OnObjectAddedToSelection, this);
-		_projectWindow->GetSelection()->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
+		_selection->GetRemovingFromSelectionEvent().RemoveHandler (&OnObjectRemovingFromSelection, this);
+		_selection->GetAddedToSelectionEvent().RemoveHandler (&OnObjectAddedToSelection, this);
+		_selection->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
 
 		if (_hwnd != nullptr)
 			::DestroyWindow (_hwnd);
@@ -63,13 +68,13 @@ public:
 
 	virtual HWND GetHWnd() const override final { return _hwnd; }
 
-private:
 	static INT_PTR CALLBACK DialogProcStatic (HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
 		BridgePropsWindow* window;
 		if (uMsg == WM_INITDIALOG)
 		{
 			window = reinterpret_cast<BridgePropsWindow*>(lParam);
+			window->AddRef();
 			window->_hwnd = hwnd;
 			assert (GetWindowLongPtr(hwnd, GWLP_USERDATA) == 0);
 			SetWindowLongPtr (hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(window));
@@ -89,6 +94,7 @@ private:
 		{
 			window->_hwnd = nullptr;
 			SetWindowLongPtr (hwnd, GWLP_USERDATA, 0);
+			window->Release();
 		}
 
 		::SetWindowLongPtr (hwnd, DWLP_MSGRESULT, result.messageResult);
@@ -177,7 +183,7 @@ private:
 
 				if (LOWORD(wParam) == IDC_BUTTON_EDIT_MST_CONFIG_TABLE)
 				{
-					auto dialog = mstConfigIdDialogFactory(_app, _projectWindow);
+					auto dialog = mstConfigIdDialogFactory(_app, _projectWindow, _selection);
 					dialog->ShowModal(_projectWindow->GetHWnd());
 					return { TRUE, 0 };
 				}
@@ -226,7 +232,7 @@ private:
 		auto checkStpEnabled = GetDlgItem (_hwnd, IDC_CHECK_STP_ENABLED);
 
 		bool enable = Button_GetCheck(checkStpEnabled) == BST_UNCHECKED;
-		for (auto o : _projectWindow->GetSelection()->GetObjects())
+		for (auto o : _selection->GetObjects())
 		{
 			auto b = dynamic_cast<Bridge*>(o);
 			if (enable)
@@ -260,7 +266,7 @@ private:
 
 		auto timestamp = GetTimestampMilliseconds();
 
-		for (Object* o : _projectWindow->GetSelection()->GetObjects())
+		for (Object* o : _selection->GetObjects())
 		{
 			auto b = dynamic_cast<Bridge*>(o); assert (b != nullptr);
 			STP_SetStpVersion (b->GetStpBridge(), newVersion, timestamp);
@@ -403,9 +409,9 @@ private:
 
 	void LoadBridgeAddressTextBox()
 	{
-		if (_projectWindow->GetSelection()->GetObjects().size() == 1)
+		if (_selection->GetObjects().size() == 1)
 		{
-			auto bridge = dynamic_cast<Bridge*>(_projectWindow->GetSelection()->GetObjects().front());
+			auto bridge = dynamic_cast<Bridge*>(_selection->GetObjects().front());
 			std::array<unsigned char, 6> ba;
 			STP_GetBridgeAddress(bridge->GetStpBridge(), ba.data());
 			::SetWindowText (_bridgeAddressEdit, bridge->GetBridgeAddressAsString().c_str());
@@ -424,7 +430,7 @@ private:
 
 		auto checkStpEnabled = GetDlgItem (_hwnd, IDC_CHECK_STP_ENABLED);
 
-		auto& objects = _projectWindow->GetSelection()->GetObjects();
+		auto& objects = _selection->GetObjects();
 
 		if (none_of (objects.begin(), objects.end(), getStpStarted))
 			::SendMessage (checkStpEnabled, BM_SETCHECK, BST_UNCHECKED, 0);
@@ -440,7 +446,7 @@ private:
 
 		int index = -1;
 
-		auto& objects = _projectWindow->GetSelection()->GetObjects();
+		auto& objects = _selection->GetObjects();
 
 		auto version = getStpVersion(objects[0]);
 		if (all_of (objects.begin(), objects.end(), [&](Object* o) { return getStpVersion(o) == version; }))
@@ -461,7 +467,7 @@ private:
 		auto getPortCount = [](Object* o) { return dynamic_cast<Bridge*>(o)->GetPorts().size(); };
 
 		int index = -1;
-		auto& objects = _projectWindow->GetSelection()->GetObjects();
+		auto& objects = _selection->GetObjects();
 		auto portCount = getPortCount(objects[0]);
 		if (all_of (objects.begin(), objects.end(), [&](Object* o) { return getPortCount(o) == portCount; }))
 			index = (int) (portCount - FirstPortCount);
@@ -474,7 +480,7 @@ private:
 		auto getMstiCount = [](Object* o) { return STP_GetMstiCount(dynamic_cast<Bridge*>(o)->GetStpBridge()); };
 
 		int index = -1;
-		auto& objects = _projectWindow->GetSelection()->GetObjects();
+		auto& objects = _selection->GetObjects();
 		auto mstiCount = getMstiCount(objects[0]);
 		if (all_of (objects.begin(), objects.end(), [&](Object* o) { return getMstiCount(o) == mstiCount; }))
 			index = mstiCount;
@@ -497,7 +503,7 @@ private:
 			return rootBridgeId;
 		};
 
-		auto& objects = _projectWindow->GetSelection()->GetObjects();
+		auto& objects = _selection->GetObjects();
 		auto rootBridge = getRootBridge(objects.front());
 		bool allSameRoot = all_of (objects.begin(), objects.end(), [&](Object* o) { return getRootBridge(o) == rootBridge; });
 		if (allSameRoot)
@@ -526,7 +532,7 @@ private:
 			return rootPathCost;
 		};
 
-		auto& objects = _projectWindow->GetSelection()->GetObjects();
+		auto& objects = _selection->GetObjects();
 		auto cost = getCost(objects.front());
 		bool allSameCost = all_of (objects.begin(), objects.end(), [&](Object* o) { return getCost(o) == cost; });
 		if (allSameCost)
@@ -546,7 +552,7 @@ private:
 			return std::string(name);
 		};
 
-		auto& objects = _projectWindow->GetSelection()->GetObjects();
+		auto& objects = _selection->GetObjects();
 		auto name = getName(objects[0]);
 
 		bool allSameName = all_of (objects.begin(), objects.end(), [&](Object* o) { return getName(o) == name; });
@@ -560,7 +566,7 @@ private:
 	{
 		auto getLevel = [](Object* o) { return STP_GetMstConfigRevisionLevel(dynamic_cast<Bridge*>(o)->GetStpBridge()); };
 
-		auto& objects = _projectWindow->GetSelection()->GetObjects();
+		auto& objects = _selection->GetObjects();
 		auto level = getLevel(objects[0]);
 
 		bool allSameLevel = all_of (objects.begin(), objects.end(), [&](Object* o) { return getLevel(o) == level; });
@@ -583,7 +589,7 @@ private:
 			return result;
 		};
 
-		auto& objects = _projectWindow->GetSelection()->GetObjects();
+		auto& objects = _selection->GetObjects();
 		auto digest = getDigest(objects.front());
 
 		bool allSame = all_of (objects.begin(), objects.end(), [&](Object* o) { return getDigest(o) == digest; });
@@ -627,7 +633,7 @@ private:
 		auto vlanNumber = _projectWindow->GetSelectedVlanNumber();
 
 		auto getTree = [vlanNumber](Object* o) { return STP_GetTreeIndexFromVlanNumber(dynamic_cast<Bridge*>(o)->GetStpBridge(), vlanNumber); };
-		auto& objects = _projectWindow->GetSelection()->GetObjects();
+		auto& objects = _selection->GetObjects();
 		auto treeIndex = getTree(objects.front());
 
 		if (all_of (objects.begin(), objects.end(), [&, treeIndex](Object* o) { return getTree(o) == treeIndex; }))
@@ -653,7 +659,7 @@ private:
 			return STP_GetBridgePriority(stpb, treeIndex);
 		};
 
-		auto& objects = _projectWindow->GetSelection()->GetObjects();
+		auto& objects = _selection->GetObjects();
 		auto prio = getPrio(objects[0]);
 		bool allSamePrio = all_of (objects.begin(), objects.end(), [&](Object* o) { return getPrio(o) == prio; });
 
@@ -679,7 +685,7 @@ private:
 		auto newPrio = (unsigned int) index * 4096u;
 		auto timestamp = GetTimestampMilliseconds();
 
-		for (Object* o : _projectWindow->GetSelection()->GetObjects())
+		for (Object* o : _selection->GetObjects())
 		{
 			auto b = dynamic_cast<Bridge*>(o);
 			auto stpb = b->GetStpBridge();
@@ -758,7 +764,7 @@ private:
 			}
 
 			auto timestamp = GetTimestampMilliseconds();
-			for (Object* o : _projectWindow->GetSelection()->GetObjects())
+			for (Object* o : _selection->GetObjects())
 			{
 				auto stpBridge = dynamic_cast<Bridge*>(o)->GetStpBridge();
 				STP_SetMstConfigName (stpBridge, ascii.c_str(), timestamp);
@@ -775,16 +781,32 @@ private:
 
 	bool BridgesSelected() const
 	{
-		auto& objects = _projectWindow->GetSelection()->GetObjects();
+		auto& objects = _selection->GetObjects();
 		return !objects.empty()
 			&& all_of (objects.begin(), objects.end(), [](Object* o) { return dynamic_cast<Bridge*>(o) != nullptr; });
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
+
+	virtual ULONG STDMETHODCALLTYPE AddRef() override final
+	{
+		return InterlockedIncrement(&_refCount);
+	}
+
+	virtual ULONG STDMETHODCALLTYPE Release() override final
+	{
+		assert (_refCount > 0);
+		ULONG newRefCount = InterlockedDecrement(&_refCount);
+		if (newRefCount == 0)
+			delete this;
+		return newRefCount;
 	}
 };
 
 template<typename... Args>
-static unique_ptr<IBridgePropsWindow> Create (Args... args)
+static IBridgePropsWindowPtr Create (Args... args)
 {
-	return unique_ptr<IBridgePropsWindow>(new BridgePropsWindow (std::forward<Args>(args)...));
+	return IBridgePropsWindowPtr(new BridgePropsWindow (std::forward<Args>(args)...), false);
 }
 
 const BridgePropsWindowFactory bridgePropertiesControlFactory = Create;

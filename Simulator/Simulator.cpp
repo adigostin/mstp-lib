@@ -126,7 +126,7 @@ class SimulatorApp : public ISimulatorApp
 	IDWriteFactoryPtr _dWriteFactory;
 
 	wstring _regKeyPath;
-	vector<unique_ptr<IProjectWindow>> _projectWindows;
+	vector<IProjectWindowPtr> _projectWindows;
 	queue<function<void()>> _workQueue;
 
 public:
@@ -176,7 +176,7 @@ public:
 
 	virtual HINSTANCE GetHInstance() const override final { return _hInstance; }
 
-	virtual void AddProjectWindow (std::unique_ptr<IProjectWindow>&& pw) override final
+	virtual void AddProjectWindow (IProjectWindow* pw) override final
 	{
 		pw->GetClosedEvent().AddHandler (&OnProjectWindowClosed, this);
 		_projectWindows.push_back(move(pw));
@@ -190,7 +190,7 @@ public:
 
 		app->_workQueue.push ([app, pw]
 		{
-			auto it = find_if (app->_projectWindows.begin(), app->_projectWindows.end(), [pw](auto& p) { return p.get() == pw; });
+			auto it = find_if (app->_projectWindows.begin(), app->_projectWindows.end(), [pw](auto& p) { return p == pw; });
 			assert (it != app->_projectWindows.end());
 			app->_projectWindows.erase(it);
 			if (app->_projectWindows.empty())
@@ -200,7 +200,7 @@ public:
 		::PostMessage (nullptr, WM_WORK, 0, 0);
 	}
 
-	virtual const std::vector<std::unique_ptr<IProjectWindow>>& GetProjectWindows() const override final { return _projectWindows; }
+	virtual const std::vector<IProjectWindowPtr>& GetProjectWindows() const override final { return _projectWindows; }
 
 	virtual ID3D11DeviceContext1* GetD3DDeviceContext() const override final { return _d3dDeviceContext; }
 
@@ -253,8 +253,9 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 		SimulatorApp app (hInstance);
 
 		{
-			auto project = shared_ptr<IProject>(projectFactory(&app, actionListFactory));
-			auto projectWindow = projectWindowFactory (&app, project, selectionFactory, editAreaFactory, nCmdShow, 1);
+			auto actionList = actionListFactory();
+			auto project = projectFactory();
+			auto projectWindow = projectWindowFactory (&app, project, selectionFactory, actionList, editAreaFactory, nCmdShow, 1);
 			app.AddProjectWindow(move(projectWindow));
 		}
 

@@ -11,15 +11,25 @@ class VlanWindow : public IVlanWindow
 {
 	ISimulatorApp*  const _app;
 	IProjectWindow* const _pw;
+	IProjectPtr     const _project;
+	ISelectionPtr   const _selection;
+	IActionListPtr  const _actionList;
+	ULONG _refCount = 1;
 	HWND _hwnd = nullptr;
 
 public:
 	VlanWindow (ISimulatorApp* app,
 				IProjectWindow* pw,
+				IProject* project,
+				ISelection* selection,
+				IActionList* actionList,
 				HWND hWndParent,
 				POINT location)
 		: _app(app)
 		, _pw(pw)
+		, _project(project)
+		, _selection(selection)
+		, _actionList(actionList)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &DialogProcStatic, &hInstance);
@@ -32,14 +42,15 @@ public:
 		::GetWindowRect(_hwnd, &rc);
 		::MoveWindow (_hwnd, location.x, location.y, rc.right - rc.left, rc.bottom - rc.top, TRUE);
 
-		_pw->GetSelection()->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
+		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
 		_pw->GetSelectedVlanNumerChangedEvent().AddHandler (&OnSelectedVlanChanged, this);
 	}
 
-	virtual ~VlanWindow()
+private:
+	~VlanWindow()
 	{
 		_pw->GetSelectedVlanNumerChangedEvent().RemoveHandler (&OnSelectedVlanChanged, this);
-		_pw->GetSelection()->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
+		_selection->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
 
 		if (_hwnd != nullptr)
 			::DestroyWindow(_hwnd);
@@ -53,6 +64,7 @@ public:
 		if (uMsg == WM_INITDIALOG)
 		{
 			window = reinterpret_cast<VlanWindow*>(lParam);
+			window->AddRef();
 			window->_hwnd = hwnd;
 			assert (GetWindowLongPtr(hwnd, GWLP_USERDATA) == 0);
 			SetWindowLongPtr (hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(window));
@@ -72,6 +84,7 @@ public:
 		{
 			window->_hwnd = nullptr;
 			SetWindowLongPtr (hwnd, GWLP_USERDATA, 0);
+			window->Release(); // this one last cause it might call Release() which would try to destroy the hwnd again.
 		}
 
 		::SetWindowLongPtr (hwnd, DWLP_MSGRESULT, result.messageResult);
@@ -142,7 +155,7 @@ public:
 		auto index = ComboBox_GetCurSel(hwnd);
 		auto vlanNumber = (unsigned int) (index + 1);
 		auto& pws = _app->GetProjectWindows();
-		auto it = find_if (pws.begin(), pws.end(), [this, vlanNumber](const std::unique_ptr<IProjectWindow>& pw)
+		auto it = find_if (pws.begin(), pws.end(), [this, vlanNumber](auto& pw)
 			{ return (pw->GetProject() == _pw->GetProject()) && (pw->GetSelectedVlanNumber() == vlanNumber); });
 		if (it != pws.end())
 		{
@@ -151,7 +164,7 @@ public:
 		}
 		else
 		{
-			auto pw = projectWindowFactory(_app, _pw->GetProjectPtr(), selectionFactory, editAreaFactory, SW_SHOWNORMAL, vlanNumber);
+			auto pw = projectWindowFactory(_app, _project, selectionFactory, _actionList, editAreaFactory, SW_SHOWNORMAL, vlanNumber);
 			_app->AddProjectWindow(move(pw));
 		}
 
@@ -166,7 +179,7 @@ public:
 	void LoadSelectedTreeEdit()
 	{
 		auto edit = GetDlgItem (_hwnd, IDC_EDIT_SELECTED_TREE); assert (edit != nullptr);
-		auto& objects = _pw->GetSelection()->GetObjects();
+		auto& objects = _selection->GetObjects();
 
 		if (objects.empty())
 		{
@@ -194,12 +207,28 @@ public:
 
 		::SetWindowText (edit, L"(no selection)");
 	}
+
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
+
+	virtual ULONG STDMETHODCALLTYPE AddRef() override final
+	{
+		return InterlockedIncrement(&_refCount);
+	}
+
+	virtual ULONG STDMETHODCALLTYPE Release() override final
+	{
+		assert (_refCount > 0);
+		ULONG newRefCount = InterlockedDecrement(&_refCount);
+		if (newRefCount == 0)
+			delete this;
+		return newRefCount;
+	}
 };
 
 template<typename... Args>
-static unique_ptr<IVlanWindow> Create (Args... args)
+static IVlanWindowPtr Create (Args... args)
 {
-	return unique_ptr<IVlanWindow>(new VlanWindow (std::forward<Args>(args)...));
+	return IVlanWindowPtr(new VlanWindow (std::forward<Args>(args)...), false);
 }
 
 const VlanWindowFactory vlanWindowFactory = &Create;

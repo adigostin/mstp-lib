@@ -14,6 +14,9 @@ static constexpr wchar_t RegValueNameWindowLeft[] = L"WindowLeft";
 static constexpr wchar_t RegValueNameWindowTop[] = L"WindowTop";
 static constexpr wchar_t RegValueNameWindowRight[] = L"WindowRight";
 static constexpr wchar_t RegValueNameWindowBottom[] = L"WindowBottom";
+static constexpr char LogPanelUniqueName[] = "STP Log Panel";
+static constexpr char PropsPanelUniqueName[] = "Props Panel";
+static constexpr char VlanPanelUniqueName[] = "VLAN Panel";
 
 static COMDLG_FILTERSPEC const ProjectFileDialogFileTypes[] =
 {
@@ -24,17 +27,13 @@ static const wchar_t ProjectFileExtensionWithoutDot[] = L"stp";
 
 class ProjectWindow : public EventManager, public IProjectWindow
 {
-	ISimulatorApp*          const _app;
-	shared_ptr<IProject>    const _project;
-	unique_ptr<ISelection>  const _selection;
-	unique_ptr<IEditArea> _editArea;
-	unique_ptr<IDockContainer> _dockContainer;
-	IDockablePanel* _logPanel;
-	unique_ptr<ILogArea> _logArea;
-	IDockablePanel* _propsPanel;
-	unique_ptr<IPropertiesWindow> _propsWindow;
-	IDockablePanel* _vlanPanel;
-	unique_ptr<IVlanWindow> _vlanWindow;
+	ULONG _refCount = 1;
+	ISimulatorApp* const _app;
+	IProjectPtr    const _project;
+	ISelectionPtr  const _selection;
+	IActionListPtr const _actionList;
+	IEditAreaPtr         _editArea;
+	IDockContainerPtr    _dockContainer;
 	HWND _hwnd;
 	SIZE _clientSize;
 	RECT _restoreBounds;
@@ -42,14 +41,16 @@ class ProjectWindow : public EventManager, public IProjectWindow
 
 public:
 	ProjectWindow (ISimulatorApp* app,
-				   const shared_ptr<IProject>& project,
+				   IProject* project,
 				   SelectionFactory selectionFactory,
+				   IActionList* actionList,
 				   EditAreaFactory editAreaFactory,
 				   int nCmdShow,
 				   unsigned int selectedVlan)
 		: _app(app)
 		, _project(project)
-		, _selection(selectionFactory(project.get()))
+		, _selection(selectionFactory(project))
+		, _actionList(actionList)
 		, _selectedVlanNumber(selectedVlan)
 	{
 		HINSTANCE hInstance;
@@ -97,26 +98,27 @@ public:
 			::GetWindowRect(_hwnd, &_restoreBounds);
 		::ShowWindow (_hwnd, nCmdShow);
 
-		_dockContainer = dockPanelFactory (_hwnd, 0xFFFF, GetClientRectPixels());
+		const RECT clientRect = { 0, 0, _clientSize.cx, _clientSize.cy };
+		_dockContainer = dockContainerFactory (_hwnd, clientRect);
 
-		_logPanel = _dockContainer->GetOrCreateDockablePanel(Side::Right, L"STP Log");
-		_logArea = logAreaFactory (_logPanel->GetHWnd(), _logPanel->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory());
-		_logPanel->GetVisibleChangedEvent().AddHandler (&OnLogPanelVisibleChanged, this);
+		auto logPanel = _dockContainer->CreatePanel (LogPanelUniqueName, Side::Right, L"STP Log");
+		auto logArea = logAreaFactory (logPanel->GetHWnd(), logPanel->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory(), _selection);
+		logPanel->GetVisibleChangedEvent().AddHandler (&OnLogPanelVisibleChanged, this);
 		SetMainMenuItemCheck (ID_VIEW_STPLOG, true);
 
-		_propsPanel = _dockContainer->GetOrCreateDockablePanel (Side::Left, L"Properties");
-		_propsWindow = propertiesWindowFactory (_app, this, _propsPanel->GetHWnd(), _propsPanel->GetContentLocation());
-		_dockContainer->ResizePanel (_propsPanel, _propsPanel->GetPanelSizeFromContentSize(_propsWindow->GetClientSize()));
-		_propsPanel->GetVisibleChangedEvent().AddHandler (&OnPropsPanelVisibleChanged, this);
+		auto propsPanel = _dockContainer->CreatePanel (PropsPanelUniqueName, Side::Left, L"Properties");
+		auto propsWindow = propertiesWindowFactory (_app, this, _selection, propsPanel->GetHWnd(), propsPanel->GetContentLocation());
+		_dockContainer->ResizePanel (propsPanel, propsPanel->GetPanelSizeFromContentSize(propsWindow->GetClientSize()));
+		propsPanel->GetVisibleChangedEvent().AddHandler (&OnPropsPanelVisibleChanged, this);
 		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
 
-		_vlanPanel = _dockContainer->GetOrCreateDockablePanel (Side::Top, L"VLAN");
-		_vlanWindow = vlanWindowFactory (_app, this, _vlanPanel->GetHWnd(), _vlanPanel->GetContentLocation());
-		_dockContainer->ResizePanel (_vlanPanel, _vlanPanel->GetPanelSizeFromContentSize(_vlanWindow->GetClientSize()));
-		_vlanPanel->GetVisibleChangedEvent().AddHandler (&OnVlanPanelVisibleChanged, this);
+		auto vlanPanel = _dockContainer->CreatePanel (VlanPanelUniqueName, Side::Top, L"VLAN");
+		auto vlanWindow = vlanWindowFactory (_app, this, _project, _selection, _actionList, vlanPanel->GetHWnd(), vlanPanel->GetContentLocation());
+		_dockContainer->ResizePanel (vlanPanel, vlanPanel->GetPanelSizeFromContentSize(vlanWindow->GetClientSize()));
+		vlanPanel->GetVisibleChangedEvent().AddHandler (&OnVlanPanelVisibleChanged, this);
 		SetMainMenuItemCheck (ID_VIEW_VLANS, true);
 
-		_editArea = editAreaFactory (app, this, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory());
+		_editArea = editAreaFactory (app, this, _project, _actionList, _selection, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory());
 
 		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
 	}
@@ -155,22 +157,6 @@ public:
 
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
 	{
-		auto pw = static_cast<ProjectWindow*>(callbackArg);
-
-		if (selection->GetObjects().size() != 1)
-			pw->_logArea->SelectBridge(nullptr);
-		else
-		{
-			auto b = dynamic_cast<Bridge*>(selection->GetObjects().front());
-			if (b == nullptr)
-			{
-				auto port = dynamic_cast<Port*>(selection->GetObjects().front());
-				if (port != nullptr)
-					b = port->GetBridge();
-			}
-
-			pw->_logArea->SelectBridge(b);
-		}
 	}
 
 	virtual HWND GetHWnd() const override { return _hwnd; }
@@ -270,7 +256,8 @@ public:
 		{
 			if ((wParam == ID_VIEW_PROPERTIES) || (wParam == ID_VIEW_STPLOG) || (wParam == ID_VIEW_VLANS))
 			{
-				auto panel = (wParam == ID_VIEW_PROPERTIES) ? _propsPanel : ((wParam == ID_VIEW_STPLOG) ? _logPanel : _vlanPanel);
+				auto panelId = (wParam == ID_VIEW_PROPERTIES) ? PropsPanelUniqueName : ((wParam == ID_VIEW_STPLOG) ? LogPanelUniqueName : VlanPanelUniqueName);
+				auto panel = _dockContainer->GetPanel(panelId);
 				auto style = (DWORD) GetWindowLongPtr(panel->GetHWnd(), GWL_STYLE);
 				style ^= WS_VISIBLE;
 				SetWindowLongPtr (panel->GetHWnd(), GWL_STYLE, style);
@@ -383,11 +370,11 @@ public:
 		HRESULT hr;
 
 		auto count = count_if (_app->GetProjectWindows().begin(), _app->GetProjectWindows().end(),
-							   [project=_project.get()] (const unique_ptr<IProjectWindow>& pw) { return pw->GetProject() == project; });
+							   [this] (auto& pw) { return pw->GetProject() == _project; });
 		if (count == 1)
 		{
 			// Closing last window of this project.
-			if (_project->GetActionList()->GetEditPointIndex() != _project->GetActionList()->GetSavePointIndex())
+			if (_actionList->GetEditPointIndex() != _actionList->GetSavePointIndex())
 			{
 				bool saveChosen;
 				hr = AskSaveDiscardCancel(L"Save changes?", &saveChosen);
@@ -483,19 +470,31 @@ public:
 
 	virtual ClosedEvent::Subscriber GetClosedEvent() override final { return ClosedEvent::Subscriber(*this); }
 
-	virtual IProject* GetProject() const override final { return _project.get(); }
+	virtual IProject* GetProject() const override final { return _project; }
 
-	virtual const std::shared_ptr<IProject>& GetProjectPtr() const override final { return _project; }
+	virtual IEditArea* GetEditArea() const override final { return _editArea; }
 
-	virtual ISelection* GetSelection() const override final { return _selection.get(); }
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
 
-	virtual IEditArea* GetEditArea() const override final { return _editArea.get(); }
+	virtual ULONG STDMETHODCALLTYPE AddRef() override final
+	{
+		return InterlockedIncrement(&_refCount);
+	}
+
+	virtual ULONG STDMETHODCALLTYPE Release() override final
+	{
+		assert (_refCount > 0);
+		ULONG newRefCount = InterlockedDecrement(&_refCount);
+		if (newRefCount == 0)
+			delete this;
+		return newRefCount;
+	}
 };
 
 template<typename... Args>
-static unique_ptr<IProjectWindow> Create (Args... args)
+static IProjectWindowPtr Create (Args... args)
 {
-	return unique_ptr<IProjectWindow>(new ProjectWindow (std::forward<Args>(args)...));
+	return IProjectWindowPtr(new ProjectWindow (std::forward<Args>(args)...), false);
 }
 
 extern const ProjectWindowFactory projectWindowFactory = &Create;

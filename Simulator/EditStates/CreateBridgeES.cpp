@@ -44,8 +44,8 @@ public:
 			};
 
 			Bridge* b = _bridge.get();
-			_pw->GetProject()->GetActionList()->PerformAndAddUserAction (L"Create Bridge", make_unique<CreateAction>(_pw->GetProject(), move(_bridge)));
-			_pw->GetSelection()->Select(b);
+			_actionList->PerformAndAddUserAction (L"Create Bridge", make_unique<CreateAction>(_pw->GetProject(), move(_bridge)));
+			_selection->Select(b);
 			STP_StartBridge (b->GetStpBridge(), GetTimestampMilliseconds());
 		}
 
@@ -79,4 +79,4 @@ public:
 	virtual bool Completed() const override final { return _completed; }
 };
 
-unique_ptr<EditState> CreateStateCreateBridge (IProjectWindow* pw) { return unique_ptr<EditState>(new CreateBridgeES(pw)); }
+unique_ptr<EditState> CreateStateCreateBridge (const EditStateDeps& deps) { return unique_ptr<EditState>(new CreateBridgeES(deps)); }

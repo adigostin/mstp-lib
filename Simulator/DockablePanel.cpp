@@ -11,8 +11,10 @@ static const float CloseButtonMarginDips = 2;
 static const float TitleBarHeightDips = CloseButtonMarginDips + CloseButtonSizeDips + CloseButtonMarginDips;
 static const int SplitterWidthDips = 4;
 
-class DockablePanel : public IDockablePanel
+class DockablePanel : public EventManager, public IDockablePanel
 {
+	string const _panelUniqueName;
+	ULONG _refCount = 1;
 	Side _side;
 	HWND _hwnd;
 	SIZE _clientSize;
@@ -21,12 +23,11 @@ class DockablePanel : public IDockablePanel
 	bool _closeButtonDown = false;
 	bool _draggingSplitter = false;
 	POINT _draggingSplitterLastMouseScreenLocation;
-	EventManager _em;
 	wstring _title;
 
 public:
-	DockablePanel (HWND hWndParent, const RECT& rect, Side side, const wchar_t* title)
-		: _side(side), _title(title)
+	DockablePanel (const char* panelUniqueName, HWND hWndParent, const RECT& rect, Side side, const wchar_t* title)
+		: _panelUniqueName(panelUniqueName), _side(side), _title(title)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) WndClassName, &hInstance);
@@ -78,6 +79,8 @@ public:
 		if (_hwnd != nullptr)
 			::DestroyWindow(_hwnd);
 	}
+
+	virtual const std::string& GetUniqueName() const override final { return _panelUniqueName; }
 
 	virtual Side GetSide() const override final { return _side; }
 
@@ -200,7 +203,7 @@ public:
 			_clientSize = { cs->cx, cs->cy };
 			return 0;
 		}
-		
+
 		if (msg == WM_SIZE)
 		{
 			_clientSize = { LOWORD(lParam), HIWORD(lParam) };
@@ -214,7 +217,7 @@ public:
 
 			return 0;
 		}
-		
+
 		if (msg == WM_ERASEBKGND)
 			return 1;
 
@@ -223,25 +226,25 @@ public:
 			ProcessWmPaint();
 			return 0;
 		}
-		
+
 		if (msg == WM_LBUTTONDOWN)
 		{
 			ProcessLButtonDown ((DWORD) wParam, POINT { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)});
 			return 0;
 		}
-		
+
 		if (msg == WM_LBUTTONUP)
 		{
 			ProcessLButtonUp ((DWORD) wParam, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
 			return 0;
 		}
-		
+
 		if (msg == WM_MOUSEMOVE)
 		{
 			ProcessMouseMove ((DWORD) wParam, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
 			return 0;
 		}
-		
+
 		if (msg == WM_SETCURSOR)
 		{
 			if (((HWND) wParam == _hwnd) && (LOWORD (lParam) == HTCLIENT))
@@ -269,7 +272,7 @@ public:
 			{
 				auto changed = ss->styleNew ^ ss->styleOld;
 				if (changed & WS_VISIBLE)
-					VisibleChangedEvent::InvokeHandlers (_em, this, (ss->styleNew & WS_VISIBLE) != 0);
+					VisibleChangedEvent::InvokeHandlers (*this, this, (ss->styleNew & WS_VISIBLE) != 0);
 			}
 
 			return 0;
@@ -407,7 +410,7 @@ public:
 			else
 				throw not_implemented_exception();
 
-			SplitterDragging::InvokeHandlers(_em, this, proposedSize);
+			SplitterDragging::InvokeHandlers(*this, this, proposedSize);
 
 			_draggingSplitterLastMouseScreenLocation = ptScreen;
 		}
@@ -415,9 +418,9 @@ public:
 
 	virtual HWND GetHWnd() const override final { return _hwnd; }
 
-	virtual VisibleChangedEvent::Subscriber GetVisibleChangedEvent() override final { return VisibleChangedEvent::Subscriber(_em); }
+	virtual VisibleChangedEvent::Subscriber GetVisibleChangedEvent() override final { return VisibleChangedEvent::Subscriber(*this); }
 
-	virtual SplitterDragging::Subscriber GetSplitterDraggingEvent() override final { return SplitterDragging::Subscriber(_em); }
+	virtual SplitterDragging::Subscriber GetSplitterDraggingEvent() override final { return SplitterDragging::Subscriber(*this); }
 
 	virtual SIZE GetPanelSizeFromContentSize (SIZE contentSize) const override final
 	{
@@ -429,6 +432,28 @@ public:
 
 		throw not_implemented_exception();
 	}
+
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
+
+	virtual ULONG STDMETHODCALLTYPE AddRef() override final
+	{
+		return InterlockedIncrement(&_refCount);
+	}
+
+	virtual ULONG STDMETHODCALLTYPE Release() override final
+	{
+		assert (_refCount > 0);
+		ULONG newRefCount = InterlockedDecrement(&_refCount);
+		if (newRefCount == 0)
+			delete this;
+		return newRefCount;
+	}
 };
 
-extern const DockablePanelFactory dockablePanelFactory = [](auto... params) { return unique_ptr<IDockablePanel>(new DockablePanel(params...)); };
+template<typename... Args>
+static IDockablePanelPtr Create (Args... args)
+{
+	return IDockablePanelPtr (new DockablePanel (std::forward<Args>(args)...), false);
+}
+
+const DockablePanelFactory dockablePanelFactory = &Create;

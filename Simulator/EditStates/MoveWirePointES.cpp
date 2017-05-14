@@ -15,8 +15,8 @@ class MoveWirePointES : public EditState
 	bool _completed = false;
 
 public:
-	MoveWirePointES (IProjectWindow* pw, Wire* wire, size_t pointIndex)
-		: base(pw), _wire(wire), _pointIndex(pointIndex), _initialPoint(wire->GetPoints()[pointIndex])
+	MoveWirePointES (const EditStateDeps& deps, Wire* wire, size_t pointIndex)
+		: base(deps), _wire(wire), _pointIndex(pointIndex), _initialPoint(wire->GetPoints()[pointIndex])
 	{ }
 
 	virtual bool Completed() const override final { return _completed; }
@@ -47,7 +47,7 @@ public:
 
 };
 
-unique_ptr<EditState> CreateStateMoveWirePoint (IProjectWindow* pw, Wire* wire, size_t pointIndex)
+unique_ptr<EditState> CreateStateMoveWirePoint (const EditStateDeps& deps, Wire* wire, size_t pointIndex)
 {
-	return unique_ptr<EditState>(new MoveWirePointES(pw, wire, pointIndex));
+	return unique_ptr<EditState>(new MoveWirePointES(deps, wire, pointIndex));
 }

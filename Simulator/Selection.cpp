@@ -8,7 +8,7 @@ using namespace std;
 
 class Selection : public ISelection
 {
-	IProject* const _project;
+	IProjectPtr const _project;
 	ULONG _refCount = 1;
 	vector<Object*> _objects;
 	EventManager _em;
@@ -21,7 +21,8 @@ public:
 		_project->GetBridgeRemovingEvent().AddHandler (&OnBridgeRemovingFromProject, this);
 	}
 
-	virtual ~Selection()
+private:
+	~Selection()
 	{
 		_project->GetBridgeRemovingEvent().RemoveHandler (&OnBridgeRemovingFromProject, this);
 		_project->GetWireRemovingEvent().RemoveHandler (&OnWireRemovingFromProject, this);
@@ -96,12 +97,28 @@ public:
 	virtual RemovingFromSelectionEvent::Subscriber GetRemovingFromSelectionEvent() override final { return RemovingFromSelectionEvent::Subscriber(_em); }
 
 	virtual ChangedEvent::Subscriber GetChangedEvent() override final { return ChangedEvent::Subscriber(_em); }
+
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
+
+	virtual ULONG STDMETHODCALLTYPE AddRef() override final
+	{
+		return InterlockedIncrement(&_refCount);
+	}
+
+	virtual ULONG STDMETHODCALLTYPE Release() override final
+	{
+		assert (_refCount > 0);
+		ULONG newRefCount = InterlockedDecrement(&_refCount);
+		if (newRefCount == 0)
+			delete this;
+		return newRefCount;
+	}
 };
 
 template<typename... Args>
-static ISelection* Create (Args... args)
+static ISelectionPtr Create (Args... args)
 {
-	return new Selection (std::forward<Args>(args)...);
+	return ISelectionPtr(new Selection (std::forward<Args>(args)...), false);
 }
 
-const SelectionFactory selectionFactory = Create;
+const SelectionFactory selectionFactory = &Create;

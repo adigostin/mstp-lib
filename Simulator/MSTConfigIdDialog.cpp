@@ -10,14 +10,15 @@ class MSTConfigIdDialog : public IMSTConfigIdDialog
 {
 	ISimulatorApp* const _app;
 	IProjectWindow* const _projectWindow;
+	ISelectionPtr const _selection;
 	vector<Bridge*> _bridges;
 	HWND _hwnd = nullptr;
 
 public:
-	MSTConfigIdDialog (ISimulatorApp* app, IProjectWindow* projectWindow)
-		: _app(app), _projectWindow(projectWindow)
+	MSTConfigIdDialog (ISimulatorApp* app, IProjectWindow* projectWindow, ISelection* selection)
+		: _app(app), _projectWindow(projectWindow), _selection(selection)
 	{
-		auto& objects = _projectWindow->GetSelection()->GetObjects();
+		auto& objects = _selection->GetObjects();
 
 		assert (!objects.empty());
 

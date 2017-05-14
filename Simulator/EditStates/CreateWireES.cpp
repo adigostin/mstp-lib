@@ -28,9 +28,7 @@ class CreateWireES : public EditState
 	SubState _subState = WaitingFirstDown;
 
 public:
-	CreateWireES (IProjectWindow* pw, Port* fromPort)
-		: base(pw)
-	{ }
+	using base::base;
 
 	virtual void OnMouseDown (const MouseLocation& location, MouseButton button) override final
 	{
@@ -85,7 +83,7 @@ public:
 			{
 				Wire* w = _wire.get();
 				_pw->GetProject()->AddWire(move(_wire));
-				_pw->GetSelection()->Select(w);
+				_selection->Select(w);
 				_subState = Done;
 			}
 		}
@@ -124,4 +122,4 @@ public:
 	virtual HCURSOR GetCursor() const override final { return LoadCursor(nullptr, IDC_CROSS); }
 };
 
-std::unique_ptr<EditState> CreateStateCreateWire (IProjectWindow* pw, Port* fromPort)  { return unique_ptr<EditState>(new CreateWireES(pw, fromPort)); }
+std::unique_ptr<EditState> CreateStateCreateWire (const EditStateDeps& deps)  { return unique_ptr<EditState>(new CreateWireES(deps)); }

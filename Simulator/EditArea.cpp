@@ -30,6 +30,9 @@ class EditArea : public ZoomableWindow, public IEditArea
 
 	ISimulatorApp*  const _app;
 	IProjectWindow* const _pw;
+	IProjectPtr     const _project;
+	IActionListPtr  const _actionList;
+	ISelectionPtr   const _selection;
 	IDWriteTextFormatPtr _legendFont;
 	DrawingObjects _drawingObjects;
 	unique_ptr<EditState> _state;
@@ -49,6 +52,9 @@ class EditArea : public ZoomableWindow, public IEditArea
 public:
 	EditArea (ISimulatorApp* app,
 			  IProjectWindow* pw,
+			  IProject* project,
+			  IActionList* actionList,
+			  ISelection* selection,
 			  HWND hWndParent,
 			  const RECT& rect,
 			  ID3D11DeviceContext1* deviceContext,
@@ -56,6 +62,9 @@ public:
 		: base (WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, hWndParent, nullptr, deviceContext, dWriteFactory)
 		, _app(app)
 		, _pw(pw)
+		, _project(project)
+		, _actionList(actionList)
+		, _selection(selection)
 	{
 		auto dc = base::GetDeviceContext();
 		_drawingObjects._dWriteFactory = dWriteFactory;
@@ -92,20 +101,20 @@ public:
 		ssprops.endCap = D2D1_CAP_STYLE_ROUND;
 		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawingObjects._strokeStyleForwardingWire); ThrowIfFailed(hr);
 
-		_pw->GetSelection()->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
-		_pw->GetProject()->GetBridgeRemovingEvent().AddHandler (&OnBridgeRemoving, this);
-		_pw->GetProject()->GetWireRemovingEvent().AddHandler (&OnWireRemoving, this);
-		_pw->GetProject()->GetProjectInvalidateEvent().AddHandler (&OnProjectInvalidate, this);
+		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
+		_project->GetBridgeRemovingEvent().AddHandler (&OnBridgeRemoving, this);
+		_project->GetWireRemovingEvent().AddHandler (&OnWireRemoving, this);
+		_project->GetProjectInvalidateEvent().AddHandler (&OnProjectInvalidate, this);
 		_pw->GetSelectedVlanNumerChangedEvent().AddHandler (&OnSelectedVlanChanged, this);
 	}
 
 	virtual ~EditArea()
 	{
 		_pw->GetSelectedVlanNumerChangedEvent().RemoveHandler (&OnSelectedVlanChanged, this);
-		_pw->GetProject()->GetProjectInvalidateEvent().RemoveHandler(&OnProjectInvalidate, this);
-		_pw->GetProject()->GetWireRemovingEvent().RemoveHandler (&OnWireRemoving, this);
-		_pw->GetProject()->GetBridgeRemovingEvent().RemoveHandler (&OnBridgeRemoving, this);
-		_pw->GetSelection()->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
+		_project->GetProjectInvalidateEvent().RemoveHandler(&OnProjectInvalidate, this);
+		_project->GetWireRemovingEvent().RemoveHandler (&OnWireRemoving, this);
+		_project->GetBridgeRemovingEvent().RemoveHandler (&OnBridgeRemoving, this);
+		_selection->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
 	}
 
 	static void OnSelectedVlanChanged (void* callbackArg, IProjectWindow* pw, unsigned int vlanNumber)
@@ -339,7 +348,7 @@ public:
 		dc->GetTransform(&oldtr);
 		dc->SetTransform(GetZoomTransform());
 
-		for (const unique_ptr<Bridge>& bridge : _pw->GetProject()->GetBridges())
+		for (const unique_ptr<Bridge>& bridge : _project->GetBridges())
 		{
 			D2D1_COLOR_F color = ColorF(ColorF::LightGreen);
 			if (STP_GetStpVersion(bridge->GetStpBridge()) >= STP_VERSION_MSTP)
@@ -364,29 +373,29 @@ public:
 		dc->GetTransform(&oldtr);
 		dc->SetTransform(GetZoomTransform());
 
-		for (const unique_ptr<Wire>& w : _pw->GetProject()->GetWires())
+		for (const unique_ptr<Wire>& w : _project->GetWires())
 			w->Render (dc, _drawingObjects, _pw->GetSelectedVlanNumber());
 
 		dc->SetTransform(oldtr);
 
-		if (_pw->GetProject()->GetBridges().empty())
+		if (_project->GetBridges().empty())
 		{
 			RenderHint (dc, GetClientWidthDips() / 2, GetClientHeightDips() / 2, L"No bridges created. Right-click to create some.");
 		}
-		else if (_pw->GetProject()->GetBridges().size() == 1)
+		else if (_project->GetBridges().size() == 1)
 		{
 			RenderHint (dc, GetClientWidthDips() / 2, GetClientHeightDips() / 2, L"Right-click to add more bridges.");
 		}
 		else
 		{
 			bool anyPortConnected = false;
-			for (auto& b : _pw->GetProject()->GetBridges())
+			for (auto& b : _project->GetBridges())
 				anyPortConnected |= any_of (b->GetPorts().begin(), b->GetPorts().end(),
-											[this](const unique_ptr<Port>& p) { return _pw->GetProject()->GetWireConnectedToPort(p.get()).first != nullptr; });
+											[this](const unique_ptr<Port>& p) { return _project->GetWireConnectedToPort(p.get()).first != nullptr; });
 
 			if (!anyPortConnected)
 			{
-				Bridge* b = _pw->GetProject()->GetBridges().front().get();
+				Bridge* b = _project->GetBridges().front().get();
 				auto text = L"No port connected. You can connect\r\nports by drawing wires with the mouse.";
 				auto wl = D2D1_POINT_2F { b->GetLeft() + b->GetWidth() / 2, b->GetBottom() + Port::ExteriorHeight * 1.5f };
 				auto dl = GetDLocationFromWLocation(wl);
@@ -398,7 +407,7 @@ public:
 	virtual void Render(ID2D1DeviceContext* dc) const override final
 	{
 		std::set<STP_MST_CONFIG_ID> configIds;
-		for (auto& bridge : _pw->GetProject()->GetBridges())
+		for (auto& bridge : _project->GetBridges())
 		{
 			auto stpb = bridge->GetStpBridge();
 			if (STP_GetStpVersion(stpb) >= STP_VERSION_MSTP)
@@ -411,7 +420,7 @@ public:
 
 		RenderWires (dc);
 
-		for (auto& o : _pw->GetSelection()->GetObjects())
+		for (auto& o : _selection->GetObjects())
 			o->RenderSelection(this, dc, _drawingObjects);
 
 		RenderLegend(dc);
@@ -500,13 +509,13 @@ public:
 		{
 			if (wParam == ID_NEW_BRIDGE)
 			{
-				EnterState (CreateStateCreateBridge(_pw));
+				EnterState (CreateStateCreateBridge(MakeEditStateDeps()));
 			}
 			else if ((wParam == ID_BRIDGE_ENABLE_STP) || (wParam == ID_BRIDGE_DISABLE_STP))
 			{
 				bool enable = (wParam == ID_BRIDGE_ENABLE_STP);
 				auto timestamp = GetTimestampMilliseconds();
-				for (Object* o : _pw->GetSelection()->GetObjects())
+				for (Object* o : _selection->GetObjects())
 				{
 					auto b = dynamic_cast<Bridge*>(o);
 					if (b != nullptr)
@@ -533,7 +542,7 @@ public:
 
 	virtual Port* GetCPAt (D2D1_POINT_2F dLocation, float tolerance) const override final
 	{
-		for (auto& b : _pw->GetProject()->GetBridges())
+		for (auto& b : _project->GetBridges())
 		{
 			for (auto& port : b->GetPorts())
 			{
@@ -547,14 +556,14 @@ public:
 
 	HTResult HitTestObjects (D2D1_POINT_2F dLocation, float tolerance) const
 	{
-		for (auto& w : _pw->GetProject()->GetWires())
+		for (auto& w : _project->GetWires())
 		{
 			auto ht = w->HitTest (this, dLocation, tolerance);
 			if (ht.object != nullptr)
 				return ht;
 		}
 
-		for (auto& b : _pw->GetProject()->GetBridges())
+		for (auto& b : _project->GetBridges())
 		{
 			auto ht = b->HitTest(this, dLocation, tolerance);
 			if (ht.object != nullptr)
@@ -591,8 +600,8 @@ public:
 
 		if (virtualKey == VK_DELETE)
 		{
-			while (!_pw->GetSelection()->GetObjects().empty())
-				_pw->GetProject()->Remove(_pw->GetSelection()->GetObjects().back());
+			while (!_selection->GetObjects().empty())
+				_project->Remove(_selection->GetObjects().back());
 			return 0;
 		}
 
@@ -640,13 +649,13 @@ public:
 
 		auto ht = HitTestObjects (dLocation, SnapDistance);
 		if (ht.object == nullptr)
-			_pw->GetSelection()->Clear();
+			_selection->Clear();
 		else
 		{
 			if (modifierKeysDown & MK_CONTROL)
-				_pw->GetSelection()->Add(ht.object);
+				_selection->Add(ht.object);
 			else
-				_pw->GetSelection()->Select(ht.object);
+				_selection->Select(ht.object);
 		}
 
 		_beginningDrag = BeginningDrag();
@@ -664,7 +673,7 @@ public:
 		else if (dynamic_cast<Bridge*>(ht.object) != nullptr)
 		{
 			if (button == MouseButton::Left)
-				_beginningDrag->stateMoveThreshold = CreateStateMoveBridges (_pw);
+				_beginningDrag->stateMoveThreshold = CreateStateMoveBridges (MakeEditStateDeps());
 		}
 		else if (dynamic_cast<Port*>(ht.object) != nullptr)
 		{
@@ -673,18 +682,18 @@ public:
 			if (ht.code == Port::HTCodeInnerOuter)
 			{
 				if (button == MouseButton::Left)
-					_beginningDrag->stateMoveThreshold = CreateStateMovePort (_pw);
+					_beginningDrag->stateMoveThreshold = CreateStateMovePort (MakeEditStateDeps());
 			}
 			else if (ht.code == Port::HTCodeCP)
 			{
-				auto alreadyConnectedWire = _pw->GetProject()->GetWireConnectedToPort(port);
+				auto alreadyConnectedWire = _project->GetWireConnectedToPort(port);
 				if (alreadyConnectedWire.first == nullptr)
 				{
-					_beginningDrag->stateMoveThreshold = CreateStateCreateWire(_pw, port);
-					_beginningDrag->stateButtonUp = CreateStateCreateWire(_pw, port);
+					_beginningDrag->stateMoveThreshold = CreateStateCreateWire(MakeEditStateDeps());
+					_beginningDrag->stateButtonUp = CreateStateCreateWire(MakeEditStateDeps());
 				}
 				else
-					_beginningDrag->stateMoveThreshold = CreateStateMoveWirePoint(_pw, alreadyConnectedWire.first, alreadyConnectedWire.second);
+					_beginningDrag->stateMoveThreshold = CreateStateMoveWirePoint(MakeEditStateDeps(), alreadyConnectedWire.first, alreadyConnectedWire.second);
 			}
 		}
 
@@ -815,14 +824,14 @@ public:
 	{
 		//D2D1_POINT_2F dipLocation = GetDipLocationFromPixelLocation(pt);
 		//_elementsAtContextMenuLocation.clear();
-		//GetElementsAt(_pw->GetProject()->GetInnerRootElement(), { dipLocation.x, dipLocation.y }, _elementsAtContextMenuLocation);
+		//GetElementsAt(_project->GetInnerRootElement(), { dipLocation.x, dipLocation.y }, _elementsAtContextMenuLocation);
 
 		HMENU hMenu;
-		if (_pw->GetSelection()->GetObjects().empty())
+		if (_selection->GetObjects().empty())
 			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_EMPTY_SPACE));
-		else if (dynamic_cast<Bridge*>(_pw->GetSelection()->GetObjects().front()) != nullptr)
+		else if (dynamic_cast<Bridge*>(_selection->GetObjects().front()) != nullptr)
 			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_BRIDGE));
-		else if (dynamic_cast<Port*>(_pw->GetSelection()->GetObjects().front()) != nullptr)
+		else if (dynamic_cast<Port*>(_selection->GetObjects().front()) != nullptr)
 			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_PORT));
 		else
 			throw not_implemented_exception();
@@ -834,12 +843,21 @@ public:
 	virtual const DrawingObjects& GetDrawingObjects() const override final { return _drawingObjects; }
 
 	virtual D2D1::Matrix3x2F GetZoomTransform() const override final { return base::GetZoomTransform(); }
+
+	EditStateDeps MakeEditStateDeps() const
+	{
+		return EditStateDeps { _pw, _project, _actionList, _selection };
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return base::QueryInterface(riid, ppvObject); }
+	virtual ULONG STDMETHODCALLTYPE AddRef() override { return base::AddRef(); }
+	virtual ULONG STDMETHODCALLTYPE Release() override { return base::Release(); }
 };
 
 template<typename... Args>
-static unique_ptr<IEditArea> Create (Args... args)
+static IEditAreaPtr Create (Args... args)
 {
-	return unique_ptr<IEditArea>(new EditArea (std::forward<Args>(args)...));
+	return IEditAreaPtr(new EditArea (std::forward<Args>(args)...), false);
 }
 
 extern const EditAreaFactory editAreaFactory = &Create;

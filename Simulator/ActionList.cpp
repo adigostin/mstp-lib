@@ -6,6 +6,7 @@ using namespace std;
 
 class ActionList : public EventManager, public IActionList
 {
+	ULONG _refCount = 1;
 	vector<pair<wstring, unique_ptr<EditAction>>> _actions;
 	size_t _savePointIndex = 0;
 	size_t _editPointIndex = 0;
@@ -29,12 +30,28 @@ class ActionList : public EventManager, public IActionList
 	virtual size_t GetSavePointIndex() const override final { return _savePointIndex; }
 
 	virtual size_t GetEditPointIndex() const override final { return _editPointIndex; }
+
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
+
+	virtual ULONG STDMETHODCALLTYPE AddRef() override final
+	{
+		return InterlockedIncrement(&_refCount);
+	}
+
+	virtual ULONG STDMETHODCALLTYPE Release() override final
+	{
+		assert (_refCount > 0);
+		ULONG newRefCount = InterlockedDecrement(&_refCount);
+		if (newRefCount == 0)
+			delete this;
+		return newRefCount;
+	}
 };
 
 template<typename... Args>
-static unique_ptr<IActionList> Create (Args... args)
+static IActionListPtr Create (Args... args)
 {
-	return unique_ptr<IActionList>(new ActionList (std::forward<Args>(args)...));
+	return IActionListPtr(new ActionList (std::forward<Args>(args)...), false);
 }
 
 const ActionListFactory actionListFactory = &Create;

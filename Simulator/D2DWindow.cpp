@@ -105,6 +105,7 @@ LRESULT CALLBACK D2DWindow::WindowProcStatic (HWND hwnd, UINT uMsg, WPARAM wPara
 	{
 		LPCREATESTRUCT lpcs = reinterpret_cast<LPCREATESTRUCT>(lParam);
 		window = reinterpret_cast<D2DWindow*>(lpcs->lpCreateParams);
+		window->AddRef();
 		window->_hwnd = hwnd;
 		SetWindowLongPtr (hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(window));
 	}
@@ -123,6 +124,7 @@ LRESULT CALLBACK D2DWindow::WindowProcStatic (HWND hwnd, UINT uMsg, WPARAM wPara
 	{
 		window->_hwnd = nullptr;
 		SetWindowLongPtr (hwnd, GWLP_USERDATA, 0);
+		window->Release();
 	}
 
 	if (result)
@@ -163,7 +165,7 @@ std::optional<LRESULT> D2DWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam
 
 		return 0;
 	}
-	
+
 	if (uMsg == WM_SIZE)
 	{
 		_clientSize = { LOWORD(lParam), HIWORD(lParam) };
@@ -226,7 +228,7 @@ void D2DWindow::ProcessWmPaint()
 
 	_d2dDeviceContext->BeginDraw();
 	_d2dDeviceContext->SetTransform(IdentityMatrix());
-	
+
 	this->Render(_d2dDeviceContext);
 
 	hr = _d2dDeviceContext->EndDraw(); ThrowIfFailed(hr);
@@ -235,7 +237,7 @@ void D2DWindow::ProcessWmPaint()
 	hr = _swapChain->Present1(0, 0, &pp); ThrowIfFailed(hr);
 
 	::EndPaint(_hwnd, &ps); // this will show the caret in case BeginPaint above hid it.
-	
+
 	this->OnAfterRender();
 
 	assert(_painting);
@@ -268,4 +270,18 @@ SIZE D2DWindow::GetPixelSizeFromDipSize(D2D1_SIZE_F sizeDips) const
 	float dpiX, dpiY;
 	_d2dDeviceContext->GetDpi(&dpiX, &dpiY);
 	return SIZE{ (int)(sizeDips.width / 96.0f * dpiX), (int)(sizeDips.height / 96.0f * dpiY) };
+}
+
+ULONG D2DWindow::AddRef()
+{
+	return InterlockedIncrement(&_refCount);
+}
+
+ULONG D2DWindow::Release()
+{
+	assert (_refCount > 0);
+	ULONG newRefCount = InterlockedDecrement(&_refCount);
+	if (newRefCount == 0)
+		delete this;
+	return newRefCount;
 }
