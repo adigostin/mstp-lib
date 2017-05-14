@@ -18,14 +18,14 @@ private:
 struct EventBase abstract
 {
 protected:
-	static void AddEventHandlerInternal(std::type_index eventType, EventManager& em, void* callback, void* callbackArg)
+	static void AddEventHandlerInternal(std::type_index eventType, EventManager* em, void* callback, void* callbackArg)
 	{
-		em._events.insert({ eventType,{ callback, callbackArg } });
+		em->_events.insert({ eventType,{ callback, callbackArg } });
 	}
 
-	static void RemoveEventHandlerInternal(std::type_index eventType, EventManager& em, void* callback, void* callbackArg)
+	static void RemoveEventHandlerInternal(std::type_index eventType, EventManager* em, void* callback, void* callbackArg)
 	{
-		auto range = em._events.equal_range(eventType);
+		auto range = em->_events.equal_range(eventType);
 
 		auto it = std::find_if(range.first, range.second, [=](const std::pair<std::type_index, EventManager::EventHandler>& p)
 		{
@@ -34,7 +34,7 @@ protected:
 
 		assert(it != range.second); // handler to remove not found
 
-		em._events.erase(it);
+		em->_events.erase(it);
 	}
 
 	static void MakeHandlerList(std::type_index eventType, const EventManager& em, std::vector<EventManager::EventHandler>& longList, std::array<EventManager::EventHandler, 8>& shortList, size_t& shortListSizeOut)
@@ -75,10 +75,10 @@ struct Event<TEventType, void(Args...)> abstract : EventBase
 
 	class Subscriber
 	{
-		EventManager& _em;
+		EventManager* const _em;
 
 	public:
-		Subscriber(EventManager& em)
+		Subscriber(EventManager* em)
 			: _em(em)
 		{ }
 

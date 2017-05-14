@@ -11,7 +11,7 @@ class ActionList : public EventManager, public IActionList
 	size_t _savePointIndex = 0;
 	size_t _editPointIndex = 0;
 
-	virtual ChangedEvent::Subscriber GetChangedEvent() override final { return ChangedEvent::Subscriber(*this); }
+	virtual ChangedEvent::Subscriber GetChangedEvent() override final { return ChangedEvent::Subscriber(this); }
 
 	virtual void AddPerformedUserAction (wstring&& name, unique_ptr<EditAction>&& action) override final
 	{

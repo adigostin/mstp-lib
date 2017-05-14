@@ -88,8 +88,8 @@ public:
 
 	STP_BRIDGE* GetStpBridge() const { return _stpBridge; }
 
-	BridgeLogLineGenerated::Subscriber GetBridgeLogLineGeneratedEvent() { return BridgeLogLineGenerated::Subscriber(*this); }
-	BridgeConfigChangedEvent::Subscriber GetBridgeConfigChangedEvent() { return BridgeConfigChangedEvent::Subscriber(*this); }
+	BridgeLogLineGenerated::Subscriber GetBridgeLogLineGeneratedEvent() { return BridgeLogLineGenerated::Subscriber(this); }
+	BridgeConfigChangedEvent::Subscriber GetBridgeConfigChangedEvent() { return BridgeConfigChangedEvent::Subscriber(this); }
 
 	bool IsPowered() const { return _powered; }
 	const std::vector<std::unique_ptr<BridgeLogLine>>& GetLogLines() const { return _logLines; }

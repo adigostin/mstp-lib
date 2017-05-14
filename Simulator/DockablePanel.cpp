@@ -341,9 +341,9 @@ public:
 		}
 	}
 
-	virtual VisibleChangedEvent::Subscriber GetVisibleChangedEvent() override final { return VisibleChangedEvent::Subscriber(*this); }
+	virtual VisibleChangedEvent::Subscriber GetVisibleChangedEvent() override final { return VisibleChangedEvent::Subscriber(this); }
 
-	virtual SplitterDragging::Subscriber GetSplitterDraggingEvent() override final { return SplitterDragging::Subscriber(*this); }
+	virtual SplitterDragging::Subscriber GetSplitterDraggingEvent() override final { return SplitterDragging::Subscriber(this); }
 
 	virtual SIZE GetPanelSizeFromContentSize (SIZE contentSize) const override final
 	{

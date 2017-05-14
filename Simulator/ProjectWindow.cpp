@@ -461,9 +461,9 @@ public:
 
 	virtual unsigned int GetSelectedVlanNumber() const override final { return _selectedVlanNumber; }
 
-	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() override final { return SelectedVlanNumerChangedEvent::Subscriber(*this); }
+	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() override final { return SelectedVlanNumerChangedEvent::Subscriber(this); }
 
-	virtual ClosedEvent::Subscriber GetClosedEvent() override final { return ClosedEvent::Subscriber(*this); }
+	virtual ClosedEvent::Subscriber GetClosedEvent() override final { return ClosedEvent::Subscriber(this); }
 
 	virtual IProject* GetProject() const override final { return _project; }
 

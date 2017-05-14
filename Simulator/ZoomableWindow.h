@@ -41,7 +41,7 @@ class ZoomableWindow abstract : public D2DWindow, public IZoomable
 public:
 	using base::base;
 
-	ZoomTransformChangedEvent::Subscriber GetZoomTransformChangedEvent() { return ZoomTransformChangedEvent::Subscriber(*this); }
+	ZoomTransformChangedEvent::Subscriber GetZoomTransformChangedEvent() { return ZoomTransformChangedEvent::Subscriber(this); }
 	D2D1::Matrix3x2F GetZoomTransform() const;
 	float GetZoom() const { return _zoom; }
 	D2D1_POINT_2F GetWorkspaceOrigin() const { return _workspaceOrigin; }
