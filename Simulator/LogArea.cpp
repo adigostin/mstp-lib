@@ -1,7 +1,7 @@
 
 #include "pch.h"
 #include "Simulator.h"
-#include "D2DWindow.h"
+#include "Win32/D2DWindow.h"
 #include "Bridge.h"
 #include "Port.h"
 

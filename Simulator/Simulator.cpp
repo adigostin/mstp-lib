@@ -1,7 +1,6 @@
 
 #include "pch.h"
 #include "Simulator.h"
-#include "Win32Defs.h"
 #include "Bridge.h"
 #include "Wire.h"
 

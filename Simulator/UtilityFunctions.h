@@ -46,8 +46,6 @@ public:
 	bool Is() const { return dynamic_cast<const T*>(this) != nullptr; }
 };
 
-enum class Side { Left, Top, Right, Bottom };
-
 struct TextLayout
 {
 	IDWriteTextLayoutPtr layout;

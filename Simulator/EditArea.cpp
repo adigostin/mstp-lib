@@ -1,7 +1,7 @@
 
 #include "pch.h"
 #include "Simulator.h"
-#include "ZoomableWindow.h"
+#include "Win32/ZoomableWindow.h"
 #include "Resource.h"
 #include "EditStates/EditState.h"
 #include "Bridge.h"

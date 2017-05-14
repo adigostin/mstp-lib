@@ -1,6 +1,5 @@
 
 #include "pch.h"
-#include "Simulator.h"
 #include "Window.h"
 
 using namespace std;

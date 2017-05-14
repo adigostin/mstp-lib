@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "Simulator.h"
-#include "Win32Defs.h"
 #include "Resource.h"
 #include "Bridge.h"
 #include "Port.h"

@@ -4,15 +4,15 @@
     <Filter Include="EditStates">
       <UniqueIdentifier>{44c75b95-8381-4205-bb9c-ff949707452e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Win32">
+      <UniqueIdentifier>{6639324b-98b9-4102-a3ee-1dfa81922d14}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
-    <ClInclude Include="Win32Defs.h" />
     <ClInclude Include="EventManager.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="D2DWindow.h" />
-    <ClInclude Include="ZoomableWindow.h" />
     <ClInclude Include="Wire.h" />
     <ClInclude Include="Bridge.h" />
     <ClInclude Include="EditStates\EditState.h">
@@ -21,15 +21,24 @@
     <ClInclude Include="Port.h" />
     <ClInclude Include="Simulator.h" />
     <ClInclude Include="UtilityFunctions.h" />
-    <ClInclude Include="Window.h" />
+    <ClInclude Include="Win32\D2DWindow.h">
+      <Filter>Win32</Filter>
+    </ClInclude>
+    <ClInclude Include="Win32\Win32Defs.h">
+      <Filter>Win32</Filter>
+    </ClInclude>
+    <ClInclude Include="Win32\Window.h">
+      <Filter>Win32</Filter>
+    </ClInclude>
+    <ClInclude Include="Win32\ZoomableWindow.h">
+      <Filter>Win32</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="EditArea.cpp" />
-    <ClCompile Include="D2DWindow.cpp" />
-    <ClCompile Include="ZoomableWindow.cpp" />
     <ClCompile Include="Selection.cpp" />
     <ClCompile Include="Simulator.cpp" />
     <ClCompile Include="Wire.cpp" />
@@ -43,8 +52,6 @@
     <ClCompile Include="LogArea.cpp" />
     <ClCompile Include="Port.cpp" />
     <ClCompile Include="UtilityFunctions.cpp" />
-    <ClCompile Include="DockablePanel.cpp" />
-    <ClCompile Include="DockContainer.cpp" />
     <ClCompile Include="EditStates\MoveWirePointES.cpp">
       <Filter>EditStates</Filter>
     </ClCompile>
@@ -60,7 +67,21 @@
       <Filter>EditStates</Filter>
     </ClCompile>
     <ClCompile Include="ActionList.cpp" />
-    <ClCompile Include="Window.cpp" />
+    <ClCompile Include="Win32\D2DWindow.cpp">
+      <Filter>Win32</Filter>
+    </ClCompile>
+    <ClCompile Include="Win32\DockablePanel.cpp">
+      <Filter>Win32</Filter>
+    </ClCompile>
+    <ClCompile Include="Win32\DockContainer.cpp">
+      <Filter>Win32</Filter>
+    </ClCompile>
+    <ClCompile Include="Win32\Window.cpp">
+      <Filter>Win32</Filter>
+    </ClCompile>
+    <ClCompile Include="Win32\ZoomableWindow.cpp">
+      <Filter>Win32</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Simulator.rc" />

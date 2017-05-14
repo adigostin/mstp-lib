@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "Bridge.h"
-#include "Win32Defs.h"
 #include "Port.h"
 #include "Wire.h"
 #include "UtilityFunctions.h"
