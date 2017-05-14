@@ -103,7 +103,7 @@ void ZoomableWindow::SetZoomAndOrigin(float zoom, float originX, float originY, 
 
 void ZoomableWindow::OnZoomTransformChanged()
 {
-	ZoomTransformChangedEvent::InvokeHandlers(_em, this);
+	ZoomTransformChangedEvent::InvokeHandlers(*this, this);
 }
 
 void ZoomableWindow::ZoomToRectangle (const D2D1_RECT_F& rect, float minMarginDips, float maxZoomOrZero, bool smooth)

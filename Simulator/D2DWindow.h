@@ -34,7 +34,6 @@ public:
 	IDWriteFactory* GetDWriteFactory() const { return _dWriteFactory; }
 
 protected:
-	EventManager _em;
 	virtual std::optional<LRESULT> WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
 	virtual void OnBeforeRender() { }
 	virtual void Render(ID2D1DeviceContext* dc) const = 0;

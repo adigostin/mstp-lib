@@ -1,7 +1,8 @@
 
 #pragma once
+#include "EventManager.h"
 
-class Window : public IUnknown
+class Window : public EventManager, public IUnknown
 {
 public:
 	Window (HINSTANCE hInstance, const wchar_t* wndClassName, DWORD exStyle, DWORD style, const RECT& rect, HWND hWndParent, HMENU hMenuOrControlId);
