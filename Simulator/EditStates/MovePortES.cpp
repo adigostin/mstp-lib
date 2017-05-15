@@ -44,6 +44,24 @@ public:
 
 	virtual void OnMouseUp (const MouseLocation& location, MouseButton button) override final
 	{
+		struct Action : public EditAction
+		{
+			Port* const _port;
+			Side  const _initialSide;
+			float const _initialOffset;
+			Side  const _finalSide;
+			float const _finalOffset;
+
+			Action (Port* port, Side initialSide, float initialOffset, Side finalSide, float finalOffset)
+				: _port(port), _initialSide(initialSide), _initialOffset(initialOffset), _finalSide(finalSide), _finalOffset(finalOffset)
+			{ }
+
+			virtual void Redo() override final { _port->SetSideAndOffset (_finalSide, _finalOffset); }
+			virtual void Undo() override final { _port->SetSideAndOffset (_initialSide, _initialOffset); }
+		};
+
+		auto action = unique_ptr<EditAction>(new Action(_port, _initialSide, _initialOffset, _port->GetSide(), _port->GetOffset()));
+		_actionList->AddPerformedUserAction (L"Move port", move(action));
 		_completed = true;
 	}
 
