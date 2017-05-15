@@ -31,6 +31,8 @@ class ActionList : public EventManager, public IActionList
 
 	virtual size_t GetEditPointIndex() const override final { return _editPointIndex; }
 
+	virtual size_t GetCount() const override final { return _actions.size(); }
+
 	virtual void SetSavePoint() override final
 	{
 		_savePointIndex = _editPointIndex;

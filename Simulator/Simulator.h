@@ -140,7 +140,10 @@ MIDL_INTERFACE("3F68DA7D-68A0-411F-A481-D711F8527292") IActionList : public IUnk
 	virtual void PerformAndAddUserAction (std::wstring&& actionName, std::unique_ptr<EditAction>&& action) = 0;
 	virtual size_t GetSavePointIndex() const = 0;
 	virtual size_t GetEditPointIndex() const = 0;
+	virtual size_t GetCount() const = 0;
 	virtual void SetSavePoint() = 0;
+	bool CanUndo() const { return GetEditPointIndex() > 0; }
+	bool CanRedo() const { return (int) GetEditPointIndex() < (int) GetCount() - 1; }
 };
 _COM_SMARTPTR_TYPEDEF(IActionList, __uuidof(IActionList));
 using ActionListFactory = IActionListPtr(*const)();

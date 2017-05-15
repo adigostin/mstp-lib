@@ -131,7 +131,18 @@ public:
 
 	static void OnActionListChanged (void* callbackArg, IActionList* actionList)
 	{
-		static_cast<ProjectWindow*>(callbackArg)->SetWindowTitle();
+		auto pw = static_cast<ProjectWindow*>(callbackArg);
+		pw->SetWindowTitle();
+		HMENU hmenu = ::GetMenu(pw->_hwnd);
+		if (hmenu != nullptr)
+		{
+			MENUITEMINFO mii = { sizeof(mii) };
+			mii.fMask = MIIM_STATE;
+			mii.fState = actionList->CanUndo() ? MFS_ENABLED : MFS_DISABLED;
+			BOOL bRes = ::SetMenuItemInfoW (hmenu, ID_EDIT_UNDO, FALSE, &mii);
+			mii.fState = actionList->CanRedo() ? MFS_ENABLED : MFS_DISABLED;
+			bRes = ::SetMenuItemInfoW (hmenu, ID_EDIT_REDO, FALSE, &mii);
+		}
 	}
 
 	void SetWindowTitle()
