@@ -63,31 +63,6 @@ RECT IWin32Window::GetClientRectPixels() const
 #pragma endregion
 
 #pragma region IProject
-
-size_t IProject::AddBridge (std::unique_ptr<Bridge>&& bridge)
-{
-	size_t index = GetBridges().size();
-	InsertBridge (index, std::move(bridge));
-	return index;
-}
-
-size_t IProject::AddWire (std::unique_ptr<Wire>&& wire)
-{
-	size_t index = GetWires().size();
-	InsertWire (index, std::move(wire));
-	return index;
-}
-
-unique_ptr<Object> IProject::Remove (Object* o)
-{
-	if (auto b = dynamic_cast<Bridge*>(o))
-		return Remove(b);
-	else if (auto w = dynamic_cast<Wire*>(o))
-		return Remove(w);
-	else
-		throw not_implemented_exception();
-}
-
 pair<Wire*, size_t> IProject::GetWireConnectedToPort (const Port* port) const
 {
 	for (auto& w : GetWires())

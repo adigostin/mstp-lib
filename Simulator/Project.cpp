@@ -20,18 +20,32 @@ class Project : public EventManager, public IProject
 public:
 	virtual const vector<unique_ptr<Bridge>>& GetBridges() const override final { return _bridges; }
 
-	virtual void InsertBridge (size_t index, unique_ptr<Bridge>&& bridge) override final
+	virtual void InsertBridge (size_t index, unique_ptr<Bridge>&& bridge, std::vector<ConvertedWirePoint>* convertedWirePoints) override final
 	{
 		if (index > _bridges.size())
 			throw invalid_argument("index");
 
-		_bridges.push_back(move(bridge));
-		_bridges.back()->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
-		BridgeInsertedEvent::InvokeHandlers (*this, this, index, _bridges.back().get());
+		Bridge* b = bridge.get();
+		auto it = _bridges.insert (_bridges.begin() + index, (move(bridge)));
+		b->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
+		BridgeInsertedEvent::InvokeHandlers (*this, this, index, b);
 		ProjectInvalidateEvent::InvokeHandlers (*this, this);
+
+		if (convertedWirePoints != nullptr)
+		{
+			for (size_t i = convertedWirePoints->size() - 1; i != -1; i--)
+			{
+				auto& cwp = convertedWirePoints->at(i);
+				if (cwp.port->GetBridge() == b)
+				{
+					cwp.wire->SetPoint(cwp.pointIndex, cwp.port);
+					convertedWirePoints->erase (convertedWirePoints->begin() + i);
+				}
+			}
+		}
 	}
 
-	virtual unique_ptr<Bridge> RemoveBridge(size_t index) override final
+	virtual unique_ptr<Bridge> RemoveBridge(size_t index, vector<ConvertedWirePoint>* convertedWirePointsToAddTo) override final
 	{
 		if (index >= _bridges.size())
 			throw invalid_argument("index");
@@ -42,26 +56,25 @@ public:
 		while (wireIndex < _wires.size())
 		{
 			Wire* w = _wires[wireIndex].get();
-
-			bool allWirePointsOnBridgeBeingDeleted = all_of (w->GetPoints().begin(), w->GetPoints().end(),
-				[b](const WireEnd& we) { return holds_alternative<ConnectedWireEnd>(we) && (get<ConnectedWireEnd>(we)->GetBridge() == b); });
-
-			if (allWirePointsOnBridgeBeingDeleted)
-				this->RemoveWire(wireIndex);
-			else
+			for (size_t i = 0; i < w->GetPoints().size(); i++)
 			{
-				for (size_t i = 0; i < w->GetPoints().size(); i++)
+				auto& point = w->GetPoints()[i];
+				if (holds_alternative<ConnectedWireEnd>(point))
 				{
-					auto& point = w->GetPoints()[i];
-					if (holds_alternative<ConnectedWireEnd>(point) && (get<ConnectedWireEnd>(point)->GetBridge() == b))
+					auto port = get<ConnectedWireEnd>(point);
+					if (port->GetBridge() == b)
+					{
+						assert (convertedWirePointsToAddTo != nullptr);
+						convertedWirePointsToAddTo->push_back(ConvertedWirePoint { w, i, port });
 						w->SetPoint(i, w->GetPointCoords(i));
+					}
 				}
 
 				wireIndex++;
 			}
 		}
 
-		BridgeRemovingEvent::InvokeHandlers(*this, this, index, _bridges[index].get());
+		BridgeRemovingEvent::InvokeHandlers(*this, this, index, b);
 		_bridges[index]->GetInvalidateEvent().RemoveHandler (&OnObjectInvalidate, this);
 		auto result = move(_bridges[index]);
 		_bridges.erase (_bridges.begin() + index);
@@ -76,9 +89,10 @@ public:
 		if (index > _wires.size())
 			throw invalid_argument("index");
 
-		_wires.push_back(move(wire));
-		_wires.back()->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
-		WireInsertedEvent::InvokeHandlers (*this, this, index, _wires.back().get());
+		Wire* w = wire.get();
+		auto it = _wires.insert (_wires.begin() + index, move(wire));
+		w->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
+		WireInsertedEvent::InvokeHandlers (*this, this, index, w);
 		ProjectInvalidateEvent::InvokeHandlers (*this, this);
 	}
 

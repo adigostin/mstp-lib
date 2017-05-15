@@ -208,6 +208,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Bridge.h" />
+    <ClInclude Include="EditActions.h" />
     <ClInclude Include="EditStates\EditState.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Port.h" />

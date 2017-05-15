@@ -35,6 +35,7 @@
     <ClInclude Include="Win32\EventManager.h">
       <Filter>Win32</Filter>
     </ClInclude>
+    <ClInclude Include="EditActions.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />

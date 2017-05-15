@@ -7,6 +7,7 @@
 #include "Bridge.h"
 #include "Port.h"
 #include "Wire.h"
+#include "EditActions.h"
 
 using namespace std;
 using namespace D2D1;
@@ -604,8 +605,13 @@ public:
 
 		if (virtualKey == VK_DELETE)
 		{
-			while (!_selection->GetObjects().empty())
-				_project->Remove(_selection->GetObjects().back());
+			if (any_of(_selection->GetObjects().begin(), _selection->GetObjects().end(), [](Object* o) { return o->Is<Port>(); }))
+			{
+				TaskDialog (GetHWnd(), nullptr, _app->GetAppName(), nullptr, L"Ports cannot be deleted.", 0, nullptr, nullptr);
+				return 0;
+			}
+
+			_actionList->PerformAndAddUserAction(L"Delete objects", unique_ptr<EditAction>(new DeleteEditAction(_project, _selection)));
 			return 0;
 		}
 

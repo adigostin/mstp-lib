@@ -39,8 +39,8 @@ public:
 				unique_ptr<Bridge> _bridge;
 				size_t _insertIndex;
 				CreateAction (IProject* project, unique_ptr<Bridge>&& bridge) : _project(project), _bridge(move(bridge)) { }
-				virtual void Redo() { _insertIndex = _project->AddBridge(move(_bridge)); }
-				virtual void Undo() { _bridge = _project->RemoveBridge(_insertIndex); }
+				virtual void Redo() { _insertIndex = _project->GetBridges().size(); _project->InsertBridge(_insertIndex, move(_bridge), nullptr); }
+				virtual void Undo() { _bridge = _project->RemoveBridge(_insertIndex, nullptr); }
 			};
 
 			Bridge* b = _bridge.get();

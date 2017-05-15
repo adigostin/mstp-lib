@@ -87,7 +87,7 @@ public:
 					unique_ptr<Wire> _wire;
 					size_t _insertIndex;
 					CreateAction (IProject* project, unique_ptr<Wire>&& wire) : _project(project), _wire(move(wire)) { }
-					virtual void Redo() { _insertIndex = _project->AddWire(move(_wire)); }
+					virtual void Redo() { _insertIndex = _project->GetWires().size(); _project->InsertWire(_insertIndex, move(_wire)); }
 					virtual void Undo() { _wire = _project->RemoveWire(_insertIndex); }
 				};
 

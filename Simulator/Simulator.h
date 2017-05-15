@@ -37,6 +37,8 @@ MIDL_INTERFACE("3ADCEF4B-9335-4DD7-8016-5958883A4347") ISelection : public IUnkn
 	virtual void Clear() = 0;
 	virtual void Add (Object* o) = 0;
 
+	bool Contains (Object* o) const { return std::find (GetObjects().begin(), GetObjects().end(), o) != GetObjects().end(); }
+
 	struct AddedToSelectionEvent : public Event<AddedToSelectionEvent, void(ISelection*, Object*)> { };
 	virtual AddedToSelectionEvent::Subscriber GetAddedToSelectionEvent() = 0;
 
@@ -165,9 +167,16 @@ enum class SaveProjectOption { SaveUnconditionally, SaveIfChangedAskUserFirst };
 
 MIDL_INTERFACE("A7D9A5A8-DB3F-4147-B488-58D260365F65") IProject : public IUnknown
 {
+	struct ConvertedWirePoint
+	{
+		Wire* wire;
+		size_t pointIndex;
+		Port* port;
+	};
+
 	virtual const std::vector<std::unique_ptr<Bridge>>& GetBridges() const = 0;
-	virtual void InsertBridge (size_t index, std::unique_ptr<Bridge>&& bridge) = 0;
-	virtual std::unique_ptr<Bridge> RemoveBridge (size_t index) = 0;
+	virtual void InsertBridge (size_t index, std::unique_ptr<Bridge>&& bridge, std::vector<ConvertedWirePoint>* convertedWirePoints) = 0;
+	virtual std::unique_ptr<Bridge> RemoveBridge (size_t index, std::vector<ConvertedWirePoint>* convertedWirePoints) = 0;
 	virtual BridgeInsertedEvent::Subscriber GetBridgeInsertedEvent() = 0;
 	virtual BridgeRemovingEvent::Subscriber GetBridgeRemovingEvent() = 0;
 
@@ -184,11 +193,6 @@ MIDL_INTERFACE("A7D9A5A8-DB3F-4147-B488-58D260365F65") IProject : public IUnknow
 
 	virtual const std::wstring& GetFilePath() const = 0;
 	virtual HRESULT Save (const wchar_t* filePath) = 0;
-
-	size_t AddBridge (std::unique_ptr<Bridge>&& bridge);
-	size_t AddWire (std::unique_ptr<Wire>&& wire);
-
-	std::unique_ptr<Object> Remove (Object* o);
 
 	std::pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const;
 	Port* FindConnectedPort (Port* txPort) const;
