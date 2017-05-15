@@ -81,8 +81,18 @@ public:
 		{
 			if (holds_alternative<ConnectedWireEnd>(_wire->GetP1()))
 			{
+				struct CreateAction : public EditAction
+				{
+					IProject* const _project;
+					unique_ptr<Wire> _wire;
+					size_t _insertIndex;
+					CreateAction (IProject* project, unique_ptr<Wire>&& wire) : _project(project), _wire(move(wire)) { }
+					virtual void Redo() { _insertIndex = _project->AddWire(move(_wire)); }
+					virtual void Undo() { _wire = _project->RemoveWire(_insertIndex); }
+				};
+
 				Wire* w = _wire.get();
-				_pw->GetProject()->AddWire(move(_wire));
+				_actionList->PerformAndAddUserAction (L"Create Wire", make_unique<CreateAction>(_pw->GetProject(), move(_wire)));
 				_selection->Select(w);
 				_subState = Done;
 			}
