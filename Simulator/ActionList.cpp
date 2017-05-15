@@ -31,6 +31,12 @@ class ActionList : public EventManager, public IActionList
 
 	virtual size_t GetEditPointIndex() const override final { return _editPointIndex; }
 
+	virtual void SetSavePoint() override final
+	{
+		_savePointIndex = _editPointIndex;
+		ChangedEvent::InvokeHandlers (*this, this);
+	}
+
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
 
 	virtual ULONG STDMETHODCALLTYPE AddRef() override final

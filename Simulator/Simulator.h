@@ -140,6 +140,7 @@ MIDL_INTERFACE("3F68DA7D-68A0-411F-A481-D711F8527292") IActionList : public IUnk
 	virtual void PerformAndAddUserAction (std::wstring&& actionName, std::unique_ptr<EditAction>&& action) = 0;
 	virtual size_t GetSavePointIndex() const = 0;
 	virtual size_t GetEditPointIndex() const = 0;
+	virtual void SetSavePoint() = 0;
 };
 _COM_SMARTPTR_TYPEDEF(IActionList, __uuidof(IActionList));
 using ActionListFactory = IActionListPtr(*const)();
@@ -152,8 +153,6 @@ struct BridgeRemovingEvent : public Event<BridgeRemovingEvent, void(IProject*, s
 
 struct WireInsertedEvent : public Event<WireInsertedEvent, void(IProject*, size_t index, Wire*)> { };
 struct WireRemovingEvent : public Event<WireRemovingEvent, void(IProject*, size_t index, Wire*)> { };
-
-struct ProjectInvalidateEvent : public Event<ProjectInvalidateEvent, void(IProject*)> { };
 
 enum class SaveProjectOption { SaveUnconditionally, SaveIfChangedAskUserFirst };
 
@@ -171,7 +170,9 @@ MIDL_INTERFACE("A7D9A5A8-DB3F-4147-B488-58D260365F65") IProject : public IUnknow
 	virtual WireInsertedEvent::Subscriber GetWireInsertedEvent() = 0;
 	virtual WireRemovingEvent::Subscriber GetWireRemovingEvent() = 0;
 
+	struct ProjectInvalidateEvent : public Event<ProjectInvalidateEvent, void(IProject*)> { };
 	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() = 0;
+
 	virtual std::array<uint8_t, 6> AllocMacAddressRange (size_t count) = 0;
 
 	virtual const std::wstring& GetFilePath() const = 0;

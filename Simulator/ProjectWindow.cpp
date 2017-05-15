@@ -92,6 +92,8 @@ public:
 			::GetWindowRect(_hwnd, &_restoreBounds);
 		::ShowWindow (_hwnd, nCmdShow);
 
+		SetWindowTitle();
+
 		const RECT clientRect = { 0, 0, _clientSize.cx, _clientSize.cy };
 		_dockContainer = dockContainerFactory (_app->GetHInstance(), _hwnd, clientRect);
 
@@ -115,14 +117,41 @@ public:
 		_editArea = editAreaFactory (app, this, _project, _actionList, _selection, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory());
 
 		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
+		_actionList->GetChangedEvent().AddHandler (&OnActionListChanged, this);
 	}
 
 	~ProjectWindow()
 	{
+		_actionList->GetChangedEvent().RemoveHandler (&OnActionListChanged, this);
 		_selection->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
 
 		if (_hwnd != nullptr)
 			::DestroyWindow(_hwnd);
+	}
+
+	static void OnActionListChanged (void* callbackArg, IActionList* actionList)
+	{
+		static_cast<ProjectWindow*>(callbackArg)->SetWindowTitle();
+	}
+
+	void SetWindowTitle()
+	{
+		wstringstream windowTitle;
+
+		const auto& filePath = _project->GetFilePath();
+		if (!filePath.empty())
+		{
+			const wchar_t* fileName = PathFindFileName (filePath.c_str());
+			const wchar_t* fileExt = PathFindExtension (filePath.c_str());
+			windowTitle << setw(fileExt - fileName) << fileName;
+		}
+		else
+			windowTitle << L"Untitled";
+
+		if (_actionList->GetSavePointIndex() != _actionList->GetEditPointIndex())
+			windowTitle << L" *";
+
+		::SetWindowText (_hwnd, windowTitle.str().c_str());
 	}
 
 	void SetMainMenuItemCheck (UINT item, bool checked)
@@ -258,6 +287,12 @@ public:
 				return 0;
 			}
 
+			if (wParam == ID_FILE_SAVE)
+			{
+				Save();
+				return 0;
+			}
+
 			if ((wParam == ID_FILE_NEW) || (wParam == ID_FILE_OPEN) || (wParam == ID_FILE_SAVE) || (wParam == ID_FILE_SAVEAS))
 			{
 				MessageBox (_hwnd, L"Saving and loading are not yet implemented.", _app->GetAppName(), 0);
@@ -274,6 +309,29 @@ public:
 		}
 
 		return DefWindowProc(_hwnd, msg, wParam, lParam);
+	}
+
+	HRESULT Save()
+	{
+		HRESULT hr;
+
+		auto savePath = _project->GetFilePath();
+		if (savePath.empty())
+		{
+			hr = TryChooseSaveFilePath (_hwnd, L"", savePath);
+			if (FAILED(hr))
+				return hr;
+		}
+
+		hr = _project->Save (savePath.c_str());
+		if (FAILED(hr))
+		{
+			TaskDialog (_hwnd, nullptr, _app->GetAppName(), L"Could Not Save", _com_error(hr).ErrorMessage(), 0, nullptr, nullptr);
+			return hr;
+		}
+
+		_actionList->SetSavePoint();
+		return S_OK;
 	}
 
 	HRESULT AskSaveDiscardCancel (const wchar_t* askText, bool* saveChosen)
@@ -377,20 +435,9 @@ public:
 
 				if (saveChosen)
 				{
-					auto savePath = _project->GetFilePath();
-					if (savePath.empty())
-					{
-						hr = TryChooseSaveFilePath (_hwnd, L"", savePath);
-						if (FAILED(hr))
-							return hr;
-					}
-
-					auto hr = _project->Save (savePath.c_str());
+					hr = this->Save();
 					if (FAILED(hr))
-					{
-						TaskDialog (_hwnd, nullptr, _app->GetAppName(), L"Could Not Save", _com_error(hr).ErrorMessage(), 0, nullptr, nullptr);
 						return hr;
-					}
 				}
 			}
 		}
