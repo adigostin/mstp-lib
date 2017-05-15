@@ -189,7 +189,7 @@ public:
 
 		app->_workQueue.push ([app, pw]
 		{
-			auto it = find_if (app->_projectWindows.begin(), app->_projectWindows.end(), [pw](const IProjectWindowPtr& p) { return p == pw; });
+			auto it = find_if (app->_projectWindows.begin(), app->_projectWindows.end(), [pw](const IProjectWindowPtr& p) { return p.GetInterfacePtr() == pw; });
 			assert (it != app->_projectWindows.end());
 			app->_projectWindows.erase(it);
 			if (app->_projectWindows.empty())
