@@ -7,6 +7,8 @@ struct HTResult
 {
 	Object* object;
 	int code;
+	bool operator==(const HTResult& other) const { return (this->object == other.object) && (this->code == other.code); }
+	bool operator!=(const HTResult& other) const { return (this->object != other.object) || (this->code != other.code); }
 };
 
 struct DrawingObjects
@@ -57,6 +59,7 @@ struct TextLayout
 unsigned int GetTimestampMilliseconds();
 D2D1::ColorF GetD2DSystemColor (int sysColorIndex);
 bool HitTestLine (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance, D2D1_POINT_2F p0w, D2D1_POINT_2F p1w, float lineWidth);
+bool PointInRect (const D2D1_RECT_F& rect, D2D1_POINT_2F location);
 bool PointInPolygon (const D2D1_POINT_2F* vertices, size_t vertexCount, D2D1_POINT_2F point);
 D2D1_RECT_F InflateRect (const D2D1_RECT_F& rect, float distance);
 void InflateRect (D2D1_RECT_F* rect, float distance);

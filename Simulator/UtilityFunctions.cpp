@@ -57,6 +57,11 @@ bool HitTestLine (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tole
 	return PointInPolygon (&vertices[0], 4, dLocation);
 }
 
+bool PointInRect (const D2D1_RECT_F& rect, D2D1_POINT_2F location)
+{
+	return (location.x >= rect.left) && (location.x < rect.right) && (location.y >= rect.top) && (location.y < rect.bottom);
+}
+
 bool PointInPolygon (const D2D1_POINT_2F* vertices, size_t vertexCount, D2D1_POINT_2F point)
 {
 	// Taken from http://stackoverflow.com/a/2922778/451036

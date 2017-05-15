@@ -45,7 +45,7 @@ void Wire::SetPoint (size_t pointIndex, const WireEnd& point)
 			auto portB = get<ConnectedWireEnd>(_points[1 - pointIndex]);
 		}
 		*/
-		WireInvalidateEvent::InvokeHandlers(*this, this);
+		InvalidateEvent::InvokeHandlers(*this, this);
 	}
 }
 
@@ -159,8 +159,18 @@ void Wire::RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, co
 
 HTResult Wire::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance)
 {
+	for (size_t i = 0; i < _points.size(); i++)
+	{
+		auto pointWLocation = this->GetPointCoords(i);
+		auto pointDLocation = zoomable->GetDLocationFromWLocation(pointWLocation);
+		D2D1_RECT_F rect = { pointDLocation.x, pointDLocation.y, pointDLocation.x, pointDLocation.y };
+		InflateRect(&rect, tolerance);
+		if (PointInRect (rect, dLocation))
+			return { this, (int) i };
+	}
+
 	if (HitTestLine (zoomable, dLocation, tolerance, GetP0Coords(), GetP1Coords(), WireThickness))
-		return { this, 1 };
+		return { this, -1 };
 
 	return { };
 }

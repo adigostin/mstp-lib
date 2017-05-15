@@ -95,7 +95,6 @@ public:
 		{
 			_subState = Done;
 			::InvalidateRect (_pw->GetEditArea()->GetHWnd(), nullptr, FALSE);
-			::SetCursor (LoadCursor(nullptr, IDC_ARROW));
 			return 0;
 		}
 
@@ -111,7 +110,7 @@ public:
 		rt->SetTransform(&oldtr);
 
 		if (holds_alternative<ConnectedWireEnd>(_wire->GetP1()))
-			_pw->GetEditArea()->RenderHoverCP (rt, get<ConnectedWireEnd>(_wire->GetP1()));
+			_pw->GetEditArea()->RenderSnapRect (rt, get<ConnectedWireEnd>(_wire->GetP1())->GetCPLocation());
 	}
 
 	virtual bool Completed() const override final

@@ -83,7 +83,7 @@ MIDL_INTERFACE("09C8FD2D-9A51-4B25-A3B4-3BCD3923FB9F") IEditArea : public IWin32
 	virtual const DrawingObjects& GetDrawingObjects() const = 0;
 	virtual void EnterState (std::unique_ptr<EditState>&& state) = 0;
 	virtual Port* GetCPAt (D2D1_POINT_2F dLocation, float tolerance) const = 0;
-	virtual void RenderHoverCP (ID2D1RenderTarget* rt, Port* port) const = 0;
+	virtual void RenderSnapRect (ID2D1RenderTarget* rt, D2D1_POINT_2F wLocation) const = 0;
 	virtual D2D1::Matrix3x2F GetZoomTransform() const = 0;
 };
 _COM_SMARTPTR_TYPEDEF(IEditArea, __uuidof(IEditArea));

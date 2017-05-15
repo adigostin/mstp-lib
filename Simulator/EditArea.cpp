@@ -36,7 +36,7 @@ class EditArea : public ZoomableWindow, public IEditArea
 	IDWriteTextFormatPtr _legendFont;
 	DrawingObjects _drawingObjects;
 	unique_ptr<EditState> _state;
-	Port* _hoverPort = nullptr;
+	HTResult _htResult = { nullptr, 0 };
 
 	struct BeginningDrag
 	{
@@ -126,10 +126,23 @@ public:
 	static void OnBridgeRemoving (void* callbackArg, IProject* project, size_t index, Bridge* b)
 	{
 		auto area = static_cast<EditArea*>(callbackArg);
-		if ((area->_hoverPort != nullptr) && (area->_hoverPort->GetBridge() == b))
+		if (dynamic_cast<Bridge*>(area->_htResult.object) != nullptr)
 		{
-			area->_hoverPort = nullptr;
-			InvalidateRect (area->GetHWnd(), nullptr, FALSE);
+			auto htBridge = static_cast<Bridge*>(area->_htResult.object);
+			if (htBridge == b)
+			{
+				area->_htResult = { nullptr, 0 };
+				InvalidateRect (area->GetHWnd(), nullptr, FALSE);
+			}
+		}
+		else if (dynamic_cast<Port*>(area->_htResult.object) != nullptr)
+		{
+			auto htPort = static_cast<Port*>(area->_htResult.object);
+			if (htPort->GetBridge() == b)
+			{
+				area->_htResult = { nullptr, 0 };
+				InvalidateRect (area->GetHWnd(), nullptr, FALSE);
+			}
 		}
 	}
 
@@ -310,13 +323,12 @@ public:
 		}
 	}
 
-	virtual void RenderHoverCP (ID2D1RenderTarget* rt, Port* port) const override final
+	virtual void RenderSnapRect (ID2D1RenderTarget* rt, D2D1_POINT_2F wLocation) const override final
 	{
 		auto oldaa = rt->GetAntialiasMode();
 		rt->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
 
-		auto cpw = port->GetCPLocation();
-		auto cpd = GetDLocationFromWLocation(cpw);
+		auto cpd = GetDLocationFromWLocation(wLocation);
 		auto rect = RectF (cpd.x - SnapDistance, cpd.y - SnapDistance, cpd.x + SnapDistance, cpd.y + SnapDistance);
 		rt->DrawRectangle (rect, _drawingObjects._brushHighlight, 2);
 
@@ -404,6 +416,20 @@ public:
 		}
 	}
 
+	void RenderHover (ID2D1DeviceContext* dc) const
+	{
+		if (dynamic_cast<Port*>(_htResult.object) != nullptr)
+		{
+			if (_htResult.code == Port::HTCodeCP)
+				RenderSnapRect (dc, static_cast<Port*>(_htResult.object)->GetCPLocation());
+		}
+		else if (dynamic_cast<Wire*>(_htResult.object) != nullptr)
+		{
+			if (_htResult.code >= 0)
+				RenderSnapRect (dc, static_cast<Wire*>(_htResult.object)->GetPointCoords(_htResult.code));
+		}
+	}
+
 	virtual void Render(ID2D1DeviceContext* dc) const override final
 	{
 		std::set<STP_MST_CONFIG_ID> configIds;
@@ -428,8 +454,8 @@ public:
 		if (!configIds.empty())
 			RenderConfigIdList (dc, configIds);
 
-		if (_hoverPort != nullptr)
-			RenderHoverCP (dc, _hoverPort);
+		if (_htResult.object != nullptr)
+			RenderHover(dc);
 
 		if (_state != nullptr)
 			_state->Render(dc);
@@ -692,8 +718,15 @@ public:
 					_beginningDrag->stateMoveThreshold = CreateStateCreateWire(MakeEditStateDeps());
 					_beginningDrag->stateButtonUp = CreateStateCreateWire(MakeEditStateDeps());
 				}
-				else
-					_beginningDrag->stateMoveThreshold = CreateStateMoveWirePoint(MakeEditStateDeps(), alreadyConnectedWire.first, alreadyConnectedWire.second);
+			}
+		}
+		else if (dynamic_cast<Wire*>(ht.object) != nullptr)
+		{
+			auto wire = static_cast<Wire*>(ht.object);
+			if (ht.code >= 0)
+			{
+				_beginningDrag->stateMoveThreshold = CreateStateMoveWirePoint(MakeEditStateDeps(), wire, ht.code);
+				_beginningDrag->stateButtonUp = CreateStateMoveWirePoint (MakeEditStateDeps(), wire, ht.code);
 			}
 		}
 
@@ -712,7 +745,7 @@ public:
 
 			if (_beginningDrag->stateButtonUp != nullptr)
 			{
-				_hoverPort = nullptr;
+				_htResult = { nullptr };
 				_state = move(_beginningDrag->stateButtonUp);
 				_state->OnMouseDown (_beginningDrag->location, _beginningDrag->button);
 				assert (!_state->Completed());
@@ -746,7 +779,7 @@ public:
 	{
 		_beginningDrag = nullopt;
 		_state = move(state);
-		_hoverPort = nullptr;
+		_htResult = { nullptr };
 	}
 
 	void ProcessWmSetCursor (POINT pt)
@@ -772,8 +805,23 @@ public:
 				if (ht.code == Port::HTCodeCP)
 					idc = IDC_CROSS;
 			}
+			else if (dynamic_cast<Wire*>(ht.object) != nullptr)
+			{
+				if (ht.code >= 0)
+					// wire point
+					idc = IDC_CROSS;
+				else
+					// wire line
+					idc = IDC_ARROW;
+			}
 
 			::SetCursor (LoadCursor(nullptr, idc));
+
+			if (_htResult != ht)
+			{
+				_htResult = ht;
+				::InvalidateRect(GetHWnd(), nullptr, 0);
+			}
 		}
 	}
 
@@ -797,7 +845,7 @@ public:
 				}
 
 				_beginningDrag = nullopt;
-				_hoverPort = nullptr;
+				_htResult = { nullptr };
 			}
 		}
 		else if (_state != nullptr)
@@ -807,15 +855,6 @@ public:
 			{
 				_state = nullptr;
 				::SetCursor (LoadCursor (nullptr, IDC_ARROW));
-			}
-		}
-		else
-		{
-			Port* newHoverPort = GetCPAt(dLocation, SnapDistance);
-			if (_hoverPort != newHoverPort)
-			{
-				_hoverPort = newHoverPort;
-				InvalidateRect (GetHWnd(), nullptr, FALSE);
 			}
 		}
 	}

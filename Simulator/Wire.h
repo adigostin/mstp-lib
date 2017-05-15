@@ -6,7 +6,6 @@ using LooseWireEnd = D2D1_POINT_2F;
 using WireEnd = std::variant<LooseWireEnd, ConnectedWireEnd>;
 
 class Wire;
-struct WireInvalidateEvent : public Event<WireInvalidateEvent, void(Wire*)> { };
 
 class Wire : public Object
 {
@@ -27,8 +26,6 @@ public:
 	D2D1_POINT_2F GetPointCoords (size_t pointIndex) const;
 	D2D1_POINT_2F GetP0Coords() const { return GetPointCoords(0); }
 	D2D1_POINT_2F GetP1Coords() const { return GetPointCoords(1); }
-
-	WireInvalidateEvent::Subscriber GetWireInvalidateEvent() { return WireInvalidateEvent::Subscriber(this); }
 
 	IXMLDOMElementPtr Serialize (IXMLDOMDocument3* doc) const;
 
