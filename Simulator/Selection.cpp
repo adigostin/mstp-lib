@@ -3,6 +3,7 @@
 #include "Simulator.h"
 #include "Bridge.h"
 #include "Wire.h"
+#include "Port.h"
 
 using namespace std;
 
@@ -27,18 +28,34 @@ private:
 		_project->GetWireRemovingEvent().RemoveHandler (&OnWireRemovingFromProject, this);
 	}
 
-	static void OnBridgeRemovingFromProject (void* callbackArg, IProject* project, size_t index, Bridge* b) { static_cast<Selection*>(callbackArg)->OnObjectRemovingFromProject(b); }
-
-	static void OnWireRemovingFromProject (void* callbackArg, IProject* project, size_t index, Wire* w) { static_cast<Selection*>(callbackArg)->OnObjectRemovingFromProject(w); }
-
-	void OnObjectRemovingFromProject (Object* o)
+	static void OnBridgeRemovingFromProject (void* callbackArg, IProject* project, size_t index, Bridge* b)
 	{
-		auto it = find (_objects.begin(), _objects.end(), o);
-		if (it != _objects.end())
+		auto selection = static_cast<Selection*>(callbackArg);
+		for (size_t i = 0; i < selection->_objects.size(); )
 		{
-			RemoveInternal(it - _objects.begin());
-			ChangedEvent::InvokeHandlers(*this, this);
+			auto so = selection->_objects[i];
+			if ((so == b) || ((dynamic_cast<Port*>(so) != nullptr) && (static_cast<Port*>(so)->GetBridge() == b)))
+				selection->RemoveInternal(i);
+			else
+				i++;
 		}
+
+		ChangedEvent::InvokeHandlers(*selection, selection);
+	}
+
+	static void OnWireRemovingFromProject (void* callbackArg, IProject* project, size_t index, Wire* w)
+	{
+		auto selection = static_cast<Selection*>(callbackArg);
+		for (size_t i = 0; i < selection->_objects.size(); )
+		{
+			auto so = selection->_objects[i];
+			if (so == w)
+				selection->RemoveInternal(i);
+			else
+				i++;
+		}
+
+		ChangedEvent::InvokeHandlers(*selection, selection);
 	}
 
 	virtual const vector<Object*>& GetObjects() const override final { return _objects; }
