@@ -227,6 +227,7 @@
     <ClCompile Include="BridgePropsWindow.cpp" />
     <ClCompile Include="ActionList.cpp" />
     <ClCompile Include="EditArea.cpp" />
+    <ClCompile Include="EditStates\BeginningDragES.cpp" />
     <ClCompile Include="EditStates\CreateBridgeES.cpp" />
     <ClCompile Include="EditStates\CreateWireES.cpp" />
     <ClCompile Include="EditStates\MoveBridgesES.cpp" />

@@ -4,6 +4,7 @@
 struct EditStateDeps
 {
 	IProjectWindow* pw;
+	IEditArea*      editArea;
 	IProject*       project;
 	IActionList*    actionList;
 	ISelection*     selection;
@@ -16,10 +17,11 @@ protected:
 	IProjectPtr const _project;
 	ISelectionPtr const _selection;
 	IActionListPtr const _actionList;
+	IEditAreaPtr const _editArea;
 
 public:
 	EditState (const EditStateDeps& deps)
-		: _pw(deps.pw), _selection(deps.selection), _actionList(deps.actionList), _project(deps.project)
+		: _pw(deps.pw), _editArea(deps.editArea), _selection(deps.selection), _actionList(deps.actionList), _project(deps.project)
 	{ }
 
 	virtual ~EditState() { }
@@ -38,3 +40,9 @@ std::unique_ptr<EditState> CreateStateMovePort (const EditStateDeps& deps);
 std::unique_ptr<EditState> CreateStateCreateBridge (const EditStateDeps& deps);
 std::unique_ptr<EditState> CreateStateCreateWire (const EditStateDeps& deps);
 std::unique_ptr<EditState> CreateStateMoveWirePoint (const EditStateDeps& deps, Wire* wire, size_t pointIndex);
+std::unique_ptr<EditState> CreateStateBeginningDrag (const EditStateDeps& deps,
+													 const MouseLocation& location,
+													 MouseButton button,
+													 HCURSOR cursor,
+													 std::unique_ptr<EditState>&& stateMoveThreshold,
+													 std::unique_ptr<EditState>&& stateButtonUp);

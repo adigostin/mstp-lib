@@ -38,17 +38,6 @@ class EditArea : public ZoomableWindow, public IEditArea
 	unique_ptr<EditState> _state;
 	HTResult _htResult = { nullptr, 0 };
 
-	struct BeginningDrag
-	{
-		MouseLocation location;
-		MouseButton button;
-		HCURSOR cursor;
-		unique_ptr<EditState> stateMoveThreshold;
-		unique_ptr<EditState> stateButtonUp;
-	};
-
-	optional<BeginningDrag> _beginningDrag;
-
 public:
 	EditArea (ISimulatorApp* app,
 			  IProjectWindow* pw,
@@ -601,17 +590,6 @@ public:
 
 	std::optional<LRESULT> ProcessKeyOrSysKeyDown (UINT virtualKey, UINT modifierKeys)
 	{
-		if (_beginningDrag)
-		{
-			if (virtualKey == VK_ESCAPE)
-			{
-				_beginningDrag = nullopt;
-				return 0;
-			}
-
-			return nullopt;
-		}
-
 		if (_state != nullptr)
 		{
 			auto res = _state->OnKeyDown (virtualKey, modifierKeys);
@@ -636,9 +614,6 @@ public:
 
 	std::optional<LRESULT> ProcessKeyOrSysKeyUp (UINT virtualKey, UINT modifierKeys)
 	{
-		if (_beginningDrag)
-			return nullopt;
-
 		if (_state != nullptr)
 			return _state->OnKeyUp (virtualKey, modifierKeys);
 
@@ -654,12 +629,6 @@ public:
 
 		auto dLocation = GetDipLocationFromPixelLocation(pt);
 		auto wLocation = GetWLocationFromDLocation(dLocation);
-
-		if (_beginningDrag)
-		{
-			// user began dragging with a mouse button, now he pressed a second button.
-			return nullopt;
-		}
 
 		if (_state != nullptr)
 		{
@@ -684,12 +653,8 @@ public:
 				_selection->Select(ht.object);
 		}
 
-		_beginningDrag = BeginningDrag();
-		_beginningDrag->location.pt = pt;
-		_beginningDrag->location.d = dLocation;
-		_beginningDrag->location.w = wLocation;
-		_beginningDrag->button = button;
-		_beginningDrag->cursor = ::GetCursor();
+		unique_ptr<EditState> stateMoveThreshold;
+		unique_ptr<EditState> stateButtonUp;
 
 		if (ht.object == nullptr)
 		{
@@ -699,7 +664,7 @@ public:
 		else if (dynamic_cast<Bridge*>(ht.object) != nullptr)
 		{
 			if (button == MouseButton::Left)
-				_beginningDrag->stateMoveThreshold = CreateStateMoveBridges (MakeEditStateDeps());
+				stateMoveThreshold = CreateStateMoveBridges (MakeEditStateDeps());
 		}
 		else if (dynamic_cast<Port*>(ht.object) != nullptr)
 		{
@@ -708,15 +673,15 @@ public:
 			if (ht.code == Port::HTCodeInnerOuter)
 			{
 				if (button == MouseButton::Left)
-					_beginningDrag->stateMoveThreshold = CreateStateMovePort (MakeEditStateDeps());
+					stateMoveThreshold = CreateStateMovePort (MakeEditStateDeps());
 			}
 			else if (ht.code == Port::HTCodeCP)
 			{
 				auto alreadyConnectedWire = _project->GetWireConnectedToPort(port);
 				if (alreadyConnectedWire.first == nullptr)
 				{
-					_beginningDrag->stateMoveThreshold = CreateStateCreateWire(MakeEditStateDeps());
-					_beginningDrag->stateButtonUp = CreateStateCreateWire(MakeEditStateDeps());
+					stateMoveThreshold = CreateStateCreateWire(MakeEditStateDeps());
+					stateButtonUp = CreateStateCreateWire(MakeEditStateDeps());
 				}
 			}
 		}
@@ -725,11 +690,13 @@ public:
 			auto wire = static_cast<Wire*>(ht.object);
 			if (ht.code >= 0)
 			{
-				_beginningDrag->stateMoveThreshold = CreateStateMoveWirePoint(MakeEditStateDeps(), wire, ht.code);
-				_beginningDrag->stateButtonUp = CreateStateMoveWirePoint (MakeEditStateDeps(), wire, ht.code);
+				stateMoveThreshold = CreateStateMoveWirePoint(MakeEditStateDeps(), wire, ht.code);
+				stateButtonUp = CreateStateMoveWirePoint (MakeEditStateDeps(), wire, ht.code);
 			}
 		}
 
+		MouseLocation mouseLocation = { pt, dLocation, wLocation };
+		EnterState (CreateStateBeginningDrag(MakeEditStateDeps(), mouseLocation, button, ::GetCursor(), move(stateMoveThreshold), move(stateButtonUp)));
 		return 0;
 	}
 
@@ -737,25 +704,6 @@ public:
 	{
 		auto dLocation = GetDipLocationFromPixelLocation(pt);
 		auto wLocation = GetWLocationFromDLocation(dLocation);
-
-		if (_beginningDrag)
-		{
-			if (button != _beginningDrag->button)
-				return nullopt; // return "not handled"
-
-			if (_beginningDrag->stateButtonUp != nullptr)
-			{
-				_htResult = { nullptr };
-				_state = move(_beginningDrag->stateButtonUp);
-				_state->OnMouseDown (_beginningDrag->location, _beginningDrag->button);
-				assert (!_state->Completed());
-				if ((pt.x != _beginningDrag->location.pt.x) || (pt.y != _beginningDrag->location.pt.y))
-					_state->OnMouseMove (_beginningDrag->location);
-			}
-
-			_beginningDrag = nullopt;
-			// fall-through to the code that handles the state
-		}
 
 		if (_state != nullptr)
 		{
@@ -765,8 +713,6 @@ public:
 				_state = nullptr;
 				::SetCursor (LoadCursor (nullptr, IDC_ARROW));
 			};
-
-			return 0;
 		}
 
 		if (button == MouseButton::Right)
@@ -777,7 +723,6 @@ public:
 
 	virtual void EnterState (std::unique_ptr<EditState>&& state) override final
 	{
-		_beginningDrag = nullopt;
 		_state = move(state);
 		_htResult = { nullptr };
 	}
@@ -787,11 +732,7 @@ public:
 		auto dLocation = GetDipLocationFromPixelLocation(pt);
 		auto wLocation = GetWLocationFromDLocation(dLocation);
 
-		if (_beginningDrag)
-		{
-			::SetCursor (_beginningDrag->cursor);
-		}
-		else if (_state != nullptr)
+		if (_state != nullptr)
 		{
 			::SetCursor (_state->GetCursor());
 		}
@@ -830,25 +771,7 @@ public:
 		auto dLocation = GetDipLocationFromPixelLocation(pt);
 		auto wLocation = GetWLocationFromDLocation(dLocation);
 
-		if (_beginningDrag)
-		{
-			RECT rc = { _beginningDrag->location.pt.x, _beginningDrag->location.pt.y, _beginningDrag->location.pt.x, _beginningDrag->location.pt.y };
-			InflateRect (&rc, GetSystemMetrics(SM_CXDRAG), GetSystemMetrics(SM_CYDRAG));
-			if (!PtInRect (&rc, pt))
-			{
-				if (_beginningDrag->stateMoveThreshold != nullptr)
-				{
-					_state = move(_beginningDrag->stateMoveThreshold);
-					_state->OnMouseDown (_beginningDrag->location, _beginningDrag->button);
-					assert (!_state->Completed());
-					_state->OnMouseMove ({ pt, dLocation, wLocation });
-				}
-
-				_beginningDrag = nullopt;
-				_htResult = { nullptr };
-			}
-		}
-		else if (_state != nullptr)
+		if (_state != nullptr)
 		{
 			_state->OnMouseMove ({ pt, dLocation, wLocation });
 			if (_state->Completed())
@@ -883,9 +806,9 @@ public:
 
 	virtual D2D1::Matrix3x2F GetZoomTransform() const override final { return base::GetZoomTransform(); }
 
-	EditStateDeps MakeEditStateDeps() const
+	EditStateDeps MakeEditStateDeps()
 	{
-		return EditStateDeps { _pw, _project, _actionList, _selection };
+		return EditStateDeps { _pw, this, _project, _actionList, _selection };
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return base::QueryInterface(riid, ppvObject); }

@@ -84,6 +84,9 @@
     <ClCompile Include="Win32\ZoomableWindow.cpp">
       <Filter>Win32</Filter>
     </ClCompile>
+    <ClCompile Include="EditStates\BeginningDragES.cpp">
+      <Filter>EditStates</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Simulator.rc" />
