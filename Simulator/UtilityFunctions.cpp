@@ -1,7 +1,7 @@
 
 #include "pch.h"
 #include "UtilityFunctions.h"
-#include "Win32Defs.h"
+#include "Win32/Win32Defs.h"
 
 using namespace std;
 using namespace D2D1;
