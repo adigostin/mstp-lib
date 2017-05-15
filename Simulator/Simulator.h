@@ -127,6 +127,7 @@ extern const ProjectWindowFactory projectWindowFactory;
 
 struct EditAction
 {
+	virtual ~EditAction() = default;
 	virtual void Undo() = 0;
 	virtual void Redo() = 0;
 };
