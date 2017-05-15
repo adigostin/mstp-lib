@@ -155,10 +155,10 @@ private:
 				return { reinterpret_cast<INT_PTR>(GetSysColorBrush(COLOR_3DFACE)), 0 };
 			}
 
-			if (GetWindowLongPtr((HWND)lParam, GWL_ID) == IDC_STATIC_TREE_PROPS)
+			if (GetWindowLongPtr((HWND)lParam, GWLP_ID) == IDC_STATIC_TREE_PROPS)
 				return { FALSE, 0 };
 
-			if (GetWindowLongPtr((HWND)lParam, GWL_ID) == IDC_STATIC_MSTP_PROPS)
+			if (GetWindowLongPtr((HWND)lParam, GWLP_ID) == IDC_STATIC_MSTP_PROPS)
 				return { FALSE, 0 };
 
 			return { reinterpret_cast<INT_PTR>(GetSysColorBrush(COLOR_WINDOW)), 0 };
