@@ -10,7 +10,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
-    <ClInclude Include="EventManager.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Wire.h" />
@@ -31,6 +30,9 @@
       <Filter>Win32</Filter>
     </ClInclude>
     <ClInclude Include="Win32\ZoomableWindow.h">
+      <Filter>Win32</Filter>
+    </ClInclude>
+    <ClInclude Include="Win32\EventManager.h">
       <Filter>Win32</Filter>
     </ClInclude>
   </ItemGroup>

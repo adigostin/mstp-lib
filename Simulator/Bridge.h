@@ -1,6 +1,6 @@
 
 #pragma once
-#include "EventManager.h"
+#include "Win32/EventManager.h"
 #include "Simulator.h"
 
 struct BridgeLogLine
