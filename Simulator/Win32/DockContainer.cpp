@@ -16,7 +16,7 @@ class DockContainer : public Window, public IDockContainer
 
 public:
 	DockContainer (HINSTANCE hInstance, HWND hWndParent, const RECT& rect)
-		: base (hInstance, DockContainerClassName, 0, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, rect, hWndParent, nullptr)
+		: base (hInstance, DockContainerClassName, 0, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, rect, hWndParent, nullptr)
 		, _hInstance(hInstance)
 	{ }
 
@@ -85,12 +85,15 @@ public:
 
 		for (auto& panel : _dockablePanels)
 		{
-			if (GetWindowLongPtr (panel->GetHWnd(), GWL_STYLE) & WS_VISIBLE)
+			if (panel->IsVisible())
 			{
 				SIZE proposedSize = (getProposedSize != nullptr) ? getProposedSize(panel) : panel->GetWindowSize();
 				RECT panelRect = LayOutPanel (panel->GetSide(), proposedSize, &contentRect);
 				if (movePanelWindows)
+				{
 					::MoveWindow(panel->GetHWnd(), panelRect.left, panelRect.top, panelRect.right - panelRect.left, panelRect.bottom - panelRect.top, TRUE);
+					::UpdateWindow (panel->GetHWnd());
+				}
 			}
 		}
 
@@ -106,7 +109,10 @@ public:
 
 		auto content = FindChild(isContentHWnd);
 		if (content != nullptr)
+		{
 			::MoveWindow (content, contentRect.left, contentRect.top, contentRect.right - contentRect.left, contentRect.bottom - contentRect.top, TRUE);
+			::UpdateWindow (content);
+		}
 	}
 
 	virtual RECT GetContentRect() const override final

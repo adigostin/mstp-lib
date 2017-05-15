@@ -129,7 +129,11 @@ public:
 			_clientSize.cx = LOWORD(lParam);
 			_clientSize.cy = HIWORD(lParam);
 			if (_bridgePropsControl != nullptr)
+			{
 				::MoveWindow (_bridgePropsControl->GetHWnd(), 0, 0, _clientSize.cx, _clientSize.cy, FALSE);
+				if (_bridgePropsControl->IsVisible())
+					::UpdateWindow(_bridgePropsControl->GetHWnd());
+			}
 			return 0;
 		}
 

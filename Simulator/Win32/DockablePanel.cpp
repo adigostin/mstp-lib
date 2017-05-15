@@ -26,7 +26,7 @@ class DockablePanel : public Window, public IDockablePanel
 
 public:
 	DockablePanel (HINSTANCE hInstance, const char* panelUniqueName, HWND hWndParent, const RECT& rect, Side side, const wchar_t* title)
-		: base (hInstance, WndClassName, 0, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, rect, hWndParent, nullptr)
+		: base (hInstance, WndClassName, 0, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, rect, hWndParent, nullptr)
 		, _panelUniqueName(panelUniqueName)
 		, _side(side)
 		, _title(title)
@@ -137,6 +137,7 @@ public:
 			{
 				auto cr = GetContentRect();
 				::MoveWindow (contentHWnd, cr.left, cr.top, cr.right - cr.left, cr.bottom - cr.top, TRUE);
+				::UpdateWindow (contentHWnd);
 			}
 
 			return 0;

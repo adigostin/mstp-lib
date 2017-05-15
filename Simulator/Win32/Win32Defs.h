@@ -57,6 +57,7 @@ MIDL_INTERFACE("C5D357E8-4A20-43D8-9C40-0CE4DC7C637C") IWin32Window : public IUn
 {
 	virtual HWND GetHWnd() const = 0;
 
+	bool IsVisible() const;
 	RECT GetClientRectPixels() const;
 	RECT GetWindowRect() const;
 	SIZE GetWindowSize() const;

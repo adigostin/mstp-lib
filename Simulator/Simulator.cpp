@@ -25,6 +25,12 @@ static const wchar_t AppVersion[] = L"2.0";
 constexpr UINT WM_WORK = WM_APP + 1;
 
 #pragma region IWin32Window
+
+bool IWin32Window::IsVisible() const
+{
+	return (GetWindowLongPtr (GetHWnd(), GWL_STYLE) & WS_VISIBLE) != 0;
+}
+
 RECT IWin32Window::GetWindowRect() const
 {
 	RECT rect;
