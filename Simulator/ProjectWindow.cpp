@@ -159,7 +159,7 @@ public:
 		else
 			windowTitle << L"Untitled";
 
-		if (_actionList->GetSavePointIndex() != _actionList->GetEditPointIndex())
+		if (_actionList->ChangedSinceLastSave())
 			windowTitle << L" *";
 
 		::SetWindowText (_hwnd, windowTitle.str().c_str());
@@ -288,38 +288,59 @@ public:
 
 		if (msg == WM_COMMAND)
 		{
-			if ((wParam == ID_VIEW_PROPERTIES) || (wParam == ID_VIEW_STPLOG) || (wParam == ID_VIEW_VLANS))
-			{
-				auto panelId = (wParam == ID_VIEW_PROPERTIES) ? PropsPanelUniqueName : ((wParam == ID_VIEW_STPLOG) ? LogPanelUniqueName : VlanPanelUniqueName);
-				auto panel = _dockContainer->GetPanel(panelId);
-				auto style = (DWORD) GetWindowLongPtr(panel->GetHWnd(), GWL_STYLE);
-				style ^= WS_VISIBLE;
-				SetWindowLongPtr (panel->GetHWnd(), GWL_STYLE, style);
-				return 0;
-			}
-
-			if (wParam == ID_FILE_SAVE)
-			{
-				Save();
-				return 0;
-			}
-
-			if ((wParam == ID_FILE_NEW) || (wParam == ID_FILE_OPEN) || (wParam == ID_FILE_SAVE) || (wParam == ID_FILE_SAVEAS))
-			{
-				MessageBox (_hwnd, L"Saving and loading are not yet implemented.", _app->GetAppName(), 0);
-				return 0;
-			}
-
-			if (wParam == ID_FILE_EXIT)
-			{
-				PostMessage (_hwnd, WM_CLOSE, 0, 0);
-				return 0;
-			}
+			auto olr = ProcessWmCommand (wParam, lParam);
+			if (olr)
+				return olr.value();
 
 			return DefWindowProc(_hwnd, msg, wParam, lParam);
 		}
 
 		return DefWindowProc(_hwnd, msg, wParam, lParam);
+	}
+
+	optional<LRESULT> ProcessWmCommand (WPARAM wParam, LPARAM lParam)
+	{
+		if ((wParam == ID_VIEW_PROPERTIES) || (wParam == ID_VIEW_STPLOG) || (wParam == ID_VIEW_VLANS))
+		{
+			auto panelId = (wParam == ID_VIEW_PROPERTIES) ? PropsPanelUniqueName : ((wParam == ID_VIEW_STPLOG) ? LogPanelUniqueName : VlanPanelUniqueName);
+			auto panel = _dockContainer->GetPanel(panelId);
+			auto style = (DWORD) GetWindowLongPtr(panel->GetHWnd(), GWL_STYLE);
+			style ^= WS_VISIBLE;
+			SetWindowLongPtr (panel->GetHWnd(), GWL_STYLE, style);
+			return 0;
+		}
+
+		if (wParam == ID_FILE_SAVE)
+		{
+			Save();
+			return 0;
+		}
+
+		if ((wParam == ID_FILE_NEW) || (wParam == ID_FILE_OPEN) || (wParam == ID_FILE_SAVEAS))
+		{
+			MessageBox (_hwnd, L"Saving and loading are not yet implemented.", _app->GetAppName(), 0);
+			return 0;
+		}
+
+		if (wParam == ID_EDIT_UNDO)
+		{
+			_actionList->Undo();
+			return 0;
+		}
+
+		if (wParam == ID_EDIT_REDO)
+		{
+			_actionList->Redo();
+			return 0;
+		}
+
+		if (wParam == ID_FILE_EXIT)
+		{
+			PostMessage (_hwnd, WM_CLOSE, 0, 0);
+			return 0;
+		}
+
+		return nullopt;
 	}
 
 	HRESULT Save()
@@ -437,7 +458,7 @@ public:
 		if (count == 1)
 		{
 			// Closing last window of this project.
-			if (_actionList->GetEditPointIndex() != _actionList->GetSavePointIndex())
+			if (_actionList->ChangedSinceLastSave())
 			{
 				bool saveChosen;
 				hr = AskSaveDiscardCancel(L"Save changes?", &saveChosen);

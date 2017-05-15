@@ -65,3 +65,6 @@ D2D1_RECT_F InflateRect (const D2D1_RECT_F& rect, float distance);
 void InflateRect (D2D1_RECT_F* rect, float distance);
 D2D1_ROUNDED_RECT InflateRoundedRect (const D2D1_ROUNDED_RECT& rr, float distance);
 void InflateRoundedRect (D2D1_ROUNDED_RECT* rr, float distance);
+inline D2D1_SIZE_F operator- (D2D1_POINT_2F p0, D2D1_POINT_2F p1) { return { p0.x - p1.x, p0.y - p1.y }; }
+inline D2D1_POINT_2F operator- (D2D1_POINT_2F p, D2D1_SIZE_F s) {return { p.x - s.width, p.y - s.height }; }
+inline D2D1_POINT_2F operator+ (D2D1_POINT_2F p, D2D1_SIZE_F s) {return { p.x + s.width, p.y + s.height }; }

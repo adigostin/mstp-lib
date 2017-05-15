@@ -39,6 +39,21 @@ class ActionList : public EventManager, public IActionList
 		ChangedEvent::InvokeHandlers (*this, this);
 	}
 
+	virtual void Undo() override final
+	{
+		assert (_editPointIndex > 0);
+		_editPointIndex--;
+		_actions[_editPointIndex].second->Undo();
+		ChangedEvent::InvokeHandlers (*this, this);
+	}
+
+	virtual void Redo() override final
+	{
+		_actions[_editPointIndex].second->Redo();
+		_editPointIndex++;
+		ChangedEvent::InvokeHandlers (*this, this);
+	}
+
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
 
 	virtual ULONG STDMETHODCALLTYPE AddRef() override final
