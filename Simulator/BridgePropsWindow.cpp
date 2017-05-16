@@ -5,7 +5,6 @@
 
 using namespace std;
 
-static constexpr UINT WM_WORK = WM_APP + 1;
 static constexpr size_t FirstPortCount = 2;
 
 class BridgePropsWindow : public IBridgePropsWindow
@@ -22,7 +21,6 @@ class BridgePropsWindow : public IBridgePropsWindow
 	HWND _controlBeingValidated = nullptr;
 	HWND _configTableDigestToolTip = nullptr;
 	bool _editChangedByUser = false;
-	std::queue<std::function<void()>> _workQueue;
 
 public:
 	BridgePropsWindow (ISimulatorApp* app,
@@ -159,13 +157,6 @@ private:
 				return { FALSE, 0 };
 
 			return { reinterpret_cast<INT_PTR>(GetSysColorBrush(COLOR_WINDOW)), 0 };
-		}
-
-		if (msg == WM_WORK)
-		{
-			_workQueue.front()();
-			_workQueue.pop();
-			return { TRUE, 0 };
 		}
 
 		if (msg == WM_COMMAND)
@@ -348,7 +339,7 @@ private:
 				else
 				{
 					::SetFocus(nullptr);
-					dialog->PostWork ([dialog, hWnd, message=move(errorMessage)]
+					dialog->_app->PostWork ([dialog, hWnd, message=move(errorMessage)]
 					{
 						::MessageBox (dialog->_hwnd, message.c_str(), 0, 0);
 						::SetFocus (hWnd);
@@ -722,12 +713,6 @@ private:
 			window->LoadAll();
 			::ShowWindow (window->GetHWnd(), SW_SHOW);
 		}
-	}
-
-	void PostWork (std::function<void()>&& work)
-	{
-		_workQueue.push(move(work));
-		PostMessage (_hwnd, WM_WORK, 0, 0);
 	}
 
 	bool ValidateAndSetProperty (HWND hwnd, const std::wstring& str, std::wstring& errorMessageOut)

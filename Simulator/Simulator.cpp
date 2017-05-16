@@ -169,7 +169,7 @@ public:
 
 		pw->GetClosedEvent().RemoveHandler (&OnProjectWindowClosed, app);
 
-		app->_workQueue.push ([app, pw]
+		app->PostWork ([app, pw]
 		{
 			auto it = find_if (app->_projectWindows.begin(), app->_projectWindows.end(), [pw](const IProjectWindowPtr& p) { return p.GetInterfacePtr() == pw; });
 			assert (it != app->_projectWindows.end());
@@ -180,7 +180,11 @@ public:
 			if (app->_projectWindows.empty())
 				PostQuitMessage(0);
 		});
+	}
 
+	virtual void PostWork (std::function<void()>&& work) override final
+	{
+		_workQueue.push (move(work));
 		::PostMessage (nullptr, WM_WORK, 0, 0);
 	}
 

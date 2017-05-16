@@ -260,6 +260,7 @@ struct ISimulatorApp
 	virtual ProjectWindowAddedEvent::Subscriber GetProjectWindowAddedEvent() = 0;
 	virtual ProjectWindowRemovingEvent::Subscriber GetProjectWindowRemovingEvent() = 0;
 	virtual ProjectWindowRemovedEvent::Subscriber GetProjectWindowRemovedEvent() = 0;
+	virtual void PostWork (std::function<void()>&& work) = 0;
 };
 
 // ============================================================================
