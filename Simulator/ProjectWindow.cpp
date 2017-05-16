@@ -92,8 +92,6 @@ public:
 			::GetWindowRect(_hwnd, &_restoreBounds);
 		::ShowWindow (_hwnd, nCmdShow);
 
-		SetWindowTitle();
-
 		const RECT clientRect = { 0, 0, _clientSize.cx, _clientSize.cy };
 		_dockContainer = dockContainerFactory (_app->GetHInstance(), _hwnd, clientRect);
 
@@ -118,15 +116,33 @@ public:
 
 		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
 		_actionList->GetChangedEvent().AddHandler (&OnActionListChanged, this);
+		_app->GetProjectWindowAddedEvent().AddHandler (&OnProjectWindowAdded, this);
+		_app->GetProjectWindowRemovedEvent().AddHandler (&OnProjectWindowRemoved, this);
 	}
 
 	~ProjectWindow()
 	{
+		_app->GetProjectWindowRemovedEvent().RemoveHandler (&OnProjectWindowRemoved, this);
+		_app->GetProjectWindowAddedEvent().RemoveHandler (&OnProjectWindowAdded, this);
 		_actionList->GetChangedEvent().RemoveHandler (&OnActionListChanged, this);
 		_selection->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
 
 		if (_hwnd != nullptr)
 			::DestroyWindow(_hwnd);
+	}
+
+	static void OnProjectWindowAdded (void* callbackArg, IProjectWindow* pw)
+	{
+		auto thispw = static_cast<ProjectWindow*>(callbackArg);
+		if (pw->GetProject() == thispw->GetProject())
+			thispw->SetWindowTitle();
+	}
+
+	static void OnProjectWindowRemoved (void* callbackArg, IProjectWindow* pw)
+	{
+		auto thispw = static_cast<ProjectWindow*>(callbackArg);
+		if (pw->GetProject() == thispw->GetProject())
+			thispw->SetWindowTitle();
 	}
 
 	static void OnActionListChanged (void* callbackArg, IActionList* actionList)
@@ -160,7 +176,11 @@ public:
 			windowTitle << L"Untitled";
 
 		if (_actionList->ChangedSinceLastSave())
-			windowTitle << L" *";
+			windowTitle << L"*";
+
+		auto& pws = _app->GetProjectWindows();
+		if (any_of (pws.begin(), pws.end(), [this](const IProjectWindowPtr& pw) { return (pw.GetInterfacePtr() != this) && (pw->GetProject() == _project); }))
+			windowTitle << L" - VLAN " << _selectedVlanNumber;
 
 		::SetWindowText (_hwnd, windowTitle.str().c_str());
 	}
@@ -534,6 +554,7 @@ public:
 			_selectedVlanNumber = vlanNumber;
 			SelectedVlanNumerChangedEvent::InvokeHandlers(*this, this, vlanNumber);
 			::InvalidateRect (GetHWnd(), nullptr, FALSE);
+			SetWindowTitle();
 		}
 	};
 

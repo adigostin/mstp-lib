@@ -246,6 +246,10 @@ extern const VlanWindowFactory vlanWindowFactory;
 
 struct ISimulatorApp
 {
+	struct ProjectWindowAddedEvent : public Event<ProjectWindowAddedEvent, void(IProjectWindow*)> { };
+	struct ProjectWindowRemovingEvent : public Event<ProjectWindowRemovingEvent, void(IProjectWindow*)> { };
+	struct ProjectWindowRemovedEvent : public Event<ProjectWindowRemovedEvent, void(IProjectWindow*)> { };
+
 	virtual HINSTANCE GetHInstance() const = 0;
 	virtual ID3D11DeviceContext1* GetD3DDeviceContext() const = 0;
 	virtual IDWriteFactory* GetDWriteFactory() const = 0;
@@ -253,6 +257,9 @@ struct ISimulatorApp
 	virtual void AddProjectWindow (IProjectWindow* pw) = 0;
 	virtual const std::vector<IProjectWindowPtr>& GetProjectWindows() const = 0;
 	virtual const wchar_t* GetAppName() const = 0;
+	virtual ProjectWindowAddedEvent::Subscriber GetProjectWindowAddedEvent() = 0;
+	virtual ProjectWindowRemovingEvent::Subscriber GetProjectWindowRemovingEvent() = 0;
+	virtual ProjectWindowRemovedEvent::Subscriber GetProjectWindowRemovedEvent() = 0;
 };
 
 // ============================================================================

@@ -98,7 +98,7 @@ Port* IProject::FindConnectedPort (Port* txPort) const
 }
 #pragma endregion
 
-class SimulatorApp : public ISimulatorApp
+class SimulatorApp : public EventManager, public ISimulatorApp
 {
 	HINSTANCE const _hInstance;
 	ID3D11Device1Ptr _d3dDevice;
@@ -160,6 +160,7 @@ public:
 	{
 		pw->GetClosedEvent().AddHandler (&OnProjectWindowClosed, this);
 		_projectWindows.push_back(move(pw));
+		ProjectWindowAddedEvent::InvokeHandlers(*this, pw);
 	}
 
 	static void OnProjectWindowClosed (void* callbackArg, IProjectWindow* pw)
@@ -172,7 +173,10 @@ public:
 		{
 			auto it = find_if (app->_projectWindows.begin(), app->_projectWindows.end(), [pw](const IProjectWindowPtr& p) { return p.GetInterfacePtr() == pw; });
 			assert (it != app->_projectWindows.end());
+			ProjectWindowRemovingEvent::InvokeHandlers(*app, pw);
+			IProjectWindowPtr pwLastRef = move(*it);
 			app->_projectWindows.erase(it);
+			ProjectWindowRemovedEvent::InvokeHandlers(*app, pwLastRef);
 			if (app->_projectWindows.empty())
 				PostQuitMessage(0);
 		});
@@ -189,6 +193,12 @@ public:
 	virtual const wchar_t* GetRegKeyPath() const override final { return _regKeyPath.c_str(); }
 
 	virtual const wchar_t* GetAppName() const override final { return AppName; }
+
+	virtual ProjectWindowAddedEvent::Subscriber GetProjectWindowAddedEvent() override final { return ProjectWindowAddedEvent::Subscriber(this); }
+
+	virtual ProjectWindowRemovingEvent::Subscriber GetProjectWindowRemovingEvent() override final { return ProjectWindowRemovingEvent::Subscriber(this); }
+
+	virtual ProjectWindowRemovedEvent::Subscriber GetProjectWindowRemovedEvent() override final { return ProjectWindowRemovedEvent::Subscriber(this); }
 
 	WPARAM RunMessageLoop()
 	{
