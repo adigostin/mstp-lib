@@ -17,11 +17,8 @@ class BridgePropsWindow : public IBridgePropsWindow
 	HWND _hwnd = nullptr;
 	HWND _bridgeAddressEdit = nullptr;
 	WNDPROC _bridgeAddressEditOriginalProc;
-	HWND _comboPortCount = nullptr;
-	HWND _comboMstiCount = nullptr;
 	HWND _mstConfigNameEdit = nullptr;
 	HWND _mstConfigRevLevelEdit = nullptr;
-	HWND _mstConfigDigestEdit = nullptr;
 	HWND _controlBeingValidated = nullptr;
 	HWND _configTableDigestToolTip = nullptr;
 	bool _editChangedByUser = false;
@@ -113,20 +110,20 @@ private:
 			::SendMessageA (comboStpVersion, CB_ADDSTRING, 0, (LPARAM) STP_GetVersionString(STP_VERSION_LEGACY_STP));
 			::SendMessageA (comboStpVersion, CB_ADDSTRING, 0, (LPARAM) STP_GetVersionString(STP_VERSION_RSTP));
 			::SendMessageA (comboStpVersion, CB_ADDSTRING, 0, (LPARAM) STP_GetVersionString(STP_VERSION_MSTP));
-			_comboPortCount = GetDlgItem (_hwnd, IDC_COMBO_PORT_COUNT);
+
+			auto comboPortCount = GetDlgItem (_hwnd, IDC_COMBO_PORT_COUNT);
 			for (size_t i = FirstPortCount; i <= 16; i++)
-				ComboBox_AddString(_comboPortCount, std::to_wstring(i).c_str());
-			_comboMstiCount = GetDlgItem (_hwnd, IDC_COMBO_MSTI_COUNT);
+				ComboBox_AddString(comboPortCount, std::to_wstring(i).c_str());
+
+			auto comboMstiCount = GetDlgItem (_hwnd, IDC_COMBO_MSTI_COUNT);
 			for (size_t i = 0; i <= 64; i++)
-				ComboBox_AddString(_comboMstiCount, std::to_wstring(i).c_str());
+				ComboBox_AddString(comboMstiCount, std::to_wstring(i).c_str());
 
 			_mstConfigNameEdit = GetDlgItem (_hwnd, IDC_EDIT_MST_CONFIG_NAME);
 			bRes = SetWindowSubclass (_mstConfigNameEdit, EditSubclassProc, EditSubClassId, (DWORD_PTR) this); assert (bRes);
 
 			_mstConfigRevLevelEdit = GetDlgItem (_hwnd, IDC_EDIT_MST_CONFIG_REV_LEVEL);
 			bRes = SetWindowSubclass (_mstConfigRevLevelEdit, EditSubclassProc, EditSubClassId, (DWORD_PTR) this); assert (bRes);
-
-			_mstConfigDigestEdit = GetDlgItem (_hwnd, IDC_EDIT_MST_CONFIG_TABLE_HASH);
 
 			DWORD ttStyle = WS_POPUP | TTS_ALWAYSTIP | TTS_BALLOON;
 			_configTableDigestToolTip = CreateWindowEx(NULL, TOOLTIPS_CLASS, NULL, ttStyle, 0, 0, 0, 0, _hwnd, NULL, _app->GetHInstance(), NULL);
@@ -472,7 +469,8 @@ private:
 		if (all_of (objects.begin(), objects.end(), [&](Object* o) { return getPortCount(o) == portCount; }))
 			index = (int) (portCount - FirstPortCount);
 
-		ComboBox_SetCurSel (_comboPortCount, index);
+		auto comboPortCount = GetDlgItem (_hwnd, IDC_COMBO_PORT_COUNT);
+		ComboBox_SetCurSel (comboPortCount, index);
 	}
 
 	void LoadMstiCountComboBox()
@@ -485,7 +483,8 @@ private:
 		if (all_of (objects.begin(), objects.end(), [&](Object* o) { return getMstiCount(o) == mstiCount; }))
 			index = mstiCount;
 
-		ComboBox_SetCurSel (_comboMstiCount, index);
+		auto comboMstiCount = GetDlgItem (_hwnd, IDC_COMBO_MSTI_COUNT);
+		ComboBox_SetCurSel (comboMstiCount, index);
 	}
 
 	// ========================================================================
@@ -594,6 +593,7 @@ private:
 
 		bool allSame = all_of (objects.begin(), objects.end(), [&](Object* o) { return getDigest(o) == digest; });
 
+		auto mstConfigDigestEdit = GetDlgItem (_hwnd, IDC_EDIT_MST_CONFIG_TABLE_HASH);
 		const wchar_t* tooltipText;
 		if (allSame)
 		{
@@ -603,7 +603,7 @@ private:
 				<< setw(2) << digest[4]  << setw(2) << digest[5]  << setw(2) << digest[6]  << setw(2) << digest[7]
 				<< setw(2) << digest[8]  << setw(2) << digest[9]  << setw(2) << digest[10] << setw(2) << digest[11]
 				<< setw(2) << digest[12] << setw(2) << digest[13] << setw(2) << digest[14] << setw(2) << digest[15];
-			::SetWindowText (_mstConfigDigestEdit, ss.str().c_str());
+			::SetWindowText (mstConfigDigestEdit, ss.str().c_str());
 
 			if (digest == DefaultConfigTableDigest)
 				tooltipText = L"All VLANs assigned to the CIST, no VLAN assigned to any MSTI.";
@@ -612,7 +612,7 @@ private:
 		}
 		else
 		{
-			::SetWindowTextA (_mstConfigDigestEdit, "(multiple selection)");
+			::SetWindowTextA (mstConfigDigestEdit, "(multiple selection)");
 			tooltipText = L"";
 		}
 

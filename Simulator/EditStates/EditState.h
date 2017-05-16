@@ -14,10 +14,10 @@ class EditState abstract
 {
 protected:
 	IProjectWindow* const _pw;
+	IEditArea* const _editArea;
 	IProjectPtr const _project;
 	ISelectionPtr const _selection;
 	IActionListPtr const _actionList;
-	IEditAreaPtr const _editArea;
 
 public:
 	EditState (const EditStateDeps& deps)
