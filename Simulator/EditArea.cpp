@@ -558,30 +558,28 @@ public:
 
 	virtual Port* GetCPAt (D2D1_POINT_2F dLocation, float tolerance) const override final
 	{
-		for (auto& b : _project->GetBridges())
-		{
-			for (auto& port : b->GetPorts())
-			{
-				if (port->HitTestCP (this, dLocation, tolerance))
-					return port.get();
-			}
-		}
+		auto htresult = HitTestObjects(dLocation, tolerance);
+		auto port = dynamic_cast<Port*>(htresult.object);
+		if ((port != nullptr) && (htresult.code == Port::HTCodeCP))
+			return port;
 
 		return nullptr;
 	}
 
 	HTResult HitTestObjects (D2D1_POINT_2F dLocation, float tolerance) const
 	{
-		for (auto& w : _project->GetWires())
+		auto& wires = _project->GetWires();
+		for (auto it = wires.rbegin(); it != wires.rend(); it++)
 		{
-			auto ht = w->HitTest (this, dLocation, tolerance);
+			auto ht = it->get()->HitTest (this, dLocation, tolerance);
 			if (ht.object != nullptr)
 				return ht;
 		}
 
-		for (auto& b : _project->GetBridges())
+		auto& bridges = _project->GetBridges();
+		for (auto it = bridges.rbegin(); it != bridges.rend(); it++)
 		{
-			auto ht = b->HitTest(this, dLocation, tolerance);
+			auto ht = it->get()->HitTest(this, dLocation, tolerance);
 			if (ht.object != nullptr)
 				return ht;
 		}
