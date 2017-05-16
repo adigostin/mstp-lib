@@ -53,7 +53,11 @@ public:
 
 		auto port = _pw->GetEditArea()->GetCPAt (location.d, SnapDistance);
 		if (port != nullptr)
-			_wire->SetPoint(_pointIndex, port);
+		{
+			auto alreadyConnectedWire = _project->GetWireConnectedToPort(port);
+			if (alreadyConnectedWire.first == nullptr)
+				_wire->SetPoint(_pointIndex, port);
+		}
 		else
 			_wire->SetPoint(_pointIndex, location.w);
 

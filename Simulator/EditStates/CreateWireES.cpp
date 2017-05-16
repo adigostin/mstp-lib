@@ -61,7 +61,14 @@ public:
 
 		auto port = _pw->GetEditArea()->GetCPAt (location.d, SnapDistance);
 		if (port != nullptr)
-			_wire->SetP1(port);
+		{
+			if (port != get<ConnectedWireEnd>(_wire->GetP0()))
+			{
+				auto alreadyConnectedWire = _project->GetWireConnectedToPort(port);
+				if (alreadyConnectedWire.first == nullptr)
+					_wire->SetP1(port);
+			}
+		}
 		else
 			_wire->SetP1(location.w);
 		::InvalidateRect (_pw->GetEditArea()->GetHWnd(), nullptr, FALSE);

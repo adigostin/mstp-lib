@@ -558,10 +558,19 @@ public:
 
 	virtual Port* GetCPAt (D2D1_POINT_2F dLocation, float tolerance) const override final
 	{
-		auto htresult = HitTestObjects(dLocation, tolerance);
-		auto port = dynamic_cast<Port*>(htresult.object);
-		if ((port != nullptr) && (htresult.code == Port::HTCodeCP))
-			return port;
+		auto& bridges = _project->GetBridges();
+		for (auto it = bridges.rbegin(); it != bridges.rend(); it++)
+		{
+			auto ht = it->get()->HitTest(this, dLocation, tolerance);
+			if (ht.object != nullptr)
+			{
+				auto port = dynamic_cast<Port*>(ht.object);
+				if ((port != nullptr) && (ht.code == Port::HTCodeCP))
+					return port;
+				else
+					return nullptr;
+			}
+		}
 
 		return nullptr;
 	}
