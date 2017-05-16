@@ -2,14 +2,11 @@
 // This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/
 // Copyright (c) 2011-2017 Adrian Gostin, distributed under the GNU General Public License v3.
 
-#define _CRT_SECURE_NO_WARNINGS
-
 #include "stp.h"
 #include "stp_bridge.h"
 #include "stp_log.h"
 #include "stp_md5.h"
 #include <string.h>
-#include <stdio.h>
 
 static void RunStateMachines (STP_BRIDGE* bridge, unsigned int timestamp);
 static unsigned int GetInstanceCountForAllStateMachines (STP_BRIDGE* bridge);
@@ -781,9 +778,15 @@ unsigned short STP_GetPortIdentifier (STP_BRIDGE* bridge, unsigned int portIndex
 void STP_GetDefaultMstConfigName (const unsigned char bridgeAddress[6], char nameOut[18])
 {
 	// Cisco uses lowercase letters here; let's do the same.
-	sprintf (nameOut, "%02x:%02x:%02x:%02x:%02x:%02x",
-			 bridgeAddress [0], bridgeAddress [1], bridgeAddress [2],
-			 bridgeAddress [3], bridgeAddress [4], bridgeAddress [5]);
+	char* ptr = nameOut;
+	for (unsigned int i = 0; i < 6; i++)
+	{
+		unsigned int val = bridgeAddress[i] >> 4;
+		*ptr++ = (val < 10) ? (val + '0') : (val - 10 + 'a');
+		val = bridgeAddress[i] & 0x0F;
+		*ptr++ = (val < 10) ? (val + '0') : (val - 10 + 'a');
+		*ptr++ = (i < 5) ? ':' : 0;
+	}
 }
 
 void STP_GetMstConfigName (STP_BRIDGE* bridge, char nameOut [33])
@@ -1151,7 +1154,7 @@ void* STP_GetApplicationContext (STP_BRIDGE* bridge)
 void STP_MST_CONFIG_ID::Dump (STP_BRIDGE* bridge, int port, int tree) const
 {
 	char namesz [33];
-	strncpy (namesz, ConfigurationName, 32);
+	memcpy (namesz, ConfigurationName, 32);
 	namesz [32] = 0;
 	LOG (bridge, port, tree, "Name=\"{S}\", Rev={D}, Digest={X2}{X2}..{X2}{X2}\r\n",
 		 namesz,
