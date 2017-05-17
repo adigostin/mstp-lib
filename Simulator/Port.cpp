@@ -207,9 +207,9 @@ void Port::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, unsigned in
 	// Draw the exterior of the port.
 	float interiorPortOutlineWidth = OutlineWidth;
 	auto b = _bridge->GetStpBridge();
+	auto treeIndex  = STP_GetTreeIndexFromVlanNumber(b, vlanNumber);
 	if (STP_IsBridgeStarted (b))
 	{
-		auto treeIndex  = STP_GetTreeIndexFromVlanNumber(b, vlanNumber);
 		auto role       = STP_GetPortRole (b, _portIndex, treeIndex);
 		auto learning   = STP_GetPortLearning (b, _portIndex, treeIndex);
 		auto forwarding = STP_GetPortForwarding (b, _portIndex, treeIndex);
@@ -223,10 +223,24 @@ void Port::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, unsigned in
 		RenderExteriorNonStpPort(rt, dos, _macOperational);
 
 	// Draw the interior of the port.
-	auto portRect = D2D1_RECT_F { -InteriorWidth / 2, -InteriorDepth, -InteriorWidth / 2 + InteriorWidth, -InteriorDepth + InteriorDepth };
+	auto portRect = D2D1_RECT_F { -InteriorWidth / 2, -InteriorDepth, InteriorWidth / 2, 0 };
 	InflateRect (&portRect, -interiorPortOutlineWidth / 2);
 	rt->FillRectangle (&portRect, _macOperational ? dos._poweredFillBrush : dos._unpoweredBrush);
 	rt->DrawRectangle (&portRect, dos._brushWindowText, interiorPortOutlineWidth);
+
+	IDWriteTextFormatPtr format;
+	auto hr = dos._dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 9, L"en-US", &format); ThrowIfFailed(hr);
+	IDWriteTextLayoutPtr layout;
+	wstringstream ss;
+	ss << setfill(L'0') << setw(4) << hex << STP_GetPortIdentifier(b, _portIndex, treeIndex);
+	auto portIdText = ss.str();
+	hr = dos._dWriteFactory->CreateTextLayout (portIdText.c_str(), (UINT32) portIdText.length(), format, 10000, 10000, &layout); ThrowIfFailed(hr);
+	DWRITE_TEXT_METRICS metrics;
+	hr = layout->GetMetrics(&metrics); ThrowIfFailed(hr);
+	DWRITE_LINE_METRICS lineMetrics;
+	UINT32 actualLineCount;
+	hr = layout->GetLineMetrics(&lineMetrics, 1, &actualLineCount); ThrowIfFailed(hr);
+	rt->DrawTextLayout ({ -metrics.width / 2, -lineMetrics.baseline - OutlineWidth * 2 - 1}, layout, dos._brushWindowText);
 
 	rt->SetTransform (&oldtr);
 }
