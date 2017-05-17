@@ -45,7 +45,7 @@ void Wire::SetPoint (size_t pointIndex, const WireEnd& point)
 			auto portB = get<ConnectedWireEnd>(_points[1 - pointIndex]);
 		}
 		*/
-		WireInvalidateEvent::InvokeHandlers(_em, this);
+		InvalidateEvent::InvokeHandlers(*this, this);
 	}
 }
 
@@ -57,21 +57,80 @@ D2D1_POINT_2F Wire::GetPointCoords (size_t pointIndex) const
 		return get<ConnectedWireEnd>(_points[pointIndex])->GetCPLocation();
 }
 
-void Wire::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, uint16_t vlanNumber) const
+bool Wire::IsForwarding (unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const
 {
-	bool forwarding = false;
 	if (holds_alternative<ConnectedWireEnd>(_points[0]) && holds_alternative<ConnectedWireEnd>(_points[1]))
 	{
 		auto portA = get<ConnectedWireEnd>(_points[0]);
 		auto portB = get<ConnectedWireEnd>(_points[1]);
-		bool portAFw = portA->GetBridge()->IsPortForwardingOnVlan(portA->GetPortIndex(), vlanNumber);
-		bool portBFw = portB->GetBridge()->IsPortForwardingOnVlan(portB->GetPortIndex(), vlanNumber);
-		forwarding = portAFw && portBFw;
+		bool portAFw = portA->IsForwarding(vlanNumber);
+		bool portBFw = portB->IsForwarding(vlanNumber);
+		if (portAFw && portBFw)
+		{
+			if (hasLoop != nullptr)
+			{
+				unordered_set<Port*> txPorts;
+
+				function<bool(Port* txPort)> transmitsTo = [vlanNumber, &txPorts, &transmitsTo, targetPort=portA](Port* txPort) -> bool
+				{
+					if (txPort->IsForwarding(vlanNumber))
+					{
+						auto rx = txPort->GetBridge()->GetProject()->FindConnectedPort(txPort);
+						if ((rx != nullptr) && rx->IsForwarding(vlanNumber))
+						{
+							txPorts.insert(txPort);
+
+							for (unsigned int i = 0; i < (unsigned int) rx->GetBridge()->GetPorts().size(); i++)
+							{
+								if ((i != rx->GetPortIndex()) && rx->IsForwarding(vlanNumber))
+								{
+									Port* otherTxPort = rx->GetBridge()->GetPorts()[i].get();
+									if (otherTxPort == targetPort)
+										return true;
+
+									if (txPorts.find(otherTxPort) != txPorts.end())
+										return false;
+
+									if (transmitsTo(otherTxPort))
+										return true;
+								}
+							}
+						}
+					}
+
+					return false;
+				};
+
+				*hasLoop = transmitsTo(portA);
+			}
+
+			return true;
+		}
 	}
 
-	auto brush = forwarding ? dos._brushForwarding.Get() : dos._brushNoForwardingWire.Get();
-	auto ss = forwarding ? dos._strokeStyleForwardingWire : dos._strokeStyleNoForwardingWire.Get();
-	rt->DrawLine (GetP0Coords(), GetP1Coords(), brush, WireThickness, ss);
+	return false;
+}
+
+void Wire::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, unsigned int vlanNumber) const
+{
+	bool hasLoop;
+	bool forwarding = IsForwarding (vlanNumber, &hasLoop);
+
+	float width = WireThickness;
+	ID2D1Brush* brush;
+
+	if (!forwarding)
+		brush = dos._brushNoForwardingWire;
+	else if (!hasLoop)
+		brush = dos._brushForwarding;
+	else
+	{
+		brush = dos._brushLoop;
+		width *= 2;
+	}
+
+	auto& ss = forwarding ? dos._strokeStyleForwardingWire : dos._strokeStyleNoForwardingWire;
+	rt->DrawLine (GetP0Coords(), GetP1Coords(), brush, width, ss);
 }
 
 void Wire::RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const
@@ -84,7 +143,7 @@ void Wire::RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, co
 	float s = sin(angle);
 	float c = cos(angle);
 
-	array<D2D1_POINT_2F, 4> vertices = 
+	array<D2D1_POINT_2F, 4> vertices =
 	{
 		D2D1_POINT_2F { fd.x + s * halfw, fd.y - c * halfw },
 		D2D1_POINT_2F { fd.x - s * halfw, fd.y + c * halfw },
@@ -100,10 +159,59 @@ void Wire::RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, co
 
 HTResult Wire::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance)
 {
+	for (size_t i = 0; i < _points.size(); i++)
+	{
+		auto pointWLocation = this->GetPointCoords(i);
+		auto pointDLocation = zoomable->GetDLocationFromWLocation(pointWLocation);
+		D2D1_RECT_F rect = { pointDLocation.x, pointDLocation.y, pointDLocation.x, pointDLocation.y };
+		InflateRect(&rect, tolerance);
+		if (PointInRect (rect, dLocation))
+			return { this, (int) i };
+	}
+
 	if (HitTestLine (zoomable, dLocation, tolerance, GetP0Coords(), GetP1Coords(), WireThickness))
-		return { this, 1 };
+		return { this, -1 };
 
 	return { };
 }
 
+IXMLDOMElementPtr Wire::Serialize (IXMLDOMDocument3* doc) const
+{
+	IXMLDOMElementPtr wireElement;
+	static const _bstr_t WireElementName = "Wire";
+	HRESULT hr = doc->createElement (WireElementName, &wireElement); ThrowIfFailed(hr);
 
+	hr = wireElement->appendChild(SerializeEnd(doc, _points[0]), nullptr); ThrowIfFailed(hr);
+	hr = wireElement->appendChild(SerializeEnd(doc, _points[1]), nullptr); ThrowIfFailed(hr);
+
+	return wireElement;
+}
+
+//static
+IXMLDOMElementPtr Wire::SerializeEnd (IXMLDOMDocument3* doc, const WireEnd& end)
+{
+	HRESULT hr;
+	IXMLDOMElementPtr element;
+
+	if (holds_alternative<ConnectedWireEnd>(end))
+	{
+		static const _bstr_t ConnectedEndString = "ConnectedEnd";
+		static const _bstr_t BridgeIndexString = "BridgeIndex";
+		static const _bstr_t PortIndexString = "PortIndex";
+
+		hr = doc->createElement (ConnectedEndString, &element); ThrowIfFailed(hr);
+		auto port = get<ConnectedWireEnd>(end);
+		auto& bridges = port->GetBridge()->GetProject()->GetBridges();
+		auto it = find_if (bridges.begin(), bridges.end(), [port](auto& up) { return up.get() == port->GetBridge(); });
+		auto bridgeIndex = it - bridges.begin();
+		hr = element->setAttribute (BridgeIndexString, _variant_t(to_string(bridgeIndex).c_str())); ThrowIfFailed(hr);
+		hr = element->setAttribute (PortIndexString, _variant_t(to_string(port->GetPortIndex()).c_str())); ThrowIfFailed(hr);
+	}
+	else
+	{
+		static const _bstr_t LooseEndString = "LooseEnd";
+		hr = doc->createElement (LooseEndString, &element); ThrowIfFailed(hr);
+	}
+
+	return element;
+}

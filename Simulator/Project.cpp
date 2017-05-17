@@ -3,94 +3,125 @@
 #include "Simulator.h"
 #include "Wire.h"
 #include "Bridge.h"
+#include "Port.h"
+
+#pragma comment (lib, "msxml6.lib")
 
 using namespace std;
 
-class Project : public IProject
+class Project : public EventManager, public IProject
 {
 	ULONG _refCount = 1;
-	vector<ComPtr<Bridge>> _bridges;
-	vector<ComPtr<Wire>> _wires;
-	EventManager _em;
+	wstring _path;
+	vector<unique_ptr<Bridge>> _bridges;
+	vector<unique_ptr<Wire>> _wires;
 	std::array<uint8_t, 6> _nextMacAddress = { 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x80 };
 
 public:
-	virtual const vector<ComPtr<Bridge>>& GetBridges() const override final { return _bridges; }
+	virtual const vector<unique_ptr<Bridge>>& GetBridges() const override final { return _bridges; }
 
-	virtual void InsertBridge (size_t index, Bridge* bridge) override final
+	virtual void InsertBridge (size_t index, unique_ptr<Bridge>&& bridge, std::vector<ConvertedWirePoint>* convertedWirePoints) override final
 	{
 		if (index > _bridges.size())
 			throw invalid_argument("index");
 
-		_bridges.push_back(bridge);
-		bridge->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
-		BridgeInsertedEvent::InvokeHandlers (_em, this, index, bridge);
-		ProjectInvalidateEvent::InvokeHandlers (_em, this);
+		Bridge* b = bridge.get();
+		auto it = _bridges.insert (_bridges.begin() + index, (move(bridge)));
+		b->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
+		BridgeInsertedEvent::InvokeHandlers (*this, this, index, b);
+		ProjectInvalidateEvent::InvokeHandlers (*this, this);
+
+		if (convertedWirePoints != nullptr)
+		{
+			for (size_t i = convertedWirePoints->size() - 1; i != -1; i--)
+			{
+				auto& cwp = convertedWirePoints->at(i);
+				if (cwp.port->GetBridge() == b)
+				{
+					cwp.wire->SetPoint(cwp.pointIndex, cwp.port);
+					convertedWirePoints->erase (convertedWirePoints->begin() + i);
+				}
+			}
+		}
 	}
 
-	virtual void RemoveBridge(size_t index) override final
+	virtual unique_ptr<Bridge> RemoveBridge(size_t index, vector<ConvertedWirePoint>* convertedWirePointsToAddTo) override final
 	{
 		if (index >= _bridges.size())
 			throw invalid_argument("index");
 
-		BridgeRemovingEvent::InvokeHandlers(_em, this, index, _bridges[index]);
+		Bridge* b = _bridges[index].get();
+
+		size_t wireIndex = 0;
+		while (wireIndex < _wires.size())
+		{
+			Wire* w = _wires[wireIndex].get();
+			for (size_t i = 0; i < w->GetPoints().size(); i++)
+			{
+				auto& point = w->GetPoints()[i];
+				if (holds_alternative<ConnectedWireEnd>(point))
+				{
+					auto port = get<ConnectedWireEnd>(point);
+					if (port->GetBridge() == b)
+					{
+						assert (convertedWirePointsToAddTo != nullptr);
+						convertedWirePointsToAddTo->push_back(ConvertedWirePoint { w, i, port });
+						w->SetPoint(i, w->GetPointCoords(i));
+					}
+				}
+
+				wireIndex++;
+			}
+		}
+
+		BridgeRemovingEvent::InvokeHandlers(*this, this, index, b);
 		_bridges[index]->GetInvalidateEvent().RemoveHandler (&OnObjectInvalidate, this);
+		auto result = move(_bridges[index]);
 		_bridges.erase (_bridges.begin() + index);
-		ProjectInvalidateEvent::InvokeHandlers (_em, this);
+		ProjectInvalidateEvent::InvokeHandlers (*this, this);
+		return result;
 	}
 
-	virtual const vector<ComPtr<Wire>>& GetWires() const override final { return _wires; }
+	virtual const vector<unique_ptr<Wire>>& GetWires() const override final { return _wires; }
 
-	virtual void InsertWire (size_t index, Wire* wire) override final
+	virtual void InsertWire (size_t index, unique_ptr<Wire>&& wire) override final
 	{
 		if (index > _wires.size())
 			throw invalid_argument("index");
 
-		_wires.push_back(wire);
-		wire->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
-		WireInsertedEvent::InvokeHandlers (_em, this, index, wire);
-		ProjectInvalidateEvent::InvokeHandlers (_em, this);
+		Wire* w = wire.get();
+		auto it = _wires.insert (_wires.begin() + index, move(wire));
+		w->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
+		WireInsertedEvent::InvokeHandlers (*this, this, index, w);
+		ProjectInvalidateEvent::InvokeHandlers (*this, this);
 	}
 
-	virtual void RemoveWire (size_t index) override final
+	virtual unique_ptr<Wire> RemoveWire (size_t index) override final
 	{
-		throw not_implemented_exception();
+		if (index >= _wires.size())
+			throw invalid_argument("index");
+
+		WireRemovingEvent::InvokeHandlers(*this, this, index, _wires[index].get());
+		_wires[index]->GetInvalidateEvent().RemoveHandler (&OnObjectInvalidate, this);
+		auto result = move(_wires[index]);
+		_wires.erase(_wires.begin() + index);
+		ProjectInvalidateEvent::InvokeHandlers (*this, this);
+		return result;
 	}
 
 	static void OnObjectInvalidate (void* callbackArg, Object* object)
 	{
 		auto project = static_cast<Project*>(callbackArg);
-		ProjectInvalidateEvent::InvokeHandlers (project->_em, project);
+		ProjectInvalidateEvent::InvokeHandlers (*project, project);
 	}
 
-	virtual BridgeInsertedEvent::Subscriber GetBridgeInsertedEvent() override final { return BridgeInsertedEvent::Subscriber(_em); }
-	virtual BridgeRemovingEvent::Subscriber GetBridgeRemovingEvent() override final { return BridgeRemovingEvent::Subscriber(_em); }
+	virtual BridgeInsertedEvent::Subscriber GetBridgeInsertedEvent() override final { return BridgeInsertedEvent::Subscriber(this); }
+	virtual BridgeRemovingEvent::Subscriber GetBridgeRemovingEvent() override final { return BridgeRemovingEvent::Subscriber(this); }
 
-	virtual WireInsertedEvent::Subscriber GetWireInsertedEvent() override final { return WireInsertedEvent::Subscriber(_em); }
-	virtual WireRemovingEvent::Subscriber GetWireRemovingEvent() override final { return WireRemovingEvent::Subscriber(_em); }
+	virtual WireInsertedEvent::Subscriber GetWireInsertedEvent() override final { return WireInsertedEvent::Subscriber(this); }
+	virtual WireRemovingEvent::Subscriber GetWireRemovingEvent() override final { return WireRemovingEvent::Subscriber(this); }
 
-	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() override final { return ProjectInvalidateEvent::Subscriber(_em); }
-
-	virtual Port* FindReceivingPort (Port* txPort) const override final
-	{
-		for (auto& w : _wires)
-		{
-			for (size_t i = 0; i < 2; i++)
-			{
-				auto& thisEnd = w->GetPoints()[i];
-				if (holds_alternative<ConnectedWireEnd>(thisEnd) && (get<ConnectedWireEnd>(thisEnd) == txPort))
-				{
-					auto& otherEnd = w->GetPoints()[1 - i];
-					if (holds_alternative<ConnectedWireEnd>(otherEnd))
-						return get<ConnectedWireEnd>(otherEnd);
-					else
-						return nullptr;
-				}
-			}
-		}
-
-		return nullptr;
-	}
+	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() override final { return ProjectInvalidateEvent::Subscriber(this); }
 
 	virtual array<uint8_t, 6> AllocMacAddressRange (size_t count) override final
 	{
@@ -109,21 +140,90 @@ public:
 		return result;
 	}
 
-	virtual pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const override final
+	virtual const std::wstring& GetFilePath() const override final { return _path; }
+
+	virtual HRESULT Save (const wchar_t* filePath) override final
 	{
-		for (auto& w : _wires)
+		IXMLDOMDocument3Ptr doc;
+		HRESULT hr = CoCreateInstance (CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(doc), (void**) &doc);
+		if (FAILED(hr))
+			return hr;
+
+		IXMLDOMElementPtr projectElement;
+		hr = doc->createElement (_bstr_t("Project"), &projectElement); ThrowIfFailed(hr);
+		hr = doc->appendChild (projectElement, nullptr); ThrowIfFailed(hr);
+
+		IXMLDOMElementPtr bridgesElement;
+		hr = doc->createElement (_bstr_t("Bridges"), &bridgesElement); ThrowIfFailed(hr);
+		hr = projectElement->appendChild (bridgesElement, nullptr); ThrowIfFailed(hr);
+		for (auto& b : _bridges)
 		{
-			if (holds_alternative<ConnectedWireEnd>(w->GetP0()) && (get<ConnectedWireEnd>(w->GetP0()) == port))
-				return { w, 0 };
-			else if (holds_alternative<ConnectedWireEnd>(w->GetP1()) && (get<ConnectedWireEnd>(w->GetP1()) == port))
-				return { w, 1 };
+			auto e = b->Serialize(doc);
+			hr = bridgesElement->appendChild (e, nullptr); ThrowIfFailed(hr);
 		}
 
-		return { };
+		IXMLDOMElementPtr wiresElement;
+		hr = doc->createElement (_bstr_t("Wires"), &wiresElement); ThrowIfFailed(hr);
+		hr = projectElement->appendChild (wiresElement, nullptr); ThrowIfFailed(hr);
+		for (auto& w : _wires)
+		{
+			hr = wiresElement->appendChild (w->Serialize(doc), nullptr);
+			ThrowIfFailed(hr);
+		}
+
+		FormatAndSaveToFile (doc, filePath);
+		_path = filePath;
+
+		return S_OK;
 	}
 
-	#pragma region IUnknown
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final { return E_NOTIMPL; }
+	void FormatAndSaveToFile (IXMLDOMDocument3* doc, const wchar_t* path) const
+	{
+		static const char StylesheetText[] =
+			"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+			"<xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"1.0\">\n"
+			"  <xsl:output method=\"xml\" indent=\"yes\" omit-xml-declaration=\"no\" />\n"
+			"  <xsl:template match=\"@* | node()\">\n"
+			"    <xsl:copy>\n"
+			"      <xsl:apply-templates select=\"@* | node()\"/>\n"
+			"    </xsl:copy>\n"
+			"  </xsl:template>\n"
+			"</xsl:stylesheet>\n"
+			"";
+
+		IXMLDOMDocument3Ptr loadXML;
+		HRESULT hr = CoCreateInstance (CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(loadXML), (void**) &loadXML); ThrowIfFailed(hr);
+		VARIANT_BOOL successful;
+		hr = loadXML->loadXML (_bstr_t(StylesheetText), &successful); ThrowIfFailed(hr);
+
+		//Create the final document which will be indented properly
+		IXMLDOMDocument3Ptr pXMLFormattedDoc;
+		hr = CoCreateInstance(CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(pXMLFormattedDoc), (void**) &pXMLFormattedDoc); ThrowIfFailed(hr);
+
+		IDispatchPtr pDispatch;
+		hr = pXMLFormattedDoc->QueryInterface(IID_IDispatch, (void**)&pDispatch); ThrowIfFailed(hr);
+
+		_variant_t vtOutObject;
+		vtOutObject.vt = VT_DISPATCH;
+		vtOutObject.pdispVal = pDispatch;
+		vtOutObject.pdispVal->AddRef();
+
+		//Apply the transformation to format the final document
+		hr = doc->transformNodeToObject(loadXML,vtOutObject);
+
+		// By default it is writing the encoding = UTF-16. Let us change the encoding to UTF-8
+		IXMLDOMNodePtr firstChild;
+		hr = pXMLFormattedDoc->get_firstChild(&firstChild); ThrowIfFailed(hr);
+		IXMLDOMNamedNodeMapPtr pXMLAttributeMap;
+		hr = firstChild->get_attributes(&pXMLAttributeMap); ThrowIfFailed(hr);
+		IXMLDOMNodePtr encodingNode;
+		hr = pXMLAttributeMap->getNamedItem(_bstr_t("encoding"), &encodingNode); ThrowIfFailed(hr);
+		encodingNode->put_nodeValue (_variant_t("UTF-8"));
+
+		hr = pXMLFormattedDoc->save(_variant_t(path)); ThrowIfFailed(hr);
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
 
 	virtual ULONG STDMETHODCALLTYPE AddRef() override final
 	{
@@ -132,12 +232,18 @@ public:
 
 	virtual ULONG STDMETHODCALLTYPE Release() override final
 	{
-		auto newRefCount = InterlockedDecrement (&_refCount);
+		assert (_refCount > 0);
+		ULONG newRefCount = InterlockedDecrement(&_refCount);
 		if (newRefCount == 0)
 			delete this;
 		return newRefCount;
 	}
-	#pragma endregion
 };
 
-extern const ProjectFactory projectFactory = [] { return ComPtr<IProject>(new Project(), false); };
+template<typename... Args>
+static IProjectPtr Create (Args... args)
+{
+	return IProjectPtr(new Project(std::forward<Args>(args)...), false);
+}
+
+extern const ProjectFactory projectFactory = &Create;

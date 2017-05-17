@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "Simulator.h"
-#include "Win32Defs.h"
 #include "Resource.h"
 #include "Bridge.h"
 #include "Port.h"
@@ -14,32 +13,45 @@ static constexpr wchar_t RegValueNameWindowLeft[] = L"WindowLeft";
 static constexpr wchar_t RegValueNameWindowTop[] = L"WindowTop";
 static constexpr wchar_t RegValueNameWindowRight[] = L"WindowRight";
 static constexpr wchar_t RegValueNameWindowBottom[] = L"WindowBottom";
+static constexpr char LogPanelUniqueName[] = "STP Log Panel";
+static constexpr char PropsPanelUniqueName[] = "Props Panel";
+static constexpr char VlanPanelUniqueName[] = "VLAN Panel";
 
-class ProjectWindow : public IProjectWindow
+static COMDLG_FILTERSPEC const ProjectFileDialogFileTypes[] =
 {
+	{ L"Drawing Files", L"*.stp" },
+	{ L"All Files",     L"*.*" },
+};
+static const wchar_t ProjectFileExtensionWithoutDot[] = L"stp";
+
+class ProjectWindow : public EventManager, public IProjectWindow
+{
+	ULONG _refCount = 1;
 	ISimulatorApp* const _app;
-	ComPtr<IProject> const _project;
-	ComPtr<ISelection> const _selection;
-	unique_ptr<IEditArea> _editArea;
-	unique_ptr<IDockContainer> _dockContainer;
-	unique_ptr<ILogArea> _logArea;
-	unique_ptr<IPropertiesWindow> _propsWindow;
-	unique_ptr<IVlanWindow> _vlanWindow;
+	IProjectPtr    const _project;
+	ISelectionPtr  const _selection;
+	IActionListPtr const _actionList;
+	IEditAreaPtr         _editArea;
+	IDockContainerPtr    _dockContainer;
 	HWND _hwnd;
 	SIZE _clientSize;
-	EventManager _em;
 	RECT _restoreBounds;
-	uint16_t _selectedVlanNumber = 1;
+	unsigned int _selectedVlanNumber = 1;
 
 public:
-	ProjectWindow (ISimulatorApp* app, IProject* project, ISelection* selection, EditAreaFactory editAreaFactory, int nCmdShow, uint16_t selectedVlan)
-		: _app(app), _project(project), _selection(selection), _selectedVlanNumber(selectedVlan)
+	ProjectWindow (ISimulatorApp* app,
+				   IProject* project,
+				   SelectionFactory selectionFactory,
+				   IActionList* actionList,
+				   EditAreaFactory editAreaFactory,
+				   int nCmdShow,
+				   unsigned int selectedVlan)
+		: _app(app)
+		, _project(project)
+		, _selection(selectionFactory(project))
+		, _actionList(actionList)
+		, _selectedVlanNumber(selectedVlan)
 	{
-		HINSTANCE hInstance;
-		BOOL bRes = GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR)&wndClassAtom, &hInstance);
-		if (!bRes)
-			throw win32_exception(GetLastError());
-
 		if (wndClassAtom == 0)
 		{
 			WNDCLASSEX wndClassEx =
@@ -49,13 +61,13 @@ public:
 				&WindowProcStatic, // lpfnWndProc
 				0, // cbClsExtra
 				0, // cbWndExtra
-				hInstance, // hInstance
-				LoadIcon(hInstance, MAKEINTRESOURCE(IDI_DESIGNER)), // hIcon
+				_app->GetHInstance(),
+				LoadIcon(_app->GetHInstance(), MAKEINTRESOURCE(IDI_DESIGNER)), // hIcon
 				LoadCursor(nullptr, IDC_ARROW), // hCursor
 				nullptr,//(HBRUSH)(COLOR_WINDOW + 1), // hbrBackground
 				MAKEINTRESOURCE(IDR_MAIN_MENU), // lpszMenuName
 				ProjectWindowWndClassName,      // lpszClassName
-				LoadIcon(hInstance, MAKEINTRESOURCE(IDI_DESIGNER))
+				LoadIcon(_app->GetHInstance(), MAKEINTRESOURCE(IDI_DESIGNER))
 			};
 
 			wndClassAtom = RegisterClassEx(&wndClassEx);
@@ -72,7 +84,7 @@ public:
 			w = _restoreBounds.right - _restoreBounds.left;
 			h = _restoreBounds.bottom - _restoreBounds.top;
 		}
-		auto hwnd = ::CreateWindow(ProjectWindowWndClassName, L"STP Simulator", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, x, y, w, h, nullptr, 0, hInstance, this);
+		auto hwnd = ::CreateWindow(ProjectWindowWndClassName, L"STP Simulator", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, x, y, w, h, nullptr, 0, _app->GetHInstance(), this);
 		if (hwnd == nullptr)
 			throw win32_exception(GetLastError());
 		assert(hwnd == _hwnd);
@@ -80,49 +92,125 @@ public:
 			::GetWindowRect(_hwnd, &_restoreBounds);
 		::ShowWindow (_hwnd, nCmdShow);
 
-		_dockContainer = dockPanelFactory (_hwnd, 0xFFFF, GetClientRectPixels());
+		const RECT clientRect = { 0, 0, _clientSize.cx, _clientSize.cy };
+		_dockContainer = dockContainerFactory (_app->GetHInstance(), _hwnd, clientRect);
 
-		auto logPanel = _dockContainer->GetOrCreateDockablePanel(Side::Right, L"STP Log");
-		_logArea = logAreaFactory (logPanel->GetHWnd(), 0xFFFF, logPanel->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory());
+		auto logPanel = _dockContainer->CreatePanel (LogPanelUniqueName, Side::Right, L"STP Log");
+		auto logArea = logAreaFactory (_app->GetHInstance(), logPanel->GetHWnd(), logPanel->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory(), _selection);
+		logPanel->GetVisibleChangedEvent().AddHandler (&OnLogPanelVisibleChanged, this);
+		SetMainMenuItemCheck (ID_VIEW_STPLOG, true);
 
-		auto propsPanel = _dockContainer->GetOrCreateDockablePanel (Side::Left, L"Properties");
-		_propsWindow = propertiesWindowFactory (propsPanel->GetHWnd(), propsPanel->GetContentRect(), _app, _project, this, _selection);
+		auto propsPanel = _dockContainer->CreatePanel (PropsPanelUniqueName, Side::Left, L"Properties");
+		auto propsWindow = propertiesWindowFactory (_app, this, _selection, propsPanel->GetHWnd(), propsPanel->GetContentLocation());
+		_dockContainer->ResizePanel (propsPanel, propsPanel->GetPanelSizeFromContentSize(propsWindow->GetClientSize()));
+		propsPanel->GetVisibleChangedEvent().AddHandler (&OnPropsPanelVisibleChanged, this);
+		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
 
-		auto vlanPanel = _dockContainer->GetOrCreateDockablePanel (Side::Top, L"VLAN");
-		_vlanWindow = vlanWindowFactory (vlanPanel->GetHWnd(), vlanPanel->GetContentLocation(), _app, _project, this, _selection);
-		_dockContainer->ResizePanel (vlanPanel, vlanPanel->GetPanelSizeFromContentSize(_vlanWindow->GetClientSize()));
+		auto vlanPanel = _dockContainer->CreatePanel (VlanPanelUniqueName, Side::Top, L"VLAN");
+		auto vlanWindow = vlanWindowFactory (_app, this, _project, _selection, _actionList, vlanPanel->GetHWnd(), vlanPanel->GetContentLocation());
+		_dockContainer->ResizePanel (vlanPanel, vlanPanel->GetPanelSizeFromContentSize(vlanWindow->GetClientSize()));
+		vlanPanel->GetVisibleChangedEvent().AddHandler (&OnVlanPanelVisibleChanged, this);
+		SetMainMenuItemCheck (ID_VIEW_VLANS, true);
 
-		_editArea = editAreaFactory (project, this, selection, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory());
+		_editArea = editAreaFactory (app, this, _project, _actionList, _selection, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory());
 
-		_selection->GetSelectionChangedEvent().AddHandler (&OnSelectionChanged, this);
+		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
+		_actionList->GetChangedEvent().AddHandler (&OnActionListChanged, this);
+		_app->GetProjectWindowAddedEvent().AddHandler (&OnProjectWindowAdded, this);
+		_app->GetProjectWindowRemovedEvent().AddHandler (&OnProjectWindowRemoved, this);
 	}
 
 	~ProjectWindow()
 	{
-		_selection->GetSelectionChangedEvent().RemoveHandler (&OnSelectionChanged, this);
+		_app->GetProjectWindowRemovedEvent().RemoveHandler (&OnProjectWindowRemoved, this);
+		_app->GetProjectWindowAddedEvent().RemoveHandler (&OnProjectWindowAdded, this);
+		_actionList->GetChangedEvent().RemoveHandler (&OnActionListChanged, this);
+		_selection->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
 
 		if (_hwnd != nullptr)
 			::DestroyWindow(_hwnd);
 	}
 
-	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
+	static void OnProjectWindowAdded (void* callbackArg, IProjectWindow* pw)
+	{
+		auto thispw = static_cast<ProjectWindow*>(callbackArg);
+		if (pw->GetProject() == thispw->GetProject())
+			thispw->SetWindowTitle();
+	}
+
+	static void OnProjectWindowRemoved (void* callbackArg, IProjectWindow* pw)
+	{
+		auto thispw = static_cast<ProjectWindow*>(callbackArg);
+		if (pw->GetProject() == thispw->GetProject())
+			thispw->SetWindowTitle();
+	}
+
+	static void OnActionListChanged (void* callbackArg, IActionList* actionList)
 	{
 		auto pw = static_cast<ProjectWindow*>(callbackArg);
-
-		if (selection->GetObjects().size() != 1)
-			pw->_logArea->SelectBridge(nullptr);
-		else
+		pw->SetWindowTitle();
+		HMENU hmenu = ::GetMenu(pw->_hwnd);
+		if (hmenu != nullptr)
 		{
-			auto b = dynamic_cast<Bridge*>(selection->GetObjects()[0].Get());
-			if (b == nullptr)
-			{
-				auto port = dynamic_cast<Port*>(selection->GetObjects()[0].Get());
-				if (port != nullptr)
-					b = port->GetBridge();
-			}
-
-			pw->_logArea->SelectBridge(b);
+			MENUITEMINFO mii = { sizeof(mii) };
+			mii.fMask = MIIM_STATE;
+			mii.fState = actionList->CanUndo() ? MFS_ENABLED : MFS_DISABLED;
+			BOOL bRes = ::SetMenuItemInfoW (hmenu, ID_EDIT_UNDO, FALSE, &mii);
+			mii.fState = actionList->CanRedo() ? MFS_ENABLED : MFS_DISABLED;
+			bRes = ::SetMenuItemInfoW (hmenu, ID_EDIT_REDO, FALSE, &mii);
 		}
+	}
+
+	void SetWindowTitle()
+	{
+		wstringstream windowTitle;
+
+		const auto& filePath = _project->GetFilePath();
+		if (!filePath.empty())
+		{
+			const wchar_t* fileName = PathFindFileName (filePath.c_str());
+			const wchar_t* fileExt = PathFindExtension (filePath.c_str());
+			windowTitle << setw(fileExt - fileName) << fileName;
+		}
+		else
+			windowTitle << L"Untitled";
+
+		if (_actionList->ChangedSinceLastSave())
+			windowTitle << L"*";
+
+		auto& pws = _app->GetProjectWindows();
+		if (any_of (pws.begin(), pws.end(), [this](const IProjectWindowPtr& pw) { return (pw.GetInterfacePtr() != this) && (pw->GetProject() == _project); }))
+			windowTitle << L" - VLAN " << _selectedVlanNumber;
+
+		::SetWindowText (_hwnd, windowTitle.str().c_str());
+	}
+
+	void SetMainMenuItemCheck (UINT item, bool checked)
+	{
+		auto menu = ::GetMenu(_hwnd);
+		MENUITEMINFO mii = { sizeof(mii) };
+		mii.fMask = MIIM_STATE;
+		mii.fState = checked ? MFS_CHECKED : MFS_UNCHECKED;
+		::SetMenuItemInfo (menu, item, FALSE, &mii);
+	}
+
+	static void OnPropsPanelVisibleChanged (void* callbackArg, IDockablePanel* panel, bool visible)
+	{
+		static_cast<ProjectWindow*>(callbackArg)->SetMainMenuItemCheck (ID_VIEW_PROPERTIES, visible);
+	}
+
+	static void OnLogPanelVisibleChanged (void* callbackArg, IDockablePanel* panel, bool visible)
+	{
+		static_cast<ProjectWindow*>(callbackArg)->SetMainMenuItemCheck (ID_VIEW_STPLOG, visible);
+	}
+
+	static void OnVlanPanelVisibleChanged (void* callbackArg, IDockablePanel* panel, bool visible)
+	{
+		static_cast<ProjectWindow*>(callbackArg)->SetMainMenuItemCheck (ID_VIEW_VLANS, visible);
+	}
+
+	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
+	{
 	}
 
 	virtual HWND GetHWnd() const override { return _hwnd; }
@@ -175,13 +263,13 @@ public:
 
 		if (msg == WM_CLOSE)
 		{
-			SaveWindowLocation();
-			PostQuitMessage(0);
-			return DefWindowProc(_hwnd, msg, wParam, lParam); // this calls DestroyWindow
+			TryClose();
+			return 0;
 		}
 
 		if (msg == WM_DESTROY)
 		{
+			ClosedEvent::InvokeHandlers(*this, this);
 			_dockContainer = nullptr; // destroy it early to avoid doing layout-related processing
 			return 0;
 		}
@@ -218,7 +306,197 @@ public:
 			return 0;
 		}
 
+		if (msg == WM_COMMAND)
+		{
+			auto olr = ProcessWmCommand (wParam, lParam);
+			if (olr)
+				return olr.value();
+
+			return DefWindowProc(_hwnd, msg, wParam, lParam);
+		}
+
 		return DefWindowProc(_hwnd, msg, wParam, lParam);
+	}
+
+	optional<LRESULT> ProcessWmCommand (WPARAM wParam, LPARAM lParam)
+	{
+		if ((wParam == ID_VIEW_PROPERTIES) || (wParam == ID_VIEW_STPLOG) || (wParam == ID_VIEW_VLANS))
+		{
+			auto panelId = (wParam == ID_VIEW_PROPERTIES) ? PropsPanelUniqueName : ((wParam == ID_VIEW_STPLOG) ? LogPanelUniqueName : VlanPanelUniqueName);
+			auto panel = _dockContainer->GetPanel(panelId);
+			auto style = (DWORD) GetWindowLongPtr(panel->GetHWnd(), GWL_STYLE);
+			style ^= WS_VISIBLE;
+			SetWindowLongPtr (panel->GetHWnd(), GWL_STYLE, style);
+			return 0;
+		}
+
+		if (wParam == ID_FILE_SAVE)
+		{
+			Save();
+			return 0;
+		}
+
+		if ((wParam == ID_FILE_NEW) || (wParam == ID_FILE_OPEN) || (wParam == ID_FILE_SAVEAS))
+		{
+			MessageBox (_hwnd, L"Saving and loading are not yet implemented.", _app->GetAppName(), 0);
+			return 0;
+		}
+
+		if (wParam == ID_EDIT_UNDO)
+		{
+			_actionList->Undo();
+			return 0;
+		}
+
+		if (wParam == ID_EDIT_REDO)
+		{
+			_actionList->Redo();
+			return 0;
+		}
+
+		if (wParam == ID_FILE_EXIT)
+		{
+			PostMessage (_hwnd, WM_CLOSE, 0, 0);
+			return 0;
+		}
+
+		return nullopt;
+	}
+
+	HRESULT Save()
+	{
+		HRESULT hr;
+
+		auto savePath = _project->GetFilePath();
+		if (savePath.empty())
+		{
+			hr = TryChooseSaveFilePath (_hwnd, L"", savePath);
+			if (FAILED(hr))
+				return hr;
+		}
+
+		hr = _project->Save (savePath.c_str());
+		if (FAILED(hr))
+		{
+			TaskDialog (_hwnd, nullptr, _app->GetAppName(), L"Could Not Save", _com_error(hr).ErrorMessage(), 0, nullptr, nullptr);
+			return hr;
+		}
+
+		_actionList->SetSavePoint();
+		return S_OK;
+	}
+
+	HRESULT AskSaveDiscardCancel (const wchar_t* askText, bool* saveChosen)
+	{
+		static const TASKDIALOG_BUTTON buttons[] =
+		{
+			{ IDYES, L"Save Changes" },
+			{ IDNO, L"Discard Changes" },
+			{ IDCANCEL, L"Cancel" },
+		};
+
+		TASKDIALOGCONFIG tdc = { sizeof (tdc) };
+		tdc.hwndParent = _hwnd;
+		tdc.pszWindowTitle = _app->GetAppName();
+		tdc.pszMainIcon = TD_WARNING_ICON;
+		tdc.pszMainInstruction = L"File was changed";
+		tdc.pszContent = askText;
+		tdc.cButtons = _countof(buttons);
+		tdc.pButtons = buttons;
+		tdc.nDefaultButton = IDOK;
+
+		int pressedButton;
+		auto hr = TaskDialogIndirect (&tdc, &pressedButton, nullptr, nullptr);
+		if (FAILED(hr))
+			return hr;
+
+		if (pressedButton == IDCANCEL)
+			return HRESULT_FROM_WIN32(ERROR_CANCELLED);
+
+		*saveChosen = (pressedButton == IDYES);
+		return S_OK;
+	}
+
+	static HRESULT TryChooseSaveFilePath (HWND fileDialogParentHWnd, const wchar_t* pathToInitializeDialogTo, wstring& sbOut)
+	{
+		IFileSaveDialogPtr dialog;
+		HRESULT hr = dialog.CreateInstance(CLSID_FileSaveDialog);
+		if (FAILED(hr))
+			return hr;
+
+		//DWORD options;
+		//hr = dialog->GetOptions (&options); rassert_hr(hr);
+		//hr = dialog->SetOptions (options | FOS_FORCEFILESYSTEM); rassert_hr(hr);
+		hr = dialog->SetFileTypes (_countof(ProjectFileDialogFileTypes), ProjectFileDialogFileTypes);
+		if (FAILED(hr))
+			return hr;
+
+		hr = dialog->SetDefaultExtension (ProjectFileExtensionWithoutDot);
+		if (FAILED(hr))
+			return hr;
+
+		if ((pathToInitializeDialogTo != nullptr) && (pathToInitializeDialogTo[0] != 0))
+		{
+			auto filePtr = PathFindFileName(pathToInitializeDialogTo);
+			dialog->SetFileName(filePtr);
+
+			wstring dir (pathToInitializeDialogTo, filePtr - pathToInitializeDialogTo);
+			IShellItemPtr si;
+			hr = SHCreateItemFromParsingName (dir.c_str(), nullptr, IID_PPV_ARGS(&si));
+			if (SUCCEEDED(hr))
+				dialog->SetFolder(si);
+		}
+
+		hr = dialog->Show(fileDialogParentHWnd);
+		if (FAILED(hr))
+			return hr;
+
+		IShellItemPtr item;
+		hr = dialog->GetResult (&item);
+		if (FAILED(hr))
+			return hr;
+
+		{
+			wchar_t* filePath;
+			hr = item->GetDisplayName (SIGDN_FILESYSPATH, &filePath);
+			if (FAILED(hr))
+				return hr;
+			sbOut = filePath;
+			CoTaskMemFree(filePath);
+		}
+
+		SHAddToRecentDocs(SHARD_PATHW, sbOut.c_str());
+		return S_OK;
+	}
+
+	HRESULT TryClose()
+	{
+		HRESULT hr;
+
+		auto count = count_if (_app->GetProjectWindows().begin(), _app->GetProjectWindows().end(),
+							   [this] (auto& pw) { return pw->GetProject() == _project; });
+		if (count == 1)
+		{
+			// Closing last window of this project.
+			if (_actionList->ChangedSinceLastSave())
+			{
+				bool saveChosen;
+				hr = AskSaveDiscardCancel(L"Save changes?", &saveChosen);
+				if (FAILED(hr))
+					return hr;
+
+				if (saveChosen)
+				{
+					hr = this->Save();
+					if (FAILED(hr))
+						return hr;
+				}
+			}
+		}
+
+		SaveWindowLocation();
+		::DestroyWindow (_hwnd);
+		return S_OK;
 	}
 
 	bool TryGetSavedWindowLocation (_Out_ RECT* restoreBounds, _Out_ int* nCmdShow)
@@ -266,7 +544,7 @@ public:
 		}
 	}
 
-	virtual void SelectVlan (uint16_t vlanNumber) override final
+	virtual void SelectVlan (unsigned int vlanNumber) override final
 	{
 		if ((vlanNumber == 0) || (vlanNumber > 4095))
 			throw invalid_argument (u8"Invalid VLAN number.");
@@ -274,49 +552,43 @@ public:
 		if (_selectedVlanNumber != vlanNumber)
 		{
 			_selectedVlanNumber = vlanNumber;
-			SelectedVlanNumerChangedEvent::InvokeHandlers(_em, this, vlanNumber);
+			SelectedVlanNumerChangedEvent::InvokeHandlers(*this, this, vlanNumber);
 			::InvalidateRect (GetHWnd(), nullptr, FALSE);
+			SetWindowTitle();
 		}
 	};
 
-	virtual uint16_t GetSelectedVlanNumber() const override final { return _selectedVlanNumber; }
+	virtual unsigned int GetSelectedVlanNumber() const override final { return _selectedVlanNumber; }
 
-	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() override final { return SelectedVlanNumerChangedEvent::Subscriber(_em); }
+	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() override final { return SelectedVlanNumerChangedEvent::Subscriber(this); }
+
+	virtual ClosedEvent::Subscriber GetClosedEvent() override final { return ClosedEvent::Subscriber(this); }
 
 	virtual IProject* GetProject() const override final { return _project; }
 
-	/*
-	LRESULT ProcessWmClose()
+	virtual IEditArea* GetEditArea() const override final { return _editArea; }
+
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
+
+	virtual ULONG STDMETHODCALLTYPE AddRef() override final
 	{
-		auto& allWindowsForProject = _project->GetProjectWindows();
-
-		rassert (!allWindowsForProject.empty());
-
-		if (allWindowsForProject.size() > 1)
-		{
-		_project->RemoveAndDestroyProjectWindow(this);
-		return;
-		}
-
-		// Closing the last remaining window of this project. Let's check for changes and ask the user whether to save them.
-		bool continueClosing = SaveProject (_project->GetFilePath(), true, SaveProjectOption::SaveIfChangedAskUserFirst, L"Save changes?");
-		if (!continueClosing)
-		return;
-
-		// Copy some pointers from "this" to the stack cause destroying the project window might release the last reference to it and destroy this object.
-		IEditorProject* project = _project;
-		IEditorApplication* app = _app;
-
-		_project->RemoveAndDestroyProjectWindow (this);
-
-		//if (project->GetProjectWindows().empty())
-		//{
-		//	app->CloseProject (project);
-		//	if (app->GetOpenProjects().empty())
-		//		PostQuitMessage (0);
-		//}
+		return InterlockedIncrement(&_refCount);
 	}
-	*/
+
+	virtual ULONG STDMETHODCALLTYPE Release() override final
+	{
+		assert (_refCount > 0);
+		ULONG newRefCount = InterlockedDecrement(&_refCount);
+		if (newRefCount == 0)
+			delete this;
+		return newRefCount;
+	}
 };
 
-extern const ProjectWindowFactory projectWindowFactory = [](auto... params) { return unique_ptr<IProjectWindow>(new ProjectWindow(params...)); };
+template<typename... Args>
+static IProjectWindowPtr Create (Args... args)
+{
+	return IProjectWindowPtr(new ProjectWindow (std::forward<Args>(args)...), false);
+}
+
+extern const ProjectWindowFactory projectWindowFactory = &Create;

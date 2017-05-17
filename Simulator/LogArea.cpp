@@ -1,8 +1,9 @@
 
 #include "pch.h"
 #include "Simulator.h"
-#include "D2DWindow.h"
+#include "Win32/D2DWindow.h"
 #include "Bridge.h"
+#include "Port.h"
 
 using namespace std;
 using namespace D2D1;
@@ -11,13 +12,14 @@ class LogArea : public D2DWindow, public ILogArea
 {
 	typedef D2DWindow base;
 
-	ComPtr<IDWriteTextFormat> _textFormat;
-	ComPtr<ID2D1SolidColorBrush> _windowBrush;
-	ComPtr<ID2D1SolidColorBrush> _windowTextBrush;
-	ComPtr<Bridge> _bridge;
+	ISelectionPtr const _selection;
+	IDWriteTextFormatPtr _textFormat;
+	ID2D1SolidColorBrushPtr _windowBrush;
+	ID2D1SolidColorBrushPtr _windowTextBrush;
+	Bridge* _bridge = nullptr;
 	int _selectedPort = -1;
 	int _selectedTree = -1;
-	vector<string> _lines;
+	vector<const BridgeLogLine*> _lines;
 	UINT_PTR _timerId = 0;
 	int _animationCurrentLineCount = 0;
 	int _animationEndLineCount = 0;
@@ -28,8 +30,9 @@ class LogArea : public D2DWindow, public ILogArea
 	static constexpr UINT AnimationScrollFramesMax = 10;
 
 public:
-	LogArea (HWND hWndParent, DWORD controlId, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory)
-		: base (WS_EX_CLIENTEDGE, WS_VISIBLE | WS_CHILD | WS_HSCROLL | WS_VSCROLL, rect, hWndParent, controlId, deviceContext, dWriteFactory)
+	LogArea (HINSTANCE hInstance, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, ISelection* selection)
+		: base (hInstance, WS_EX_CLIENTEDGE, WS_VISIBLE | WS_CHILD | WS_HSCROLL | WS_VSCROLL, rect, hWndParent, nullptr, deviceContext, dWriteFactory)
+		, _selection(selection)
 	{
 		auto hr = dWriteFactory->CreateTextFormat (L"Consolas", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
 			DWRITE_FONT_STRETCH_NORMAL, 11, L"en-US", &_textFormat); ThrowIfFailed(hr);
@@ -38,17 +41,35 @@ public:
 
 		GetDeviceContext()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOW), &_windowBrush);
 		GetDeviceContext()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOWTEXT), &_windowTextBrush);
+		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
 	}
 
+private:
 	~LogArea()
 	{
+		_selection->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
 		if (_bridge != nullptr)
 			_bridge->GetBridgeLogLineGeneratedEvent().RemoveHandler (OnLogLineGeneratedStatic, this);
 	}
 
-	virtual HWND GetHWnd() const override final
+	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
 	{
-		return this->D2DWindow::GetHWnd();
+		auto logArea = static_cast<LogArea*>(callbackArg);
+
+		if (selection->GetObjects().size() != 1)
+			logArea->SelectBridge(nullptr);
+		else
+		{
+			auto b = dynamic_cast<Bridge*>(selection->GetObjects().front());
+			if (b == nullptr)
+			{
+				auto port = dynamic_cast<Port*>(selection->GetObjects().front());
+				if (port != nullptr)
+					b = port->GetBridge();
+			}
+
+			logArea->SelectBridge(b);
+		}
 	}
 
 	virtual void Render(ID2D1DeviceContext* dc) const override final
@@ -64,9 +85,9 @@ public:
 
 			auto oldta = _textFormat->GetTextAlignment();
 			_textFormat->SetTextAlignment (DWRITE_TEXT_ALIGNMENT_CENTER);
-			ComPtr<IDWriteTextLayout> tl;
+			IDWriteTextLayoutPtr tl;
 			auto text = (_bridge == nullptr) ? TextNoBridge : TextNoEntries;
-			auto hr = GetDWriteFactory()->CreateTextLayout (text, wcslen(text), _textFormat, clientSize.width, 10000, &tl); ThrowIfFailed(hr);
+			auto hr = GetDWriteFactory()->CreateTextLayout (text, (UINT32) wcslen(text), _textFormat, clientSize.width, 10000, &tl); ThrowIfFailed(hr);
 			_textFormat->SetTextAlignment(oldta);
 			DWRITE_TEXT_METRICS metrics;
 			tl->GetMetrics (&metrics);
@@ -75,18 +96,17 @@ public:
 		else
 		{
 			wstring_convert<codecvt_utf8<wchar_t>> converter;
-			wstring line;
 
 			float y = 0;
 			float lineHeight = 0;
 			for (int lineIndex = _topLineIndex; (lineIndex < _animationCurrentLineCount) && (y < clientSize.height); lineIndex++)
 			{
-				line = converter.from_bytes(_lines[lineIndex]);
+				auto& line = converter.from_bytes(_lines[lineIndex]->text);
 
 				if ((line.length() >= 2) && (line[line.length() - 2] == '\r') && (line[line.length() - 1] == '\n'))
 					line.resize (line.length() - 2);
 
-				ComPtr<IDWriteTextLayout> tl;
+				IDWriteTextLayoutPtr tl;
 				auto hr = GetDWriteFactory()->CreateTextLayout (line.c_str(), (UINT32) line.length(), _textFormat, 10000, 10000, &tl); ThrowIfFailed(hr);
 
 				if (lineHeight == 0)
@@ -105,17 +125,17 @@ public:
 		}
 	}
 
-	static void OnLogLineGeneratedStatic (void* callbackArg, Bridge* b, const BridgeLogLine& ll)
+	static void OnLogLineGeneratedStatic (void* callbackArg, Bridge* b, const BridgeLogLine* ll)
 	{
 		static_cast<LogArea*>(callbackArg)->OnLogLineGenerated(ll);
 	}
 
-	void OnLogLineGenerated (const BridgeLogLine& ll)
+	void OnLogLineGenerated (const BridgeLogLine* ll)
 	{
-		if (((_selectedPort == -1) || (_selectedPort == ll.portIndex))
-			&& ((_selectedTree == -1) || (_selectedTree == ll.treeIndex)))
+		if (((_selectedPort == -1) || (_selectedPort == ll->portIndex))
+			&& ((_selectedTree == -1) || (_selectedTree == ll->treeIndex)))
 		{
-			_lines.push_back(ll.text);
+			_lines.push_back(ll);
 
 			bool lastLineVisible = (_topLineIndex + _numberOfLinesFitting >= _animationCurrentLineCount);
 
@@ -158,9 +178,9 @@ public:
 		}
 	}
 
-	virtual void SelectBridge (Bridge* b) override final 
+	void SelectBridge (Bridge* b)
 	{
-		if (_bridge.Get() != b)
+		if (_bridge != b)
 		{
 			if (_bridge != nullptr)
 			{
@@ -178,10 +198,10 @@ public:
 			{
 				for (auto& ll : _bridge->GetLogLines())
 				{
-					if (((_selectedPort == -1) || (_selectedPort == ll.portIndex))
-						&& ((_selectedTree == -1) || (_selectedTree == ll.treeIndex)))
+					if (((_selectedPort == -1) || (_selectedPort == ll->portIndex))
+						&& ((_selectedTree == -1) || (_selectedTree == ll->treeIndex)))
 					{
-						_lines.push_back(ll.text);
+						_lines.push_back(ll.get());
 					}
 				}
 
@@ -239,7 +259,7 @@ public:
 		assert (_animationEndLineCount != _animationCurrentLineCount);
 		assert (_animationScrollFramesRemaining != 0);
 
-		size_t linesToAddInThisAnimationFrame = (_animationEndLineCount - _animationCurrentLineCount) / _animationScrollFramesRemaining;
+		int linesToAddInThisAnimationFrame = (_animationEndLineCount - _animationCurrentLineCount) / _animationScrollFramesRemaining;
 		_animationCurrentLineCount += linesToAddInThisAnimationFrame;
 
 		if (_animationCurrentLineCount <= _numberOfLinesFitting)
@@ -250,7 +270,7 @@ public:
 		InvalidateRect (GetHWnd(), nullptr, FALSE);
 
 		// Need to set SIF_DISABLENOSCROLL due to what seems like a Windows bug:
-		// GetScrollInfo returns garbage if called right after SetScrollInfo, if SetScrollInfo made the scroll bar change from invisible to visible, 
+		// GetScrollInfo returns garbage if called right after SetScrollInfo, if SetScrollInfo made the scroll bar change from invisible to visible,
 		SCROLLINFO si = { sizeof (si) };
 		si.fMask = SIF_POS | SIF_RANGE | SIF_PAGE | SIF_DISABLENOSCROLL;
 		si.nMin = 0;
@@ -275,13 +295,13 @@ public:
 		}
 	}
 
-	static size_t CalcNumberOfLinesFitting (IDWriteTextFormat* textFormat, float clientHeightDips, IDWriteFactory* dWriteFactory)
+	static int CalcNumberOfLinesFitting (IDWriteTextFormat* textFormat, float clientHeightDips, IDWriteFactory* dWriteFactory)
 	{
-		ComPtr<IDWriteTextLayout> tl;
+		IDWriteTextLayoutPtr tl;
 		auto hr = dWriteFactory->CreateTextLayout (L"A", 1, textFormat, 1000, 1000, &tl); ThrowIfFailed(hr);
 		DWRITE_TEXT_METRICS metrics;
 		hr = tl->GetMetrics(&metrics);
-		size_t numberOfLinesFitting = (size_t) floor(clientHeightDips / metrics.height);
+		int numberOfLinesFitting = (int) floor(clientHeightDips / metrics.height);
 		return numberOfLinesFitting;
 	}
 
@@ -301,7 +321,7 @@ public:
 				_topLineIndex = 0;
 		}
 
-		size_t newNumberOfLinesFitting = CalcNumberOfLinesFitting (_textFormat, GetClientSizeDips().height, GetDWriteFactory());		
+		int newNumberOfLinesFitting = CalcNumberOfLinesFitting (_textFormat, GetClientSizeDips().height, GetDWriteFactory());
 		if (_numberOfLinesFitting != newNumberOfLinesFitting)
 		{
 			_numberOfLinesFitting = newNumberOfLinesFitting;
@@ -320,7 +340,7 @@ public:
 		}
 
 		// Need to set SIF_DISABLENOSCROLL due to what seems like a Windows bug:
-		// GetScrollInfo returns garbage if called right after SetScrollInfo, if SetScrollInfo made the scroll bar change from invisible to visible, 
+		// GetScrollInfo returns garbage if called right after SetScrollInfo, if SetScrollInfo made the scroll bar change from invisible to visible,
 
 		// TODO: fix this
 		SCROLLINFO si = { sizeof (si) };
@@ -335,7 +355,7 @@ public:
 	void EndAnimation()
 	{
 		assert (_animationScrollFramesRemaining > 0);
-		
+
 		// Scroll animation is in progress. Finalize it.
 		assert (_animationEndLineCount > _animationCurrentLineCount);
 		assert (_timerId != 0);
@@ -393,8 +413,8 @@ public:
 	{
 		WORD fwKeys = GET_KEYSTATE_WPARAM(wParam);
 		short zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
-		int xPos = GET_X_LPARAM(lParam); 
-		int yPos = GET_Y_LPARAM(lParam); 
+		int xPos = GET_X_LPARAM(lParam);
+		int yPos = GET_Y_LPARAM(lParam);
 
 		if (_animationScrollFramesRemaining > 0)
 			EndAnimation();
@@ -411,6 +431,16 @@ public:
 
 		ProcessUserScroll (newTopLineIndex);
 	}
+
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return base::QueryInterface(riid, ppvObject); }
+	virtual ULONG STDMETHODCALLTYPE AddRef() override { return base::AddRef(); }
+	virtual ULONG STDMETHODCALLTYPE Release() override { return base::Release(); }
 };
 
-extern const LogAreaFactory logAreaFactory = [](auto... params) { return unique_ptr<ILogArea>(new LogArea(params...)); };
+template<typename... Args>
+static ILogAreaPtr Create (Args... args)
+{
+	return ILogAreaPtr (new LogArea(std::forward<Args>(args)...), false);
+}
+
+extern const LogAreaFactory logAreaFactory = &Create;

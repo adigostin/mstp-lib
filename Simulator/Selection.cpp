@@ -3,15 +3,15 @@
 #include "Simulator.h"
 #include "Bridge.h"
 #include "Wire.h"
+#include "Port.h"
 
 using namespace std;
 
-class Selection : public ISelection
+class Selection : public EventManager, public ISelection
 {
+	IProjectPtr const _project;
 	ULONG _refCount = 1;
-	IProject* const _project;
-	vector<ComPtr<Object>> _objects;
-	EventManager _em;
+	vector<Object*> _objects;
 
 public:
 	Selection (IProject* project)
@@ -21,38 +21,54 @@ public:
 		_project->GetBridgeRemovingEvent().AddHandler (&OnBridgeRemovingFromProject, this);
 	}
 
-	virtual ~Selection()
+private:
+	~Selection()
 	{
 		_project->GetBridgeRemovingEvent().RemoveHandler (&OnBridgeRemovingFromProject, this);
 		_project->GetWireRemovingEvent().RemoveHandler (&OnWireRemovingFromProject, this);
 	}
 
-	static void OnBridgeRemovingFromProject (void* callbackArg, IProject* project, size_t index, Bridge* b) { static_cast<Selection*>(callbackArg)->OnObjectRemovingFromProject(b); }
-
-	static void OnWireRemovingFromProject (void* callbackArg, IProject* project, size_t index, Wire* w) { static_cast<Selection*>(callbackArg)->OnObjectRemovingFromProject(w); }
-
-	void OnObjectRemovingFromProject (Object* o)
+	static void OnBridgeRemovingFromProject (void* callbackArg, IProject* project, size_t index, Bridge* b)
 	{
-		auto it = find (_objects.begin(), _objects.end(), o);
-		if (it != _objects.end())
+		auto selection = static_cast<Selection*>(callbackArg);
+		for (size_t i = 0; i < selection->_objects.size(); )
 		{
-			RemoveInternal(it - _objects.begin());
-			SelectionChangedEvent::InvokeHandlers(_em, this);
+			auto so = selection->_objects[i];
+			if ((so == b) || ((dynamic_cast<Port*>(so) != nullptr) && (static_cast<Port*>(so)->GetBridge() == b)))
+				selection->RemoveInternal(i);
+			else
+				i++;
 		}
+
+		ChangedEvent::InvokeHandlers(*selection, selection);
 	}
 
-	virtual const vector<ComPtr<Object>>& GetObjects() const override final { return _objects; }
+	static void OnWireRemovingFromProject (void* callbackArg, IProject* project, size_t index, Wire* w)
+	{
+		auto selection = static_cast<Selection*>(callbackArg);
+		for (size_t i = 0; i < selection->_objects.size(); )
+		{
+			auto so = selection->_objects[i];
+			if (so == w)
+				selection->RemoveInternal(i);
+			else
+				i++;
+		}
+
+		ChangedEvent::InvokeHandlers(*selection, selection);
+	}
+
+	virtual const vector<Object*>& GetObjects() const override final { return _objects; }
 
 	void AddInternal (Object* o)
 	{
-		_objects.push_back(ComPtr<Object>(o));
-		AddedToSelectionEvent::InvokeHandlers(_em, this, o);
+		_objects.push_back(o);
+		AddedToSelectionEvent::InvokeHandlers(*this, this, o);
 	}
 
 	void RemoveInternal (size_t index)
 	{
-		auto o = _objects[index].Get();
-		RemovingFromSelectionEvent::InvokeHandlers (_em, this, o);
+		RemovingFromSelectionEvent::InvokeHandlers (*this, this, _objects[index]);
 		_objects.erase(_objects.begin() + index);
 	}
 
@@ -62,7 +78,7 @@ public:
 		{
 			while (!_objects.empty())
 				RemoveInternal (_objects.size() - 1);
-			SelectionChangedEvent::InvokeHandlers(_em, this);
+			ChangedEvent::InvokeHandlers(*this, this);
 		}
 	}
 
@@ -76,7 +92,7 @@ public:
 			while (!_objects.empty())
 				RemoveInternal(_objects.size() - 1);
 			AddInternal(o);
-			SelectionChangedEvent::InvokeHandlers(_em, this);
+			ChangedEvent::InvokeHandlers(*this, this);
 		}
 	}
 
@@ -89,31 +105,36 @@ public:
 			throw invalid_argument("Object was already added to selection.");
 
 		AddInternal(o);
-		SelectionChangedEvent::InvokeHandlers(_em, this);
+		ChangedEvent::InvokeHandlers(*this, this);
 	}
 
-	virtual AddedToSelectionEvent::Subscriber GetAddedToSelectionEvent() override final { return AddedToSelectionEvent::Subscriber(_em); }
+	virtual AddedToSelectionEvent::Subscriber GetAddedToSelectionEvent() override final { return AddedToSelectionEvent::Subscriber(this); }
 
-	virtual RemovingFromSelectionEvent::Subscriber GetRemovingFromSelectionEvent() override final { return RemovingFromSelectionEvent::Subscriber(_em); }
+	virtual RemovingFromSelectionEvent::Subscriber GetRemovingFromSelectionEvent() override final { return RemovingFromSelectionEvent::Subscriber(this); }
 
-	virtual SelectionChangedEvent::Subscriber GetSelectionChangedEvent() override final { return SelectionChangedEvent::Subscriber(_em); }
+	virtual ChangedEvent::Subscriber GetChangedEvent() override final { return ChangedEvent::Subscriber(this); }
 
-	#pragma region IUnknown
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override final { return E_NOTIMPL; }
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
 
-	virtual ULONG STDMETHODCALLTYPE AddRef(void) override final
+	virtual ULONG STDMETHODCALLTYPE AddRef() override final
 	{
-		return InterlockedIncrement (&_refCount);
+		return InterlockedIncrement(&_refCount);
 	}
 
-	virtual ULONG STDMETHODCALLTYPE Release(void) override final
+	virtual ULONG STDMETHODCALLTYPE Release() override final
 	{
-		auto newRefCount = InterlockedDecrement (&_refCount);
+		assert (_refCount > 0);
+		ULONG newRefCount = InterlockedDecrement(&_refCount);
 		if (newRefCount == 0)
 			delete this;
 		return newRefCount;
 	}
-	#pragma endregion
 };
 
-extern const SelectionFactory selectionFactory = [](auto... params) { return ComPtr<ISelection>(new Selection(params...), false); };
+template<typename... Args>
+static ISelectionPtr Create (Args... args)
+{
+	return ISelectionPtr(new Selection (std::forward<Args>(args)...), false);
+}
+
+const SelectionFactory selectionFactory = &Create;

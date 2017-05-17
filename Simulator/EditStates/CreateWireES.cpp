@@ -7,11 +7,13 @@
 
 using namespace std;
 
+static size_t nextWireIndex = 1;
+
 class CreateWireES : public EditState
 {
 	typedef EditState base;
 
-	ComPtr<Wire> _wire;
+	unique_ptr<Wire> _wire;
 	POINT _firstDownLocation;
 
 	enum SubState
@@ -26,16 +28,7 @@ class CreateWireES : public EditState
 	SubState _subState = WaitingFirstDown;
 
 public:
-	CreateWireES (const EditStateDeps& deps, Port* fromPort)
-		: base(deps)
-	{
-		/*if (fromPort != nullptr)
-		{
-			_wire = ComPtr<Wire>(new Wire(), false);
-			_wire->SetP0 (fromPort);
-			_wire->SetP1 (fromPort->GetCPLocation());
-		}*/
-	}
+	using base::base;
 
 	virtual void OnMouseDown (const MouseLocation& location, MouseButton button) override final
 	{
@@ -44,13 +37,14 @@ public:
 
 		if (_subState == WaitingFirstDown)
 		{
-			auto fromPort = _area->GetCPAt(location.d, SnapDistance);
+			auto fromPort = _pw->GetEditArea()->GetCPAt(location.d, SnapDistance);
 			if (fromPort != nullptr)
 			{
 				_firstDownLocation = location.pt;
-				_wire = ComPtr<Wire>(new Wire(), false);
+				_wire.reset (new Wire());
 				_wire->SetP0 (fromPort);
 				_wire->SetP1 (fromPort->GetCPLocation());
+				_wire->SetDebugName ((string("Wire") + to_string(nextWireIndex++)).c_str());
 				_subState  = WaitingFirstUp;
 			}
 		}
@@ -65,12 +59,19 @@ public:
 		if (_subState == WaitingFirstDown)
 			return;
 
-		auto port = _area->GetCPAt (location.d, SnapDistance);
+		auto port = _pw->GetEditArea()->GetCPAt (location.d, SnapDistance);
 		if (port != nullptr)
-			_wire->SetP1(port);
+		{
+			if (port != get<ConnectedWireEnd>(_wire->GetP0()))
+			{
+				auto alreadyConnectedWire = _project->GetWireConnectedToPort(port);
+				if (alreadyConnectedWire.first == nullptr)
+					_wire->SetP1(port);
+			}
+		}
 		else
 			_wire->SetP1(location.w);
-		::InvalidateRect (_area->GetHWnd(), nullptr, FALSE);
+		::InvalidateRect (_pw->GetEditArea()->GetHWnd(), nullptr, FALSE);
 
 		if (_subState == WaitingFirstUp)
 		{
@@ -87,8 +88,19 @@ public:
 		{
 			if (holds_alternative<ConnectedWireEnd>(_wire->GetP1()))
 			{
-				_project->Add(_wire);
-				_selection->Select(_wire);
+				struct CreateAction : public EditAction
+				{
+					IProject* const _project;
+					unique_ptr<Wire> _wire;
+					size_t _insertIndex;
+					CreateAction (IProject* project, unique_ptr<Wire>&& wire) : _project(project), _wire(move(wire)) { }
+					virtual void Redo() { _insertIndex = _project->GetWires().size(); _project->InsertWire(_insertIndex, move(_wire)); }
+					virtual void Undo() { _wire = _project->RemoveWire(_insertIndex); }
+				};
+
+				Wire* w = _wire.get();
+				_actionList->PerformAndAddUserAction (L"Create Wire", make_unique<CreateAction>(_pw->GetProject(), move(_wire)));
+				_selection->Select(w);
 				_subState = Done;
 			}
 		}
@@ -99,8 +111,7 @@ public:
 		if (virtualKey == VK_ESCAPE)
 		{
 			_subState = Done;
-			::InvalidateRect (_area->GetHWnd(), nullptr, FALSE);
-			::SetCursor (LoadCursor(nullptr, IDC_ARROW));
+			::InvalidateRect (_pw->GetEditArea()->GetHWnd(), nullptr, FALSE);
 			return 0;
 		}
 
@@ -111,12 +122,12 @@ public:
 	{
 		D2D1_MATRIX_3X2_F oldtr;
 		rt->GetTransform(&oldtr);
-		rt->SetTransform(_area->GetZoomTransform());
-		_wire->Render(rt, _area->GetDrawingObjects(), _pw->GetSelectedVlanNumber());
+		rt->SetTransform(_pw->GetEditArea()->GetZoomTransform());
+		_wire->Render(rt, _pw->GetEditArea()->GetDrawingObjects(), _pw->GetSelectedVlanNumber());
 		rt->SetTransform(&oldtr);
 
 		if (holds_alternative<ConnectedWireEnd>(_wire->GetP1()))
-			_area->RenderHoverCP (rt, get<ConnectedWireEnd>(_wire->GetP1()));
+			_pw->GetEditArea()->RenderSnapRect (rt, get<ConnectedWireEnd>(_wire->GetP1())->GetCPLocation());
 	}
 
 	virtual bool Completed() const override final
@@ -127,4 +138,4 @@ public:
 	virtual HCURSOR GetCursor() const override final { return LoadCursor(nullptr, IDC_CROSS); }
 };
 
-std::unique_ptr<EditState> CreateStateCreateWire (const EditStateDeps& deps, Port* fromPort)  { return unique_ptr<EditState>(new CreateWireES(deps, fromPort)); }
+std::unique_ptr<EditState> CreateStateCreateWire (const EditStateDeps& deps)  { return unique_ptr<EditState>(new CreateWireES(deps)); }

@@ -1,24 +1,10 @@
 
 #include "pch.h"
 #include "UtilityFunctions.h"
+#include "Win32/Win32Defs.h"
 
 using namespace std;
 using namespace D2D1;
-
-#pragma region Object class
-ULONG STDMETHODCALLTYPE Object::AddRef()
-{
-	return InterlockedIncrement(&_refCount);
-}
-
-ULONG STDMETHODCALLTYPE Object::Release()
-{
-	ULONG newRefCount = InterlockedDecrement(&_refCount);
-	if (newRefCount == 0)
-		delete this;
-	return newRefCount;
-}
-#pragma endregion
 
 unsigned int GetTimestampMilliseconds()
 {
@@ -71,6 +57,11 @@ bool HitTestLine (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tole
 	return PointInPolygon (&vertices[0], 4, dLocation);
 }
 
+bool PointInRect (const D2D1_RECT_F& rect, D2D1_POINT_2F location)
+{
+	return (location.x >= rect.left) && (location.x < rect.right) && (location.y >= rect.top) && (location.y < rect.bottom);
+}
+
 bool PointInPolygon (const D2D1_POINT_2F* vertices, size_t vertexCount, D2D1_POINT_2F point)
 {
 	// Taken from http://stackoverflow.com/a/2922778/451036
@@ -120,53 +111,16 @@ void InflateRoundedRect (D2D1_ROUNDED_RECT* rr, float distance)
 		rr->radiusY = 0;
 }
 
-TextLayout TextLayout::Make (IDWriteFactory* dWriteFactory, IDWriteTextFormat* format, const wchar_t* str)
+TextLayout TextLayout::Create (IDWriteFactory* dWriteFactory, IDWriteTextFormat* format, const wchar_t* str)
 {
-	ComPtr<IDWriteTextLayout> tl;
-	auto hr = dWriteFactory->CreateTextLayout(str, wcslen(str), format, 10000, 10000, &tl); ThrowIfFailed(hr);
+	IDWriteTextLayoutPtr tl;
+	auto hr = dWriteFactory->CreateTextLayout(str, (UINT32) wcslen(str), format, 10000, 10000, &tl); ThrowIfFailed(hr);
 	DWRITE_TEXT_METRICS metrics;
 	hr = tl->GetMetrics(&metrics); ThrowIfFailed(hr);
 	return TextLayout { move(tl), metrics };
 }
 
 /*
-unsigned long long GetMacAddressValueFromBytes (unsigned char* address)
-{
-	unsigned int high = ((unsigned int)address[0] << 8) | (unsigned int)address[1];
-	unsigned int low = ((unsigned int)address[2] << 24) | ((unsigned int)address[3] << 16) | ((unsigned int)address[4] << 8) | (unsigned int)address[5];
-
-	return (((unsigned long long) high) << 32) | low;
-}
-
-void GetMacAddressBytesFromValue (unsigned long long value, unsigned char* addressOut6Bytes)
-{
-	unsigned int low = (unsigned int)value;
-	unsigned int high = (unsigned int)(value >> 32);
-	addressOut6Bytes[0] = (unsigned char)(high >> 8);
-	addressOut6Bytes[1] = (unsigned char)high;
-	addressOut6Bytes[2] = (unsigned char)(low >> 24);
-	addressOut6Bytes[3] = (unsigned char)(low >> 16);
-	addressOut6Bytes[4] = (unsigned char)(low >> 8);
-	addressOut6Bytes[5] = (unsigned char)low;
-}
-
-void MacAddressToString (unsigned long long address, wchar_t* bufferOut18WChars)
-{
-	_snwprintf_s (bufferOut18WChars, 18, 18, L"%02X:%02X:%02X:%02X:%02X:%02X",
-		(unsigned int)(address >> 40) & 0xFF,
-				  (unsigned int)(address >> 32) & 0xFF,
-				  ((unsigned int)address >> 24) & 0xFF,
-				  ((unsigned int)address >> 16) & 0xFF,
-				  ((unsigned int)address >> 8) & 0xFF,
-				  ((unsigned int)address & 0xFF));
-}
-
-void MacAddressToString (unsigned char* address6Bytes, wchar_t* bufferOut18WChars)
-{
-	_snwprintf_s (bufferOut18WChars, 18, 18, L"%02X:%02X:%02X:%02X:%02X:%02X",
-				  address6Bytes[0], address6Bytes[1], address6Bytes[2], address6Bytes[3], address6Bytes[4], address6Bytes[5]);
-}
-
 bool TryParseMacAddress (const wchar_t* text, unsigned long long* addressOut)
 {
 	if ((wcslen (text) == 17)

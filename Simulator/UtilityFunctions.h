@@ -1,5 +1,5 @@
 #pragma once
-#include "EventManager.h"
+#include "Win32/EventManager.h"
 
 class Object;
 
@@ -7,63 +7,64 @@ struct HTResult
 {
 	Object* object;
 	int code;
+	bool operator==(const HTResult& other) const { return (this->object == other.object) && (this->code == other.code); }
+	bool operator!=(const HTResult& other) const { return (this->object != other.object) || (this->code != other.code); }
 };
 
 struct DrawingObjects
 {
-	ComPtr<IDWriteFactory> _dWriteFactory;
-	ComPtr<ID2D1SolidColorBrush> _poweredFillBrush;
-	ComPtr<ID2D1SolidColorBrush> _unpoweredBrush;
-	ComPtr<ID2D1SolidColorBrush> _brushWindowText;
-	ComPtr<ID2D1SolidColorBrush> _brushWindow;
-	ComPtr<ID2D1SolidColorBrush> _brushHighlight;
-	ComPtr<ID2D1SolidColorBrush> _brushDiscardingPort;
-	ComPtr<ID2D1SolidColorBrush> _brushLearningPort;
-	ComPtr<ID2D1SolidColorBrush> _brushForwarding;
-	ComPtr<ID2D1SolidColorBrush> _brushNoForwardingWire;
-	ComPtr<ID2D1SolidColorBrush> _brushTempWire;
-	ComPtr<ID2D1StrokeStyle> _strokeStyleForwardingWire;
-	ComPtr<ID2D1StrokeStyle> _strokeStyleNoForwardingWire;
-	ComPtr<IDWriteTextFormat> _regularTextFormat;
-	ComPtr<ID2D1StrokeStyle> _strokeStyleSelectionRect;
+	IDWriteFactoryPtr _dWriteFactory;
+	ID2D1SolidColorBrushPtr _poweredFillBrush;
+	ID2D1SolidColorBrushPtr _unpoweredBrush;
+	ID2D1SolidColorBrushPtr _brushWindowText;
+	ID2D1SolidColorBrushPtr _brushWindow;
+	ID2D1SolidColorBrushPtr _brushHighlight;
+	ID2D1SolidColorBrushPtr _brushDiscardingPort;
+	ID2D1SolidColorBrushPtr _brushLearningPort;
+	ID2D1SolidColorBrushPtr _brushForwarding;
+	ID2D1SolidColorBrushPtr _brushNoForwardingWire;
+	ID2D1SolidColorBrushPtr _brushLoop;
+	ID2D1SolidColorBrushPtr _brushTempWire;
+	ID2D1StrokeStylePtr _strokeStyleForwardingWire;
+	ID2D1StrokeStylePtr _strokeStyleNoForwardingWire;
+	IDWriteTextFormatPtr _regularTextFormat;
+	ID2D1StrokeStylePtr _strokeStyleSelectionRect;
 };
 
-class Object : public IUnknown
+struct IZoomable;
+
+class Object : public EventManager
 {
-	ULONG _refCount = 1;
-protected:
-	EventManager _em;
-	virtual ~Object() { assert(_refCount == 0); }
-
 public:
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
-
-	virtual ULONG STDMETHODCALLTYPE AddRef() override final;
-	virtual ULONG STDMETHODCALLTYPE Release() override final;
+	virtual ~Object() = default;
 
 	struct InvalidateEvent : public Event<InvalidateEvent, void(Object*)> { };
-	InvalidateEvent::Subscriber GetInvalidateEvent() { return InvalidateEvent::Subscriber(_em); }
+	InvalidateEvent::Subscriber GetInvalidateEvent() { return InvalidateEvent::Subscriber(this); }
 
-	virtual void Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, uint16_t vlanNumber) const = 0;
 	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const = 0;
 	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) = 0;
-};
 
-enum class Side { Left, Top, Right, Bottom };
+	template<typename T>
+	bool Is() const { return dynamic_cast<const T*>(this) != nullptr; }
+};
 
 struct TextLayout
 {
-	ComPtr<IDWriteTextLayout> layout;
+	IDWriteTextLayoutPtr layout;
 	DWRITE_TEXT_METRICS metrics;
 
-	static TextLayout Make (IDWriteFactory* dWriteFactory, IDWriteTextFormat* format, const wchar_t* str);
+	static TextLayout Create (IDWriteFactory* dWriteFactory, IDWriteTextFormat* format, const wchar_t* str);
 };
 
 unsigned int GetTimestampMilliseconds();
 D2D1::ColorF GetD2DSystemColor (int sysColorIndex);
 bool HitTestLine (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance, D2D1_POINT_2F p0w, D2D1_POINT_2F p1w, float lineWidth);
+bool PointInRect (const D2D1_RECT_F& rect, D2D1_POINT_2F location);
 bool PointInPolygon (const D2D1_POINT_2F* vertices, size_t vertexCount, D2D1_POINT_2F point);
 D2D1_RECT_F InflateRect (const D2D1_RECT_F& rect, float distance);
 void InflateRect (D2D1_RECT_F* rect, float distance);
 D2D1_ROUNDED_RECT InflateRoundedRect (const D2D1_ROUNDED_RECT& rr, float distance);
 void InflateRoundedRect (D2D1_ROUNDED_RECT* rr, float distance);
+inline D2D1_SIZE_F operator- (D2D1_POINT_2F p0, D2D1_POINT_2F p1) { return { p0.x - p1.x, p0.y - p1.y }; }
+inline D2D1_POINT_2F operator- (D2D1_POINT_2F p, D2D1_SIZE_F s) {return { p.x - s.width, p.y - s.height }; }
+inline D2D1_POINT_2F operator+ (D2D1_POINT_2F p, D2D1_SIZE_F s) {return { p.x + s.width, p.y + s.height }; }

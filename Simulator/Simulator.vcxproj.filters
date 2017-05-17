@@ -1,51 +1,17 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Ribbon">
-      <UniqueIdentifier>{9d816b0b-58c5-4e71-a8f8-f93d8265863d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="mstp-lib">
-      <UniqueIdentifier>{fc04b78a-9460-4c32-8130-a53110b5023f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="mstp-lib\802.1Q-2011">
-      <UniqueIdentifier>{cfc75957-b41e-4da6-bf54-bb04b411d54e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="EditStates">
       <UniqueIdentifier>{44c75b95-8381-4205-bb9c-ff949707452e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Win32">
+      <UniqueIdentifier>{6639324b-98b9-4102-a3ee-1dfa81922d14}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
-    <ClInclude Include="Win32Defs.h" />
-    <ClInclude Include="EventManager.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="mstp-lib\802.1Q-2011\802_1Q_2011_procedures.h">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClInclude>
-    <ClInclude Include="mstp-lib\log.h">
-      <Filter>mstp-lib</Filter>
-    </ClInclude>
-    <ClInclude Include="mstp-lib\hmac_md5.h">
-      <Filter>mstp-lib</Filter>
-    </ClInclude>
-    <ClInclude Include="mstp-lib\bridge.h">
-      <Filter>mstp-lib</Filter>
-    </ClInclude>
-    <ClInclude Include="mstp-lib\bpdu.h">
-      <Filter>mstp-lib</Filter>
-    </ClInclude>
-    <ClInclude Include="mstp-lib\base_types.h">
-      <Filter>mstp-lib</Filter>
-    </ClInclude>
-    <ClInclude Include="mstp-lib\port.h">
-      <Filter>mstp-lib</Filter>
-    </ClInclude>
-    <ClInclude Include="mstp-lib\stp.h">
-      <Filter>mstp-lib</Filter>
-    </ClInclude>
-    <ClInclude Include="D2DWindow.h" />
-    <ClInclude Include="ZoomableWindow.h" />
     <ClInclude Include="Wire.h" />
     <ClInclude Include="Bridge.h" />
     <ClInclude Include="EditStates\EditState.h">
@@ -54,68 +20,28 @@
     <ClInclude Include="Port.h" />
     <ClInclude Include="Simulator.h" />
     <ClInclude Include="UtilityFunctions.h" />
+    <ClInclude Include="Win32\D2DWindow.h">
+      <Filter>Win32</Filter>
+    </ClInclude>
+    <ClInclude Include="Win32\Win32Defs.h">
+      <Filter>Win32</Filter>
+    </ClInclude>
+    <ClInclude Include="Win32\Window.h">
+      <Filter>Win32</Filter>
+    </ClInclude>
+    <ClInclude Include="Win32\ZoomableWindow.h">
+      <Filter>Win32</Filter>
+    </ClInclude>
+    <ClInclude Include="Win32\EventManager.h">
+      <Filter>Win32</Filter>
+    </ClInclude>
+    <ClInclude Include="EditActions.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="EditArea.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortReceive.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_procedures.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_BridgeDetection.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_L2GPReceive.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortInformation.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortProtocolMigration.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortRoleSelection.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortRoleTransitions.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortStateTransition.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortTimers.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortTransmit.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_TopologyChange.cpp">
-      <Filter>mstp-lib\802.1Q-2011</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\log.cpp">
-      <Filter>mstp-lib</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\hmac_md5.cpp">
-      <Filter>mstp-lib</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\bpdu.cpp">
-      <Filter>mstp-lib</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\base_types.cpp">
-      <Filter>mstp-lib</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\stp.cpp">
-      <Filter>mstp-lib</Filter>
-    </ClCompile>
-    <ClCompile Include="D2DWindow.cpp" />
-    <ClCompile Include="ZoomableWindow.cpp" />
     <ClCompile Include="Selection.cpp" />
     <ClCompile Include="Simulator.cpp" />
     <ClCompile Include="Wire.cpp" />
@@ -129,18 +55,39 @@
     <ClCompile Include="LogArea.cpp" />
     <ClCompile Include="Port.cpp" />
     <ClCompile Include="UtilityFunctions.cpp" />
-    <ClCompile Include="DockablePanel.cpp" />
-    <ClCompile Include="DockContainer.cpp" />
     <ClCompile Include="EditStates\MoveWirePointES.cpp">
       <Filter>EditStates</Filter>
     </ClCompile>
     <ClCompile Include="EditStates\CreateWireES.cpp">
       <Filter>EditStates</Filter>
     </ClCompile>
-    <ClCompile Include="PropertiesWindow.cpp" />
     <ClCompile Include="VlanWindow.cpp" />
     <ClCompile Include="BridgePropsWindow.cpp" />
     <ClCompile Include="MSTConfigIdDialog.cpp" />
+    <ClCompile Include="PropsWindow.cpp" />
+    <ClCompile Include="Test.c" />
+    <ClCompile Include="EditStates\MovePortES.cpp">
+      <Filter>EditStates</Filter>
+    </ClCompile>
+    <ClCompile Include="ActionList.cpp" />
+    <ClCompile Include="Win32\D2DWindow.cpp">
+      <Filter>Win32</Filter>
+    </ClCompile>
+    <ClCompile Include="Win32\DockablePanel.cpp">
+      <Filter>Win32</Filter>
+    </ClCompile>
+    <ClCompile Include="Win32\DockContainer.cpp">
+      <Filter>Win32</Filter>
+    </ClCompile>
+    <ClCompile Include="Win32\Window.cpp">
+      <Filter>Win32</Filter>
+    </ClCompile>
+    <ClCompile Include="Win32\ZoomableWindow.cpp">
+      <Filter>Win32</Filter>
+    </ClCompile>
+    <ClCompile Include="EditStates\BeginningDragES.cpp">
+      <Filter>EditStates</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Simulator.rc" />

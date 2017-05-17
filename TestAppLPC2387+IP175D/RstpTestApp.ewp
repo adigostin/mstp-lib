@@ -994,40 +994,40 @@
       </file>
     </group>
     <file>
-      <name>$PROJ_DIR$\..\mstp-lib\base_types.cpp</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\mstp-lib\base_types.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\mstp-lib\bpdu.cpp</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\mstp-lib\bpdu.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\mstp-lib\bridge.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\mstp-lib\hmac_md5.cpp</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\mstp-lib\hmac_md5.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\mstp-lib\log.cpp</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\mstp-lib\log.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\mstp-lib\port.h</name>
-    </file>
-    <file>
       <name>$PROJ_DIR$\..\mstp-lib\stp.cpp</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\mstp-lib\stp.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\stp_base_types.cpp</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\stp_base_types.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\stp_bpdu.cpp</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\stp_bpdu.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\stp_bridge.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\stp_log.cpp</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\stp_log.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\stp_md5.cpp</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\stp_md5.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\mstp-lib\stp_port.h</name>
     </file>
   </group>
   <file>

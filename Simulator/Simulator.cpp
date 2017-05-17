@@ -1,7 +1,6 @@
 
 #include "pch.h"
 #include "Simulator.h"
-#include "Win32Defs.h"
 #include "Bridge.h"
 #include "Wire.h"
 
@@ -23,7 +22,15 @@ static const wchar_t CompanyName[] = L"Adi Gostin";
 static const wchar_t AppName[] = L"STP Simulator";
 static const wchar_t AppVersion[] = L"2.0";
 
+constexpr UINT WM_WORK = WM_APP + 1;
+
 #pragma region IWin32Window
+
+bool IWin32Window::IsVisible() const
+{
+	return (GetWindowLongPtr (GetHWnd(), GWL_STYLE) & WS_VISIBLE) != 0;
+}
+
 RECT IWin32Window::GetWindowRect() const
 {
 	RECT rect;
@@ -55,45 +62,56 @@ RECT IWin32Window::GetClientRectPixels() const
 };
 #pragma endregion
 
-void IProject::Remove (Object* o)
+#pragma region IProject
+pair<Wire*, size_t> IProject::GetWireConnectedToPort (const Port* port) const
 {
-	if (auto b = dynamic_cast<Bridge*>(o))
-		Remove(b);
-	else if (auto w = dynamic_cast<Wire*>(o))
-		Remove(w);
-	else
-		throw not_implemented_exception();
+	for (auto& w : GetWires())
+	{
+		if (holds_alternative<ConnectedWireEnd>(w->GetP0()) && (get<ConnectedWireEnd>(w->GetP0()) == port))
+			return { w.get(), 0 };
+		else if (holds_alternative<ConnectedWireEnd>(w->GetP1()) && (get<ConnectedWireEnd>(w->GetP1()) == port))
+			return { w.get(), 1 };
+	}
+
+	return { };
 }
 
-void IProject::Remove (Bridge* b)
+Port* IProject::FindConnectedPort (Port* txPort) const
 {
-	auto& bridges = GetBridges();
-	auto it = find (bridges.begin(), bridges.end(), b);
-	if (it == bridges.end())
-		throw invalid_argument("b");
-	RemoveBridge(it - bridges.begin());
-}
+	for (auto& w : GetWires())
+	{
+		for (size_t i = 0; i < 2; i++)
+		{
+			auto& thisEnd = w->GetPoints()[i];
+			if (holds_alternative<ConnectedWireEnd>(thisEnd) && (get<ConnectedWireEnd>(thisEnd) == txPort))
+			{
+				auto& otherEnd = w->GetPoints()[1 - i];
+				if (holds_alternative<ConnectedWireEnd>(otherEnd))
+					return get<ConnectedWireEnd>(otherEnd);
+				else
+					return nullptr;
+			}
+		}
+	}
 
-void IProject::Remove (Wire* w)
-{
-	auto& wires = GetWires();
-	auto it = find (wires.begin(), wires.end(), w);
-	if (it == wires.end())
-		throw invalid_argument("w");
-	RemoveWire (it - wires.begin());
+	return nullptr;
 }
+#pragma endregion
 
-class SimulatorApp : public ISimulatorApp
+class SimulatorApp : public EventManager, public ISimulatorApp
 {
-	ComPtr<ID3D11Device1> _d3dDevice;
-	ComPtr<ID3D11DeviceContext1> _d3dDeviceContext;
-	ComPtr<IDWriteFactory> _dWriteFactory;
+	HINSTANCE const _hInstance;
+	ID3D11Device1Ptr _d3dDevice;
+	ID3D11DeviceContext1Ptr _d3dDeviceContext;
+	IDWriteFactoryPtr _dWriteFactory;
 
 	wstring _regKeyPath;
-	std::vector<std::unique_ptr<IProjectWindow>> _projectWindows;
+	vector<IProjectWindowPtr> _projectWindows;
+	queue<function<void()>> _workQueue;
 
 public:
-	SimulatorApp()
+	SimulatorApp (HINSTANCE hInstance)
+		: _hInstance(hInstance)
 	{
 		wstringstream ss;
 		ss << L"SOFTWARE\\" << CompanyName << L"\\" << ::AppName << L"\\" << ::AppVersion;
@@ -105,8 +123,8 @@ public:
 		#endif
 
 		auto d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
-		ComPtr<ID3D11Device> device;
-		ComPtr<ID3D11DeviceContext> deviceContext;
+		ID3D11DevicePtr device;
+		ID3D11DeviceContextPtr deviceContext;
 
 		HRESULT hr;
 		if (tryDebugFirst)
@@ -132,22 +150,89 @@ public:
 
 		hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof (IDWriteFactory), reinterpret_cast<IUnknown**>(&_dWriteFactory)); ThrowIfFailed(hr);
 
-		//ComPtr<IWICImagingFactory2> wicFactory;
+		//IWICImagingFactory2Ptr wicFactory;
 		//hr = CoCreateInstance(CLSID_WICImagingFactory2, NULL, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory2), (void**)&wicFactory); ThrowIfFailed(hr);
 	}
 
-	virtual void AddProjectWindow (std::unique_ptr<IProjectWindow>&& pw) override final
+	virtual HINSTANCE GetHInstance() const override final { return _hInstance; }
+
+	virtual void AddProjectWindow (IProjectWindow* pw) override final
 	{
+		pw->GetClosedEvent().AddHandler (&OnProjectWindowClosed, this);
 		_projectWindows.push_back(move(pw));
+		ProjectWindowAddedEvent::InvokeHandlers(*this, pw);
 	}
 
-	virtual const std::vector<std::unique_ptr<IProjectWindow>>& GetProjectWindows() const override final { return _projectWindows; }
+	static void OnProjectWindowClosed (void* callbackArg, IProjectWindow* pw)
+	{
+		auto app = static_cast<SimulatorApp*>(callbackArg);
+
+		pw->GetClosedEvent().RemoveHandler (&OnProjectWindowClosed, app);
+
+		app->PostWork ([app, pw]
+		{
+			auto it = find_if (app->_projectWindows.begin(), app->_projectWindows.end(), [pw](const IProjectWindowPtr& p) { return p.GetInterfacePtr() == pw; });
+			assert (it != app->_projectWindows.end());
+			ProjectWindowRemovingEvent::InvokeHandlers(*app, pw);
+			IProjectWindowPtr pwLastRef = move(*it);
+			app->_projectWindows.erase(it);
+			ProjectWindowRemovedEvent::InvokeHandlers(*app, pwLastRef);
+			if (app->_projectWindows.empty())
+				PostQuitMessage(0);
+		});
+	}
+
+	virtual void PostWork (std::function<void()>&& work) override final
+	{
+		_workQueue.push (move(work));
+		::PostMessage (nullptr, WM_WORK, 0, 0);
+	}
+
+	virtual const std::vector<IProjectWindowPtr>& GetProjectWindows() const override final { return _projectWindows; }
 
 	virtual ID3D11DeviceContext1* GetD3DDeviceContext() const override final { return _d3dDeviceContext; }
 
 	virtual IDWriteFactory* GetDWriteFactory() const override final { return _dWriteFactory; }
 
 	virtual const wchar_t* GetRegKeyPath() const override final { return _regKeyPath.c_str(); }
+
+	virtual const wchar_t* GetAppName() const override final { return AppName; }
+
+	virtual ProjectWindowAddedEvent::Subscriber GetProjectWindowAddedEvent() override final { return ProjectWindowAddedEvent::Subscriber(this); }
+
+	virtual ProjectWindowRemovingEvent::Subscriber GetProjectWindowRemovingEvent() override final { return ProjectWindowRemovingEvent::Subscriber(this); }
+
+	virtual ProjectWindowRemovedEvent::Subscriber GetProjectWindowRemovedEvent() override final { return ProjectWindowRemovedEvent::Subscriber(this); }
+
+	WPARAM RunMessageLoop()
+	{
+		MSG msg;
+		while (GetMessage(&msg, nullptr, 0, 0))
+		{
+			if (msg.message == WM_MOUSEWHEEL)
+			{
+				HWND h = WindowFromPoint ({ GET_X_LPARAM(msg.lParam), GET_Y_LPARAM(msg.lParam) });
+				if (h != nullptr)
+				{
+					SendMessage (h, msg.message, msg.wParam, msg.lParam);
+					continue;
+				}
+			}
+
+			if ((msg.hwnd == nullptr) && (msg.message == WM_WORK))
+			{
+				_workQueue.front()();
+				_workQueue.pop();
+			}
+			else
+			{
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
+		}
+
+		return msg.wParam;
+	}
 };
 
 int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
@@ -159,30 +244,22 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 
 	int processExitValue;
 	{
-		SimulatorApp app;
+		SimulatorApp app (hInstance);
 
 		{
-			//auto actionList = actionListFactory();
-			auto project = projectFactory();//move(actionList));
-			auto selection = selectionFactory(project);
-			auto projectWindow = projectWindowFactory (&app, project, selection, editAreaFactory, nCmdShow, 1);
+			auto actionList = actionListFactory();
+			auto project = projectFactory();
+			auto projectWindow = projectWindowFactory (&app, project, selectionFactory, actionList, editAreaFactory, nCmdShow, 1);
 			app.AddProjectWindow(move(projectWindow));
 		}
 
-		MSG msg;
-		while (GetMessage(&msg, nullptr, 0, 0))
-		{
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}
-
-		processExitValue = (int)msg.wParam;
+		processExitValue = (int)app.RunMessageLoop();
 	}
 	/*
 	if (device->GetCreationFlags() & D3D11_CREATE_DEVICE_DEBUG)
 	{
 		deviceContext = nullptr;
-		ComPtr<ID3D11Debug> debug;
+		ID3D11DebugPtr debug;
 		hr = device->QueryInterface(&debug);
 		if (SUCCEEDED(hr))
 			debug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
