@@ -498,6 +498,19 @@ private:
 
 		auto stpBridge = dynamic_cast<Bridge*>(_selection->GetObjects().front())->GetStpBridge();
 
+		if (!STP_IsBridgeStarted(stpBridge))
+		{
+			::SetWindowText (GetDlgItem(_hwnd, IDC_STATIC_PRIO_VECTOR),           L"Priority Vector");
+			::SetWindowText (GetDlgItem(_hwnd, IDC_EDIT_ROOT_BRIDGE_ID),          L"(STP disabled)");
+			::SetWindowText (GetDlgItem(_hwnd, IDC_EDIT_EXTERNAL_ROOT_PATH_COST), L"(STP disabled)");
+			::SetWindowText (GetDlgItem(_hwnd, IDC_EDIT_REGIONAL_ROOT_BRIDGE_ID), L"(STP disabled)");
+			::SetWindowText (GetDlgItem(_hwnd, IDC_EDIT_INTERNAL_ROOT_PATH_COST), L"(STP disabled)");
+			::SetWindowText (GetDlgItem(_hwnd, IDC_EDIT_DESIGNATED_BRIDGE_ID),    L"(STP disabled)");
+			::SetWindowText (GetDlgItem(_hwnd, IDC_EDIT_DESIGNATED_PORT_ID),      L"(STP disabled)");
+			::SetWindowText (GetDlgItem(_hwnd, IDC_EDIT_RECEIVING_PORT_ID),       L"(STP disabled)");
+			return;
+		}
+
 		auto treeIndex = STP_GetTreeIndexFromVlanNumber(stpBridge, _projectWindow->GetSelectedVlanNumber());
 
 		wstringstream ss;

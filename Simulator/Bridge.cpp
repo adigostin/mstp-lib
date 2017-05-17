@@ -257,8 +257,8 @@ void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned 
 	{
 		auto stpVersion = STP_GetStpVersion(_stpBridge);
 		auto treeIndex = STP_GetTreeIndexFromVlanNumber(_stpBridge, vlanNumber);
-		bool isCistRoot = STP_IsRootBridge(_stpBridge);
-		bool isRegionalRoot = (treeIndex > 0) && STP_IsRegionalRootBridge(_stpBridge, treeIndex);
+		bool isCistRoot = STP_IsCistRoot(_stpBridge);
+		bool isRegionalRoot = (treeIndex > 0) && STP_IsRegionalRoot(_stpBridge, treeIndex);
 
 		if ((treeIndex == 0) ? isCistRoot : isRegionalRoot)
 			bridgeOutlineWidth *= 2;

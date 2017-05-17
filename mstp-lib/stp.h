@@ -188,8 +188,8 @@ void STP_GetRootTimes (struct STP_BRIDGE* bridge,
 					   unsigned short* messageAgeOutOrNull,
 					   unsigned char* remainingHopsOutOrNull);
 
-unsigned int STP_IsRootBridge (struct STP_BRIDGE* bridge);
-unsigned int STP_IsRegionalRootBridge (struct STP_BRIDGE* bridge, unsigned int treeIndex);
+unsigned int STP_IsCistRoot (struct STP_BRIDGE* bridge);
+unsigned int STP_IsRegionalRoot (struct STP_BRIDGE* bridge, unsigned int treeIndex);
 
 void  STP_SetApplicationContext (struct STP_BRIDGE* bridge, void* applicationContext);
 void* STP_GetApplicationContext (struct STP_BRIDGE* bridge);

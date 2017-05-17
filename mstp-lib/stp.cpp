@@ -1090,6 +1090,7 @@ const char* STP_GetAdminP2PString (enum STP_ADMIN_P2P adminP2P)
 
 void STP_GetRootPriorityVector (STP_BRIDGE* bridge, unsigned int treeIndex, unsigned char priorityVectorOut[36])
 {
+	assert (bridge->started);
 	const unsigned char* rootPriority = (const unsigned char*) &bridge->trees [treeIndex]->rootPriority;
 	const unsigned char* rootPortId   = (const unsigned char*) &bridge->trees [treeIndex]->rootPortId;
 	memcpy (priorityVectorOut, rootPriority, 34);
@@ -1132,14 +1133,14 @@ void STP_GetRootTimes (STP_BRIDGE* bridge,
 
 // ============================================================================
 
-unsigned int STP_IsRootBridge (STP_BRIDGE* bridge)
+unsigned int STP_IsCistRoot (STP_BRIDGE* bridge)
 {
 	assert (bridge->started);
 	BRIDGE_TREE* cist = bridge->trees[CIST_INDEX];
 	return cist->rootPriority.RootId == cist->GetBridgeIdentifier();
 }
 
-unsigned int STP_IsRegionalRootBridge (STP_BRIDGE* bridge, unsigned int treeIndex)
+unsigned int STP_IsRegionalRoot (STP_BRIDGE* bridge, unsigned int treeIndex)
 {
 	assert (bridge->started);
 	assert ((treeIndex > 0) && (treeIndex < bridge->treeCount()));
@@ -1153,8 +1154,6 @@ void  STP_SetApplicationContext (STP_BRIDGE* bridge, void* applicationContext)
 {
 	bridge->applicationContext = applicationContext;
 }
-
-// ============================================================================
 
 void* STP_GetApplicationContext (STP_BRIDGE* bridge)
 {
