@@ -108,6 +108,20 @@ private:
 		ChangedEvent::InvokeHandlers(*this, this);
 	}
 
+	virtual void Remove (Object* o) override final
+	{
+		if (o == nullptr)
+			throw invalid_argument("Parameter may not be nullptr.");
+
+		auto it = std::find (_objects.begin(), _objects.end(), o);
+		if (it == _objects.end())
+			throw invalid_argument("Object is not selected.");
+		size_t index = it - _objects.begin();
+
+		RemoveInternal(index);
+		ChangedEvent::InvokeHandlers(*this, this);
+	}
+
 	virtual AddedToSelectionEvent::Subscriber GetAddedToSelectionEvent() override final { return AddedToSelectionEvent::Subscriber(this); }
 
 	virtual RemovingFromSelectionEvent::Subscriber GetRemovingFromSelectionEvent() override final { return RemovingFromSelectionEvent::Subscriber(this); }

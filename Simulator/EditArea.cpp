@@ -661,7 +661,12 @@ public:
 		else
 		{
 			if (modifierKeysDown & MK_CONTROL)
-				_selection->Add(ht.object);
+			{
+				if (!_selection->Contains(ht.object))
+					_selection->Add(ht.object);
+				else
+					_selection->Remove(ht.object);
+			}
 			else
 				_selection->Select(ht.object);
 		}

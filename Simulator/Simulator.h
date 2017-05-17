@@ -36,6 +36,7 @@ MIDL_INTERFACE("3ADCEF4B-9335-4DD7-8016-5958883A4347") ISelection : public IUnkn
 	virtual void Select (Object* o) = 0;
 	virtual void Clear() = 0;
 	virtual void Add (Object* o) = 0;
+	virtual void Remove (Object* o) = 0;
 
 	bool Contains (Object* o) const { return std::find (GetObjects().begin(), GetObjects().end(), o) != GetObjects().end(); }
 
