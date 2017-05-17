@@ -1,0 +1,43 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<link rel="Stylesheet" type="text/css" media="screen" href="Screen.css" />
+  <title>StpCallback_OnPortRoleChanged</title>
+</head>
+<body>
+	<h3>StpCallback_OnPortRoleChanged</h3>
+	<hr />
+<pre>
+void StpCallback_OnPortRoleChanged (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_PORT_ROLE role, unsigned int timestamp);
+</pre>
+	<h4>
+		Summary</h4>
+	<p>
+		Application-defined function that is called by the STP library when it detects
+		a change in the network topology.</p>
+	<h4>
+		Parameters</h4>
+	<dl>
+		<dt>bridge</dt>
+		<dd>The application receives in this parameter a pointer to the STP_BRIDGE object.</dd>
+		<dt>portIndex</dt>
+		<dd>The application receives in this parameter the index of the port whose role has changed.</dd>
+		<dt>treeIndex</dt>
+		<dd>The application receives in this parameter the index of the spanning tree on which the port role changed (always 0 for LegacySTP and RSTP).</dd>
+		<dt>role</dt>
+		<dd>The new port role.</dd>
+		<dt>timestamp</dt>
+		<dd>The application receives in this parameter the timestamp that it passed to the function that caused the role change (i.e., STP_OnBpduReceived, STP_OnPortEnabled etc.) Useful for debugging and troubleshooting.</dd>
+	</dl>
+	<h4>
+		Remarks</h4>
+	<p>
+			The application should implement this callback if it needs to update some user interface as ports change role. An Ethernet switch, for example, has a web interface where the user can inspect the state of each port; the code in this callback would refresh the displayed information to make sure the user sees up-to-date information about the port.</p>
+
+	<p>
+		StpCallback_OnTopologyChanged is a placeholder name used throughout this documentation. The
+		application may name this callback differently.</p>
+
+</body>
+</html>
