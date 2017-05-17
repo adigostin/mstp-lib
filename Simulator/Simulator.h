@@ -175,23 +175,20 @@ MIDL_INTERFACE("A7D9A5A8-DB3F-4147-B488-58D260365F65") IProject : public IUnknow
 		Port* port;
 	};
 
+	struct ProjectInvalidateEvent : public Event<ProjectInvalidateEvent, void(IProject*)> { };
+
 	virtual const std::vector<std::unique_ptr<Bridge>>& GetBridges() const = 0;
 	virtual void InsertBridge (size_t index, std::unique_ptr<Bridge>&& bridge, std::vector<ConvertedWirePoint>* convertedWirePoints) = 0;
 	virtual std::unique_ptr<Bridge> RemoveBridge (size_t index, std::vector<ConvertedWirePoint>* convertedWirePoints) = 0;
 	virtual BridgeInsertedEvent::Subscriber GetBridgeInsertedEvent() = 0;
 	virtual BridgeRemovingEvent::Subscriber GetBridgeRemovingEvent() = 0;
-
 	virtual const std::vector<std::unique_ptr<Wire>>& GetWires() const = 0;
 	virtual void InsertWire (size_t index, std::unique_ptr<Wire>&& wire) = 0;
 	virtual std::unique_ptr<Wire> RemoveWire (size_t index) = 0;
 	virtual WireInsertedEvent::Subscriber GetWireInsertedEvent() = 0;
 	virtual WireRemovingEvent::Subscriber GetWireRemovingEvent() = 0;
-
-	struct ProjectInvalidateEvent : public Event<ProjectInvalidateEvent, void(IProject*)> { };
 	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() = 0;
-
 	virtual std::array<uint8_t, 6> AllocMacAddressRange (size_t count) = 0;
-
 	virtual const std::wstring& GetFilePath() const = 0;
 	virtual HRESULT Save (const wchar_t* filePath) = 0;
 

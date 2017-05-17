@@ -301,15 +301,16 @@ private:
 				if (dialog->_editChangedByUser && (dialog->_controlBeingValidated == nullptr))
 				{
 					dialog->_controlBeingValidated = hWnd;
-					std::wstring errorMessage;
-					bool valid = dialog->ValidateAndSetProperty(hWnd, str, errorMessage);
-					if (!valid)
+					try
 					{
-						::MessageBox (dialog->_hwnd, errorMessage.c_str(), 0, 0);
+						dialog->ValidateAndSetProperty(hWnd, str.c_str());
+						dialog->_editChangedByUser = false;
+					}
+					catch (const exception& ex)
+					{
+						::MessageBoxA (dialog->_hwnd, ex.what(), 0, 0);
 						::SetFocus (hWnd);
 					}
-					else
-						dialog->_editChangedByUser = false;
 
 					::SendMessage (hWnd, EM_SETSEL, 0, -1);
 					dialog->_controlBeingValidated = nullptr;
@@ -326,24 +327,24 @@ private:
 			std::wstring str;
 			str.resize(GetWindowTextLength (hWnd) + 1);
 			GetWindowText (hWnd, str.data(), (int) str.size());
+			str.resize(str.size() - 1);
 
 			if (dialog->_editChangedByUser && (dialog->_controlBeingValidated == nullptr))
 			{
 				dialog->_controlBeingValidated = hWnd;
 
-				std::wstring errorMessage;
-				bool valid = dialog->ValidateAndSetProperty(hWnd, str, errorMessage);
-				if (valid)
+				try
 				{
+					dialog->ValidateAndSetProperty(hWnd, str.c_str());
 					dialog->_controlBeingValidated = nullptr;
 					dialog->_editChangedByUser = false;
 				}
-				else
+				catch (const exception& ex)
 				{
 					::SetFocus(nullptr);
-					dialog->_app->PostWork ([dialog, hWnd, message=move(errorMessage)]
+					dialog->_app->PostWork ([dialog, hWnd, message=string(ex.what())]
 					{
-						::MessageBox (dialog->_hwnd, message.c_str(), 0, 0);
+						::MessageBoxA (dialog->_hwnd, message.c_str(), 0, 0);
 						::SetFocus (hWnd);
 						::SendMessage (hWnd, EM_SETSEL, 0, -1);
 						dialog->_controlBeingValidated = nullptr;
@@ -749,31 +750,26 @@ private:
 		}
 	}
 
-	bool ValidateAndSetProperty (HWND hwnd, const std::wstring& str, std::wstring& errorMessageOut)
+	void ValidateAndSetProperty (HWND hwnd, const wchar_t* str)
 	{
 		if (hwnd == _bridgeAddressEdit)
 		{
-			static constexpr wchar_t FormatErrorMessage[] = L"Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX or XXXXXXXXXXXX (6 hex bytes).";
+			static constexpr char FormatErrorMessage[] = u8"Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX or XXXXXXXXXXXX (6 hex bytes).";
+
 			int offsetMultiplier;
-			if (str.length() == 12)
+			if (wcslen(str) == 12)
 			{
 				offsetMultiplier = 2;
 			}
-			else if (str.length() == 17)
+			else if (wcslen(str) == 17)
 			{
 				if ((str[2] != ':') || (str[5] != ':') || (str[8] != ':') || (str[11] != ':') || (str[14] != ':'))
-				{
-					errorMessageOut = FormatErrorMessage;
-					return false;
-				}
+					throw invalid_argument(FormatErrorMessage);
 
 				offsetMultiplier = 3;
 			}
 			else
-			{
-				errorMessageOut = FormatErrorMessage;
-				return false;
-			}
+				throw invalid_argument(FormatErrorMessage);
 
 			array<uint8_t, 6> address;
 			for (size_t i = 0; i < 6; i++)
@@ -782,10 +778,7 @@ private:
 				wchar_t ch1 = str[i * offsetMultiplier + 1];
 
 				if (!iswxdigit(ch0) || !iswxdigit(ch1))
-				{
-					errorMessageOut = FormatErrorMessage;
-					return false;
-				}
+					throw invalid_argument(FormatErrorMessage);
 
 				auto hn = (ch0 <= '9') ? (ch0 - '0') : ((ch0 >= 'a') ? (ch0 - 'a' + 10) : (ch0 - 'A' + 10));
 				auto ln = (ch1 <= '9') ? (ch1 - '0') : ((ch1 >= 'a') ? (ch1 - 'a' + 10) : (ch1 - 'A' + 10));
@@ -798,28 +791,19 @@ private:
 				auto stpBridge = dynamic_cast<Bridge*>(o)->GetStpBridge();
 				STP_SetBridgeAddress (stpBridge, address.data(), timestamp);
 			}
-
-			return true;
 		}
-
-		if (hwnd == _mstConfigNameEdit)
+		else if (hwnd == _mstConfigNameEdit)
 		{
-			if (str.length() > 32)
-			{
-				errorMessageOut = L"Invalid MST Config Name: more than 32 characters.";
-				return false;
-			}
+			if (wcslen(str) > 32)
+				throw invalid_argument("Invalid MST Config Name: more than 32 characters.");
 
 			string ascii;
-			for (wchar_t ch : str)
+			for (auto p = str; *p != 0; p++)
 			{
-				if (ch >= 128)
-				{
-					errorMessageOut = L"Invalid MST Config Name: non-ASCII characters.";
-					return false;
-				}
+				if (*p >= 128)
+					throw invalid_argument("Invalid MST Config Name: non-ASCII characters.");
 
-				ascii.push_back((char) ch);
+				ascii.push_back((char) *p);
 			}
 
 			auto timestamp = GetTimestampMilliseconds();
@@ -828,14 +812,13 @@ private:
 				auto stpBridge = dynamic_cast<Bridge*>(o)->GetStpBridge();
 				STP_SetMstConfigName (stpBridge, ascii.c_str(), timestamp);
 			}
-
-			return true;
 		}
-
-		if (hwnd == _mstConfigRevLevelEdit)
+		else if (hwnd == _mstConfigRevLevelEdit)
+		{
 			throw not_implemented_exception();
-
-		throw not_implemented_exception();
+		}
+		else
+			throw not_implemented_exception();
 	}
 
 	bool BridgesSelected() const
