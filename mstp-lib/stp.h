@@ -179,7 +179,7 @@ const char* STP_GetPortRoleString (enum STP_PORT_ROLE portRole);
 const char* STP_GetVersionString (enum STP_VERSION version);
 const char* STP_GetAdminP2PString (enum STP_ADMIN_P2P adminP2P);
 
-void STP_GetRootPriorityVector (struct STP_BRIDGE* bridge, unsigned int treeIndex, unsigned char* priorityVector36BytesOut);
+void STP_GetRootPriorityVector (struct STP_BRIDGE* bridge, unsigned int treeIndex, unsigned char priorityVectorOut[36]);
 void STP_GetRootTimes (struct STP_BRIDGE* bridge,
 					   unsigned int treeIndex,
 					   unsigned short* forwardDelayOutOrNull,

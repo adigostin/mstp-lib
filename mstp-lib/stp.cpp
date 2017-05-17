@@ -1088,13 +1088,13 @@ const char* STP_GetAdminP2PString (enum STP_ADMIN_P2P adminP2P)
 
 // ============================================================================
 
-void STP_GetRootPriorityVector (STP_BRIDGE* bridge, unsigned int treeIndex, unsigned char* priorityVector36BytesOut)
+void STP_GetRootPriorityVector (STP_BRIDGE* bridge, unsigned int treeIndex, unsigned char priorityVectorOut[36])
 {
 	const unsigned char* rootPriority = (const unsigned char*) &bridge->trees [treeIndex]->rootPriority;
 	const unsigned char* rootPortId   = (const unsigned char*) &bridge->trees [treeIndex]->rootPortId;
-	memcpy (priorityVector36BytesOut, rootPriority, 34);
-	priorityVector36BytesOut [34] = rootPortId [0];
-	priorityVector36BytesOut [35] = rootPortId [1];
+	memcpy (priorityVectorOut, rootPriority, 34);
+	priorityVectorOut [34] = rootPortId [0];
+	priorityVectorOut [35] = rootPortId [1];
 }
 
 void STP_GetRootTimes (STP_BRIDGE* bridge,

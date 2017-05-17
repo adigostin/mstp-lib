@@ -153,10 +153,8 @@ private:
 				return { reinterpret_cast<INT_PTR>(GetSysColorBrush(COLOR_3DFACE)), 0 };
 			}
 
-			if (GetWindowLongPtr((HWND)lParam, GWLP_ID) == IDC_STATIC_TREE_PROPS)
-				return { FALSE, 0 };
-
-			if (GetWindowLongPtr((HWND)lParam, GWLP_ID) == IDC_STATIC_MSTP_PROPS)
+			auto id = GetWindowLongPtr((HWND)lParam, GWLP_ID);
+			if ((id == IDC_STATIC_TREE_PROPS) || (id == IDC_STATIC_MSTP_PROPS) || (id == IDC_STATIC_PRIO_VECTOR))
 				return { FALSE, 0 };
 
 			return { reinterpret_cast<INT_PTR>(GetSysColorBrush(COLOR_WINDOW)), 0 };
@@ -388,8 +386,7 @@ private:
 		LoadBridgeAddressTextBox();
 		LoadStpStartedCheckBox();
 		LoadStpVersionComboBox();
-		LoadCistRootBridgeEdit();
-		LoadCistRootPathCostEdit();
+		LoadRootPriorityVectorControls();
 		LoadPortCountComboBox();
 		LoadMstiCountComboBox();
 		LoadMstConfigNameTextBox();
@@ -484,55 +481,78 @@ private:
 
 	// ========================================================================
 
-	void LoadCistRootBridgeEdit()
+	void LoadRootPriorityVectorControls()
 	{
-		auto edit = GetDlgItem (_hwnd, IDC_EDIT_CIST_ROOT);
-		auto getRootBridge = [](Object* o)
+		if (_selection->GetObjects().size() > 1)
 		{
-			auto stpb = dynamic_cast<Bridge*>(o)->GetStpBridge();
-			unsigned char prioVector[36];
-			STP_GetRootPriorityVector(stpb, 0, prioVector);
-			array<unsigned char, 8> rootBridgeId;
-			memcpy (rootBridgeId.data(), &prioVector[0], 8);
-			return rootBridgeId;
-		};
-
-		auto& objects = _selection->GetObjects();
-		auto rootBridge = getRootBridge(objects.front());
-		bool allSameRoot = all_of (objects.begin(), objects.end(), [&](Object* o) { return getRootBridge(o) == rootBridge; });
-		if (allSameRoot)
-		{
-			wstringstream ss;
-			ss << uppercase << setfill(L'0') << hex << setw(2) << rootBridge[0] << setw(2) << rootBridge[1] << "."
-				<< setw(2) << rootBridge[2] << setw(2) << rootBridge[3] << setw(2) << rootBridge[4]
-				<< setw(2) << rootBridge[5] << setw(2) << rootBridge[6] << setw(2) << rootBridge[7];
-			::SetWindowText (edit, ss.str().c_str());
+			::SetWindowText (GetDlgItem(_hwnd, IDC_STATIC_PRIO_VECTOR),           L"Priority Vector");
+			::SetWindowText (GetDlgItem(_hwnd, IDC_EDIT_ROOT_BRIDGE_ID),          L"(multiple selection)");
+			::SetWindowText (GetDlgItem(_hwnd, IDC_EDIT_EXTERNAL_ROOT_PATH_COST), L"(multiple selection)");
+			::SetWindowText (GetDlgItem(_hwnd, IDC_EDIT_REGIONAL_ROOT_BRIDGE_ID), L"(multiple selection)");
+			::SetWindowText (GetDlgItem(_hwnd, IDC_EDIT_INTERNAL_ROOT_PATH_COST), L"(multiple selection)");
+			::SetWindowText (GetDlgItem(_hwnd, IDC_EDIT_DESIGNATED_BRIDGE_ID),    L"(multiple selection)");
+			::SetWindowText (GetDlgItem(_hwnd, IDC_EDIT_DESIGNATED_PORT_ID),      L"(multiple selection)");
+			::SetWindowText (GetDlgItem(_hwnd, IDC_EDIT_RECEIVING_PORT_ID),       L"(multiple selection)");
+			return;
 		}
+
+		auto stpBridge = dynamic_cast<Bridge*>(_selection->GetObjects().front())->GetStpBridge();
+
+		auto treeIndex = STP_GetTreeIndexFromVlanNumber(stpBridge, _projectWindow->GetSelectedVlanNumber());
+
+		wstringstream ss;
+		ss << L"Priority Vector (";
+		if (treeIndex == 0)
+			ss << "CIST";
 		else
-			::SetWindowText (edit, L"(multiple selection)");
-	}
+			ss << "MSTI " << treeIndex;
+		ss << L')';
+		::SetWindowText (GetDlgItem(_hwnd, IDC_STATIC_PRIO_VECTOR), ss.str().c_str());
 
-	// ========================================================================
+		unsigned char prioVector[36];
+		STP_GetRootPriorityVector(stpBridge, 0, prioVector);
 
-	void LoadCistRootPathCostEdit()
-	{
-		auto edit = GetDlgItem (_hwnd, IDC_EDIT_CIST_ROOT_PATH_COST);
-		auto getCost = [](Object* o)
-		{
-			auto stpb = dynamic_cast<Bridge*>(o)->GetStpBridge();
-			unsigned char prioVector[36];
-			STP_GetRootPriorityVector(stpb, 0, prioVector);
-			uint32_t rootPathCost = ((uint32_t) prioVector[8] << 24) | ((uint32_t) prioVector[9] << 16) | ((uint32_t) prioVector[10] << 8) | prioVector[11];
-			return rootPathCost;
-		};
+		// RootBridgeId and
+		ss.str(L"");
+		ss << uppercase << setfill(L'0') << hex
+			<< setw(2) << prioVector[0] << setw(2) << prioVector[1] << "."
+			<< setw(2) << prioVector[2] << setw(2) << prioVector[3] << setw(2) << prioVector[4]
+			<< setw(2) << prioVector[5] << setw(2) << prioVector[6] << setw(2) << prioVector[7];
+		::SetWindowText (GetDlgItem(_hwnd, IDC_EDIT_ROOT_BRIDGE_ID), ss.str().c_str());
 
-		auto& objects = _selection->GetObjects();
-		auto cost = getCost(objects.front());
-		bool allSameCost = all_of (objects.begin(), objects.end(), [&](Object* o) { return getCost(o) == cost; });
-		if (allSameCost)
-			::SetWindowText (edit, to_wstring(cost).c_str());
-		else
-			::SetWindowText (edit, L"(multiple selection)");
+		// ExternalRootPathCost
+		auto externalCost = ((uint32_t) prioVector[8] << 24) | ((uint32_t) prioVector[9] << 16) | ((uint32_t) prioVector[10] << 8) | prioVector[11];
+		::SetWindowText (GetDlgItem(_hwnd, IDC_EDIT_EXTERNAL_ROOT_PATH_COST), to_wstring(externalCost).c_str());
+
+		// RegionalRootBridgeId
+		ss.str(L"");
+		ss << uppercase << setfill(L'0') << hex
+			<< setw(2) << prioVector[12] << setw(2) << prioVector[13] << "."
+			<< setw(2) << prioVector[14] << setw(2) << prioVector[15] << setw(2) << prioVector[16]
+			<< setw(2) << prioVector[17] << setw(2) << prioVector[18] << setw(2) << prioVector[19];
+		::SetWindowText (GetDlgItem(_hwnd, IDC_EDIT_REGIONAL_ROOT_BRIDGE_ID), ss.str().c_str());
+
+		// InternalRootPathCost
+		auto internalCost = ((uint32_t) prioVector[20] << 24) | ((uint32_t) prioVector[21] << 16) | ((uint32_t) prioVector[22] << 8) | prioVector[23];
+		::SetWindowText (GetDlgItem(_hwnd, IDC_EDIT_INTERNAL_ROOT_PATH_COST), to_wstring(internalCost).c_str());
+
+		// DesignatedBridgeId
+		ss.str(L"");
+		ss << uppercase << setfill(L'0') << hex
+			<< setw(2) << prioVector[24] << setw(2) << prioVector[25] << "."
+			<< setw(2) << prioVector[26] << setw(2) << prioVector[27] << setw(2) << prioVector[28]
+			<< setw(2) << prioVector[29] << setw(2) << prioVector[30] << setw(2) << prioVector[31];
+		::SetWindowText (GetDlgItem(_hwnd, IDC_EDIT_DESIGNATED_BRIDGE_ID), ss.str().c_str());
+
+		// DesignatedPortId
+		ss.str(L"");
+		ss << uppercase << setfill(L'0') << hex << setw(2) << prioVector[32] << setw(2) << prioVector[33];
+		::SetWindowText (GetDlgItem(_hwnd, IDC_EDIT_DESIGNATED_PORT_ID), ss.str().c_str());
+
+		// ReceivingPortId
+		ss.str(L"");
+		ss << uppercase << setfill(L'0') << hex << setw(2) << prioVector[34] << setw(2) << prioVector[35];
+		::SetWindowText (GetDlgItem(_hwnd, IDC_EDIT_RECEIVING_PORT_ID), ss.str().c_str());
 	}
 
 	// ========================================================================
@@ -695,10 +715,7 @@ private:
 	{
 		auto window = static_cast<BridgePropsWindow*>(callbackArg);
 		if (window->BridgesSelected())
-		{
-			window->LoadSelectedTreeEdit();
-			window->LoadBridgePriorityCombo();
-		}
+			window->LoadAll();
 	}
 
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)

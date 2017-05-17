@@ -15,11 +15,7 @@ static bool Same (const WireEnd& a, const WireEnd& b)
 		return false;
 
 	if (holds_alternative<LooseWireEnd>(a))
-	{
-		auto aa = get<LooseWireEnd>(a);
-		auto bb = get<LooseWireEnd>(b);
-		return (aa.x == bb.x) && (aa.y == bb.y);
-	}
+		return get<LooseWireEnd>(a) == get<LooseWireEnd>(b);
 	else
 		return get<ConnectedWireEnd>(a) == get<ConnectedWireEnd>(b);
 }
@@ -28,23 +24,7 @@ void Wire::SetPoint (size_t pointIndex, const WireEnd& point)
 {
 	if (!Same(_points[pointIndex], point))
 	{
-		/*
-		if (holds_alternative<ConnectedWireEnd>(_points[pointIndex]) && holds_alternative<ConnectedWireEnd>(_points[1 - pointIndex]))
-		{
-			// disconnecting two ports
-			auto portA = get<ConnectedWireEnd>(_points[pointIndex]);
-			auto portB = get<ConnectedWireEnd>(_points[1 - pointIndex]);
-		}
-		*/
 		_points[pointIndex] = point;
-		/*
-		if (holds_alternative<ConnectedWireEnd>(_points[pointIndex]) && holds_alternative<ConnectedWireEnd>(_points[1 - pointIndex]))
-		{
-			// connected two ports
-			auto portA = get<ConnectedWireEnd>(_points[pointIndex]);
-			auto portB = get<ConnectedWireEnd>(_points[1 - pointIndex]);
-		}
-		*/
 		InvalidateEvent::InvokeHandlers(*this, this);
 	}
 }
@@ -59,56 +39,54 @@ D2D1_POINT_2F Wire::GetPointCoords (size_t pointIndex) const
 
 bool Wire::IsForwarding (unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const
 {
-	if (holds_alternative<ConnectedWireEnd>(_points[0]) && holds_alternative<ConnectedWireEnd>(_points[1]))
+	if (!holds_alternative<ConnectedWireEnd>(_points[0]) || !holds_alternative<ConnectedWireEnd>(_points[1]))
+		return false;
+
+	auto portA = get<ConnectedWireEnd>(_points[0]);
+	auto portB = get<ConnectedWireEnd>(_points[1]);
+	bool portAFw = portA->IsForwarding(vlanNumber);
+	bool portBFw = portB->IsForwarding(vlanNumber);
+	if (!portAFw || !portBFw)
+		return false;
+
+	if (hasLoop != nullptr)
 	{
-		auto portA = get<ConnectedWireEnd>(_points[0]);
-		auto portB = get<ConnectedWireEnd>(_points[1]);
-		bool portAFw = portA->IsForwarding(vlanNumber);
-		bool portBFw = portB->IsForwarding(vlanNumber);
-		if (portAFw && portBFw)
+		unordered_set<Port*> txPorts;
+
+		function<bool(Port* txPort)> transmitsTo = [vlanNumber, &txPorts, &transmitsTo, targetPort=portA](Port* txPort) -> bool
 		{
-			if (hasLoop != nullptr)
+			if (txPort->IsForwarding(vlanNumber))
 			{
-				unordered_set<Port*> txPorts;
-
-				function<bool(Port* txPort)> transmitsTo = [vlanNumber, &txPorts, &transmitsTo, targetPort=portA](Port* txPort) -> bool
+				auto rx = txPort->GetBridge()->GetProject()->FindConnectedPort(txPort);
+				if ((rx != nullptr) && rx->IsForwarding(vlanNumber))
 				{
-					if (txPort->IsForwarding(vlanNumber))
+					txPorts.insert(txPort);
+
+					for (unsigned int i = 0; i < (unsigned int) rx->GetBridge()->GetPorts().size(); i++)
 					{
-						auto rx = txPort->GetBridge()->GetProject()->FindConnectedPort(txPort);
-						if ((rx != nullptr) && rx->IsForwarding(vlanNumber))
+						if ((i != rx->GetPortIndex()) && rx->IsForwarding(vlanNumber))
 						{
-							txPorts.insert(txPort);
+							Port* otherTxPort = rx->GetBridge()->GetPorts()[i].get();
+							if (otherTxPort == targetPort)
+								return true;
 
-							for (unsigned int i = 0; i < (unsigned int) rx->GetBridge()->GetPorts().size(); i++)
-							{
-								if ((i != rx->GetPortIndex()) && rx->IsForwarding(vlanNumber))
-								{
-									Port* otherTxPort = rx->GetBridge()->GetPorts()[i].get();
-									if (otherTxPort == targetPort)
-										return true;
+							if (txPorts.find(otherTxPort) != txPorts.end())
+								return false;
 
-									if (txPorts.find(otherTxPort) != txPorts.end())
-										return false;
-
-									if (transmitsTo(otherTxPort))
-										return true;
-								}
-							}
+							if (transmitsTo(otherTxPort))
+								return true;
 						}
 					}
-
-					return false;
-				};
-
-				*hasLoop = transmitsTo(portA);
+				}
 			}
 
-			return true;
-		}
+			return false;
+		};
+
+		*hasLoop = transmitsTo(portA);
 	}
 
-	return false;
+	return true;
 }
 
 void Wire::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, unsigned int vlanNumber) const
