@@ -409,18 +409,19 @@ public:
 	void RenderZoomingPaningHint (ID2D1DeviceContext* dc) const
 	{
 		IDWriteTextFormatPtr format;
-		auto hr = GetDWriteFactory()->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_MEDIUM, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 9, L"en-US", &format); ThrowIfFailed(hr);
+		auto hr = GetDWriteFactory()->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_MEDIUM, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 10, L"en-US", &format); ThrowIfFailed(hr);
 		IDWriteTextLayoutPtr layout;
-		static const wchar_t Text[] = L"Rotate mouse wheen for zooming, press wheel and drag for panning.";
+		static const wchar_t Text[] = L"Rotate mouse wheel for zooming, press wheel and drag for panning.";
 		hr = GetDWriteFactory()->CreateTextLayout (Text, _countof(Text) - 1, format, 1000, 1000, &layout); ThrowIfFailed(hr);
 		DWRITE_TEXT_METRICS metrics;
 		hr = layout->GetMetrics(&metrics); ThrowIfFailed(hr);
+		float lineWidth = GetDipSizeFromPixelSize ({ 1, 0 }).width;
 		D2D1_RECT_F rect =
 		{
-			GetClientWidthDips() / 2 - metrics.width / 2 - 1,
-			GetClientHeightDips() - metrics.height - 1,
-			GetClientWidthDips() / 2 + metrics.width / 2 + 1,
-			GetClientHeightDips() + 0.5f
+			GetClientWidthDips() / 2 - metrics.width / 2 - lineWidth,
+			GetClientHeightDips() - metrics.height - lineWidth,
+			GetClientWidthDips() / 2 + metrics.width / 2 + lineWidth,
+			GetClientHeightDips() + lineWidth / 2
 		};
 
 		ID2D1SolidColorBrushPtr brush;
@@ -430,7 +431,7 @@ public:
 
 		auto oldaa = dc->GetAntialiasMode();
 		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-		dc->DrawRectangle (&rect, _drawingObjects._brushWindowText);
+		dc->DrawRectangle (&rect, _drawingObjects._brushWindowText, lineWidth);
 		dc->SetAntialiasMode(oldaa);
 
 		dc->DrawTextLayout ({ GetClientWidthDips() / 2 - metrics.width / 2, GetClientHeightDips() - metrics.height }, layout, _drawingObjects._brushWindowText);
