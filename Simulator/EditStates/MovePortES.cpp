@@ -15,8 +15,9 @@ class MovePortES : public EditState
 	bool _completed = false;
 
 public:
-	MovePortES (const EditStateDeps& deps)
-		: base(deps)
+	using base::base;
+
+	virtual void OnMouseDown (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		assert (_selection->GetObjects().size() == 1);
 		_port = dynamic_cast<Port*>(_selection->GetObjects().front());
@@ -42,7 +43,7 @@ public:
 		return nullopt;
 	}
 
-	virtual void OnMouseUp (const MouseLocation& location, MouseButton button) override final
+	virtual void OnMouseUp (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		struct Action : public EditAction
 		{

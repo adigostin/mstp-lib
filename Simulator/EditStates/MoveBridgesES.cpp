@@ -24,7 +24,7 @@ class MoveBridgeES : public EditState
 public:
 	using base::base;
 
-	virtual void OnMouseDown (const MouseLocation& location, MouseButton button) override final
+	virtual void OnMouseDown (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		auto firstBridge = static_cast<Bridge*>(_selection->GetObjects()[0]); assert (firstBridge != nullptr);
 		_firstBridgeInitialLocation = firstBridge->GetLocation();
@@ -62,7 +62,7 @@ public:
 		return nullopt;
 	}
 
-	virtual void OnMouseUp (const MouseLocation& location, MouseButton button) override final
+	virtual void OnMouseUp (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		struct Action : public EditAction
 		{

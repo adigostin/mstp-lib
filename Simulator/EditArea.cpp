@@ -481,7 +481,8 @@ public:
 		else if ((uMsg == WM_LBUTTONUP) || (uMsg == WM_RBUTTONUP))
 		{
 			auto button = (uMsg == WM_LBUTTONUP) ? MouseButton::Left : MouseButton::Right;
-			auto result = ProcessMouseButtonUp (button, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
+			UINT modifierKeysDown = (UINT) wParam;
+			auto result = ProcessMouseButtonUp (button, modifierKeysDown, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
 			return result ? result.value() : base::WindowProc (hwnd, uMsg, wParam, lParam);
 		}
 		else if (uMsg == WM_SETCURSOR)
@@ -640,12 +641,14 @@ public:
 			// Some validation code (maybe in the Properties Window) must have failed and taken focus back.
 			return nullopt;
 
-		auto dLocation = GetDipLocationFromPixelLocation(pt);
-		auto wLocation = GetWLocationFromDLocation(dLocation);
+		MouseLocation mouseLocation;
+		mouseLocation.pt = pt;
+		mouseLocation.d = GetDipLocationFromPixelLocation(pt);
+		mouseLocation.w = GetWLocationFromDLocation(mouseLocation.d);
 
 		if (_state != nullptr)
 		{
-			_state->OnMouseDown ({ pt, dLocation, wLocation }, button);
+			_state->OnMouseDown (button, modifierKeysDown, mouseLocation);
 			if (_state->Completed())
 			{
 				_state = nullptr;
@@ -655,77 +658,86 @@ public:
 			return 0;
 		}
 
-		auto ht = HitTestObjects (dLocation, SnapDistance);
+		auto ht = HitTestObjects (mouseLocation.d, SnapDistance);
 		if (ht.object == nullptr)
 			_selection->Clear();
 		else
 		{
 			if (modifierKeysDown & MK_CONTROL)
 			{
-				if (!_selection->Contains(ht.object))
+				if (_selection->Contains(ht.object))
+					_selection->Remove(ht.object);
+				else if (!_selection->GetObjects().empty() && (typeid(*_selection->GetObjects()[0]) == typeid(*ht.object)))
 					_selection->Add(ht.object);
 				else
-					_selection->Remove(ht.object);
+					_selection->Select(ht.object);
 			}
 			else
-				_selection->Select(ht.object);
+			{
+				if (!_selection->Contains(ht.object))
+					_selection->Select(ht.object);
+			}
 		}
-
-		unique_ptr<EditState> stateMoveThreshold;
-		unique_ptr<EditState> stateButtonUp;
 
 		if (ht.object == nullptr)
 		{
 			// TODO: area selection
 			//stateForMoveThreshold =
 		}
-		else if (dynamic_cast<Bridge*>(ht.object) != nullptr)
+		else
 		{
-			if (button == MouseButton::Left)
-				stateMoveThreshold = CreateStateMoveBridges (MakeEditStateDeps());
-		}
-		else if (dynamic_cast<Port*>(ht.object) != nullptr)
-		{
-			auto port = dynamic_cast<Port*>(ht.object);
+			unique_ptr<EditState> stateMoveThreshold;
+			unique_ptr<EditState> stateButtonUp;
 
-			if (ht.code == Port::HTCodeInnerOuter)
+			if (dynamic_cast<Bridge*>(ht.object) != nullptr)
 			{
 				if (button == MouseButton::Left)
-					stateMoveThreshold = CreateStateMovePort (MakeEditStateDeps());
+					stateMoveThreshold = CreateStateMoveBridges (MakeEditStateDeps());
 			}
-			else if (ht.code == Port::HTCodeCP)
+			else if (dynamic_cast<Port*>(ht.object) != nullptr)
 			{
-				auto alreadyConnectedWire = _project->GetWireConnectedToPort(port);
-				if (alreadyConnectedWire.first == nullptr)
+				auto port = dynamic_cast<Port*>(ht.object);
+
+				if (ht.code == Port::HTCodeInnerOuter)
 				{
-					stateMoveThreshold = CreateStateCreateWire(MakeEditStateDeps());
-					stateButtonUp = CreateStateCreateWire(MakeEditStateDeps());
+					if (button == MouseButton::Left)
+						stateMoveThreshold = CreateStateMovePort (MakeEditStateDeps());
+				}
+				else if (ht.code == Port::HTCodeCP)
+				{
+					auto alreadyConnectedWire = _project->GetWireConnectedToPort(port);
+					if (alreadyConnectedWire.first == nullptr)
+					{
+						stateMoveThreshold = CreateStateCreateWire(MakeEditStateDeps());
+						stateButtonUp = CreateStateCreateWire(MakeEditStateDeps());
+					}
 				}
 			}
-		}
-		else if (dynamic_cast<Wire*>(ht.object) != nullptr)
-		{
-			auto wire = static_cast<Wire*>(ht.object);
-			if (ht.code >= 0)
+			else if (dynamic_cast<Wire*>(ht.object) != nullptr)
 			{
-				stateMoveThreshold = CreateStateMoveWirePoint(MakeEditStateDeps(), wire, ht.code);
-				stateButtonUp = CreateStateMoveWirePoint (MakeEditStateDeps(), wire, ht.code);
+				auto wire = static_cast<Wire*>(ht.object);
+				if (ht.code >= 0)
+				{
+					stateMoveThreshold = CreateStateMoveWirePoint(MakeEditStateDeps(), wire, ht.code);
+					stateButtonUp = CreateStateMoveWirePoint (MakeEditStateDeps(), wire, ht.code);
+				}
 			}
+
+			auto state = CreateStateBeginningDrag(MakeEditStateDeps(), ht.object, button, modifierKeysDown, mouseLocation, ::GetCursor(), move(stateMoveThreshold), move(stateButtonUp));
+			EnterState(move(state));
 		}
 
-		MouseLocation mouseLocation = { pt, dLocation, wLocation };
-		EnterState (CreateStateBeginningDrag(MakeEditStateDeps(), mouseLocation, button, ::GetCursor(), move(stateMoveThreshold), move(stateButtonUp)));
 		return 0;
 	}
 
-	std::optional<LRESULT> ProcessMouseButtonUp (MouseButton button, POINT pt)
+	std::optional<LRESULT> ProcessMouseButtonUp (MouseButton button, UINT modifierKeysDown, POINT pt)
 	{
 		auto dLocation = GetDipLocationFromPixelLocation(pt);
 		auto wLocation = GetWLocationFromDLocation(dLocation);
 
 		if (_state != nullptr)
 		{
-			_state->OnMouseUp ({ pt, dLocation, wLocation }, button);
+			_state->OnMouseUp (button, modifierKeysDown, { pt, dLocation, wLocation });
 			if (_state->Completed())
 			{
 				_state = nullptr;

@@ -33,9 +33,9 @@ public:
 
 	virtual bool Completed() const override final { return _subState == Done; }
 
-	virtual void OnMouseDown (const MouseLocation& location, MouseButton button) override final
+	virtual void OnMouseDown (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
-		base::OnMouseDown(location, button);
+		base::OnMouseDown (button, modifierKeysDown, location);
 
 		if (button != MouseButton::Left)
 			return;
@@ -70,7 +70,7 @@ public:
 		}
 	}
 
-	virtual void OnMouseUp (const MouseLocation& location, MouseButton button) override final
+	virtual void OnMouseUp (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		if (_subState == WaitingSecondUp)
 		{

@@ -30,7 +30,7 @@ class CreateWireES : public EditState
 public:
 	using base::base;
 
-	virtual void OnMouseDown (const MouseLocation& location, MouseButton button) override final
+	virtual void OnMouseDown (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		if (button != MouseButton::Left)
 			return;
@@ -82,7 +82,7 @@ public:
 		}
 	}
 
-	virtual void OnMouseUp (const MouseLocation& location, MouseButton button) override final
+	virtual void OnMouseUp (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		if (_subState == WaitingSecondUp)
 		{

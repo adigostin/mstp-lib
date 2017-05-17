@@ -29,7 +29,7 @@ public:
 		::InvalidateRect (_pw->GetEditArea()->GetHWnd(), nullptr, FALSE);
 	}
 
-	virtual void OnMouseUp (const MouseLocation& location, MouseButton button) override final
+	virtual void OnMouseUp (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		if (_bridge != nullptr)
 		{
