@@ -298,6 +298,7 @@ private:
 				std::wstring str;
 				str.resize(GetWindowTextLength (hWnd) + 1);
 				GetWindowText (hWnd, str.data(), (int) str.size());
+				str.resize(str.size() - 1);
 
 				if (dialog->_editChangedByUser && (dialog->_controlBeingValidated == nullptr))
 				{
@@ -722,10 +723,50 @@ private:
 	{
 		if (hwnd == _bridgeAddressEdit)
 		{
-			if (!iswxdigit(str[0]) || !iswxdigit(str[1]))
+			static constexpr wchar_t FormatErrorMessage[] = L"Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX or XXXXXXXXXXXX (6 hex bytes).";
+			int offsetMultiplier;
+			if (str.length() == 12)
 			{
-				errorMessageOut = L"Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX.";
+				offsetMultiplier = 2;
+			}
+			else if (str.length() == 17)
+			{
+				if ((str[2] != ':') || (str[5] != ':') || (str[8] != ':') || (str[11] != ':') || (str[14] != ':'))
+				{
+					errorMessageOut = FormatErrorMessage;
+					return false;
+				}
+
+				offsetMultiplier = 3;
+			}
+			else
+			{
+				errorMessageOut = FormatErrorMessage;
 				return false;
+			}
+
+			array<uint8_t, 6> address;
+			for (size_t i = 0; i < 6; i++)
+			{
+				wchar_t ch0 = str[i * offsetMultiplier];
+				wchar_t ch1 = str[i * offsetMultiplier + 1];
+
+				if (!iswxdigit(ch0) || !iswxdigit(ch1))
+				{
+					errorMessageOut = FormatErrorMessage;
+					return false;
+				}
+
+				auto hn = (ch0 <= '9') ? (ch0 - '0') : ((ch0 >= 'a') ? (ch0 - 'a' + 10) : (ch0 - 'A' + 10));
+				auto ln = (ch1 <= '9') ? (ch1 - '0') : ((ch1 >= 'a') ? (ch1 - 'a' + 10) : (ch1 - 'A' + 10));
+				address[i] = (hn << 4) | ln;
+			}
+
+			auto timestamp = GetTimestampMilliseconds();
+			for (Object* o : _selection->GetObjects())
+			{
+				auto stpBridge = dynamic_cast<Bridge*>(o)->GetStpBridge();
+				STP_SetBridgeAddress (stpBridge, address.data(), timestamp);
 			}
 
 			return true;

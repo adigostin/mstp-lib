@@ -214,32 +214,44 @@ void STP_StopBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 
 void STP_SetBridgeAddress (STP_BRIDGE* bridge, const unsigned char* address, unsigned int timestamp)
 {
-	LOG (bridge, -1, -1, "{T}: Setting bridge MAC address to {BA}...\r\n", timestamp, address);
+	LOG (bridge, -1, -1, "{T}: Setting bridge MAC address to {BA}...", timestamp, address);
 
-	for (unsigned int treeIndex = 0; treeIndex < (1 + bridge->mstiCount); treeIndex++)
+	const unsigned char* currentAddress = (const unsigned char*) bridge->trees[CIST_INDEX]->GetBridgeIdentifier().GetAddress();
+	if (memcmp (currentAddress, address, 6) == 0)
 	{
-		// change the MAC address without changing the priority
-		BRIDGE_ID bid = bridge->trees [treeIndex]->GetBridgeIdentifier ();
-		bid.SetAddress (address);
-		bridge->trees [treeIndex]->SetBridgeIdentifier (bid);
+		LOG (bridge, -1, -1, " nothing changed.\r\n");
 	}
-
-	if (bridge->started)
+	else
 	{
-		if (bridge->ForceProtocolVersion < STP_VERSION_MSTP)
+		LOG (bridge, -1, -1, "\r\n");
+
+		for (unsigned int treeIndex = 0; treeIndex < (1 + bridge->mstiCount); treeIndex++)
 		{
-			// STP or RSTP mode. I think there's no need to assert BEGIN, only to recompute priorities.
-			RecomputePrioritiesAndPortRoles (bridge, CIST_INDEX, timestamp);
+			// change the MAC address without changing the priority
+			BRIDGE_ID bid = bridge->trees [treeIndex]->GetBridgeIdentifier ();
+			bid.SetAddress (address);
+			bridge->trees [treeIndex]->SetBridgeIdentifier (bid);
 		}
-		else
+
+		if (bridge->started)
 		{
-			// BEGIN used to be asserted when the MST Config Name was generated from the bridge address.
-			// Now that we don't generate a default name anymore, I don't know if it's still needed, but I'll leave it for now.
-			bridge->BEGIN = true;
-			RunStateMachines (bridge, timestamp);
-			bridge->BEGIN = false;
-			RunStateMachines (bridge, timestamp);
+			if (bridge->ForceProtocolVersion < STP_VERSION_MSTP)
+			{
+				// STP or RSTP mode. I think there's no need to assert BEGIN, only to recompute priorities.
+				RecomputePrioritiesAndPortRoles (bridge, CIST_INDEX, timestamp);
+			}
+			else
+			{
+				// BEGIN used to be asserted when the MST Config Name was generated from the bridge address.
+				// Now that we don't generate a default name anymore, I don't know if it's still needed, but I'll leave it for now.
+				bridge->BEGIN = true;
+				RunStateMachines (bridge, timestamp);
+				bridge->BEGIN = false;
+				RunStateMachines (bridge, timestamp);
+			}
 		}
+
+		bridge->callbacks.onConfigChanged(bridge, timestamp);
 	}
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
