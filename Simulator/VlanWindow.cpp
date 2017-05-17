@@ -42,6 +42,8 @@ public:
 		::GetWindowRect(_hwnd, &rc);
 		::MoveWindow (_hwnd, location.x, location.y, rc.right - rc.left, rc.bottom - rc.top, TRUE);
 
+		_selection->GetAddedToSelectionEvent().AddHandler (&OnAddedToSelection, this);
+		_selection->GetRemovingFromSelectionEvent().AddHandler (&OnRemovingFromSelection, this);
 		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
 		_pw->GetSelectedVlanNumerChangedEvent().AddHandler (&OnSelectedVlanChanged, this);
 	}
@@ -51,6 +53,8 @@ private:
 	{
 		_pw->GetSelectedVlanNumerChangedEvent().RemoveHandler (&OnSelectedVlanChanged, this);
 		_selection->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
+		_selection->GetRemovingFromSelectionEvent().RemoveHandler (&OnRemovingFromSelection, this);
+		_selection->GetAddedToSelectionEvent().RemoveHandler (&OnAddedToSelection, this);
 
 		if (_hwnd != nullptr)
 			::DestroyWindow(_hwnd);
@@ -132,6 +136,25 @@ private:
 		}
 
 		return { FALSE, 0 };
+	}
+
+	static void OnAddedToSelection (void* callbackArg, ISelection* selection, Object* obj)
+	{
+		auto b = dynamic_cast<Bridge*>(obj);
+		if (b != nullptr)
+			b->GetBridgeConfigChangedEvent().AddHandler (&OnBridgeConfigChanged, callbackArg);
+	}
+
+	static void OnRemovingFromSelection (void* callbackArg, ISelection* selection, Object* obj)
+	{
+		auto b = dynamic_cast<Bridge*>(obj);
+		if (b != nullptr)
+			b->GetBridgeConfigChangedEvent().RemoveHandler (&OnBridgeConfigChanged, callbackArg);
+	}
+
+	static void OnBridgeConfigChanged (void* callbackArg, Bridge* bridge)
+	{
+		static_cast<VlanWindow*>(callbackArg)->LoadSelectedTreeEdit();
 	}
 
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
