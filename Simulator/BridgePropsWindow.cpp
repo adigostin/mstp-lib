@@ -11,7 +11,8 @@ class BridgePropsWindow : public IBridgePropsWindow
 {
 	ISimulatorApp*  const _app;
 	IProjectWindow* const _projectWindow;
-	ISelectionPtr const _selection;
+	IProjectPtr     const _project;
+	ISelectionPtr   const _selection;
 	ULONG _refCount = 1;
 	HWND _hwnd = nullptr;
 	HWND _bridgeAddressEdit = nullptr;
@@ -25,11 +26,13 @@ class BridgePropsWindow : public IBridgePropsWindow
 public:
 	BridgePropsWindow (ISimulatorApp* app,
 					   IProjectWindow* projectWindow,
+					   IProject* project,
 					   ISelection* selection,
 					   HWND hwndParent,
 					   POINT location)
 		: _app(app)
 		, _projectWindow(projectWindow)
+		, _project(project)
 		, _selection(selection)
 	{
 		HINSTANCE hInstance;
@@ -171,7 +174,7 @@ private:
 
 				if (LOWORD(wParam) == IDC_BUTTON_EDIT_MST_CONFIG_TABLE)
 				{
-					auto dialog = mstConfigIdDialogFactory(_app, _projectWindow, _selection);
+					auto dialog = mstConfigIdDialogFactory(_app, _projectWindow, _project, _selection);
 					dialog->ShowModal(_projectWindow->GetHWnd());
 					return { TRUE, 0 };
 				}

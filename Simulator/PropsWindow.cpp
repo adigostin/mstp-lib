@@ -11,6 +11,7 @@ class PropertiesWindow : public IPropertiesWindow
 {
 	ULONG _refCount = 1;
 	ISimulatorApp* const _app;
+	IProjectPtr const _project;
 	IProjectWindow* const _projectWindow;
 	HWND _hwnd = nullptr;
 	SIZE _clientSize;
@@ -20,11 +21,13 @@ class PropertiesWindow : public IPropertiesWindow
 public:
 	PropertiesWindow (ISimulatorApp* app,
 					  IProjectWindow* projectWindow,
+					  IProject* project,
 					  ISelection* selection,
 					  HWND hWndParent,
 					  POINT location)
 		: _app(app)
 		, _projectWindow(projectWindow)
+		, _project(project)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR)&wndClassAtom, &hInstance);
@@ -64,7 +67,7 @@ public:
 		SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0);
 		_font = ::CreateFontIndirect (&ncm.lfMessageFont);
 
-		_bridgePropsControl = bridgePropertiesControlFactory (_app, _projectWindow, selection, _hwnd, { 0, 0 });
+		_bridgePropsControl = bridgePropertiesControlFactory (_app, _projectWindow, _project, selection, _hwnd, { 0, 0 });
 
 		SIZE ws = _bridgePropsControl->GetWindowSize();
 		::MoveWindow (_hwnd, 0, 0, ws.cx, ws.cy, TRUE);

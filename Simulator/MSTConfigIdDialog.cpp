@@ -10,13 +10,14 @@ class MSTConfigIdDialog : public IMSTConfigIdDialog
 {
 	ISimulatorApp* const _app;
 	IProjectWindow* const _projectWindow;
+	IProject* const _project;
 	ISelectionPtr const _selection;
 	vector<Bridge*> _bridges;
 	HWND _hwnd = nullptr;
 
 public:
-	MSTConfigIdDialog (ISimulatorApp* app, IProjectWindow* projectWindow, ISelection* selection)
-		: _app(app), _projectWindow(projectWindow), _selection(selection)
+	MSTConfigIdDialog (ISimulatorApp* app, IProjectWindow* projectWindow, IProject* project, ISelection* selection)
+		: _app(app), _projectWindow(projectWindow), _project(project), _selection(selection)
 	{
 		auto& objects = _selection->GetObjects();
 
@@ -29,6 +30,20 @@ public:
 				throw invalid_argument ("Selection must consists only of bridges.");
 			_bridges.push_back(b);
 		}
+
+		_project->GetBridgeRemovingEvent().AddHandler (&OnBridgeRemoving, this);
+	}
+
+	~MSTConfigIdDialog()
+	{
+		_project->GetBridgeRemovingEvent().RemoveHandler (&OnBridgeRemoving, this);
+	}
+
+	static void OnBridgeRemoving (void* callbackArg, IProject* project, size_t index, Bridge* bridge)
+	{
+		auto dialog = static_cast<MSTConfigIdDialog*>(callbackArg);
+		if (find (dialog->_bridges.begin(), dialog->_bridges.end(), bridge) != dialog->_bridges.end())
+			::EndDialog (dialog->_hwnd, IDCANCEL);
 	}
 
 	virtual UINT ShowModal (HWND hWndParent) override final
@@ -133,7 +148,7 @@ public:
 		ListView_InsertColumn (list, 1, &lvc);
 
 		if (allSameConfig)
-			LoadTable(list);
+			LoadTable (list, _bridges[0]);
 		else
 		{
 			LVITEM lvi = { 0 };
@@ -154,13 +169,13 @@ public:
 		return true;
 	}
 
-	void LoadTable(HWND list)
+	void LoadTable (HWND list, Bridge* bridge)
 	{
 		LVITEM lvi = { 0 };
 		lvi.mask = LVIF_TEXT;
 
 		unsigned int entryCount;
-		auto entries = STP_GetMstConfigTable (_bridges[0]->GetStpBridge(), &entryCount);
+		auto entries = STP_GetMstConfigTable (bridge->GetStpBridge(), &entryCount);
 
 		for (unsigned int vlanNumber = 0; vlanNumber <= MaxVlanNumber; vlanNumber++)
 		{
@@ -191,7 +206,7 @@ public:
 
 		HWND list = GetDlgItem (_hwnd, IDC_LIST_CONFIG_TABLE);
 		ListView_DeleteAllItems(list);
-		LoadTable(list);
+		LoadTable (list, _bridges[0]);
 	}
 
 	void LoadTestConfig1()
@@ -219,7 +234,7 @@ public:
 
 		HWND list = GetDlgItem (_hwnd, IDC_LIST_CONFIG_TABLE);
 		ListView_DeleteAllItems(list);
-		LoadTable(list);
+		LoadTable (list, _bridges[0]);
 	}
 };
 

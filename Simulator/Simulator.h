@@ -210,6 +210,7 @@ MIDL_INTERFACE("8C5BA174-3A21-4953-BAA4-D04E8F2EB87F") IPropertiesWindow : publi
 _COM_SMARTPTR_TYPEDEF(IPropertiesWindow, __uuidof(IPropertiesWindow));
 using PropertiesWindowFactory = IPropertiesWindowPtr(*const)(ISimulatorApp* app,
 															 IProjectWindow* projectWindow,
+															 IProject* project,
 															 ISelection* selection,
 															 HWND hWndParent,
 															 POINT location);
@@ -223,6 +224,7 @@ MIDL_INTERFACE("6438D8FC-058B-4A83-A4DC-2B48AE028D09") IBridgePropsWindow : publ
 _COM_SMARTPTR_TYPEDEF(IBridgePropsWindow, __uuidof(IBridgePropsWindow));
 using BridgePropsWindowFactory = IBridgePropsWindowPtr(*const)(ISimulatorApp* app,
 															   IProjectWindow* projectWindow,
+															   IProject* project,
 															   ISelection* selection,
 															   HWND hwndParent,
 															   POINT location);
@@ -274,5 +276,6 @@ struct IMSTConfigIdDialog
 
 using MSTConfigIdDialogFactory = std::unique_ptr<IMSTConfigIdDialog>(*const)(ISimulatorApp* app,
 																			 IProjectWindow* projectWindow,
+																			 IProject* project,
 																			 ISelection* selection);
 extern const MSTConfigIdDialogFactory mstConfigIdDialogFactory;
