@@ -7,6 +7,12 @@ using namespace std;
 
 static constexpr size_t FirstPortCount = 2;
 
+struct EditInfo
+{
+	void(*loadFunction)(const vector<Bridge*>& selectedBridges, HWND editHWnd);
+	void(*validateAndSetFunction)(const wchar_t* str, const vector<Bridge*>& selectedBridges, IActionList* actionList);
+};
+
 class BridgePropsWindow : public IBridgePropsWindow
 {
 	ISimulatorApp*  const _app;
@@ -16,20 +22,12 @@ class BridgePropsWindow : public IBridgePropsWindow
 	IActionListPtr  const _actionList;
 	ULONG _refCount = 1;
 	HWND _hwnd = nullptr;
-	HWND _bridgeAddressEdit = nullptr;
-	WNDPROC _bridgeAddressEditOriginalProc;
-	HWND _mstConfigNameEdit = nullptr;
-	HWND _mstConfigRevLevelEdit = nullptr;
 	HWND _controlBeingValidated = nullptr;
 	HWND _configTableDigestToolTip = nullptr;
 	bool _editChangedByUser = false;
 	vector<Bridge*> _bridges;
 
-	struct XX
-	{
-		string text;
-		bool enabled;
-	};
+	static const unordered_map<int, EditInfo> _editInfos;
 
 public:
 	BridgePropsWindow (ISimulatorApp* app,
@@ -122,8 +120,13 @@ private:
 	{
 		if (msg == WM_INITDIALOG)
 		{
-			_bridgeAddressEdit = GetDlgItem (_hwnd, IDC_EDIT_BRIDGE_ADDRESS);
-			BOOL bRes = SetWindowSubclass (_bridgeAddressEdit, EditSubclassProc, EditSubClassId, (DWORD_PTR) this); assert (bRes);
+			for (auto& p : _editInfos)
+			{
+				auto editHWnd = GetDlgItem(_hwnd, p.first);
+				BOOL bRes = SetWindowSubclass (editHWnd, EditSubclassProc, EditSubClassId, (DWORD_PTR) this);
+				assert (bRes);
+			}
+
 			auto comboStpVersion = GetDlgItem (_hwnd, IDC_COMBO_STP_VERSION);
 			::SendMessageA (comboStpVersion, CB_ADDSTRING, 0, (LPARAM) STP_GetVersionString(STP_VERSION_LEGACY_STP));
 			::SendMessageA (comboStpVersion, CB_ADDSTRING, 0, (LPARAM) STP_GetVersionString(STP_VERSION_RSTP));
@@ -136,12 +139,6 @@ private:
 			auto comboMstiCount = GetDlgItem (_hwnd, IDC_COMBO_MSTI_COUNT);
 			for (size_t i = 0; i <= 64; i++)
 				ComboBox_AddString(comboMstiCount, std::to_wstring(i).c_str());
-
-			_mstConfigNameEdit = GetDlgItem (_hwnd, IDC_EDIT_MST_CONFIG_NAME);
-			bRes = SetWindowSubclass (_mstConfigNameEdit, EditSubclassProc, EditSubClassId, (DWORD_PTR) this); assert (bRes);
-
-			_mstConfigRevLevelEdit = GetDlgItem (_hwnd, IDC_EDIT_MST_CONFIG_REV_LEVEL);
-			bRes = SetWindowSubclass (_mstConfigRevLevelEdit, EditSubclassProc, EditSubClassId, (DWORD_PTR) this); assert (bRes);
 
 			DWORD ttStyle = WS_POPUP | TTS_ALWAYSTIP | TTS_BALLOON;
 			_configTableDigestToolTip = CreateWindowEx(NULL, TOOLTIPS_CLASS, NULL, ttStyle, 0, 0, 0, 0, _hwnd, NULL, _app->GetHInstance(), NULL);
@@ -291,15 +288,9 @@ private:
 		{
 			if (wParam == VK_ESCAPE)
 			{
-				if (hWnd == dialog->_bridgeAddressEdit)
-					dialog->LoadBridgeAddressTextBox();
-				else if (hWnd == dialog->_mstConfigNameEdit)
-					dialog->LoadMstConfigNameTextBox();
-				else if (hWnd == dialog->_mstConfigRevLevelEdit)
-					dialog->LoadMstConfigRevLevelTextBox();
-				else
-					throw not_implemented_exception();
-
+				auto id = (int) GetWindowLongPtr (hWnd, GWLP_ID);
+				auto& info = _editInfos.at(id);
+				info.loadFunction(dialog->_bridges, hWnd);
 				::SendMessage (hWnd, EM_SETSEL, 0, -1);
 				dialog->_editChangedByUser = false;
 				return 0;
@@ -316,7 +307,9 @@ private:
 					dialog->_controlBeingValidated = hWnd;
 					try
 					{
-						dialog->ValidateAndSetProperty(hWnd, str.c_str());
+						auto id = (int) GetWindowLongPtr (hWnd, GWLP_ID);
+						auto& info = _editInfos.at(id);
+						info.validateAndSetFunction(str.c_str(), dialog->_bridges, dialog->_actionList);
 						dialog->_editChangedByUser = false;
 					}
 					catch (const exception& ex)
@@ -348,7 +341,9 @@ private:
 
 				try
 				{
-					dialog->ValidateAndSetProperty(hWnd, str.c_str());
+					auto id = (int) GetWindowLongPtr (hWnd, GWLP_ID);
+					auto& info = _editInfos.at(id);
+					info.validateAndSetFunction(str.c_str(), dialog->_bridges, dialog->_actionList);
 					dialog->_controlBeingValidated = nullptr;
 					dialog->_editChangedByUser = false;
 				}
@@ -404,14 +399,18 @@ private:
 	void LoadAll()
 	{
 		assert (!_bridges.empty());
-		LoadBridgeAddressTextBox();
+
+		for (auto& p : _editInfos)
+		{
+			HWND editHWnd = GetDlgItem(_hwnd, p.first);
+			p.second.loadFunction (_bridges, editHWnd);
+		}
+
 		LoadStpStartedCheckBox();
 		LoadStpVersionComboBox();
 		LoadRootPriorityVectorControls();
 		LoadPortCountComboBox();
 		LoadMstiCountComboBox();
-		LoadMstConfigNameTextBox();
-		LoadMstConfigRevLevelTextBox();
 		LoadMstConfigTableHashEdit();
 		LoadSelectedTreeEdit();
 		LoadBridgePriorityCombo();
@@ -419,23 +418,21 @@ private:
 
 	// ========================================================================
 
-	#pragma region Bridge Address Property
-	void LoadBridgeAddressTextBox()
+	static void LoadBridgeAddressTextBox (const vector<Bridge*>& selectedBridges, HWND edit)
 	{
-		auto prop = GetBridgeAddressProperty();
-		::SetWindowTextA (_bridgeAddressEdit, prop.text.c_str());
-		::EnableWindow (_bridgeAddressEdit, prop.enabled);
-	}
-
-	XX GetBridgeAddressProperty()
-	{
-		if (_bridges.size() == 1)
-			return XX { _bridges[0]->GetBridgeAddressAsString(), true };
+		if (selectedBridges.size() == 1)
+		{
+			::SetWindowTextA (edit, selectedBridges[0]->GetBridgeAddressAsString().c_str());
+			::EnableWindow (edit, TRUE);
+		}
 		else
-			return XX { "(multiple selection)", false };
+		{
+			::SetWindowTextA (edit, "(multiple selection)");
+			::EnableWindow (edit, FALSE);
+		}
 	}
 
-	void SetBridgeAddress (const wchar_t* str)
+	static void ValidateAndSetBridgeAddress (const wchar_t* str, const vector<Bridge*>& selectedBridges, IActionList* actionList)
 	{
 		static constexpr char FormatErrorMessage[] = u8"Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX or XXXXXXXXXXXX (6 hex bytes).";
 
@@ -496,9 +493,9 @@ private:
 			virtual std::string GetName() const override final { return "Set Bridge Address"; }
 		};
 
-		_actionList->PerformAndAddUserAction (unique_ptr<EditAction>(new SetBridgeAddressAction(_bridges, newAddress)));
+		auto action = unique_ptr<EditAction>(new SetBridgeAddressAction(selectedBridges, newAddress));
+		actionList->PerformAndAddUserAction (move(action));
 	}
-	#pragma endregion
 
 	// ========================================================================
 
@@ -640,27 +637,19 @@ private:
 
 	// ========================================================================
 
-	#pragma region MST Config Name Property
-	void LoadMstConfigNameTextBox()
+	static void LoadMstConfigNameTextBox (const vector<Bridge*>& selectedBridges, HWND edit)
 	{
-		auto prop = GetMstConfigNameProperty();
-		::SetWindowTextA (_mstConfigNameEdit, prop.text.c_str());
-		::EnableWindow (_mstConfigNameEdit, prop.enabled);
-	}
+		const char* name = STP_GetMstConfigId(selectedBridges[0]->GetStpBridge())->ConfigurationName;
 
-	XX GetMstConfigNameProperty()
-	{
-		const char* name = STP_GetMstConfigId(_bridges[0]->GetStpBridge())->ConfigurationName;
-
-		bool allSameName = all_of (_bridges.begin(), _bridges.end(),
+		bool allSameName = all_of (selectedBridges.begin(), selectedBridges.end(),
 								   [name](Bridge* b) { return memcmp (STP_GetMstConfigId(b->GetStpBridge())->ConfigurationName, name, 32) == 0; });
 		if (allSameName)
-			return { string(name, 32), true };
+			::SetWindowTextA (edit, string(name, 32).c_str());
 		else
-			return { "(multiple selection)", true };
+			::SetWindowTextA (edit, "(multiple selection)");
 	}
 
-	void SetMstConfigName (const wchar_t* str)
+	static void ValidateAndSetMstConfigName (const wchar_t* str, const vector<Bridge*>& selectedBridges, IActionList* actionList)
 	{
 		if (wcslen(str) > 32)
 			throw invalid_argument("Invalid MST Config Name: more than 32 characters.");
@@ -704,14 +693,13 @@ private:
 			virtual string GetName() const override final { return "Set MST Config Name"; }
 		};
 
-		auto action = unique_ptr<EditAction>(new SetMstConfigNameAction(_bridges, move(ascii)));
-		_actionList->PerformAndAddUserAction(move(action));
+		auto action = unique_ptr<EditAction>(new SetMstConfigNameAction(selectedBridges, move(ascii)));
+		actionList->PerformAndAddUserAction(move(action));
 	}
-	#pragma endregion
 
 	// ========================================================================
 
-	void LoadMstConfigRevLevelTextBox()
+	static void LoadMstConfigRevLevelTextBox (const vector<Bridge*>& selectedBridges, HWND edit)
 	{
 		auto getLevel = [](Bridge* b) -> unsigned short
 		{
@@ -719,14 +707,21 @@ private:
 			return ((unsigned short) id->RevisionLevelHigh << 8) | (unsigned short) id->RevisionLevelLow;
 		};
 
-		auto level = getLevel(_bridges[0]);
+		auto level = getLevel(selectedBridges[0]);
 
-		bool allSameLevel = all_of (_bridges.begin(), _bridges.end(), [&](Bridge* b) { return getLevel(b) == level; });
+		bool allSameLevel = all_of (selectedBridges.begin(), selectedBridges.end(), [&](Bridge* b) { return getLevel(b) == level; });
 		if (allSameLevel)
-			::SetWindowTextA (_mstConfigRevLevelEdit, to_string(level).c_str());
+			::SetWindowTextA (edit, to_string(level).c_str());
 		else
-			::SetWindowTextA (_mstConfigRevLevelEdit, "(multiple selection)");
+			::SetWindowTextA (edit, "(multiple selection)");
 	}
+
+	static void ValidateAndSetMstConfigRevLevel (const wchar_t* str, const vector<Bridge*>& selectedBridges, IActionList* actionList)
+	{
+		throw not_implemented_exception();
+	}
+
+	// ========================================================================
 
 	void LoadMstConfigTableHashEdit()
 	{
@@ -856,24 +851,6 @@ private:
 		}
 	}
 
-	void ValidateAndSetProperty (HWND hwnd, const wchar_t* str)
-	{
-		if (hwnd == _bridgeAddressEdit)
-		{
-			SetBridgeAddress(str);
-		}
-		else if (hwnd == _mstConfigNameEdit)
-		{
-			SetMstConfigName(str);
-		}
-		else if (hwnd == _mstConfigRevLevelEdit)
-		{
-			throw not_implemented_exception();
-		}
-		else
-			throw not_implemented_exception();
-	}
-
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
 
 	virtual ULONG STDMETHODCALLTYPE AddRef() override final
@@ -889,6 +866,13 @@ private:
 			delete this;
 		return newRefCount;
 	}
+};
+
+const unordered_map<int, EditInfo> BridgePropsWindow::_editInfos =
+{
+	{ IDC_EDIT_BRIDGE_ADDRESS,       { &LoadBridgeAddressTextBox,     &ValidateAndSetBridgeAddress     } },
+	{ IDC_EDIT_MST_CONFIG_NAME,      { &LoadMstConfigNameTextBox,     &ValidateAndSetMstConfigName     } },
+	{ IDC_EDIT_MST_CONFIG_REV_LEVEL, { &LoadMstConfigRevLevelTextBox, &ValidateAndSetMstConfigRevLevel } },
 };
 
 template<typename... Args>
