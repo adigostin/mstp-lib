@@ -263,7 +263,7 @@ void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned 
 		if ((treeIndex == 0) ? isCistRoot : isRegionalRoot)
 			bridgeOutlineWidth *= 2;
 
-		text << uppercase << setfill(L'0') << setw(4) << hex << STP_GetBridgePriority(_stpBridge, treeIndex) << L'.' << GetBridgeAddressAsString() << endl;
+		text << uppercase << setfill(L'0') << setw(4) << hex << STP_GetBridgePriority(_stpBridge, treeIndex) << L'.' << get_bridge_address_as_wstring() << endl;
 		text << L"STP enabled (" << STP_GetVersionString(stpVersion) << L")" << endl;
 		text << (isCistRoot ? L"CIST Root Bridge\r\n" : L"");
 		if (stpVersion >= STP_VERSION_MSTP)
@@ -274,7 +274,7 @@ void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned 
 	}
 	else
 	{
-		text << uppercase << setfill(L'0') << hex << GetBridgeAddressAsString() << endl << L"STP disabled\r\n(right-click to enable)";
+		text << uppercase << setfill(L'0') << hex << get_bridge_address_as_wstring() << endl << L"STP disabled\r\n(right-click to enable)";
 	}
 
 	// Draw bridge outline.
@@ -323,7 +323,18 @@ HTResult Bridge::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, fl
 	return {};
 }
 
-std::wstring Bridge::GetBridgeAddressAsString() const
+std::string Bridge::get_bridge_address_as_string() const
+{
+	auto address = STP_GetBridgeAddress(_stpBridge)->bytes;
+
+	stringstream ss;
+	ss << uppercase << setfill('0') << hex
+		<< setw(2) << address[0] << setw(2) << address[1] << setw(2) << address[2]
+		<< setw(2) << address[3] << setw(2) << address[4] << setw(2) << address[5];
+	return ss.str();
+}
+
+std::wstring Bridge::get_bridge_address_as_wstring() const
 {
 	auto address = STP_GetBridgeAddress(_stpBridge)->bytes;
 
@@ -372,7 +383,7 @@ IXMLDOMElementPtr Bridge::Serialize (IXMLDOMDocument3* doc) const
 	auto bridgeIndex = it - _project->GetBridges().begin();
 	hr = element->setAttribute (IndexString, _variant_t(bridgeIndex)); ThrowIfFailed(hr);
 
-	hr = element->setAttribute (AddressString, _variant_t(GetBridgeAddressAsString().c_str())); ThrowIfFailed(hr);
+	hr = element->setAttribute (AddressString, _variant_t(get_bridge_address_as_wstring().c_str())); ThrowIfFailed(hr);
 
 	hr = element->setAttribute (StpEnabledString, _variant_t(STP_IsBridgeStarted(_stpBridge))); ThrowIfFailed(hr);
 

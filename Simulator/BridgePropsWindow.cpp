@@ -25,6 +25,12 @@ class BridgePropsWindow : public IBridgePropsWindow
 	bool _editChangedByUser = false;
 	vector<Bridge*> _bridges;
 
+	struct XX
+	{
+		string text;
+		bool enabled;
+	};
+
 public:
 	BridgePropsWindow (ISimulatorApp* app,
 					   IProjectWindow* projectWindow,
@@ -415,16 +421,17 @@ private:
 
 	void LoadBridgeAddressTextBox()
 	{
+		auto prop = GetBridgeAddressProperty();
+		::SetWindowTextA (_bridgeAddressEdit, prop.text.c_str());
+		::EnableWindow (_bridgeAddressEdit, prop.enabled);
+	}
+
+	XX GetBridgeAddressProperty()
+	{
 		if (_bridges.size() == 1)
-		{
-			::SetWindowText (_bridgeAddressEdit, _bridges[0]->GetBridgeAddressAsString().c_str());
-			::EnableWindow (_bridgeAddressEdit, TRUE);
-		}
+			return XX { _bridges[0]->get_bridge_address_as_string(), true };
 		else
-		{
-			::SetWindowText (_bridgeAddressEdit, L"(multiple selection)");
-			::EnableWindow (_bridgeAddressEdit, FALSE);
-		}
+			return XX { "(multiple selection)", false };
 	}
 
 	void SetBridgeAddress (const wchar_t* str)
@@ -469,8 +476,7 @@ private:
 			SetBridgeAddressAction (const vector<Bridge*>& bridges, STP_BRIDGE_ADDRESS newAddress)
 				: _bridges(bridges), _newAddress(newAddress)
 			{
-				for (auto b : bridges)
-					_oldAddresses.push_back (*STP_GetBridgeAddress(b->GetStpBridge()));
+				std::transform (bridges.begin(), bridges.end(), back_inserter(_oldAddresses), [](Bridge* b) { return *STP_GetBridgeAddress(b->GetStpBridge()); });
 			}
 
 			virtual void Redo() override final
@@ -632,15 +638,70 @@ private:
 
 	void LoadMstConfigNameTextBox()
 	{
+		auto prop = GetMstConfigNameProperty();
+		::SetWindowTextA (_mstConfigNameEdit, prop.text.c_str());
+		::EnableWindow (_mstConfigNameEdit, prop.enabled);
+	}
+
+	XX GetMstConfigNameProperty()
+	{
 		const char* name = STP_GetMstConfigId(_bridges[0]->GetStpBridge())->ConfigurationName;
 
 		bool allSameName = all_of (_bridges.begin(), _bridges.end(),
 								   [name](Bridge* b) { return memcmp (STP_GetMstConfigId(b->GetStpBridge())->ConfigurationName, name, 32) == 0; });
 		if (allSameName)
-			::SetWindowTextA (_mstConfigNameEdit, string(name, 32).c_str());
+			return { string(name, 32), true };
 		else
-			::SetWindowTextA (_mstConfigNameEdit, "(multiple selection)");
+			return { "(multiple selection)", true };
 	}
+
+	void SetMstConfigName (const wchar_t* str)
+	{
+		if (wcslen(str) > 32)
+			throw invalid_argument("Invalid MST Config Name: more than 32 characters.");
+
+		string ascii;
+		for (auto p = str; *p != 0; p++)
+		{
+			if (*p >= 128)
+				throw invalid_argument("Invalid MST Config Name: non-ASCII characters.");
+
+			ascii.push_back((char) *p);
+		}
+
+		struct SetMstConfigNameAction : public EditAction
+		{
+			vector<Bridge*> const _bridges;
+			string const _newName;
+			vector<string> _oldNames;
+
+			SetMstConfigNameAction (const vector<Bridge*>& bridges, string&& newName)
+				: _bridges(bridges), _newName(move(newName))
+			{
+				std::transform (_bridges.begin(), _bridges.end(), back_inserter(_oldNames),
+								[](Bridge* b) { return string(STP_GetMstConfigId(b->GetStpBridge())->ConfigurationName, 32); });
+			}
+
+			virtual void Redo() override final
+			{
+				auto timestamp = GetTimestampMilliseconds();
+				for (Bridge* b : _bridges)
+					STP_SetMstConfigName (b->GetStpBridge(), _newName.c_str(), timestamp);
+			}
+
+			virtual void Undo() override final
+			{
+				auto timestamp = GetTimestampMilliseconds();
+				for (size_t i = 0; i < _bridges.size(); i++)
+					STP_SetMstConfigName (_bridges[i]->GetStpBridge(), _oldNames[i].c_str(), timestamp);
+			}
+		};
+
+		auto action = unique_ptr<EditAction>(new SetMstConfigNameAction(_bridges, move(ascii)));
+		_actionList->PerformAndAddUserAction(L"Set MST Config Name", move(action));
+	}
+
+	// ========================================================================
 
 	void LoadMstConfigRevLevelTextBox()
 	{
@@ -796,21 +857,7 @@ private:
 		}
 		else if (hwnd == _mstConfigNameEdit)
 		{
-			if (wcslen(str) > 32)
-				throw invalid_argument("Invalid MST Config Name: more than 32 characters.");
-
-			string ascii;
-			for (auto p = str; *p != 0; p++)
-			{
-				if (*p >= 128)
-					throw invalid_argument("Invalid MST Config Name: non-ASCII characters.");
-
-				ascii.push_back((char) *p);
-			}
-
-			auto timestamp = GetTimestampMilliseconds();
-			for (Bridge* b : _bridges)
-				STP_SetMstConfigName (b->GetStpBridge(), ascii.c_str(), timestamp);
+			SetMstConfigName(str);
 		}
 		else if (hwnd == _mstConfigRevLevelEdit)
 		{
