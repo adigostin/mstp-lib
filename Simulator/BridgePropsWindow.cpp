@@ -22,6 +22,7 @@ class BridgePropsWindow : public IBridgePropsWindow
 	HWND _controlBeingValidated = nullptr;
 	HWND _configTableDigestToolTip = nullptr;
 	bool _editChangedByUser = false;
+	vector<Bridge*> _bridges;
 
 public:
 	BridgePropsWindow (ISimulatorApp* app,
@@ -45,6 +46,13 @@ public:
 		RECT rc;
 		::GetWindowRect(_hwnd, &rc);
 		::MoveWindow (_hwnd, location.x, location.y, rc.right - rc.left, rc.bottom - rc.top, TRUE);
+
+		for (auto o : _selection->GetObjects())
+		{
+			auto b = dynamic_cast<Bridge*>(o);
+			if (b != nullptr)
+				_bridges.push_back(b);
+		}
 
 		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
 		_selection->GetAddedToSelectionEvent().AddHandler (&OnObjectAddedToSelection, this);
@@ -221,9 +229,8 @@ private:
 		auto checkStpEnabled = GetDlgItem (_hwnd, IDC_CHECK_STP_ENABLED);
 
 		bool enable = Button_GetCheck(checkStpEnabled) == BST_UNCHECKED;
-		for (auto o : _selection->GetObjects())
+		for (auto b: _bridges)
 		{
-			auto b = dynamic_cast<Bridge*>(o);
 			if (enable)
 			{
 				if (!STP_IsBridgeStarted(b->GetStpBridge()))
@@ -255,11 +262,8 @@ private:
 
 		auto timestamp = GetTimestampMilliseconds();
 
-		for (Object* o : _selection->GetObjects())
-		{
-			auto b = dynamic_cast<Bridge*>(o); assert (b != nullptr);
+		for (auto b : _bridges)
 			STP_SetStpVersion (b->GetStpBridge(), newVersion, timestamp);
-		}
 	}
 
 	static LRESULT CALLBACK EditSubclassProc (HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
@@ -364,7 +368,10 @@ private:
 
 		auto bridge = dynamic_cast<Bridge*>(o);
 		if (bridge != nullptr)
+		{
+			window->_bridges.push_back(bridge);
 			bridge->GetBridgeConfigChangedEvent().AddHandler (&OnBridgeConfigChanged, window);
+		}
 	}
 
 	static void OnObjectRemovingFromSelection (void* callbackArg, ISelection* selection, Object* o)
@@ -373,7 +380,11 @@ private:
 
 		auto bridge = dynamic_cast<Bridge*>(o);
 		if (bridge != nullptr)
+		{
 			bridge->GetBridgeConfigChangedEvent().RemoveHandler (&OnBridgeConfigChanged, window);
+			auto it = find (window->_bridges.begin(), window->_bridges.end(), bridge);
+			window->_bridges.erase(it);
+		}
 	}
 
 	static void OnBridgeConfigChanged (void* callbackArg, Bridge* b)
@@ -383,7 +394,7 @@ private:
 
 	void LoadAll()
 	{
-		assert (BridgesSelected());
+		assert (!_bridges.empty());
 		LoadBridgeAddressTextBox();
 		LoadStpStartedCheckBox();
 		LoadStpVersionComboBox();
@@ -399,12 +410,9 @@ private:
 
 	void LoadBridgeAddressTextBox()
 	{
-		if (_selection->GetObjects().size() == 1)
+		if (_bridges.size() == 1)
 		{
-			auto bridge = dynamic_cast<Bridge*>(_selection->GetObjects().front());
-			std::array<unsigned char, 6> ba;
-			STP_GetBridgeAddress(bridge->GetStpBridge(), ba.data());
-			::SetWindowText (_bridgeAddressEdit, bridge->GetBridgeAddressAsString().c_str());
+			::SetWindowText (_bridgeAddressEdit, _bridges[0]->GetBridgeAddressAsString().c_str());
 			::EnableWindow (_bridgeAddressEdit, TRUE);
 		}
 		else
@@ -416,30 +424,21 @@ private:
 
 	void LoadStpStartedCheckBox()
 	{
-		auto getStpStarted = [](Object* o) { return STP_IsBridgeStarted(dynamic_cast<Bridge*>(o)->GetStpBridge()); };
+		auto check = GetDlgItem (_hwnd, IDC_CHECK_STP_ENABLED);
 
-		auto checkStpEnabled = GetDlgItem (_hwnd, IDC_CHECK_STP_ENABLED);
-
-		auto& objects = _selection->GetObjects();
-
-		if (none_of (objects.begin(), objects.end(), getStpStarted))
-			::SendMessage (checkStpEnabled, BM_SETCHECK, BST_UNCHECKED, 0);
-		else if (all_of (objects.begin(), objects.end(), getStpStarted))
-			::SendMessage (checkStpEnabled, BM_SETCHECK, BST_CHECKED, 0);
+		if (none_of (_bridges.begin(), _bridges.end(), [](Bridge* b) { return STP_IsBridgeStarted(b->GetStpBridge()); }))
+			::SendMessage (check, BM_SETCHECK, BST_UNCHECKED, 0);
+		else if (all_of (_bridges.begin(), _bridges.end(), [](Bridge* b) { return STP_IsBridgeStarted(b->GetStpBridge()); }))
+			::SendMessage (check, BM_SETCHECK, BST_CHECKED, 0);
 		else
-			::SendMessage (checkStpEnabled, BM_SETCHECK, BST_INDETERMINATE, 0);
+			::SendMessage (check, BM_SETCHECK, BST_INDETERMINATE, 0);
 	}
 
 	void LoadStpVersionComboBox()
 	{
-		auto getStpVersion = [](Object* o) { return STP_GetStpVersion (dynamic_cast<Bridge*>(o)->GetStpBridge()); };
-
 		int index = -1;
-
-		auto& objects = _selection->GetObjects();
-
-		auto version = getStpVersion(objects[0]);
-		if (all_of (objects.begin(), objects.end(), [&](Object* o) { return getStpVersion(o) == version; }))
+		auto version = STP_GetStpVersion(_bridges[0]->GetStpBridge());
+		if (all_of (_bridges.begin(), _bridges.end(), [version](Bridge* b) { return STP_GetStpVersion(b->GetStpBridge()) == version; }))
 		{
 			if (version == STP_VERSION_LEGACY_STP)
 				index = 0;
@@ -454,37 +453,27 @@ private:
 
 	void LoadPortCountComboBox()
 	{
-		auto getPortCount = [](Object* o) { return dynamic_cast<Bridge*>(o)->GetPorts().size(); };
-
 		int index = -1;
-		auto& objects = _selection->GetObjects();
-		auto portCount = getPortCount(objects[0]);
-		if (all_of (objects.begin(), objects.end(), [&](Object* o) { return getPortCount(o) == portCount; }))
+		auto portCount = _bridges[0]->GetPorts().size();
+		if (all_of (_bridges.begin(), _bridges.end(), [portCount](Bridge* b) { return b->GetPorts().size() == portCount; }))
 			index = (int) (portCount - FirstPortCount);
-
-		auto comboPortCount = GetDlgItem (_hwnd, IDC_COMBO_PORT_COUNT);
-		ComboBox_SetCurSel (comboPortCount, index);
+		ComboBox_SetCurSel (GetDlgItem(_hwnd, IDC_COMBO_PORT_COUNT), index);
 	}
 
 	void LoadMstiCountComboBox()
 	{
-		auto getMstiCount = [](Object* o) { return STP_GetMstiCount(dynamic_cast<Bridge*>(o)->GetStpBridge()); };
-
 		int index = -1;
-		auto& objects = _selection->GetObjects();
-		auto mstiCount = getMstiCount(objects[0]);
-		if (all_of (objects.begin(), objects.end(), [&](Object* o) { return getMstiCount(o) == mstiCount; }))
+		auto mstiCount = STP_GetMstiCount(_bridges[0]->GetStpBridge());
+		if (all_of (_bridges.begin(), _bridges.end(), [mstiCount](Bridge* b) { return STP_GetMstiCount(b->GetStpBridge()) == mstiCount; }))
 			index = mstiCount;
-
-		auto comboMstiCount = GetDlgItem (_hwnd, IDC_COMBO_MSTI_COUNT);
-		ComboBox_SetCurSel (comboMstiCount, index);
+		ComboBox_SetCurSel (GetDlgItem(_hwnd, IDC_COMBO_MSTI_COUNT), index);
 	}
 
 	// ========================================================================
 
 	void LoadRootPriorityVectorControls()
 	{
-		if (_selection->GetObjects().size() > 1)
+		if (_bridges.size() > 1)
 		{
 			::SetWindowText (GetDlgItem(_hwnd, IDC_STATIC_PRIO_VECTOR),           L"Priority Vector");
 			::SetWindowText (GetDlgItem(_hwnd, IDC_EDIT_ROOT_BRIDGE_ID),          L"(multiple selection)");
@@ -497,7 +486,7 @@ private:
 			return;
 		}
 
-		auto stpBridge = dynamic_cast<Bridge*>(_selection->GetObjects().front())->GetStpBridge();
+		auto stpBridge = _bridges[0]->GetStpBridge();
 
 		if (!STP_IsBridgeStarted(stpBridge))
 		{
@@ -573,31 +562,27 @@ private:
 
 	void LoadMstConfigNameTextBox()
 	{
-		auto getName = [](Object* o)
-		{
-			char name[33];
-			STP_GetMstConfigName(dynamic_cast<Bridge*>(o)->GetStpBridge(), name);
-			return std::string(name);
-		};
+		const char* name = STP_GetMstConfigId(_bridges[0]->GetStpBridge())->ConfigurationName;
 
-		auto& objects = _selection->GetObjects();
-		auto name = getName(objects[0]);
-
-		bool allSameName = all_of (objects.begin(), objects.end(), [&](Object* o) { return getName(o) == name; });
+		bool allSameName = all_of (_bridges.begin(), _bridges.end(),
+								   [name](Bridge* b) { return memcmp (STP_GetMstConfigId(b->GetStpBridge())->ConfigurationName, name, 32) == 0; });
 		if (allSameName)
-			::SetWindowTextA (_mstConfigNameEdit, name.c_str());
+			::SetWindowTextA (_mstConfigNameEdit, string(name, 32).c_str());
 		else
 			::SetWindowTextA (_mstConfigNameEdit, "(multiple selection)");
 	}
 
 	void LoadMstConfigRevLevelTextBox()
 	{
-		auto getLevel = [](Object* o) { return STP_GetMstConfigRevisionLevel(dynamic_cast<Bridge*>(o)->GetStpBridge()); };
+		auto getLevel = [](Bridge* b) -> unsigned short
+		{
+			auto id = STP_GetMstConfigId(b->GetStpBridge());
+			return ((unsigned short) id->RevisionLevelHigh << 8) | (unsigned short) id->RevisionLevelLow;
+		};
 
-		auto& objects = _selection->GetObjects();
-		auto level = getLevel(objects[0]);
+		auto level = getLevel(_bridges[0]);
 
-		bool allSameLevel = all_of (objects.begin(), objects.end(), [&](Object* o) { return getLevel(o) == level; });
+		bool allSameLevel = all_of (_bridges.begin(), _bridges.end(), [&](Bridge* b) { return getLevel(b) == level; });
 		if (allSameLevel)
 			::SetWindowTextA (_mstConfigRevLevelEdit, to_string(level).c_str());
 		else
@@ -606,21 +591,10 @@ private:
 
 	void LoadMstConfigTableHashEdit()
 	{
-		auto getDigest = [](Object* o)
-		{
-			auto b = dynamic_cast<Bridge*>(o); assert (b != nullptr);
-			unsigned int digestLength;
-			auto digest = STP_GetMstConfigTableDigest (b->GetStpBridge(), &digestLength);
-			assert (digestLength == 16);
-			array<uint8_t, 16> result;
-			memcpy (result.data(), digest, 16);
-			return result;
-		};
+		const unsigned char* digest = STP_GetMstConfigId(_bridges.front()->GetStpBridge())->ConfigurationDigest;
 
-		auto& objects = _selection->GetObjects();
-		auto digest = getDigest(objects.front());
-
-		bool allSame = all_of (objects.begin(), objects.end(), [&](Object* o) { return getDigest(o) == digest; });
+		bool allSame = all_of (_bridges.begin(), _bridges.end(),
+							   [digest](Bridge* b) { return memcmp (STP_GetMstConfigId(b->GetStpBridge())->ConfigurationDigest, digest, 16) == 0; });
 
 		auto mstConfigDigestEdit = GetDlgItem (_hwnd, IDC_EDIT_MST_CONFIG_TABLE_HASH);
 		const wchar_t* tooltipText;
@@ -634,7 +608,7 @@ private:
 				<< setw(2) << digest[12] << setw(2) << digest[13] << setw(2) << digest[14] << setw(2) << digest[15];
 			::SetWindowText (mstConfigDigestEdit, ss.str().c_str());
 
-			if (digest == DefaultConfigTableDigest)
+			if (memcmp (digest, DefaultConfigTableDigest, 16) == 0)
 				tooltipText = L"All VLANs assigned to the CIST, no VLAN assigned to any MSTI.";
 			else
 				tooltipText = L"Customized config table.";
@@ -661,11 +635,11 @@ private:
 
 		auto vlanNumber = _projectWindow->GetSelectedVlanNumber();
 
-		auto getTree = [vlanNumber](Object* o) { return STP_GetTreeIndexFromVlanNumber(dynamic_cast<Bridge*>(o)->GetStpBridge(), vlanNumber); };
-		auto& objects = _selection->GetObjects();
-		auto treeIndex = getTree(objects.front());
+		auto treeIndex = STP_GetTreeIndexFromVlanNumber(_bridges[0]->GetStpBridge(), vlanNumber);
 
-		if (all_of (objects.begin(), objects.end(), [&, treeIndex](Object* o) { return getTree(o) == treeIndex; }))
+		bool allSameTree = all_of (_bridges.begin(), _bridges.end(),
+								   [vlanNumber, treeIndex](Bridge* b) { return STP_GetTreeIndexFromVlanNumber(b->GetStpBridge(), vlanNumber) == treeIndex; });
+		if (allSameTree)
 		{
 			if (treeIndex == 0)
 				::SetWindowText (edit, L"CIST(0)");
@@ -681,16 +655,14 @@ private:
 	void LoadBridgePriorityCombo()
 	{
 		auto vlanNumber = _projectWindow->GetSelectedVlanNumber();
-		auto getPrio = [vlanNumber](Object* o)
+		auto getPrio = [vlanNumber](Bridge* b)
 		{
-			auto stpb = dynamic_cast<Bridge*>(o)->GetStpBridge();
-			auto treeIndex = STP_GetTreeIndexFromVlanNumber(stpb, vlanNumber);
-			return STP_GetBridgePriority(stpb, treeIndex);
+			auto treeIndex = STP_GetTreeIndexFromVlanNumber(b->GetStpBridge(), vlanNumber);
+			return STP_GetBridgePriority(b->GetStpBridge(), treeIndex);
 		};
 
-		auto& objects = _selection->GetObjects();
-		auto prio = getPrio(objects[0]);
-		bool allSamePrio = all_of (objects.begin(), objects.end(), [&](Object* o) { return getPrio(o) == prio; });
+		auto prio = getPrio(_bridges[0]);
+		bool allSamePrio = all_of (_bridges.begin(), _bridges.end(), [&](Bridge* b) { return getPrio(b) == prio; });
 
 		auto combo = GetDlgItem(_hwnd, IDC_COMBO_BRIDGE_PRIORITY);
 		if (allSamePrio)
@@ -714,9 +686,8 @@ private:
 		auto newPrio = (unsigned int) index * 4096u;
 		auto timestamp = GetTimestampMilliseconds();
 
-		for (Object* o : _selection->GetObjects())
+		for (Bridge* b : _bridges)
 		{
-			auto b = dynamic_cast<Bridge*>(o);
 			auto stpb = b->GetStpBridge();
 			auto treeIndex = STP_GetTreeIndexFromVlanNumber(stpb, _projectWindow->GetSelectedVlanNumber());
 			STP_SetBridgePriority (stpb, treeIndex, newPrio, timestamp);
@@ -728,18 +699,14 @@ private:
 	static void OnSelectedVlanChanged (void* callbackArg, IProjectWindow* pw, unsigned int vlanNumber)
 	{
 		auto window = static_cast<BridgePropsWindow*>(callbackArg);
-		if (window->BridgesSelected())
+		if (!window->_bridges.empty())
 			window->LoadAll();
 	}
 
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
 	{
 		auto window = static_cast<BridgePropsWindow*>(callbackArg);
-
-		bool bridgesSelected = !selection->GetObjects().empty()
-			&& all_of (selection->GetObjects().begin(), selection->GetObjects().end(), [](Object* o) { return dynamic_cast<Bridge*>(o) != nullptr; });
-
-		if (!bridgesSelected)
+		if (window->_bridges.empty())
 		{
 			::ShowWindow (window->GetHWnd(), SW_HIDE);
 		}
@@ -786,11 +753,8 @@ private:
 			}
 
 			auto timestamp = GetTimestampMilliseconds();
-			for (Object* o : _selection->GetObjects())
-			{
-				auto stpBridge = dynamic_cast<Bridge*>(o)->GetStpBridge();
-				STP_SetBridgeAddress (stpBridge, address.data(), timestamp);
-			}
+			for (Bridge* b : _bridges)
+				STP_SetBridgeAddress (b->GetStpBridge(), address.data(), timestamp);
 		}
 		else if (hwnd == _mstConfigNameEdit)
 		{
@@ -807,11 +771,8 @@ private:
 			}
 
 			auto timestamp = GetTimestampMilliseconds();
-			for (Object* o : _selection->GetObjects())
-			{
-				auto stpBridge = dynamic_cast<Bridge*>(o)->GetStpBridge();
-				STP_SetMstConfigName (stpBridge, ascii.c_str(), timestamp);
-			}
+			for (Bridge* b : _bridges)
+				STP_SetMstConfigName (b->GetStpBridge(), ascii.c_str(), timestamp);
 		}
 		else if (hwnd == _mstConfigRevLevelEdit)
 		{
@@ -819,13 +780,6 @@ private:
 		}
 		else
 			throw not_implemented_exception();
-	}
-
-	bool BridgesSelected() const
-	{
-		auto& objects = _selection->GetObjects();
-		return !objects.empty()
-			&& all_of (objects.begin(), objects.end(), [](Object* o) { return dynamic_cast<Bridge*>(o) != nullptr; });
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }

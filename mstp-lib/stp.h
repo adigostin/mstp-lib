@@ -156,11 +156,9 @@ unsigned int STP_GetPortOperEdge            (struct STP_BRIDGE* bridge, unsigned
 unsigned int STP_GetPortOperPointToPointMAC (struct STP_BRIDGE* bridge, unsigned int portIndex);
 
 void STP_GetDefaultMstConfigName (const unsigned char bridgeAddress[6], char nameOut[18]);
-void STP_GetMstConfigName (struct STP_BRIDGE* bridge, char nameOut [33]);
 void STP_SetMstConfigName (struct STP_BRIDGE* bridge, const char* name, unsigned int debugTimestamp);
 
 void STP_SetMstConfigRevisionLevel (struct STP_BRIDGE* bridge, unsigned short revisionLevel, unsigned int debugTimestamp);
-unsigned short STP_GetMstConfigRevisionLevel (struct STP_BRIDGE* bridge);
 
 struct STP_CONFIG_TABLE_ENTRY
 {
@@ -170,7 +168,6 @@ struct STP_CONFIG_TABLE_ENTRY
 
 void STP_SetMstConfigTable (struct STP_BRIDGE* bridge, const struct STP_CONFIG_TABLE_ENTRY* entries, unsigned int entryCount, unsigned int timestamp);
 const struct STP_CONFIG_TABLE_ENTRY* STP_GetMstConfigTable (struct STP_BRIDGE* bridge, unsigned int* entryCountOut);
-const unsigned char* STP_GetMstConfigTableDigest (struct STP_BRIDGE* bridge, unsigned int* digestLengthOut);
 unsigned int STP_GetMaxVlanNumber (struct STP_BRIDGE* bridge);
 unsigned int STP_GetTreeIndexFromVlanNumber (struct STP_BRIDGE* bridge, unsigned int vlanNumber);
 const struct STP_MST_CONFIG_ID* STP_GetMstConfigId (struct STP_BRIDGE* bridge);

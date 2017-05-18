@@ -801,12 +801,6 @@ void STP_GetDefaultMstConfigName (const unsigned char bridgeAddress[6], char nam
 	}
 }
 
-void STP_GetMstConfigName (STP_BRIDGE* bridge, char nameOut [33])
-{
-	memcpy (nameOut, bridge->MstConfigId.ConfigurationName, 32);
-	nameOut [32] = 0;
-}
-
 void STP_SetMstConfigName (STP_BRIDGE* bridge, const char* name, unsigned int timestamp)
 {
 	assert (strlen (name) <= 32);
@@ -871,11 +865,6 @@ void STP_SetMstConfigRevisionLevel (STP_BRIDGE* bridge, unsigned short revisionL
 	FLUSH_LOG (bridge);
 }
 
-unsigned short STP_GetMstConfigRevisionLevel (STP_BRIDGE* bridge)
-{
-	return (bridge->MstConfigId.RevisionLevelHigh << 8) | bridge->MstConfigId.RevisionLevelLow;
-}
-
 static void ComputeMstConfigDigest (STP_BRIDGE* bridge)
 {
 	HMAC_MD5_CONTEXT context;
@@ -937,12 +926,6 @@ const STP_CONFIG_TABLE_ENTRY* STP_GetMstConfigTable (STP_BRIDGE* bridge, unsigne
 {
 	*entryCountOut = 1 + bridge->maxVlanNumber;
 	return (const STP_CONFIG_TABLE_ENTRY*) bridge->mstConfigTable;
-}
-
-const unsigned char* STP_GetMstConfigTableDigest (struct STP_BRIDGE* bridge, unsigned int* digestLengthOut)
-{
-	*digestLengthOut = 16;
-	return bridge->MstConfigId.ConfigurationDigest;
 }
 
 // ============================================================================
