@@ -79,8 +79,8 @@ public:
 
 	const std::vector<std::unique_ptr<Port>>& GetPorts() const { return _ports; }
 
-	std::string get_bridge_address_as_string() const;
-	std::wstring get_bridge_address_as_wstring() const;
+	std::string GetBridgeAddressAsString() const;
+	std::wstring GetBridgeAddressAsWString() const;
 
 	void Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned int vlanNumber, const D2D1_COLOR_F& configIdColor) const;
 

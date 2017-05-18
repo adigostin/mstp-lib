@@ -133,6 +133,7 @@ struct EditAction
 	virtual ~EditAction() = default;
 	virtual void Redo() = 0;
 	virtual void Undo() = 0;
+	virtual std::string GetName() const = 0;
 };
 
 MIDL_INTERFACE("3F68DA7D-68A0-411F-A481-D711F8527292") IActionList : public IUnknown
@@ -140,8 +141,8 @@ MIDL_INTERFACE("3F68DA7D-68A0-411F-A481-D711F8527292") IActionList : public IUnk
 	struct ChangedEvent : public Event<ChangedEvent, void(IActionList*)> { };
 
 	virtual ChangedEvent::Subscriber GetChangedEvent() = 0;
-	virtual void AddPerformedUserAction (std::wstring&& actionName, std::unique_ptr<EditAction>&& action) = 0;
-	virtual void PerformAndAddUserAction (std::wstring&& actionName, std::unique_ptr<EditAction>&& action) = 0;
+	virtual void AddPerformedUserAction (std::unique_ptr<EditAction>&& action) = 0;
+	virtual void PerformAndAddUserAction (std::unique_ptr<EditAction>&& action) = 0;
 	virtual size_t GetSavePointIndex() const = 0;
 	virtual size_t GetEditPointIndex() const = 0;
 	virtual size_t GetCount() const = 0;
@@ -151,6 +152,8 @@ MIDL_INTERFACE("3F68DA7D-68A0-411F-A481-D711F8527292") IActionList : public IUnk
 	bool ChangedSinceLastSave() const { return GetEditPointIndex() != GetSavePointIndex(); }
 	bool CanUndo() const { return GetEditPointIndex() > 0; }
 	bool CanRedo() const { return GetEditPointIndex() < GetCount(); }
+	virtual EditAction* GetUndoableAction() const = 0;
+	virtual EditAction* GetRedoableAction() const = 0;
 };
 _COM_SMARTPTR_TYPEDEF(IActionList, __uuidof(IActionList));
 using ActionListFactory = IActionListPtr(*const)();

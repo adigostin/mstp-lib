@@ -96,10 +96,11 @@ public:
 					CreateAction (IProject* project, unique_ptr<Wire>&& wire) : _project(project), _wire(move(wire)) { }
 					virtual void Redo() { _insertIndex = _project->GetWires().size(); _project->InsertWire(_insertIndex, move(_wire)); }
 					virtual void Undo() { _wire = _project->RemoveWire(_insertIndex); }
+					virtual std::string GetName() const override final { return "Create Wire"; }
 				};
 
 				Wire* w = _wire.get();
-				_actionList->PerformAndAddUserAction (L"Create Wire", make_unique<CreateAction>(_pw->GetProject(), move(_wire)));
+				_actionList->PerformAndAddUserAction (make_unique<CreateAction>(_pw->GetProject(), move(_wire)));
 				_selection->Select(w);
 				_subState = Done;
 			}

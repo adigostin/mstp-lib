@@ -89,10 +89,12 @@ public:
 				for (size_t i = 0; i < _infos.size(); i++)
 					_infos[i].b->SetLocation (_firstBridgeInitialLocation + _infos[i].offsetFromFirst);
 			}
+
+			virtual std::string GetName() const override final { return "Move Bridges"; }
 		};
 
 		auto action = unique_ptr<EditAction>(new Action (_firstBridgeInitialLocation, _infos[0].b->GetLocation(), move(_infos)));
-		_actionList->AddPerformedUserAction (L"Move bridges", move(action));
+		_actionList->AddPerformedUserAction (move(action));
 		_completed = true;
 	}
 

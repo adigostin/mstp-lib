@@ -652,7 +652,7 @@ public:
 				return 0;
 			}
 
-			_actionList->PerformAndAddUserAction(L"Delete objects", unique_ptr<EditAction>(new DeleteEditAction(_project, _selection)));
+			_actionList->PerformAndAddUserAction(unique_ptr<EditAction>(new DeleteEditAction(_project, _selection)));
 			return 0;
 		}
 

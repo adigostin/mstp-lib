@@ -7,24 +7,24 @@ using namespace std;
 class ActionList : public EventManager, public IActionList
 {
 	ULONG _refCount = 1;
-	vector<pair<wstring, unique_ptr<EditAction>>> _actions;
+	vector<unique_ptr<EditAction>> _actions;
 	size_t _savePointIndex = 0;
 	size_t _editPointIndex = 0;
 
 	virtual ChangedEvent::Subscriber GetChangedEvent() override final { return ChangedEvent::Subscriber(this); }
 
-	virtual void AddPerformedUserAction (wstring&& name, unique_ptr<EditAction>&& action) override final
+	virtual void AddPerformedUserAction (unique_ptr<EditAction>&& action) override final
 	{
 		_actions.erase (_actions.begin() + _editPointIndex, _actions.end());
-		_actions.push_back ({ move(name), move(action) });
+		_actions.push_back (move(action));
 		_editPointIndex++;
 		ChangedEvent::InvokeHandlers(*this, this);
 	}
 
-	virtual void PerformAndAddUserAction (std::wstring&& actionName, std::unique_ptr<EditAction>&& action) override final
+	virtual void PerformAndAddUserAction (std::unique_ptr<EditAction>&& action) override final
 	{
 		action->Redo();
-		AddPerformedUserAction(move(actionName), move(action));
+		AddPerformedUserAction(move(action));
 	}
 
 	virtual size_t GetSavePointIndex() const override final { return _savePointIndex; }
@@ -43,15 +43,27 @@ class ActionList : public EventManager, public IActionList
 	{
 		assert (_editPointIndex > 0);
 		_editPointIndex--;
-		_actions[_editPointIndex].second->Undo();
+		_actions[_editPointIndex]->Undo();
 		ChangedEvent::InvokeHandlers (*this, this);
 	}
 
 	virtual void Redo() override final
 	{
-		_actions[_editPointIndex].second->Redo();
+		_actions[_editPointIndex]->Redo();
 		_editPointIndex++;
 		ChangedEvent::InvokeHandlers (*this, this);
+	}
+
+	virtual EditAction* GetUndoableAction() const override final
+	{
+		assert (CanUndo());
+		return _actions[_editPointIndex - 1].get();
+	}
+
+	virtual EditAction* GetRedoableAction() const override final
+	{
+		assert (CanRedo());
+		return _actions[_editPointIndex].get();
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }

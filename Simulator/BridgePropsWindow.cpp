@@ -419,6 +419,7 @@ private:
 
 	// ========================================================================
 
+	#pragma region Bridge Address Property
 	void LoadBridgeAddressTextBox()
 	{
 		auto prop = GetBridgeAddressProperty();
@@ -429,7 +430,7 @@ private:
 	XX GetBridgeAddressProperty()
 	{
 		if (_bridges.size() == 1)
-			return XX { _bridges[0]->get_bridge_address_as_string(), true };
+			return XX { _bridges[0]->GetBridgeAddressAsString(), true };
 		else
 			return XX { "(multiple selection)", false };
 	}
@@ -491,10 +492,13 @@ private:
 				for (size_t i = 0; i < _bridges.size(); i++)
 					STP_SetBridgeAddress (_bridges[i]->GetStpBridge(), _oldAddresses[i].bytes, timestamp);
 			}
+
+			virtual std::string GetName() const override final { return "Set Bridge Address"; }
 		};
 
-		_actionList->PerformAndAddUserAction (L"Change bridge address", unique_ptr<EditAction>(new SetBridgeAddressAction(_bridges, newAddress)));
+		_actionList->PerformAndAddUserAction (unique_ptr<EditAction>(new SetBridgeAddressAction(_bridges, newAddress)));
 	}
+	#pragma endregion
 
 	// ========================================================================
 
@@ -636,6 +640,7 @@ private:
 
 	// ========================================================================
 
+	#pragma region MST Config Name Property
 	void LoadMstConfigNameTextBox()
 	{
 		auto prop = GetMstConfigNameProperty();
@@ -695,11 +700,14 @@ private:
 				for (size_t i = 0; i < _bridges.size(); i++)
 					STP_SetMstConfigName (_bridges[i]->GetStpBridge(), _oldNames[i].c_str(), timestamp);
 			}
+
+			virtual string GetName() const override final { return "Set MST Config Name"; }
 		};
 
 		auto action = unique_ptr<EditAction>(new SetMstConfigNameAction(_bridges, move(ascii)));
-		_actionList->PerformAndAddUserAction(L"Set MST Config Name", move(action));
+		_actionList->PerformAndAddUserAction(move(action));
 	}
+	#pragma endregion
 
 	// ========================================================================
 
@@ -847,7 +855,6 @@ private:
 			::ShowWindow (window->GetHWnd(), SW_SHOW);
 		}
 	}
-
 
 	void ValidateAndSetProperty (HWND hwnd, const wchar_t* str)
 	{

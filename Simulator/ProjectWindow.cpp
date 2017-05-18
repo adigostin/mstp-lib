@@ -155,12 +155,21 @@ public:
 		HMENU hmenu = ::GetMenu(pw->_hwnd);
 		if (hmenu != nullptr)
 		{
-			MENUITEMINFO mii = { sizeof(mii) };
-			mii.fMask = MIIM_STATE;
+			MENUITEMINFOA mii = { sizeof(mii) };
+			mii.fMask = MIIM_STATE | MIIM_STRING;
 			mii.fState = actionList->CanUndo() ? MFS_ENABLED : MFS_DISABLED;
-			BOOL bRes = ::SetMenuItemInfoW (hmenu, ID_EDIT_UNDO, FALSE, &mii);
+			string t = "Undo ";
+			if (actionList->CanUndo())
+				t += actionList->GetUndoableAction()->GetName();
+			mii.dwTypeData = const_cast<LPSTR>(t.c_str());
+			BOOL bRes = ::SetMenuItemInfoA (hmenu, ID_EDIT_UNDO, FALSE, &mii);
+
 			mii.fState = actionList->CanRedo() ? MFS_ENABLED : MFS_DISABLED;
-			bRes = ::SetMenuItemInfoW (hmenu, ID_EDIT_REDO, FALSE, &mii);
+			t = "Redo ";
+			if (actionList->CanRedo())
+				t += actionList->GetRedoableAction()->GetName();
+			mii.dwTypeData = const_cast<LPSTR>(t.c_str());
+			bRes = ::SetMenuItemInfoA (hmenu, ID_EDIT_REDO, FALSE, &mii);
 		}
 	}
 

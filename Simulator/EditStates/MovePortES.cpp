@@ -59,10 +59,11 @@ public:
 
 			virtual void Redo() override final { _port->SetSideAndOffset (_finalSide, _finalOffset); }
 			virtual void Undo() override final { _port->SetSideAndOffset (_initialSide, _initialOffset); }
+			virtual string GetName() const override final { return "Move Port"; }
 		};
 
 		auto action = unique_ptr<EditAction>(new Action(_port, _initialSide, _initialOffset, _port->GetSide(), _port->GetOffset()));
-		_actionList->AddPerformedUserAction (L"Move port", move(action));
+		_actionList->AddPerformedUserAction (move(action));
 		_completed = true;
 	}
 

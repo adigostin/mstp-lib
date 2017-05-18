@@ -39,12 +39,13 @@ public:
 				unique_ptr<Bridge> _bridge;
 				size_t _insertIndex;
 				CreateAction (IProject* project, unique_ptr<Bridge>&& bridge) : _project(project), _bridge(move(bridge)) { }
-				virtual void Redo() { _insertIndex = _project->GetBridges().size(); _project->InsertBridge(_insertIndex, move(_bridge), nullptr); }
-				virtual void Undo() { _bridge = _project->RemoveBridge(_insertIndex, nullptr); }
+				virtual void Redo() override final { _insertIndex = _project->GetBridges().size(); _project->InsertBridge(_insertIndex, move(_bridge), nullptr); }
+				virtual void Undo() override final { _bridge = _project->RemoveBridge(_insertIndex, nullptr); }
+				virtual std::string GetName() const override final { return "Create Bridge"; }
 			};
 
 			Bridge* b = _bridge.get();
-			_actionList->PerformAndAddUserAction (L"Create Bridge", make_unique<CreateAction>(_pw->GetProject(), move(_bridge)));
+			_actionList->PerformAndAddUserAction (make_unique<CreateAction>(_pw->GetProject(), move(_bridge)));
 			_selection->Select(b);
 			STP_StartBridge (b->GetStpBridge(), GetTimestampMilliseconds());
 		}

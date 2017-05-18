@@ -42,5 +42,7 @@ struct DeleteEditAction : public EditAction
 		for (auto it = _wires.begin(); it != _wires.end(); it++)
 			_project->InsertWire (it->second, move(it->first));
 	}
+
+	virtual std::string GetName() const override final { return "Delete objects"; }
 };
 
