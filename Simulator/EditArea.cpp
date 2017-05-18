@@ -733,7 +733,7 @@ public:
 
 				if (ht.code == Port::HTCodeInnerOuter)
 				{
-					if (button == MouseButton::Left)
+					if ((button == MouseButton::Left) && (_selection->GetObjects().size() == 1) && (dynamic_cast<Port*>(_selection->GetObjects()[0]) != nullptr))
 						stateMoveThreshold = CreateStateMovePort (MakeEditStateDeps());
 				}
 				else if (ht.code == Port::HTCodeCP)
