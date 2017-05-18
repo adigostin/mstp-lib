@@ -105,16 +105,16 @@ extern const EditAreaFactory editAreaFactory;
 
 MIDL_INTERFACE("62555843-4CB8-43FB-8C91-F229A4D318BD") IProjectWindow : public IWin32Window
 {
+	struct SelectedVlanNumerChangedEvent : public Event<SelectedVlanNumerChangedEvent, void(IProjectWindow* pw, unsigned int vlanNumber)> { };
+	struct DestroyingEvent : public Event<DestroyingEvent, void(IProjectWindow* pw)> { };
+
 	virtual IProject* GetProject() const = 0;
 	virtual IEditArea* GetEditArea() const = 0;
 	virtual void SelectVlan (unsigned int vlanNumber) = 0;
 	virtual unsigned int GetSelectedVlanNumber() const = 0;
-
-	struct SelectedVlanNumerChangedEvent : public Event<SelectedVlanNumerChangedEvent, void(IProjectWindow* pw, unsigned int vlanNumber)> { };
 	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() = 0;
-
-	struct ClosedEvent : public Event<ClosedEvent, void(IProjectWindow* pw)> { };
-	virtual ClosedEvent::Subscriber GetClosedEvent() = 0;
+	virtual DestroyingEvent::Subscriber GetDestroyingEvent() = 0;
+	virtual void PostWork (std::function<void()>&& work) = 0;
 };
 _COM_SMARTPTR_TYPEDEF(IProjectWindow, __uuidof(IProjectWindow));
 using ProjectWindowFactory = IProjectWindowPtr(*const)(ISimulatorApp* app,
@@ -260,7 +260,6 @@ struct ISimulatorApp
 	virtual ProjectWindowAddedEvent::Subscriber GetProjectWindowAddedEvent() = 0;
 	virtual ProjectWindowRemovingEvent::Subscriber GetProjectWindowRemovingEvent() = 0;
 	virtual ProjectWindowRemovedEvent::Subscriber GetProjectWindowRemovedEvent() = 0;
-	virtual void PostWork (std::function<void()>&& work) = 0;
 };
 
 // ============================================================================

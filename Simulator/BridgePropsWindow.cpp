@@ -346,7 +346,7 @@ private:
 				catch (const exception& ex)
 				{
 					::SetFocus(nullptr);
-					dialog->_app->PostWork ([dialog, hWnd, message=string(ex.what())]
+					dialog->_projectWindow->PostWork ([dialog, hWnd, message=string(ex.what())]
 					{
 						::MessageBoxA (dialog->_hwnd, message.c_str(), 0, 0);
 						::SetFocus (hWnd);

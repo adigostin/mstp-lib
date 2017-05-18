@@ -22,8 +22,6 @@ static const wchar_t CompanyName[] = L"Adi Gostin";
 static const wchar_t AppName[] = L"STP Simulator";
 static const wchar_t AppVersion[] = L"2.0";
 
-constexpr UINT WM_WORK = WM_APP + 1;
-
 #pragma region IWin32Window
 
 bool IWin32Window::IsVisible() const
@@ -107,7 +105,6 @@ class SimulatorApp : public EventManager, public ISimulatorApp
 
 	wstring _regKeyPath;
 	vector<IProjectWindowPtr> _projectWindows;
-	queue<function<void()>> _workQueue;
 
 public:
 	SimulatorApp (HINSTANCE hInstance)
@@ -158,34 +155,25 @@ public:
 
 	virtual void AddProjectWindow (IProjectWindow* pw) override final
 	{
-		pw->GetClosedEvent().AddHandler (&OnProjectWindowClosed, this);
+		pw->GetDestroyingEvent().AddHandler (&OnProjectWindowDestroying, this);
 		_projectWindows.push_back(move(pw));
 		ProjectWindowAddedEvent::InvokeHandlers(*this, pw);
 	}
 
-	static void OnProjectWindowClosed (void* callbackArg, IProjectWindow* pw)
+	static void OnProjectWindowDestroying (void* callbackArg, IProjectWindow* pw)
 	{
 		auto app = static_cast<SimulatorApp*>(callbackArg);
 
-		pw->GetClosedEvent().RemoveHandler (&OnProjectWindowClosed, app);
+		pw->GetDestroyingEvent().RemoveHandler (&OnProjectWindowDestroying, app);
 
-		app->PostWork ([app, pw]
-		{
-			auto it = find_if (app->_projectWindows.begin(), app->_projectWindows.end(), [pw](const IProjectWindowPtr& p) { return p.GetInterfacePtr() == pw; });
-			assert (it != app->_projectWindows.end());
-			ProjectWindowRemovingEvent::InvokeHandlers(*app, pw);
-			IProjectWindowPtr pwLastRef = move(*it);
-			app->_projectWindows.erase(it);
-			ProjectWindowRemovedEvent::InvokeHandlers(*app, pwLastRef);
-			if (app->_projectWindows.empty())
-				PostQuitMessage(0);
-		});
-	}
-
-	virtual void PostWork (std::function<void()>&& work) override final
-	{
-		_workQueue.push (move(work));
-		::PostMessage (nullptr, WM_WORK, 0, 0);
+		auto it = find_if (app->_projectWindows.begin(), app->_projectWindows.end(), [pw](const IProjectWindowPtr& p) { return p.GetInterfacePtr() == pw; });
+		assert (it != app->_projectWindows.end());
+		ProjectWindowRemovingEvent::InvokeHandlers(*app, pw);
+		IProjectWindowPtr pwLastRef = move(*it);
+		app->_projectWindows.erase(it);
+		ProjectWindowRemovedEvent::InvokeHandlers(*app, pwLastRef);
+		if (app->_projectWindows.empty())
+			PostQuitMessage(0);
 	}
 
 	virtual const std::vector<IProjectWindowPtr>& GetProjectWindows() const override final { return _projectWindows; }
@@ -219,16 +207,8 @@ public:
 				}
 			}
 
-			if ((msg.hwnd == nullptr) && (msg.message == WM_WORK))
-			{
-				_workQueue.front()();
-				_workQueue.pop();
-			}
-			else
-			{
-				TranslateMessage(&msg);
-				DispatchMessage(&msg);
-			}
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
 		}
 
 		return msg.wParam;

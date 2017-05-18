@@ -6,6 +6,8 @@
 
 using namespace std;
 
+#define WM_WORK  (WM_APP + 1)
+
 static ATOM wndClassAtom;
 static constexpr wchar_t ProjectWindowWndClassName[] = L"ProjectWindow-{24B42526-2970-4B3C-A753-2DABD22C4BB0}";
 static constexpr wchar_t RegValueNameShowCmd[] = L"WindowShowCmd";
@@ -37,6 +39,7 @@ class ProjectWindow : public EventManager, public IProjectWindow
 	SIZE _clientSize;
 	RECT _restoreBounds;
 	unsigned int _selectedVlanNumber = 1;
+	queue<function<void()>> _workQueue;
 
 public:
 	ProjectWindow (ISimulatorApp* app,
@@ -229,6 +232,7 @@ public:
 		{
 			LPCREATESTRUCT lpcs = reinterpret_cast<LPCREATESTRUCT>(lParam);
 			window = reinterpret_cast<ProjectWindow*>(lpcs->lpCreateParams);
+			window->AddRef();
 			window->_hwnd = hwnd;
 			SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(window));
 		}
@@ -247,6 +251,7 @@ public:
 		{
 			window->_hwnd = nullptr;
 			SetWindowLongPtr(hwnd, GWLP_USERDATA, 0);
+			window->Release();
 		}
 
 		return result;
@@ -269,7 +274,7 @@ public:
 
 		if (msg == WM_DESTROY)
 		{
-			ClosedEvent::InvokeHandlers(*this, this);
+			DestroyingEvent::InvokeHandlers(*this, this);
 			_dockContainer = nullptr; // destroy it early to avoid doing layout-related processing
 			return 0;
 		}
@@ -313,6 +318,13 @@ public:
 				return olr.value();
 
 			return DefWindowProc(_hwnd, msg, wParam, lParam);
+		}
+
+		if (msg == WM_WORK)
+		{
+			_workQueue.front()();
+			_workQueue.pop();
+			return 0;
 		}
 
 		return DefWindowProc(_hwnd, msg, wParam, lParam);
@@ -562,11 +574,17 @@ public:
 
 	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() override final { return SelectedVlanNumerChangedEvent::Subscriber(this); }
 
-	virtual ClosedEvent::Subscriber GetClosedEvent() override final { return ClosedEvent::Subscriber(this); }
+	virtual DestroyingEvent::Subscriber GetDestroyingEvent() override final { return DestroyingEvent::Subscriber(this); }
 
 	virtual IProject* GetProject() const override final { return _project; }
 
 	virtual IEditArea* GetEditArea() const override final { return _editArea; }
+
+	virtual void PostWork (std::function<void()>&& work) override final
+	{
+		_workQueue.push (move(work));
+		::PostMessage (_hwnd, WM_WORK, 0, 0);
+	}
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
 
