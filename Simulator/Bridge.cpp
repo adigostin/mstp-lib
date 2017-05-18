@@ -325,8 +325,7 @@ HTResult Bridge::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, fl
 
 std::wstring Bridge::GetBridgeAddressAsString() const
 {
-	array<unsigned char, 6> address;
-	STP_GetBridgeAddress (_stpBridge, address.data());
+	auto address = STP_GetBridgeAddress(_stpBridge)->bytes;
 
 	wstringstream ss;
 	ss << uppercase << setfill(L'0') << hex
@@ -338,7 +337,7 @@ std::wstring Bridge::GetBridgeAddressAsString() const
 std::array<uint8_t, 6> Bridge::GetPortAddress (size_t portIndex) const
 {
 	std::array<uint8_t, 6> pa;
-	STP_GetBridgeAddress (_stpBridge, pa.data());
+	memcpy (pa.data(), STP_GetBridgeAddress(_stpBridge)->bytes, 6);
 	pa[5]++;
 	if (pa[5] == 0)
 	{

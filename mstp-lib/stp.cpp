@@ -32,7 +32,7 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	assert (sizeof (unsigned int) == 4);
 	assert (sizeof (INV_UINT2) == 2);
 	assert (sizeof (INV_UINT4) == 4);
-	assert (sizeof (BRIDGE_ADDRESS) == 6);
+	assert (sizeof (STP_BRIDGE_ADDRESS) == 6);
 	assert (sizeof (BRIDGE_ID) == 8);
 	assert (sizeof (PORT_ID) == 2);
 	assert (sizeof (PRIORITY_VECTOR) == 34);
@@ -216,7 +216,7 @@ void STP_SetBridgeAddress (STP_BRIDGE* bridge, const unsigned char* address, uns
 {
 	LOG (bridge, -1, -1, "{T}: Setting bridge MAC address to {BA}...", timestamp, address);
 
-	const unsigned char* currentAddress = (const unsigned char*) bridge->trees[CIST_INDEX]->GetBridgeIdentifier().GetAddress();
+	const unsigned char* currentAddress = bridge->trees[CIST_INDEX]->GetBridgeIdentifier().GetAddress().bytes;
 	if (memcmp (currentAddress, address, 6) == 0)
 	{
 		LOG (bridge, -1, -1, " nothing changed.\r\n");
@@ -258,10 +258,9 @@ void STP_SetBridgeAddress (STP_BRIDGE* bridge, const unsigned char* address, uns
 	FLUSH_LOG (bridge);
 }
 
-void STP_GetBridgeAddress (STP_BRIDGE* bridge, unsigned char addressOut[6])
+const struct STP_BRIDGE_ADDRESS* STP_GetBridgeAddress (STP_BRIDGE* bridge)
 {
-	const unsigned char* address = (const unsigned char*) bridge->trees [CIST_INDEX]->GetBridgeIdentifier ().GetAddress ();
-	memcpy (addressOut, address, 6);
+	return &bridge->trees [CIST_INDEX]->GetBridgeIdentifier().GetAddress();
 }
 
 // ============================================================================

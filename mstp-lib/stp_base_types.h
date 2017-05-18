@@ -97,35 +97,12 @@ public:
 
 // ============================================================================
 
-// Six-byte MAC address, not aligned in memory.
-struct BRIDGE_ADDRESS
-{
-	unsigned char a0;
-	unsigned char a1;
-	unsigned char a2;
-	unsigned char a3;
-	unsigned char a4;
-	unsigned char a5;
-
-	void SetValue (const unsigned char address[6]);
-
-	bool operator== (const BRIDGE_ADDRESS& rhs) const;
-	bool operator != (const BRIDGE_ADDRESS& rhs) const;
-
-	operator const unsigned char* () const
-	{
-		return &a0;
-	}
-};
-
-// ============================================================================
-
 // Eight-byte BridgeId structure as defined in the STP standard, not aligned in memory.
 struct BRIDGE_ID
 {
 private:
-	INV_UINT2		_priority;
-	BRIDGE_ADDRESS	_address;
+	INV_UINT2          _priority;
+	STP_BRIDGE_ADDRESS _address;
 
 public:
 	bool operator== (const BRIDGE_ID& rhs) const
@@ -147,7 +124,12 @@ public:
 
 	void SetAddress (const unsigned char address[6])
 	{
-		_address.SetValue (address);
+		_address.bytes[0] = address[0];
+		_address.bytes[1] = address[1];
+		_address.bytes[2] = address[2];
+		_address.bytes[3] = address[3];
+		_address.bytes[4] = address[4];
+		_address.bytes[5] = address[5];
 	}
 
 	void Set (unsigned short settablePriorityComponent, unsigned short mstid, const unsigned char address[6])
@@ -161,7 +143,7 @@ public:
 		return _priority.GetValue ();
 	}
 
-	const BRIDGE_ADDRESS& GetAddress () const
+	const STP_BRIDGE_ADDRESS& GetAddress() const
 	{
 		return _address;
 	}

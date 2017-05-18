@@ -9,10 +9,9 @@
 	<h3>STP_GetBridgeAddress</h3>
 	<hr />
 <pre>
-void STP_GetBridgeAddress
+const struct STP_BRIDGE_ADDRESS* STP_GetBridgeAddress
 (
-    STP_BRIDGE*     bridge,
-    unsigned char*  addressOut6Bytes,
+    STP_BRIDGE* bridge,
 );
 </pre>
 	<h4>
@@ -26,15 +25,17 @@ void STP_GetBridgeAddress
 			<dt>bridge</dt>
 		<dd>Pointer to a STP_BRIDGE object, obtained from <a href="STP_CreateBridge.html">
 			STP_CreateBridge</a>.</dd>
-		<dt>addressOut6Bytes</dt>
-		<dd>The MAC address of the STP bridge</dd>
 	</dl>
 	<h4>
+		Return Value</h4>
+    <p>
+		Pointer to the bridge address.</p>
+    <h4>
 		Remarks</h4>
 	<p>
 			See the Remarks section in <a href="STP_SetBridgePriority.html">STP_SetBridgePriority</a> for information on how the bridge priority is calculated from the bridge address.</p>
 	<p>
 		It is allowed to call this function from within an <a href="STP_CALLBACKS.html">STP callback</a>.</p>
-	
+
 </body>
 </html>

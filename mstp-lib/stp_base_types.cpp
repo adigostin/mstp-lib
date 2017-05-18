@@ -30,29 +30,14 @@ int Cmp (const void* _p1, const void* _p2, int size)
 
 // ============================================================================
 
-bool BRIDGE_ADDRESS::operator== (const BRIDGE_ADDRESS& rhs) const
+bool STP_BRIDGE_ADDRESS::operator== (const STP_BRIDGE_ADDRESS& rhs) const
 {
-	return (this->a0 == rhs.a0)
-		&& (this->a1 == rhs.a1)
-		&& (this->a2 == rhs.a2)
-		&& (this->a3 == rhs.a3)
-		&& (this->a4 == rhs.a4)
-		&& (this->a5 == rhs.a5);
+	return Cmp (this->bytes, rhs.bytes, 6) == 0;
 }
 
-bool BRIDGE_ADDRESS::operator != (const BRIDGE_ADDRESS& rhs) const
+bool STP_BRIDGE_ADDRESS::operator != (const STP_BRIDGE_ADDRESS& rhs) const
 {
-	return !operator== (rhs);
-}
-
-void BRIDGE_ADDRESS::SetValue (const unsigned char address[6])
-{
-	a0 = address [0];
-	a1 = address [1];
-	a2 = address [2];
-	a3 = address [3];
-	a4 = address [4];
-	a5 = address [5];
+	return Cmp (this->bytes, rhs.bytes, 6) != 0;
 }
 
 // ============================================================================

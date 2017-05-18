@@ -23,6 +23,7 @@ public:
 					  IProjectWindow* projectWindow,
 					  IProject* project,
 					  ISelection* selection,
+					  IActionList* actionList,
 					  HWND hWndParent,
 					  POINT location)
 		: _app(app)
@@ -67,7 +68,7 @@ public:
 		SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0);
 		_font = ::CreateFontIndirect (&ncm.lfMessageFont);
 
-		_bridgePropsControl = bridgePropertiesControlFactory (_app, _projectWindow, _project, selection, _hwnd, { 0, 0 });
+		_bridgePropsControl = bridgePropertiesControlFactory (_app, _projectWindow, _project, selection, actionList, _hwnd, { 0, 0 });
 
 		SIZE ws = _bridgePropsControl->GetWindowSize();
 		::MoveWindow (_hwnd, 0, 0, ws.cx, ws.cy, TRUE);

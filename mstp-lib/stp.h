@@ -92,6 +92,16 @@ struct STP_MST_CONFIG_ID
 	#endif
 };
 
+// Six-byte MAC address, not aligned in memory.
+struct STP_BRIDGE_ADDRESS
+{
+	unsigned char bytes[6];
+	#ifdef __cplusplus
+	bool operator== (const STP_BRIDGE_ADDRESS& rhs) const;
+	bool operator!= (const STP_BRIDGE_ADDRESS& rhs) const;
+	#endif
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -122,7 +132,7 @@ void STP_OnBpduReceived (struct STP_BRIDGE* bridge, unsigned int portIndex, cons
 
 // Call this every time the bridge's MAC address changes while STP is running.
 void STP_SetBridgeAddress (struct STP_BRIDGE* bridge, const unsigned char* address, unsigned int timestamp);
-void STP_GetBridgeAddress (struct STP_BRIDGE* bridge, unsigned char addressOut[6]);
+const struct STP_BRIDGE_ADDRESS* STP_GetBridgeAddress (struct STP_BRIDGE* bridge);
 
 // Call these whenever one of the ports changes state. See 13.25.31 portEnabled in 802.1Q-2011 for details.
 void STP_OnPortEnabled (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int speedMegabitsPerSecond, unsigned int detectedPointToPointMAC, unsigned int timestamp);

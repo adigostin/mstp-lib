@@ -13,6 +13,7 @@ class BridgePropsWindow : public IBridgePropsWindow
 	IProjectWindow* const _projectWindow;
 	IProjectPtr     const _project;
 	ISelectionPtr   const _selection;
+	IActionListPtr  const _actionList;
 	ULONG _refCount = 1;
 	HWND _hwnd = nullptr;
 	HWND _bridgeAddressEdit = nullptr;
@@ -29,12 +30,14 @@ public:
 					   IProjectWindow* projectWindow,
 					   IProject* project,
 					   ISelection* selection,
+					   IActionList* actionList,
 					   HWND hwndParent,
 					   POINT location)
 		: _app(app)
 		, _projectWindow(projectWindow)
 		, _project(project)
 		, _selection(selection)
+		, _actionList(actionList)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &DialogProcStatic, &hInstance);
@@ -408,6 +411,8 @@ private:
 		LoadBridgePriorityCombo();
 	}
 
+	// ========================================================================
+
 	void LoadBridgeAddressTextBox()
 	{
 		if (_bridges.size() == 1)
@@ -421,6 +426,71 @@ private:
 			::EnableWindow (_bridgeAddressEdit, FALSE);
 		}
 	}
+
+	void SetBridgeAddress (const wchar_t* str)
+	{
+		static constexpr char FormatErrorMessage[] = u8"Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX or XXXXXXXXXXXX (6 hex bytes).";
+
+		int offsetMultiplier;
+		if (wcslen(str) == 12)
+		{
+			offsetMultiplier = 2;
+		}
+		else if (wcslen(str) == 17)
+		{
+			if ((str[2] != ':') || (str[5] != ':') || (str[8] != ':') || (str[11] != ':') || (str[14] != ':'))
+				throw invalid_argument(FormatErrorMessage);
+
+			offsetMultiplier = 3;
+		}
+		else
+			throw invalid_argument(FormatErrorMessage);
+
+		STP_BRIDGE_ADDRESS newAddress;
+		for (size_t i = 0; i < 6; i++)
+		{
+			wchar_t ch0 = str[i * offsetMultiplier];
+			wchar_t ch1 = str[i * offsetMultiplier + 1];
+
+			if (!iswxdigit(ch0) || !iswxdigit(ch1))
+				throw invalid_argument(FormatErrorMessage);
+
+			auto hn = (ch0 <= '9') ? (ch0 - '0') : ((ch0 >= 'a') ? (ch0 - 'a' + 10) : (ch0 - 'A' + 10));
+			auto ln = (ch1 <= '9') ? (ch1 - '0') : ((ch1 >= 'a') ? (ch1 - 'a' + 10) : (ch1 - 'A' + 10));
+			newAddress.bytes[i] = (hn << 4) | ln;
+		}
+
+		struct SetBridgeAddressAction : public EditAction
+		{
+			vector<Bridge*>    const _bridges;
+			STP_BRIDGE_ADDRESS const _newAddress;
+			vector<STP_BRIDGE_ADDRESS> _oldAddresses;
+
+			SetBridgeAddressAction (const vector<Bridge*>& bridges, STP_BRIDGE_ADDRESS newAddress)
+				: _bridges(bridges), _newAddress(newAddress)
+			{
+				for (auto b : bridges)
+					_oldAddresses.push_back (*STP_GetBridgeAddress(b->GetStpBridge()));
+			}
+
+			virtual void Redo() override final
+			{
+				auto timestamp = GetTimestampMilliseconds();
+				for (Bridge* b : _bridges)
+					STP_SetBridgeAddress (b->GetStpBridge(), _newAddress.bytes, timestamp);
+			}
+			virtual void Undo() override final
+			{
+				auto timestamp = GetTimestampMilliseconds();
+				for (size_t i = 0; i < _bridges.size(); i++)
+					STP_SetBridgeAddress (_bridges[i]->GetStpBridge(), _oldAddresses[i].bytes, timestamp);
+			}
+		};
+
+		_actionList->PerformAndAddUserAction (L"Change bridge address", unique_ptr<EditAction>(new SetBridgeAddressAction(_bridges, newAddress)));
+	}
+
+	// ========================================================================
 
 	void LoadStpStartedCheckBox()
 	{
@@ -717,44 +787,12 @@ private:
 		}
 	}
 
+
 	void ValidateAndSetProperty (HWND hwnd, const wchar_t* str)
 	{
 		if (hwnd == _bridgeAddressEdit)
 		{
-			static constexpr char FormatErrorMessage[] = u8"Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX or XXXXXXXXXXXX (6 hex bytes).";
-
-			int offsetMultiplier;
-			if (wcslen(str) == 12)
-			{
-				offsetMultiplier = 2;
-			}
-			else if (wcslen(str) == 17)
-			{
-				if ((str[2] != ':') || (str[5] != ':') || (str[8] != ':') || (str[11] != ':') || (str[14] != ':'))
-					throw invalid_argument(FormatErrorMessage);
-
-				offsetMultiplier = 3;
-			}
-			else
-				throw invalid_argument(FormatErrorMessage);
-
-			array<uint8_t, 6> address;
-			for (size_t i = 0; i < 6; i++)
-			{
-				wchar_t ch0 = str[i * offsetMultiplier];
-				wchar_t ch1 = str[i * offsetMultiplier + 1];
-
-				if (!iswxdigit(ch0) || !iswxdigit(ch1))
-					throw invalid_argument(FormatErrorMessage);
-
-				auto hn = (ch0 <= '9') ? (ch0 - '0') : ((ch0 >= 'a') ? (ch0 - 'a' + 10) : (ch0 - 'A' + 10));
-				auto ln = (ch1 <= '9') ? (ch1 - '0') : ((ch1 >= 'a') ? (ch1 - 'a' + 10) : (ch1 - 'A' + 10));
-				address[i] = (hn << 4) | ln;
-			}
-
-			auto timestamp = GetTimestampMilliseconds();
-			for (Bridge* b : _bridges)
-				STP_SetBridgeAddress (b->GetStpBridge(), address.data(), timestamp);
+			SetBridgeAddress(str);
 		}
 		else if (hwnd == _mstConfigNameEdit)
 		{

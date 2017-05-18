@@ -131,8 +131,8 @@ extern const ProjectWindowFactory projectWindowFactory;
 struct EditAction
 {
 	virtual ~EditAction() = default;
-	virtual void Undo() = 0;
 	virtual void Redo() = 0;
+	virtual void Undo() = 0;
 };
 
 MIDL_INTERFACE("3F68DA7D-68A0-411F-A481-D711F8527292") IActionList : public IUnknown
@@ -209,6 +209,7 @@ using PropertiesWindowFactory = IPropertiesWindowPtr(*const)(ISimulatorApp* app,
 															 IProjectWindow* projectWindow,
 															 IProject* project,
 															 ISelection* selection,
+															 IActionList* actionList,
 															 HWND hWndParent,
 															 POINT location);
 extern const PropertiesWindowFactory propertiesWindowFactory;
@@ -223,6 +224,7 @@ using BridgePropsWindowFactory = IBridgePropsWindowPtr(*const)(ISimulatorApp* ap
 															   IProjectWindow* projectWindow,
 															   IProject* project,
 															   ISelection* selection,
+															   IActionList* actionList,
 															   HWND hwndParent,
 															   POINT location);
 extern const BridgePropsWindowFactory bridgePropertiesControlFactory;

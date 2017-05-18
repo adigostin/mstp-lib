@@ -393,7 +393,7 @@ void rcvMsgs (STP_BRIDGE* bridge, int givenPort)
 
 			// TODO: not sure about the lines below
 			portTree->msgPriority.DesignatedBridgeId.SetPriority (message->BridgePriority << 8, mstid);
-			portTree->msgPriority.DesignatedBridgeId.SetAddress (bridge->receivedBpduContent->cistBridgeId.GetAddress ());
+			portTree->msgPriority.DesignatedBridgeId.SetAddress (bridge->receivedBpduContent->cistBridgeId.GetAddress().bytes);
 			portTree->msgPriority.DesignatedPortId.Set (message->PortPriority & 0xF0, bridge->receivedBpduContent->cistPortId.GetPortNumber ());
 
 			portTree->msgTimes.remainingHops = message->RemainingHops;
