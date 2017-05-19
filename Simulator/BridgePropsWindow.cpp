@@ -61,7 +61,6 @@ public:
 				_bridges.push_back(b);
 		}
 
-		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
 		_selection->GetAddedToSelectionEvent().AddHandler (&OnObjectAddedToSelection, this);
 		_selection->GetRemovingFromSelectionEvent().AddHandler (&OnObjectRemovingFromSelection, this);
 		_projectWindow->GetSelectedVlanNumerChangedEvent().AddHandler (&OnSelectedVlanChanged, this);
@@ -73,7 +72,6 @@ private:
 		_projectWindow->GetSelectedVlanNumerChangedEvent().RemoveHandler (&OnSelectedVlanChanged, this);
 		_selection->GetRemovingFromSelectionEvent().RemoveHandler (&OnObjectRemovingFromSelection, this);
 		_selection->GetAddedToSelectionEvent().RemoveHandler (&OnObjectAddedToSelection, this);
-		_selection->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
 
 		if (_hwnd != nullptr)
 			::DestroyWindow (_hwnd);
@@ -375,6 +373,7 @@ private:
 		{
 			window->_bridges.push_back(bridge);
 			bridge->GetBridgeConfigChangedEvent().AddHandler (&OnBridgeConfigChanged, window);
+			window->LoadAll();
 		}
 	}
 
@@ -388,6 +387,8 @@ private:
 			bridge->GetBridgeConfigChangedEvent().RemoveHandler (&OnBridgeConfigChanged, window);
 			auto it = find (window->_bridges.begin(), window->_bridges.end(), bridge);
 			window->_bridges.erase(it);
+			if (!window->_bridges.empty())
+				window->LoadAll();
 		}
 	}
 
@@ -835,20 +836,6 @@ private:
 		auto window = static_cast<BridgePropsWindow*>(callbackArg);
 		if (!window->_bridges.empty())
 			window->LoadAll();
-	}
-
-	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
-	{
-		auto window = static_cast<BridgePropsWindow*>(callbackArg);
-		if (window->_bridges.empty())
-		{
-			::ShowWindow (window->GetHWnd(), SW_HIDE);
-		}
-		else
-		{
-			window->LoadAll();
-			::ShowWindow (window->GetHWnd(), SW_SHOW);
-		}
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }

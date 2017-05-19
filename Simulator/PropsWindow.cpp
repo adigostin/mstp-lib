@@ -2,6 +2,8 @@
 #include "pch.h"
 #include "Simulator.h"
 #include "Win32/Window.h"
+#include "Bridge.h"
+#include "Port.h"
 
 using namespace std;
 
@@ -13,8 +15,9 @@ class PropertiesWindow : public Window, public IPropertiesWindow
 	using base = Window;
 
 	ISimulatorApp* const _app;
-	IProjectPtr const _project;
 	IProjectWindow* const _projectWindow;
+	IProjectPtr const _project;
+	ISelectionPtr const _selection;
 	HFONT _font;
 	IBridgePropsWindowPtr _bridgePropsControl;
 
@@ -32,6 +35,7 @@ public:
 		, _app(app)
 		, _projectWindow(projectWindow)
 		, _project(project)
+		, _selection(selection)
 	{
 		NONCLIENTMETRICS ncm = { sizeof(NONCLIENTMETRICS) };
 		SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0);
@@ -41,10 +45,14 @@ public:
 
 		SIZE ws = _bridgePropsControl->GetWindowSize();
 		::MoveWindow (GetHWnd(), 0, 0, ws.cx, ws.cy, TRUE);
+
+		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
 	}
 
 	~PropertiesWindow()
 	{
+		_selection->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
+
 		::DeleteObject(_font);
 	}
 
@@ -77,6 +85,24 @@ public:
 		}
 
 		return resultBaseClass;
+	}
+
+	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
+	{
+		auto window = static_cast<PropertiesWindow*>(callbackArg);
+
+		bool showBridgeWindow = false;
+		bool showPortsWindow = false;
+		if (!selection->GetObjects().empty())
+		{
+			if (all_of (selection->GetObjects().begin(), selection->GetObjects().end(), [](Object* o) { return o->Is<Bridge>(); }))
+				showBridgeWindow = true;
+			else if (all_of (selection->GetObjects().begin(), selection->GetObjects().end(), [](Object* o) { return o->Is<Port>(); }))
+				showPortsWindow = true;
+		}
+
+		::ShowWindow(window->_bridgePropsControl->GetHWnd(), showBridgeWindow ? SW_SHOW : SW_HIDE);
+		// TODO: same for port props window
 	}
 
 	virtual HWND GetHWnd() const override final { return base::GetHWnd(); }
