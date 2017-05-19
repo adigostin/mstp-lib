@@ -351,13 +351,13 @@ public:
 			return 0;
 		}
 
-		if (wParam == ID_FILE_SAVE)
-		{
-			Save();
-			return 0;
-		}
+		//if (wParam == ID_FILE_SAVE)
+		//{
+		//	Save();
+		//	return 0;
+		//}
 
-		if ((wParam == ID_FILE_NEW) || (wParam == ID_FILE_OPEN) || (wParam == ID_FILE_SAVEAS))
+		if ((wParam == ID_FILE_NEW) || (wParam == ID_FILE_OPEN) || (wParam == ID_FILE_SAVE) || (wParam == ID_FILE_SAVEAS))
 		{
 			MessageBox (_hwnd, L"Saving and loading are not yet implemented.", _app->GetAppName(), 0);
 			return 0;
@@ -492,8 +492,7 @@ public:
 
 	HRESULT TryClose()
 	{
-		HRESULT hr;
-
+		/*
 		auto count = count_if (_app->GetProjectWindows().begin(), _app->GetProjectWindows().end(),
 							   [this] (auto& pw) { return pw->GetProject() == _project; });
 		if (count == 1)
@@ -502,7 +501,7 @@ public:
 			if (_actionList->ChangedSinceLastSave())
 			{
 				bool saveChosen;
-				hr = AskSaveDiscardCancel(L"Save changes?", &saveChosen);
+				auto hr = AskSaveDiscardCancel(L"Save changes?", &saveChosen);
 				if (FAILED(hr))
 					return hr;
 
@@ -514,7 +513,7 @@ public:
 				}
 			}
 		}
-
+		*/
 		SaveWindowLocation();
 		::DestroyWindow (_hwnd);
 		return S_OK;
