@@ -7,12 +7,6 @@ using namespace std;
 
 static constexpr size_t FirstPortCount = 2;
 
-struct EditInfo
-{
-	void(*loadFunction)(const vector<Bridge*>& selectedBridges, HWND editHWnd);
-	void(*validateAndSetFunction)(const wchar_t* str, const vector<Bridge*>& selectedBridges, IActionList* actionList);
-};
-
 class BridgePropsWindow : public IBridgePropsWindow
 {
 	ISimulatorApp*  const _app;
@@ -26,8 +20,6 @@ class BridgePropsWindow : public IBridgePropsWindow
 	HWND _configTableDigestToolTip = nullptr;
 	bool _editChangedByUser = false;
 	vector<Bridge*> _bridges;
-
-	static const unordered_map<int, EditInfo> _editInfos;
 
 public:
 	BridgePropsWindow (ISimulatorApp* app,
@@ -118,12 +110,9 @@ private:
 	{
 		if (msg == WM_INITDIALOG)
 		{
-			for (auto& p : _editInfos)
-			{
-				auto editHWnd = GetDlgItem(_hwnd, p.first);
-				BOOL bRes = SetWindowSubclass (editHWnd, EditSubclassProc, EditSubClassId, (DWORD_PTR) this);
-				assert (bRes);
-			}
+			SetWindowSubclass (GetDlgItem(_hwnd, IDC_EDIT_BRIDGE_ADDRESS), EditSubclassProc, EditSubClassId, (DWORD_PTR) this);
+			SetWindowSubclass (GetDlgItem(_hwnd, IDC_EDIT_MST_CONFIG_NAME), EditSubclassProc, EditSubClassId, (DWORD_PTR) this);
+			SetWindowSubclass (GetDlgItem(_hwnd, IDC_EDIT_MST_CONFIG_REV_LEVEL), EditSubclassProc, EditSubClassId, (DWORD_PTR) this);
 
 			auto comboStpVersion = GetDlgItem (_hwnd, IDC_COMBO_STP_VERSION);
 			::SendMessageA (comboStpVersion, CB_ADDSTRING, 0, (LPARAM) STP_GetVersionString(STP_VERSION_LEGACY_STP));
@@ -203,14 +192,12 @@ private:
 				}
 				else if (LOWORD(wParam) == IDC_COMBO_PORT_COUNT)
 				{
-					MessageBox (_hwnd, L"The Simulator does not yet support changing the Port Count for an existing bridge.", _app->GetAppName(), 0);
-					LoadPortCountComboBox();
+					ProcessPortCountSelChange();
 					return { TRUE, 0 };
 				}
 				else if (LOWORD(wParam) == IDC_COMBO_MSTI_COUNT)
 				{
-					MessageBox (_hwnd, L"The Simulator does not yet support changing the MSTI Count for an existing bridge.", _app->GetAppName(), 0);
-					LoadMstiCountComboBox();
+					ProcessMstiCountSelChange();
 					return { TRUE, 0 };
 				}
 			}
@@ -226,50 +213,6 @@ private:
 		return { FALSE, 0 };
 	}
 
-	void ProcessStpStartedClicked()
-	{
-		auto timestamp = GetTimestampMilliseconds();
-
-		auto checkStpEnabled = GetDlgItem (_hwnd, IDC_CHECK_STP_ENABLED);
-
-		bool enable = Button_GetCheck(checkStpEnabled) == BST_UNCHECKED;
-		for (auto b: _bridges)
-		{
-			if (enable)
-			{
-				if (!STP_IsBridgeStarted(b->GetStpBridge()))
-					STP_StartBridge (b->GetStpBridge(), timestamp);
-			}
-			else
-			{
-				if (STP_IsBridgeStarted(b->GetStpBridge()))
-					STP_StopBridge (b->GetStpBridge(), timestamp);
-			}
-		}
-	}
-
-	void ProcessStpVersionSelChanged (HWND hwnd)
-	{
-		int index = ComboBox_GetCurSel(hwnd);
-		if (index == -1)
-			return;
-
-		assert ((index >= 0) && (index < 3));
-
-		STP_VERSION newVersion;
-		if (index == 0)
-			newVersion = STP_VERSION_LEGACY_STP;
-		else if (index == 1)
-			newVersion = STP_VERSION_RSTP;
-		else
-			newVersion = STP_VERSION_MSTP;
-
-		auto timestamp = GetTimestampMilliseconds();
-
-		for (auto b : _bridges)
-			STP_SetStpVersion (b->GetStpBridge(), newVersion, timestamp);
-	}
-
 	static LRESULT CALLBACK EditSubclassProc (HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 	{
 		auto dialog = reinterpret_cast<BridgePropsWindow*>(dwRefData);
@@ -282,74 +225,39 @@ private:
 			return DefSubclassProc (hWnd, msg, wParam, lParam);
 		}
 
-		if (msg == WM_KEYDOWN)
+		if ((msg == WM_KEYDOWN) && (wParam == VK_ESCAPE))
 		{
-			if (wParam == VK_ESCAPE)
-			{
-				auto id = (int) GetWindowLongPtr (hWnd, GWLP_ID);
-				auto& info = _editInfos.at(id);
-				info.loadFunction(dialog->_bridges, hWnd);
-				::SendMessage (hWnd, EM_SETSEL, 0, -1);
+			dialog->LoadAll();
+			::SendMessage (hWnd, EM_SETSEL, 0, -1);
+			dialog->_editChangedByUser = false;
+			return 0;
+		}
+
+		if (msg == WM_SETFOCUS)
+		{
+			if (dialog->_controlBeingValidated == nullptr)
 				dialog->_editChangedByUser = false;
-				return 0;
-			}
-			else if (wParam == VK_RETURN)
-			{
-				std::wstring str;
-				str.resize(GetWindowTextLength (hWnd) + 1);
-				GetWindowText (hWnd, str.data(), (int) str.size());
-				str.resize(str.size() - 1);
-
-				if (dialog->_editChangedByUser && (dialog->_controlBeingValidated == nullptr))
-				{
-					dialog->_controlBeingValidated = hWnd;
-					try
-					{
-						auto id = (int) GetWindowLongPtr (hWnd, GWLP_ID);
-						auto& info = _editInfos.at(id);
-						info.validateAndSetFunction(str.c_str(), dialog->_bridges, dialog->_actionList);
-						dialog->_editChangedByUser = false;
-					}
-					catch (const exception& ex)
-					{
-						::MessageBoxA (dialog->_hwnd, ex.what(), 0, 0);
-						::SetFocus (hWnd);
-					}
-
-					::SendMessage (hWnd, EM_SETSEL, 0, -1);
-					dialog->_controlBeingValidated = nullptr;
-				}
-
-				return 0;
-			}
-
 			return DefSubclassProc (hWnd, msg, wParam, lParam);
 		}
 
-		if (msg == WM_KILLFOCUS)
+		if (((msg == WM_KEYDOWN) && (wParam == VK_RETURN))
+			|| (msg == WM_KILLFOCUS))
 		{
-			std::wstring str;
-			str.resize(GetWindowTextLength (hWnd) + 1);
-			GetWindowText (hWnd, str.data(), (int) str.size());
-			str.resize(str.size() - 1);
-
 			if (dialog->_editChangedByUser && (dialog->_controlBeingValidated == nullptr))
 			{
 				dialog->_controlBeingValidated = hWnd;
-
 				try
 				{
-					auto id = (int) GetWindowLongPtr (hWnd, GWLP_ID);
-					auto& info = _editInfos.at(id);
-					info.validateAndSetFunction(str.c_str(), dialog->_bridges, dialog->_actionList);
-					dialog->_controlBeingValidated = nullptr;
+					dialog->ValidateAndSetEditControl(hWnd);
 					dialog->_editChangedByUser = false;
+					dialog->_controlBeingValidated = nullptr;
 				}
 				catch (const exception& ex)
 				{
 					::SetFocus(nullptr);
-					dialog->_projectWindow->PostWork ([dialog, hWnd, message=string(ex.what())]
+					dialog->_projectWindow->PostWork ([dialog, hWnd, message=string(ex.what())] () mutable
 					{
+						message += "\r\n\r\n(You can press Escape to cancel your edits.)";
 						::MessageBoxA (dialog->_hwnd, message.c_str(), 0, 0);
 						::SetFocus (hWnd);
 						::SendMessage (hWnd, EM_SETSEL, 0, -1);
@@ -400,30 +308,47 @@ private:
 	void LoadAll()
 	{
 		assert (!_bridges.empty());
-
-		for (auto& p : _editInfos)
-		{
-			HWND editHWnd = GetDlgItem(_hwnd, p.first);
-			p.second.loadFunction (_bridges, editHWnd);
-		}
-
+		LoadBridgeAddressTextBox();
+		LoadMstConfigNameTextBox();
+		LoadMstConfigRevLevelTextBox();
 		LoadStpStartedCheckBox();
 		LoadStpVersionComboBox();
 		LoadRootPriorityVectorControls();
 		LoadPortCountComboBox();
 		LoadMstiCountComboBox();
 		LoadMstConfigTableHashEdit();
-		LoadSelectedTreeEdit();
 		LoadBridgePriorityCombo();
 	}
 
-	// ========================================================================
-
-	static void LoadBridgeAddressTextBox (const vector<Bridge*>& selectedBridges, HWND edit)
+	void ValidateAndSetEditControl (HWND edit)
 	{
-		if (selectedBridges.size() == 1)
+		std::wstring str;
+		str.resize(GetWindowTextLength (edit) + 1);
+		GetWindowText (edit, str.data(), (int) str.size());
+		str.resize(str.size() - 1);
+
+		auto id = (int) GetWindowLongPtr (edit, GWLP_ID);
+
+		if (id == IDC_EDIT_BRIDGE_ADDRESS)
+			ValidateAndSetBridgeAddress(str.c_str());
+
+		else if (id == IDC_EDIT_MST_CONFIG_NAME)
+			ValidateAndSetMstConfigName(str.c_str());
+
+		else if (id == IDC_EDIT_MST_CONFIG_REV_LEVEL)
+			ValidateAndSetMstConfigRevLevel(str.c_str());
+
+		else
+			throw not_implemented_exception();
+	}
+
+	#pragma region Bridge Address
+	void LoadBridgeAddressTextBox()
+	{
+		auto edit = GetDlgItem(_hwnd, IDC_EDIT_BRIDGE_ADDRESS);
+		if (_bridges.size() == 1)
 		{
-			::SetWindowTextA (edit, selectedBridges[0]->GetBridgeAddressAsString().c_str());
+			::SetWindowTextA (edit, _bridges[0]->GetBridgeAddressAsString().c_str());
 			::EnableWindow (edit, TRUE);
 		}
 		else
@@ -433,7 +358,7 @@ private:
 		}
 	}
 
-	static void ValidateAndSetBridgeAddress (const wchar_t* str, const vector<Bridge*>& selectedBridges, IActionList* actionList)
+	void ValidateAndSetBridgeAddress (const wchar_t* str)
 	{
 		static constexpr char FormatErrorMessage[] = u8"Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX or XXXXXXXXXXXX (6 hex bytes).";
 
@@ -494,12 +419,12 @@ private:
 			virtual std::string GetName() const override final { return "Set Bridge Address"; }
 		};
 
-		auto action = unique_ptr<EditAction>(new SetBridgeAddressAction(selectedBridges, newAddress));
-		actionList->PerformAndAddUserAction (move(action));
+		auto action = unique_ptr<EditAction>(new SetBridgeAddressAction(_bridges, newAddress));
+		_actionList->PerformAndAddUserAction (move(action));
 	}
+	#pragma endregion
 
-	// ========================================================================
-
+	#pragma region STP Started
 	void LoadStpStartedCheckBox()
 	{
 		auto check = GetDlgItem (_hwnd, IDC_CHECK_STP_ENABLED);
@@ -512,6 +437,30 @@ private:
 			::SendMessage (check, BM_SETCHECK, BST_INDETERMINATE, 0);
 	}
 
+	void ProcessStpStartedClicked()
+	{
+		auto timestamp = GetTimestampMilliseconds();
+
+		auto checkStpEnabled = GetDlgItem (_hwnd, IDC_CHECK_STP_ENABLED);
+
+		bool enable = Button_GetCheck(checkStpEnabled) == BST_UNCHECKED;
+		for (auto b: _bridges)
+		{
+			if (enable)
+			{
+				if (!STP_IsBridgeStarted(b->GetStpBridge()))
+					STP_StartBridge (b->GetStpBridge(), timestamp);
+			}
+			else
+			{
+				if (STP_IsBridgeStarted(b->GetStpBridge()))
+					STP_StopBridge (b->GetStpBridge(), timestamp);
+			}
+		}
+	}
+	#pragma endregion
+
+	#pragma region STP Version
 	void LoadStpVersionComboBox()
 	{
 		int index = -1;
@@ -529,6 +478,30 @@ private:
 		ComboBox_SetCurSel (GetDlgItem (_hwnd, IDC_COMBO_STP_VERSION), index);
 	}
 
+	void ProcessStpVersionSelChanged (HWND hwnd)
+	{
+		int index = ComboBox_GetCurSel(hwnd);
+		if (index == -1)
+			return;
+
+		assert ((index >= 0) && (index < 3));
+
+		STP_VERSION newVersion;
+		if (index == 0)
+			newVersion = STP_VERSION_LEGACY_STP;
+		else if (index == 1)
+			newVersion = STP_VERSION_RSTP;
+		else
+			newVersion = STP_VERSION_MSTP;
+
+		auto timestamp = GetTimestampMilliseconds();
+
+		for (auto b : _bridges)
+			STP_SetStpVersion (b->GetStpBridge(), newVersion, timestamp);
+	}
+	#pragma endregion
+
+	#pragma region Port Count
 	void LoadPortCountComboBox()
 	{
 		int index = -1;
@@ -538,6 +511,14 @@ private:
 		ComboBox_SetCurSel (GetDlgItem(_hwnd, IDC_COMBO_PORT_COUNT), index);
 	}
 
+	void ProcessPortCountSelChange()
+	{
+		MessageBox (_hwnd, L"The Simulator does not yet support changing the Port Count for an existing bridge.", _app->GetAppName(), 0);
+		LoadPortCountComboBox();
+	}
+	#pragma endregion
+
+	#pragma region MSTI Count
 	void LoadMstiCountComboBox()
 	{
 		int index = -1;
@@ -547,7 +528,12 @@ private:
 		ComboBox_SetCurSel (GetDlgItem(_hwnd, IDC_COMBO_MSTI_COUNT), index);
 	}
 
-	// ========================================================================
+	void ProcessMstiCountSelChange()
+	{
+		MessageBox (_hwnd, L"The Simulator does not yet support changing the MSTI Count for an existing bridge.", _app->GetAppName(), 0);
+		LoadMstiCountComboBox();
+	}
+	#pragma endregion
 
 	void LoadRootPriorityVectorControls()
 	{
@@ -636,13 +622,13 @@ private:
 		::SetWindowText (GetDlgItem(_hwnd, IDC_EDIT_RECEIVING_PORT_ID), ss.str().c_str());
 	}
 
-	// ========================================================================
-
-	static void LoadMstConfigNameTextBox (const vector<Bridge*>& selectedBridges, HWND edit)
+	#pragma region MST Config Name
+	void LoadMstConfigNameTextBox()
 	{
-		const char* name = STP_GetMstConfigId(selectedBridges[0]->GetStpBridge())->ConfigurationName;
+		auto edit = GetDlgItem(_hwnd, IDC_EDIT_MST_CONFIG_NAME);
+		const char* name = STP_GetMstConfigId(_bridges[0]->GetStpBridge())->ConfigurationName;
 
-		bool allSameName = all_of (selectedBridges.begin(), selectedBridges.end(),
+		bool allSameName = all_of (_bridges.begin(), _bridges.end(),
 								   [name](Bridge* b) { return memcmp (STP_GetMstConfigId(b->GetStpBridge())->ConfigurationName, name, 32) == 0; });
 		if (allSameName)
 			::SetWindowTextA (edit, string(name, 32).c_str());
@@ -650,7 +636,7 @@ private:
 			::SetWindowTextA (edit, "(multiple selection)");
 	}
 
-	static void ValidateAndSetMstConfigName (const wchar_t* str, const vector<Bridge*>& selectedBridges, IActionList* actionList)
+	void ValidateAndSetMstConfigName (const wchar_t* str)
 	{
 		if (wcslen(str) > 32)
 			throw invalid_argument("Invalid MST Config Name: more than 32 characters.");
@@ -694,35 +680,35 @@ private:
 			virtual string GetName() const override final { return "Set MST Config Name"; }
 		};
 
-		auto action = unique_ptr<EditAction>(new SetMstConfigNameAction(selectedBridges, move(ascii)));
-		actionList->PerformAndAddUserAction(move(action));
+		auto action = unique_ptr<EditAction>(new SetMstConfigNameAction(_bridges, move(ascii)));
+		_actionList->PerformAndAddUserAction(move(action));
 	}
+	#pragma endregion
 
-	// ========================================================================
-
-	static void LoadMstConfigRevLevelTextBox (const vector<Bridge*>& selectedBridges, HWND edit)
+	#pragma region MST Config Rev Level
+	void LoadMstConfigRevLevelTextBox()
 	{
+		auto edit = GetDlgItem(_hwnd, IDC_EDIT_MST_CONFIG_REV_LEVEL);
 		auto getLevel = [](Bridge* b) -> unsigned short
 		{
 			auto id = STP_GetMstConfigId(b->GetStpBridge());
 			return ((unsigned short) id->RevisionLevelHigh << 8) | (unsigned short) id->RevisionLevelLow;
 		};
 
-		auto level = getLevel(selectedBridges[0]);
+		auto level = getLevel(_bridges[0]);
 
-		bool allSameLevel = all_of (selectedBridges.begin(), selectedBridges.end(), [&](Bridge* b) { return getLevel(b) == level; });
+		bool allSameLevel = all_of (_bridges.begin(), _bridges.end(), [&](Bridge* b) { return getLevel(b) == level; });
 		if (allSameLevel)
 			::SetWindowTextA (edit, to_string(level).c_str());
 		else
 			::SetWindowTextA (edit, "(multiple selection)");
 	}
 
-	static void ValidateAndSetMstConfigRevLevel (const wchar_t* str, const vector<Bridge*>& selectedBridges, IActionList* actionList)
+	void ValidateAndSetMstConfigRevLevel (const wchar_t* str)
 	{
 		throw not_implemented_exception();
 	}
-
-	// ========================================================================
+	#pragma endregion
 
 	void LoadMstConfigTableHashEdit()
 	{
@@ -762,53 +748,46 @@ private:
 		SendMessage (_configTableDigestToolTip, TTM_ADDTOOL, 0, (LPARAM)&toolInfo);
 	}
 
-	// ========================================================================
-
-	void LoadSelectedTreeEdit()
+	#pragma region Bridge Priority
+	void LoadBridgePriorityCombo()
 	{
-		auto edit = GetDlgItem (_hwnd, IDC_EDIT_PROPS_SELECTED_TREE); assert (edit != nullptr);
+		auto label = GetDlgItem (_hwnd, IDC_STATIC_BRIDGE_PRIO); assert (label != nullptr);
+		auto combo = GetDlgItem(_hwnd, IDC_COMBO_BRIDGE_PRIORITY);
 
 		auto vlanNumber = _projectWindow->GetSelectedVlanNumber();
 
 		auto treeIndex = STP_GetTreeIndexFromVlanNumber(_bridges[0]->GetStpBridge(), vlanNumber);
-
 		bool allSameTree = all_of (_bridges.begin(), _bridges.end(),
 								   [vlanNumber, treeIndex](Bridge* b) { return STP_GetTreeIndexFromVlanNumber(b->GetStpBridge(), vlanNumber) == treeIndex; });
-		if (allSameTree)
-		{
-			if (treeIndex == 0)
-				::SetWindowText (edit, L"CIST(0)");
-			else
-				::SetWindowText (edit, (wstring(L"MSTI") + to_wstring(treeIndex)).c_str());
-		}
-		else
-			::SetWindowText (edit, L"(multiple selection)");
-	}
 
-	// ========================================================================
-
-	void LoadBridgePriorityCombo()
-	{
-		auto vlanNumber = _projectWindow->GetSelectedVlanNumber();
-		auto getPrio = [vlanNumber](Bridge* b)
+		if (!allSameTree)
 		{
-			auto treeIndex = STP_GetTreeIndexFromVlanNumber(b->GetStpBridge(), vlanNumber);
-			return STP_GetBridgePriority(b->GetStpBridge(), treeIndex);
-		};
-
-		auto prio = getPrio(_bridges[0]);
-		bool allSamePrio = all_of (_bridges.begin(), _bridges.end(), [&](Bridge* b) { return getPrio(b) == prio; });
-
-		auto combo = GetDlgItem(_hwnd, IDC_COMBO_BRIDGE_PRIORITY);
-		if (allSamePrio)
-		{
-			ComboBox_SetCurSel (combo, prio / 4096);
-			::EnableWindow (combo, TRUE);
-		}
-		else
-		{
+			::SetWindowTextA (label, "Bridge Priority");
 			ComboBox_SetCurSel (combo, -1);
 			::EnableWindow (combo, FALSE);
+		}
+		else
+		{
+			stringstream labelText;
+			labelText << "Bridge Priority (";
+			if (treeIndex == 0)
+				labelText << "CIST)";
+			else
+				labelText << "MSTI " << treeIndex << ")";
+			::SetWindowTextA (label, labelText.str().c_str());
+
+			auto prio = STP_GetBridgePriority(_bridges[0]->GetStpBridge(), treeIndex);
+			bool allSamePrio = all_of (_bridges.begin(), _bridges.end(), [prio, treeIndex](Bridge* b) { return STP_GetBridgePriority(b->GetStpBridge(), treeIndex) == prio; });
+			if (allSamePrio)
+			{
+				ComboBox_SetCurSel (combo, prio / 4096);
+				::EnableWindow (combo, TRUE);
+			}
+			else
+			{
+				ComboBox_SetCurSel (combo, -1);
+				::EnableWindow (combo, FALSE);
+			}
 		}
 	}
 
@@ -828,8 +807,7 @@ private:
 			STP_SetBridgePriority (stpb, treeIndex, newPrio, timestamp);
 		}
 	}
-
-	// ========================================================================
+	#pragma endregion
 
 	static void OnSelectedVlanChanged (void* callbackArg, IProjectWindow* pw, unsigned int vlanNumber)
 	{
@@ -853,13 +831,6 @@ private:
 			delete this;
 		return newRefCount;
 	}
-};
-
-const unordered_map<int, EditInfo> BridgePropsWindow::_editInfos =
-{
-	{ IDC_EDIT_BRIDGE_ADDRESS,       { &LoadBridgeAddressTextBox,     &ValidateAndSetBridgeAddress     } },
-	{ IDC_EDIT_MST_CONFIG_NAME,      { &LoadMstConfigNameTextBox,     &ValidateAndSetMstConfigName     } },
-	{ IDC_EDIT_MST_CONFIG_REV_LEVEL, { &LoadMstConfigRevLevelTextBox, &ValidateAndSetMstConfigRevLevel } },
 };
 
 template<typename... Args>
