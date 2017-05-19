@@ -496,7 +496,7 @@ void Bridge::StpCallback_FreeMemory(void* p)
 	free(p);
 }
 
-void* Bridge::StpCallback_TransmitGetBuffer (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int bpduSize, unsigned int timestamp)
+void* Bridge::StpCallback_TransmitGetBuffer (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int bpduSize, unsigned int timestamp)
 {
 	Bridge* b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 	Port* txPort = b->_ports[portIndex].get();
@@ -513,7 +513,7 @@ void* Bridge::StpCallback_TransmitGetBuffer (STP_BRIDGE* bridge, unsigned int po
 	return &b->_txPacketData[21];
 }
 
-void Bridge::StpCallback_TransmitReleaseBuffer (STP_BRIDGE* bridge, void* bufferReturnedByGetBuffer)
+void Bridge::StpCallback_TransmitReleaseBuffer (const STP_BRIDGE* bridge, void* bufferReturnedByGetBuffer)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 
@@ -527,24 +527,24 @@ void Bridge::StpCallback_TransmitReleaseBuffer (STP_BRIDGE* bridge, void* buffer
 	::PostMessage (receivingBridge->_helperWindow, WM_PACKET_RECEIVED, (WPARAM)(void*)receivingBridge, 0);
 }
 
-void Bridge::StpCallback_EnableLearning(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
+void Bridge::StpCallback_EnableLearning (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 	InvalidateEvent::InvokeHandlers (*b, b);
 }
 
-void Bridge::StpCallback_EnableForwarding(STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
+void Bridge::StpCallback_EnableForwarding (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 	InvalidateEvent::InvokeHandlers(*b, b);
 }
 
-void Bridge::StpCallback_FlushFdb (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType)
+void Bridge::StpCallback_FlushFdb (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 }
 
-void Bridge::StpCallback_DebugStrOut (STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, unsigned int flush)
+void Bridge::StpCallback_DebugStrOut (const STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, unsigned int flush)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 
@@ -581,21 +581,21 @@ void Bridge::StpCallback_DebugStrOut (STP_BRIDGE* bridge, int portIndex, int tre
 	}
 }
 
-void Bridge::StpCallback_OnTopologyChange (STP_BRIDGE* bridgetimestamp)
+void Bridge::StpCallback_OnTopologyChange (const STP_BRIDGE* bridgetimestamp)
 {
 }
 
-void Bridge::StpCallback_OnNotifiedTopologyChange (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp)
+void Bridge::StpCallback_OnNotifiedTopologyChange (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp)
 {
 }
 
-void Bridge::StpCallback_OnPortRoleChanged (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role, unsigned int timestamp)
+void Bridge::StpCallback_OnPortRoleChanged (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role, unsigned int timestamp)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 	InvalidateEvent::InvokeHandlers(*b, b);
 }
 
-void Bridge::StpCallback_OnConfigChanged (struct STP_BRIDGE* bridge, unsigned int timestamp)
+void Bridge::StpCallback_OnConfigChanged (const STP_BRIDGE* bridge, unsigned int timestamp)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 	BridgeConfigChangedEvent::InvokeHandlers (*b, b);

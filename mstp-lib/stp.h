@@ -31,16 +31,16 @@ enum STP_PORT_ROLE
 	STP_PORT_ROLE_MASTER	= 10,
 };
 
-typedef void  (*STP_CALLBACK_ENABLE_LEARNING)				(struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp);
-typedef void  (*STP_CALLBACK_ENABLE_FORWARDING)				(struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp);
-typedef void* (*STP_CALLBACK_TRANSMIT_GET_BUFFER)			(struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int bpduSize, unsigned int timestamp);
-typedef void  (*STP_CALLBACK_TRANSMIT_RELEASE_BUFFER)		(struct STP_BRIDGE* bridge, void* bufferReturnedByGetBuffer);
-typedef void  (*STP_CALLBACK_FLUSH_FDB)						(struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType);
-typedef void  (*STP_CALLBACK_DEBUG_STR_OUT)					(struct STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, unsigned int flush);
-typedef void  (*STP_CALLBACK_ON_TOPOLOGY_CHANGE)			(struct STP_BRIDGE* bridge);
-typedef void  (*STP_CALLBACK_ON_NOTIFIED_TOPOLOGY_CHANGE)	(struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp);
-typedef void  (*STP_CALLBACK_PORT_ROLE_CHANGED)             (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_PORT_ROLE role, unsigned int timestamp);
-typedef void  (*STP_CALLBACK_CONFIG_CHANGED)                (struct STP_BRIDGE* bridge, unsigned int timestamp);
+typedef void  (*STP_CALLBACK_ENABLE_LEARNING)				(const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp);
+typedef void  (*STP_CALLBACK_ENABLE_FORWARDING)				(const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp);
+typedef void* (*STP_CALLBACK_TRANSMIT_GET_BUFFER)			(const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int bpduSize, unsigned int timestamp);
+typedef void  (*STP_CALLBACK_TRANSMIT_RELEASE_BUFFER)		(const struct STP_BRIDGE* bridge, void* bufferReturnedByGetBuffer);
+typedef void  (*STP_CALLBACK_FLUSH_FDB)						(const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType);
+typedef void  (*STP_CALLBACK_DEBUG_STR_OUT)					(const struct STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, unsigned int flush);
+typedef void  (*STP_CALLBACK_ON_TOPOLOGY_CHANGE)			(const struct STP_BRIDGE* bridge);
+typedef void  (*STP_CALLBACK_ON_NOTIFIED_TOPOLOGY_CHANGE)	(const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp);
+typedef void  (*STP_CALLBACK_PORT_ROLE_CHANGED)             (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_PORT_ROLE role, unsigned int timestamp);
+typedef void  (*STP_CALLBACK_CONFIG_CHANGED)                (const struct STP_BRIDGE* bridge, unsigned int timestamp);
 typedef void* (*STP_CALLBACK_ALLOC_AND_ZERO_MEMORY) (unsigned int size);
 typedef void  (*STP_CALLBACK_FREE_MEMORY) (void* p);
 
@@ -116,15 +116,15 @@ void STP_DestroyBridge (struct STP_BRIDGE* bridge);
 
 void STP_StartBridge (struct STP_BRIDGE* bridge, unsigned int timestamp);
 void STP_StopBridge (struct STP_BRIDGE* bridge, unsigned int timestamp);
-unsigned int STP_IsBridgeStarted (struct STP_BRIDGE* bridge);
+unsigned int STP_IsBridgeStarted (const struct STP_BRIDGE* bridge);
 
 void STP_EnableLogging (struct STP_BRIDGE* bridge, unsigned int enable);
-unsigned int STP_IsLoggingEnabled (struct STP_BRIDGE* bridge);
+unsigned int STP_IsLoggingEnabled (const struct STP_BRIDGE* bridge);
 
-unsigned int STP_GetPortCount (struct STP_BRIDGE* bridge);
-unsigned int STP_GetMstiCount (struct STP_BRIDGE* bridge);
+unsigned int STP_GetPortCount (const struct STP_BRIDGE* bridge);
+unsigned int STP_GetMstiCount (const struct STP_BRIDGE* bridge);
 
-enum STP_VERSION STP_GetStpVersion (struct STP_BRIDGE* bridge);
+enum STP_VERSION STP_GetStpVersion (const struct STP_BRIDGE* bridge);
 void STP_SetStpVersion (struct STP_BRIDGE* bridge, enum STP_VERSION version, unsigned int timestamp);
 
 // Call this when you receive a BPDU.
@@ -132,7 +132,7 @@ void STP_OnBpduReceived (struct STP_BRIDGE* bridge, unsigned int portIndex, cons
 
 // Call this every time the bridge's MAC address changes while STP is running.
 void STP_SetBridgeAddress (struct STP_BRIDGE* bridge, const unsigned char* address, unsigned int timestamp);
-const struct STP_BRIDGE_ADDRESS* STP_GetBridgeAddress (struct STP_BRIDGE* bridge);
+const struct STP_BRIDGE_ADDRESS* STP_GetBridgeAddress (const struct STP_BRIDGE* bridge);
 
 // Call these whenever one of the ports changes state. See 13.25.31 portEnabled in 802.1Q-2011 for details.
 void STP_OnPortEnabled (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int speedMegabitsPerSecond, unsigned int detectedPointToPointMAC, unsigned int timestamp);
@@ -142,28 +142,28 @@ void STP_OnOneSecondTick (struct STP_BRIDGE* bridge, unsigned int timestamp);
 
 // 0-61440 in steps of 4096
 void           STP_SetBridgePriority (struct STP_BRIDGE* bridge, unsigned int treeIndex, unsigned short bridgePriority, unsigned int timestamp);
-unsigned short STP_GetBridgePriority (struct STP_BRIDGE* bridge, unsigned int treeIndex);
+unsigned short STP_GetBridgePriority (const struct STP_BRIDGE* bridge, unsigned int treeIndex);
 
 // 0-240 in steps of 16
 void          STP_SetPortPriority (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned char portPriority, unsigned int timestamp);
-unsigned char STP_GetPortPriority (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
-unsigned short STP_GetPortIdentifier (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
+unsigned char STP_GetPortPriority (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
+unsigned short STP_GetPortIdentifier (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
 
 void STP_SetPortAdminEdge (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int adminEdge, unsigned int timestamp);
-unsigned int STP_GetPortAdminEdge (struct STP_BRIDGE* bridge, unsigned int portIndex);
+unsigned int STP_GetPortAdminEdge (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
 void STP_SetPortAutoEdge (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int autoEdge, unsigned int timestamp);
-unsigned int STP_GetPortAutoEdge (struct STP_BRIDGE* bridge, unsigned int portIndex);
+unsigned int STP_GetPortAutoEdge (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
 void          STP_SetPortAdminPointToPointMAC (struct STP_BRIDGE* bridge, unsigned int portIndex, enum STP_ADMIN_P2P adminPointToPointMAC, unsigned int timestamp);
-enum STP_ADMIN_P2P STP_GetPortAdminPointToPointMAC (struct STP_BRIDGE* bridge, unsigned int portIndex);
+enum STP_ADMIN_P2P STP_GetPortAdminPointToPointMAC (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
-unsigned int STP_GetPortEnabled             (struct STP_BRIDGE* bridge, unsigned int portIndex);
-enum STP_PORT_ROLE STP_GetPortRole          (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
-unsigned int STP_GetPortLearning            (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
-unsigned int STP_GetPortForwarding          (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
-unsigned int STP_GetPortOperEdge            (struct STP_BRIDGE* bridge, unsigned int portIndex);
-unsigned int STP_GetPortOperPointToPointMAC (struct STP_BRIDGE* bridge, unsigned int portIndex);
+unsigned int STP_GetPortEnabled             (const struct STP_BRIDGE* bridge, unsigned int portIndex);
+enum STP_PORT_ROLE STP_GetPortRole          (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
+unsigned int STP_GetPortLearning            (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
+unsigned int STP_GetPortForwarding          (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
+unsigned int STP_GetPortOperEdge            (const struct STP_BRIDGE* bridge, unsigned int portIndex);
+unsigned int STP_GetPortOperPointToPointMAC (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
 void STP_GetDefaultMstConfigName (const unsigned char bridgeAddress[6], char nameOut[18]);
 void STP_SetMstConfigName (struct STP_BRIDGE* bridge, const char* name, unsigned int timestamp);
@@ -177,16 +177,16 @@ struct STP_CONFIG_TABLE_ENTRY
 
 void STP_SetMstConfigTable (struct STP_BRIDGE* bridge, const struct STP_CONFIG_TABLE_ENTRY* entries, unsigned int entryCount, unsigned int timestamp);
 const struct STP_CONFIG_TABLE_ENTRY* STP_GetMstConfigTable (struct STP_BRIDGE* bridge, unsigned int* entryCountOut);
-unsigned int STP_GetMaxVlanNumber (struct STP_BRIDGE* bridge);
-unsigned int STP_GetTreeIndexFromVlanNumber (struct STP_BRIDGE* bridge, unsigned int vlanNumber);
-const struct STP_MST_CONFIG_ID* STP_GetMstConfigId (struct STP_BRIDGE* bridge);
+unsigned int STP_GetMaxVlanNumber (const struct STP_BRIDGE* bridge);
+unsigned int STP_GetTreeIndexFromVlanNumber (const struct STP_BRIDGE* bridge, unsigned int vlanNumber);
+const struct STP_MST_CONFIG_ID* STP_GetMstConfigId (const struct STP_BRIDGE* bridge);
 
 const char* STP_GetPortRoleString (enum STP_PORT_ROLE portRole);
 const char* STP_GetVersionString (enum STP_VERSION version);
 const char* STP_GetAdminP2PString (enum STP_ADMIN_P2P adminP2P);
 
-void STP_GetRootPriorityVector (struct STP_BRIDGE* bridge, unsigned int treeIndex, unsigned char priorityVectorOut[36]);
-void STP_GetRootTimes (struct STP_BRIDGE* bridge,
+void STP_GetRootPriorityVector (const struct STP_BRIDGE* bridge, unsigned int treeIndex, unsigned char priorityVectorOut[36]);
+void STP_GetRootTimes (const struct STP_BRIDGE* bridge,
 					   unsigned int treeIndex,
 					   unsigned short* forwardDelayOutOrNull,
 					   unsigned short* helloTimeOutOrNull,
@@ -194,11 +194,11 @@ void STP_GetRootTimes (struct STP_BRIDGE* bridge,
 					   unsigned short* messageAgeOutOrNull,
 					   unsigned char* remainingHopsOutOrNull);
 
-unsigned int STP_IsCistRoot (struct STP_BRIDGE* bridge);
-unsigned int STP_IsRegionalRoot (struct STP_BRIDGE* bridge, unsigned int treeIndex);
+unsigned int STP_IsCistRoot (const struct STP_BRIDGE* bridge);
+unsigned int STP_IsRegionalRoot (const struct STP_BRIDGE* bridge, unsigned int treeIndex);
 
 void  STP_SetApplicationContext (struct STP_BRIDGE* bridge, void* applicationContext);
-void* STP_GetApplicationContext (struct STP_BRIDGE* bridge);
+void* STP_GetApplicationContext (const struct STP_BRIDGE* bridge);
 
 #ifdef __cplusplus
 } // extern "C"

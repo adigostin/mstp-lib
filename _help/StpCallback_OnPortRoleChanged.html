@@ -9,13 +9,20 @@
 	<h3>StpCallback_OnPortRoleChanged</h3>
 	<hr />
 <pre>
-void StpCallback_OnPortRoleChanged (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_PORT_ROLE role, unsigned int timestamp);
+void StpCallback_OnPortRoleChanged
+(
+    const struct STP_BRIDGE* bridge,
+    unsigned int             portIndex,
+    unsigned int             treeIndex,
+    enum STP_PORT_ROLE       role,
+    unsigned int             timestamp
+);
 </pre>
 	<h4>
 		Summary</h4>
 	<p>
-		Application-defined function that is called by the STP library when it detects
-		a change in the network topology.</p>
+		Application-defined function that is called by the STP library 
+        immediately after it changes a port role.</p>
 	<h4>
 		Parameters</h4>
 	<dl>

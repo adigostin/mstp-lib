@@ -14,7 +14,9 @@ void* StpCallback_AllocAndZeroMemory (unsigned int size);
 	<h4>
 		Summary</h4>
 	<p>
-		Application-defined function that allocates and zeroes-out memory for STP use.</p>
+		Application-defined function that allocates and zeroes-out memory for STP use. 
+        (The library does not call standard memory-allocation functions, because most embedded 
+        applications don&#39;t have a heap to allocate from.) </p>
 	<p>
 		<code>StpCallback_AllocAndZeroMemory</code> is a placeholder name used throughout this documentation. The 
 		application may name this callback differently.</p>

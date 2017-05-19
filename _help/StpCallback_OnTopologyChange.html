@@ -9,7 +9,10 @@
 	<h3>StpCallback_OnTopologyChange</h3>
 	<hr />
 <pre>
-void StpCallback_OnTopologyChange (STP_BRIDGE* bridge, unsigned int treeIndex);
+void StpCallback_OnTopologyChange
+(
+    const STP_BRIDGE* bridge,
+);
 </pre>
 	<h4>
 		Summary</h4>
@@ -21,8 +24,6 @@ void StpCallback_OnTopologyChange (STP_BRIDGE* bridge, unsigned int treeIndex);
 	<dl>
 		<dt>bridge</dt>
 		<dd>The application receives in this parameter a pointer to a STP_BRIDGE object.</dd>
-		<dt>treeIndex</dt>
-		<dd>The index of the spanning tree on which a topology change occurred.</dd>
 	</dl>
 	<h4>
 		Remarks</h4>
@@ -31,9 +32,7 @@ void StpCallback_OnTopologyChange (STP_BRIDGE* bridge, unsigned int treeIndex);
 			on the local bridge.</p>
 
 	<p>
-			TODO: Update this page.</p>
-	<p>
-		StpCallback_OnTopologyChanged is a placeholder name used throughout this documentation. The
+		StpCallback_OnTopologyChange is a placeholder name used throughout this documentation. The
 		application may name this callback differently.</p>
 
 </body>

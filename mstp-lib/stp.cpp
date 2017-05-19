@@ -260,7 +260,7 @@ void STP_SetBridgeAddress (STP_BRIDGE* bridge, const unsigned char* address, uns
 	FLUSH_LOG (bridge);
 }
 
-const struct STP_BRIDGE_ADDRESS* STP_GetBridgeAddress (STP_BRIDGE* bridge)
+const struct STP_BRIDGE_ADDRESS* STP_GetBridgeAddress (const struct STP_BRIDGE* bridge)
 {
 	return &bridge->trees [CIST_INDEX]->GetBridgeIdentifier().GetAddress();
 }
@@ -414,7 +414,7 @@ void STP_OnBpduReceived (STP_BRIDGE* bridge, unsigned int portIndex, const unsig
 
 // ============================================================================
 
-unsigned int STP_IsBridgeStarted (STP_BRIDGE* bridge)
+unsigned int STP_IsBridgeStarted (const STP_BRIDGE* bridge)
 {
 	return bridge->started;
 }
@@ -428,7 +428,7 @@ void STP_EnableLogging (STP_BRIDGE* bridge, unsigned int enable)
 
 // ============================================================================
 
-unsigned int STP_IsLoggingEnabled (STP_BRIDGE* bridge)
+unsigned int STP_IsLoggingEnabled (const STP_BRIDGE* bridge)
 {
 	return bridge->loggingEnabled;
 }
@@ -584,7 +584,7 @@ void STP_SetPortAdminEdge (STP_BRIDGE* bridge, unsigned int portIndex, unsigned 
 	bridge->ports [portIndex]->AdminEdge = newAdminEdge;
 }
 
-unsigned int STP_GetPortAdminEdge (STP_BRIDGE* bridge, unsigned int portIndex)
+unsigned int STP_GetPortAdminEdge (const STP_BRIDGE* bridge, unsigned int portIndex)
 {
 	return bridge->ports [portIndex]->AdminEdge;
 }
@@ -596,7 +596,7 @@ void STP_SetPortAutoEdge (STP_BRIDGE* bridge, unsigned int portIndex, unsigned i
 	bridge->ports [portIndex]->AutoEdge = newAutoEdge;
 }
 
-unsigned int STP_GetPortAutoEdge (STP_BRIDGE* bridge, unsigned int portIndex)
+unsigned int STP_GetPortAutoEdge (const STP_BRIDGE* bridge, unsigned int portIndex)
 {
 	return bridge->ports [portIndex]->AutoEdge;
 }
@@ -639,7 +639,7 @@ void STP_SetPortAdminPointToPointMAC (STP_BRIDGE* bridge, unsigned int portIndex
 	FLUSH_LOG (bridge);
 }
 
-STP_ADMIN_P2P STP_GetPortAdminPointToPointMAC (STP_BRIDGE* bridge, unsigned int portIndex)
+STP_ADMIN_P2P STP_GetPortAdminPointToPointMAC (const STP_BRIDGE* bridge, unsigned int portIndex)
 {
 	return bridge->ports [portIndex]->adminPointToPointMAC;
 }
@@ -730,7 +730,7 @@ void STP_SetBridgePriority (STP_BRIDGE* bridge, unsigned int treeIndex, unsigned
 	FLUSH_LOG (bridge);
 }
 
-unsigned short STP_GetBridgePriority (STP_BRIDGE* bridge, unsigned int treeIndex)
+unsigned short STP_GetBridgePriority (const STP_BRIDGE* bridge, unsigned int treeIndex)
 {
 	assert (treeIndex <= bridge->mstiCount);
 
@@ -766,7 +766,7 @@ void STP_SetPortPriority (STP_BRIDGE* bridge, unsigned int portIndex, unsigned i
 	FLUSH_LOG (bridge);
 }
 
-unsigned char STP_GetPortPriority (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
+unsigned char STP_GetPortPriority (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
 {
 	// See 13.25.32 in 802.1Q-2011
 
@@ -777,7 +777,7 @@ unsigned char STP_GetPortPriority (STP_BRIDGE* bridge, unsigned int portIndex, u
 	return priority;
 }
 
-unsigned short STP_GetPortIdentifier (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
+unsigned short STP_GetPortIdentifier (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
 {
 	assert (portIndex < bridge->portCount);
 	assert (treeIndex <= bridge->mstiCount);
@@ -931,17 +931,17 @@ const STP_CONFIG_TABLE_ENTRY* STP_GetMstConfigTable (STP_BRIDGE* bridge, unsigne
 
 // ============================================================================
 
-unsigned int STP_GetPortCount (STP_BRIDGE* bridge)
+unsigned int STP_GetPortCount (const STP_BRIDGE* bridge)
 {
 	return bridge->portCount;
 }
 
-unsigned int STP_GetMstiCount (STP_BRIDGE* bridge)
+unsigned int STP_GetMstiCount (const STP_BRIDGE* bridge)
 {
 	return bridge->mstiCount;
 }
 
-enum STP_VERSION STP_GetStpVersion (STP_BRIDGE* bridge)
+enum STP_VERSION STP_GetStpVersion (const STP_BRIDGE* bridge)
 {
 	return bridge->ForceProtocolVersion;
 }
@@ -970,46 +970,46 @@ void STP_SetStpVersion (STP_BRIDGE* bridge, enum STP_VERSION version, unsigned i
 	FLUSH_LOG (bridge);
 }
 
-unsigned int STP_GetPortEnabled (STP_BRIDGE* bridge, unsigned int portIndex)
+unsigned int STP_GetPortEnabled (const STP_BRIDGE* bridge, unsigned int portIndex)
 {
 	return bridge->ports [portIndex]->portEnabled;
 }
 
-STP_PORT_ROLE STP_GetPortRole (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
+STP_PORT_ROLE STP_GetPortRole (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
 {
 	assert (bridge->started);
 	return bridge->ports [portIndex]->trees [treeIndex]->role;
 }
 
-unsigned int STP_GetPortLearning (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
+unsigned int STP_GetPortLearning (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
 {
 	assert (bridge->started);
 	return bridge->ports [portIndex]->trees [treeIndex]->learning;
 }
 
-unsigned int STP_GetPortForwarding (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
+unsigned int STP_GetPortForwarding (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
 {
 	assert (bridge->started);
 	return bridge->ports [portIndex]->trees [treeIndex]->forwarding;
 }
 
-unsigned int STP_GetPortOperEdge (STP_BRIDGE* bridge, unsigned int portIndex)
+unsigned int STP_GetPortOperEdge (const STP_BRIDGE* bridge, unsigned int portIndex)
 {
 	assert (bridge->started);
 	return bridge->ports [portIndex]->operEdge;
 }
 
-unsigned int STP_GetPortOperPointToPointMAC (STP_BRIDGE* bridge, unsigned int portIndex)
+unsigned int STP_GetPortOperPointToPointMAC (const STP_BRIDGE* bridge, unsigned int portIndex)
 {
 	return bridge->ports [portIndex]->operPointToPointMAC;
 }
 
-unsigned int STP_GetMaxVlanNumber (STP_BRIDGE* bridge)
+unsigned int STP_GetMaxVlanNumber (const STP_BRIDGE* bridge)
 {
 	return bridge->maxVlanNumber;
 }
 
-unsigned int STP_GetTreeIndexFromVlanNumber (STP_BRIDGE* bridge, unsigned int vlanNumber)
+unsigned int STP_GetTreeIndexFromVlanNumber (const STP_BRIDGE* bridge, unsigned int vlanNumber)
 {
 	assert (vlanNumber <= bridge->maxVlanNumber);
 
@@ -1027,7 +1027,7 @@ unsigned int STP_GetTreeIndexFromVlanNumber (STP_BRIDGE* bridge, unsigned int vl
 	}
 }
 
-const struct STP_MST_CONFIG_ID* STP_GetMstConfigId (struct STP_BRIDGE* bridge)
+const struct STP_MST_CONFIG_ID* STP_GetMstConfigId (const struct STP_BRIDGE* bridge)
 {
 	return &bridge->MstConfigId;
 }
@@ -1072,7 +1072,7 @@ const char* STP_GetAdminP2PString (enum STP_ADMIN_P2P adminP2P)
 
 // ============================================================================
 
-void STP_GetRootPriorityVector (STP_BRIDGE* bridge, unsigned int treeIndex, unsigned char priorityVectorOut[36])
+void STP_GetRootPriorityVector (const STP_BRIDGE* bridge, unsigned int treeIndex, unsigned char priorityVectorOut[36])
 {
 	assert (bridge->started);
 	const unsigned char* rootPriority = (const unsigned char*) &bridge->trees [treeIndex]->rootPriority;
@@ -1082,7 +1082,7 @@ void STP_GetRootPriorityVector (STP_BRIDGE* bridge, unsigned int treeIndex, unsi
 	priorityVectorOut [35] = rootPortId [1];
 }
 
-void STP_GetRootTimes (STP_BRIDGE* bridge,
+void STP_GetRootTimes (const STP_BRIDGE* bridge,
 					   unsigned int treeIndex,
 					   unsigned short* forwardDelayOutOrNull,
 					   unsigned short* helloTimeOutOrNull,
@@ -1117,14 +1117,14 @@ void STP_GetRootTimes (STP_BRIDGE* bridge,
 
 // ============================================================================
 
-unsigned int STP_IsCistRoot (STP_BRIDGE* bridge)
+unsigned int STP_IsCistRoot (const STP_BRIDGE* bridge)
 {
 	assert (bridge->started);
 	BRIDGE_TREE* cist = bridge->trees[CIST_INDEX];
 	return cist->rootPriority.RootId == cist->GetBridgeIdentifier();
 }
 
-unsigned int STP_IsRegionalRoot (STP_BRIDGE* bridge, unsigned int treeIndex)
+unsigned int STP_IsRegionalRoot (const STP_BRIDGE* bridge, unsigned int treeIndex)
 {
 	assert (bridge->started);
 	assert ((treeIndex > 0) && (treeIndex < bridge->treeCount()));
@@ -1139,7 +1139,7 @@ void  STP_SetApplicationContext (STP_BRIDGE* bridge, void* applicationContext)
 	bridge->applicationContext = applicationContext;
 }
 
-void* STP_GetApplicationContext (STP_BRIDGE* bridge)
+void* STP_GetApplicationContext (const STP_BRIDGE* bridge)
 {
 	return bridge->applicationContext;
 }

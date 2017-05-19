@@ -376,7 +376,7 @@ int main ()
 
 // ============================================================================
 
-static void StpCallback_EnableLearning (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
+static void StpCallback_EnableLearning (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
 {
 	unsigned int i = ENET_MIIReadRegister (20, 6);
 
@@ -398,7 +398,7 @@ static void StpCallback_EnableLearning (struct STP_BRIDGE* bridge, unsigned int 
 	ENET_MIIWriteRegister (20, 6, i);
 }
 
-static void StpCallback_EnableForwarding (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
+static void StpCallback_EnableForwarding (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
 {
 	unsigned int i = ENET_MIIReadRegister (20, 6);
 
@@ -423,7 +423,7 @@ static void StpCallback_EnableForwarding (struct STP_BRIDGE* bridge, unsigned in
 static unsigned char BpduFrameBuffer [21 + 36];
 static unsigned int BpduFrameSize;
 
-static void* StpCallback_TransmitGetBuffer (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int bpduSize, unsigned int timestamp)
+static void* StpCallback_TransmitGetBuffer (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int bpduSize, unsigned int timestamp)
 {
 	if (portIndex == PORT_RMII)
 	{
@@ -444,7 +444,7 @@ static void* StpCallback_TransmitGetBuffer (struct STP_BRIDGE* bridge, unsigned 
 	BpduFrameBuffer[5] = 0x00;
 
 	// Source Mac Address
-	STP_GetBridgeAddress (bridge, &BpduFrameBuffer[6]);
+	memcpy (&BpduFrameBuffer[6], STP_GetBridgeAddress(bridge)->bytes, 6);
 	assert ((unsigned int) BpduFrameBuffer[11] + 1 + portIndex <= 255);
 	BpduFrameBuffer[11] += (1 + portIndex);
 
@@ -466,12 +466,12 @@ static void* StpCallback_TransmitGetBuffer (struct STP_BRIDGE* bridge, unsigned 
 	return &BpduFrameBuffer[21];
 }
 
-static void StpCallback_TransmitReleaseBuffer (struct STP_BRIDGE* bridge, void* bufferReturnedByGetBuffer)
+static void StpCallback_TransmitReleaseBuffer (const struct STP_BRIDGE* bridge, void* bufferReturnedByGetBuffer)
 {
 	tapdev_send (BpduFrameBuffer, BpduFrameSize);
 }
 
-static void StpCallback_FlushFdb (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType)
+static void StpCallback_FlushFdb (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType)
 {
 	// quickly age out everything
 	ENET_MIIWriteRegister (20, 14, 0x60);
@@ -483,7 +483,7 @@ static void StpCallback_FlushFdb (struct STP_BRIDGE* bridge, unsigned int portIn
 	ENET_MIIWriteRegister (20, 14, 5);
 }
 
-static void StpCallback_DebugStrOut (struct STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, unsigned int flush)
+static void StpCallback_DebugStrOut (const struct STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, unsigned int flush)
 {
 	printf ("%s", nullTerminatedString);
 	if (flush)
@@ -491,14 +491,14 @@ static void StpCallback_DebugStrOut (struct STP_BRIDGE* bridge, int portIndex, i
 }
 
 // See long comment at the end of 802_1Q_2011_procedures.cpp.
-static void StpCallback_OnTopologyChange (struct STP_BRIDGE* bridge)
+static void StpCallback_OnTopologyChange (const struct STP_BRIDGE* bridge)
 {
 	// do nothing in this demo app
 	//printf ("TC\r\n");
 }
 
 // See long comment at the end of 802_1Q_2011_procedures.cpp.
-static void StpCallback_OnNotifiedTC (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp)
+static void StpCallback_OnNotifiedTC (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp)
 {
 	// quickly age out everything
 	ENET_MIIWriteRegister (20, 14, 0x60);
@@ -510,11 +510,11 @@ static void StpCallback_OnNotifiedTC (struct STP_BRIDGE* bridge, unsigned int po
 	ENET_MIIWriteRegister (20, 14, 5);
 }
 
-void StpCallback_OnPortRoleChanged (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_PORT_ROLE role, unsigned int timestamp)
+void StpCallback_OnPortRoleChanged (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_PORT_ROLE role, unsigned int timestamp)
 {
 }
 
-void StpCallback_OnConfigChanged (struct STP_BRIDGE* bridge, unsigned int timestamp)
+void StpCallback_OnConfigChanged (const struct STP_BRIDGE* bridge, unsigned int timestamp)
 {
 }
 
