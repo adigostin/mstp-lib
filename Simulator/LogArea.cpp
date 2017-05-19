@@ -30,8 +30,8 @@ class LogArea : public D2DWindow, public ILogArea
 	static constexpr UINT AnimationScrollFramesMax = 10;
 
 public:
-	LogArea (HINSTANCE hInstance, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, ISelection* selection)
-		: base (hInstance, WS_EX_CLIENTEDGE, WS_VISIBLE | WS_CHILD | WS_HSCROLL | WS_VSCROLL, rect, hWndParent, nullptr, deviceContext, dWriteFactory)
+	LogArea (HINSTANCE hInstance, HWND hWndParent, const RECT& rect, IDWriteFactory* dWriteFactory, ISelection* selection)
+		: base (hInstance, WS_EX_CLIENTEDGE, WS_VISIBLE | WS_CHILD | WS_HSCROLL | WS_VSCROLL, rect, hWndParent, nullptr, dWriteFactory)
 		, _selection(selection)
 	{
 		auto hr = dWriteFactory->CreateTextFormat (L"Consolas", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
@@ -39,8 +39,8 @@ public:
 
 		_numberOfLinesFitting = CalcNumberOfLinesFitting (_textFormat, GetClientSizeDips().height, dWriteFactory);
 
-		GetDeviceContext()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOW), &_windowBrush);
-		GetDeviceContext()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOWTEXT), &_windowTextBrush);
+		GetRenderTarget()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOW), &_windowBrush);
+		GetRenderTarget()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOWTEXT), &_windowTextBrush);
 		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
 	}
 
@@ -72,7 +72,7 @@ private:
 		}
 	}
 
-	virtual void Render(ID2D1DeviceContext* dc) const override final
+	virtual void Render(ID2D1RenderTarget* dc) const override final
 	{
 		dc->Clear(GetD2DSystemColor(COLOR_WINDOW));
 

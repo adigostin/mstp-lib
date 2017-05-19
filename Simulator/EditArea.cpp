@@ -47,16 +47,15 @@ public:
 			  ISelection* selection,
 			  HWND hWndParent,
 			  const RECT& rect,
-			  ID3D11DeviceContext1* deviceContext,
 			  IDWriteFactory* dWriteFactory)
-		: base (app->GetHInstance(), WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, hWndParent, nullptr, deviceContext, dWriteFactory)
+		: base (app->GetHInstance(), WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, hWndParent, nullptr, dWriteFactory)
 		, _app(app)
 		, _pw(pw)
 		, _project(project)
 		, _actionList(actionList)
 		, _selection(selection)
 	{
-		auto dc = base::GetDeviceContext();
+		auto dc = base::GetRenderTarget();
 		_drawingObjects._dWriteFactory = dWriteFactory;
 		auto hr = dc->CreateSolidColorBrush (ColorF (ColorF::PaleGreen), &_drawingObjects._poweredFillBrush); ThrowIfFailed(hr);
 		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray), &_drawingObjects._unpoweredBrush); ThrowIfFailed(hr);
@@ -181,7 +180,7 @@ public:
 		{ L"Undefined",							STP_PORT_ROLE_UNKNOWN,    false, false, false },
 	};
 
-	void RenderLegend (ID2D1DeviceContext* dc) const
+	void RenderLegend (ID2D1RenderTarget* dc) const
 	{
 		auto clientSizeDips = GetClientSizeDips();
 
@@ -249,7 +248,7 @@ public:
 		}
 	}
 
-	void RenderConfigIdList (ID2D1DeviceContext* dc, const std::set<STP_MST_CONFIG_ID>& configIds) const
+	void RenderConfigIdList (ID2D1RenderTarget* dc, const std::set<STP_MST_CONFIG_ID>& configIds) const
 	{
 		size_t colorIndex = 0;
 
@@ -325,7 +324,7 @@ public:
 		rt->SetAntialiasMode(oldaa);
 	}
 
-	void RenderHint (ID2D1DeviceContext* dc, float centerX, float topY, const wchar_t* text) const
+	void RenderHint (ID2D1RenderTarget* dc, float centerX, float topY, const wchar_t* text) const
 	{
 		float padding = 3.0f;
 		auto tl = TextLayout::Create (GetDWriteFactory(), _drawingObjects._regularTextFormat, text);
@@ -344,7 +343,7 @@ public:
 		dc->DrawTextLayout ({ rr.rect.left + padding, rr.rect.top + padding }, tl.layout, brush);
 	}
 
-	void RenderBridges (ID2D1DeviceContext* dc, const std::set<STP_MST_CONFIG_ID>& configIds) const
+	void RenderBridges (ID2D1RenderTarget* dc, const std::set<STP_MST_CONFIG_ID>& configIds) const
 	{
 		D2D1_MATRIX_3X2_F oldtr;
 		dc->GetTransform(&oldtr);
@@ -369,7 +368,7 @@ public:
 		dc->SetTransform(oldtr);
 	}
 
-	void RenderWires (ID2D1DeviceContext* dc) const
+	void RenderWires (ID2D1RenderTarget* dc) const
 	{
 		D2D1_MATRIX_3X2_F oldtr;
 		dc->GetTransform(&oldtr);
@@ -406,7 +405,7 @@ public:
 		}
 	}
 
-	void RenderZoomingPaningHint (ID2D1DeviceContext* dc) const
+	void RenderZoomingPanningHint (ID2D1RenderTarget* dc) const
 	{
 		IDWriteTextFormatPtr format;
 		auto hr = GetDWriteFactory()->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_MEDIUM, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 10, L"en-US", &format); ThrowIfFailed(hr);
@@ -437,7 +436,7 @@ public:
 		dc->DrawTextLayout ({ GetClientWidthDips() / 2 - metrics.width / 2, GetClientHeightDips() - metrics.height }, layout, _drawingObjects._brushWindowText);
 	}
 
-	void RenderHover (ID2D1DeviceContext* dc) const
+	void RenderHover (ID2D1RenderTarget* dc) const
 	{
 		if (dynamic_cast<Port*>(_htResult.object) != nullptr)
 		{
@@ -451,7 +450,7 @@ public:
 		}
 	}
 
-	virtual void Render(ID2D1DeviceContext* dc) const override final
+	virtual void Render(ID2D1RenderTarget* dc) const override final
 	{
 		std::set<STP_MST_CONFIG_ID> configIds;
 		for (auto& bridge : _project->GetBridges())
@@ -478,7 +477,7 @@ public:
 		if (_htResult.object != nullptr)
 			RenderHover(dc);
 
-		RenderZoomingPaningHint(dc);
+		RenderZoomingPanningHint(dc);
 
 		if (_state != nullptr)
 			_state->Render(dc);

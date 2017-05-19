@@ -14,43 +14,17 @@ using namespace D2D1;
 static ATOM WndClassAtom;
 static const wchar_t WndClassName[] = L"D2DWindow-{175802BE-0628-45C0-BC8A-3D27C6F4F0BE}";
 
-D2DWindow::D2DWindow (HINSTANCE hInstance, DWORD exStyle, DWORD style, const RECT& rect, HWND hWndParent, HMENU hMenuOrControlId, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory)
+D2DWindow::D2DWindow (HINSTANCE hInstance, DWORD exStyle, DWORD style, const RECT& rect, HWND hWndParent, HMENU hMenuOrControlId, IDWriteFactory* dWriteFactory)
 	: base(hInstance, WndClassName, exStyle, style, rect, hWndParent, hMenuOrControlId)
-	, _d3dDeviceContext(deviceContext)
 	, _dWriteFactory(dWriteFactory)
 {
-	ID3D11DevicePtr device;
-	deviceContext->GetDevice(&device);
-	auto hr = device->QueryInterface(IID_PPV_ARGS(&_d3dDevice)); ThrowIfFailed(hr);
-
-	hr = device->QueryInterface(IID_PPV_ARGS(&_dxgiDevice)); ThrowIfFailed(hr);
-
-	hr = _dxgiDevice->GetAdapter(&_dxgiAdapter); ThrowIfFailed(hr);
-
-	hr = _dxgiAdapter->GetParent(IID_PPV_ARGS(&_dxgiFactory)); ThrowIfFailed(hr);
-
-	hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, IID_PPV_ARGS(&_d2dFactory)); ThrowIfFailed(hr);
-
-	DXGI_SWAP_CHAIN_DESC1 desc;
-	desc.Width = std::max((LONG) 8, GetClientWidthPixels());
-	desc.Height = std::max((LONG)8, GetClientHeightPixels());
-	desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-	desc.Stereo = FALSE;
-	desc.SampleDesc.Count = 1;
-	desc.SampleDesc.Quality = 0;
-	desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	desc.BufferCount = 1;
-	desc.Scaling = DXGI_SCALING_STRETCH;
-	desc.SwapEffect = DXGI_SWAP_EFFECT_SEQUENTIAL;// DXGI_SWAP_EFFECT_DISCARD;// DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
-	desc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-	desc.Flags = 0;
-	hr = _dxgiFactory->CreateSwapChainForHwnd(_d3dDevice, GetHWnd(), &desc, nullptr, nullptr, &_swapChain); ThrowIfFailed(hr);
-	_forceFullPresentation = true;
+	auto hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, IID_PPV_ARGS(&_d2dFactory));
+	ThrowIfFailed(hr);
 
 	CreateD2DDeviceContext();
 
 	float dpiX, dpiY;
-	_d2dDeviceContext->GetDpi(&dpiX, &dpiY);
+	_renderTarget->GetDpi(&dpiX, &dpiY);
 	_clientSizeDips.width = GetClientWidthPixels() * 96.0f / dpiX;
 	_clientSizeDips.height = GetClientHeightPixels() * 96.0f / dpiY;
 }
@@ -59,9 +33,6 @@ void D2DWindow::CreateD2DDeviceContext()
 {
 	assert(_d2dDeviceContext == nullptr);
 
-	IDXGISurface2Ptr dxgiSurface;
-	auto hr = _swapChain->GetBuffer(0, IID_PPV_ARGS(&dxgiSurface)); ThrowIfFailed(hr);
-
 	D2D1_RENDER_TARGET_PROPERTIES props = {};
 	props.type = D2D1_RENDER_TARGET_TYPE_HARDWARE;
 	props.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -69,9 +40,13 @@ void D2DWindow::CreateD2DDeviceContext()
 	_d2dFactory->GetDesktopDpi (&props.dpiX, &props.dpiY);
 	props.usage = D2D1_RENDER_TARGET_USAGE_NONE;
 	props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
-	ID2D1RenderTargetPtr rt;
-	hr = _d2dFactory->CreateDxgiSurfaceRenderTarget(dxgiSurface, &props, &rt); ThrowIfFailed(hr);
-	hr = rt->QueryInterface(&_d2dDeviceContext); ThrowIfFailed(hr);
+
+	D2D1_HWND_RENDER_TARGET_PROPERTIES hwndrtprops = { };
+	hwndrtprops.hwnd = GetHWnd();
+	hwndrtprops.pixelSize = { (UINT32) GetClientWidthPixels(), (UINT32) GetClientHeightPixels() };
+
+	auto hr = _d2dFactory->CreateHwndRenderTarget(&props, &hwndrtprops, &_renderTarget);
+	ThrowIfFailed(hr);
 }
 
 std::optional<LRESULT> D2DWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -80,12 +55,11 @@ std::optional<LRESULT> D2DWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam
 
 	if (uMsg == WM_SIZE)
 	{
-		_d2dDeviceContext = nullptr;
-		auto hr = _swapChain->ResizeBuffers (0, std::max ((LONG)8, GetClientWidthPixels()), std::max((LONG)8, GetClientHeightPixels()), DXGI_FORMAT_UNKNOWN, 0); ThrowIfFailed(hr);
+		_renderTarget = nullptr;
 		CreateD2DDeviceContext();
 
 		float dpiX, dpiY;
-		_d2dDeviceContext->GetDpi(&dpiX, &dpiY);
+		_renderTarget->GetDpi(&dpiX, &dpiY);
 		_clientSizeDips.width = GetClientWidthPixels() * 96.0f / dpiX;
 		_clientSizeDips.height = GetClientHeightPixels() * 96.0f / dpiY;
 
@@ -133,18 +107,12 @@ void D2DWindow::ProcessWmPaint (HWND hwnd)
 
 	_painting = true;
 
-	ID3D11Texture2DPtr backBuffer;
-	hr = _swapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer)); ThrowIfFailed(hr);
+	_renderTarget->BeginDraw();
+	_renderTarget->SetTransform(IdentityMatrix());
 
-	_d2dDeviceContext->BeginDraw();
-	_d2dDeviceContext->SetTransform(IdentityMatrix());
+	this->Render(_renderTarget);
 
-	this->Render(_d2dDeviceContext);
-
-	hr = _d2dDeviceContext->EndDraw(); ThrowIfFailed(hr);
-
-	DXGI_PRESENT_PARAMETERS pp = {};
-	hr = _swapChain->Present1(0, 0, &pp); ThrowIfFailed(hr);
+	hr = _renderTarget->EndDraw(); ThrowIfFailed(hr);
 
 	::EndPaint(hwnd, &ps); // this will show the caret in case BeginPaint above hid it.
 
@@ -157,28 +125,28 @@ void D2DWindow::ProcessWmPaint (HWND hwnd)
 D2D1_POINT_2F D2DWindow::GetDipLocationFromPixelLocation(POINT p) const
 {
 	float dpiX, dpiY;
-	_d2dDeviceContext->GetDpi(&dpiX, &dpiY);
+	_renderTarget->GetDpi(&dpiX, &dpiY);
 	return D2D1_POINT_2F{ p.x * 96.0f / dpiX, p.y * 96.0f / dpiY };
 }
 
 POINT D2DWindow::GetPixelLocationFromDipLocation(D2D1_POINT_2F locationDips) const
 {
 	float dpiX, dpiY;
-	_d2dDeviceContext->GetDpi(&dpiX, &dpiY);
+	_renderTarget->GetDpi(&dpiX, &dpiY);
 	return POINT{ (int)(locationDips.x / 96.0f * dpiX), (int)(locationDips.y / 96.0f * dpiY) };
 }
 
 D2D1_SIZE_F D2DWindow::GetDipSizeFromPixelSize(SIZE sz) const
 {
 	float dpiX, dpiY;
-	_d2dDeviceContext->GetDpi(&dpiX, &dpiY);
+	_renderTarget->GetDpi(&dpiX, &dpiY);
 	return D2D1_SIZE_F{ sz.cx * 96.0f / dpiX, sz.cy * 96.0f / dpiY };
 }
 
 SIZE D2DWindow::GetPixelSizeFromDipSize(D2D1_SIZE_F sizeDips) const
 {
 	float dpiX, dpiY;
-	_d2dDeviceContext->GetDpi(&dpiX, &dpiY);
+	_renderTarget->GetDpi(&dpiX, &dpiY);
 	return SIZE{ (int)(sizeDips.width / 96.0f * dpiX), (int)(sizeDips.height / 96.0f * dpiY) };
 }
 

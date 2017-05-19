@@ -99,7 +99,7 @@ public:
 		_dockContainer = dockContainerFactory (_app->GetHInstance(), _hwnd, clientRect);
 
 		auto logPanel = _dockContainer->CreatePanel (LogPanelUniqueName, Side::Right, L"STP Log");
-		auto logArea = logAreaFactory (_app->GetHInstance(), logPanel->GetHWnd(), logPanel->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory(), _selection);
+		auto logArea = logAreaFactory (_app->GetHInstance(), logPanel->GetHWnd(), logPanel->GetContentRect(), _app->GetDWriteFactory(), _selection);
 		logPanel->GetVisibleChangedEvent().AddHandler (&OnLogPanelVisibleChanged, this);
 		SetMainMenuItemCheck (ID_VIEW_STPLOG, true);
 
@@ -115,7 +115,7 @@ public:
 		vlanPanel->GetVisibleChangedEvent().AddHandler (&OnVlanPanelVisibleChanged, this);
 		SetMainMenuItemCheck (ID_VIEW_VLANS, true);
 
-		_editArea = editAreaFactory (app, this, _project, _actionList, _selection, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), _app->GetD3DDeviceContext(), _app->GetDWriteFactory());
+		_editArea = editAreaFactory (app, this, _project, _actionList, _selection, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), _app->GetDWriteFactory());
 
 		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
 		_actionList->GetChangedEvent().AddHandler (&OnActionListChanged, this);

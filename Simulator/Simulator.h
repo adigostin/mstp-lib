@@ -59,7 +59,7 @@ MIDL_INTERFACE("{47DD7E84-9550-42DD-AECE-296878C0C631}") ILogArea abstract : pub
 {
 };
 _COM_SMARTPTR_TYPEDEF(ILogArea, __uuidof(ILogArea));
-using LogAreaFactory = ILogAreaPtr(*const)(HINSTANCE hInstance, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory, ISelection* selection);
+using LogAreaFactory = ILogAreaPtr(*const)(HINSTANCE hInstance, HWND hWndParent, const RECT& rect, IDWriteFactory* dWriteFactory, ISelection* selection);
 extern const LogAreaFactory logAreaFactory;
 
 // ============================================================================
@@ -97,7 +97,6 @@ using EditAreaFactory = IEditAreaPtr(*const)(ISimulatorApp* app,
 											 ISelection* selection,
 											 HWND hWndParent,
 											 const RECT& rect,
-											 ID3D11DeviceContext1* deviceContext,
 											 IDWriteFactory* dWriteFactory);
 extern const EditAreaFactory editAreaFactory;
 
@@ -256,7 +255,6 @@ struct ISimulatorApp
 	struct ProjectWindowRemovedEvent : public Event<ProjectWindowRemovedEvent, void(IProjectWindow*)> { };
 
 	virtual HINSTANCE GetHInstance() const = 0;
-	virtual ID3D11DeviceContext1* GetD3DDeviceContext() const = 0;
 	virtual IDWriteFactory* GetDWriteFactory() const = 0;
 	virtual const wchar_t* GetRegKeyPath() const = 0;
 	virtual void AddProjectWindow (IProjectWindow* pw) = 0;

@@ -99,8 +99,6 @@ Port* IProject::FindConnectedPort (Port* txPort) const
 class SimulatorApp : public EventManager, public ISimulatorApp
 {
 	HINSTANCE const _hInstance;
-	ID3D11Device1Ptr _d3dDevice;
-	ID3D11DeviceContext1Ptr _d3dDeviceContext;
 	IDWriteFactoryPtr _dWriteFactory;
 
 	wstring _regKeyPath;
@@ -119,33 +117,7 @@ public:
 		tryDebugFirst = true;
 		#endif
 
-		auto d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
-		ID3D11DevicePtr device;
-		ID3D11DeviceContextPtr deviceContext;
-
-		HRESULT hr;
-		if (tryDebugFirst)
-		{
-			hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
-								   D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_DEBUG,
-								   &d3dFeatureLevel, 1,
-								   D3D11_SDK_VERSION, &device, nullptr, &deviceContext);
-		}
-
-		if (!tryDebugFirst || FAILED(hr))
-		{
-			hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
-								   D3D11_CREATE_DEVICE_BGRA_SUPPORT,
-								   &d3dFeatureLevel, 1,
-								   D3D11_SDK_VERSION, &device, nullptr, &deviceContext);
-			ThrowIfFailed(hr);
-		}
-
-		hr = device->QueryInterface(IID_PPV_ARGS(&_d3dDevice)); ThrowIfFailed(hr);
-
-		hr = deviceContext->QueryInterface(IID_PPV_ARGS(&_d3dDeviceContext)); ThrowIfFailed(hr);
-
-		hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof (IDWriteFactory), reinterpret_cast<IUnknown**>(&_dWriteFactory)); ThrowIfFailed(hr);
+		auto hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof (IDWriteFactory), reinterpret_cast<IUnknown**>(&_dWriteFactory)); ThrowIfFailed(hr);
 
 		//IWICImagingFactory2Ptr wicFactory;
 		//hr = CoCreateInstance(CLSID_WICImagingFactory2, NULL, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory2), (void**)&wicFactory); ThrowIfFailed(hr);
@@ -177,8 +149,6 @@ public:
 	}
 
 	virtual const std::vector<IProjectWindowPtr>& GetProjectWindows() const override final { return _projectWindows; }
-
-	virtual ID3D11DeviceContext1* GetD3DDeviceContext() const override final { return _d3dDeviceContext; }
 
 	virtual IDWriteFactory* GetDWriteFactory() const override final { return _dWriteFactory; }
 
