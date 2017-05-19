@@ -166,8 +166,7 @@ unsigned int STP_GetPortOperEdge            (struct STP_BRIDGE* bridge, unsigned
 unsigned int STP_GetPortOperPointToPointMAC (struct STP_BRIDGE* bridge, unsigned int portIndex);
 
 void STP_GetDefaultMstConfigName (const unsigned char bridgeAddress[6], char nameOut[18]);
-void STP_SetMstConfigName (struct STP_BRIDGE* bridge, const char* name, unsigned int debugTimestamp);
-
+void STP_SetMstConfigName (struct STP_BRIDGE* bridge, const char* name, unsigned int timestamp);
 void STP_SetMstConfigRevisionLevel (struct STP_BRIDGE* bridge, unsigned short revisionLevel, unsigned int debugTimestamp);
 
 struct STP_CONFIG_TABLE_ENTRY

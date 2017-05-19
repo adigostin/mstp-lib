@@ -49,6 +49,8 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	// This means a maximum of 4095 ports.
 	assert ((portCount >= 1) && (portCount < 4096));
 
+	assert (maxVlanNumber <= 4094);
+
 	STP_BRIDGE* bridge = (STP_BRIDGE*) callbacks->allocAndZeroMemory (sizeof (STP_BRIDGE));
 	assert (bridge != NULL);
 
