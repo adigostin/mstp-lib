@@ -381,6 +381,15 @@ public:
 			return 0;
 		}
 
+		if (wParam == ID_HELP_ABOUT)
+		{
+			wstring text (_app->GetAppName());
+			text += L" v";
+			text += _app->GetAppVersionString();
+			MessageBox (_hwnd, text.c_str(), _app->GetAppName(), 0);
+			return 0;
+		}
+
 		return nullopt;
 	}
 

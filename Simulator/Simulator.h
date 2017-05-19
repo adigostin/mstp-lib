@@ -262,6 +262,7 @@ struct ISimulatorApp
 	virtual void AddProjectWindow (IProjectWindow* pw) = 0;
 	virtual const std::vector<IProjectWindowPtr>& GetProjectWindows() const = 0;
 	virtual const wchar_t* GetAppName() const = 0;
+	virtual const wchar_t* GetAppVersionString() const = 0;
 	virtual ProjectWindowAddedEvent::Subscriber GetProjectWindowAddedEvent() = 0;
 	virtual ProjectWindowRemovingEvent::Subscriber GetProjectWindowRemovingEvent() = 0;
 	virtual ProjectWindowRemovedEvent::Subscriber GetProjectWindowRemovedEvent() = 0;

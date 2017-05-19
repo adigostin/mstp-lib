@@ -20,7 +20,7 @@ using namespace D2D1;
 
 static const wchar_t CompanyName[] = L"Adi Gostin";
 static const wchar_t AppName[] = L"STP Simulator";
-static const wchar_t AppVersion[] = L"2.0";
+static const wchar_t AppVersionString[] = L"2.0";
 
 #pragma region IWin32Window
 
@@ -111,7 +111,7 @@ public:
 		: _hInstance(hInstance)
 	{
 		wstringstream ss;
-		ss << L"SOFTWARE\\" << CompanyName << L"\\" << ::AppName << L"\\" << ::AppVersion;
+		ss << L"SOFTWARE\\" << CompanyName << L"\\" << ::AppName << L"\\" << ::AppVersionString;
 		_regKeyPath = ss.str();
 
 		bool tryDebugFirst = false;
@@ -185,6 +185,8 @@ public:
 	virtual const wchar_t* GetRegKeyPath() const override final { return _regKeyPath.c_str(); }
 
 	virtual const wchar_t* GetAppName() const override final { return AppName; }
+
+	virtual const wchar_t* GetAppVersionString() const override final { return AppVersionString; }
 
 	virtual ProjectWindowAddedEvent::Subscriber GetProjectWindowAddedEvent() override final { return ProjectWindowAddedEvent::Subscriber(this); }
 

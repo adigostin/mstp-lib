@@ -79,7 +79,10 @@ BEGIN
         MENUITEM "STP &Log",                    ID_VIEW_STPLOG
         MENUITEM "&VLANs",                      ID_VIEW_VLANS
     END
-    MENUITEM "&Help",                       0
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&About",                      ID_HELP_ABOUT
+    END
 END
 
 
