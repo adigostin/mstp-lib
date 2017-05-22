@@ -31,8 +31,6 @@ D2DWindow::D2DWindow (HINSTANCE hInstance, DWORD exStyle, DWORD style, const REC
 
 void D2DWindow::CreateD2DDeviceContext()
 {
-	assert(_d2dDeviceContext == nullptr);
-
 	D2D1_RENDER_TARGET_PROPERTIES props = {};
 	props.type = D2D1_RENDER_TARGET_TYPE_HARDWARE;
 	props.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
