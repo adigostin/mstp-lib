@@ -467,8 +467,40 @@ private:
 
 		auto timestamp = GetTimestampMilliseconds();
 
-		for (auto b : _bridges)
-			STP_SetStpVersion (b->GetStpBridge(), newVersion, timestamp);
+		if (any_of (_bridges.begin(), _bridges.end(), [newVersion](Bridge* b) { return STP_GetStpVersion(b->GetStpBridge()) != newVersion; }))
+		{
+			struct ChangeStpVersionAction : public EditAction
+			{
+				vector<pair<Bridge*, STP_VERSION>> _bridgesAndOldVersions;
+				STP_VERSION _newVersion;
+
+				ChangeStpVersionAction (const vector<Bridge*>& bridges, STP_VERSION newVersion)
+				{
+					std::transform (bridges.begin(), bridges.end(), back_inserter(_bridgesAndOldVersions),
+									[](Bridge* b) { return make_pair(b, STP_GetStpVersion(b->GetStpBridge())); });
+					_newVersion = newVersion;
+				}
+
+				virtual void Redo() override final
+				{
+					auto timestamp = GetTimestampMilliseconds();
+					for (auto& p : _bridgesAndOldVersions)
+						STP_SetStpVersion (p.first->GetStpBridge(), _newVersion, timestamp);
+				}
+
+				virtual void Undo() override final
+				{
+					auto timestamp = GetTimestampMilliseconds();
+					for (auto& p : _bridgesAndOldVersions)
+						STP_SetStpVersion (p.first->GetStpBridge(), p.second, timestamp);
+				}
+
+				virtual std::string GetName() const override final { return "Change STP version"; }
+			};
+
+			auto action = unique_ptr<EditAction>(new ChangeStpVersionAction(_bridges, newVersion));
+			_actionList->PerformAndAddUserAction (move(action));
+		}
 	}
 	#pragma endregion
 

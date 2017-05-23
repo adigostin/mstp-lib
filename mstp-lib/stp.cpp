@@ -1048,15 +1048,36 @@ const char* STP_GetPortRoleString (STP_PORT_ROLE portRole)
 	}
 }
 
+static const char LegacySTPString[] = "LegacySTP";
+static const char RSTPString[] = "RSTP";
+static const char MSTPString[] = "MSTP";
+
 const char* STP_GetVersionString (enum STP_VERSION version)
 {
 	switch (version)
 	{
-		case STP_VERSION_LEGACY_STP:	return "LegacySTP";
-		case STP_VERSION_RSTP:			return "RSTP";
-		case STP_VERSION_MSTP:			return "MSTP";
-		default:						return "(unknown)";
+		case STP_VERSION_LEGACY_STP:	return LegacySTPString;
+		case STP_VERSION_RSTP:			return RSTPString;
+		case STP_VERSION_MSTP:			return MSTPString;
+		default:
+			assert(false);
+			return nullptr;
 	}
+}
+
+enum STP_VERSION STP_GetVersionFromString (const char* str)
+{
+	if (strcmp(str, LegacySTPString) == 0)
+		return STP_VERSION_LEGACY_STP;
+
+	if (strcmp(str, RSTPString) == 0)
+		return STP_VERSION_RSTP;
+
+	if (strcmp(str, MSTPString) == 0)
+		return STP_VERSION_MSTP;
+
+	assert(false);
+	return (STP_VERSION) -1;
 }
 
 const char* STP_GetAdminP2PString (enum STP_ADMIN_P2P adminP2P)

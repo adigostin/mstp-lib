@@ -416,6 +416,12 @@ unique_ptr<Bridge> Bridge::Deserialize (IProject* project, IXMLDOMElement* eleme
 
 	auto timestamp = GetTimestampMilliseconds();
 
+	auto versionStringW = getAttribute(StpVersionString);
+	wstring_convert<codecvt_utf8<wchar_t>> converter;
+	auto versionStringA = converter.to_bytes(versionStringW);
+	auto version = STP_GetVersionFromString(versionStringA.c_str());
+	STP_SetStpVersion (bridge->_stpBridge, version, timestamp);
+
 	if (wcstoul(getAttribute(StpEnabledString), nullptr, 10))
 		STP_StartBridge (bridge->_stpBridge, timestamp);
 
