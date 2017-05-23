@@ -547,7 +547,7 @@ public:
 	HRESULT TryClose()
 	{
 		auto count = count_if (_app->GetProjectWindows().begin(), _app->GetProjectWindows().end(),
-							   [this] (auto& pw) { return pw->GetProject() == _project; });
+							   [this] (auto& pw) { return pw->GetProject() == _project.GetInterfacePtr(); });
 		if (count == 1)
 		{
 			// Closing last window of this project.
