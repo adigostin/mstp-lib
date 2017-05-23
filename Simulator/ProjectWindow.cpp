@@ -191,7 +191,7 @@ public:
 			windowTitle << L"*";
 
 		auto& pws = _app->GetProjectWindows();
-		if (any_of (pws.begin(), pws.end(), [this](const IProjectWindowPtr& pw) { return (pw.GetInterfacePtr() != this) && (pw->GetProject() == _project); }))
+		if (any_of (pws.begin(), pws.end(), [this](const IProjectWindowPtr& pw) { return (pw.GetInterfacePtr() != this) && (pw->GetProject() == _project.GetInterfacePtr()); }))
 			windowTitle << L" - VLAN " << _selectedVlanNumber;
 
 		::SetWindowText (_hwnd, windowTitle.str().c_str());
@@ -351,13 +351,19 @@ public:
 			return 0;
 		}
 
-		//if (wParam == ID_FILE_SAVE)
-		//{
-		//	Save();
-		//	return 0;
-		//}
+		if (wParam == ID_FILE_SAVE)
+		{
+			Save();
+			return 0;
+		}
 
-		if ((wParam == ID_FILE_NEW) || (wParam == ID_FILE_OPEN) || (wParam == ID_FILE_SAVE) || (wParam == ID_FILE_SAVEAS))
+		if (wParam == ID_FILE_OPEN)
+		{
+			Open();
+			return 0;
+		}
+
+		if ((wParam == ID_FILE_NEW) || (wParam == ID_FILE_SAVEAS))
 		{
 			MessageBox (_hwnd, L"Saving and loading are not yet implemented.", _app->GetAppName(), 0);
 			return 0;
@@ -393,6 +399,35 @@ public:
 		return nullopt;
 	}
 
+	void Open()
+	{
+		wstring openPath;
+		HRESULT hr = TryChooseFilePath (OpenOrSave::Open, _hwnd, nullptr, openPath);
+		if (FAILED(hr))
+			return;
+
+		IProjectPtr projectToLoadTo = _actionList->ChangedSinceLastSave() ? projectFactory() : _project;
+
+		try
+		{
+			projectToLoadTo->Load(openPath.c_str());
+		}
+		catch (const exception& ex)
+		{
+			wstringstream ss;
+			ss << ex.what() << endl << endl << openPath;
+			TaskDialog (_hwnd, nullptr, _app->GetAppName(), L"Could Not Open", ss.str().c_str(), 0, nullptr, nullptr);
+			return;
+		}
+
+		if (projectToLoadTo.GetInterfacePtr() != _project.GetInterfacePtr())
+		{
+			auto newActionList = actionListFactory();
+			auto newWindow = projectWindowFactory(_app, projectToLoadTo, selectionFactory, newActionList, editAreaFactory, SW_SHOW, 1);
+			_app->AddProjectWindow(newWindow);
+		}
+	}
+
 	HRESULT Save()
 	{
 		HRESULT hr;
@@ -400,7 +435,7 @@ public:
 		auto savePath = _project->GetFilePath();
 		if (savePath.empty())
 		{
-			hr = TryChooseSaveFilePath (_hwnd, L"", savePath);
+			hr = TryChooseFilePath (OpenOrSave::Save, _hwnd, L"", savePath);
 			if (FAILED(hr))
 				return hr;
 		}
@@ -447,10 +482,12 @@ public:
 		return S_OK;
 	}
 
-	static HRESULT TryChooseSaveFilePath (HWND fileDialogParentHWnd, const wchar_t* pathToInitializeDialogTo, wstring& sbOut)
+	enum class OpenOrSave { Open, Save };
+
+	static HRESULT TryChooseFilePath (OpenOrSave which, HWND fileDialogParentHWnd, const wchar_t* pathToInitializeDialogTo, wstring& sbOut)
 	{
-		IFileSaveDialogPtr dialog;
-		HRESULT hr = dialog.CreateInstance(CLSID_FileSaveDialog);
+		IFileDialogPtr dialog;
+		HRESULT hr = dialog.CreateInstance ((which == OpenOrSave::Save) ? CLSID_FileSaveDialog : CLSID_FileOpenDialog);
 		if (FAILED(hr))
 			return hr;
 
@@ -501,7 +538,6 @@ public:
 
 	HRESULT TryClose()
 	{
-		/*
 		auto count = count_if (_app->GetProjectWindows().begin(), _app->GetProjectWindows().end(),
 							   [this] (auto& pw) { return pw->GetProject() == _project; });
 		if (count == 1)
@@ -522,7 +558,7 @@ public:
 				}
 			}
 		}
-		*/
+
 		SaveWindowLocation();
 		::DestroyWindow (_hwnd);
 		return S_OK;

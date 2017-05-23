@@ -93,14 +93,14 @@ public:
 		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
 		_project->GetBridgeRemovingEvent().AddHandler (&OnBridgeRemoving, this);
 		_project->GetWireRemovingEvent().AddHandler (&OnWireRemoving, this);
-		_project->GetProjectInvalidateEvent().AddHandler (&OnProjectInvalidate, this);
+		_project->GetInvalidateEvent().AddHandler (&OnProjectInvalidate, this);
 		_pw->GetSelectedVlanNumerChangedEvent().AddHandler (&OnSelectedVlanChanged, this);
 	}
 
 	virtual ~EditArea()
 	{
 		_pw->GetSelectedVlanNumerChangedEvent().RemoveHandler (&OnSelectedVlanChanged, this);
-		_project->GetProjectInvalidateEvent().RemoveHandler(&OnProjectInvalidate, this);
+		_project->GetInvalidateEvent().RemoveHandler(&OnProjectInvalidate, this);
 		_project->GetWireRemovingEvent().RemoveHandler (&OnWireRemoving, this);
 		_project->GetBridgeRemovingEvent().RemoveHandler (&OnBridgeRemoving, this);
 		_selection->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);

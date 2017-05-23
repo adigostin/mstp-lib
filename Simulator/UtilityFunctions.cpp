@@ -120,36 +120,38 @@ TextLayout TextLayout::Create (IDWriteFactory* dWriteFactory, IDWriteTextFormat*
 	return TextLayout { move(tl), metrics };
 }
 
-/*
-bool TryParseMacAddress (const wchar_t* text, unsigned long long* addressOut)
+STP_BRIDGE_ADDRESS ConvertStringToBridgeAddress (const wchar_t* str)
 {
-	if ((wcslen (text) == 17)
-		&& iswxdigit (text[0]) && iswxdigit (text[1]) && (text[2] == L':')
-		&& iswxdigit (text[3]) && iswxdigit (text[4]) && (text[5] == L':')
-		&& iswxdigit (text[6]) && iswxdigit (text[7]) && (text[8] == L':')
-		&& iswxdigit (text[9]) && iswxdigit (text[10]) && (text[11] == L':')
-		&& iswxdigit (text[12]) && iswxdigit (text[13]) && (text[14] == L':')
-		&& iswxdigit (text[15]) && iswxdigit (text[16]))
+	static constexpr char FormatErrorMessage[] = u8"Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX or XXXXXXXXXXXX (6 hex bytes).";
+
+	int offsetMultiplier;
+	if (wcslen(str) == 12)
 	{
-		*addressOut = (_wcstoui64 (&text[0], NULL, 16) << 40)
-			| (_wcstoui64 (&text[3], NULL, 16) << 32)
-			| (_wcstoui64 (&text[6], NULL, 16) << 24)
-			| (_wcstoui64 (&text[9], NULL, 16) << 16)
-			| (_wcstoui64 (&text[12], NULL, 16) << 8)
-			| (_wcstoui64 (&text[15], NULL, 16));
-		return true;
+		offsetMultiplier = 2;
+	}
+	else if (wcslen(str) == 17)
+	{
+		if ((str[2] != ':') || (str[5] != ':') || (str[8] != ':') || (str[11] != ':') || (str[14] != ':'))
+			throw invalid_argument(FormatErrorMessage);
+
+		offsetMultiplier = 3;
+	}
+	else
+		throw invalid_argument(FormatErrorMessage);
+
+	STP_BRIDGE_ADDRESS newAddress;
+	for (size_t i = 0; i < 6; i++)
+	{
+		wchar_t ch0 = str[i * offsetMultiplier];
+		wchar_t ch1 = str[i * offsetMultiplier + 1];
+
+		if (!iswxdigit(ch0) || !iswxdigit(ch1))
+			throw invalid_argument(FormatErrorMessage);
+
+		auto hn = (ch0 <= '9') ? (ch0 - '0') : ((ch0 >= 'a') ? (ch0 - 'a' + 10) : (ch0 - 'A' + 10));
+		auto ln = (ch1 <= '9') ? (ch1 - '0') : ((ch1 >= 'a') ? (ch1 - 'a' + 10) : (ch1 - 'A' + 10));
+		newAddress.bytes[i] = (hn << 4) | ln;
 	}
 
-	return false;
+	return newAddress;
 }
-
-bool TryParseMacAddress (const wchar_t* text, unsigned char* addressOut6Bytes)
-{
-	unsigned long long value;
-	if (TryParseMacAddress (text, &value) == false)
-		return false;
-
-	GetMacAddressBytesFromValue (value, addressOut6Bytes);
-	return true;
-}
-*/

@@ -5,8 +5,6 @@
 #include "Bridge.h"
 #include "Port.h"
 
-#pragma comment (lib, "msxml6.lib")
-
 using namespace std;
 
 class Project : public EventManager, public IProject
@@ -15,7 +13,7 @@ class Project : public EventManager, public IProject
 	wstring _path;
 	vector<unique_ptr<Bridge>> _bridges;
 	vector<unique_ptr<Wire>> _wires;
-	std::array<uint8_t, 6> _nextMacAddress = { 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x80 };
+	STP_BRIDGE_ADDRESS _nextMacAddress = { 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x80 };
 
 public:
 	virtual const vector<unique_ptr<Bridge>>& GetBridges() const override final { return _bridges; }
@@ -29,7 +27,7 @@ public:
 		auto it = _bridges.insert (_bridges.begin() + index, (move(bridge)));
 		b->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
 		BridgeInsertedEvent::InvokeHandlers (*this, this, index, b);
-		ProjectInvalidateEvent::InvokeHandlers (*this, this);
+		InvalidateEvent::InvokeHandlers (*this, this);
 
 		if (convertedWirePoints != nullptr)
 		{
@@ -78,7 +76,7 @@ public:
 		_bridges[index]->GetInvalidateEvent().RemoveHandler (&OnObjectInvalidate, this);
 		auto result = move(_bridges[index]);
 		_bridges.erase (_bridges.begin() + index);
-		ProjectInvalidateEvent::InvokeHandlers (*this, this);
+		InvalidateEvent::InvokeHandlers (*this, this);
 		return result;
 	}
 
@@ -93,7 +91,7 @@ public:
 		auto it = _wires.insert (_wires.begin() + index, move(wire));
 		w->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
 		WireInsertedEvent::InvokeHandlers (*this, this, index, w);
-		ProjectInvalidateEvent::InvokeHandlers (*this, this);
+		InvalidateEvent::InvokeHandlers (*this, this);
 	}
 
 	virtual unique_ptr<Wire> RemoveWire (size_t index) override final
@@ -105,14 +103,14 @@ public:
 		_wires[index]->GetInvalidateEvent().RemoveHandler (&OnObjectInvalidate, this);
 		auto result = move(_wires[index]);
 		_wires.erase(_wires.begin() + index);
-		ProjectInvalidateEvent::InvokeHandlers (*this, this);
+		InvalidateEvent::InvokeHandlers (*this, this);
 		return result;
 	}
 
 	static void OnObjectInvalidate (void* callbackArg, Object* object)
 	{
 		auto project = static_cast<Project*>(callbackArg);
-		ProjectInvalidateEvent::InvokeHandlers (*project, project);
+		InvalidateEvent::InvokeHandlers (*project, project);
 	}
 
 	virtual BridgeInsertedEvent::Subscriber GetBridgeInsertedEvent() override final { return BridgeInsertedEvent::Subscriber(this); }
@@ -121,19 +119,20 @@ public:
 	virtual WireInsertedEvent::Subscriber GetWireInsertedEvent() override final { return WireInsertedEvent::Subscriber(this); }
 	virtual WireRemovingEvent::Subscriber GetWireRemovingEvent() override final { return WireRemovingEvent::Subscriber(this); }
 
-	virtual ProjectInvalidateEvent::Subscriber GetProjectInvalidateEvent() override final { return ProjectInvalidateEvent::Subscriber(this); }
+	virtual InvalidateEvent::Subscriber GetInvalidateEvent() override final { return InvalidateEvent::Subscriber(this); }
+	virtual LoadedEvent::Subscriber GetLoadedEvent() override final { return LoadedEvent::Subscriber(this); }
 
-	virtual array<uint8_t, 6> AllocMacAddressRange (size_t count) override final
+	virtual STP_BRIDGE_ADDRESS AllocMacAddressRange (size_t count) override final
 	{
 		if (count >= 128)
 			throw range_error("count must be lower than 128.");
 
 		auto result = _nextMacAddress;
-		_nextMacAddress[5] += (uint8_t)count;
-		if (_nextMacAddress[5] < count)
+		_nextMacAddress.bytes[5] += (uint8_t)count;
+		if (_nextMacAddress.bytes[5] < count)
 		{
-			_nextMacAddress[4]++;
-			if (_nextMacAddress[4] == 0)
+			_nextMacAddress.bytes[4]++;
+			if (_nextMacAddress.bytes[4] == 0)
 				throw not_implemented_exception();
 		}
 
@@ -221,6 +220,64 @@ public:
 		encodingNode->put_nodeValue (_variant_t("UTF-8"));
 
 		hr = pXMLFormattedDoc->save(_variant_t(path)); ThrowIfFailed(hr);
+	}
+
+	virtual void Load (const wchar_t* filePath) override final
+	{
+		IXMLDOMDocument3Ptr doc;
+		HRESULT hr = CoCreateInstance (CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(doc), (void**) &doc); ThrowIfFailed(hr);
+
+		VARIANT_BOOL isSuccessful;
+		hr = doc->load(_variant_t(filePath), &isSuccessful); ThrowIfFailed(hr);
+		if (isSuccessful != VARIANT_TRUE)
+			throw runtime_error("Load failed.");
+
+		IXMLDOMNodePtr xmlDeclarationNode;
+		hr = doc->get_firstChild(&xmlDeclarationNode); ThrowIfFailed(hr);
+		_bstr_t nodeName;
+		hr = xmlDeclarationNode->get_nodeName(nodeName.GetAddress()); ThrowIfFailed(hr);
+		if (_wcsicmp (nodeName.GetBSTR(), L"xml") != 0)
+			throw runtime_error("Missing XML declaration.");
+
+		IXMLDOMNodePtr projectNode;
+		hr = xmlDeclarationNode->get_nextSibling(&projectNode); ThrowIfFailed(hr);
+		hr = projectNode->get_nodeName(nodeName.GetAddress()); ThrowIfFailed(hr);
+		if (_wcsicmp (nodeName.GetBSTR(), L"Project") != 0)
+			throw runtime_error("Missing \"Project\" element in the XML.");
+
+		{
+			IXMLDOMNodeListPtr bridgeNodes;
+			hr = doc->selectNodes(_bstr_t("Project/Bridges/Bridge"), &bridgeNodes); ThrowIfFailed(hr);
+			long bridgeCount;
+			hr = bridgeNodes->get_length(&bridgeCount); ThrowIfFailed(hr);
+			for (long i = 0; i < bridgeCount; i++)
+			{
+				IXMLDOMNodePtr bridgeNode;
+				hr = bridgeNodes->get_item(i, &bridgeNode); ThrowIfFailed(hr);
+				IXMLDOMElementPtr bridgeElement;
+				hr = bridgeNode->QueryInterface(&bridgeElement); ThrowIfFailed(hr);
+				auto bridge = Bridge::Deserialize(this, bridgeElement);
+				this->InsertBridge(_bridges.size(), move(bridge), nullptr);
+			}
+		}
+
+		{
+			IXMLDOMNodeListPtr wireNodes;
+			hr = doc->selectNodes(_bstr_t("Project/Wires/Wire"), &wireNodes); ThrowIfFailed(hr);
+			long wireCount;
+			hr = wireNodes->get_length(&wireCount); ThrowIfFailed(hr);
+			for (long i = 0; i < wireCount; i++)
+			{
+				IXMLDOMNodePtr wireNode;
+				hr = wireNodes->get_item(i, &wireNode); ThrowIfFailed(hr);
+				IXMLDOMElementPtr wireElement;
+				hr = wireNode->QueryInterface(&wireElement); ThrowIfFailed(hr);
+				auto wire = Wire::Deserialize(wireElement);
+				this->InsertWire(_wires.size(), move(wire));
+			}
+		}
+
+		LoadedEvent::InvokeHandlers(*this, this);
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }

@@ -1,5 +1,6 @@
 #pragma once
 #include "Win32/EventManager.h"
+#include "stp.h"
 
 class Object;
 
@@ -70,3 +71,4 @@ inline D2D1_POINT_2F operator- (D2D1_POINT_2F p, D2D1_SIZE_F s) {return { p.x - 
 inline D2D1_POINT_2F operator+ (D2D1_POINT_2F p, D2D1_SIZE_F s) {return { p.x + s.width, p.y + s.height }; }
 inline bool operator== (D2D1_POINT_2F p0, D2D1_POINT_2F p1) { return (p0.x == p1.x) && (p0.y == p1.y); }
 inline bool operator!= (D2D1_POINT_2F p0, D2D1_POINT_2F p1) { return (p0.x != p1.x) || (p0.y != p1.y); }
+STP_BRIDGE_ADDRESS ConvertStringToBridgeAddress (const wchar_t* str);

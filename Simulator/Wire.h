@@ -27,7 +27,8 @@ public:
 	D2D1_POINT_2F GetP0Coords() const { return GetPointCoords(0); }
 	D2D1_POINT_2F GetP1Coords() const { return GetPointCoords(1); }
 
-	IXMLDOMElementPtr Serialize (IXMLDOMDocument3* doc) const;
+	IXMLDOMElementPtr Serialize (IXMLDOMDocument* doc) const;
+	static std::unique_ptr<Wire> Deserialize (IXMLDOMElement* element);
 
 	void Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, unsigned int vlanNumber) const;
 
@@ -35,6 +36,6 @@ public:
 	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
 
 private:
-	static IXMLDOMElementPtr SerializeEnd (IXMLDOMDocument3* doc, const WireEnd& end);
+	static IXMLDOMElementPtr SerializeEnd (IXMLDOMDocument* doc, const WireEnd& end);
 	bool IsForwarding (unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const;
 };

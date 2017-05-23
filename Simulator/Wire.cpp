@@ -153,10 +153,11 @@ HTResult Wire::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, floa
 	return { };
 }
 
-IXMLDOMElementPtr Wire::Serialize (IXMLDOMDocument3* doc) const
+static const _bstr_t WireElementName = "Wire";
+
+IXMLDOMElementPtr Wire::Serialize (IXMLDOMDocument* doc) const
 {
 	IXMLDOMElementPtr wireElement;
-	static const _bstr_t WireElementName = "Wire";
 	HRESULT hr = doc->createElement (WireElementName, &wireElement); ThrowIfFailed(hr);
 
 	hr = wireElement->appendChild(SerializeEnd(doc, _points[0]), nullptr); ThrowIfFailed(hr);
@@ -165,8 +166,14 @@ IXMLDOMElementPtr Wire::Serialize (IXMLDOMDocument3* doc) const
 	return wireElement;
 }
 
+// static
+unique_ptr<Wire> Wire::Deserialize (IXMLDOMElement* element)
+{
+	throw not_implemented_exception();
+}
+
 //static
-IXMLDOMElementPtr Wire::SerializeEnd (IXMLDOMDocument3* doc, const WireEnd& end)
+IXMLDOMElementPtr Wire::SerializeEnd (IXMLDOMDocument* doc, const WireEnd& end)
 {
 	HRESULT hr;
 	IXMLDOMElementPtr element;

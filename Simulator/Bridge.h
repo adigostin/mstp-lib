@@ -46,11 +46,8 @@ class Bridge : public Object
 	Port*                _txReceivingPort;
 	unsigned int         _txTimestamp;
 
-private:
-	Bridge (IProject* project, unsigned int portCount, unsigned int mstiCount, const std::array<uint8_t, 6>& macAddress);
 public:
-	template<typename... Args>
-	static std::unique_ptr<Bridge> Create (Args... args) { return std::unique_ptr<Bridge>(new Bridge(std::forward<Args>(args)...)); }
+	Bridge (IProject* project, unsigned int portCount, unsigned int mstiCount, const unsigned char macAddress[6]);
 
 	virtual ~Bridge();
 
@@ -96,7 +93,7 @@ public:
 	const std::vector<std::unique_ptr<BridgeLogLine>>& GetLogLines() const { return _logLines; }
 
 	IXMLDOMElementPtr Serialize (IXMLDOMDocument3* doc) const;
-	static std::unique_ptr<Bridge> Deserialize (IXMLDOMElement* element);
+	static std::unique_ptr<Bridge> Deserialize (IProject* project, IXMLDOMElement* element);
 
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);

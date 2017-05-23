@@ -17,7 +17,7 @@ static constexpr uint8_t BpduDestAddress[6] = { 1, 0x80, 0xC2, 0, 0, 0 };
 HWND     Bridge::_helperWindow;
 uint32_t Bridge::_helperWindowRefCount;
 
-Bridge::Bridge (IProject* project, unsigned int portCount, unsigned int mstiCount, const std::array<uint8_t, 6>& macAddress)
+Bridge::Bridge (IProject* project, unsigned int portCount, unsigned int mstiCount, const unsigned char macAddress[6])
 	: _project(project)
 {
 	float offset = 0;
@@ -66,7 +66,7 @@ Bridge::Bridge (IProject* project, unsigned int portCount, unsigned int mstiCoun
 		throw win32_exception(GetLastError());
 	_macOperationalTimerHandle.reset(handle);
 
-	_stpBridge = STP_CreateBridge (portCount, mstiCount, MaxVlanNumber, &StpCallbacks, &macAddress[0], 256);
+	_stpBridge = STP_CreateBridge (portCount, mstiCount, MaxVlanNumber, &StpCallbacks, macAddress, 256);
 	STP_EnableLogging (_stpBridge, true);
 	STP_SetApplicationContext (_stpBridge, this);
 
@@ -373,36 +373,61 @@ static const _bstr_t FalseString = L"False";
 static const _bstr_t StpVersionString = L"StpVersion";
 static const _bstr_t PortCountString = L"PortCount";
 static const _bstr_t MstiCountString = L"MstiCount";
+static const _bstr_t XString = L"X";
+static const _bstr_t YString = L"Y";
+static const _bstr_t WidthString = L"Width";
+static const _bstr_t HeightString = L"Height";
+
 
 IXMLDOMElementPtr Bridge::Serialize (IXMLDOMDocument3* doc) const
 {
 	IXMLDOMElementPtr element;
-	HRESULT hr = doc->createElement (BridgeString, &element); ThrowIfFailed(hr);
+	auto hr = doc->createElement (BridgeString, &element); ThrowIfFailed(hr);
 
 	auto it = find_if (_project->GetBridges().begin(), _project->GetBridges().end(), [this](auto& up) { return up.get() == this; });
 	auto bridgeIndex = it - _project->GetBridges().begin();
-	hr = element->setAttribute (IndexString, _variant_t(bridgeIndex)); ThrowIfFailed(hr);
 
-	hr = element->setAttribute (AddressString, _variant_t(GetBridgeAddressAsWString().c_str())); ThrowIfFailed(hr);
+	//auto setAttribute = [&element](const _bstr_t& name, const _variant_t& value) { auto hr = element->setAttribute(name, value); ThrowIfFailed(hr); };
+	setlocale (LC_NUMERIC, "C");
 
-	hr = element->setAttribute (StpEnabledString, _variant_t(STP_IsBridgeStarted(_stpBridge))); ThrowIfFailed(hr);
-
-	hr = element->setAttribute (StpVersionString, _variant_t(STP_GetVersionString(STP_GetStpVersion(_stpBridge)))); ThrowIfFailed(hr);
-
-	hr = element->setAttribute (PortCountString, _variant_t(_ports.size())); ThrowIfFailed(hr);
-
-	hr = element->setAttribute (MstiCountString, _variant_t(STP_GetMstiCount(_stpBridge))); ThrowIfFailed(hr);
+	element->setAttribute (IndexString,      _variant_t(bridgeIndex));
+	element->setAttribute (AddressString,    _variant_t(GetBridgeAddressAsWString().c_str()));
+	element->setAttribute (StpEnabledString, _variant_t(STP_IsBridgeStarted(_stpBridge)));
+	element->setAttribute (StpVersionString, _variant_t(STP_GetVersionString(STP_GetStpVersion(_stpBridge))));
+	element->setAttribute (PortCountString,  _variant_t(_ports.size()));
+	element->setAttribute (MstiCountString,  _variant_t(STP_GetMstiCount(_stpBridge)));
+	element->setAttribute (XString,          _variant_t(to_string(_x).c_str()));
+	element->setAttribute (YString,          _variant_t(to_string(_y).c_str()));
+	element->setAttribute (WidthString,      _variant_t(_width));
+	element->setAttribute (HeightString,     _variant_t(_height));
 
 	return element;
 }
 
 //static
-unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
+unique_ptr<Bridge> Bridge::Deserialize (IProject* project, IXMLDOMElement* element)
 {
-	_variant_t value;
-	HRESULT hr = element->getAttribute (AddressString, &value); ThrowIfFailed(hr);
+	auto getAttribute = [element](const _bstr_t& name) -> _variant_t
+	{
+		_variant_t value;
+		auto hr = element->getAttribute (name, &value); ThrowIfFailed(hr);
+		return value;
+	};
 
-	return nullptr;
+	auto portCount = (unsigned int) getAttribute(PortCountString);
+	auto mstiCount = (unsigned int) getAttribute(MstiCountString);
+	auto bridgeAddress = ConvertStringToBridgeAddress((_bstr_t) getAttribute(AddressString));
+
+	auto bridge = unique_ptr<Bridge>(new Bridge(project, portCount, mstiCount, bridgeAddress.bytes));
+
+	setlocale (LC_NUMERIC, "C");
+
+	bridge->_x = wcstof((_bstr_t) getAttribute(XString), nullptr);
+	bridge->_y = wcstof((_bstr_t) getAttribute(YString), nullptr);
+	bridge->_width  = wcstof((_bstr_t) getAttribute(WidthString), nullptr);
+	bridge->_height = wcstof((_bstr_t) getAttribute(HeightString), nullptr);
+
+	return bridge;
 }
 
 void Bridge::SetCoordsForInteriorPort (Port* _port, D2D1_POINT_2F proposedLocation)
