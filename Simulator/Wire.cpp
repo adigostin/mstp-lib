@@ -8,6 +8,10 @@ using namespace std;
 
 static constexpr float WireThickness = 2;
 
+Wire::Wire (WireEnd firstEnd, WireEnd secondEnd)
+	: _points({ firstEnd, secondEnd })
+{ }
+
 // Workaround for what seems like a library bug: std::variant's operators == and != not working.
 static bool Same (const WireEnd& a, const WireEnd& b)
 {
@@ -167,10 +171,26 @@ IXMLDOMElementPtr Wire::Serialize (IXMLDOMDocument* doc) const
 }
 
 // static
-unique_ptr<Wire> Wire::Deserialize (IXMLDOMElement* element)
+unique_ptr<Wire> Wire::Deserialize (IProject* project, IXMLDOMElement* wireElement)
 {
-	throw not_implemented_exception();
+	IXMLDOMNodePtr firstChild;
+	auto hr = wireElement->get_firstChild(&firstChild); ThrowIfFailed(hr);
+	auto firstEnd = DeserializeEnd (project, (IXMLDOMElementPtr) firstChild);
+
+	IXMLDOMNodePtr secondChild;
+	hr = firstChild->get_nextSibling(&secondChild); ThrowIfFailed(hr);
+	auto secondEnd = DeserializeEnd (project, (IXMLDOMElementPtr) secondChild);
+
+	auto wire = make_unique<Wire>(firstEnd, secondEnd);
+	return wire;
 }
+
+static const _bstr_t ConnectedEndString = "ConnectedEnd";
+static const _bstr_t BridgeIndexString  = "BridgeIndex";
+static const _bstr_t PortIndexString    = "PortIndex";
+static const _bstr_t LooseEndString     = "LooseEnd";
+static const _bstr_t XString            = "X";
+static const _bstr_t YString            = "Y";
 
 //static
 IXMLDOMElementPtr Wire::SerializeEnd (IXMLDOMDocument* doc, const WireEnd& end)
@@ -180,10 +200,6 @@ IXMLDOMElementPtr Wire::SerializeEnd (IXMLDOMDocument* doc, const WireEnd& end)
 
 	if (holds_alternative<ConnectedWireEnd>(end))
 	{
-		static const _bstr_t ConnectedEndString = "ConnectedEnd";
-		static const _bstr_t BridgeIndexString = "BridgeIndex";
-		static const _bstr_t PortIndexString = "PortIndex";
-
 		hr = doc->createElement (ConnectedEndString, &element); ThrowIfFailed(hr);
 		auto port = get<ConnectedWireEnd>(end);
 		auto& bridges = port->GetBridge()->GetProject()->GetBridges();
@@ -192,11 +208,47 @@ IXMLDOMElementPtr Wire::SerializeEnd (IXMLDOMDocument* doc, const WireEnd& end)
 		hr = element->setAttribute (BridgeIndexString, _variant_t(to_string(bridgeIndex).c_str())); ThrowIfFailed(hr);
 		hr = element->setAttribute (PortIndexString, _variant_t(to_string(port->GetPortIndex()).c_str())); ThrowIfFailed(hr);
 	}
-	else
+	else if (holds_alternative<LooseWireEnd>(end))
 	{
-		static const _bstr_t LooseEndString = "LooseEnd";
+		auto& location = get<LooseWireEnd>(end);
 		hr = doc->createElement (LooseEndString, &element); ThrowIfFailed(hr);
+		hr = element->setAttribute (XString, _variant_t(location.x)); ThrowIfFailed(hr);
+		hr = element->setAttribute (YString, _variant_t(location.y)); ThrowIfFailed(hr);
 	}
+	else
+		throw not_implemented_exception();
 
 	return element;
 }
+
+//static
+WireEnd Wire::DeserializeEnd (IProject* project, IXMLDOMElement* element)
+{
+	HRESULT hr;
+
+	_bstr_t name;
+	hr = element->get_nodeName(name.GetAddress()); ThrowIfFailed(hr);
+
+	if (wcscmp(name, ConnectedEndString) == 0)
+	{
+		_variant_t value;
+		hr = element->getAttribute (BridgeIndexString, &value); ThrowIfFailed(hr);
+		size_t bridgeIndex = wcstoul (value.bstrVal, nullptr, 10);
+		hr = element->getAttribute (PortIndexString, &value); ThrowIfFailed(hr);
+		size_t portIndex = wcstoul (value.bstrVal, nullptr, 10);
+		return ConnectedWireEnd { project->GetBridges()[bridgeIndex]->GetPorts()[portIndex].get() };
+	}
+	else if (wcscmp (name, LooseEndString) == 0)
+	{
+		_variant_t value;
+		hr = element->getAttribute (XString, &value); ThrowIfFailed(hr);
+		float x = wcstof (value.bstrVal, nullptr);
+		hr = element->getAttribute (YString, &value); ThrowIfFailed(hr);
+		float y = wcstof (value.bstrVal, nullptr);
+		return LooseWireEnd { x, y };
+	}
+	else
+		throw not_implemented_exception();
+}
+
+

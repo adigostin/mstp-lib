@@ -13,6 +13,9 @@ class Wire : public Object
 	std::string _debugName;
 
 public:
+	Wire() = default;
+	Wire (WireEnd firstEnd, WireEnd secondEnd);
+
 	const std::array<WireEnd, 2>& GetPoints() const { return _points; }
 	void SetPoint (size_t pointIndex, const WireEnd& point);
 
@@ -28,7 +31,7 @@ public:
 	D2D1_POINT_2F GetP1Coords() const { return GetPointCoords(1); }
 
 	IXMLDOMElementPtr Serialize (IXMLDOMDocument* doc) const;
-	static std::unique_ptr<Wire> Deserialize (IXMLDOMElement* element);
+	static std::unique_ptr<Wire> Deserialize (IProject* project, IXMLDOMElement* element);
 
 	void Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, unsigned int vlanNumber) const;
 
@@ -37,5 +40,7 @@ public:
 
 private:
 	static IXMLDOMElementPtr SerializeEnd (IXMLDOMDocument* doc, const WireEnd& end);
+	static WireEnd DeserializeEnd (IProject* project, IXMLDOMElement* element);
+
 	bool IsForwarding (unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const;
 };

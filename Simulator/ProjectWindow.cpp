@@ -121,10 +121,12 @@ public:
 		_actionList->GetChangedEvent().AddHandler (&OnActionListChanged, this);
 		_app->GetProjectWindowAddedEvent().AddHandler (&OnProjectWindowAdded, this);
 		_app->GetProjectWindowRemovedEvent().AddHandler (&OnProjectWindowRemoved, this);
+		_project->GetLoadedEvent().AddHandler (&OnProjectLoaded, this);
 	}
 
 	~ProjectWindow()
 	{
+		_project->GetLoadedEvent().RemoveHandler (&OnProjectLoaded, this);
 		_app->GetProjectWindowRemovedEvent().RemoveHandler (&OnProjectWindowRemoved, this);
 		_app->GetProjectWindowAddedEvent().RemoveHandler (&OnProjectWindowAdded, this);
 		_actionList->GetChangedEvent().RemoveHandler (&OnActionListChanged, this);
@@ -132,6 +134,12 @@ public:
 
 		if (_hwnd != nullptr)
 			::DestroyWindow(_hwnd);
+	}
+
+	static void OnProjectLoaded (void* callbackArg, IProject* project)
+	{
+		auto pw = static_cast<ProjectWindow*>(callbackArg);
+		pw->SetWindowTitle();
 	}
 
 	static void OnProjectWindowAdded (void* callbackArg, IProjectWindow* pw)

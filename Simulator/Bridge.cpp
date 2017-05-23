@@ -365,7 +365,6 @@ std::array<uint8_t, 6> Bridge::GetPortAddress (size_t portIndex) const
 }
 
 static const _bstr_t BridgeString = "Bridge";
-static const _bstr_t IndexString = "Index";
 static const _bstr_t AddressString = "Address";
 static const _bstr_t StpEnabledString = L"STPEnabled";
 static const _bstr_t TrueString = L"True";
@@ -384,13 +383,6 @@ IXMLDOMElementPtr Bridge::Serialize (IXMLDOMDocument3* doc) const
 	IXMLDOMElementPtr element;
 	auto hr = doc->createElement (BridgeString, &element); ThrowIfFailed(hr);
 
-	auto it = find_if (_project->GetBridges().begin(), _project->GetBridges().end(), [this](auto& up) { return up.get() == this; });
-	auto bridgeIndex = it - _project->GetBridges().begin();
-
-	//auto setAttribute = [&element](const _bstr_t& name, const _variant_t& value) { auto hr = element->setAttribute(name, value); ThrowIfFailed(hr); };
-	setlocale (LC_NUMERIC, "C");
-
-	element->setAttribute (IndexString,      _variant_t(bridgeIndex));
 	element->setAttribute (AddressString,    _variant_t(GetBridgeAddressAsWString().c_str()));
 	element->setAttribute (StpEnabledString, _variant_t(STP_IsBridgeStarted(_stpBridge)));
 	element->setAttribute (StpVersionString, _variant_t(STP_GetVersionString(STP_GetStpVersion(_stpBridge))));
@@ -407,25 +399,30 @@ IXMLDOMElementPtr Bridge::Serialize (IXMLDOMDocument3* doc) const
 //static
 unique_ptr<Bridge> Bridge::Deserialize (IProject* project, IXMLDOMElement* element)
 {
-	auto getAttribute = [element](const _bstr_t& name) -> _variant_t
+	auto getAttribute = [element](const _bstr_t& name) -> _bstr_t
 	{
 		_variant_t value;
 		auto hr = element->getAttribute (name, &value); ThrowIfFailed(hr);
-		return value;
+		return (_bstr_t) value;
 	};
-
-	auto portCount = (unsigned int) getAttribute(PortCountString);
-	auto mstiCount = (unsigned int) getAttribute(MstiCountString);
-	auto bridgeAddress = ConvertStringToBridgeAddress((_bstr_t) getAttribute(AddressString));
-
-	auto bridge = unique_ptr<Bridge>(new Bridge(project, portCount, mstiCount, bridgeAddress.bytes));
 
 	setlocale (LC_NUMERIC, "C");
 
-	bridge->_x = wcstof((_bstr_t) getAttribute(XString), nullptr);
-	bridge->_y = wcstof((_bstr_t) getAttribute(YString), nullptr);
-	bridge->_width  = wcstof((_bstr_t) getAttribute(WidthString), nullptr);
-	bridge->_height = wcstof((_bstr_t) getAttribute(HeightString), nullptr);
+	unsigned int portCount = wcstoul(getAttribute(PortCountString), nullptr, 10);
+	unsigned int mstiCount = wcstoul(getAttribute(MstiCountString), nullptr, 10);
+	auto bridgeAddress = ConvertStringToBridgeAddress(getAttribute(AddressString));
+
+	auto bridge = unique_ptr<Bridge>(new Bridge(project, portCount, mstiCount, bridgeAddress.bytes));
+
+	auto timestamp = GetTimestampMilliseconds();
+
+	if (wcstoul(getAttribute(StpEnabledString), nullptr, 10))
+		STP_StartBridge (bridge->_stpBridge, timestamp);
+
+	bridge->_x = wcstof(getAttribute(XString), nullptr);
+	bridge->_y = wcstof(getAttribute(YString), nullptr);
+	bridge->_width  = wcstof(getAttribute(WidthString), nullptr);
+	bridge->_height = wcstof(getAttribute(HeightString), nullptr);
 
 	return bridge;
 }

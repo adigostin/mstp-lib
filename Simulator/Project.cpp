@@ -272,11 +272,12 @@ public:
 				hr = wireNodes->get_item(i, &wireNode); ThrowIfFailed(hr);
 				IXMLDOMElementPtr wireElement;
 				hr = wireNode->QueryInterface(&wireElement); ThrowIfFailed(hr);
-				auto wire = Wire::Deserialize(wireElement);
+				auto wire = Wire::Deserialize (this, wireElement);
 				this->InsertWire(_wires.size(), move(wire));
 			}
 		}
 
+		_path = filePath;
 		LoadedEvent::InvokeHandlers(*this, this);
 	}
 
