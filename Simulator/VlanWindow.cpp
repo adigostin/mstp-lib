@@ -116,7 +116,17 @@ private:
 			return { reinterpret_cast<INT_PTR>(GetSysColorBrush(COLOR_WINDOW)), 0 };
 
 		if (msg == WM_CTLCOLORSTATIC)
+		{
+			wchar_t className[32];
+			GetClassName ((HWND) lParam, className, _countof(className));
+			if ((_wcsicmp(className, L"EDIT") == 0) && (GetWindowLongPtr((HWND) lParam, GWL_STYLE) & ES_READONLY))
+			{
+				SetBkMode ((HDC) wParam, TRANSPARENT);
+				return { reinterpret_cast<INT_PTR>(GetSysColorBrush(COLOR_3DFACE)), 0 };
+			}
+
 			return { reinterpret_cast<INT_PTR>(GetSysColorBrush(COLOR_WINDOW)), 0 };
+		}
 
 		if (msg == WM_COMMAND)
 		{
@@ -129,6 +139,13 @@ private:
 			if ((HIWORD(wParam) == CBN_SELCHANGE) && (LOWORD(wParam) == IDC_COMBO_NEW_WINDOW_VLAN))
 			{
 				ProcessNewWindowVlanSelChange ((HWND) lParam);
+				return { TRUE, 0 };
+			}
+
+			if ((HIWORD(wParam) == BN_CLICKED) && (LOWORD(wParam) == IDC_BUTTON_EDIT_MST_CONFIG_TABLE))
+			{
+				auto dialog = mstConfigIdDialogFactory(_app, _pw, _project, _selection);
+				dialog->ShowModal(_pw->GetHWnd());
 				return { TRUE, 0 };
 			}
 
@@ -202,17 +219,22 @@ private:
 	void LoadSelectedTreeEdit()
 	{
 		auto edit = GetDlgItem (_hwnd, IDC_EDIT_SELECTED_TREE); assert (edit != nullptr);
+		auto tableButton = GetDlgItem (_hwnd, IDC_BUTTON_EDIT_MST_CONFIG_TABLE); assert (tableButton != nullptr);
 		auto& objects = _selection->GetObjects();
 
 		if (objects.empty())
 		{
 			::SetWindowText (edit, L"(no selection)");
+			::EnableWindow (edit, FALSE);
+			::EnableWindow (tableButton, FALSE);
 			return;
 		}
 
 		if (objects.size() > 1)
 		{
 			::SetWindowText (edit, L"(multiple selection)");
+			::EnableWindow (edit, FALSE);
+			::EnableWindow (tableButton, FALSE);
 			return;
 		}
 
@@ -225,10 +247,14 @@ private:
 				::SetWindowText (edit, L"CIST (0)");
 			else
 				::SetWindowText (edit, (wstring(L"MSTI ") + to_wstring(treeIndex)).c_str());
+			::EnableWindow (edit, TRUE);
+			::EnableWindow (tableButton, TRUE);
 			return;
 		}
 
 		::SetWindowText (edit, L"(no selection)");
+		::EnableWindow (edit, FALSE);
+		::EnableWindow (tableButton, FALSE);
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
