@@ -375,7 +375,11 @@ public:
 		dc->SetTransform(GetZoomTransform());
 
 		for (const unique_ptr<Wire>& w : _project->GetWires())
-			w->Render (dc, _drawingObjects, _pw->GetSelectedVlanNumber());
+		{
+			bool hasLoop;
+			bool forwarding = _project->IsWireForwarding(w.get(), _pw->GetSelectedVlanNumber(), &hasLoop);
+			w->Render (dc, _drawingObjects, forwarding, hasLoop);
+		}
 
 		dc->SetTransform(oldtr);
 

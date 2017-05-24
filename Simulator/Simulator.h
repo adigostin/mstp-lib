@@ -196,6 +196,7 @@ MIDL_INTERFACE("A7D9A5A8-DB3F-4147-B488-58D260365F65") IProject : public IUnknow
 	virtual const std::wstring& GetFilePath() const = 0;
 	virtual HRESULT Save (const wchar_t* filePath) = 0;
 	virtual void Load (const wchar_t* filePath) = 0;
+	virtual bool IsWireForwarding (Wire* wire, unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const = 0;
 
 	std::pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const;
 	Port* FindConnectedPort (Port* txPort) const;

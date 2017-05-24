@@ -111,13 +111,13 @@ struct Event<TEventType, void(Args...)> abstract : EventBase
 			{
 				auto callback = (callback_t)shortList[i].callback;
 				auto arg = shortList[i].callbackArg;
-				callback (arg, args...);
+				callback (arg, std::forward<Args>(args)...);
 			}
 		}
 		else
 		{
 			for (auto h : longList)
-				((callback_t)h.callback) (h.callbackArg, args...);
+				((callback_t)h.callback) (h.callbackArg, std::forward<Args>(args)...);
 		}
 	}
 };

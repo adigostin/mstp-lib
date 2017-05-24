@@ -1,16 +1,27 @@
 
 #pragma once
-#include "Simulator.h"
+#include "UtilityFunctions.h"
+#include "Win32/Win32Defs.h"
+
+struct PacketInfo
+{
+	std::vector<uint8_t> data;
+	unsigned int timestamp;
+	std::vector<std::array<uint8_t, 6>> txPortPath;
+};
 
 class Port : public Object
 {
 	friend class Bridge;
 
 	Bridge* const _bridge;
-	unsigned int const _portIndex;
+	size_t const _portIndex;
 	Side _side;
 	float _offset;
-	bool _macOperational = false;
+
+	static constexpr unsigned int MissedLinkPulseCounterMax = 6;
+	unsigned int _missedLinkPulseCounter = MissedLinkPulseCounterMax; // _missedLinkPulseCounter equal to MissedLinkPulseCounterMax means macOperational=false
+	std::queue<PacketInfo> _rxQueue;
 
 public:
 	Port (Bridge* bridge, unsigned int portIndex, Side side, float offset);
@@ -26,11 +37,11 @@ public:
 	static constexpr float OutlineWidth = 2;
 
 	Bridge* GetBridge() const { return _bridge; }
-	unsigned int GetPortIndex() const { return _portIndex; }
+	size_t GetPortIndex() const { return _portIndex; }
 	Side GetSide() const { return _side; }
 	float GetOffset() const { return _offset; }
 	D2D1_POINT_2F GetCPLocation() const;
-	bool GetMacOperational() const { return _macOperational; }
+	bool GetMacOperational() const;
 	D2D1::Matrix3x2F GetPortTransform() const;
 	D2D1_RECT_F GetInnerOuterRect() const;
 	bool IsForwarding (unsigned int vlanNumber) const;

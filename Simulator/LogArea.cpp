@@ -49,7 +49,7 @@ private:
 	{
 		_selection->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
 		if (_bridge != nullptr)
-			_bridge->GetBridgeLogLineGeneratedEvent().RemoveHandler (OnLogLineGeneratedStatic, this);
+			_bridge->GetLogLineGeneratedEvent().RemoveHandler (OnLogLineGeneratedStatic, this);
 	}
 
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
@@ -188,7 +188,7 @@ private:
 					EndAnimation();
 
 				_lines.clear();
-				_bridge->GetBridgeLogLineGeneratedEvent().RemoveHandler (OnLogLineGeneratedStatic, this);
+				_bridge->GetLogLineGeneratedEvent().RemoveHandler (OnLogLineGeneratedStatic, this);
 				_bridge = nullptr;
 			}
 
@@ -205,7 +205,7 @@ private:
 					}
 				}
 
-				_bridge->GetBridgeLogLineGeneratedEvent().AddHandler (OnLogLineGeneratedStatic, this);
+				_bridge->GetLogLineGeneratedEvent().AddHandler (OnLogLineGeneratedStatic, this);
 			}
 
 			_topLineIndex = max (0, (int) _lines.size() - _numberOfLinesFitting);

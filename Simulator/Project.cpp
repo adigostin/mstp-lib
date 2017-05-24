@@ -26,6 +26,7 @@ public:
 		Bridge* b = bridge.get();
 		auto it = _bridges.insert (_bridges.begin() + index, (move(bridge)));
 		b->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
+		b->GetPacketTransmitEvent().AddHandler (&OnPacketTransmit, this);
 		BridgeInsertedEvent::InvokeHandlers (*this, this, index, b);
 		InvalidateEvent::InvokeHandlers (*this, this);
 
@@ -73,6 +74,7 @@ public:
 		}
 
 		BridgeRemovingEvent::InvokeHandlers(*this, this, index, b);
+		_bridges[index]->GetPacketTransmitEvent().AddHandler (&OnPacketTransmit, this);
 		_bridges[index]->GetInvalidateEvent().RemoveHandler (&OnObjectInvalidate, this);
 		auto result = move(_bridges[index]);
 		_bridges.erase (_bridges.begin() + index);
@@ -107,6 +109,18 @@ public:
 		return result;
 	}
 
+	static void OnPacketTransmit (void* callbackArg, Bridge* bridge, size_t txPortIndex, PacketInfo&& pi)
+	{
+		auto project = static_cast<Project*>(callbackArg);
+		auto txPort = bridge->GetPorts().at(txPortIndex).get();
+		auto rxPort = project->FindConnectedPort(txPort);
+		if (rxPort != nullptr)
+		{
+			pi.txPortPath.push_back (bridge->GetPortAddress(txPortIndex));
+			rxPort->GetBridge()->EnqueuePacket(move(pi), rxPort->GetPortIndex());
+		}
+	}
+
 	static void OnObjectInvalidate (void* callbackArg, Object* object)
 	{
 		auto project = static_cast<Project*>(callbackArg);
@@ -121,6 +135,58 @@ public:
 
 	virtual InvalidateEvent::Subscriber GetInvalidateEvent() override final { return InvalidateEvent::Subscriber(this); }
 	virtual LoadedEvent::Subscriber GetLoadedEvent() override final { return LoadedEvent::Subscriber(this); }
+
+	virtual bool IsWireForwarding (Wire* wire, unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const override final
+	{
+		if (!holds_alternative<ConnectedWireEnd>(wire->GetP0()) || !holds_alternative<ConnectedWireEnd>(wire->GetP1()))
+			return false;
+
+		auto portA = get<ConnectedWireEnd>(wire->GetP0());
+		auto portB = get<ConnectedWireEnd>(wire->GetP1());
+		bool portAFw = portA->IsForwarding(vlanNumber);
+		bool portBFw = portB->IsForwarding(vlanNumber);
+		if (!portAFw || !portBFw)
+			return false;
+
+		if (hasLoop != nullptr)
+		{
+			unordered_set<Port*> txPorts;
+
+			function<bool(Port* txPort)> transmitsTo = [this, vlanNumber, &txPorts, &transmitsTo, targetPort=portA](Port* txPort) -> bool
+			{
+				if (txPort->IsForwarding(vlanNumber))
+				{
+					auto rx = FindConnectedPort(txPort);
+					if ((rx != nullptr) && rx->IsForwarding(vlanNumber))
+					{
+						txPorts.insert(txPort);
+
+						for (unsigned int i = 0; i < (unsigned int) rx->GetBridge()->GetPorts().size(); i++)
+						{
+							if ((i != rx->GetPortIndex()) && rx->IsForwarding(vlanNumber))
+							{
+								Port* otherTxPort = rx->GetBridge()->GetPorts()[i].get();
+								if (otherTxPort == targetPort)
+									return true;
+
+								if (txPorts.find(otherTxPort) != txPorts.end())
+									return false;
+
+								if (transmitsTo(otherTxPort))
+									return true;
+							}
+						}
+					}
+				}
+
+				return false;
+			};
+
+			*hasLoop = transmitsTo(portA);
+		}
+
+		return true;
+	}
 
 	virtual STP_BRIDGE_ADDRESS AllocMacAddressRange (size_t count) override final
 	{
@@ -158,7 +224,7 @@ public:
 		for (size_t bridgeIndex = 0; bridgeIndex < _bridges.size(); bridgeIndex++)
 		{
 			auto b = _bridges.at(bridgeIndex).get();
-			auto e = b->Serialize(this, bridgeIndex, doc);
+			auto e = b->Serialize(bridgeIndex, doc);
 			hr = bridgesElement->appendChild (e, nullptr); ThrowIfFailed(hr);
 		}
 
@@ -167,7 +233,7 @@ public:
 		hr = projectElement->appendChild (wiresElement, nullptr); ThrowIfFailed(hr);
 		for (auto& w : _wires)
 		{
-			hr = wiresElement->appendChild (w->Serialize(doc), nullptr);
+			hr = wiresElement->appendChild (w->Serialize(this, doc), nullptr);
 			ThrowIfFailed(hr);
 		}
 
@@ -257,7 +323,7 @@ public:
 				hr = bridgeNodes->get_item(i, &bridgeNode); ThrowIfFailed(hr);
 				IXMLDOMElementPtr bridgeElement;
 				hr = bridgeNode->QueryInterface(&bridgeElement); ThrowIfFailed(hr);
-				auto bridge = Bridge::Deserialize(this, bridgeElement);
+				auto bridge = Bridge::Deserialize(bridgeElement);
 				this->InsertBridge(_bridges.size(), move(bridge), nullptr);
 			}
 		}

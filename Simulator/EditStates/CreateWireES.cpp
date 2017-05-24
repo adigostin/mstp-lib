@@ -13,7 +13,7 @@ class CreateWireES : public EditState
 {
 	typedef EditState base;
 
-	unique_ptr<Wire> _wire;
+	Wire* _wire = nullptr;
 	POINT _firstDownLocation;
 
 	enum SubState
@@ -41,10 +41,12 @@ public:
 			if (fromPort != nullptr)
 			{
 				_firstDownLocation = location.pt;
-				_wire.reset (new Wire());
-				_wire->SetP0 (fromPort);
-				_wire->SetP1 (fromPort->GetCPLocation());
-				_wire->SetDebugName ((string("Wire") + to_string(nextWireIndex++)).c_str());
+				auto newWire = make_unique<Wire>();
+				newWire->SetP0 (fromPort);
+				newWire->SetP1 (fromPort->GetCPLocation());
+				newWire->SetDebugName ((string("Wire") + to_string(nextWireIndex++)).c_str());
+				_wire = newWire.get();
+				_project->InsertWire(_project->GetWires().size(), move(newWire));
 				_subState  = WaitingFirstUp;
 			}
 		}
@@ -92,16 +94,14 @@ public:
 				{
 					IProject* const _project;
 					unique_ptr<Wire> _wire;
-					size_t _insertIndex;
 					CreateAction (IProject* project, unique_ptr<Wire>&& wire) : _project(project), _wire(move(wire)) { }
-					virtual void Redo() { _insertIndex = _project->GetWires().size(); _project->InsertWire(_insertIndex, move(_wire)); }
-					virtual void Undo() { _wire = _project->RemoveWire(_insertIndex); }
+					virtual void Redo() { _project->InsertWire(_project->GetWires().size(), move(_wire)); }
+					virtual void Undo() { _wire = _project->RemoveWire(_project->GetWires().size() - 1); }
 					virtual std::string GetName() const override final { return "Create Wire"; }
 				};
 
-				Wire* w = _wire.get();
-				_actionList->PerformAndAddUserAction (make_unique<CreateAction>(_pw->GetProject(), move(_wire)));
-				_selection->Select(w);
+				_actionList->AddPerformedUserAction (make_unique<CreateAction>(_pw->GetProject(), nullptr));
+				_selection->Select(_wire);
 				_subState = Done;
 			}
 		}
@@ -111,6 +111,12 @@ public:
 	{
 		if (virtualKey == VK_ESCAPE)
 		{
+			if (_wire != nullptr)
+			{
+				_project->RemoveWire(_project->GetWires().size() - 1);
+				_wire = nullptr;
+			}
+
 			_subState = Done;
 			::InvalidateRect (_pw->GetEditArea()->GetHWnd(), nullptr, FALSE);
 			return 0;
@@ -121,13 +127,8 @@ public:
 
 	virtual void Render (ID2D1RenderTarget* rt) override final
 	{
-		D2D1_MATRIX_3X2_F oldtr;
-		rt->GetTransform(&oldtr);
-		rt->SetTransform(_pw->GetEditArea()->GetZoomTransform());
-		_wire->Render(rt, _pw->GetEditArea()->GetDrawingObjects(), _pw->GetSelectedVlanNumber());
-		rt->SetTransform(&oldtr);
-
-		if (holds_alternative<ConnectedWireEnd>(_wire->GetP1()))
+		base::Render(rt);
+		if ((_wire != nullptr) && holds_alternative<ConnectedWireEnd>(_wire->GetP1()))
 			_pw->GetEditArea()->RenderSnapRect (rt, get<ConnectedWireEnd>(_wire->GetP1())->GetCPLocation());
 	}
 

@@ -1,7 +1,7 @@
 
 #pragma once
 #include "Win32/EventManager.h"
-#include "Simulator.h"
+#include "Port.h"
 
 struct BridgeLogLine
 {
@@ -10,12 +10,8 @@ struct BridgeLogLine
 	int treeIndex;
 };
 
-struct BridgeLogLineGenerated : public Event<BridgeLogLineGenerated, void(Bridge*, const BridgeLogLine* line)> { };
-struct BridgeConfigChangedEvent : public Event<BridgeConfigChangedEvent, void(Bridge*)> { };
-
 class Bridge : public Object
 {
-	IProject* const _project;
 	float _x;
 	float _y;
 	float _width;
@@ -27,27 +23,17 @@ class Bridge : public Object
 	std::vector<std::unique_ptr<BridgeLogLine>> _logLines;
 	BridgeLogLine _currentLogLine;
 	TimerQueueTimer_unique_ptr _oneSecondTimerHandle;
-	TimerQueueTimer_unique_ptr _macOperationalTimerHandle;
+	TimerQueueTimer_unique_ptr _linkPulseTimerHandle;
 	static HWND _helperWindow;
 	static uint32_t _helperWindowRefCount;
-
-	struct RxPacketInfo
-	{
-		std::vector<uint8_t> data;
-		unsigned int portIndex;
-		unsigned int timestamp;
-		std::vector<std::array<uint8_t, 6>> txPortPath;
-	};
-	std::queue<RxPacketInfo> _rxQueue;
 
 	// variables used by TransmitGetBuffer/ReleaseBuffer
 	std::vector<uint8_t> _txPacketData;
 	Port*                _txTransmittingPort;
-	Port*                _txReceivingPort;
 	unsigned int         _txTimestamp;
 
 public:
-	Bridge (IProject* project, unsigned int portCount, unsigned int mstiCount, const unsigned char macAddress[6]);
+	Bridge (unsigned int portCount, unsigned int mstiCount, const unsigned char macAddress[6]);
 
 	virtual ~Bridge();
 
@@ -58,8 +44,6 @@ public:
 	static constexpr float OutlineWidth = 2;
 	static constexpr float MinWidth = 180;
 	static constexpr float RoundRadius = 8;
-
-	IProject* GetProject() const { return _project; }
 
 	float GetLeft() const { return _x; }
 	float GetRight() const { return _x + _width; }
@@ -86,23 +70,29 @@ public:
 
 	STP_BRIDGE* GetStpBridge() const { return _stpBridge; }
 
-	BridgeLogLineGenerated::Subscriber GetBridgeLogLineGeneratedEvent() { return BridgeLogLineGenerated::Subscriber(this); }
-	BridgeConfigChangedEvent::Subscriber GetBridgeConfigChangedEvent() { return BridgeConfigChangedEvent::Subscriber(this); }
+	struct LogLineGenerated : public Event<LogLineGenerated, void(Bridge*, const BridgeLogLine* line)> { };
+	struct ConfigChangedEvent : public Event<ConfigChangedEvent, void(Bridge*)> { };
+	struct PacketTransmitEvent : public Event<PacketTransmitEvent, void(Bridge*, size_t txPortIndex, PacketInfo&& packet)> { };
 
+	LogLineGenerated::Subscriber GetLogLineGeneratedEvent() { return LogLineGenerated::Subscriber(this); }
+	ConfigChangedEvent::Subscriber GetConfigChangedEvent() { return ConfigChangedEvent::Subscriber(this); }
+	PacketTransmitEvent::Subscriber GetPacketTransmitEvent() { return PacketTransmitEvent::Subscriber(this); }
+
+	void EnqueuePacket (PacketInfo&& packet, size_t rxPortIndex);
 	bool IsPowered() const { return _powered; }
 	const std::vector<std::unique_ptr<BridgeLogLine>>& GetLogLines() const { return _logLines; }
+	std::array<uint8_t, 6> GetPortAddress (size_t portIndex) const;
 
-	static IXMLDOMElementPtr Serialize (IProject* project, size_t bridgeIndex, IXMLDOMDocument3* doc);
-	static std::unique_ptr<Bridge> Deserialize (IProject* project, IXMLDOMElement* element);
+	IXMLDOMElementPtr Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) const;
+	static std::unique_ptr<Bridge> Deserialize (IXMLDOMElement* element);
 
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
-	static void CALLBACK MacOperationalTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
+	static void CALLBACK LinkPulseTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
 	static LRESULT CALLBACK HelperWindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 	static void OnPortInvalidate (void* callbackArg, Object* object);
-	void ComputeMacOperational();
-	void ProcessReceivedPacket();
-	std::array<uint8_t, 6> GetPortAddress (size_t portIndex) const;
+	void OnLinkPulseTick();
+	void ProcessReceivedPacket (size_t rxPortIndex);
 
 	static void* StpCallback_AllocAndZeroMemory (unsigned int size);
 	static void  StpCallback_FreeMemory (void* p);

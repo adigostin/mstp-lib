@@ -2,23 +2,21 @@
 #include "Bridge.h"
 #include "Port.h"
 #include "Wire.h"
-#include "UtilityFunctions.h"
 #include "stp_md5.h"
 
 using namespace std;
 using namespace D2D1;
 
-static constexpr UINT WM_ONE_SECOND_TIMER = WM_APP + 1;
-static constexpr UINT WM_MAC_OPERATIONAL_TIMER = WM_APP + 2;
-static constexpr UINT WM_PACKET_RECEIVED = WM_APP + 3;
+static constexpr UINT WM_ONE_SECOND_TIMER  = WM_APP + 1;
+static constexpr UINT WM_LINK_PULSE_TIMER  = WM_APP + 2;
+static constexpr UINT WM_PACKET_RECEIVED   = WM_APP + 3;
 
 static constexpr uint8_t BpduDestAddress[6] = { 1, 0x80, 0xC2, 0, 0, 0 };
 
 HWND     Bridge::_helperWindow;
 uint32_t Bridge::_helperWindowRefCount;
 
-Bridge::Bridge (IProject* project, unsigned int portCount, unsigned int mstiCount, const unsigned char macAddress[6])
-	: _project(project)
+Bridge::Bridge (unsigned int portCount, unsigned int mstiCount, const unsigned char macAddress[6])
 {
 	float offset = 0;
 
@@ -55,16 +53,11 @@ Bridge::Bridge (IProject* project, unsigned int portCount, unsigned int mstiCoun
 
 	DWORD period = 950 + (std::random_device()() % 100);
 	HANDLE handle;
-	BOOL bRes = ::CreateTimerQueueTimer (&handle, nullptr, OneSecondTimerCallback, this, period, period, 0);
-	if (!bRes)
-		throw win32_exception(GetLastError());
+	BOOL bRes = ::CreateTimerQueueTimer (&handle, nullptr, OneSecondTimerCallback, this, period, period, 0); ThrowWin32IfFailed(bRes);
 	_oneSecondTimerHandle.reset(handle);
 
-	period = 45 + (std::random_device()() % 10);
-	bRes = ::CreateTimerQueueTimer (&handle, nullptr, MacOperationalTimerCallback, this, period, period, 0);
-	if (!bRes)
-		throw win32_exception(GetLastError());
-	_macOperationalTimerHandle.reset(handle);
+	bRes = ::CreateTimerQueueTimer (&handle, nullptr, LinkPulseTimerCallback, this, 16, 16, 0); ThrowWin32IfFailed(bRes);
+	_linkPulseTimerHandle.reset(handle);
 
 	_stpBridge = STP_CreateBridge (portCount, mstiCount, MaxVlanNumber, &StpCallbacks, macAddress, 256);
 	STP_EnableLogging (_stpBridge, true);
@@ -80,7 +73,7 @@ Bridge::~Bridge()
 		port->GetInvalidateEvent().RemoveHandler(&OnPortInvalidate, this);
 
 	// First stop the timers, to be sure the mutex won't be acquired in a background thread (when we'll have background threads).
-	_macOperationalTimerHandle = nullptr;
+	_linkPulseTimerHandle = nullptr;
 	_oneSecondTimerHandle = nullptr;
 
 	_helperWindowRefCount--;
@@ -108,10 +101,10 @@ void CALLBACK Bridge::OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOr
 }
 
 //static
-void CALLBACK Bridge::MacOperationalTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired)
+void CALLBACK Bridge::LinkPulseTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired)
 {
 	auto bridge = static_cast<Bridge*>(lpParameter);
-	::PostMessage (bridge->_helperWindow, WM_MAC_OPERATIONAL_TIMER, (WPARAM) bridge, 0);
+	::PostMessage (bridge->_helperWindow, WM_LINK_PULSE_TIMER, (WPARAM) bridge, 0);
 }
 
 // static
@@ -120,22 +113,20 @@ LRESULT CALLBACK Bridge::HelperWindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, 
 	if (uMsg == WM_ONE_SECOND_TIMER)
 	{
 		auto bridge = static_cast<Bridge*>((void*)wParam);
-
-		if (STP_IsBridgeStarted(bridge->_stpBridge))
-			STP_OnOneSecondTick (bridge->_stpBridge, GetTimestampMilliseconds());
-
+		STP_OnOneSecondTick (bridge->_stpBridge, GetTimestampMilliseconds());
 		return 0;
 	}
-	else if (uMsg == WM_MAC_OPERATIONAL_TIMER)
+	else if (uMsg == WM_LINK_PULSE_TIMER)
 	{
 		auto bridge = static_cast<Bridge*>((void*)wParam);
-		bridge->ComputeMacOperational();
+		bridge->OnLinkPulseTick();
 		return 0;
 	}
 	else if (uMsg == WM_PACKET_RECEIVED)
 	{
 		auto bridge = static_cast<Bridge*>((void*)wParam);
-		bridge->ProcessReceivedPacket();
+		auto portIndex = static_cast<size_t>(lParam);
+		bridge->ProcessReceivedPacket(portIndex);
 		return 0;
 	}
 
@@ -143,7 +134,7 @@ LRESULT CALLBACK Bridge::HelperWindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, 
 }
 
 // Checks the wires and computes macOperational for each port on this bridge.
-void Bridge::ComputeMacOperational()
+void Bridge::OnLinkPulseTick()
 {
 	auto timestamp = GetTimestampMilliseconds();
 
@@ -151,83 +142,76 @@ void Bridge::ComputeMacOperational()
 	for (unsigned int portIndex = 0; portIndex < _ports.size(); portIndex++)
 	{
 		Port* port = _ports[portIndex].get();
-
-		bool newMacOperational = (_project->FindConnectedPort(port) != nullptr);
-		if (port->_macOperational != newMacOperational)
+		if (port->_missedLinkPulseCounter < Port::MissedLinkPulseCounterMax)
 		{
-			if (port->_macOperational)
+			port->_missedLinkPulseCounter++;
+			if (port->_missedLinkPulseCounter == Port::MissedLinkPulseCounterMax)
 			{
-				// port just disconnected
 				STP_OnPortDisabled (_stpBridge, portIndex, timestamp);
+				invalidate = true;
 			}
-
-			port->_macOperational = newMacOperational;
-
-			if (port->_macOperational)
-			{
-				// port just connected
-				STP_OnPortEnabled (_stpBridge, portIndex, 100, true, timestamp);
-			}
-
-			invalidate = true;
 		}
+
+		// Transmit an empty packet that plays the role of a link pulse.
+		PacketInfo pi = { { }, timestamp, { } };
+		PacketTransmitEvent::InvokeHandlers(*this, this, portIndex, move(pi));
 	}
 
 	if (invalidate)
 		InvalidateEvent::InvokeHandlers(*this, this);
 }
 
-void Bridge::ProcessReceivedPacket()
+void Bridge::EnqueuePacket (PacketInfo&& packet, size_t rxPortIndex)
 {
-	auto rp = move(_rxQueue.front());
-	_rxQueue.pop();
+	_ports.at(rxPortIndex)->_rxQueue.push(move(packet));
+	::PostMessage (_helperWindow, WM_PACKET_RECEIVED, (WPARAM)(void*)this, (LPARAM) rxPortIndex);
+}
+
+// WM_PACKET_RECEIVED
+void Bridge::ProcessReceivedPacket (size_t rxPortIndex)
+{
+	auto port = _ports.at(rxPortIndex).get();
+	auto rp = move(port->_rxQueue.front());
+	port->_rxQueue.pop();
 
 	bool invalidate = false;
-	if (!_ports[rp.portIndex]->_macOperational)
+	bool oldMacOperational = port->_missedLinkPulseCounter < Port::MissedLinkPulseCounterMax;
+	port->_missedLinkPulseCounter = 0;
+	if (oldMacOperational == false)
 	{
-		_ports[rp.portIndex]->_macOperational = true;
+		STP_OnPortEnabled (_stpBridge, (unsigned int) rxPortIndex, 100, true, rp.timestamp);
 		invalidate = true;
 	}
 
-	if (memcmp (&rp.data[0], BpduDestAddress, 6) == 0)
+	if (rp.data.empty())
+	{
+		// Empty packet, which we use as link pulse. We discard it here.
+	}
+	else if ((rp.data.size() >= 6) && (memcmp (&rp.data[0], BpduDestAddress, 6) == 0))
 	{
 		// It's a BPDU.
 		if (STP_IsBridgeStarted(_stpBridge))
 		{
-			if (!STP_GetPortEnabled(_stpBridge, rp.portIndex))
-			{
-				STP_OnPortEnabled (_stpBridge, rp.portIndex, 100, true, rp.timestamp);
-				invalidate = true;
-			}
-
-			STP_OnBpduReceived (_stpBridge, rp.portIndex, &rp.data[21], (unsigned int) (rp.data.size() - 21), rp.timestamp);
+			STP_OnBpduReceived (_stpBridge, (unsigned int) rxPortIndex, &rp.data[21], (unsigned int) (rp.data.size() - 21), rp.timestamp);
 		}
 		else
 		{
 			// broadcast it to the other ports.
-			for (size_t i = 0; i < _ports.size(); i++)
+			for (size_t txPortIndex = 0; txPortIndex < _ports.size(); txPortIndex++)
 			{
-				if (i != rp.portIndex)
-				{
-					auto txPortAddress = GetPortAddress(i);
+				if (txPortIndex == rxPortIndex)
+					continue;
 
-					// If it already went through this port, we have a loop that would hang our UI.
-					if (find (rp.txPortPath.begin(), rp.txPortPath.end(), txPortAddress) != rp.txPortPath.end())
-					{
-						// We don't do anything here; we have code in Wire.cpp that shows loops to the user - as thick red wires.
-					}
-					else
-					{
-						auto rxPort = _project->FindConnectedPort(_ports[i].get());
-						if (rxPort != nullptr)
-						{
-							RxPacketInfo info = rp;
-							info.portIndex = rxPort->_portIndex;
-							info.txPortPath.push_back(txPortAddress);
-							rxPort->_bridge->_rxQueue.push(move(info));
-							::PostMessage (rxPort->_bridge->_helperWindow, WM_PACKET_RECEIVED, (WPARAM)(void*)rxPort->_bridge, 0);
-						}
-					}
+				auto txPortAddress = GetPortAddress(txPortIndex);
+
+				// If it already went through this port, we have a loop that would hang our UI.
+				if (find (rp.txPortPath.begin(), rp.txPortPath.end(), txPortAddress) != rp.txPortPath.end())
+				{
+					// We don't do anything here; we have code in Wire.cpp that shows loops to the user - as thick red wires.
+				}
+				else
+				{
+					PacketTransmitEvent::InvokeHandlers (*this, this, txPortIndex, PacketInfo(rp));
 				}
 			}
 		}
@@ -383,36 +367,32 @@ static const _bstr_t BridgeTreeString = L"BridgeTree";
 static const _bstr_t TreeIndexString = L"TreeIndex"; // saved to ease reading the XML
 static const _bstr_t BridgePriorityString = L"BridgePriority";
 
-// static
-IXMLDOMElementPtr Bridge::Serialize (IProject* project, size_t bridgeIndex, IXMLDOMDocument3* doc)
+IXMLDOMElementPtr Bridge::Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) const
 {
 	IXMLDOMElementPtr bridgeElement;
 	auto hr = doc->createElement (BridgeString, &bridgeElement); ThrowIfFailed(hr);
 
-	auto b = project->GetBridges().at(bridgeIndex).get();
-	auto stpb = b->GetStpBridge();
-
 	bridgeElement->setAttribute (BridgeIndexString,   _variant_t(bridgeIndex));
-	bridgeElement->setAttribute (AddressString,       _variant_t(b->GetBridgeAddressAsWString().c_str()));
-	bridgeElement->setAttribute (StpEnabledString,    _variant_t(STP_IsBridgeStarted(stpb)));
-	bridgeElement->setAttribute (StpVersionString,    _variant_t(STP_GetVersionString(STP_GetStpVersion(stpb))));
-	bridgeElement->setAttribute (PortCountString,     _variant_t(b->_ports.size()));
-	bridgeElement->setAttribute (MstiCountString,     _variant_t(STP_GetMstiCount(stpb)));
-	bridgeElement->setAttribute (MstConfigNameString, _variant_t(STP_GetMstConfigId(stpb)->ConfigurationName));
-	bridgeElement->setAttribute (XString,             _variant_t(b->_x));
-	bridgeElement->setAttribute (YString,             _variant_t(b->_y));
-	bridgeElement->setAttribute (WidthString,         _variant_t(b->_width));
-	bridgeElement->setAttribute (HeightString,        _variant_t(b->_height));
+	bridgeElement->setAttribute (AddressString,       _variant_t(GetBridgeAddressAsWString().c_str()));
+	bridgeElement->setAttribute (StpEnabledString,    _variant_t(STP_IsBridgeStarted(_stpBridge)));
+	bridgeElement->setAttribute (StpVersionString,    _variant_t(STP_GetVersionString(STP_GetStpVersion(_stpBridge))));
+	bridgeElement->setAttribute (PortCountString,     _variant_t(_ports.size()));
+	bridgeElement->setAttribute (MstiCountString,     _variant_t(STP_GetMstiCount(_stpBridge)));
+	bridgeElement->setAttribute (MstConfigNameString, _variant_t(STP_GetMstConfigId(_stpBridge)->ConfigurationName));
+	bridgeElement->setAttribute (XString,             _variant_t(_x));
+	bridgeElement->setAttribute (YString,             _variant_t(_y));
+	bridgeElement->setAttribute (WidthString,         _variant_t(_width));
+	bridgeElement->setAttribute (HeightString,        _variant_t(_height));
 
 	IXMLDOMElementPtr bridgeTreesElement;
 	hr = doc->createElement (BridgeTreesString, &bridgeTreesElement); ThrowIfFailed(hr);
 
-	for (unsigned int treeIndex = 0; treeIndex <= STP_GetMstiCount(stpb); treeIndex++)
+	for (unsigned int treeIndex = 0; treeIndex <= STP_GetMstiCount(_stpBridge); treeIndex++)
 	{
 		IXMLDOMElementPtr bridgeTreeElement;
 		hr = doc->createElement (BridgeTreeString, &bridgeTreeElement); ThrowIfFailed(hr);
 		bridgeTreeElement->setAttribute (TreeIndexString, _variant_t(treeIndex));
-		bridgeTreeElement->setAttribute (BridgePriorityString, _variant_t(STP_GetBridgePriority(stpb, treeIndex)));
+		bridgeTreeElement->setAttribute (BridgePriorityString, _variant_t(STP_GetBridgePriority(_stpBridge, treeIndex)));
 		bridgeTreesElement->appendChild(bridgeTreeElement, nullptr);
 	}
 
@@ -422,7 +402,7 @@ IXMLDOMElementPtr Bridge::Serialize (IProject* project, size_t bridgeIndex, IXML
 }
 
 //static
-unique_ptr<Bridge> Bridge::Deserialize (IProject* project, IXMLDOMElement* element)
+unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 {
 	auto getAttribute = [element](const _bstr_t& name) -> _bstr_t
 	{
@@ -441,7 +421,7 @@ unique_ptr<Bridge> Bridge::Deserialize (IProject* project, IXMLDOMElement* eleme
 	unsigned int mstiCount = wcstoul(getAttribute(MstiCountString), nullptr, 10);
 	auto bridgeAddress = ConvertStringToBridgeAddress(getAttribute(AddressString));
 
-	auto bridge = unique_ptr<Bridge>(new Bridge(project, portCount, mstiCount, bridgeAddress.bytes));
+	auto bridge = unique_ptr<Bridge>(new Bridge(portCount, mstiCount, bridgeAddress.bytes));
 
 	bridge->_x = wcstof(getAttribute(XString), nullptr);
 	bridge->_y = wcstof(getAttribute(YString), nullptr);
@@ -588,15 +568,11 @@ void* Bridge::StpCallback_TransmitGetBuffer (const STP_BRIDGE* bridge, unsigned 
 {
 	Bridge* b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 	Port* txPort = b->_ports[portIndex].get();
-	Port* rxPort = b->_project->FindConnectedPort(txPort);
-	if (rxPort == nullptr)
-		return nullptr; // The port was disconnected and our port polling code hasn't reacted yet. This is what happens in a real system too.
 
 	b->_txPacketData.resize (bpduSize + 21);
 	memcpy (&b->_txPacketData[0], BpduDestAddress, 6);
 	memcpy (&b->_txPacketData[6], &b->GetPortAddress(portIndex)[0], 6);
 	b->_txTransmittingPort = txPort;
-	b->_txReceivingPort = rxPort;
 	b->_txTimestamp = timestamp;
 	return &b->_txPacketData[21];
 }
@@ -605,14 +581,10 @@ void Bridge::StpCallback_TransmitReleaseBuffer (const STP_BRIDGE* bridge, void* 
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 
-	RxPacketInfo info;
+	PacketInfo info;
 	info.data = move(b->_txPacketData);
-	info.portIndex = b->_txReceivingPort->_portIndex;
 	info.timestamp = b->_txTimestamp;
-	info.txPortPath.push_back (b->GetPortAddress(b->_txTransmittingPort->GetPortIndex()));
-	Bridge* receivingBridge = b->_txReceivingPort->_bridge;
-	receivingBridge->_rxQueue.push (move(info));
-	::PostMessage (receivingBridge->_helperWindow, WM_PACKET_RECEIVED, (WPARAM)(void*)receivingBridge, 0);
+	PacketTransmitEvent::InvokeHandlers (*b, b, b->_txTransmittingPort->GetPortIndex(), move(info));
 }
 
 void Bridge::StpCallback_EnableLearning (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
@@ -649,7 +621,7 @@ void Bridge::StpCallback_DebugStrOut (const STP_BRIDGE* bridge, int portIndex, i
 			if ((b->_currentLogLine.portIndex != portIndex) || (b->_currentLogLine.treeIndex != treeIndex))
 			{
 				b->_logLines.push_back(make_unique<BridgeLogLine>(move(b->_currentLogLine)));
-				BridgeLogLineGenerated::InvokeHandlers (*b, b, b->_logLines.back().get());
+				LogLineGenerated::InvokeHandlers (*b, b, b->_logLines.back().get());
 			}
 
 			b->_currentLogLine.text.append (nullTerminatedString, (size_t) stringLength);
@@ -658,14 +630,14 @@ void Bridge::StpCallback_DebugStrOut (const STP_BRIDGE* bridge, int portIndex, i
 		if (!b->_currentLogLine.text.empty() && (b->_currentLogLine.text.back() == L'\n'))
 		{
 			b->_logLines.push_back(make_unique<BridgeLogLine>(move(b->_currentLogLine)));
-			BridgeLogLineGenerated::InvokeHandlers (*b, b, b->_logLines.back().get());
+			LogLineGenerated::InvokeHandlers (*b, b, b->_logLines.back().get());
 		}
 	}
 
 	if (flush && !b->_currentLogLine.text.empty())
 	{
 		b->_logLines.push_back(make_unique<BridgeLogLine>(move(b->_currentLogLine)));
-		BridgeLogLineGenerated::InvokeHandlers (*b, b, b->_logLines.back().get());
+		LogLineGenerated::InvokeHandlers (*b, b, b->_logLines.back().get());
 	}
 }
 
@@ -686,7 +658,7 @@ void Bridge::StpCallback_OnPortRoleChanged (const STP_BRIDGE* bridge, unsigned i
 void Bridge::StpCallback_OnConfigChanged (const STP_BRIDGE* bridge, unsigned int timestamp)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
-	BridgeConfigChangedEvent::InvokeHandlers (*b, b);
+	ConfigChangedEvent::InvokeHandlers (*b, b);
 	InvalidateEvent::InvokeHandlers(*b, b);
 }
 #pragma endregion

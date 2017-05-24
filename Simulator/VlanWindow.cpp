@@ -159,14 +159,14 @@ private:
 	{
 		auto b = dynamic_cast<Bridge*>(obj);
 		if (b != nullptr)
-			b->GetBridgeConfigChangedEvent().AddHandler (&OnBridgeConfigChanged, callbackArg);
+			b->GetConfigChangedEvent().AddHandler (&OnBridgeConfigChanged, callbackArg);
 	}
 
 	static void OnRemovingFromSelection (void* callbackArg, ISelection* selection, Object* obj)
 	{
 		auto b = dynamic_cast<Bridge*>(obj);
 		if (b != nullptr)
-			b->GetBridgeConfigChangedEvent().RemoveHandler (&OnBridgeConfigChanged, callbackArg);
+			b->GetConfigChangedEvent().RemoveHandler (&OnBridgeConfigChanged, callbackArg);
 	}
 
 	static void OnBridgeConfigChanged (void* callbackArg, Bridge* bridge)

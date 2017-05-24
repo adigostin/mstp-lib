@@ -280,7 +280,7 @@ private:
 		if (bridge != nullptr)
 		{
 			window->_bridges.push_back(bridge);
-			bridge->GetBridgeConfigChangedEvent().AddHandler (&OnBridgeConfigChanged, window);
+			bridge->GetConfigChangedEvent().AddHandler (&OnBridgeConfigChanged, window);
 			window->LoadAll();
 		}
 	}
@@ -292,7 +292,7 @@ private:
 		auto bridge = dynamic_cast<Bridge*>(o);
 		if (bridge != nullptr)
 		{
-			bridge->GetBridgeConfigChangedEvent().RemoveHandler (&OnBridgeConfigChanged, window);
+			bridge->GetConfigChangedEvent().RemoveHandler (&OnBridgeConfigChanged, window);
 			auto it = find (window->_bridges.begin(), window->_bridges.end(), bridge);
 			window->_bridges.erase(it);
 			if (!window->_bridges.empty())

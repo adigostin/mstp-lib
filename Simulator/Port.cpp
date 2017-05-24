@@ -210,29 +210,29 @@ void Port::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, unsigned in
 	auto treeIndex  = STP_GetTreeIndexFromVlanNumber(b, vlanNumber);
 	if (STP_IsBridgeStarted (b))
 	{
-		auto role       = STP_GetPortRole (b, _portIndex, treeIndex);
-		auto learning   = STP_GetPortLearning (b, _portIndex, treeIndex);
-		auto forwarding = STP_GetPortForwarding (b, _portIndex, treeIndex);
-		auto operEdge   = STP_GetPortOperEdge (b, _portIndex);
+		auto role       = STP_GetPortRole (b, (unsigned int) _portIndex, treeIndex);
+		auto learning   = STP_GetPortLearning (b, (unsigned int) _portIndex, treeIndex);
+		auto forwarding = STP_GetPortForwarding (b, (unsigned int) _portIndex, treeIndex);
+		auto operEdge   = STP_GetPortOperEdge (b, (unsigned int) _portIndex);
 		RenderExteriorStpPort (rt, dos, role, learning, forwarding, operEdge);
 
 		if (role == STP_PORT_ROLE_ROOT)
 			interiorPortOutlineWidth *= 2;
 	}
 	else
-		RenderExteriorNonStpPort(rt, dos, _macOperational);
+		RenderExteriorNonStpPort(rt, dos, GetMacOperational());
 
 	// Draw the interior of the port.
 	auto portRect = D2D1_RECT_F { -InteriorWidth / 2, -InteriorDepth, InteriorWidth / 2, 0 };
 	InflateRect (&portRect, -interiorPortOutlineWidth / 2);
-	rt->FillRectangle (&portRect, _macOperational ? dos._poweredFillBrush : dos._unpoweredBrush);
+	rt->FillRectangle (&portRect, GetMacOperational() ? dos._poweredFillBrush : dos._unpoweredBrush);
 	rt->DrawRectangle (&portRect, dos._brushWindowText, interiorPortOutlineWidth);
 
 	IDWriteTextFormatPtr format;
 	auto hr = dos._dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 9, L"en-US", &format); ThrowIfFailed(hr);
 	IDWriteTextLayoutPtr layout;
 	wstringstream ss;
-	ss << setfill(L'0') << setw(4) << hex << STP_GetPortIdentifier(b, _portIndex, treeIndex);
+	ss << setfill(L'0') << setw(4) << hex << STP_GetPortIdentifier(b, (unsigned int) _portIndex, treeIndex);
 	auto portIdText = ss.str();
 	hr = dos._dWriteFactory->CreateTextLayout (portIdText.c_str(), (UINT32) portIdText.length(), format, 10000, 10000, &layout); ThrowIfFailed(hr);
 	DWRITE_TEXT_METRICS metrics;
@@ -304,7 +304,7 @@ bool Port::IsForwarding (unsigned int vlanNumber) const
 		return true;
 
 	auto treeIndex = STP_GetTreeIndexFromVlanNumber(stpb, vlanNumber);
-	return STP_GetPortForwarding (stpb, _portIndex, treeIndex);
+	return STP_GetPortForwarding (stpb, (unsigned int) _portIndex, treeIndex);
 }
 
 void Port::SetSideAndOffset (Side side, float offset)
@@ -315,4 +315,9 @@ void Port::SetSideAndOffset (Side side, float offset)
 		_offset = offset;
 		InvalidateEvent::InvokeHandlers (*this, this);
 	}
+}
+
+bool Port::GetMacOperational() const
+{
+	return _missedLinkPulseCounter < MissedLinkPulseCounterMax;
 }
