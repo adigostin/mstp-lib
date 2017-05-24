@@ -365,6 +365,7 @@ std::array<uint8_t, 6> Bridge::GetPortAddress (size_t portIndex) const
 }
 
 static const _bstr_t BridgeString = "Bridge";
+static const _bstr_t BridgeIndexString = "BridgeIndex"; // saved to ease reading the XML
 static const _bstr_t AddressString = "Address";
 static const _bstr_t StpEnabledString = L"STPEnabled";
 static const _bstr_t TrueString = L"True";
@@ -377,25 +378,47 @@ static const _bstr_t XString = L"X";
 static const _bstr_t YString = L"Y";
 static const _bstr_t WidthString = L"Width";
 static const _bstr_t HeightString = L"Height";
+static const _bstr_t BridgeTreesString = L"BridgeTrees";
+static const _bstr_t BridgeTreeString = L"BridgeTree";
+static const _bstr_t TreeIndexString = L"TreeIndex"; // saved to ease reading the XML
+static const _bstr_t BridgePriorityString = L"BridgePriority";
 
-
-IXMLDOMElementPtr Bridge::Serialize (IXMLDOMDocument3* doc) const
+// static
+IXMLDOMElementPtr Bridge::Serialize (IProject* project, size_t bridgeIndex, IXMLDOMDocument3* doc)
 {
-	IXMLDOMElementPtr element;
-	auto hr = doc->createElement (BridgeString, &element); ThrowIfFailed(hr);
+	IXMLDOMElementPtr bridgeElement;
+	auto hr = doc->createElement (BridgeString, &bridgeElement); ThrowIfFailed(hr);
 
-	element->setAttribute (AddressString,       _variant_t(GetBridgeAddressAsWString().c_str()));
-	element->setAttribute (StpEnabledString,    _variant_t(STP_IsBridgeStarted(_stpBridge)));
-	element->setAttribute (StpVersionString,    _variant_t(STP_GetVersionString(STP_GetStpVersion(_stpBridge))));
-	element->setAttribute (PortCountString,     _variant_t(_ports.size()));
-	element->setAttribute (MstiCountString,     _variant_t(STP_GetMstiCount(_stpBridge)));
-	element->setAttribute (MstConfigNameString, _variant_t(STP_GetMstConfigId(_stpBridge)->ConfigurationName));
-	element->setAttribute (XString,             _variant_t(to_string(_x).c_str()));
-	element->setAttribute (YString,             _variant_t(to_string(_y).c_str()));
-	element->setAttribute (WidthString,         _variant_t(_width));
-	element->setAttribute (HeightString,        _variant_t(_height));
+	auto b = project->GetBridges().at(bridgeIndex).get();
+	auto stpb = b->GetStpBridge();
 
-	return element;
+	bridgeElement->setAttribute (BridgeIndexString,   _variant_t(bridgeIndex));
+	bridgeElement->setAttribute (AddressString,       _variant_t(b->GetBridgeAddressAsWString().c_str()));
+	bridgeElement->setAttribute (StpEnabledString,    _variant_t(STP_IsBridgeStarted(stpb)));
+	bridgeElement->setAttribute (StpVersionString,    _variant_t(STP_GetVersionString(STP_GetStpVersion(stpb))));
+	bridgeElement->setAttribute (PortCountString,     _variant_t(b->_ports.size()));
+	bridgeElement->setAttribute (MstiCountString,     _variant_t(STP_GetMstiCount(stpb)));
+	bridgeElement->setAttribute (MstConfigNameString, _variant_t(STP_GetMstConfigId(stpb)->ConfigurationName));
+	bridgeElement->setAttribute (XString,             _variant_t(b->_x));
+	bridgeElement->setAttribute (YString,             _variant_t(b->_y));
+	bridgeElement->setAttribute (WidthString,         _variant_t(b->_width));
+	bridgeElement->setAttribute (HeightString,        _variant_t(b->_height));
+
+	IXMLDOMElementPtr bridgeTreesElement;
+	hr = doc->createElement (BridgeTreesString, &bridgeTreesElement); ThrowIfFailed(hr);
+
+	for (unsigned int treeIndex = 0; treeIndex <= STP_GetMstiCount(stpb); treeIndex++)
+	{
+		IXMLDOMElementPtr bridgeTreeElement;
+		hr = doc->createElement (BridgeTreeString, &bridgeTreeElement); ThrowIfFailed(hr);
+		bridgeTreeElement->setAttribute (TreeIndexString, _variant_t(treeIndex));
+		bridgeTreeElement->setAttribute (BridgePriorityString, _variant_t(STP_GetBridgePriority(stpb, treeIndex)));
+		bridgeTreesElement->appendChild(bridgeTreeElement, nullptr);
+	}
+
+	hr = bridgeElement->appendChild(bridgeTreesElement, nullptr); ThrowIfFailed(hr);
+
+	return bridgeElement;
 }
 
 //static
@@ -408,6 +431,7 @@ unique_ptr<Bridge> Bridge::Deserialize (IProject* project, IXMLDOMElement* eleme
 		return (_bstr_t) value;
 	};
 
+	HRESULT hr;
 	_variant_t value;
 	setlocale (LC_NUMERIC, "C");
 	wstring_convert<codecvt_utf8<wchar_t>> converter;
@@ -424,22 +448,48 @@ unique_ptr<Bridge> Bridge::Deserialize (IProject* project, IXMLDOMElement* eleme
 	bridge->_width  = wcstof(getAttribute(WidthString), nullptr);
 	bridge->_height = wcstof(getAttribute(HeightString), nullptr);
 
-	if (SUCCEEDED(element->getAttribute(StpVersionString, &value)) && (value.vt != VT_NULL))
+	hr = element->getAttribute(StpVersionString, &value);
+	if (SUCCEEDED(hr) && (value.vt != VT_NULL))
 	{
 		auto versionString = converter.to_bytes(value.bstrVal);
 		auto version = STP_GetVersionFromString(versionString.c_str());
 		STP_SetStpVersion (bridge->_stpBridge, version, timestamp);
 	}
 
-	if (SUCCEEDED(element->getAttribute(MstConfigNameString, &value)) && (value.vt != VT_NULL))
+	hr = element->getAttribute(MstConfigNameString, &value);
+	if (SUCCEEDED(hr) && (value.vt != VT_NULL))
 	{
 		auto name = converter.to_bytes(value.bstrVal);
 		STP_SetMstConfigName (bridge->_stpBridge, name.c_str(), timestamp);
 	}
 
-	if (SUCCEEDED(element->getAttribute(StpEnabledString, &value)) && (value.vt != VT_NULL) && wcstoul(value.bstrVal, nullptr, 10))
+	hr = element->getAttribute(StpEnabledString, &value);
+	if (SUCCEEDED(hr) && (value.vt != VT_NULL) && wcstoul(value.bstrVal, nullptr, 10))
 		STP_StartBridge (bridge->_stpBridge, timestamp);
 
+	IXMLDOMNodePtr bridgeTreesNode;
+	hr = element->selectSingleNode(BridgeTreesString, &bridgeTreesNode);
+	if (SUCCEEDED(hr))
+	{
+		IXMLDOMNodeListPtr bridgeTreeNodes;
+		hr = bridgeTreesNode->get_childNodes(&bridgeTreeNodes); ThrowIfFailed(hr);
+
+		long treeCount;
+		hr = bridgeTreeNodes->get_length(&treeCount); ThrowIfFailed(hr);
+		for (long treeIndex = 0; treeIndex < treeCount; treeIndex++)
+		{
+			IXMLDOMNodePtr bridgeTreeNode;
+			hr = bridgeTreeNodes->get_item(treeIndex, &bridgeTreeNode); ThrowIfFailed(hr);
+			IXMLDOMElementPtr bridgeTreeElement = bridgeTreeNode;
+
+			hr = bridgeTreeElement->getAttribute(BridgePriorityString, &value);
+			if (SUCCEEDED(hr) && (value.vt != VT_NULL))
+			{
+				auto prio = wcstoul (value.bstrVal, nullptr, 10);
+				STP_SetBridgePriority (bridge->_stpBridge, (unsigned int) treeIndex, (unsigned short) prio, timestamp);
+			}
+		}
+	}
 	return bridge;
 }
 

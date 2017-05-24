@@ -801,12 +801,49 @@ private:
 
 		auto newPrio = (unsigned int) index * 4096u;
 		auto timestamp = GetTimestampMilliseconds();
+		auto vlan = _projectWindow->GetSelectedVlanNumber();
+		static const auto getPrio = [](Bridge* b, unsigned int vlan) { return STP_GetBridgePriority(b->GetStpBridge(), STP_GetTreeIndexFromVlanNumber(b->GetStpBridge(), vlan)); };
 
-		for (Bridge* b : _bridges)
+		if (any_of(_bridges.begin(), _bridges.end(), [=](Bridge* b) { return getPrio(b, vlan) != newPrio; }))
 		{
-			auto stpb = b->GetStpBridge();
-			auto treeIndex = STP_GetTreeIndexFromVlanNumber(stpb, _projectWindow->GetSelectedVlanNumber());
-			STP_SetBridgePriority (stpb, treeIndex, newPrio, timestamp);
+			struct ChangeBridgePrioAction : EditAction
+			{
+				vector<pair<Bridge*, unsigned short>> _bridgesAndOldPrios;
+				unsigned short _newPrio;
+				unsigned int _vlan;
+
+				ChangeBridgePrioAction(const vector<Bridge*> bridges, unsigned short newPrio, unsigned int vlan)
+				{
+					std::transform (bridges.begin(), bridges.end(), back_inserter(_bridgesAndOldPrios), [=](Bridge* b) { return make_pair(b, getPrio(b, vlan)); });
+					_newPrio = newPrio;
+					_vlan = vlan;
+				}
+
+				virtual void Redo() override final
+				{
+					auto timestamp = GetTimestampMilliseconds();
+					for (auto& p : _bridgesAndOldPrios)
+					{
+						auto treeIndex = STP_GetTreeIndexFromVlanNumber (p.first->GetStpBridge(), _vlan);
+						STP_SetBridgePriority (p.first->GetStpBridge(), treeIndex, _newPrio, timestamp);
+					}
+				}
+
+				virtual void Undo() override final
+				{
+					auto timestamp = GetTimestampMilliseconds();
+					for (auto& p : _bridgesAndOldPrios)
+					{
+						auto treeIndex = STP_GetTreeIndexFromVlanNumber (p.first->GetStpBridge(), _vlan);
+						STP_SetBridgePriority (p.first->GetStpBridge(), treeIndex, p.second, timestamp);
+					}
+				}
+
+				virtual std::string GetName() const override final { return "Change bridge priority"; }
+			};
+
+			auto action = unique_ptr<EditAction>(new ChangeBridgePrioAction(_bridges, newPrio, vlan));
+			_actionList->PerformAndAddUserAction (move(action));
 		}
 	}
 	#pragma endregion

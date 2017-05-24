@@ -155,9 +155,10 @@ public:
 		IXMLDOMElementPtr bridgesElement;
 		hr = doc->createElement (_bstr_t("Bridges"), &bridgesElement); ThrowIfFailed(hr);
 		hr = projectElement->appendChild (bridgesElement, nullptr); ThrowIfFailed(hr);
-		for (auto& b : _bridges)
+		for (size_t bridgeIndex = 0; bridgeIndex < _bridges.size(); bridgeIndex++)
 		{
-			auto e = b->Serialize(doc);
+			auto b = _bridges.at(bridgeIndex).get();
+			auto e = b->Serialize(this, bridgeIndex, doc);
 			hr = bridgesElement->appendChild (e, nullptr); ThrowIfFailed(hr);
 		}
 

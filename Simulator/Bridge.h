@@ -92,7 +92,7 @@ public:
 	bool IsPowered() const { return _powered; }
 	const std::vector<std::unique_ptr<BridgeLogLine>>& GetLogLines() const { return _logLines; }
 
-	IXMLDOMElementPtr Serialize (IXMLDOMDocument3* doc) const;
+	static IXMLDOMElementPtr Serialize (IProject* project, size_t bridgeIndex, IXMLDOMDocument3* doc);
 	static std::unique_ptr<Bridge> Deserialize (IProject* project, IXMLDOMElement* element);
 
 private:
