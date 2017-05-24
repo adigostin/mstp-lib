@@ -364,27 +364,27 @@ private:
 
 		struct SetBridgeAddressAction : public EditAction
 		{
-			vector<Bridge*>    const _bridges;
-			STP_BRIDGE_ADDRESS const _newAddress;
-			vector<STP_BRIDGE_ADDRESS> _oldAddresses;
+			vector<pair<Bridge*, STP_BRIDGE_ADDRESS>> _bridgesAndOldAddresses;
+			STP_BRIDGE_ADDRESS _newAddress;
 
 			SetBridgeAddressAction (const vector<Bridge*>& bridges, STP_BRIDGE_ADDRESS newAddress)
-				: _bridges(bridges), _newAddress(newAddress)
 			{
-				std::transform (bridges.begin(), bridges.end(), back_inserter(_oldAddresses), [](Bridge* b) { return *STP_GetBridgeAddress(b->GetStpBridge()); });
+				std::transform (bridges.begin(), bridges.end(), back_inserter(_bridgesAndOldAddresses),
+								[](Bridge* b) { return make_pair(b, *STP_GetBridgeAddress(b->GetStpBridge())); });
+				_newAddress = newAddress;
 			}
 
 			virtual void Redo() override final
 			{
 				auto timestamp = GetTimestampMilliseconds();
-				for (Bridge* b : _bridges)
-					STP_SetBridgeAddress (b->GetStpBridge(), _newAddress.bytes, timestamp);
+				for (auto& p : _bridgesAndOldAddresses)
+					STP_SetBridgeAddress (p.first->GetStpBridge(), _newAddress.bytes, timestamp);
 			}
 			virtual void Undo() override final
 			{
 				auto timestamp = GetTimestampMilliseconds();
-				for (size_t i = 0; i < _bridges.size(); i++)
-					STP_SetBridgeAddress (_bridges[i]->GetStpBridge(), _oldAddresses[i].bytes, timestamp);
+				for (auto& p : _bridgesAndOldAddresses)
+					STP_SetBridgeAddress (p.first->GetStpBridge(), p.second.bytes, timestamp);
 			}
 
 			virtual std::string GetName() const override final { return "Set Bridge Address"; }
