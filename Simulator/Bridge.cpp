@@ -372,6 +372,7 @@ static const _bstr_t FalseString = L"False";
 static const _bstr_t StpVersionString = L"StpVersion";
 static const _bstr_t PortCountString = L"PortCount";
 static const _bstr_t MstiCountString = L"MstiCount";
+static const _bstr_t MstConfigNameString = L"MstConfigName";
 static const _bstr_t XString = L"X";
 static const _bstr_t YString = L"Y";
 static const _bstr_t WidthString = L"Width";
@@ -383,15 +384,16 @@ IXMLDOMElementPtr Bridge::Serialize (IXMLDOMDocument3* doc) const
 	IXMLDOMElementPtr element;
 	auto hr = doc->createElement (BridgeString, &element); ThrowIfFailed(hr);
 
-	element->setAttribute (AddressString,    _variant_t(GetBridgeAddressAsWString().c_str()));
-	element->setAttribute (StpEnabledString, _variant_t(STP_IsBridgeStarted(_stpBridge)));
-	element->setAttribute (StpVersionString, _variant_t(STP_GetVersionString(STP_GetStpVersion(_stpBridge))));
-	element->setAttribute (PortCountString,  _variant_t(_ports.size()));
-	element->setAttribute (MstiCountString,  _variant_t(STP_GetMstiCount(_stpBridge)));
-	element->setAttribute (XString,          _variant_t(to_string(_x).c_str()));
-	element->setAttribute (YString,          _variant_t(to_string(_y).c_str()));
-	element->setAttribute (WidthString,      _variant_t(_width));
-	element->setAttribute (HeightString,     _variant_t(_height));
+	element->setAttribute (AddressString,       _variant_t(GetBridgeAddressAsWString().c_str()));
+	element->setAttribute (StpEnabledString,    _variant_t(STP_IsBridgeStarted(_stpBridge)));
+	element->setAttribute (StpVersionString,    _variant_t(STP_GetVersionString(STP_GetStpVersion(_stpBridge))));
+	element->setAttribute (PortCountString,     _variant_t(_ports.size()));
+	element->setAttribute (MstiCountString,     _variant_t(STP_GetMstiCount(_stpBridge)));
+	element->setAttribute (MstConfigNameString, _variant_t(STP_GetMstConfigId(_stpBridge)->ConfigurationName));
+	element->setAttribute (XString,             _variant_t(to_string(_x).c_str()));
+	element->setAttribute (YString,             _variant_t(to_string(_y).c_str()));
+	element->setAttribute (WidthString,         _variant_t(_width));
+	element->setAttribute (HeightString,        _variant_t(_height));
 
 	return element;
 }
@@ -406,7 +408,10 @@ unique_ptr<Bridge> Bridge::Deserialize (IProject* project, IXMLDOMElement* eleme
 		return (_bstr_t) value;
 	};
 
+	_variant_t value;
 	setlocale (LC_NUMERIC, "C");
+	wstring_convert<codecvt_utf8<wchar_t>> converter;
+	auto timestamp = GetTimestampMilliseconds();
 
 	unsigned int portCount = wcstoul(getAttribute(PortCountString), nullptr, 10);
 	unsigned int mstiCount = wcstoul(getAttribute(MstiCountString), nullptr, 10);
@@ -414,21 +419,26 @@ unique_ptr<Bridge> Bridge::Deserialize (IProject* project, IXMLDOMElement* eleme
 
 	auto bridge = unique_ptr<Bridge>(new Bridge(project, portCount, mstiCount, bridgeAddress.bytes));
 
-	auto timestamp = GetTimestampMilliseconds();
-
-	auto versionStringW = getAttribute(StpVersionString);
-	wstring_convert<codecvt_utf8<wchar_t>> converter;
-	auto versionStringA = converter.to_bytes(versionStringW);
-	auto version = STP_GetVersionFromString(versionStringA.c_str());
-	STP_SetStpVersion (bridge->_stpBridge, version, timestamp);
-
-	if (wcstoul(getAttribute(StpEnabledString), nullptr, 10))
-		STP_StartBridge (bridge->_stpBridge, timestamp);
-
 	bridge->_x = wcstof(getAttribute(XString), nullptr);
 	bridge->_y = wcstof(getAttribute(YString), nullptr);
 	bridge->_width  = wcstof(getAttribute(WidthString), nullptr);
 	bridge->_height = wcstof(getAttribute(HeightString), nullptr);
+
+	if (SUCCEEDED(element->getAttribute(StpVersionString, &value)) && (value.vt != VT_NULL))
+	{
+		auto versionString = converter.to_bytes(value.bstrVal);
+		auto version = STP_GetVersionFromString(versionString.c_str());
+		STP_SetStpVersion (bridge->_stpBridge, version, timestamp);
+	}
+
+	if (SUCCEEDED(element->getAttribute(MstConfigNameString, &value)) && (value.vt != VT_NULL))
+	{
+		auto name = converter.to_bytes(value.bstrVal);
+		STP_SetMstConfigName (bridge->_stpBridge, name.c_str(), timestamp);
+	}
+
+	if (SUCCEEDED(element->getAttribute(StpEnabledString, &value)) && (value.vt != VT_NULL) && wcstoul(value.bstrVal, nullptr, 10))
+		STP_StartBridge (bridge->_stpBridge, timestamp);
 
 	return bridge;
 }

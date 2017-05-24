@@ -655,29 +655,28 @@ private:
 
 		struct SetMstConfigNameAction : public EditAction
 		{
-			vector<Bridge*> const _bridges;
-			string const _newName;
-			vector<string> _oldNames;
+			vector<pair<Bridge*, string>> _bridgesAndOldNames;
+			string _newName;
 
 			SetMstConfigNameAction (const vector<Bridge*>& bridges, string&& newName)
-				: _bridges(bridges), _newName(move(newName))
 			{
-				std::transform (_bridges.begin(), _bridges.end(), back_inserter(_oldNames),
-								[](Bridge* b) { return string(STP_GetMstConfigId(b->GetStpBridge())->ConfigurationName, 32); });
+				std::transform (bridges.begin(), bridges.end(), back_inserter(_bridgesAndOldNames),
+								[](Bridge* b) { return make_pair(b, string(STP_GetMstConfigId(b->GetStpBridge())->ConfigurationName, 32)); });
+				_newName = move(newName);
 			}
 
 			virtual void Redo() override final
 			{
 				auto timestamp = GetTimestampMilliseconds();
-				for (Bridge* b : _bridges)
-					STP_SetMstConfigName (b->GetStpBridge(), _newName.c_str(), timestamp);
+				for (auto& p : _bridgesAndOldNames)
+					STP_SetMstConfigName (p.first->GetStpBridge(), _newName.c_str(), timestamp);
 			}
 
 			virtual void Undo() override final
 			{
 				auto timestamp = GetTimestampMilliseconds();
-				for (size_t i = 0; i < _bridges.size(); i++)
-					STP_SetMstConfigName (_bridges[i]->GetStpBridge(), _oldNames[i].c_str(), timestamp);
+				for (auto& p : _bridgesAndOldNames)
+					STP_SetMstConfigName (p.first->GetStpBridge(), p.second.c_str(), timestamp);
 			}
 
 			virtual string GetName() const override final { return "Set MST Config Name"; }
