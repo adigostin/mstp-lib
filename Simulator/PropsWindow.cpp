@@ -64,7 +64,7 @@ public:
 		{
 			if (_bridgePropsControl != nullptr)
 			{
-				::MoveWindow (_bridgePropsControl->GetHWnd(), 0, 0, GetClientWidthPixels(), GetClientHeightPixels(), FALSE);
+				::MoveWindow (_bridgePropsControl->GetHWnd(), 0, 0, GetClientWidthPixels(), GetClientHeightPixels(), TRUE);
 				if (_bridgePropsControl->IsVisible())
 					::UpdateWindow(_bridgePropsControl->GetHWnd());
 			}
