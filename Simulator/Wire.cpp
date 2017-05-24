@@ -27,7 +27,7 @@ void Wire::SetPoint (size_t pointIndex, const WireEnd& point)
 	if (!Same(_points[pointIndex], point))
 	{
 		_points[pointIndex] = point;
-		InvalidateEvent::InvokeHandlers(*this, this);
+		InvalidateEvent::InvokeHandlers(this, this);
 	}
 }
 

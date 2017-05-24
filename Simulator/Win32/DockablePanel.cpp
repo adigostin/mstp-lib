@@ -197,7 +197,7 @@ public:
 			{
 				auto changed = ss->styleNew ^ ss->styleOld;
 				if (changed & WS_VISIBLE)
-					VisibleChangedEvent::InvokeHandlers (*this, this, (ss->styleNew & WS_VISIBLE) != 0);
+					VisibleChangedEvent::InvokeHandlers (this, this, (ss->styleNew & WS_VISIBLE) != 0);
 			}
 
 			return 0;
@@ -335,7 +335,7 @@ public:
 			else
 				throw not_implemented_exception();
 
-			SplitterDragging::InvokeHandlers(*this, this, proposedSize);
+			SplitterDragging::InvokeHandlers(this, this, proposedSize);
 
 			_draggingSplitterLastMouseScreenLocation = ptScreen;
 		}

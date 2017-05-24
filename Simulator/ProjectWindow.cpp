@@ -291,7 +291,7 @@ public:
 
 		if (msg == WM_DESTROY)
 		{
-			DestroyingEvent::InvokeHandlers(*this, this);
+			DestroyingEvent::InvokeHandlers(this, this);
 			_dockContainer = nullptr; // destroy it early to avoid doing layout-related processing
 			return 0;
 		}
@@ -625,7 +625,7 @@ public:
 		if (_selectedVlanNumber != vlanNumber)
 		{
 			_selectedVlanNumber = vlanNumber;
-			SelectedVlanNumerChangedEvent::InvokeHandlers(*this, this, vlanNumber);
+			SelectedVlanNumerChangedEvent::InvokeHandlers(this, this, vlanNumber);
 			::InvalidateRect (GetHWnd(), nullptr, FALSE);
 			SetWindowTitle();
 		}

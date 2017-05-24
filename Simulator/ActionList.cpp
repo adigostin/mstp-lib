@@ -18,7 +18,7 @@ class ActionList : public EventManager, public IActionList
 		_actions.erase (_actions.begin() + _editPointIndex, _actions.end());
 		_actions.push_back (move(action));
 		_editPointIndex++;
-		ChangedEvent::InvokeHandlers(*this, this);
+		ChangedEvent::InvokeHandlers(this, this);
 	}
 
 	virtual void PerformAndAddUserAction (std::unique_ptr<EditAction>&& action) override final
@@ -36,7 +36,7 @@ class ActionList : public EventManager, public IActionList
 	virtual void SetSavePoint() override final
 	{
 		_savePointIndex = _editPointIndex;
-		ChangedEvent::InvokeHandlers (*this, this);
+		ChangedEvent::InvokeHandlers (this, this);
 	}
 
 	virtual void Undo() override final
@@ -44,14 +44,14 @@ class ActionList : public EventManager, public IActionList
 		assert (_editPointIndex > 0);
 		_editPointIndex--;
 		_actions[_editPointIndex]->Undo();
-		ChangedEvent::InvokeHandlers (*this, this);
+		ChangedEvent::InvokeHandlers (this, this);
 	}
 
 	virtual void Redo() override final
 	{
 		_actions[_editPointIndex]->Redo();
 		_editPointIndex++;
-		ChangedEvent::InvokeHandlers (*this, this);
+		ChangedEvent::InvokeHandlers (this, this);
 	}
 
 	virtual EditAction* GetUndoableAction() const override final

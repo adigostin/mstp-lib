@@ -130,7 +130,7 @@ public:
 	{
 		pw->GetDestroyingEvent().AddHandler (&OnProjectWindowDestroying, this);
 		_projectWindows.push_back(move(pw));
-		ProjectWindowAddedEvent::InvokeHandlers(*this, pw);
+		ProjectWindowAddedEvent::InvokeHandlers(this, pw);
 	}
 
 	static void OnProjectWindowDestroying (void* callbackArg, IProjectWindow* pw)
@@ -141,10 +141,10 @@ public:
 
 		auto it = find_if (app->_projectWindows.begin(), app->_projectWindows.end(), [pw](const IProjectWindowPtr& p) { return p.GetInterfacePtr() == pw; });
 		assert (it != app->_projectWindows.end());
-		ProjectWindowRemovingEvent::InvokeHandlers(*app, pw);
+		ProjectWindowRemovingEvent::InvokeHandlers(app, pw);
 		IProjectWindowPtr pwLastRef = move(*it);
 		app->_projectWindows.erase(it);
-		ProjectWindowRemovedEvent::InvokeHandlers(*app, pwLastRef);
+		ProjectWindowRemovedEvent::InvokeHandlers(app, pwLastRef);
 		if (app->_projectWindows.empty())
 			PostQuitMessage(0);
 	}

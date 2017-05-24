@@ -90,7 +90,7 @@ Bridge::~Bridge()
 void Bridge::OnPortInvalidate (void* callbackArg, Object* object)
 {
 	auto bridge = static_cast<Bridge*>(callbackArg);
-	InvalidateEvent::InvokeHandlers (*bridge, bridge);
+	InvalidateEvent::InvokeHandlers (bridge, bridge);
 }
 
 //static
@@ -154,11 +154,11 @@ void Bridge::OnLinkPulseTick()
 
 		// Transmit an empty packet that plays the role of a link pulse.
 		PacketInfo pi = { { }, timestamp, { } };
-		PacketTransmitEvent::InvokeHandlers(*this, this, portIndex, move(pi));
+		PacketTransmitEvent::InvokeHandlers(this, this, portIndex, move(pi));
 	}
 
 	if (invalidate)
-		InvalidateEvent::InvokeHandlers(*this, this);
+		InvalidateEvent::InvokeHandlers(this, this);
 }
 
 void Bridge::EnqueuePacket (PacketInfo&& packet, size_t rxPortIndex)
@@ -211,14 +211,14 @@ void Bridge::ProcessReceivedPacket (size_t rxPortIndex)
 				}
 				else
 				{
-					PacketTransmitEvent::InvokeHandlers (*this, this, txPortIndex, PacketInfo(rp));
+					PacketTransmitEvent::InvokeHandlers (this, this, txPortIndex, PacketInfo(rp));
 				}
 			}
 		}
 	}
 
 	if (invalidate)
-		InvalidateEvent::InvokeHandlers(*this, this);
+		InvalidateEvent::InvokeHandlers(this, this);
 }
 
 void Bridge::SetLocation(float x, float y)
@@ -227,7 +227,7 @@ void Bridge::SetLocation(float x, float y)
 	{
 		_x = x;
 		_y = y;
-		InvalidateEvent::InvokeHandlers(*this, this);
+		InvalidateEvent::InvokeHandlers(this, this);
 	}
 }
 
@@ -532,7 +532,7 @@ void Bridge::SetCoordsForInteriorPort (Port* _port, D2D1_POINT_2F proposedLocati
 			_port->_offset = mouseY;
 	}
 
-	InvalidateEvent::InvokeHandlers (*this, this);
+	InvalidateEvent::InvokeHandlers (this, this);
 }
 
 #pragma region STP Callbacks
@@ -584,19 +584,19 @@ void Bridge::StpCallback_TransmitReleaseBuffer (const STP_BRIDGE* bridge, void* 
 	PacketInfo info;
 	info.data = move(b->_txPacketData);
 	info.timestamp = b->_txTimestamp;
-	PacketTransmitEvent::InvokeHandlers (*b, b, b->_txTransmittingPort->GetPortIndex(), move(info));
+	PacketTransmitEvent::InvokeHandlers (b, b, b->_txTransmittingPort->GetPortIndex(), move(info));
 }
 
 void Bridge::StpCallback_EnableLearning (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
-	InvalidateEvent::InvokeHandlers (*b, b);
+	InvalidateEvent::InvokeHandlers (b, b);
 }
 
 void Bridge::StpCallback_EnableForwarding (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
-	InvalidateEvent::InvokeHandlers(*b, b);
+	InvalidateEvent::InvokeHandlers(b, b);
 }
 
 void Bridge::StpCallback_FlushFdb (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType)
@@ -621,7 +621,7 @@ void Bridge::StpCallback_DebugStrOut (const STP_BRIDGE* bridge, int portIndex, i
 			if ((b->_currentLogLine.portIndex != portIndex) || (b->_currentLogLine.treeIndex != treeIndex))
 			{
 				b->_logLines.push_back(make_unique<BridgeLogLine>(move(b->_currentLogLine)));
-				LogLineGenerated::InvokeHandlers (*b, b, b->_logLines.back().get());
+				LogLineGenerated::InvokeHandlers (b, b, b->_logLines.back().get());
 			}
 
 			b->_currentLogLine.text.append (nullTerminatedString, (size_t) stringLength);
@@ -630,14 +630,14 @@ void Bridge::StpCallback_DebugStrOut (const STP_BRIDGE* bridge, int portIndex, i
 		if (!b->_currentLogLine.text.empty() && (b->_currentLogLine.text.back() == L'\n'))
 		{
 			b->_logLines.push_back(make_unique<BridgeLogLine>(move(b->_currentLogLine)));
-			LogLineGenerated::InvokeHandlers (*b, b, b->_logLines.back().get());
+			LogLineGenerated::InvokeHandlers (b, b, b->_logLines.back().get());
 		}
 	}
 
 	if (flush && !b->_currentLogLine.text.empty())
 	{
 		b->_logLines.push_back(make_unique<BridgeLogLine>(move(b->_currentLogLine)));
-		LogLineGenerated::InvokeHandlers (*b, b, b->_logLines.back().get());
+		LogLineGenerated::InvokeHandlers (b, b, b->_logLines.back().get());
 	}
 }
 
@@ -652,13 +652,13 @@ void Bridge::StpCallback_OnNotifiedTopologyChange (const STP_BRIDGE* bridge, uns
 void Bridge::StpCallback_OnPortRoleChanged (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role, unsigned int timestamp)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
-	InvalidateEvent::InvokeHandlers(*b, b);
+	InvalidateEvent::InvokeHandlers(b, b);
 }
 
 void Bridge::StpCallback_OnConfigChanged (const STP_BRIDGE* bridge, unsigned int timestamp)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
-	ConfigChangedEvent::InvokeHandlers (*b, b);
-	InvalidateEvent::InvokeHandlers(*b, b);
+	ConfigChangedEvent::InvokeHandlers (b, b);
+	InvalidateEvent::InvokeHandlers(b, b);
 }
 #pragma endregion

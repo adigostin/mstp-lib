@@ -27,8 +27,8 @@ public:
 		auto it = _bridges.insert (_bridges.begin() + index, (move(bridge)));
 		b->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
 		b->GetPacketTransmitEvent().AddHandler (&OnPacketTransmit, this);
-		BridgeInsertedEvent::InvokeHandlers (*this, this, index, b);
-		InvalidateEvent::InvokeHandlers (*this, this);
+		BridgeInsertedEvent::InvokeHandlers (this, this, index, b);
+		InvalidateEvent::InvokeHandlers (this, this);
 
 		if (convertedWirePoints != nullptr)
 		{
@@ -73,12 +73,12 @@ public:
 			}
 		}
 
-		BridgeRemovingEvent::InvokeHandlers(*this, this, index, b);
+		BridgeRemovingEvent::InvokeHandlers(this, this, index, b);
 		_bridges[index]->GetPacketTransmitEvent().AddHandler (&OnPacketTransmit, this);
 		_bridges[index]->GetInvalidateEvent().RemoveHandler (&OnObjectInvalidate, this);
 		auto result = move(_bridges[index]);
 		_bridges.erase (_bridges.begin() + index);
-		InvalidateEvent::InvokeHandlers (*this, this);
+		InvalidateEvent::InvokeHandlers (this, this);
 		return result;
 	}
 
@@ -92,8 +92,8 @@ public:
 		Wire* w = wire.get();
 		auto it = _wires.insert (_wires.begin() + index, move(wire));
 		w->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
-		WireInsertedEvent::InvokeHandlers (*this, this, index, w);
-		InvalidateEvent::InvokeHandlers (*this, this);
+		WireInsertedEvent::InvokeHandlers (this, this, index, w);
+		InvalidateEvent::InvokeHandlers (this, this);
 	}
 
 	virtual unique_ptr<Wire> RemoveWire (size_t index) override final
@@ -101,11 +101,11 @@ public:
 		if (index >= _wires.size())
 			throw invalid_argument("index");
 
-		WireRemovingEvent::InvokeHandlers(*this, this, index, _wires[index].get());
+		WireRemovingEvent::InvokeHandlers(this, this, index, _wires[index].get());
 		_wires[index]->GetInvalidateEvent().RemoveHandler (&OnObjectInvalidate, this);
 		auto result = move(_wires[index]);
 		_wires.erase(_wires.begin() + index);
-		InvalidateEvent::InvokeHandlers (*this, this);
+		InvalidateEvent::InvokeHandlers (this, this);
 		return result;
 	}
 
@@ -124,7 +124,7 @@ public:
 	static void OnObjectInvalidate (void* callbackArg, Object* object)
 	{
 		auto project = static_cast<Project*>(callbackArg);
-		InvalidateEvent::InvokeHandlers (*project, project);
+		InvalidateEvent::InvokeHandlers (project, project);
 	}
 
 	virtual BridgeInsertedEvent::Subscriber GetBridgeInsertedEvent() override final { return BridgeInsertedEvent::Subscriber(this); }
@@ -345,7 +345,7 @@ public:
 		}
 
 		_path = filePath;
-		LoadedEvent::InvokeHandlers(*this, this);
+		LoadedEvent::InvokeHandlers(this, this);
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }

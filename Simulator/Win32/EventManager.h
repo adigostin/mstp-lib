@@ -39,15 +39,15 @@ protected:
 		em->_events.erase(it);
 	}
 
-	static void MakeHandlerList(std::type_index eventType, const EventManager& em, std::vector<EventManager::EventHandler>& longList, std::array<EventManager::EventHandler, 8>& shortList, size_t& shortListSizeOut)
+	static void MakeHandlerList(std::type_index eventType, const EventManager* em, std::vector<EventManager::EventHandler>& longList, std::array<EventManager::EventHandler, 8>& shortList, size_t& shortListSizeOut)
 	{
 		shortListSizeOut = 0;
 
-		size_t count = em._events.count(eventType);
+		size_t count = em->_events.count(eventType);
 		if (count == 0)
 			return;
 
-		auto range = em._events.equal_range(eventType);
+		auto range = em->_events.equal_range(eventType);
 
 		if (count <= shortList.size())
 		{
@@ -95,7 +95,7 @@ struct Event<TEventType, void(Args...)> abstract : EventBase
 		}
 	};
 
-	static void InvokeHandlers(const EventManager& em, Args... args)
+	static void InvokeHandlers(const EventManager* em, Args... args)
 	{
 		// Note that this function must be reentrant (one event handler can invoke another event).
 		// We use one of two lists: one in the stack in case we have a few handlers, the other in the heap for many handlers.

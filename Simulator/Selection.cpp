@@ -40,7 +40,7 @@ private:
 				i++;
 		}
 
-		ChangedEvent::InvokeHandlers(*selection, selection);
+		ChangedEvent::InvokeHandlers(selection, selection);
 	}
 
 	static void OnWireRemovingFromProject (void* callbackArg, IProject* project, size_t index, Wire* w)
@@ -55,7 +55,7 @@ private:
 				i++;
 		}
 
-		ChangedEvent::InvokeHandlers(*selection, selection);
+		ChangedEvent::InvokeHandlers(selection, selection);
 	}
 
 	virtual const vector<Object*>& GetObjects() const override final { return _objects; }
@@ -63,12 +63,12 @@ private:
 	void AddInternal (Object* o)
 	{
 		_objects.push_back(o);
-		AddedToSelectionEvent::InvokeHandlers(*this, this, o);
+		AddedToSelectionEvent::InvokeHandlers(this, this, o);
 	}
 
 	void RemoveInternal (size_t index)
 	{
-		RemovingFromSelectionEvent::InvokeHandlers (*this, this, _objects[index]);
+		RemovingFromSelectionEvent::InvokeHandlers (this, this, _objects[index]);
 		_objects.erase(_objects.begin() + index);
 	}
 
@@ -78,7 +78,7 @@ private:
 		{
 			while (!_objects.empty())
 				RemoveInternal (_objects.size() - 1);
-			ChangedEvent::InvokeHandlers(*this, this);
+			ChangedEvent::InvokeHandlers(this, this);
 		}
 	}
 
@@ -92,7 +92,7 @@ private:
 			while (!_objects.empty())
 				RemoveInternal(_objects.size() - 1);
 			AddInternal(o);
-			ChangedEvent::InvokeHandlers(*this, this);
+			ChangedEvent::InvokeHandlers(this, this);
 		}
 	}
 
@@ -105,7 +105,7 @@ private:
 			throw invalid_argument("Object was already added to selection.");
 
 		AddInternal(o);
-		ChangedEvent::InvokeHandlers(*this, this);
+		ChangedEvent::InvokeHandlers(this, this);
 	}
 
 	virtual void Remove (Object* o) override final
@@ -119,7 +119,7 @@ private:
 		size_t index = it - _objects.begin();
 
 		RemoveInternal(index);
-		ChangedEvent::InvokeHandlers(*this, this);
+		ChangedEvent::InvokeHandlers(this, this);
 	}
 
 	virtual AddedToSelectionEvent::Subscriber GetAddedToSelectionEvent() override final { return AddedToSelectionEvent::Subscriber(this); }
