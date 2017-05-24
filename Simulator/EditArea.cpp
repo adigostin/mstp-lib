@@ -567,23 +567,18 @@ public:
 			else if ((wParam == ID_BRIDGE_ENABLE_STP) || (wParam == ID_BRIDGE_DISABLE_STP))
 			{
 				bool enable = (wParam == ID_BRIDGE_ENABLE_STP);
-				auto timestamp = GetTimestampMilliseconds();
+				std::vector<Bridge*> bridges;
 				for (Object* o : _selection->GetObjects())
 				{
 					auto b = dynamic_cast<Bridge*>(o);
 					if (b != nullptr)
-					{
-						if (enable)
-						{
-							if (!STP_IsBridgeStarted(b->GetStpBridge()))
-								STP_StartBridge (b->GetStpBridge(), timestamp);
-						}
-						else
-						{
-							if (STP_IsBridgeStarted(b->GetStpBridge()))
-								STP_StopBridge (b->GetStpBridge(), timestamp);
-						}
-					}
+						bridges.push_back(b);
+				}
+
+				if (!bridges.empty())
+				{
+					auto action = unique_ptr<EditAction>(new EnableDisableStpAction(bridges, enable));
+					_actionList->PerformAndAddUserAction (move(action));
 				}
 			}
 

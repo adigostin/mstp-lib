@@ -2,6 +2,7 @@
 #include "Simulator.h"
 #include "Resource.h"
 #include "Bridge.h"
+#include "EditActions.h"
 
 using namespace std;
 
@@ -410,23 +411,13 @@ private:
 
 	void ProcessStpStartedClicked()
 	{
-		auto timestamp = GetTimestampMilliseconds();
+		auto check = GetDlgItem (_hwnd, IDC_CHECK_STP_ENABLED);
+		bool enable = Button_GetCheck(check) == BST_UNCHECKED;
 
-		auto checkStpEnabled = GetDlgItem (_hwnd, IDC_CHECK_STP_ENABLED);
-
-		bool enable = Button_GetCheck(checkStpEnabled) == BST_UNCHECKED;
-		for (auto b: _bridges)
+		if (any_of (_bridges.begin(), _bridges.end(), [enable](Bridge* b) { return (bool) STP_IsBridgeStarted(b->GetStpBridge()) != enable; }))
 		{
-			if (enable)
-			{
-				if (!STP_IsBridgeStarted(b->GetStpBridge()))
-					STP_StartBridge (b->GetStpBridge(), timestamp);
-			}
-			else
-			{
-				if (STP_IsBridgeStarted(b->GetStpBridge()))
-					STP_StopBridge (b->GetStpBridge(), timestamp);
-			}
+			auto action = unique_ptr<EditAction>(new EnableDisableStpAction(_bridges, enable));
+			_actionList->PerformAndAddUserAction(move(action));
 		}
 	}
 	#pragma endregion

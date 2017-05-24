@@ -1,6 +1,7 @@
 
 #pragma once
 #include "Simulator.h"
+#include "Wire.h"
 
 struct DeleteEditAction : public EditAction
 {
@@ -44,5 +45,44 @@ struct DeleteEditAction : public EditAction
 	}
 
 	virtual std::string GetName() const override final { return "Delete objects"; }
+};
+
+struct EnableDisableStpAction : EditAction
+{
+	std::vector<std::pair<Bridge*, bool>> _bridgesAndOldEnable;
+	bool _newEnable;
+
+	EnableDisableStpAction (const std::vector<Bridge*>& bridges, bool newEnable)
+	{
+		std::transform (bridges.begin(), bridges.end(), std::back_inserter(_bridgesAndOldEnable),
+						[](Bridge* b) { return std::make_pair(b, STP_IsBridgeStarted(b->GetStpBridge())); });
+		_newEnable = newEnable;
+	}
+
+	virtual void Redo() override final
+	{
+		auto timestamp = GetTimestampMilliseconds();
+		for (auto& p : _bridgesAndOldEnable)
+		{
+			if (_newEnable)
+				STP_StartBridge(p.first->GetStpBridge(), timestamp);
+			else
+				STP_StopBridge(p.first->GetStpBridge(), timestamp);
+		}
+	}
+
+	virtual void Undo() override final
+	{
+		auto timestamp = GetTimestampMilliseconds();
+		for (auto& p : _bridgesAndOldEnable)
+		{
+			if (p.second)
+				STP_StartBridge(p.first->GetStpBridge(), timestamp);
+			else
+				STP_StopBridge(p.first->GetStpBridge(), timestamp);
+		}
+	}
+
+	virtual std::string GetName() const override final { return std::string (_newEnable ? "Enable STP" : "Disable STP"); }
 };
 

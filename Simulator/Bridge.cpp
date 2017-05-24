@@ -444,8 +444,13 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 	}
 
 	hr = element->getAttribute(StpEnabledString, &value);
-	if (SUCCEEDED(hr) && (value.vt != VT_NULL) && wcstoul(value.bstrVal, nullptr, 10))
-		STP_StartBridge (bridge->_stpBridge, timestamp);
+	if (SUCCEEDED(hr) && (value.vt != VT_NULL))
+	{
+		if (wcstoul(value.bstrVal, nullptr, 10) != 0)
+			STP_StartBridge (bridge->_stpBridge, timestamp);
+		else
+			STP_StopBridge (bridge->_stpBridge, timestamp);
+	}
 
 	IXMLDOMNodePtr bridgeTreesNode;
 	hr = element->selectSingleNode(BridgeTreesString, &bridgeTreesNode);
