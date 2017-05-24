@@ -351,21 +351,25 @@ std::array<uint8_t, 6> Bridge::GetPortAddress (size_t portIndex) const
 static const _bstr_t BridgeString = "Bridge";
 static const _bstr_t BridgeIndexString = "BridgeIndex"; // saved to ease reading the XML
 static const _bstr_t AddressString = "Address";
-static const _bstr_t StpEnabledString = L"STPEnabled";
-static const _bstr_t TrueString = L"True";
-static const _bstr_t FalseString = L"False";
-static const _bstr_t StpVersionString = L"StpVersion";
-static const _bstr_t PortCountString = L"PortCount";
-static const _bstr_t MstiCountString = L"MstiCount";
-static const _bstr_t MstConfigNameString = L"MstConfigName";
-static const _bstr_t XString = L"X";
-static const _bstr_t YString = L"Y";
-static const _bstr_t WidthString = L"Width";
-static const _bstr_t HeightString = L"Height";
-static const _bstr_t BridgeTreesString = L"BridgeTrees";
-static const _bstr_t BridgeTreeString = L"BridgeTree";
-static const _bstr_t TreeIndexString = L"TreeIndex"; // saved to ease reading the XML
-static const _bstr_t BridgePriorityString = L"BridgePriority";
+static const _bstr_t StpEnabledString = "STPEnabled";
+static const _bstr_t TrueString = "True";
+static const _bstr_t FalseString = "False";
+static const _bstr_t StpVersionString = "StpVersion";
+static const _bstr_t PortCountString = "PortCount";
+static const _bstr_t MstiCountString = "MstiCount";
+static const _bstr_t MstConfigNameString = "MstConfigName";
+static const _bstr_t MstConfigTableString = "MstConfigTable";
+static const _bstr_t EntryString = "Entry";
+static const _bstr_t XString = "X";
+static const _bstr_t YString = "Y";
+static const _bstr_t WidthString = "Width";
+static const _bstr_t HeightString = "Height";
+static const _bstr_t BridgeTreesString = "BridgeTrees";
+static const _bstr_t BridgeTreeString = "BridgeTree";
+static const _bstr_t TreeIndexString = "TreeIndex";
+static const _bstr_t BridgePriorityString = "BridgePriority";
+static const _bstr_t VlanString = "Vlan";
+static const _bstr_t TreeString = "Tree";
 
 IXMLDOMElementPtr Bridge::Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) const
 {
@@ -384,9 +388,23 @@ IXMLDOMElementPtr Bridge::Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) 
 	bridgeElement->setAttribute (WidthString,         _variant_t(_width));
 	bridgeElement->setAttribute (HeightString,        _variant_t(_height));
 
+	IXMLDOMElementPtr configTableElement;
+	hr = doc->createElement (MstConfigTableString, &configTableElement); ThrowIfFailed(hr);
+	hr = bridgeElement->appendChild(configTableElement, nullptr); ThrowIfFailed(hr);
+	unsigned int entryCount;
+	auto configTable = STP_GetMstConfigTable(_stpBridge, &entryCount);
+	for (unsigned int vlan = 0; vlan < entryCount; vlan++)
+	{
+		IXMLDOMElementPtr entryElement;
+		hr = doc->createElement (EntryString, &entryElement); ThrowIfFailed(hr);
+		hr = entryElement->setAttribute (VlanString, _variant_t(vlan)); ThrowIfFailed(hr);
+		hr = entryElement->setAttribute (TreeString, _variant_t(configTable[vlan].treeIndex)); ThrowIfFailed(hr);
+		hr = configTableElement->appendChild(entryElement, nullptr); ThrowIfFailed(hr);
+	}
+
 	IXMLDOMElementPtr bridgeTreesElement;
 	hr = doc->createElement (BridgeTreesString, &bridgeTreesElement); ThrowIfFailed(hr);
-
+	hr = bridgeElement->appendChild(bridgeTreesElement, nullptr); ThrowIfFailed(hr);
 	for (unsigned int treeIndex = 0; treeIndex <= STP_GetMstiCount(_stpBridge); treeIndex++)
 	{
 		IXMLDOMElementPtr bridgeTreeElement;
@@ -395,8 +413,6 @@ IXMLDOMElementPtr Bridge::Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) 
 		bridgeTreeElement->setAttribute (BridgePriorityString, _variant_t(STP_GetBridgePriority(_stpBridge, treeIndex)));
 		bridgeTreesElement->appendChild(bridgeTreeElement, nullptr);
 	}
-
-	hr = bridgeElement->appendChild(bridgeTreesElement, nullptr); ThrowIfFailed(hr);
 
 	return bridgeElement;
 }
@@ -450,6 +466,29 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 			STP_StartBridge (bridge->_stpBridge, timestamp);
 		else
 			STP_StopBridge (bridge->_stpBridge, timestamp);
+	}
+
+	IXMLDOMNodePtr configTableNode;
+	hr = element->selectSingleNode(MstConfigTableString, &configTableNode);
+	if (SUCCEEDED(hr))
+	{
+		IXMLDOMNodeListPtr nodes;
+		hr = configTableNode->get_childNodes(&nodes); ThrowIfFailed(hr);
+		long entryCount;
+		hr = nodes->get_length(&entryCount); ThrowIfFailed(hr);
+		vector<STP_CONFIG_TABLE_ENTRY> configTable;
+		for (unsigned int vlan = 0; vlan < (unsigned int) entryCount; vlan++)
+		{
+			IXMLDOMNodePtr entryNode;
+			hr = nodes->get_item(vlan, &entryNode); ThrowIfFailed(hr);
+			IXMLDOMElementPtr entryElement (entryNode);
+
+			hr = entryElement->getAttribute(TreeString, &value); ThrowIfFailed(hr);
+			auto treeIndex = wcstoul(value.bstrVal, nullptr, 10);
+			configTable.push_back (STP_CONFIG_TABLE_ENTRY { 0, (unsigned char) treeIndex });
+		}
+
+		STP_SetMstConfigTable(bridge->_stpBridge, &configTable[0], (unsigned int) configTable.size(), timestamp);
 	}
 
 	IXMLDOMNodePtr bridgeTreesNode;
