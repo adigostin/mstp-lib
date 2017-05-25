@@ -467,7 +467,7 @@ public:
 		RenderHint (rt, GetClientWidthDips() / 2, GetClientHeightDips(), L"Rotate mouse wheel for zooming, press wheel and drag for panning.", true, true);
 
 		if (_project->IsSimulationPaused())
-			RenderHint (rt, GetClientWidthDips() / 2, 10, L"Simulation Paused");
+			RenderHint (rt, GetClientWidthDips() / 2, 10, L"Simulation is paused. Right-click to resume.");
 
 		if (_state != nullptr)
 			_state->Render(rt);
