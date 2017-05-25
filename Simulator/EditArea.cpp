@@ -571,7 +571,7 @@ public:
 				for (Object* o : _selection->GetObjects())
 				{
 					auto b = dynamic_cast<Bridge*>(o);
-					if (b != nullptr)
+					if ((b != nullptr) && ((bool) STP_IsBridgeStarted(b->GetStpBridge()) != enable))
 						bridges.push_back(b);
 				}
 
