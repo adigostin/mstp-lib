@@ -36,6 +36,9 @@ BEGIN
         MENUITEM "New Bridge",                  ID_NEW_BRIDGE
         MENUITEM SEPARATOR
         MENUITEM "Paste",                       ID_PASTE_BRIDGE, INACTIVE
+        MENUITEM SEPARATOR
+        MENUITEM "Pause Simulation",            ID_PAUSE_SIMULATION, INACTIVE
+        MENUITEM "Resume Simulation",           ID_RESUME_SIMULATION, INACTIVE
     END
 END
 

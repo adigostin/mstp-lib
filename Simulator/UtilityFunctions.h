@@ -29,6 +29,7 @@ struct DrawingObjects
 	ID2D1StrokeStylePtr _strokeStyleForwardingWire;
 	ID2D1StrokeStylePtr _strokeStyleNoForwardingWire;
 	IDWriteTextFormatPtr _regularTextFormat;
+	IDWriteTextFormatPtr _smallTextFormat;
 	ID2D1StrokeStylePtr _strokeStyleSelectionRect;
 };
 

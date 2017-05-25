@@ -8,13 +8,63 @@ using namespace std;
 using namespace D2D1;
 
 static constexpr UINT WM_ONE_SECOND_TIMER  = WM_APP + 1;
-static constexpr UINT WM_LINK_PULSE_TIMER  = WM_APP + 2;
 static constexpr UINT WM_PACKET_RECEIVED   = WM_APP + 3;
 
 static constexpr uint8_t BpduDestAddress[6] = { 1, 0x80, 0xC2, 0, 0, 0 };
 
-HWND     Bridge::_helperWindow;
-uint32_t Bridge::_helperWindowRefCount;
+Bridge::HelperWindow Bridge::_helperWindow;
+
+Bridge::HelperWindow::HelperWindow()
+{
+	HINSTANCE hInstance;
+	BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &SubclassProc, &hInstance);
+	if (!bRes)
+		throw win32_exception(GetLastError());
+
+	_hwnd = CreateWindow (L"STATIC", L"", 0, 0, 0, 0, 0, HWND_MESSAGE, 0, hInstance, 0);
+	if (_hwnd == nullptr)
+		throw win32_exception(GetLastError());
+
+	bRes = SetWindowSubclass (_hwnd, SubclassProc, 0, (DWORD_PTR) this);
+	if (!bRes)
+		throw win32_exception(GetLastError());
+
+	_linkPulseTimerId = ::SetTimer (_hwnd, 1, 16, nullptr);
+	if (_linkPulseTimerId == 0)
+		throw win32_exception(GetLastError());
+}
+
+Bridge::HelperWindow::~HelperWindow()
+{
+	::KillTimer (_hwnd, _linkPulseTimerId);
+	::RemoveWindowSubclass (_hwnd, SubclassProc, 0);
+	::DestroyWindow (_hwnd);
+}
+
+//static
+LRESULT CALLBACK Bridge::HelperWindow::SubclassProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	auto hw = (HelperWindow*) dwRefData;
+
+	if ((uMsg == WM_TIMER) && (wParam == hw->_linkPulseTimerId))
+	{
+		// We use a timer on a single thread for pulses because we want to avoid links going down due to delays on some threads but not on others.
+		LinkPulseEvent::InvokeHandlers(hw);
+		return 0;
+	}
+	else if (uMsg == WM_ONE_SECOND_TIMER)
+	{
+		Bridge::OnWmOneSecondTimer (wParam, lParam);
+		return 0;
+	}
+	else if (uMsg == WM_PACKET_RECEIVED)
+	{
+		Bridge::OnWmPacketReceived (wParam, lParam);
+		return 0;
+	}
+
+	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+}
 
 Bridge::Bridge (unsigned int portCount, unsigned int mstiCount, const unsigned char macAddress[6])
 {
@@ -33,35 +83,16 @@ Bridge::Bridge (unsigned int portCount, unsigned int mstiCount, const unsigned c
 	_width = max (offset, MinWidth);
 	_height = DefaultHeight;
 
-	if (_helperWindow == nullptr)
-	{
-		HINSTANCE hInstance;
-		BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &StpCallbacks, &hInstance);
-		if (!bRes)
-			throw win32_exception(GetLastError());
-
-		_helperWindow = CreateWindow (L"STATIC", L"", 0, 0, 0, 0, 0, HWND_MESSAGE, 0, hInstance, 0);
-		if (_helperWindow == nullptr)
-			throw win32_exception(GetLastError());
-
-		bRes = SetWindowSubclass (_helperWindow, HelperWindowProc, 0, 0);
-		if (!bRes)
-			throw win32_exception(GetLastError());
-	}
-
-	_helperWindowRefCount++;
-
 	DWORD period = 950 + (std::random_device()() % 100);
 	HANDLE handle;
 	BOOL bRes = ::CreateTimerQueueTimer (&handle, nullptr, OneSecondTimerCallback, this, period, period, 0); ThrowWin32IfFailed(bRes);
 	_oneSecondTimerHandle.reset(handle);
 
-	bRes = ::CreateTimerQueueTimer (&handle, nullptr, LinkPulseTimerCallback, this, 16, 16, 0); ThrowWin32IfFailed(bRes);
-	_linkPulseTimerHandle.reset(handle);
-
 	_stpBridge = STP_CreateBridge (portCount, mstiCount, MaxVlanNumber, &StpCallbacks, macAddress, 256);
 	STP_EnableLogging (_stpBridge, true);
 	STP_SetApplicationContext (_stpBridge, this);
+
+	_helperWindow.GetLinkPulseEvent().AddHandler (&OnLinkPulseTick, this);
 
 	for (auto& port : _ports)
 		port->GetInvalidateEvent().AddHandler(&OnPortInvalidate, this);
@@ -72,16 +103,10 @@ Bridge::~Bridge()
 	for (auto& port : _ports)
 		port->GetInvalidateEvent().RemoveHandler(&OnPortInvalidate, this);
 
-	// First stop the timers, to be sure the mutex won't be acquired in a background thread (when we'll have background threads).
-	_linkPulseTimerHandle = nullptr;
-	_oneSecondTimerHandle = nullptr;
+	_helperWindow.GetLinkPulseEvent().RemoveHandler (&OnLinkPulseTick, this);
 
-	_helperWindowRefCount--;
-	if (_helperWindowRefCount == 0)
-	{
-		::RemoveWindowSubclass (_helperWindow, HelperWindowProc, 0);
-		::DestroyWindow (_helperWindow);
-	}
+	// First stop the timers, to be sure the mutex won't be acquired in a background thread (when we'll have background threads).
+	_oneSecondTimerHandle = nullptr;
 
 	STP_DestroyBridge (_stpBridge);
 }
@@ -97,121 +122,115 @@ void Bridge::OnPortInvalidate (void* callbackArg, Object* object)
 void CALLBACK Bridge::OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired)
 {
 	auto bridge = static_cast<Bridge*>(lpParameter);
-	::PostMessage (bridge->_helperWindow, WM_ONE_SECOND_TIMER, (WPARAM) bridge, 0);
+	// We're on a worker thread. Let's post this message and continue processing on the GUI thread.
+	::PostMessage (_helperWindow._hwnd, WM_ONE_SECOND_TIMER, (WPARAM) bridge, 0);
 }
 
 //static
-void CALLBACK Bridge::LinkPulseTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired)
+void Bridge::OnWmOneSecondTimer (WPARAM wParam, LPARAM lParam)
 {
-	auto bridge = static_cast<Bridge*>(lpParameter);
-	::PostMessage (bridge->_helperWindow, WM_LINK_PULSE_TIMER, (WPARAM) bridge, 0);
-}
-
-// static
-LRESULT CALLBACK Bridge::HelperWindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
-{
-	if (uMsg == WM_ONE_SECOND_TIMER)
-	{
-		auto bridge = static_cast<Bridge*>((void*)wParam);
+	auto bridge = static_cast<Bridge*>((void*)wParam);
+	if (!bridge->_simulationPaused)
 		STP_OnOneSecondTick (bridge->_stpBridge, GetTimestampMilliseconds());
-		return 0;
-	}
-	else if (uMsg == WM_LINK_PULSE_TIMER)
-	{
-		auto bridge = static_cast<Bridge*>((void*)wParam);
-		bridge->OnLinkPulseTick();
-		return 0;
-	}
-	else if (uMsg == WM_PACKET_RECEIVED)
-	{
-		auto bridge = static_cast<Bridge*>((void*)wParam);
-		auto portIndex = static_cast<size_t>(lParam);
-		bridge->ProcessReceivedPacket(portIndex);
-		return 0;
-	}
-
-	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
 }
 
 // Checks the wires and computes macOperational for each port on this bridge.
-void Bridge::OnLinkPulseTick()
+//static
+void Bridge::OnLinkPulseTick (void* callbackArg)
 {
+	auto b = static_cast<Bridge*>(callbackArg);
+	if (b->_simulationPaused)
+		return;
+
 	auto timestamp = GetTimestampMilliseconds();
 
 	bool invalidate = false;
-	for (unsigned int portIndex = 0; portIndex < _ports.size(); portIndex++)
+	for (size_t portIndex = 0; portIndex < b->_ports.size(); portIndex++)
 	{
-		Port* port = _ports[portIndex].get();
+		Port* port = b->_ports[portIndex].get();
 		if (port->_missedLinkPulseCounter < Port::MissedLinkPulseCounterMax)
 		{
 			port->_missedLinkPulseCounter++;
 			if (port->_missedLinkPulseCounter == Port::MissedLinkPulseCounterMax)
 			{
-				STP_OnPortDisabled (_stpBridge, portIndex, timestamp);
+				STP_OnPortDisabled (b->_stpBridge, (unsigned int) portIndex, timestamp);
 				invalidate = true;
 			}
 		}
 
 		// Transmit an empty packet that plays the role of a link pulse.
 		PacketInfo pi = { { }, timestamp, { } };
-		PacketTransmitEvent::InvokeHandlers(this, this, portIndex, move(pi));
+		PacketTransmitEvent::InvokeHandlers(b, b, portIndex, move(pi));
 	}
 
 	if (invalidate)
-		InvalidateEvent::InvokeHandlers(this, this);
+		InvalidateEvent::InvokeHandlers(b, b);
 }
 
 void Bridge::EnqueuePacket (PacketInfo&& packet, size_t rxPortIndex)
 {
-	_ports.at(rxPortIndex)->_rxQueue.push(move(packet));
-	::PostMessage (_helperWindow, WM_PACKET_RECEIVED, (WPARAM)(void*)this, (LPARAM) rxPortIndex);
+	_rxQueue.push ({ rxPortIndex, move(packet) });
+	::PostMessage (_helperWindow._hwnd, WM_PACKET_RECEIVED, (WPARAM)(void*)this, 0);
 }
 
 // WM_PACKET_RECEIVED
-void Bridge::ProcessReceivedPacket (size_t rxPortIndex)
+//static
+void Bridge::OnWmPacketReceived (WPARAM wParam, LPARAM lParam)
 {
-	auto port = _ports.at(rxPortIndex).get();
-	auto rp = move(port->_rxQueue.front());
-	port->_rxQueue.pop();
+	auto bridge = static_cast<Bridge*>((void*)wParam);
+	if (!bridge->_simulationPaused)
+		bridge->ProcessReceivedPackets();
+}
 
+void Bridge::ProcessReceivedPackets()
+{
 	bool invalidate = false;
-	bool oldMacOperational = port->_missedLinkPulseCounter < Port::MissedLinkPulseCounterMax;
-	port->_missedLinkPulseCounter = 0;
-	if (oldMacOperational == false)
-	{
-		STP_OnPortEnabled (_stpBridge, (unsigned int) rxPortIndex, 100, true, rp.timestamp);
-		invalidate = true;
-	}
 
-	if (rp.data.empty())
+	while (!_rxQueue.empty())
 	{
-		// Empty packet, which we use as link pulse. We discard it here.
-	}
-	else if ((rp.data.size() >= 6) && (memcmp (&rp.data[0], BpduDestAddress, 6) == 0))
-	{
-		// It's a BPDU.
-		if (STP_IsBridgeStarted(_stpBridge))
+		size_t rxPortIndex = _rxQueue.front().first;
+		auto port = _ports.at(rxPortIndex).get();
+		auto rp = move(_rxQueue.front().second);
+		_rxQueue.pop();
+
+		bool oldMacOperational = port->_missedLinkPulseCounter < Port::MissedLinkPulseCounterMax;
+		port->_missedLinkPulseCounter = 0;
+		if (oldMacOperational == false)
 		{
-			STP_OnBpduReceived (_stpBridge, (unsigned int) rxPortIndex, &rp.data[21], (unsigned int) (rp.data.size() - 21), rp.timestamp);
+			STP_OnPortEnabled (_stpBridge, (unsigned int) rxPortIndex, 100, true, rp.timestamp);
+			invalidate = true;
 		}
-		else
+
+		if (rp.data.empty())
 		{
-			// broadcast it to the other ports.
-			for (size_t txPortIndex = 0; txPortIndex < _ports.size(); txPortIndex++)
+			// Empty packet, which we use as link pulse. We discard it here.
+		}
+		else if ((rp.data.size() >= 6) && (memcmp (&rp.data[0], BpduDestAddress, 6) == 0))
+		{
+			// It's a BPDU.
+			if (STP_IsBridgeStarted(_stpBridge))
 			{
-				if (txPortIndex == rxPortIndex)
-					continue;
-
-				auto txPortAddress = GetPortAddress(txPortIndex);
-
-				// If it already went through this port, we have a loop that would hang our UI.
-				if (find (rp.txPortPath.begin(), rp.txPortPath.end(), txPortAddress) != rp.txPortPath.end())
+				STP_OnBpduReceived (_stpBridge, (unsigned int) rxPortIndex, &rp.data[21], (unsigned int) (rp.data.size() - 21), rp.timestamp);
+			}
+			else
+			{
+				// broadcast it to the other ports.
+				for (size_t txPortIndex = 0; txPortIndex < _ports.size(); txPortIndex++)
 				{
-					// We don't do anything here; we have code in Wire.cpp that shows loops to the user - as thick red wires.
-				}
-				else
-				{
-					PacketTransmitEvent::InvokeHandlers (this, this, txPortIndex, PacketInfo(rp));
+					if (txPortIndex == rxPortIndex)
+						continue;
+
+					auto txPortAddress = GetPortAddress(txPortIndex);
+
+					// If it already went through this port, we have a loop that would hang our UI.
+					if (find (rp.txPortPath.begin(), rp.txPortPath.end(), txPortAddress) != rp.txPortPath.end())
+					{
+						// We don't do anything here; we have code in Wire.cpp that shows loops to the user - as thick red wires.
+					}
+					else
+					{
+						PacketTransmitEvent::InvokeHandlers (this, this, txPortIndex, PacketInfo(rp));
+					}
 				}
 			}
 		}
@@ -577,6 +596,17 @@ void Bridge::SetCoordsForInteriorPort (Port* _port, D2D1_POINT_2F proposedLocati
 	}
 
 	InvalidateEvent::InvokeHandlers (this, this);
+}
+
+void Bridge::PauseSimulation()
+{
+	_simulationPaused = true;
+}
+
+void Bridge::ResumeSimulation()
+{
+	_simulationPaused = false;
+	ProcessReceivedPackets();
 }
 
 #pragma region STP Callbacks

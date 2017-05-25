@@ -20,6 +20,7 @@ public:
 	float GetClientWidthDips() const { return _clientSizeDips.width; }
 	float GetClientHeightDips() const { return _clientSizeDips.height; }
 	D2D1_POINT_2F GetDipLocationFromPixelLocation(POINT locationPixels) const;
+	D2D1_POINT_2F GetDipLocationFromPixelLocation(float xPixels, float yPixels) const;
 	POINT GetPixelLocationFromDipLocation(D2D1_POINT_2F locationDips) const;
 	D2D1_SIZE_F GetDipSizeFromPixelSize(SIZE sizePixels) const;
 	SIZE GetPixelSizeFromDipSize(D2D1_SIZE_F sizeDips) const;

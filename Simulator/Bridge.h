@@ -23,9 +23,25 @@ class Bridge : public Object
 	std::vector<std::unique_ptr<BridgeLogLine>> _logLines;
 	BridgeLogLine _currentLogLine;
 	TimerQueueTimer_unique_ptr _oneSecondTimerHandle;
-	TimerQueueTimer_unique_ptr _linkPulseTimerHandle;
-	static HWND _helperWindow;
-	static uint32_t _helperWindowRefCount;
+	bool _simulationPaused = false;
+	std::queue<std::pair<size_t, PacketInfo>> _rxQueue;
+
+	// Let's keep things simple and do everything on the GUI thread.
+	struct HelperWindow : EventManager
+	{
+		HWND _hwnd;
+		UINT_PTR _linkPulseTimerId;
+
+		HelperWindow();
+		~HelperWindow();
+
+		static LRESULT CALLBACK SubclassProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
+
+		struct LinkPulseEvent : public Event<LinkPulseEvent, void()> { };
+		LinkPulseEvent::Subscriber GetLinkPulseEvent() { return LinkPulseEvent::Subscriber(this); }
+	};
+
+	static HelperWindow _helperWindow;
 
 	// variables used by TransmitGetBuffer/ReleaseBuffer
 	std::vector<uint8_t> _txPacketData;
@@ -34,7 +50,6 @@ class Bridge : public Object
 
 public:
 	Bridge (unsigned int portCount, unsigned int mstiCount, const unsigned char macAddress[6]);
-
 	virtual ~Bridge();
 
 public:
@@ -79,6 +94,11 @@ public:
 	PacketTransmitEvent::Subscriber GetPacketTransmitEvent() { return PacketTransmitEvent::Subscriber(this); }
 
 	void EnqueuePacket (PacketInfo&& packet, size_t rxPortIndex);
+private:
+	static void OnWmPacketReceived (WPARAM wParam, LPARAM lParam);
+	void ProcessReceivedPackets();
+
+public:
 	bool IsPowered() const { return _powered; }
 	const std::vector<std::unique_ptr<BridgeLogLine>>& GetLogLines() const { return _logLines; }
 	std::array<uint8_t, 6> GetPortAddress (size_t portIndex) const;
@@ -86,13 +106,14 @@ public:
 	IXMLDOMElementPtr Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) const;
 	static std::unique_ptr<Bridge> Deserialize (IXMLDOMElement* element);
 
+	void PauseSimulation();
+	void ResumeSimulation();
+
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
-	static void CALLBACK LinkPulseTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
-	static LRESULT CALLBACK HelperWindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
+	static void OnWmOneSecondTimer (WPARAM wParam, LPARAM lParam);
 	static void OnPortInvalidate (void* callbackArg, Object* object);
-	void OnLinkPulseTick();
-	void ProcessReceivedPacket (size_t rxPortIndex);
+	static void OnLinkPulseTick(void* callbackArg);
 
 	static void* StpCallback_AllocAndZeroMemory (unsigned int size);
 	static void  StpCallback_FreeMemory (void* p);

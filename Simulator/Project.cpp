@@ -14,6 +14,7 @@ class Project : public EventManager, public IProject
 	vector<unique_ptr<Bridge>> _bridges;
 	vector<unique_ptr<Wire>> _wires;
 	STP_BRIDGE_ADDRESS _nextMacAddress = { 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x80 };
+	bool _simulationPaused = false;
 
 public:
 	virtual const vector<unique_ptr<Bridge>>& GetBridges() const override final { return _bridges; }
@@ -347,6 +348,24 @@ public:
 		_path = filePath;
 		LoadedEvent::InvokeHandlers(this, this);
 	}
+
+	virtual void PauseSimulation() override final
+	{
+		_simulationPaused = true;
+		for (auto& b : _bridges)
+			b->PauseSimulation();
+		InvalidateEvent::InvokeHandlers (this, this);
+	}
+
+	virtual void ResumeSimulation() override final
+	{
+		_simulationPaused = false;
+		for (auto& b : _bridges)
+			b->ResumeSimulation();
+		InvalidateEvent::InvokeHandlers (this, this);
+	}
+
+	virtual bool IsSimulationPaused() const override final { return _simulationPaused; }
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
 

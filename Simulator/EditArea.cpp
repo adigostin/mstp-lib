@@ -69,10 +69,11 @@ public:
 		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOW), &_drawingObjects._brushWindow); ThrowIfFailed(hr);
 		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_HIGHLIGHT), &_drawingObjects._brushHighlight); ThrowIfFailed(hr);
 		hr = GetDWriteFactory()->CreateTextFormat (L"Tahoma", NULL, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
-			DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_drawingObjects._regularTextFormat); ThrowIfFailed(hr);
-
+			DWRITE_FONT_STRETCH_NORMAL, 11, L"en-US", &_drawingObjects._regularTextFormat); ThrowIfFailed(hr);
+		hr = GetDWriteFactory()->CreateTextFormat (L"Tahoma", NULL, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
+			DWRITE_FONT_STRETCH_NORMAL, 9.5f, L"en-US", &_drawingObjects._smallTextFormat); ThrowIfFailed(hr);
 		GetDWriteFactory()->CreateTextFormat (L"Tahoma", nullptr,  DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
-										  DWRITE_FONT_STRETCH_CONDENSED, 11, L"en-US", &_legendFont); ThrowIfFailed(hr);
+			DWRITE_FONT_STRETCH_CONDENSED, 11, L"en-US", &_legendFont); ThrowIfFailed(hr);
 
 		ID2D1FactoryPtr factory;
 		dc->GetFactory(&factory);
@@ -324,23 +325,36 @@ public:
 		rt->SetAntialiasMode(oldaa);
 	}
 
-	void RenderHint (ID2D1RenderTarget* dc, float centerX, float topY, const wchar_t* text) const
+	void RenderHint (ID2D1RenderTarget* rt, float centerX, float y, const wchar_t* text, bool smallFont = false, bool alignBottom = false) const
 	{
-		float padding = 3.0f;
-		auto tl = TextLayout::Create (GetDWriteFactory(), _drawingObjects._regularTextFormat, text);
+		float leftRightPadding = 3;
+		float topBottomPadding = 1.5f;
+		auto textFormat = smallFont ? _drawingObjects._smallTextFormat.GetInterfacePtr() : _drawingObjects._regularTextFormat.GetInterfacePtr();
+		auto tl = TextLayout::Create (GetDWriteFactory(), textFormat, text);
 
-		D2D1_ROUNDED_RECT rr;
-		rr.rect.left = centerX - tl.metrics.width / 2 - padding;
-		rr.rect.top = topY;
-		rr.rect.right = centerX + tl.metrics.width / 2 + padding;
-		rr.rect.bottom = topY + padding + tl.metrics.height + padding;
-		rr.radiusX = rr.radiusY = 4;
+		float pixelWidthDips = GetDipSizeFromPixelSize ({ 1, 0 }).width;
+		float lineWidth = roundf(1.0f / pixelWidthDips) * pixelWidthDips;
+
+		if (alignBottom)
+			y -= topBottomPadding + tl.metrics.height + topBottomPadding + lineWidth;
+
+		D2D1_POINT_2F topLeft = { centerX - tl.metrics.width / 2 - leftRightPadding, y };
+		auto pt = GetPixelLocationFromDipLocation(topLeft);
+		topLeft = GetDipLocationFromPixelLocation (pt.x + 0.5f, pt.y + 0.5f);
+
+		D2D1_POINT_2F bottomRight = { centerX + tl.metrics.width / 2 + leftRightPadding, y + 2 * topBottomPadding + tl.metrics.height };
+		pt = GetPixelLocationFromDipLocation(bottomRight);
+		bottomRight = GetDipLocationFromPixelLocation (pt.x + 0.5f, pt.y + 0.5f);
+
+		D2D1_ROUNDED_RECT rr = { { topLeft.x, topLeft.y, bottomRight.x, bottomRight.y }, 4, 4 };
 		ID2D1SolidColorBrushPtr brush;
-		dc->CreateSolidColorBrush (GetD2DSystemColor(COLOR_INFOBK), &brush);
-		dc->FillRoundedRectangle (&rr, brush);
+		rt->CreateSolidColorBrush (GetD2DSystemColor(COLOR_INFOBK), &brush);
+		rt->FillRoundedRectangle (&rr, brush);
+
 		brush->SetColor (GetD2DSystemColor(COLOR_INFOTEXT));
-		dc->DrawRoundedRectangle (&rr, brush);
-		dc->DrawTextLayout ({ rr.rect.left + padding, rr.rect.top + padding }, tl.layout, brush);
+		rt->DrawRoundedRectangle (&rr, brush, lineWidth);
+
+		rt->DrawTextLayout ({ rr.rect.left + leftRightPadding, rr.rect.top + topBottomPadding }, tl.layout, brush);
 	}
 
 	void RenderBridges (ID2D1RenderTarget* dc, const std::set<STP_MST_CONFIG_ID>& configIds) const
@@ -409,37 +423,6 @@ public:
 		}
 	}
 
-	void RenderZoomingPanningHint (ID2D1RenderTarget* dc) const
-	{
-		IDWriteTextFormatPtr format;
-		auto hr = GetDWriteFactory()->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_MEDIUM, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 10, L"en-US", &format); ThrowIfFailed(hr);
-		IDWriteTextLayoutPtr layout;
-		static const wchar_t Text[] = L"Rotate mouse wheel for zooming, press wheel and drag for panning.";
-		hr = GetDWriteFactory()->CreateTextLayout (Text, _countof(Text) - 1, format, 1000, 1000, &layout); ThrowIfFailed(hr);
-		DWRITE_TEXT_METRICS metrics;
-		hr = layout->GetMetrics(&metrics); ThrowIfFailed(hr);
-		float lineWidth = GetDipSizeFromPixelSize ({ 1, 0 }).width;
-		D2D1_RECT_F rect =
-		{
-			GetClientWidthDips() / 2 - metrics.width / 2 - lineWidth,
-			GetClientHeightDips() - metrics.height - lineWidth,
-			GetClientWidthDips() / 2 + metrics.width / 2 + lineWidth,
-			GetClientHeightDips() + lineWidth / 2
-		};
-
-		ID2D1SolidColorBrushPtr brush;
-		dc->CreateSolidColorBrush (GetD2DSystemColor(COLOR_INFOBK), &brush);
-		brush->SetOpacity (0.8f);
-		dc->FillRectangle (&rect, brush);
-
-		auto oldaa = dc->GetAntialiasMode();
-		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-		dc->DrawRectangle (&rect, _drawingObjects._brushWindowText, lineWidth);
-		dc->SetAntialiasMode(oldaa);
-
-		dc->DrawTextLayout ({ GetClientWidthDips() / 2 - metrics.width / 2, GetClientHeightDips() - metrics.height }, layout, _drawingObjects._brushWindowText);
-	}
-
 	void RenderHover (ID2D1RenderTarget* dc) const
 	{
 		if (dynamic_cast<Port*>(_htResult.object) != nullptr)
@@ -454,7 +437,7 @@ public:
 		}
 	}
 
-	virtual void Render(ID2D1RenderTarget* dc) const override final
+	virtual void Render(ID2D1RenderTarget* rt) const override final
 	{
 		std::set<STP_MST_CONFIG_ID> configIds;
 		for (auto& bridge : _project->GetBridges())
@@ -464,27 +447,30 @@ public:
 				configIds.insert (*STP_GetMstConfigId(stpb));
 		}
 
-		dc->Clear(GetD2DSystemColor(COLOR_WINDOW));
+		rt->Clear(GetD2DSystemColor(COLOR_WINDOW));
 
-		RenderBridges (dc, configIds);
+		RenderBridges (rt, configIds);
 
-		RenderWires (dc);
+		RenderWires (rt);
 
 		for (auto& o : _selection->GetObjects())
-			o->RenderSelection(this, dc, _drawingObjects);
+			o->RenderSelection(this, rt, _drawingObjects);
 
-		RenderLegend(dc);
+		RenderLegend(rt);
 
 		if (!configIds.empty())
-			RenderConfigIdList (dc, configIds);
+			RenderConfigIdList (rt, configIds);
 
 		if (_htResult.object != nullptr)
-			RenderHover(dc);
+			RenderHover(rt);
 
-		RenderZoomingPanningHint(dc);
+		RenderHint (rt, GetClientWidthDips() / 2, GetClientHeightDips(), L"Rotate mouse wheel for zooming, press wheel and drag for panning.", true, true);
+
+		if (_project->IsSimulationPaused())
+			RenderHint (rt, GetClientWidthDips() / 2, 10, L"Simulation Paused");
 
 		if (_state != nullptr)
-			_state->Render(dc);
+			_state->Render(rt);
 	}
 
 	virtual HWND GetHWnd() const override final { return base::GetHWnd(); }
@@ -580,6 +566,16 @@ public:
 					auto action = unique_ptr<EditAction>(new EnableDisableStpAction(bridges, enable));
 					_actionList->PerformAndAddUserAction (move(action));
 				}
+			}
+			else if (wParam == ID_PAUSE_SIMULATION)
+			{
+				_project->PauseSimulation();
+				return 0;
+			}
+			else if (wParam == ID_RESUME_SIMULATION)
+			{
+				_project->ResumeSimulation();
+				return 0;
 			}
 
 			return 0;
@@ -851,7 +847,11 @@ public:
 
 		HMENU hMenu;
 		if (_selection->GetObjects().empty())
+		{
 			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_EMPTY_SPACE));
+			::EnableMenuItem (hMenu, ID_PAUSE_SIMULATION, _project->IsSimulationPaused() ? MF_DISABLED : MF_ENABLED);
+			::EnableMenuItem (hMenu, ID_RESUME_SIMULATION, _project->IsSimulationPaused() ? MF_ENABLED : MF_DISABLED);
+		}
 		else if (dynamic_cast<Bridge*>(_selection->GetObjects().front()) != nullptr)
 			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_BRIDGE));
 		else if (dynamic_cast<Port*>(_selection->GetObjects().front()) != nullptr)

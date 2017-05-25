@@ -21,7 +21,6 @@ class Port : public Object
 
 	static constexpr unsigned int MissedLinkPulseCounterMax = 6;
 	unsigned int _missedLinkPulseCounter = MissedLinkPulseCounterMax; // _missedLinkPulseCounter equal to MissedLinkPulseCounterMax means macOperational=false
-	std::queue<PacketInfo> _rxQueue;
 
 public:
 	Port (Bridge* bridge, unsigned int portIndex, Side side, float offset);
