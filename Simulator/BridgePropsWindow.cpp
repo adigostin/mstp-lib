@@ -36,12 +36,7 @@ public:
 		, _selection(selection)
 		, _actionList(actionList)
 	{
-		HINSTANCE hInstance;
-		BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &DialogProcStatic, &hInstance);
-		if (!bRes)
-			throw win32_exception(GetLastError());
-
-		_hwnd = CreateDialogParam (hInstance, MAKEINTRESOURCE(IDD_PROPPAGE_BRIDGE), hwndParent, &DialogProcStatic, reinterpret_cast<LPARAM>(this));
+		_hwnd = CreateDialogParam (app->GetHInstance(), MAKEINTRESOURCE(IDD_PROPPAGE_BRIDGE), hwndParent, &DialogProcStatic, reinterpret_cast<LPARAM>(this));
 
 		RECT rc;
 		::GetWindowRect(_hwnd, &rc);
@@ -276,7 +271,6 @@ private:
 	static void OnObjectAddedToSelection (void* callbackArg, ISelection* selection, Object* o)
 	{
 		auto window = static_cast<BridgePropsWindow*>(callbackArg);
-
 		auto bridge = dynamic_cast<Bridge*>(o);
 		if (bridge != nullptr)
 		{
@@ -289,7 +283,6 @@ private:
 	static void OnObjectRemovingFromSelection (void* callbackArg, ISelection* selection, Object* o)
 	{
 		auto window = static_cast<BridgePropsWindow*>(callbackArg);
-
 		auto bridge = dynamic_cast<Bridge*>(o);
 		if (bridge != nullptr)
 		{
