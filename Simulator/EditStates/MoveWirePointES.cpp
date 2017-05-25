@@ -74,10 +74,24 @@ public:
 	{
 		if (_subState == WaitingSecondUp)
 		{
-			//if (holds_alternative<ConnectedWireEnd>(_wire->GetPoints()[_point Index]))
+			struct MoveAction : public EditAction
 			{
-				_subState = Done;
-			}
+				Wire* const _wire;
+				size_t const _pointIndex;
+				WireEnd const _initial;
+				WireEnd const _final;
+
+				MoveAction (Wire* wire, size_t pointIndex, WireEnd initial, WireEnd final)
+					: _wire(wire), _pointIndex(pointIndex), _initial(initial), _final(final)
+				{ }
+
+				virtual void Redo() override final { _wire->SetPoint(_pointIndex, _final); }
+				virtual void Undo() override final { _wire->SetPoint(_pointIndex, _initial); }
+				virtual std::string GetName() const override final { return "Move wire end"; }
+			};
+
+			_actionList->AddPerformedUserAction(unique_ptr<EditAction>(new MoveAction(_wire, _pointIndex, _initialPoint, _wire->GetPoints()[_pointIndex])));
+			_subState = Done;
 		}
 	}
 
