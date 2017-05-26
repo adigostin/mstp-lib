@@ -19,7 +19,7 @@ class Port : public Object
 	Side _side;
 	float _offset;
 
-	static constexpr unsigned int MissedLinkPulseCounterMax = 6;
+	static constexpr unsigned int MissedLinkPulseCounterMax = 5;
 	unsigned int _missedLinkPulseCounter = MissedLinkPulseCounterMax; // _missedLinkPulseCounter equal to MissedLinkPulseCounterMax means macOperational=false
 
 public:

@@ -30,7 +30,7 @@ class Bridge : public Object
 	struct HelperWindow : EventManager
 	{
 		HWND _hwnd;
-		UINT_PTR _linkPulseTimerId;
+		HANDLE _linkPulseTimerHandle;
 
 		HelperWindow();
 		~HelperWindow();

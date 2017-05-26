@@ -8,6 +8,7 @@ using namespace std;
 using namespace D2D1;
 
 static constexpr UINT WM_ONE_SECOND_TIMER  = WM_APP + 1;
+static constexpr UINT WM_LINK_PULSE_TIMER  = WM_APP + 2;
 static constexpr UINT WM_PACKET_RECEIVED   = WM_APP + 3;
 
 static constexpr uint8_t BpduDestAddress[6] = { 1, 0x80, 0xC2, 0, 0, 0 };
@@ -17,26 +18,25 @@ Bridge::HelperWindow Bridge::_helperWindow;
 Bridge::HelperWindow::HelperWindow()
 {
 	HINSTANCE hInstance;
-	BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &SubclassProc, &hInstance);
+	BOOL bRes = ::GetModuleHandleExW (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &SubclassProc, &hInstance);
 	if (!bRes)
 		throw win32_exception(GetLastError());
 
-	_hwnd = CreateWindow (L"STATIC", L"", 0, 0, 0, 0, 0, HWND_MESSAGE, 0, hInstance, 0);
+	_hwnd = ::CreateWindowExW (0, L"STATIC", L"", 0, 0, 0, 0, 0, HWND_MESSAGE, 0, hInstance, 0);
 	if (_hwnd == nullptr)
 		throw win32_exception(GetLastError());
 
-	bRes = SetWindowSubclass (_hwnd, SubclassProc, 0, (DWORD_PTR) this);
+	bRes = ::SetWindowSubclass (_hwnd, SubclassProc, 0, (DWORD_PTR) this);
 	if (!bRes)
 		throw win32_exception(GetLastError());
 
-	_linkPulseTimerId = ::SetTimer (_hwnd, 1, 16, nullptr);
-	if (_linkPulseTimerId == 0)
-		throw win32_exception(GetLastError());
+	auto callback = [](void* lpParameter, BOOLEAN TimerOrWaitFired) { ::PostMessage (_helperWindow._hwnd, WM_LINK_PULSE_TIMER, 0, 0); };
+	bRes = ::CreateTimerQueueTimer (&_linkPulseTimerHandle, nullptr, callback, this, 16, 16, 0); ThrowWin32IfFailed(bRes);
 }
 
 Bridge::HelperWindow::~HelperWindow()
 {
-	::KillTimer (_hwnd, _linkPulseTimerId);
+	::DeleteTimerQueueTimer (nullptr, _linkPulseTimerHandle, INVALID_HANDLE_VALUE);
 	::RemoveWindowSubclass (_hwnd, SubclassProc, 0);
 	::DestroyWindow (_hwnd);
 }
@@ -46,7 +46,7 @@ LRESULT CALLBACK Bridge::HelperWindow::SubclassProc (HWND hWnd, UINT uMsg, WPARA
 {
 	auto hw = (HelperWindow*) dwRefData;
 
-	if ((uMsg == WM_TIMER) && (wParam == hw->_linkPulseTimerId))
+	if (uMsg == WM_LINK_PULSE_TIMER)
 	{
 		// We use a timer on a single thread for pulses because we want to avoid links going down due to delays on some threads but not on others.
 		LinkPulseEvent::InvokeHandlers(hw);
