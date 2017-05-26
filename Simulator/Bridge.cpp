@@ -489,7 +489,7 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 
 	IXMLDOMNodePtr configTableNode;
 	hr = element->selectSingleNode(MstConfigTableString, &configTableNode);
-	if (SUCCEEDED(hr))
+	if (SUCCEEDED(hr) && (configTableNode != nullptr))
 	{
 		IXMLDOMNodeListPtr nodes;
 		hr = configTableNode->get_childNodes(&nodes); ThrowIfFailed(hr);
@@ -512,7 +512,7 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 
 	IXMLDOMNodePtr bridgeTreesNode;
 	hr = element->selectSingleNode(BridgeTreesString, &bridgeTreesNode);
-	if (SUCCEEDED(hr))
+	if (SUCCEEDED(hr) && (bridgeTreesNode != nullptr))
 	{
 		IXMLDOMNodeListPtr bridgeTreeNodes;
 		hr = bridgeTreesNode->get_childNodes(&bridgeTreeNodes); ThrowIfFailed(hr);
