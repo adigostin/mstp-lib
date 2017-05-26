@@ -330,31 +330,32 @@ public:
 		float leftRightPadding = 3;
 		float topBottomPadding = 1.5f;
 		auto textFormat = smallFont ? _drawingObjects._smallTextFormat.GetInterfacePtr() : _drawingObjects._regularTextFormat.GetInterfacePtr();
-		auto tl = TextLayout::Create (GetDWriteFactory(), textFormat, text);
+		IDWriteTextLayoutPtr tl;
+		auto hr = _drawingObjects._dWriteFactory->CreateTextLayout(text, wcslen(text), textFormat, 10000, 10000, &tl); ThrowIfFailed(hr);
+		DWRITE_TEXT_METRICS metrics;
+		hr = tl->GetMetrics(&metrics); ThrowIfFailed(hr);
 
 		float pixelWidthDips = GetDipSizeFromPixelSize ({ 1, 0 }).width;
-		float lineWidth = roundf(1.0f / pixelWidthDips) * pixelWidthDips;
+		float lineWidthDips = roundf(1.0f / pixelWidthDips) * pixelWidthDips;
 
-		if (alignBottom)
-			y -= topBottomPadding + tl.metrics.height + topBottomPadding + lineWidth;
+		float left = centerX - metrics.width / 2 - leftRightPadding;
+		float top = y - (alignBottom ? (topBottomPadding + metrics.height + topBottomPadding + lineWidthDips) : 0);
+		float right = centerX + metrics.width / 2 + leftRightPadding;
+		float bottom = y + 2 * topBottomPadding + metrics.height;
+		left   = roundf (left   / pixelWidthDips) * pixelWidthDips + lineWidthDips / 2;
+		top    = roundf (top    / pixelWidthDips) * pixelWidthDips + lineWidthDips / 2;
+		right  = roundf (right  / pixelWidthDips) * pixelWidthDips + lineWidthDips / 2;
+		bottom = roundf (bottom / pixelWidthDips) * pixelWidthDips + lineWidthDips / 2;
 
-		D2D1_POINT_2F topLeft = { centerX - tl.metrics.width / 2 - leftRightPadding, y };
-		auto pt = GetPixelLocationFromDipLocation(topLeft);
-		topLeft = GetDipLocationFromPixelLocation (pt.x + 0.5f, pt.y + 0.5f);
-
-		D2D1_POINT_2F bottomRight = { centerX + tl.metrics.width / 2 + leftRightPadding, y + 2 * topBottomPadding + tl.metrics.height };
-		pt = GetPixelLocationFromDipLocation(bottomRight);
-		bottomRight = GetDipLocationFromPixelLocation (pt.x + 0.5f, pt.y + 0.5f);
-
-		D2D1_ROUNDED_RECT rr = { { topLeft.x, topLeft.y, bottomRight.x, bottomRight.y }, 4, 4 };
+		D2D1_ROUNDED_RECT rr = { { left, top, right, bottom }, 4, 4 };
 		ID2D1SolidColorBrushPtr brush;
 		rt->CreateSolidColorBrush (GetD2DSystemColor(COLOR_INFOBK), &brush);
 		rt->FillRoundedRectangle (&rr, brush);
 
 		brush->SetColor (GetD2DSystemColor(COLOR_INFOTEXT));
-		rt->DrawRoundedRectangle (&rr, brush, lineWidth);
+		rt->DrawRoundedRectangle (&rr, brush, lineWidthDips);
 
-		rt->DrawTextLayout ({ rr.rect.left + leftRightPadding, rr.rect.top + topBottomPadding }, tl.layout, brush);
+		rt->DrawTextLayout ({ rr.rect.left + leftRightPadding, rr.rect.top + topBottomPadding }, tl, brush);
 	}
 
 	void RenderBridges (ID2D1RenderTarget* dc, const std::set<STP_MST_CONFIG_ID>& configIds) const
