@@ -36,6 +36,9 @@
       <Filter>Win32</Filter>
     </ClInclude>
     <ClInclude Include="EditActions.h" />
+    <ClInclude Include="Win32\PropertyGrid.h">
+      <Filter>Win32</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -87,6 +90,9 @@
     </ClCompile>
     <ClCompile Include="EditStates\BeginningDragES.cpp">
       <Filter>EditStates</Filter>
+    </ClCompile>
+    <ClCompile Include="Win32\PropertyGrid.cpp">
+      <Filter>Win32</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

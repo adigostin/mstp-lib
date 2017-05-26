@@ -26,13 +26,6 @@ unsigned int GetTimestampMilliseconds()
 	return (unsigned int)milliseconds;
 }
 
-ColorF GetD2DSystemColor (int sysColorIndex)
-{
-	DWORD brg = GetSysColor (sysColorIndex);
-	DWORD rgb = ((brg & 0xff0000) >> 16) | (brg & 0xff00) | ((brg & 0xff) << 16);
-	return ColorF (rgb);
-}
-
 bool HitTestLine (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance, D2D1_POINT_2F p0w, D2D1_POINT_2F p1w, float lineWidth)
 {
 	auto fd = zoomable->GetDLocationFromWLocation(p0w);
@@ -109,15 +102,6 @@ void InflateRoundedRect (D2D1_ROUNDED_RECT* rr, float distance)
 	rr->radiusY += distance;
 	if (rr->radiusY < 0)
 		rr->radiusY = 0;
-}
-
-TextLayout TextLayout::Create (IDWriteFactory* dWriteFactory, IDWriteTextFormat* format, const wchar_t* str)
-{
-	IDWriteTextLayoutPtr tl;
-	auto hr = dWriteFactory->CreateTextLayout(str, (UINT32) wcslen(str), format, 10000, 10000, &tl); ThrowIfFailed(hr);
-	DWRITE_TEXT_METRICS metrics;
-	hr = tl->GetMetrics(&metrics); ThrowIfFailed(hr);
-	return TextLayout { move(tl), metrics };
 }
 
 STP_BRIDGE_ADDRESS ConvertStringToBridgeAddress (const wchar_t* str)

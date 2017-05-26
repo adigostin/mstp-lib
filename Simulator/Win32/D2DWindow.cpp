@@ -155,3 +155,19 @@ SIZE D2DWindow::GetPixelSizeFromDipSize(D2D1_SIZE_F sizeDips) const
 	return SIZE{ (int)(sizeDips.width / 96.0f * dpiX), (int)(sizeDips.height / 96.0f * dpiY) };
 }
 
+ColorF GetD2DSystemColor (int sysColorIndex)
+{
+	DWORD brg = GetSysColor (sysColorIndex);
+	DWORD rgb = ((brg & 0xff0000) >> 16) | (brg & 0xff00) | ((brg & 0xff) << 16);
+	return ColorF (rgb);
+}
+
+TextLayout TextLayout::Create (IDWriteFactory* dWriteFactory, IDWriteTextFormat* format, const wchar_t* str, float maxWidth)
+{
+	IDWriteTextLayoutPtr tl;
+	auto hr = dWriteFactory->CreateTextLayout(str, (UINT32) wcslen(str), format, (maxWidth != 0) ? maxWidth : 10000, 10000, &tl); ThrowIfFailed(hr);
+	DWRITE_TEXT_METRICS metrics;
+	hr = tl->GetMetrics(&metrics); ThrowIfFailed(hr);
+	return TextLayout { move(tl), metrics };
+}
+

@@ -218,6 +218,7 @@
     <ClInclude Include="UtilityFunctions.h" />
     <ClInclude Include="Win32\D2DWindow.h" />
     <ClInclude Include="Win32\EventManager.h" />
+    <ClInclude Include="Win32\PropertyGrid.h" />
     <ClInclude Include="Win32\Win32Defs.h" />
     <ClInclude Include="Win32\Window.h" />
     <ClInclude Include="Win32\ZoomableWindow.h" />
@@ -263,6 +264,7 @@
     <ClCompile Include="Win32\D2DWindow.cpp" />
     <ClCompile Include="Win32\DockablePanel.cpp" />
     <ClCompile Include="Win32\DockContainer.cpp" />
+    <ClCompile Include="Win32\PropertyGrid.cpp" />
     <ClCompile Include="Win32\Window.cpp" />
     <ClCompile Include="Win32\ZoomableWindow.cpp" />
     <ClCompile Include="Wire.cpp" />

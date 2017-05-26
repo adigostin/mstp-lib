@@ -3,6 +3,7 @@
 #include "Port.h"
 #include "Wire.h"
 #include "stp_md5.h"
+#include "Win32/D2DWindow.h"
 
 using namespace std;
 using namespace D2D1;

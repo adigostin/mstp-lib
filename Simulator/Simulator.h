@@ -10,7 +10,6 @@ struct IProjectWindow;
 struct ISelection;
 struct ILogArea;
 struct IActionList;
-struct DrawingObjects;
 class Object;
 class Bridge;
 class Port;
@@ -219,8 +218,8 @@ using PropertiesWindowFactory = IPropertiesWindowPtr(*const)(ISimulatorApp* app,
 															 IProject* project,
 															 ISelection* selection,
 															 IActionList* actionList,
-															 HWND hWndParent,
-															 POINT location);
+															 const RECT& rect,
+															 HWND hWndParent);
 extern const PropertiesWindowFactory propertiesWindowFactory;
 
 // ============================================================================

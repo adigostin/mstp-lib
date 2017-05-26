@@ -104,8 +104,7 @@ public:
 		SetMainMenuItemCheck (ID_VIEW_STPLOG, true);
 
 		auto propsPanel = _dockContainer->CreatePanel (PropsPanelUniqueName, Side::Left, L"Properties");
-		auto propsWindow = propertiesWindowFactory (app, this, project, _selection, actionList, propsPanel->GetHWnd(), propsPanel->GetContentLocation());
-		_dockContainer->ResizePanel (propsPanel, propsPanel->GetPanelSizeFromContentSize(propsWindow->GetClientSize()));
+		auto propsWindow = propertiesWindowFactory (app, this, project, _selection, actionList, propsPanel->GetContentRect(), propsPanel->GetHWnd());
 		propsPanel->GetVisibleChangedEvent().AddHandler (&OnPropsPanelVisibleChanged, this);
 		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
 

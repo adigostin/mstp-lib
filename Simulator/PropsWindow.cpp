@@ -1,9 +1,10 @@
 
 #include "pch.h"
 #include "Simulator.h"
-#include "Win32/Window.h"
+#include "Win32/PropertyGrid.h"
 #include "Bridge.h"
 #include "Port.h"
+#include "Wire.h"
 
 using namespace std;
 
@@ -19,7 +20,7 @@ class PropertiesWindow : public Window, public IPropertiesWindow
 	IProjectPtr const _project;
 	ISelectionPtr const _selection;
 	HFONT _font;
-	IBridgePropsWindowPtr _bridgePropsControl;
+	PropertyGrid _pg;
 
 	static constexpr DWORD Style = WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
 
@@ -29,22 +30,20 @@ public:
 					  IProject* project,
 					  ISelection* selection,
 					  IActionList* actionList,
-					  HWND hWndParent,
-					  POINT location)
-		: base (app->GetHInstance(), PropertiesWindowWndClassName, 0, Style, RECT { location.x, location.y, 0, 0 }, hWndParent, nullptr)
+					  const RECT& rect,
+					  HWND hWndParent)
+		: base (app->GetHInstance(), PropertiesWindowWndClassName, 0, Style, rect, hWndParent, nullptr)
 		, _app(app)
 		, _projectWindow(projectWindow)
 		, _project(project)
 		, _selection(selection)
+		, _pg(app->GetHInstance(), this->Window::GetClientRectPixels(), GetHWnd(), app->GetDWriteFactory())
 	{
 		NONCLIENTMETRICS ncm = { sizeof(NONCLIENTMETRICS) };
 		SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0);
 		_font = ::CreateFontIndirect (&ncm.lfMessageFont);
 
-		_bridgePropsControl = bridgePropertiesControlFactory (_app, _projectWindow, _project, selection, actionList, GetHWnd(), { 0, 0 });
-
-		SIZE ws = _bridgePropsControl->GetWindowSize();
-		::MoveWindow (GetHWnd(), 0, 0, ws.cx, ws.cy, TRUE);
+		_pg.SetNoItemText (L"(no selection)");
 
 		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
 	}
@@ -62,12 +61,9 @@ public:
 
 		if (msg == WM_SIZE)
 		{
-			if (_bridgePropsControl != nullptr)
-			{
-				::MoveWindow (_bridgePropsControl->GetHWnd(), 0, 0, GetClientWidthPixels(), GetClientHeightPixels(), TRUE);
-				if (_bridgePropsControl->IsVisible())
-					::UpdateWindow(_bridgePropsControl->GetHWnd());
-			}
+			::MoveWindow (_pg.GetHWnd(), 0, 0, GetClientWidthPixels(), GetClientHeightPixels(), TRUE);
+			if (_pg.IsVisible())
+				::UpdateWindow(_pg.GetHWnd());
 			return 0;
 		}
 
@@ -91,18 +87,33 @@ public:
 	{
 		auto window = static_cast<PropertiesWindow*>(callbackArg);
 
-		bool showBridgeWindow = false;
-		bool showPortsWindow = false;
-		if (!selection->GetObjects().empty())
+		window->_pg.ClearItems();
+
+		if (selection->GetObjects().empty())
+			window->_pg.SetNoItemText (L"(no selection)");
+		else
 		{
 			if (all_of (selection->GetObjects().begin(), selection->GetObjects().end(), [](Object* o) { return o->Is<Bridge>(); }))
-				showBridgeWindow = true;
+				window->AddBridgeProperties();
 			else if (all_of (selection->GetObjects().begin(), selection->GetObjects().end(), [](Object* o) { return o->Is<Port>(); }))
-				showPortsWindow = true;
+				window->AddPortProperties();
+			else if (all_of (selection->GetObjects().begin(), selection->GetObjects().end(), [](Object* o) { return o->Is<Wire>(); }))
+				window->_pg.SetNoItemText (L"(no selection)");
+			else
+				window->_pg.SetNoItemText (L"(multiple selection)");
 		}
+	}
 
-		::ShowWindow(window->_bridgePropsControl->GetHWnd(), showBridgeWindow ? SW_SHOW : SW_HIDE);
-		// TODO: same for port props window
+	void AddBridgeProperties()
+	{
+		if (_selection->GetObjects().size() == 1)
+			_pg.AddItem (new PGTextItem (_pg, "Bridge Address", dynamic_cast<Bridge*>(_selection->GetObjects()[0])->GetBridgeAddressAsString().c_str(), nullptr));
+		else
+			_pg.AddItem (new PGTextItem (_pg, "Bridge Address", "(multiple selection)", nullptr));
+	}
+
+	void AddPortProperties()
+	{
 	}
 
 	virtual HWND GetHWnd() const override final { return base::GetHWnd(); }

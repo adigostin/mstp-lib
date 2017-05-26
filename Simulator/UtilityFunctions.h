@@ -50,16 +50,7 @@ public:
 	bool Is() const { return dynamic_cast<const T*>(this) != nullptr; }
 };
 
-struct TextLayout
-{
-	IDWriteTextLayoutPtr layout;
-	DWRITE_TEXT_METRICS metrics;
-
-	static TextLayout Create (IDWriteFactory* dWriteFactory, IDWriteTextFormat* format, const wchar_t* str);
-};
-
 unsigned int GetTimestampMilliseconds();
-D2D1::ColorF GetD2DSystemColor (int sysColorIndex);
 bool HitTestLine (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance, D2D1_POINT_2F p0w, D2D1_POINT_2F p1w, float lineWidth);
 bool PointInRect (const D2D1_RECT_F& rect, D2D1_POINT_2F location);
 bool PointInPolygon (const D2D1_POINT_2F* vertices, size_t vertexCount, D2D1_POINT_2F point);
