@@ -87,13 +87,17 @@ public:
 
 	struct LogLineGenerated : public Event<LogLineGenerated, void(Bridge*, const BridgeLogLine* line)> { };
 	struct ConfigChangedEvent : public Event<ConfigChangedEvent, void(Bridge*)> { };
+	struct LinkPulseEvent : public Event<LinkPulseEvent, void(Bridge*, size_t txPortIndex, unsigned int timestamp)> { };
 	struct PacketTransmitEvent : public Event<PacketTransmitEvent, void(Bridge*, size_t txPortIndex, PacketInfo&& packet)> { };
 
 	LogLineGenerated::Subscriber GetLogLineGeneratedEvent() { return LogLineGenerated::Subscriber(this); }
 	ConfigChangedEvent::Subscriber GetConfigChangedEvent() { return ConfigChangedEvent::Subscriber(this); }
+	LinkPulseEvent::Subscriber GetLinkPulseEvent() { return LinkPulseEvent::Subscriber(this); }
 	PacketTransmitEvent::Subscriber GetPacketTransmitEvent() { return PacketTransmitEvent::Subscriber(this); }
 
+	void ProcessLinkPulse (size_t rxPortIndex, unsigned int timestamp);
 	void EnqueuePacket (PacketInfo&& packet, size_t rxPortIndex);
+
 private:
 	static void OnWmPacketReceived (WPARAM wParam, LPARAM lParam);
 	void ProcessReceivedPackets();

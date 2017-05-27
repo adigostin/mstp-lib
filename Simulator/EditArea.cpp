@@ -331,7 +331,7 @@ public:
 		float topBottomPadding = 1.5f;
 		auto textFormat = smallFont ? _drawingObjects._smallTextFormat.GetInterfacePtr() : _drawingObjects._regularTextFormat.GetInterfacePtr();
 		IDWriteTextLayoutPtr tl;
-		auto hr = _drawingObjects._dWriteFactory->CreateTextLayout(text, wcslen(text), textFormat, 10000, 10000, &tl); ThrowIfFailed(hr);
+		auto hr = _drawingObjects._dWriteFactory->CreateTextLayout(text, (UINT32) wcslen(text), textFormat, 10000, 10000, &tl); ThrowIfFailed(hr);
 		DWRITE_TEXT_METRICS metrics;
 		hr = tl->GetMetrics(&metrics); ThrowIfFailed(hr);
 

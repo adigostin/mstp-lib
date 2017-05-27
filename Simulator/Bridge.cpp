@@ -158,13 +158,23 @@ void Bridge::OnLinkPulseTick (void* callbackArg)
 			}
 		}
 
-		// Transmit an empty packet that plays the role of a link pulse.
-		PacketInfo pi = { { }, timestamp, { } };
-		PacketTransmitEvent::InvokeHandlers(b, b, portIndex, move(pi));
+		LinkPulseEvent::InvokeHandlers(b, b, portIndex, timestamp);
 	}
 
 	if (invalidate)
 		InvalidateEvent::InvokeHandlers(b, b);
+}
+
+void Bridge::ProcessLinkPulse (size_t rxPortIndex, unsigned int timestamp)
+{
+	auto port = _ports.at(rxPortIndex).get();
+	bool oldMacOperational = port->_missedLinkPulseCounter < Port::MissedLinkPulseCounterMax;
+	port->_missedLinkPulseCounter = 0;
+	if (oldMacOperational == false)
+	{
+		STP_OnPortEnabled (_stpBridge, (unsigned int) rxPortIndex, 100, true, timestamp);
+		InvalidateEvent::InvokeHandlers(this, this);
+	}
 }
 
 void Bridge::EnqueuePacket (PacketInfo&& packet, size_t rxPortIndex)
@@ -201,11 +211,7 @@ void Bridge::ProcessReceivedPackets()
 			invalidate = true;
 		}
 
-		if (rp.data.empty())
-		{
-			// Empty packet, which we use as link pulse. We discard it here.
-		}
-		else if ((rp.data.size() >= 6) && (memcmp (&rp.data[0], BpduDestAddress, 6) == 0))
+		if ((rp.data.size() >= 6) && (memcmp (&rp.data[0], BpduDestAddress, 6) == 0))
 		{
 			// It's a BPDU.
 			if (STP_IsBridgeStarted(_stpBridge))
@@ -234,6 +240,8 @@ void Bridge::ProcessReceivedPackets()
 				}
 			}
 		}
+		else
+			throw not_implemented_exception();
 	}
 
 	if (invalidate)
