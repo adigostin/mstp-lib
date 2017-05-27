@@ -28,6 +28,7 @@ public:
 		auto it = _bridges.insert (_bridges.begin() + index, (move(bridge)));
 		b->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
 		b->GetPacketTransmitEvent().AddHandler (&OnPacketTransmit, this);
+		b->GetLinkPulseEvent().AddHandler (&OnLinkPulse, this);
 		BridgeInsertedEvent::InvokeHandlers (this, this, index, b);
 		InvalidateEvent::InvokeHandlers (this, this);
 
@@ -75,6 +76,7 @@ public:
 		}
 
 		BridgeRemovingEvent::InvokeHandlers(this, this, index, b);
+		_bridges[index]->GetLinkPulseEvent().RemoveHandler (&OnLinkPulse, this);
 		_bridges[index]->GetPacketTransmitEvent().AddHandler (&OnPacketTransmit, this);
 		_bridges[index]->GetInvalidateEvent().RemoveHandler (&OnObjectInvalidate, this);
 		auto result = move(_bridges[index]);
@@ -120,6 +122,15 @@ public:
 			pi.txPortPath.push_back (bridge->GetPortAddress(txPortIndex));
 			rxPort->GetBridge()->EnqueuePacket(move(pi), rxPort->GetPortIndex());
 		}
+	}
+
+	static void OnLinkPulse (void* callbackArg, Bridge* bridge, size_t txPortIndex, unsigned int timestamp)
+	{
+		auto project = static_cast<Project*>(callbackArg);
+		auto txPort = bridge->GetPorts().at(txPortIndex).get();
+		auto rxPort = project->FindConnectedPort(txPort);
+		if (rxPort != nullptr)
+			rxPort->GetBridge()->ProcessLinkPulse(rxPort->GetPortIndex(), timestamp);
 	}
 
 	static void OnObjectInvalidate (void* callbackArg, Object* object)
