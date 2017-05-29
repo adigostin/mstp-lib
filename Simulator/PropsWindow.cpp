@@ -12,20 +12,9 @@ using namespace std;
 static ATOM wndClassAtom;
 static constexpr wchar_t PropertiesWindowWndClassName[] = L"PropertiesWindow-{24B42526-2970-4B3C-A753-2DABD22C4BB0}";
 
-using StringPD = PropertyGrid::TypedPD<wstring>;
-using uint = unsigned int;
-
-extern const PropertyGrid::TypedPD<wstring> BridgePropAddress;
-extern const PropertyGrid::TypedPD<bool> BridgePropStpEnabled;
-extern const PropertyGrid::EnumPD::NVP StpVersionNVPs[];
-extern const PropertyGrid::EnumPD BridgePropStpVersion;
-extern const PropertyGrid::TypedPD<uint> BridgePropPortCount;
-extern const PropertyGrid::TypedPD<uint> BridgePropMstiCount;
-extern const vector<const PropertyGrid::PD*> BridgeProperties;
-
-extern const PropertyGrid::TypedPD<bool> PortPropAdminEdge;
-extern const PropertyGrid::TypedPD<bool> PortPropAutoEdge;
-extern const vector<const PropertyGrid::PD*> PortProperties;
+extern const PropertyGrid::PD* const BridgeProperties[];
+extern const PropertyGrid::PD* const PortProperties[];
+extern const PropertyGrid::PD* const WireProperties[];
 
 class PropertiesWindow : public Window, public IPropertiesWindow
 {
@@ -70,7 +59,7 @@ public:
 		_selection->GetAddedToSelectionEvent().RemoveHandler (&OnObjectAddedToSelection, this);
 	}
 
-	static const std::vector<const PropertyGrid::PD*>& GetPropertyDescriptors (const void* selectedObject)
+	static const PropertyGrid::PD* const* GetPropertyDescriptors (const void* selectedObject)
 	{
 		auto o = static_cast<const Object*>(selectedObject);
 		if (dynamic_cast<const Bridge*>(o) != nullptr)
@@ -78,6 +67,9 @@ public:
 
 		if (dynamic_cast<const Port*>(o) != nullptr)
 			return PortProperties;
+
+		if (dynamic_cast<const Wire*>(o) != nullptr)
+			return WireProperties;
 
 		throw not_implemented_exception();
 	}
@@ -152,8 +144,8 @@ const PropertiesWindowFactory propertiesWindowFactory = &Create;
 static const PropertyGrid::TypedPD<wstring> BridgePropAddress
 (
 	L"Bridge Address",
-	[](const void* o) { return static_cast<const Bridge*>(o)->GetBridgeAddressAsWString(); },
-	[](void* o, wstring str, const PropertyGrid* pg)
+	[](const PropertyGrid* pg, const void* o) { return static_cast<const Bridge*>(o)->GetBridgeAddressAsWString(); },
+	[](const PropertyGrid* pg, void* o, wstring str)
 	{
 		auto newAddress = ConvertStringToBridgeAddress(str.c_str());
 		auto window = static_cast<PropertiesWindow*>(pg->GetAppContext());
@@ -167,7 +159,7 @@ static const PropertyGrid::TypedPD<wstring> BridgePropAddress
 static const PropertyGrid::TypedPD<bool> BridgePropStpEnabled
 (
 	L"STP Enabled",
-	[](const void* o) { return (bool) STP_IsBridgeStarted(static_cast<const Bridge*>(o)->GetStpBridge()); },
+	[](const PropertyGrid* pg, const void* o) { return (bool) STP_IsBridgeStarted(static_cast<const Bridge*>(o)->GetStpBridge()); },
 	nullptr
 );
 
@@ -176,58 +168,97 @@ static const PropertyGrid::EnumPD::NVP StpVersionNVPs[] = { { L"LegacySTP", STP_
 static const PropertyGrid::EnumPD BridgePropStpVersion
 {
 	L"STP Version",
-	[](const void* o) { return (int) STP_GetStpVersion(static_cast<const Bridge*>(o)->GetStpBridge()); },
+	[](const PropertyGrid* pg, const void* o) { return (int) STP_GetStpVersion(static_cast<const Bridge*>(o)->GetStpBridge()); },
 	nullptr,
 	StpVersionNVPs
 };
 
-static const PropertyGrid::TypedPD<uint> BridgePropPortCount
+static const PropertyGrid::TypedPD<unsigned int> BridgePropPortCount
 {
 	L"Port Count",
-	[](const void* o) { return static_cast<const Bridge*>(o)->GetPorts().size(); },
+	[](const PropertyGrid* pg, const void* o) { return static_cast<const Bridge*>(o)->GetPorts().size(); },
 	nullptr
 };
 
-static const PropertyGrid::TypedPD<uint> BridgePropMstiCount
+static const PropertyGrid::TypedPD<unsigned int> BridgePropMstiCount
 {
 	L"MSTI Count",
-	[](const void* o) { return STP_GetMstiCount(static_cast<const Bridge*>(o)->GetStpBridge()); },
+	[](const PropertyGrid* pg, const void* o) { return STP_GetMstiCount(static_cast<const Bridge*>(o)->GetStpBridge()); },
 	nullptr
 };
 
-static const vector<const PropertyGrid::PD*> BridgeProperties =
+static const PropertyGrid::TypedPD<unsigned short> BridgePropPrio
+{
+	L"Bridge Priority",
+	[](const PropertyGrid* pg, const void* o)
+	{
+		auto window = static_cast<PropertiesWindow*>(pg->GetAppContext());
+		auto b = static_cast<const Bridge*>(o);
+		auto treeIndex = STP_GetTreeIndexFromVlanNumber (b->GetStpBridge(), window->_projectWindow->GetSelectedVlanNumber());
+		return STP_GetBridgePriority(b->GetStpBridge(), treeIndex);
+	},
+	nullptr,
+	[](const PropertyGrid* pg)
+	{
+		auto window = static_cast<PropertiesWindow*>(pg->GetAppContext());
+		auto& objs = window->_selection->GetObjects();
+		auto vlanNumber = window->_projectWindow->GetSelectedVlanNumber();
+		auto treeIndex = STP_GetTreeIndexFromVlanNumber(dynamic_cast<Bridge*>(objs[0])->GetStpBridge(), vlanNumber);
+		auto begin = reinterpret_cast<Bridge* const*>(&objs[0]);
+		auto end = begin + objs.size();
+		bool allSameTree = all_of (begin, end, [vlanNumber, treeIndex](Bridge* b) { return STP_GetTreeIndexFromVlanNumber(b->GetStpBridge(), vlanNumber) == treeIndex; });
+
+		if (!allSameTree)
+			return wstring(L"Bridge Priority");
+
+		wstringstream label;
+		label << L"Bridge Priority (";
+		if (treeIndex == 0)
+			label << L"CIST)";
+		else
+			label << L"MSTI " << treeIndex << L")";
+		return label.str();
+	},
+};
+
+static const PropertyGrid::PD* const BridgeProperties[] =
 {
 	&BridgePropAddress,
 	&BridgePropStpEnabled,
 	&BridgePropStpVersion,
 	&BridgePropPortCount,
 	&BridgePropMstiCount,
+	&BridgePropPrio,
+	nullptr,
 };
 
 static const PropertyGrid::TypedPD<bool> PortPropAdminEdge
-{
+(
 	L"AdminEdge",
-	[](const void* o)
+	[](const PropertyGrid* pg, const void* o)
 	{
 		auto port = static_cast<const Port*>(o);
 		return (bool) STP_GetPortAdminEdge(port->GetBridge()->GetStpBridge(), (unsigned int) port->GetPortIndex());
 	},
-	nullptr,
-};
+	nullptr
+);
 
 static const PropertyGrid::TypedPD<bool> PortPropAutoEdge
-{
+(
 	L"AutoEdge",
-	[](const void* o)
+	[](const PropertyGrid* pg, const void* o)
 	{
 		auto port = static_cast<const Port*>(o);
 		return (bool) STP_GetPortAutoEdge(port->GetBridge()->GetStpBridge(), (unsigned int) port->GetPortIndex());
 	},
-	nullptr,
-};
+	nullptr
+);
 
-static const vector<const PropertyGrid::PD*> PortProperties =
+static const PropertyGrid::PD* const PortProperties[] =
 {
 	&PortPropAutoEdge,
 	&PortPropAdminEdge,
+	nullptr
 };
+
+static const PropertyGrid::PD* const WireProperties[] = { nullptr };

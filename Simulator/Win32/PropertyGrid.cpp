@@ -29,9 +29,9 @@ PropertyGrid::EnumPD::EnumPD (const wchar_t* name, Getter getter, Setter setter,
 	: TypedPD(name, getter, setter), _nameValuePairs(nameValuePairs)
 { }
 
-std::wstring PropertyGrid::EnumPD::to_wstring (const void* so) const
+std::wstring PropertyGrid::EnumPD::to_wstring (const PropertyGrid* pg, const void* so) const
 {
-	auto value = _getter(so);
+	auto value = _getter(pg, so);
 	for (auto nvp = _nameValuePairs; nvp->first != nullptr; nvp++)
 	{
 		if (nvp->second == value)
@@ -63,13 +63,17 @@ void PropertyGrid::Render (ID2D1RenderTarget* rt) const
 	float pixelWidthDips = GetDipSizeFromPixelSize ({ 1, 0 }).width;
 	float lineWidthDips = roundf(1.0f / pixelWidthDips) * pixelWidthDips;
 	float y = 0;
-	auto& pds = _propertyCollectionGetter(_selectedObjects[0]);
-	for (auto pd : pds)
+	for (auto ppd = _propertyCollectionGetter(_selectedObjects[0]); *ppd != nullptr; ppd++)
 	{
-		auto labelTL = TextLayout::Create (GetDWriteFactory(), _textFormat, pd->_name, GetNameColumnWidth());
+		auto pd = *ppd;
+		TextLayout labelTL;
+		if (pd->_labelGetter != nullptr)
+			labelTL = TextLayout::Create (GetDWriteFactory(), _textFormat, pd->_labelGetter(this).c_str(), GetNameColumnWidth());
+		else
+			labelTL = TextLayout::Create (GetDWriteFactory(), _textFormat, pd->_name, GetNameColumnWidth());
 		rt->DrawTextLayout ({ CellLRPadding, y }, labelTL.layout, pd->IsReadOnly() ? _grayTextBrush : _windowTextBrush);
 
-		auto str = pd->to_wstring(_selectedObjects[0]);
+		auto str = pd->to_wstring(this, _selectedObjects[0]);
 		auto valueTL = TextLayout::Create (GetDWriteFactory(), _textFormat, str.c_str());
 		rt->DrawTextLayout ({ GetNameColumnWidth() + CellLRPadding, y }, valueTL.layout, pd->IsReadOnly() ? _grayTextBrush : _windowTextBrush);
 
