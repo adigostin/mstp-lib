@@ -137,9 +137,14 @@ public:
 		if (it != _dockablePanels.end())
 			throw invalid_argument ("Panel already exists");
 
-		static constexpr SIZE DefaultPanelSize = { 300, 300 };
+		HDC screen = GetDC(GetHWnd());
+		int dpiX = GetDeviceCaps (screen, LOGPIXELSX);
+		int dpiY = GetDeviceCaps (screen, LOGPIXELSY);
+		ReleaseDC (GetHWnd(), screen);
+
+		SIZE initialSize = { 200 * dpiX / 96, 200 * dpiY / 96 };
 		auto contentRect = LayOutPanels(nullptr, nullptr);
-		RECT panelRect = LayOutPanel (side, DefaultPanelSize, &contentRect);
+		RECT panelRect = LayOutPanel (side, initialSize, &contentRect);
 
 		LayOutContent (contentRect);
 
