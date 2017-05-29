@@ -9,7 +9,7 @@ class D2DWindow abstract : public Window
 	D2D1_SIZE_F _clientSizeDips;
 	bool _painting = false;
 	bool _forceFullPresentation;
-	IDWriteFactoryPtr _dWriteFactory;
+	IDWriteFactoryPtr const _dWriteFactory;
 	ID2D1FactoryPtr _d2dFactory;
 	ID2D1HwndRenderTargetPtr _renderTarget;
 
