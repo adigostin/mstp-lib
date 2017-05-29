@@ -8,8 +8,6 @@ using namespace D2D1;
 
 #pragma comment (lib, "d2d1.lib")
 #pragma comment (lib, "dwrite.lib")
-#pragma comment (lib, "D3D11.lib")
-#pragma comment (lib, "Dxgi.lib")
 
 static ATOM WndClassAtom;
 static const wchar_t WndClassName[] = L"D2DWindow-{175802BE-0628-45C0-BC8A-3D27C6F4F0BE}";
