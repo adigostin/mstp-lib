@@ -176,7 +176,7 @@ static const PropertyGrid::EnumPD BridgePropStpVersion
 static const PropertyGrid::TypedPD<unsigned int> BridgePropPortCount
 {
 	L"Port Count",
-	[](const PropertyGrid* pg, const void* o) { return static_cast<const Bridge*>(o)->GetPorts().size(); },
+	[](const PropertyGrid* pg, const void* o) { return (unsigned int) static_cast<const Bridge*>(o)->GetPorts().size(); },
 	nullptr
 };
 
