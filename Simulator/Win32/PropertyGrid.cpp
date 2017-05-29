@@ -45,7 +45,71 @@ std::optional<LRESULT> PropertyGrid::WindowProc(HWND hwnd, UINT msg, WPARAM wPar
 {
 	auto resultBaseClass = base::WindowProc (hwnd, msg, wParam, lParam);
 
+	if (msg == WM_SETCURSOR)
+	{
+		if (((HWND) wParam == GetHWnd()) && (LOWORD (lParam) == HTCLIENT))
+		{
+			// Let's check the result because GetCursorPos fails when the input desktop is not the current desktop
+			// (happens for example when the monitor goes to sleep and then the lock screen is displayed).
+			POINT pt;
+			if (::GetCursorPos (&pt))
+			{
+				if (ScreenToClient (GetHWnd(), &pt))
+				{
+					this->ProcessWmSetCursor(pt);
+					return TRUE;
+				}
+			}
+		}
+
+		return nullopt;
+	}
+
 	return resultBaseClass;
+}
+
+void PropertyGrid::ProcessWmSetCursor (POINT pt) const
+{
+	auto dipLocation = GetDipLocationFromPixelLocation(pt);
+	auto item = GetItemAt(dipLocation);
+	if ((item != nullptr) && !item->pd->IsReadOnly())
+	{
+		if (dipLocation.x >= GetNameColumnWidth())
+			::SetCursor (::LoadCursor (nullptr, IDC_HAND));
+		else
+			::SetCursor (::LoadCursor (nullptr, IDC_ARROW));
+	}
+	else
+		::SetCursor (::LoadCursor (nullptr, IDC_ARROW));
+}
+
+const PropertyGrid::Item* PropertyGrid::GetItemAt (D2D1_POINT_2F location) const
+{
+	auto item = EnumItems ([location](float textY, float lineY, float lineWidth, const Item& item, bool& stopEnum)
+	{
+		stopEnum = lineY + lineWidth > location.y;
+	});
+
+	return item;
+}
+
+const PropertyGrid::Item* PropertyGrid::EnumItems (std::function<void(float textY, float lineY, float lineWidth, const Item& item, bool& stopEnum)> func) const
+{
+	float pixelWidthDips = GetDipSizeFromPixelSize ({ 1, 0 }).width;
+	float lineWidthDips = roundf(1.0f / pixelWidthDips) * pixelWidthDips;
+	float y = 0;
+	bool cancelEnum = false;
+	for (auto& item : _items)
+	{
+		float lineY = y + std::max (item.labelTL.metrics.height, item.valueTL.metrics.height);
+		lineY = roundf (lineY / pixelWidthDips) * pixelWidthDips + lineWidthDips / 2;
+		func (y, lineY, lineWidthDips, item, cancelEnum);
+		if (cancelEnum)
+			return &item;
+		y = lineY + lineWidthDips;
+	}
+
+	return nullptr;
 }
 
 void PropertyGrid::Render (ID2D1RenderTarget* rt) const
@@ -60,27 +124,23 @@ void PropertyGrid::Render (ID2D1RenderTarget* rt) const
 		return;
 	}
 
+	EnumItems ([this, rt](float textY, float lineY, float lineWidth, const Item& item, bool& stopEnum)
+	{
+		auto& brush = item.pd->IsReadOnly() ? _grayTextBrush : _windowTextBrush;
+		rt->DrawTextLayout ({ CellLRPadding, textY }, item.labelTL.layout, brush);
+		rt->DrawTextLayout ({ GetNameColumnWidth() + CellLRPadding, textY }, item.valueTL.layout, brush);
+		rt->DrawLine ({ 0, lineY }, { GetClientWidthDips(), lineY }, _grayTextBrush, lineWidth);
+	});
+
 	float pixelWidthDips = GetDipSizeFromPixelSize ({ 1, 0 }).width;
 	float lineWidthDips = roundf(1.0f / pixelWidthDips) * pixelWidthDips;
 	float y = 0;
-	for (auto ppd = _propertyCollectionGetter(_selectedObjects[0]); *ppd != nullptr; ppd++)
+	for (auto& item : _items)
 	{
-		auto pd = *ppd;
-		TextLayout labelTL;
-		if (pd->_labelGetter != nullptr)
-			labelTL = TextLayout::Create (GetDWriteFactory(), _textFormat, pd->_labelGetter(this).c_str(), GetNameColumnWidth());
-		else
-			labelTL = TextLayout::Create (GetDWriteFactory(), _textFormat, pd->_name, GetNameColumnWidth());
-		rt->DrawTextLayout ({ CellLRPadding, y }, labelTL.layout, pd->IsReadOnly() ? _grayTextBrush : _windowTextBrush);
 
-		auto str = pd->to_wstring(this, _selectedObjects[0]);
-		auto valueTL = TextLayout::Create (GetDWriteFactory(), _textFormat, str.c_str());
-		rt->DrawTextLayout ({ GetNameColumnWidth() + CellLRPadding, y }, valueTL.layout, pd->IsReadOnly() ? _grayTextBrush : _windowTextBrush);
-
-		y += std::max (labelTL.metrics.height, valueTL.metrics.height);
+		y += std::max (item.labelTL.metrics.height, item.valueTL.metrics.height);
 
 		y = roundf (y / pixelWidthDips) * pixelWidthDips + lineWidthDips / 2;
-		rt->DrawLine ({ 0, y }, { GetClientWidthDips(), y }, _grayTextBrush, lineWidthDips);
 		y += lineWidthDips;
 	}
 
@@ -115,13 +175,45 @@ void PropertyGrid::SelectObjects (void* const* objects, size_t count)
 	DiscardEditor();
 
 	_selectedObjects.assign (objects, objects + count);
+	_items.clear();
+
+	if (!_selectedObjects.empty())
+	{
+		for (auto ppd = _propertyCollectionGetter(_selectedObjects[0]); *ppd != nullptr; ppd++)
+			_items.push_back (Item { *ppd });
+
+		CreateLabelTextLayouts();
+		CreateValueTextLayouts();
+	}
+
 	::InvalidateRect (GetHWnd(), NULL, FALSE);
+}
+
+void PropertyGrid::CreateLabelTextLayouts()
+{
+	for (auto& item : _items)
+	{
+		if (item.pd->_labelGetter != nullptr)
+			item.labelTL = TextLayout::Create (GetDWriteFactory(), _textFormat, item.pd->_labelGetter(this).c_str(), GetNameColumnWidth());
+		else
+			item.labelTL = TextLayout::Create (GetDWriteFactory(), _textFormat, item.pd->_name, GetNameColumnWidth());
+	}
+}
+
+void PropertyGrid::CreateValueTextLayouts()
+{
+	for (auto& item : _items)
+	{
+		auto str = item.pd->to_wstring(this, _selectedObjects[0]);
+		item.valueTL = TextLayout::Create (GetDWriteFactory(), _textFormat, str.c_str());
+	}
 }
 
 void PropertyGrid::ReloadPropertyValues()
 {
 	DiscardEditor();
 
-	//throw not_implemented_exception();
+	//throw not_implemented_exception()
+	CreateValueTextLayouts();
 	::InvalidateRect (GetHWnd(), NULL, FALSE);
 }

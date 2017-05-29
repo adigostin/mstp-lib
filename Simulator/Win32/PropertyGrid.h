@@ -56,6 +56,15 @@ private:
 	ID2D1SolidColorBrushPtr _grayTextBrush;
 	std::vector<void*> _selectedObjects;
 
+	struct Item
+	{
+		const PD* pd;
+		TextLayout labelTL;
+		TextLayout valueTL;
+	};
+
+	std::vector<Item> _items;
+
 public:
 	PropertyGrid (HINSTANCE hInstance, const RECT& rect, HWND hWndParent, IDWriteFactory* dWriteFactory, void* appContext, PropertyCollectionGetter propertyCollectionGetter);
 	~PropertyGrid();
@@ -63,15 +72,18 @@ public:
 	void DiscardEditor();
 	void SelectObjects (void* const* objects, size_t count);
 	void ReloadPropertyValues();
-
-	float GetNameColumnWidth() const { return GetClientWidthDips() * _nameColumnSize; }
-	float GetValueColumnWidth() const { return GetClientWidthDips() * ( 1 - _nameColumnSize); }
-
 	void* GetAppContext() const { return _appContext; }
 
 private:
 	virtual void Render(ID2D1RenderTarget* rt) const override final;
 	virtual std::optional<LRESULT> WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override final;
+	void ProcessWmSetCursor (POINT pt) const;
+	const Item* GetItemAt (D2D1_POINT_2F location) const;
+	void CreateLabelTextLayouts();
+	void CreateValueTextLayouts();
+	const Item* EnumItems (std::function<void(float textY, float lineY, float lineWidth, const Item& item, bool& stopEnum)> func) const;
+	float GetNameColumnWidth() const { return GetClientWidthDips() * _nameColumnSize; }
+	float GetValueColumnWidth() const { return GetClientWidthDips() * ( 1 - _nameColumnSize); }
 };
 
 template<>
