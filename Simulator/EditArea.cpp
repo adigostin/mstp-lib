@@ -165,20 +165,20 @@ public:
 	{
 		{ L"Disabled",							STP_PORT_ROLE_DISABLED,   false, false, false },
 
-		{ L"Designated discarding",				STP_PORT_ROLE_DESIGNATED, false, false, false },
-		{ L"Designated learning",				STP_PORT_ROLE_DESIGNATED, true,  false, false },
-		{ L"Designated forwarding",				STP_PORT_ROLE_DESIGNATED, true,  true,  false },
-		{ L"Designated forwarding operEdge",	STP_PORT_ROLE_DESIGNATED, true,  true,  true  },
+		{ L"Designated discarding",  STP_PORT_ROLE_DESIGNATED, false, false, false },
+		{ L"Designated learning",    STP_PORT_ROLE_DESIGNATED, true,  false, false },
+		{ L"Designated forwarding",  STP_PORT_ROLE_DESIGNATED, true,  true,  false },
+		{ L"Design. fwd. operEdge",  STP_PORT_ROLE_DESIGNATED, true,  true,  true  },
 
-		{ L"Root/Master discarding",			STP_PORT_ROLE_ROOT,       false, false, false },
-		{ L"Root/Master learning",				STP_PORT_ROLE_ROOT,       true,  false, false },
-		{ L"Root/Master forwarding",			STP_PORT_ROLE_ROOT,       true,  true,  false },
+		{ L"Root/Master discarding", STP_PORT_ROLE_ROOT,       false, false, false },
+		{ L"Root/Master learning",   STP_PORT_ROLE_ROOT,       true,  false, false },
+		{ L"Root/Master forwarding", STP_PORT_ROLE_ROOT,       true,  true,  false },
 
-		{ L"Alternate discarding",				STP_PORT_ROLE_ALTERNATE,  false, false, false },
-		{ L"Alternate learning",				STP_PORT_ROLE_ALTERNATE,  true,  false, false },
+		{ L"Alternate discarding",   STP_PORT_ROLE_ALTERNATE,  false, false, false },
+		{ L"Alternate learning",     STP_PORT_ROLE_ALTERNATE,  true,  false, false },
 
-		{ L"Backup discarding",					STP_PORT_ROLE_BACKUP,     false, false, false },
-		{ L"Undefined",							STP_PORT_ROLE_UNKNOWN,    false, false, false },
+		{ L"Backup discarding",      STP_PORT_ROLE_BACKUP,     false, false, false },
+		{ L"Undefined",              STP_PORT_ROLE_UNKNOWN,    false, false, false },
 	};
 
 	void RenderLegend (ID2D1RenderTarget* dc) const
