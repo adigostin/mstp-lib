@@ -82,8 +82,7 @@ private:
 	void CreateLabelTextLayouts();
 	void CreateValueTextLayouts();
 	const Item* EnumItems (std::function<void(float textY, float lineY, float lineWidth, const Item& item, bool& stopEnum)> func) const;
-	float GetNameColumnWidth() const { return GetClientWidthDips() * _nameColumnSize; }
-	float GetValueColumnWidth() const { return GetClientWidthDips() * ( 1 - _nameColumnSize); }
+	float GetNameColumnWidth() const;
 };
 
 template<>
