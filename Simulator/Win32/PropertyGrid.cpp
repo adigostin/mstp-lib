@@ -52,6 +52,12 @@ std::optional<LRESULT> PropertyGrid::WindowProc(HWND hwnd, UINT msg, WPARAM wPar
 		return 0;
 	}
 
+	if (msg == WM_LBUTTONUP)
+	{
+		ProcessLButtonUp ((DWORD) wParam, POINT { LOWORD(lParam), HIWORD(lParam) });
+		return 0;
+	}
+
 	if (msg == WM_SETCURSOR)
 	{
 		if (((HWND) wParam == GetHWnd()) && (LOWORD (lParam) == HTCLIENT))
@@ -227,4 +233,143 @@ void PropertyGrid::ReloadPropertyValues()
 	//throw not_implemented_exception()
 	CreateValueTextLayouts();
 	::InvalidateRect (GetHWnd(), NULL, FALSE);
+}
+
+static const UINT WM_CLOSE_EDITOR = WM_APP + 1;
+
+LRESULT CALLBACK EditorWndProc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	if (msg == WM_ACTIVATE)
+		return 0; // DefWindowProc would set the keyboard focus
+
+	if (msg == WM_MOUSEACTIVATE)
+		return MA_NOACTIVATE;
+
+	if ((msg == WM_COMMAND) && (HIWORD(wParam) == BN_CLICKED))
+	{
+		::PostMessage (hwnd, WM_CLOSE_EDITOR, LOWORD(wParam), 0);
+		return 0;
+	}
+
+	return DefWindowProc (hwnd, msg, wParam, lParam);
+}
+
+int PropertyGrid::ShowEditor (POINT ptScreen, const NVP* nameValuePairs)
+{
+	HINSTANCE hInstance;
+	BOOL bRes = ::GetModuleHandleExW (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &EditorWndProc, &hInstance); assert(bRes);
+
+	static ATOM atom = 0;
+	if (atom == 0)
+	{
+		WNDCLASS EditorWndClass =
+		{
+			0, // style
+			EditorWndProc,
+			0, // cbClsExtra
+			0, // cbWndExtra
+			hInstance,
+			nullptr, // hIcon
+			::LoadCursor(nullptr, IDC_ARROW), // hCursor
+			(HBRUSH) (COLOR_WINDOW + 1), // hbrBackground
+			nullptr, // lpszMenuName
+			L"GIGI", // lpszClassName
+		};
+
+		atom = ::RegisterClassW (&EditorWndClass); assert (atom != 0);
+	}
+
+	auto hwnd = CreateWindowEx (WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, L"GIGI", L"aaa", WS_POPUP | WS_BORDER, 0, 0, 0, 0, GetHWnd(), nullptr, hInstance, nullptr); assert (hwnd != nullptr);
+
+	auto hdc = ::GetDC(hwnd);
+	int dpiX = GetDeviceCaps (hdc, LOGPIXELSX);
+	int dpiY = GetDeviceCaps (hdc, LOGPIXELSY);
+	int padding = 7 * dpiX / 96;
+	LONG buttonWidth = 100 * dpiX / 96;
+	LONG buttonHeight = 0;
+	for (auto nvp = nameValuePairs; nvp->first != nullptr; nvp++)
+	{
+		RECT rc = { };
+		DrawTextW (hdc, nvp->first, -1, &rc, DT_CALCRECT);
+		buttonWidth = max (buttonWidth, rc.right - rc.left + 2 * padding);
+		buttonHeight = rc.bottom - rc.top + 2 * padding;
+	}
+
+	NONCLIENTMETRICS ncMetrics = { sizeof(NONCLIENTMETRICS) };
+	SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncMetrics, 0);
+	HFONT_unique_ptr font (CreateFontIndirect (&ncMetrics.lfMessageFont));
+
+	int margin = 2 * dpiX / 96;
+	int y = margin;
+	for (auto nvp = nameValuePairs; nvp->first != nullptr; nvp++)
+	{
+		auto button = CreateWindowEx (0, L"Button", nvp->first, WS_CHILD | WS_VISIBLE | BS_NOTIFY, margin, y, buttonWidth, buttonHeight, hwnd, (HMENU) nvp->second, hInstance, nullptr);
+		::SendMessage (button, WM_SETFONT, (WPARAM) font.get(), FALSE);
+		y += buttonHeight + margin;
+	}
+	RECT wr = { 0, 0, margin + buttonWidth + margin, y };
+	::AdjustWindowRectEx (&wr, GetWindowLongPtr(hwnd, GWL_STYLE), FALSE, GetWindowLongPtr(hwnd, GWL_EXSTYLE));
+	::SetWindowPos (hwnd, nullptr, ptScreen.x, ptScreen.y, wr.right - wr.left, wr.bottom - wr.top, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+	::ReleaseDC (hwnd, hdc);
+
+	int result = -1;
+	MSG msg;
+	while (GetMessage(&msg, 0, 0, 0))
+	{
+		if ((msg.hwnd == hwnd) && (msg.message == WM_CLOSE_EDITOR))
+		{
+			result = msg.wParam;
+			break;
+		}
+
+		if ((msg.message == WM_KEYDOWN) && (msg.wParam == VK_ESCAPE))
+			break;
+
+		bool exitLoop = false;
+		if ((msg.hwnd != hwnd) && (::GetParent(msg.hwnd) != hwnd))
+		{
+			if ((msg.message == WM_LBUTTONDOWN) || (msg.message == WM_RBUTTONDOWN) || (msg.message == WM_MBUTTONDOWN)
+				|| (msg.message == WM_NCLBUTTONDOWN) || (msg.message == WM_NCRBUTTONDOWN) || (msg.message == WM_NCMBUTTONDOWN))
+			{
+				ShowWindow (hwnd, SW_HIDE);
+				exitLoop = true;
+			}
+		}
+
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+
+		if (exitLoop)
+			break;
+	}
+
+	::DestroyWindow (hwnd);
+	return result;
+}
+
+void PropertyGrid::ProcessLButtonUp (DWORD modifierKeys, POINT pt)
+{
+	auto item = GetItemAt (GetDipLocationFromPixelLocation(pt));
+	if ((item != nullptr) && !item->pd->IsReadOnly())
+	{
+		::ClientToScreen (GetHWnd(), &pt);
+
+		if (dynamic_cast<const TypedPD<bool>*>(item->pd) != nullptr)
+		{
+			auto boolPD = dynamic_cast<const TypedPD<bool>*>(item->pd);
+			static constexpr NVP nvps[] = { { L"False", 0 }, { L"True", 1 }, { 0, 0 } };
+			int newValue = ShowEditor (pt, nvps);
+			if (newValue != -1)
+				boolPD->_setter (this, _selectedObjects, (bool) newValue);
+		}
+		else if (dynamic_cast<const EnumPD*>(item->pd) != nullptr)
+		{
+			auto enumPD = dynamic_cast<const EnumPD*>(item->pd);
+			int newValue = ShowEditor (pt, enumPD->_nameValuePairs);
+			if (newValue != -1)
+				enumPD->_setter (this, _selectedObjects, newValue);
+		}
+		else
+			MessageBox (GetHWnd(), item->pd->_name, L"aaaa", 0);
+	}
 }

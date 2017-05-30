@@ -145,12 +145,12 @@ static const PropertyGrid::TypedPD<wstring> BridgePropAddress
 (
 	L"Bridge Address",
 	[](const PropertyGrid* pg, const void* o) { return static_cast<const Bridge*>(o)->GetBridgeAddressAsWString(); },
-	[](const PropertyGrid* pg, void* o, wstring str)
+	[](const PropertyGrid* pg, const std::vector<void*>& sos, wstring str)
 	{
 		auto newAddress = ConvertStringToBridgeAddress(str.c_str());
 		auto window = static_cast<PropertiesWindow*>(pg->GetAppContext());
 		vector<Bridge*> bridges;
-		std::transform (window->_selection->GetObjects().begin(), window->_selection->GetObjects().end(), back_inserter(bridges), [](Object* o) { return dynamic_cast<Bridge*>(o); });
+		std::transform (sos.begin(), sos.end(), back_inserter(bridges), [](void* o) { return static_cast<Bridge*>(o); });
 		auto action = unique_ptr<EditAction>(new SetBridgeAddressAction(bridges, newAddress));
 		window->_actionList->PerformAndAddUserAction (move(action));
 	}
@@ -160,16 +160,21 @@ static const PropertyGrid::TypedPD<bool> BridgePropStpEnabled
 (
 	L"STP Enabled",
 	[](const PropertyGrid* pg, const void* o) { return (bool) STP_IsBridgeStarted(static_cast<const Bridge*>(o)->GetStpBridge()); },
-	nullptr
+	[](const PropertyGrid* pg, const std::vector<void*>& sos, bool value)
+	{
+
+	}
 );
 
-static const PropertyGrid::EnumPD::NVP StpVersionNVPs[] = { { L"LegacySTP", STP_VERSION_LEGACY_STP }, { L"RSTP", STP_VERSION_RSTP }, { L"MSTP", STP_VERSION_MSTP }, { 0, 0 } };
+static const PropertyGrid::NVP StpVersionNVPs[] = { { L"LegacySTP", STP_VERSION_LEGACY_STP }, { L"RSTP", STP_VERSION_RSTP }, { L"MSTP", STP_VERSION_MSTP }, { 0, 0 } };
 
 static const PropertyGrid::EnumPD BridgePropStpVersion
 {
 	L"STP Version",
 	[](const PropertyGrid* pg, const void* o) { return (int) STP_GetStpVersion(static_cast<const Bridge*>(o)->GetStpBridge()); },
-	nullptr,
+	[](const PropertyGrid* pg, const std::vector<void*>& sos, int value)
+	{
+	},
 	StpVersionNVPs
 };
 

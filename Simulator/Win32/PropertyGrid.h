@@ -22,7 +22,7 @@ public:
 	struct TypedPD : PD
 	{
 		using Getter = TValue(*)(const PropertyGrid* pg, const void* object);
-		using Setter = void(*)(const PropertyGrid* pg, void* object, TValue newValue);
+		using Setter = void(*)(const PropertyGrid* pg, const std::vector<void*>& selectedObjects, TValue newValue);
 		Getter const _getter;
 		Setter const _setter;
 
@@ -34,9 +34,10 @@ public:
 		virtual std::wstring to_wstring (const PropertyGrid* pg, const void* so) const override { return std::to_wstring(_getter(pg, so)); }
 	};
 
+	using NVP = std::pair<const wchar_t*, int>;
+
 	struct EnumPD : TypedPD<int>
 	{
-		using NVP = std::pair<const wchar_t*, int>;
 		const NVP* const _nameValuePairs;
 
 		EnumPD (const wchar_t* name, Getter getter, Setter setter, const NVP* nameValuePairs);
@@ -83,6 +84,8 @@ private:
 	void CreateValueTextLayouts();
 	const Item* EnumItems (std::function<void(float textY, float lineY, float lineWidth, const Item& item, bool& stopEnum)> func) const;
 	float GetNameColumnWidth() const;
+	void ProcessLButtonUp (DWORD modifierKeys, POINT pt);
+	int ShowEditor (POINT ptScreen, const NVP* nameValuePairs);
 };
 
 template<>
