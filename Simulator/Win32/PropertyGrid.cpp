@@ -303,12 +303,12 @@ int PropertyGrid::ShowEditor (POINT ptScreen, const NVP* nameValuePairs)
 	int y = margin;
 	for (auto nvp = nameValuePairs; nvp->first != nullptr; nvp++)
 	{
-		auto button = CreateWindowEx (0, L"Button", nvp->first, WS_CHILD | WS_VISIBLE | BS_NOTIFY, margin, y, buttonWidth, buttonHeight, hwnd, (HMENU) nvp->second, hInstance, nullptr);
+		auto button = CreateWindowEx (0, L"Button", nvp->first, WS_CHILD | WS_VISIBLE | BS_NOTIFY, margin, y, buttonWidth, buttonHeight, hwnd, (HMENU) (UINT_PTR) nvp->second, hInstance, nullptr);
 		::SendMessage (button, WM_SETFONT, (WPARAM) font.get(), FALSE);
 		y += buttonHeight + margin;
 	}
 	RECT wr = { 0, 0, margin + buttonWidth + margin, y };
-	::AdjustWindowRectEx (&wr, GetWindowLongPtr(hwnd, GWL_STYLE), FALSE, GetWindowLongPtr(hwnd, GWL_EXSTYLE));
+	::AdjustWindowRectEx (&wr, (DWORD) GetWindowLongPtr(hwnd, GWL_STYLE), FALSE, (DWORD) GetWindowLongPtr(hwnd, GWL_EXSTYLE));
 	::SetWindowPos (hwnd, nullptr, ptScreen.x, ptScreen.y, wr.right - wr.left, wr.bottom - wr.top, SWP_NOACTIVATE | SWP_SHOWWINDOW);
 	::ReleaseDC (hwnd, hdc);
 
@@ -318,7 +318,7 @@ int PropertyGrid::ShowEditor (POINT ptScreen, const NVP* nameValuePairs)
 	{
 		if ((msg.hwnd == hwnd) && (msg.message == WM_CLOSE_EDITOR))
 		{
-			result = msg.wParam;
+			result = (int) msg.wParam;
 			break;
 		}
 
