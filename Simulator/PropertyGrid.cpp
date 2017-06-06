@@ -31,7 +31,7 @@ PropertyGrid::EnumPD::EnumPD (const wchar_t* name, Getter getter, Setter setter,
 	: TypedPD(name, getter, setter), _nameValuePairs(nameValuePairs)
 { }
 
-std::wstring PropertyGrid::EnumPD::to_wstring (const PropertyGrid* pg, const void* so) const
+std::wstring PropertyGrid::EnumPD::to_wstring (const PropertyGrid* pg, const Object* so) const
 {
 	auto value = _getter(pg, so);
 	for (auto nvp = _nameValuePairs; nvp->first != nullptr; nvp++)
@@ -167,7 +167,7 @@ void PropertyGrid::DiscardEditor()
 {
 }
 
-void PropertyGrid::SelectObjects (void* const* objects, size_t count)
+void PropertyGrid::SelectObjects (Object* const* objects, size_t count)
 {
 	bool sameSelection = false;
 	if (_selectedObjects.size() == count)
@@ -209,7 +209,7 @@ void PropertyGrid::CreateLabelTextLayouts()
 	for (auto& item : _items)
 	{
 		if (item.pd->_labelGetter != nullptr)
-			item.labelTL = TextLayout::Create (GetDWriteFactory(), _textFormat, item.pd->_labelGetter(this).c_str(), maxWidth);
+			item.labelTL = TextLayout::Create (GetDWriteFactory(), _textFormat, item.pd->_labelGetter(this, _selectedObjects).c_str(), maxWidth);
 		else
 			item.labelTL = TextLayout::Create (GetDWriteFactory(), _textFormat, item.pd->_name, maxWidth);
 	}
@@ -224,7 +224,18 @@ void PropertyGrid::CreateValueTextLayouts()
 	for (auto& item : _items)
 	{
 		auto str = item.pd->to_wstring(this, _selectedObjects[0]);
-		item.valueTL = TextLayout::Create (GetDWriteFactory(), _textFormat, str.c_str(), maxWidth);
+		item.valueTL.layout = nullptr;
+		for (size_t i = 1; i < _selectedObjects.size(); i++)
+		{
+			if (item.pd->to_wstring(this, _selectedObjects[i]) != str)
+			{
+				item.valueTL = TextLayout::Create (GetDWriteFactory(), _textFormat, L"(multiple selection)", maxWidth);
+				break;
+			}
+		}
+
+		if (item.valueTL.layout == nullptr)
+			item.valueTL = TextLayout::Create (GetDWriteFactory(), _textFormat, str.c_str(), maxWidth);
 	}
 }
 
