@@ -90,17 +90,7 @@ public:
 		{
 			if (holds_alternative<ConnectedWireEnd>(_wire->GetP1()))
 			{
-				struct CreateAction : public EditAction
-				{
-					IProject* const _project;
-					unique_ptr<Wire> _wire;
-					CreateAction (IProject* project, unique_ptr<Wire>&& wire) : _project(project), _wire(move(wire)) { }
-					virtual void Redo() { _project->InsertWire(_project->GetWires().size(), move(_wire)); }
-					virtual void Undo() { _wire = _project->RemoveWire(_project->GetWires().size() - 1); }
-					virtual std::string GetName() const override final { return "Create Wire"; }
-				};
-
-				_actionList->AddPerformedUserAction (make_unique<CreateAction>(_pw->GetProject(), nullptr));
+				_project->SetModified(true);
 				_selection->Select(_wire);
 				_subState = Done;
 			}

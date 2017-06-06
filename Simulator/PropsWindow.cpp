@@ -5,7 +5,6 @@
 #include "Bridge.h"
 #include "Port.h"
 #include "Wire.h"
-#include "EditActions.h"
 
 using namespace std;
 
@@ -25,7 +24,6 @@ public:
 	IProjectWindow* const _projectWindow;
 	IProjectPtr const _project;
 	ISelectionPtr const _selection;
-	IActionListPtr const _actionList;
 	PropertyGrid _pg;
 
 	static constexpr DWORD Style = WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
@@ -34,7 +32,6 @@ public:
 					  IProjectWindow* projectWindow,
 					  IProject* project,
 					  ISelection* selection,
-					  IActionList* actionList,
 					  const RECT& rect,
 					  HWND hWndParent)
 		: base (app->GetHInstance(), PropertiesWindowWndClassName, 0, Style, rect, hWndParent, nullptr)
@@ -42,7 +39,6 @@ public:
 		, _projectWindow(projectWindow)
 		, _project(project)
 		, _selection(selection)
-		, _actionList(actionList)
 		, _pg(app->GetHInstance(), this->Window::GetClientRectPixels(), GetHWnd(), app->GetDWriteFactory(), this, &GetPropertyDescriptors)
 	{
 		_selection->GetAddedToSelectionEvent().AddHandler (&OnObjectAddedToSelection, this);
@@ -149,10 +145,10 @@ static const PropertyGrid::TypedPD<wstring> BridgePropAddress
 	{
 		auto newAddress = ConvertStringToBridgeAddress(str.c_str());
 		auto window = static_cast<PropertiesWindow*>(pg->GetAppContext());
-		vector<Bridge*> bridges;
-		std::transform (sos.begin(), sos.end(), back_inserter(bridges), [](void* o) { return static_cast<Bridge*>(o); });
-		auto action = unique_ptr<EditAction>(new SetBridgeAddressAction(bridges, newAddress));
-		window->_actionList->PerformAndAddUserAction (move(action));
+		auto timestamp = GetTimestampMilliseconds();
+		for (void* so : sos)
+			STP_SetBridgeAddress (static_cast<Bridge*>(so)->GetStpBridge(), newAddress.bytes, timestamp);
+		window->_project->SetModified(true);
 	}
 );
 

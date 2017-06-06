@@ -32,7 +32,6 @@ class ProjectWindow : public EventManager, public IProjectWindow
 	ISimulatorApp* const _app;
 	IProjectPtr    const _project;
 	ISelectionPtr  const _selection;
-	IActionListPtr const _actionList;
 	IEditAreaPtr         _editArea;
 	IDockContainerPtr    _dockContainer;
 	HWND _hwnd;
@@ -45,14 +44,12 @@ public:
 	ProjectWindow (ISimulatorApp* app,
 				   IProject* project,
 				   SelectionFactory selectionFactory,
-				   IActionList* actionList,
 				   EditAreaFactory editAreaFactory,
 				   int nCmdShow,
 				   unsigned int selectedVlan)
 		: _app(app)
 		, _project(project)
 		, _selection(selectionFactory(project))
-		, _actionList(actionList)
 		, _selectedVlanNumber(selectedVlan)
 	{
 		if (wndClassAtom == 0)
@@ -104,20 +101,20 @@ public:
 		SetMainMenuItemCheck (ID_VIEW_STPLOG, true);
 
 		auto propsPanel = _dockContainer->CreatePanel (PropsPanelUniqueName, Side::Left, L"Properties");
-		auto propsWindow = propertiesWindowFactory (app, this, project, _selection, actionList, propsPanel->GetContentRect(), propsPanel->GetHWnd());
+		auto propsWindow = propertiesWindowFactory (app, this, project, _selection, propsPanel->GetContentRect(), propsPanel->GetHWnd());
 		propsPanel->GetVisibleChangedEvent().AddHandler (&OnPropsPanelVisibleChanged, this);
 		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
 
 		auto vlanPanel = _dockContainer->CreatePanel (VlanPanelUniqueName, Side::Top, L"VLAN");
-		auto vlanWindow = vlanWindowFactory (_app, this, _project, _selection, _actionList, vlanPanel->GetHWnd(), vlanPanel->GetContentLocation());
+		auto vlanWindow = vlanWindowFactory (_app, this, _project, _selection, vlanPanel->GetHWnd(), vlanPanel->GetContentLocation());
 		_dockContainer->ResizePanel (vlanPanel, vlanPanel->GetPanelSizeFromContentSize(vlanWindow->GetClientSize()));
 		vlanPanel->GetVisibleChangedEvent().AddHandler (&OnVlanPanelVisibleChanged, this);
 		SetMainMenuItemCheck (ID_VIEW_VLANS, true);
 
-		_editArea = editAreaFactory (app, this, _project, _actionList, _selection, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), _app->GetDWriteFactory());
+		_editArea = editAreaFactory (app, this, _project, _selection, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), _app->GetDWriteFactory());
 
 		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
-		_actionList->GetChangedEvent().AddHandler (&OnActionListChanged, this);
+		_project->GetModifiedChangedEvent().AddHandler (&OnProjectModifiedChanged, this);
 		_app->GetProjectWindowAddedEvent().AddHandler (&OnProjectWindowAdded, this);
 		_app->GetProjectWindowRemovedEvent().AddHandler (&OnProjectWindowRemoved, this);
 		_project->GetLoadedEvent().AddHandler (&OnProjectLoaded, this);
@@ -128,7 +125,7 @@ public:
 		_project->GetLoadedEvent().RemoveHandler (&OnProjectLoaded, this);
 		_app->GetProjectWindowRemovedEvent().RemoveHandler (&OnProjectWindowRemoved, this);
 		_app->GetProjectWindowAddedEvent().RemoveHandler (&OnProjectWindowAdded, this);
-		_actionList->GetChangedEvent().RemoveHandler (&OnActionListChanged, this);
+		_project->GetModifiedChangedEvent().AddHandler (&OnProjectModifiedChanged, this);
 		_selection->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
 
 		if (_hwnd != nullptr)
@@ -155,29 +152,10 @@ public:
 			thispw->SetWindowTitle();
 	}
 
-	static void OnActionListChanged (void* callbackArg, IActionList* actionList)
+	static void OnProjectModifiedChanged (void* callbackArg, IProject* project)
 	{
 		auto pw = static_cast<ProjectWindow*>(callbackArg);
 		pw->SetWindowTitle();
-		HMENU hmenu = ::GetMenu(pw->_hwnd);
-		if (hmenu != nullptr)
-		{
-			MENUITEMINFOA mii = { sizeof(mii) };
-			mii.fMask = MIIM_STATE | MIIM_STRING;
-			mii.fState = actionList->CanUndo() ? MFS_ENABLED : MFS_DISABLED;
-			string t = "Undo ";
-			if (actionList->CanUndo())
-				t += actionList->GetUndoableAction()->GetName();
-			mii.dwTypeData = const_cast<LPSTR>(t.c_str());
-			BOOL bRes = ::SetMenuItemInfoA (hmenu, ID_EDIT_UNDO, FALSE, &mii);
-
-			mii.fState = actionList->CanRedo() ? MFS_ENABLED : MFS_DISABLED;
-			t = "Redo ";
-			if (actionList->CanRedo())
-				t += actionList->GetRedoableAction()->GetName();
-			mii.dwTypeData = const_cast<LPSTR>(t.c_str());
-			bRes = ::SetMenuItemInfoA (hmenu, ID_EDIT_REDO, FALSE, &mii);
-		}
 	}
 
 	void SetWindowTitle()
@@ -194,7 +172,7 @@ public:
 		else
 			windowTitle << L"Untitled";
 
-		if (_actionList->ChangedSinceLastSave())
+		if (_project->GetModified())
 			windowTitle << L"*";
 
 		auto& pws = _app->GetProjectWindows();
@@ -376,18 +354,6 @@ public:
 			return 0;
 		}
 
-		if (wParam == ID_EDIT_UNDO)
-		{
-			_actionList->Undo();
-			return 0;
-		}
-
-		if (wParam == ID_EDIT_REDO)
-		{
-			_actionList->Redo();
-			return 0;
-		}
-
 		if (wParam == ID_FILE_EXIT)
 		{
 			PostMessage (_hwnd, WM_CLOSE, 0, 0);
@@ -413,7 +379,7 @@ public:
 		if (FAILED(hr))
 			return;
 
-		IProjectPtr projectToLoadTo = _actionList->ChangedSinceLastSave() ? projectFactory() : _project;
+		IProjectPtr projectToLoadTo = _project->GetModified() ? projectFactory() : _project;
 
 		try
 		{
@@ -429,8 +395,7 @@ public:
 
 		if (projectToLoadTo.GetInterfacePtr() != _project.GetInterfacePtr())
 		{
-			auto newActionList = actionListFactory();
-			auto newWindow = projectWindowFactory(_app, projectToLoadTo, selectionFactory, newActionList, editAreaFactory, SW_SHOW, 1);
+			auto newWindow = projectWindowFactory(_app, projectToLoadTo, selectionFactory, editAreaFactory, SW_SHOW, 1);
 			_app->AddProjectWindow(newWindow);
 		}
 	}
@@ -454,7 +419,7 @@ public:
 			return hr;
 		}
 
-		_actionList->SetSavePoint();
+		_project->SetModified(false);
 		return S_OK;
 	}
 
@@ -550,7 +515,7 @@ public:
 		if (count == 1)
 		{
 			// Closing last window of this project.
-			if (_actionList->ChangedSinceLastSave())
+			if (_project->GetModified())
 			{
 				bool saveChosen;
 				auto hr = AskSaveDiscardCancel(L"Save changes?", &saveChosen);

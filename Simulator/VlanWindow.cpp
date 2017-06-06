@@ -13,7 +13,6 @@ class VlanWindow : public IVlanWindow
 	IProjectWindow* const _pw;
 	IProjectPtr     const _project;
 	ISelectionPtr   const _selection;
-	IActionListPtr  const _actionList;
 	ULONG _refCount = 1;
 	HWND _hwnd = nullptr;
 
@@ -22,14 +21,12 @@ public:
 				IProjectWindow* pw,
 				IProject* project,
 				ISelection* selection,
-				IActionList* actionList,
 				HWND hWndParent,
 				POINT location)
 		: _app(app)
 		, _pw(pw)
 		, _project(project)
 		, _selection(selection)
-		, _actionList(actionList)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &DialogProcStatic, &hInstance);
@@ -204,7 +201,7 @@ private:
 		}
 		else
 		{
-			auto pw = projectWindowFactory(_app, _project, selectionFactory, _actionList, editAreaFactory, SW_SHOWNORMAL, vlanNumber);
+			auto pw = projectWindowFactory(_app, _project, selectionFactory, editAreaFactory, SW_SHOWNORMAL, vlanNumber);
 			_app->AddProjectWindow(move(pw));
 		}
 

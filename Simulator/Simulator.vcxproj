@@ -212,7 +212,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Bridge.h" />
-    <ClInclude Include="EditActions.h" />
     <ClInclude Include="EditStates\EditState.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Port.h" />
@@ -231,7 +230,6 @@
   <ItemGroup>
     <ClCompile Include="Bridge.cpp" />
     <ClCompile Include="BridgePropsWindow.cpp" />
-    <ClCompile Include="ActionList.cpp" />
     <ClCompile Include="EditArea.cpp" />
     <ClCompile Include="EditStates\BeginningDragES.cpp" />
     <ClCompile Include="EditStates\CreateBridgeES.cpp" />

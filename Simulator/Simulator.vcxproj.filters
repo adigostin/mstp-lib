@@ -35,7 +35,6 @@
     <ClInclude Include="Win32\EventManager.h">
       <Filter>Win32</Filter>
     </ClInclude>
-    <ClInclude Include="EditActions.h" />
     <ClInclude Include="Win32\PropertyGrid.h">
       <Filter>Win32</Filter>
     </ClInclude>
@@ -72,7 +71,6 @@
     <ClCompile Include="EditStates\MovePortES.cpp">
       <Filter>EditStates</Filter>
     </ClCompile>
-    <ClCompile Include="ActionList.cpp" />
     <ClCompile Include="Win32\D2DWindow.cpp">
       <Filter>Win32</Filter>
     </ClCompile>

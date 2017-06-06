@@ -64,37 +64,7 @@ public:
 
 	virtual void OnMouseUp (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
-		struct Action : public EditAction
-		{
-			D2D1_POINT_2F const _firstBridgeInitialLocation;
-			D2D1_POINT_2F const _firstBridgeFinalLocation;
-			vector<Info> const _infos;
-
-			Action (D2D1_POINT_2F firstBridgeInitialLocation, D2D1_POINT_2F firstBridgeFinalLocation, vector<Info>&& infos)
-				: _firstBridgeInitialLocation(firstBridgeInitialLocation)
-				, _firstBridgeFinalLocation(firstBridgeFinalLocation)
-				, _infos(move(infos))
-			{ }
-
-			virtual void Redo() override final
-			{
-				_infos[0].b->SetLocation (_firstBridgeFinalLocation);
-				for (size_t i = 0; i < _infos.size(); i++)
-					_infos[i].b->SetLocation (_firstBridgeFinalLocation + _infos[i].offsetFromFirst);
-			}
-
-			virtual void Undo() override final
-			{
-				_infos[0].b->SetLocation (_firstBridgeInitialLocation);
-				for (size_t i = 0; i < _infos.size(); i++)
-					_infos[i].b->SetLocation (_firstBridgeInitialLocation + _infos[i].offsetFromFirst);
-			}
-
-			virtual std::string GetName() const override final { return "Move Bridges"; }
-		};
-
-		auto action = unique_ptr<EditAction>(new Action (_firstBridgeInitialLocation, _infos[0].b->GetLocation(), move(_infos)));
-		_actionList->AddPerformedUserAction (move(action));
+		_project->SetModified(true);
 		_completed = true;
 	}
 

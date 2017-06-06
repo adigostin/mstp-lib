@@ -34,34 +34,11 @@ public:
 	{
 		if (_bridge != nullptr)
 		{
-			struct CreateBridgeAction : public EditAction
-			{
-				IProject* const _project;
-				unique_ptr<Bridge> _bridge;
-
-				CreateBridgeAction (IProject* project, unique_ptr<Bridge>&& bridge)
-					: _project(project), _bridge(move(bridge))
-				{ }
-
-				virtual void Redo() override final
-				{
-					size_t insertIndex = _project->GetBridges().size();
-					_project->InsertBridge(insertIndex, move(_bridge), nullptr);
-					STP_StartBridge (_project->GetBridges().back()->GetStpBridge(), GetTimestampMilliseconds());
-				}
-
-				virtual void Undo() override final
-				{
-					STP_StopBridge (_project->GetBridges().back()->GetStpBridge(), GetTimestampMilliseconds());
-					size_t eraseIndex = _project->GetBridges().size() - 1;
-					_bridge = _project->RemoveBridge(eraseIndex, nullptr);
-				}
-
-				virtual std::string GetName() const override final { return "Create Bridge"; }
-			};
-
 			Bridge* b = _bridge.get();
-			_actionList->PerformAndAddUserAction (make_unique<CreateBridgeAction>(_pw->GetProject(), move(_bridge)));
+			size_t insertIndex = _project->GetBridges().size();
+			_project->InsertBridge(insertIndex, move(_bridge));
+			STP_StartBridge (_project->GetBridges().back()->GetStpBridge(), GetTimestampMilliseconds());
+			_project->SetModified(true);
 			_selection->Select(b);
 		}
 

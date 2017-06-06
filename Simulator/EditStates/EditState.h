@@ -6,7 +6,6 @@ struct EditStateDeps
 	IProjectWindow* pw;
 	IEditArea*      editArea;
 	IProject*       project;
-	IActionList*    actionList;
 	ISelection*     selection;
 };
 
@@ -17,11 +16,10 @@ protected:
 	IEditArea* const _editArea;
 	IProjectPtr const _project;
 	ISelectionPtr const _selection;
-	IActionListPtr const _actionList;
 
 public:
 	EditState (const EditStateDeps& deps)
-		: _pw(deps.pw), _editArea(deps.editArea), _selection(deps.selection), _actionList(deps.actionList), _project(deps.project)
+		: _pw(deps.pw), _editArea(deps.editArea), _selection(deps.selection), _project(deps.project)
 	{ }
 
 	virtual ~EditState() { }
