@@ -6,8 +6,10 @@ using namespace std;
 
 static constexpr float CellLRPadding = 3.0f;
 
-PropertyGrid::PropertyGrid (HINSTANCE hInstance, const RECT& rect, HWND hWndParent, IDWriteFactory* dWriteFactory, void* appContext, PropertyCollectionGetter propertyCollectionGetter)
-	: base (hInstance, 0, WS_CHILD | WS_VISIBLE, rect, hWndParent, nullptr, dWriteFactory)
+PropertyGrid::PropertyGrid (ISimulatorApp* app, IProject* project, const RECT& rect, HWND hWndParent, IDWriteFactory* dWriteFactory, void* appContext, PropertyCollectionGetter propertyCollectionGetter)
+	: base (app->GetHInstance(), 0, WS_CHILD | WS_VISIBLE, rect, hWndParent, nullptr, dWriteFactory)
+	, _app(app)
+	, _project(project)
 	, _appContext(appContext)
 	, _propertyCollectionGetter(propertyCollectionGetter)
 {
@@ -303,12 +305,12 @@ int PropertyGrid::ShowEditor (POINT ptScreen, const NVP* nameValuePairs)
 	int y = margin;
 	for (auto nvp = nameValuePairs; nvp->first != nullptr; nvp++)
 	{
-		auto button = CreateWindowEx (0, L"Button", nvp->first, WS_CHILD | WS_VISIBLE | BS_NOTIFY, margin, y, buttonWidth, buttonHeight, hwnd, (HMENU) nvp->second, hInstance, nullptr);
+		auto button = CreateWindowEx (0, L"Button", nvp->first, WS_CHILD | WS_VISIBLE | BS_NOTIFY, margin, y, buttonWidth, buttonHeight, hwnd, (HMENU) (INT_PTR) nvp->second, hInstance, nullptr);
 		::SendMessage (button, WM_SETFONT, (WPARAM) font.get(), FALSE);
 		y += buttonHeight + margin;
 	}
 	RECT wr = { 0, 0, margin + buttonWidth + margin, y };
-	::AdjustWindowRectEx (&wr, GetWindowLongPtr(hwnd, GWL_STYLE), FALSE, GetWindowLongPtr(hwnd, GWL_EXSTYLE));
+	::AdjustWindowRectEx (&wr, (DWORD) GetWindowLongPtr(hwnd, GWL_STYLE), FALSE, (DWORD) GetWindowLongPtr(hwnd, GWL_EXSTYLE));
 	::SetWindowPos (hwnd, nullptr, ptScreen.x, ptScreen.y, wr.right - wr.left, wr.bottom - wr.top, SWP_NOACTIVATE | SWP_SHOWWINDOW);
 	::ReleaseDC (hwnd, hdc);
 
@@ -318,7 +320,7 @@ int PropertyGrid::ShowEditor (POINT ptScreen, const NVP* nameValuePairs)
 	{
 		if ((msg.hwnd == hwnd) && (msg.message == WM_CLOSE_EDITOR))
 		{
-			result = msg.wParam;
+			result = (int) msg.wParam;
 			break;
 		}
 
@@ -358,16 +360,38 @@ void PropertyGrid::ProcessLButtonUp (DWORD modifierKeys, POINT pt)
 		{
 			auto boolPD = dynamic_cast<const TypedPD<bool>*>(item->pd);
 			static constexpr NVP nvps[] = { { L"False", 0 }, { L"True", 1 }, { 0, 0 } };
-			int newValue = ShowEditor (pt, nvps);
-			if (newValue != -1)
-				boolPD->_setter (this, _selectedObjects, (bool) newValue);
+			int newValueInt = ShowEditor (pt, nvps);
+			if (newValueInt != -1)
+			{
+				bool newValue = (bool) newValueInt;
+
+				auto timestamp = GetTimestampMilliseconds();
+				for (auto so : _selectedObjects)
+				{
+					if (boolPD->_getter(this, so) != newValue)
+					{
+						boolPD->_setter (this, so, (bool) newValue, timestamp);
+						_project->SetModified(true);
+					}
+				}
+			}
 		}
 		else if (dynamic_cast<const EnumPD*>(item->pd) != nullptr)
 		{
 			auto enumPD = dynamic_cast<const EnumPD*>(item->pd);
 			int newValue = ShowEditor (pt, enumPD->_nameValuePairs);
 			if (newValue != -1)
-				enumPD->_setter (this, _selectedObjects, newValue);
+			{
+				auto timestamp = GetTimestampMilliseconds();
+				for (auto so : _selectedObjects)
+				{
+					if (enumPD->_getter(this, so) != newValue)
+					{
+						enumPD->_setter (this, so, newValue, timestamp);
+						_project->SetModified(true);
+					}
+				}
+			}
 		}
 		else
 			MessageBox (GetHWnd(), item->pd->_name, L"aaaa", 0);

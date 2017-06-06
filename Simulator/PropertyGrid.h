@@ -1,5 +1,6 @@
 #pragma once
-#include "D2DWindow.h"
+#include "Win32/D2DWindow.h"
+#include "Simulator.h"
 
 class PropertyGrid : public D2DWindow
 {
@@ -22,7 +23,7 @@ public:
 	struct TypedPD : PD
 	{
 		using Getter = TValue(*)(const PropertyGrid* pg, const void* object);
-		using Setter = void(*)(const PropertyGrid* pg, const std::vector<void*>& selectedObjects, TValue newValue);
+		using Setter = void(*)(const PropertyGrid* pg, void* object, TValue newValue, unsigned int timestamp);
 		Getter const _getter;
 		Setter const _setter;
 
@@ -47,6 +48,8 @@ public:
 	typedef const PD* const* (*PropertyCollectionGetter) (const void* selectedObject);
 
 private:
+	ISimulatorApp* const _app;
+	IProjectPtr const _project;
 	void* const _appContext;
 	PropertyCollectionGetter const _propertyCollectionGetter;
 	IDWriteTextFormatPtr _textFormat;
@@ -67,7 +70,7 @@ private:
 	std::vector<Item> _items;
 
 public:
-	PropertyGrid (HINSTANCE hInstance, const RECT& rect, HWND hWndParent, IDWriteFactory* dWriteFactory, void* appContext, PropertyCollectionGetter propertyCollectionGetter);
+	PropertyGrid (ISimulatorApp* app, IProject* project, const RECT& rect, HWND hWndParent, IDWriteFactory* dWriteFactory, void* appContext, PropertyCollectionGetter propertyCollectionGetter);
 	~PropertyGrid();
 
 	void DiscardEditor();

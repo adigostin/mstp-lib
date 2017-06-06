@@ -1,7 +1,7 @@
 
 #include "pch.h"
 #include "Simulator.h"
-#include "Win32/PropertyGrid.h"
+#include "PropertyGrid.h"
 #include "Bridge.h"
 #include "Port.h"
 #include "Wire.h"
@@ -39,7 +39,7 @@ public:
 		, _projectWindow(projectWindow)
 		, _project(project)
 		, _selection(selection)
-		, _pg(app->GetHInstance(), this->Window::GetClientRectPixels(), GetHWnd(), app->GetDWriteFactory(), this, &GetPropertyDescriptors)
+		, _pg(app, project, this->Window::GetClientRectPixels(), GetHWnd(), app->GetDWriteFactory(), this, &GetPropertyDescriptors)
 	{
 		_selection->GetAddedToSelectionEvent().AddHandler (&OnObjectAddedToSelection, this);
 		_selection->GetRemovingFromSelectionEvent().AddHandler (&OnObjectRemovingFromSelection, this);
@@ -141,13 +141,11 @@ static const PropertyGrid::TypedPD<wstring> BridgePropAddress
 (
 	L"Bridge Address",
 	[](const PropertyGrid* pg, const void* o) { return static_cast<const Bridge*>(o)->GetBridgeAddressAsWString(); },
-	[](const PropertyGrid* pg, const std::vector<void*>& sos, wstring str)
+	[](const PropertyGrid* pg, void* obj, wstring str, unsigned int timestamp)
 	{
 		auto newAddress = ConvertStringToBridgeAddress(str.c_str());
 		auto window = static_cast<PropertiesWindow*>(pg->GetAppContext());
-		auto timestamp = GetTimestampMilliseconds();
-		for (void* so : sos)
-			STP_SetBridgeAddress (static_cast<Bridge*>(so)->GetStpBridge(), newAddress.bytes, timestamp);
+		STP_SetBridgeAddress (static_cast<Bridge*>(obj)->GetStpBridge(), newAddress.bytes, timestamp);
 		window->_project->SetModified(true);
 	}
 );
@@ -156,9 +154,13 @@ static const PropertyGrid::TypedPD<bool> BridgePropStpEnabled
 (
 	L"STP Enabled",
 	[](const PropertyGrid* pg, const void* o) { return (bool) STP_IsBridgeStarted(static_cast<const Bridge*>(o)->GetStpBridge()); },
-	[](const PropertyGrid* pg, const std::vector<void*>& sos, bool value)
+	[](const PropertyGrid* pg, void* obj, bool value, unsigned int timestamp)
 	{
-
+		auto stpb = static_cast<Bridge*>(obj)->GetStpBridge();
+		if (value && !STP_IsBridgeStarted(stpb))
+			STP_StartBridge (stpb, timestamp);
+		else if (!value && STP_IsBridgeStarted(stpb))
+			STP_StopBridge (stpb, timestamp);
 	}
 );
 
@@ -168,8 +170,12 @@ static const PropertyGrid::EnumPD BridgePropStpVersion
 {
 	L"STP Version",
 	[](const PropertyGrid* pg, const void* o) { return (int) STP_GetStpVersion(static_cast<const Bridge*>(o)->GetStpBridge()); },
-	[](const PropertyGrid* pg, const std::vector<void*>& sos, int value)
+	[](const PropertyGrid* pg, void* obj, int value, unsigned int timestamp)
 	{
+		auto stpb = static_cast<Bridge*>(obj)->GetStpBridge();
+		auto newVersion = (STP_VERSION) value;
+		if (STP_GetStpVersion(stpb) != newVersion)
+			STP_SetStpVersion(stpb, newVersion, timestamp);
 	},
 	StpVersionNVPs
 };
