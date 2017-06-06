@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "Port.h"
 #include "Bridge.h"
+#include "UtilityFunctions.h"
 
 using namespace std;
 using namespace D2D1;
@@ -321,3 +322,38 @@ bool Port::GetMacOperational() const
 {
 	return _missedLinkPulseCounter < MissedLinkPulseCounterMax;
 }
+
+static const TypedProperty<bool> PortPropAdminEdge
+(
+	L"AdminEdge",
+	[](const Object* o, unsigned int vlanNumber)
+	{
+		auto port = static_cast<const Port*>(o);
+		return (bool) STP_GetPortAdminEdge(port->GetBridge()->GetStpBridge(), (unsigned int) port->GetPortIndex());
+	},
+	nullptr
+);
+
+static const TypedProperty<bool> PortPropAutoEdge
+(
+	L"AutoEdge",
+	[](const Object* o, unsigned int vlanNumber)
+	{
+		auto port = static_cast<const Port*>(o);
+		return (bool) STP_GetPortAutoEdge(port->GetBridge()->GetStpBridge(), (unsigned int) port->GetPortIndex());
+	},
+	nullptr
+);
+
+static const Property* const PortProperties[] =
+{
+	&PortPropAutoEdge,
+	&PortPropAdminEdge,
+	nullptr
+};
+
+const Property* const* Port::GetProperties() const
+{
+	return PortProperties;
+}
+

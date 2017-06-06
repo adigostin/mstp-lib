@@ -7,6 +7,7 @@
 #include "Bridge.h"
 #include "Port.h"
 #include "Wire.h"
+#include "UtilityFunctions.h"
 
 using namespace std;
 using namespace D2D1;

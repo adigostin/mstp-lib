@@ -2,6 +2,7 @@
 #include "Simulator.h"
 #include "Resource.h"
 #include "Bridge.h"
+#include "UtilityFunctions.h"
 
 using namespace std;
 

@@ -213,6 +213,7 @@
   <ItemGroup>
     <ClInclude Include="Bridge.h" />
     <ClInclude Include="EditStates\EditState.h" />
+    <ClInclude Include="Object.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Port.h" />
     <ClInclude Include="PropertyGrid.h" />
@@ -239,6 +240,7 @@
     <ClCompile Include="EditStates\MoveWirePointES.cpp" />
     <ClCompile Include="LogArea.cpp" />
     <ClCompile Include="MSTConfigIdDialog.cpp" />
+    <ClCompile Include="Object.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

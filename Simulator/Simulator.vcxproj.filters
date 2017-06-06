@@ -36,6 +36,7 @@
       <Filter>Win32</Filter>
     </ClInclude>
     <ClInclude Include="PropertyGrid.h" />
+    <ClInclude Include="Object.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -88,6 +89,7 @@
       <Filter>EditStates</Filter>
     </ClCompile>
     <ClCompile Include="PropertyGrid.cpp" />
+    <ClCompile Include="Object.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Simulator.rc" />

@@ -1,7 +1,6 @@
 #pragma once
-#include "Win32/EventManager.h"
+#include "Object.h"
 #include "Win32/Win32Defs.h"
-#include "UtilityFunctions.h"
 #include "stp.h"
 
 struct ISimulatorApp;
@@ -9,7 +8,6 @@ struct IProject;
 struct IProjectWindow;
 struct ISelection;
 struct ILogArea;
-class Object;
 class Bridge;
 class Port;
 class Wire;

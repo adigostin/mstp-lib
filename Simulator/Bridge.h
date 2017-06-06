@@ -52,6 +52,8 @@ public:
 	Bridge (unsigned int portCount, unsigned int mstiCount, const unsigned char macAddress[6]);
 	virtual ~Bridge();
 
+	virtual const Property* const* GetProperties() const override final;
+
 public:
 	static constexpr int HTCodeInner = 1;
 

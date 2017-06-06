@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "EditState.h"
 #include "Bridge.h"
+#include "UtilityFunctions.h"
 
 using namespace std;
 using namespace D2D1;

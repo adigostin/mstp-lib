@@ -1,7 +1,8 @@
 
 #pragma once
-#include "UtilityFunctions.h"
+#include "Object.h"
 #include "Win32/Win32Defs.h"
+#include "stp.h"
 
 struct PacketInfo
 {
@@ -24,6 +25,8 @@ class Port : public Object
 
 public:
 	Port (Bridge* bridge, unsigned int portIndex, Side side, float offset);
+
+	virtual const Property* const* GetProperties() const override final;
 
 	static constexpr int HTCodeInnerOuter = 1;
 	static constexpr int HTCodeCP = 2;
