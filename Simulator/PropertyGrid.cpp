@@ -1,15 +1,17 @@
 
 #include "pch.h"
 #include "PropertyGrid.h"
+#include "UtilityFunctions.h"
 
 using namespace std;
 
 static constexpr float CellLRPadding = 3.0f;
 
-PropertyGrid::PropertyGrid (HINSTANCE hInstance, const RECT& rect, HWND hWndParent, IDWriteFactory* dWriteFactory, void* appContext, PropertyCollectionGetter propertyCollectionGetter)
-	: base (hInstance, 0, WS_CHILD | WS_VISIBLE, rect, hWndParent, nullptr, dWriteFactory)
-	, _appContext(appContext)
-	, _propertyCollectionGetter(propertyCollectionGetter)
+PropertyGrid::PropertyGrid (ISimulatorApp* app, IProjectWindow* projectWindow, IProject* project, const RECT& rect, HWND hWndParent, IDWriteFactory* dWriteFactory)
+	: base (app->GetHInstance(), 0, WS_CHILD | WS_VISIBLE, rect, hWndParent, nullptr, dWriteFactory)
+	, _app(app)
+	, _projectWindow(projectWindow)
+	, _project(project)
 {
 	auto hr = dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
 											   DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_textFormat); ThrowIfFailed(hr);
@@ -20,25 +22,6 @@ PropertyGrid::PropertyGrid (HINSTANCE hInstance, const RECT& rect, HWND hWndPare
 	GetRenderTarget()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOW), &_windowBrush);
 	GetRenderTarget()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOWTEXT), &_windowTextBrush);
 	GetRenderTarget()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_GRAYTEXT), &_grayTextBrush);
-}
-
-PropertyGrid::~PropertyGrid()
-{ }
-
-PropertyGrid::EnumPD::EnumPD (const wchar_t* name, Getter getter, Setter setter, const NVP* nameValuePairs)
-	: TypedPD(name, getter, setter), _nameValuePairs(nameValuePairs)
-{ }
-
-std::wstring PropertyGrid::EnumPD::to_wstring (const PropertyGrid* pg, const void* so) const
-{
-	auto value = _getter(pg, so);
-	for (auto nvp = _nameValuePairs; nvp->first != nullptr; nvp++)
-	{
-		if (nvp->second == value)
-			return nvp->first;
-	}
-
-	return L"??";
 }
 
 std::optional<LRESULT> PropertyGrid::WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -165,7 +148,7 @@ void PropertyGrid::DiscardEditor()
 {
 }
 
-void PropertyGrid::SelectObjects (void* const* objects, size_t count)
+void PropertyGrid::SelectObjects (Object* const* objects, size_t count)
 {
 	bool sameSelection = false;
 	if (_selectedObjects.size() == count)
@@ -191,11 +174,15 @@ void PropertyGrid::SelectObjects (void* const* objects, size_t count)
 
 	if (!_selectedObjects.empty())
 	{
-		for (auto ppd = _propertyCollectionGetter(_selectedObjects[0]); *ppd != nullptr; ppd++)
-			_items.push_back (Item { *ppd });
+		auto props = _selectedObjects[0]->GetProperties();
+		if (all_of(_selectedObjects.begin(), _selectedObjects.end(), [props](Object* o) { return o->GetProperties() == props; }))
+		{
+			for (auto ppd = props; *ppd != nullptr; ppd++)
+				_items.push_back (Item { *ppd });
 
-		CreateLabelTextLayouts();
-		CreateValueTextLayouts();
+			CreateLabelTextLayouts();
+			CreateValueTextLayouts();
+		}
 	}
 
 	::InvalidateRect (GetHWnd(), NULL, FALSE);
@@ -207,7 +194,7 @@ void PropertyGrid::CreateLabelTextLayouts()
 	for (auto& item : _items)
 	{
 		if (item.pd->_labelGetter != nullptr)
-			item.labelTL = TextLayout::Create (GetDWriteFactory(), _textFormat, item.pd->_labelGetter(this).c_str(), maxWidth);
+			item.labelTL = TextLayout::Create (GetDWriteFactory(), _textFormat, item.pd->_labelGetter(_selectedObjects, _projectWindow->GetSelectedVlanNumber()).c_str(), maxWidth);
 		else
 			item.labelTL = TextLayout::Create (GetDWriteFactory(), _textFormat, item.pd->_name, maxWidth);
 	}
@@ -221,8 +208,19 @@ void PropertyGrid::CreateValueTextLayouts()
 
 	for (auto& item : _items)
 	{
-		auto str = item.pd->to_wstring(this, _selectedObjects[0]);
-		item.valueTL = TextLayout::Create (GetDWriteFactory(), _textFormat, str.c_str(), maxWidth);
+		auto str = item.pd->to_wstring (_selectedObjects[0], _projectWindow->GetSelectedVlanNumber());
+		item.valueTL.layout = nullptr;
+		for (size_t i = 1; i < _selectedObjects.size(); i++)
+		{
+			if (item.pd->to_wstring(_selectedObjects[i], _projectWindow->GetSelectedVlanNumber()) != str)
+			{
+				item.valueTL = TextLayout::Create (GetDWriteFactory(), _textFormat, L"(multiple selection)", maxWidth);
+				break;
+			}
+		}
+
+		if (item.valueTL.layout == nullptr)
+			item.valueTL = TextLayout::Create (GetDWriteFactory(), _textFormat, str.c_str(), maxWidth);
 	}
 }
 
@@ -303,7 +301,7 @@ int PropertyGrid::ShowEditor (POINT ptScreen, const NVP* nameValuePairs)
 	int y = margin;
 	for (auto nvp = nameValuePairs; nvp->first != nullptr; nvp++)
 	{
-		auto button = CreateWindowEx (0, L"Button", nvp->first, WS_CHILD | WS_VISIBLE | BS_NOTIFY, margin, y, buttonWidth, buttonHeight, hwnd, (HMENU) (UINT_PTR) nvp->second, hInstance, nullptr);
+		auto button = CreateWindowEx (0, L"Button", nvp->first, WS_CHILD | WS_VISIBLE | BS_NOTIFY, margin, y, buttonWidth, buttonHeight, hwnd, (HMENU) (INT_PTR) nvp->second, hInstance, nullptr);
 		::SendMessage (button, WM_SETFONT, (WPARAM) font.get(), FALSE);
 		y += buttonHeight + margin;
 	}
@@ -354,20 +352,42 @@ void PropertyGrid::ProcessLButtonUp (DWORD modifierKeys, POINT pt)
 	{
 		::ClientToScreen (GetHWnd(), &pt);
 
-		if (dynamic_cast<const TypedPD<bool>*>(item->pd) != nullptr)
+		if (dynamic_cast<const TypedProperty<bool>*>(item->pd) != nullptr)
 		{
-			auto boolPD = dynamic_cast<const TypedPD<bool>*>(item->pd);
+			auto boolPD = dynamic_cast<const TypedProperty<bool>*>(item->pd);
 			static constexpr NVP nvps[] = { { L"False", 0 }, { L"True", 1 }, { 0, 0 } };
-			int newValue = ShowEditor (pt, nvps);
-			if (newValue != -1)
-				boolPD->_setter (this, _selectedObjects, (bool) newValue);
+			int newValueInt = ShowEditor (pt, nvps);
+			if (newValueInt != -1)
+			{
+				bool newValue = (bool) newValueInt;
+
+				auto timestamp = GetTimestampMilliseconds();
+				for (auto so : _selectedObjects)
+				{
+					if (boolPD->_getter(so, _projectWindow->GetSelectedVlanNumber()) != newValue)
+					{
+						boolPD->_setter (so, (bool) newValue, _projectWindow->GetSelectedVlanNumber(), timestamp);
+						_project->SetModified(true);
+					}
+				}
+			}
 		}
-		else if (dynamic_cast<const EnumPD*>(item->pd) != nullptr)
+		else if (dynamic_cast<const EnumProperty*>(item->pd) != nullptr)
 		{
-			auto enumPD = dynamic_cast<const EnumPD*>(item->pd);
+			auto enumPD = dynamic_cast<const EnumProperty*>(item->pd);
 			int newValue = ShowEditor (pt, enumPD->_nameValuePairs);
 			if (newValue != -1)
-				enumPD->_setter (this, _selectedObjects, newValue);
+			{
+				auto timestamp = GetTimestampMilliseconds();
+				for (auto so : _selectedObjects)
+				{
+					if (enumPD->_getter(so, _projectWindow->GetSelectedVlanNumber()) != newValue)
+					{
+						enumPD->_setter (so, newValue, _projectWindow->GetSelectedVlanNumber(), timestamp);
+						_project->SetModified(true);
+					}
+				}
+			}
 		}
 		else
 			MessageBox (GetHWnd(), item->pd->_name, L"aaaa", 0);

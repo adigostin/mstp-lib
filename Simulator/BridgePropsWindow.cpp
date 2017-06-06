@@ -2,7 +2,7 @@
 #include "Simulator.h"
 #include "Resource.h"
 #include "Bridge.h"
-#include "EditActions.h"
+#include "UtilityFunctions.h"
 
 using namespace std;
 
@@ -14,7 +14,6 @@ class BridgePropsWindow : public IBridgePropsWindow
 	IProjectWindow* const _projectWindow;
 	IProjectPtr     const _project;
 	ISelectionPtr   const _selection;
-	IActionListPtr  const _actionList;
 	ULONG _refCount = 1;
 	HWND _hwnd = nullptr;
 	HWND _controlBeingValidated = nullptr;
@@ -27,14 +26,12 @@ public:
 					   IProjectWindow* projectWindow,
 					   IProject* project,
 					   ISelection* selection,
-					   IActionList* actionList,
 					   HWND hwndParent,
 					   POINT location)
 		: _app(app)
 		, _projectWindow(projectWindow)
 		, _project(project)
 		, _selection(selection)
-		, _actionList(actionList)
 	{
 		_hwnd = CreateDialogParam (app->GetHInstance(), MAKEINTRESOURCE(IDD_PROPPAGE_BRIDGE), hwndParent, &DialogProcStatic, reinterpret_cast<LPARAM>(this));
 
@@ -355,8 +352,10 @@ private:
 	void ValidateAndSetBridgeAddress (const wchar_t* str)
 	{
 		auto newAddress = ConvertStringToBridgeAddress(str);
-		auto action = unique_ptr<EditAction>(new SetBridgeAddressAction(_bridges, newAddress));
-		_actionList->PerformAndAddUserAction (move(action));
+		auto timestamp = GetTimestampMilliseconds();
+		for (auto b : _bridges)
+			STP_SetBridgeAddress (b->GetStpBridge(), newAddress.bytes, timestamp);
+		_project->SetModified(true);
 	}
 	#pragma endregion
 
@@ -380,8 +379,9 @@ private:
 
 		if (any_of (_bridges.begin(), _bridges.end(), [enable](Bridge* b) { return (bool) STP_IsBridgeStarted(b->GetStpBridge()) != enable; }))
 		{
-			auto action = unique_ptr<EditAction>(new EnableDisableStpAction(_bridges, enable));
-			_actionList->PerformAndAddUserAction(move(action));
+			throw not_implemented_exception();
+			//auto action = unique_ptr<EditAction>(new EnableDisableStpAction(_bridges, enable));
+			//_actionList->PerformAndAddUserAction(move(action));
 		}
 	}
 	#pragma endregion
@@ -424,8 +424,9 @@ private:
 
 		if (any_of (_bridges.begin(), _bridges.end(), [newVersion](Bridge* b) { return STP_GetStpVersion(b->GetStpBridge()) != newVersion; }))
 		{
-			auto action = unique_ptr<EditAction>(new ChangeStpVersionAction(_bridges, newVersion));
-			_actionList->PerformAndAddUserAction (move(action));
+			throw not_implemented_exception();
+			//auto action = unique_ptr<EditAction>(new ChangeStpVersionAction(_bridges, newVersion));
+			//_actionList->PerformAndAddUserAction (move(action));
 		}
 	}
 	#pragma endregion
@@ -583,8 +584,9 @@ private:
 		auto same = [&ascii](Bridge* b) { return memcmp (ascii.data(), STP_GetMstConfigId(b->GetStpBridge())->ConfigurationName, 32) == 0; };
 		if (any_of (_bridges.begin(), _bridges.end(), [&same](Bridge* b) { return !same(b); }))
 		{
-			auto action = unique_ptr<EditAction>(new SetMstConfigNameAction(_bridges, move(ascii)));
-			_actionList->PerformAndAddUserAction(move(action));
+			throw not_implemented_exception();
+			//auto action = unique_ptr<EditAction>(new SetMstConfigNameAction(_bridges, move(ascii)));
+			//_actionList->PerformAndAddUserAction(move(action));
 		}
 	}
 	#pragma endregion
@@ -708,8 +710,9 @@ private:
 
 		if (any_of(_bridges.begin(), _bridges.end(), [=](Bridge* b) { return getPrio(b, vlan) != newPrio; }))
 		{
-			auto action = unique_ptr<EditAction>(new ChangeBridgePrioAction(_bridges, newPrio, vlan));
-			_actionList->PerformAndAddUserAction (move(action));
+			throw not_implemented_exception();
+			//auto action = unique_ptr<EditAction>(new ChangeBridgePrioAction(_bridges, newPrio, vlan));
+			//_actionList->PerformAndAddUserAction (move(action));
 		}
 	}
 	#pragma endregion

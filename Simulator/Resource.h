@@ -57,8 +57,6 @@
 #define ID_FILE_EXIT                    32786
 #define ID_FILE_SAVE                    32787
 #define ID_EDIT                         32788
-#define ID_EDIT_UNDO                    32789
-#define ID_EDIT_REDO                    32790
 #define ID_HELP                         32791
 #define ID_HELP_ABOUT                   32792
 #define ID_PAUSE_SIMULATION             32793

@@ -212,17 +212,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Bridge.h" />
-    <ClInclude Include="EditActions.h" />
     <ClInclude Include="EditStates\EditState.h" />
+    <ClInclude Include="Object.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Port.h" />
+    <ClInclude Include="PropertyGrid.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Simulator.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="UtilityFunctions.h" />
     <ClInclude Include="Win32\D2DWindow.h" />
     <ClInclude Include="Win32\EventManager.h" />
-    <ClInclude Include="Win32\PropertyGrid.h" />
     <ClInclude Include="Win32\Win32Defs.h" />
     <ClInclude Include="Win32\Window.h" />
     <ClInclude Include="Win32\ZoomableWindow.h" />
@@ -231,7 +231,6 @@
   <ItemGroup>
     <ClCompile Include="Bridge.cpp" />
     <ClCompile Include="BridgePropsWindow.cpp" />
-    <ClCompile Include="ActionList.cpp" />
     <ClCompile Include="EditArea.cpp" />
     <ClCompile Include="EditStates\BeginningDragES.cpp" />
     <ClCompile Include="EditStates\CreateBridgeES.cpp" />
@@ -241,6 +240,7 @@
     <ClCompile Include="EditStates\MoveWirePointES.cpp" />
     <ClCompile Include="LogArea.cpp" />
     <ClCompile Include="MSTConfigIdDialog.cpp" />
+    <ClCompile Include="Object.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -250,6 +250,7 @@
     <ClCompile Include="Port.cpp" />
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
+    <ClCompile Include="PropertyGrid.cpp" />
     <ClCompile Include="PropsWindow.cpp" />
     <ClCompile Include="Test.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
@@ -268,7 +269,6 @@
     <ClCompile Include="Win32\D2DWindow.cpp" />
     <ClCompile Include="Win32\DockablePanel.cpp" />
     <ClCompile Include="Win32\DockContainer.cpp" />
-    <ClCompile Include="Win32\PropertyGrid.cpp" />
     <ClCompile Include="Win32\Window.cpp" />
     <ClCompile Include="Win32\ZoomableWindow.cpp" />
     <ClCompile Include="Wire.cpp" />

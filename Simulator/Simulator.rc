@@ -71,11 +71,7 @@ BEGIN
         MENUITEM SEPARATOR
         MENUITEM "E&xit",                       ID_FILE_EXIT
     END
-    POPUP "&Edit"
-    BEGIN
-        MENUITEM "&Undo",                       ID_EDIT_UNDO, INACTIVE
-        MENUITEM "&Redo",                       ID_EDIT_REDO, INACTIVE
-    END
+    MENUITEM "&Edit",                       65535
     POPUP "&View"
     BEGIN
         MENUITEM "&Properties",                 ID_VIEW_PROPERTIES

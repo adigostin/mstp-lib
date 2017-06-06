@@ -7,7 +7,7 @@
 #include "Bridge.h"
 #include "Port.h"
 #include "Wire.h"
-#include "EditActions.h"
+#include "UtilityFunctions.h"
 
 using namespace std;
 using namespace D2D1;
@@ -32,7 +32,6 @@ class EditArea : public ZoomableWindow, public IEditArea
 	ISimulatorApp*  const _app;
 	IProjectWindow* const _pw;
 	IProjectPtr     const _project;
-	IActionListPtr  const _actionList;
 	ISelectionPtr   const _selection;
 	IDWriteTextFormatPtr _legendFont;
 	DrawingObjects _drawingObjects;
@@ -43,7 +42,6 @@ public:
 	EditArea (ISimulatorApp* app,
 			  IProjectWindow* pw,
 			  IProject* project,
-			  IActionList* actionList,
 			  ISelection* selection,
 			  HWND hWndParent,
 			  const RECT& rect,
@@ -52,7 +50,6 @@ public:
 		, _app(app)
 		, _pw(pw)
 		, _project(project)
-		, _actionList(actionList)
 		, _selection(selection)
 	{
 		auto dc = base::GetRenderTarget();
@@ -554,19 +551,20 @@ public:
 			else if ((wParam == ID_BRIDGE_ENABLE_STP) || (wParam == ID_BRIDGE_DISABLE_STP))
 			{
 				bool enable = (wParam == ID_BRIDGE_ENABLE_STP);
-				std::vector<Bridge*> bridges;
+				auto timestamp = GetTimestampMilliseconds();
 				for (Object* o : _selection->GetObjects())
 				{
 					auto b = dynamic_cast<Bridge*>(o);
-					if ((b != nullptr) && ((bool) STP_IsBridgeStarted(b->GetStpBridge()) != enable))
-						bridges.push_back(b);
+					if (b != nullptr)
+					{
+						if (enable && !STP_IsBridgeStarted(b->GetStpBridge()))
+							STP_StartBridge(b->GetStpBridge(), timestamp);
+						else if (!enable && STP_IsBridgeStarted(b->GetStpBridge()))
+							STP_StopBridge(b->GetStpBridge(), timestamp);
+					}
 				}
 
-				if (!bridges.empty())
-				{
-					auto action = unique_ptr<EditAction>(new EnableDisableStpAction(bridges, enable));
-					_actionList->PerformAndAddUserAction (move(action));
-				}
+				_project->SetModified(true);
 			}
 			else if (wParam == ID_PAUSE_SIMULATION)
 			{
@@ -647,7 +645,36 @@ public:
 				return 0;
 			}
 
-			_actionList->PerformAndAddUserAction(unique_ptr<EditAction>(new DeleteEditAction(_project, _selection)));
+			if (any_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [](Object* o) { return o->Is<Port>(); }))
+			{
+				TaskDialog (_pw->GetHWnd(), nullptr, _app->GetAppName(), L"Can't Delete Ports", L"The Simulator does not yet support deleting ports.", 0, TD_INFORMATION_ICON, nullptr);
+				return 0;
+			}
+
+			while (!_selection->GetObjects().empty())
+			{
+				if (auto b = dynamic_cast<Bridge*>(_selection->GetObjects().front()))
+				{
+					auto it = find_if (_project->GetBridges().begin(), _project->GetBridges().end(), [b](const unique_ptr<Bridge>& pb) { return pb.get() == b; });
+					if (it != _project->GetBridges().end())
+					{
+						size_t bi = it - _project->GetBridges().begin();
+						_project->RemoveBridge(bi);
+						_project->SetModified(true);
+					}
+				}
+				else if (auto w = dynamic_cast<Wire*>(_selection->GetObjects().front()))
+				{
+					auto it = find_if (_project->GetWires().begin(), _project->GetWires().end(), [w](const unique_ptr<Wire>& pw) { return pw.get() == w; });
+					if (it != _project->GetWires().end())
+					{
+						size_t wi = it - _project->GetWires().begin();
+						_project->RemoveWire(wi);
+						_project->SetModified(true);
+					}
+				}
+			}
+
 			return 0;
 		}
 
@@ -870,7 +897,7 @@ public:
 
 	EditStateDeps MakeEditStateDeps()
 	{
-		return EditStateDeps { _pw, this, _project, _actionList, _selection };
+		return EditStateDeps { _pw, this, _project, _selection };
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return base::QueryInterface(riid, ppvObject); }

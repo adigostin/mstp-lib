@@ -3,6 +3,7 @@
 #include "Wire.h"
 #include "Bridge.h"
 #include "Port.h"
+#include "UtilityFunctions.h"
 
 using namespace std;
 
@@ -194,4 +195,13 @@ WireEnd Wire::DeserializeEnd (IProject* project, IXMLDOMElement* element)
 		throw not_implemented_exception();
 }
 
+static const Property* const WireProperties[] =
+{
+	nullptr
+};
+
+const Property* const* Wire::GetProperties() const
+{
+	return WireProperties;
+}
 

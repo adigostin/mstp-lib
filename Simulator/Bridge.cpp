@@ -4,6 +4,7 @@
 #include "Wire.h"
 #include "stp_md5.h"
 #include "Win32/D2DWindow.h"
+#include "UtilityFunctions.h"
 
 using namespace std;
 using namespace D2D1;
@@ -616,6 +617,108 @@ void Bridge::ResumeSimulation()
 {
 	_simulationPaused = false;
 	ProcessReceivedPackets();
+}
+
+static const TypedProperty<wstring> BridgePropAddress
+(
+	L"Bridge Address",
+	[](const Object* o, unsigned int vlanNumber) { return static_cast<const Bridge*>(o)->GetBridgeAddressAsWString(); },
+	[](Object* obj, wstring str, unsigned int vlanNumber, unsigned int timestamp)
+	{
+		auto newAddress = ConvertStringToBridgeAddress(str.c_str());
+		STP_SetBridgeAddress (static_cast<Bridge*>(obj)->GetStpBridge(), newAddress.bytes, timestamp);
+	}
+);
+
+static const TypedProperty<bool> BridgePropStpEnabled
+(
+	L"STP Enabled",
+	[](const Object* o, unsigned int vlanNumber) { return (bool) STP_IsBridgeStarted(static_cast<const Bridge*>(o)->GetStpBridge()); },
+	[](Object* obj, bool value, unsigned int vlanNumber, unsigned int timestamp)
+	{
+		auto stpb = static_cast<Bridge*>(obj)->GetStpBridge();
+		if (value && !STP_IsBridgeStarted(stpb))
+			STP_StartBridge (stpb, timestamp);
+		else if (!value && STP_IsBridgeStarted(stpb))
+			STP_StopBridge (stpb, timestamp);
+	}
+);
+
+static const NVP StpVersionNVPs[] = { { L"LegacySTP", STP_VERSION_LEGACY_STP }, { L"RSTP", STP_VERSION_RSTP }, { L"MSTP", STP_VERSION_MSTP }, { 0, 0 } };
+
+static const EnumProperty BridgePropStpVersion
+{
+	L"STP Version",
+	[](const Object* o, unsigned int vlanNumber) { return (int) STP_GetStpVersion(static_cast<const Bridge*>(o)->GetStpBridge()); },
+	[](Object* obj, int value, unsigned int vlanNumber, unsigned int timestamp)
+	{
+		auto stpb = static_cast<Bridge*>(obj)->GetStpBridge();
+		auto newVersion = (STP_VERSION) value;
+		if (STP_GetStpVersion(stpb) != newVersion)
+			STP_SetStpVersion(stpb, newVersion, timestamp);
+	},
+	StpVersionNVPs
+};
+
+static const TypedProperty<unsigned int> BridgePropPortCount
+{
+	L"Port Count",
+	[](const Object* o, unsigned int vlanNumber) { return (unsigned int) static_cast<const Bridge*>(o)->GetPorts().size(); },
+	nullptr
+};
+
+static const TypedProperty<unsigned int> BridgePropMstiCount
+{
+	L"MSTI Count",
+	[](const Object* o, unsigned int vlanNumber) { return STP_GetMstiCount(static_cast<const Bridge*>(o)->GetStpBridge()); },
+	nullptr
+};
+
+static const TypedProperty<unsigned short> BridgePropPrio
+(
+	L"Bridge Priority",
+	[](const Object* o, unsigned int vlanNumber) -> unsigned short
+	{
+		auto b = static_cast<const Bridge*>(o);
+		auto treeIndex = STP_GetTreeIndexFromVlanNumber (b->GetStpBridge(), vlanNumber);
+		return STP_GetBridgePriority(b->GetStpBridge(), treeIndex);
+	},
+	nullptr,
+	[](const std::vector<Object*>& objs, unsigned int vlanNumber) -> wstring
+	{
+		auto treeIndex = STP_GetTreeIndexFromVlanNumber(dynamic_cast<Bridge*>(objs[0])->GetStpBridge(), vlanNumber);
+		auto begin = reinterpret_cast<Bridge* const*>(&objs[0]);
+		auto end = begin + objs.size();
+		bool allSameTree = all_of (begin, end, [vlanNumber, treeIndex](Bridge* b) { return STP_GetTreeIndexFromVlanNumber(b->GetStpBridge(), vlanNumber) == treeIndex; });
+
+		if (!allSameTree)
+			return wstring(L"Bridge Priority");
+
+		wstringstream label;
+		label << L"Bridge Priority (";
+		if (treeIndex == 0)
+			label << L"CIST)";
+		else
+			label << L"MSTI " << treeIndex << L")";
+		return label.str();
+	}
+);
+
+
+static const Property* const BridgeProperties[] =
+{
+	&BridgePropAddress,
+	&BridgePropStpEnabled,
+	&BridgePropStpVersion,
+	&BridgePropPortCount,
+	&BridgePropMstiCount,
+	&BridgePropPrio,
+	nullptr,
+};
+
+const Property* const* Bridge::GetProperties() const
+{
+	return BridgeProperties;
 }
 
 #pragma region STP Callbacks

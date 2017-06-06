@@ -35,10 +35,8 @@
     <ClInclude Include="Win32\EventManager.h">
       <Filter>Win32</Filter>
     </ClInclude>
-    <ClInclude Include="EditActions.h" />
-    <ClInclude Include="Win32\PropertyGrid.h">
-      <Filter>Win32</Filter>
-    </ClInclude>
+    <ClInclude Include="PropertyGrid.h" />
+    <ClInclude Include="Object.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -72,7 +70,6 @@
     <ClCompile Include="EditStates\MovePortES.cpp">
       <Filter>EditStates</Filter>
     </ClCompile>
-    <ClCompile Include="ActionList.cpp" />
     <ClCompile Include="Win32\D2DWindow.cpp">
       <Filter>Win32</Filter>
     </ClCompile>
@@ -91,9 +88,8 @@
     <ClCompile Include="EditStates\BeginningDragES.cpp">
       <Filter>EditStates</Filter>
     </ClCompile>
-    <ClCompile Include="Win32\PropertyGrid.cpp">
-      <Filter>Win32</Filter>
-    </ClCompile>
+    <ClCompile Include="PropertyGrid.cpp" />
+    <ClCompile Include="Object.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Simulator.rc" />

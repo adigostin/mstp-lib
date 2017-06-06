@@ -1,7 +1,6 @@
 #pragma once
-#include "Win32/EventManager.h"
+#include "Object.h"
 #include "Win32/Win32Defs.h"
-#include "UtilityFunctions.h"
 #include "stp.h"
 
 struct ISimulatorApp;
@@ -9,8 +8,6 @@ struct IProject;
 struct IProjectWindow;
 struct ISelection;
 struct ILogArea;
-struct IActionList;
-class Object;
 class Bridge;
 class Port;
 class Wire;
@@ -92,7 +89,6 @@ _COM_SMARTPTR_TYPEDEF(IEditArea, __uuidof(IEditArea));
 using EditAreaFactory = IEditAreaPtr(*const)(ISimulatorApp* app,
 											 IProjectWindow* pw,
 											 IProject* project,
-											 IActionList* actionList,
 											 ISelection* selection,
 											 HWND hWndParent,
 											 const RECT& rect,
@@ -118,44 +114,10 @@ _COM_SMARTPTR_TYPEDEF(IProjectWindow, __uuidof(IProjectWindow));
 using ProjectWindowFactory = IProjectWindowPtr(*const)(ISimulatorApp* app,
 													   IProject* project,
 													   SelectionFactory selectionFactory,
-													   IActionList* actionList,
 													   EditAreaFactory editAreaFactory,
 													   int nCmdShow,
 													   unsigned int selectedVlan);
 extern const ProjectWindowFactory projectWindowFactory;
-
-// ============================================================================
-
-struct EditAction
-{
-	virtual ~EditAction() = default;
-	virtual void Redo() = 0;
-	virtual void Undo() = 0;
-	virtual std::string GetName() const = 0;
-};
-
-MIDL_INTERFACE("3F68DA7D-68A0-411F-A481-D711F8527292") IActionList : public IUnknown
-{
-	struct ChangedEvent : public Event<ChangedEvent, void(IActionList*)> { };
-
-	virtual ChangedEvent::Subscriber GetChangedEvent() = 0;
-	virtual void AddPerformedUserAction (std::unique_ptr<EditAction>&& action) = 0;
-	virtual void PerformAndAddUserAction (std::unique_ptr<EditAction>&& action) = 0;
-	virtual size_t GetSavePointIndex() const = 0;
-	virtual size_t GetEditPointIndex() const = 0;
-	virtual size_t GetCount() const = 0;
-	virtual void SetSavePoint() = 0;
-	virtual void Undo() = 0;
-	virtual void Redo() = 0;
-	bool ChangedSinceLastSave() const { return GetEditPointIndex() != GetSavePointIndex(); }
-	bool CanUndo() const { return GetEditPointIndex() > 0; }
-	bool CanRedo() const { return GetEditPointIndex() < GetCount(); }
-	virtual EditAction* GetUndoableAction() const = 0;
-	virtual EditAction* GetRedoableAction() const = 0;
-};
-_COM_SMARTPTR_TYPEDEF(IActionList, __uuidof(IActionList));
-using ActionListFactory = IActionListPtr(*const)();
-extern const ActionListFactory actionListFactory;
 
 // ============================================================================
 
@@ -178,10 +140,11 @@ MIDL_INTERFACE("A7D9A5A8-DB3F-4147-B488-58D260365F65") IProject : public IUnknow
 
 	struct InvalidateEvent : public Event<InvalidateEvent, void(IProject*)> { };
 	struct LoadedEvent : public Event<LoadedEvent, void(IProject*)> { };
+	struct ModifiedChangedEvent : public Event<ModifiedChangedEvent, void(IProject*)> { };
 
 	virtual const std::vector<std::unique_ptr<Bridge>>& GetBridges() const = 0;
-	virtual void InsertBridge (size_t index, std::unique_ptr<Bridge>&& bridge, std::vector<ConvertedWirePoint>* convertedWirePoints) = 0;
-	virtual std::unique_ptr<Bridge> RemoveBridge (size_t index, std::vector<ConvertedWirePoint>* convertedWirePoints) = 0;
+	virtual void InsertBridge (size_t index, std::unique_ptr<Bridge>&& bridge) = 0;
+	virtual std::unique_ptr<Bridge> RemoveBridge (size_t index) = 0;
 	virtual BridgeInsertedEvent::Subscriber GetBridgeInsertedEvent() = 0;
 	virtual BridgeRemovingEvent::Subscriber GetBridgeRemovingEvent() = 0;
 	virtual const std::vector<std::unique_ptr<Wire>>& GetWires() const = 0;
@@ -199,6 +162,9 @@ MIDL_INTERFACE("A7D9A5A8-DB3F-4147-B488-58D260365F65") IProject : public IUnknow
 	virtual void PauseSimulation() = 0;
 	virtual void ResumeSimulation() = 0;
 	virtual bool IsSimulationPaused() const = 0;
+	virtual bool GetModified() const = 0;
+	virtual void SetModified (bool modified) = 0;
+	virtual ModifiedChangedEvent::Subscriber GetModifiedChangedEvent() = 0;
 
 	std::pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const;
 	Port* FindConnectedPort (Port* txPort) const;
@@ -217,7 +183,6 @@ using PropertiesWindowFactory = IPropertiesWindowPtr(*const)(ISimulatorApp* app,
 															 IProjectWindow* projectWindow,
 															 IProject* project,
 															 ISelection* selection,
-															 IActionList* actionList,
 															 const RECT& rect,
 															 HWND hWndParent);
 extern const PropertiesWindowFactory propertiesWindowFactory;
@@ -232,7 +197,6 @@ using BridgePropsWindowFactory = IBridgePropsWindowPtr(*const)(ISimulatorApp* ap
 															   IProjectWindow* projectWindow,
 															   IProject* project,
 															   ISelection* selection,
-															   IActionList* actionList,
 															   HWND hwndParent,
 															   POINT location);
 extern const BridgePropsWindowFactory bridgePropertiesControlFactory;
@@ -247,7 +211,6 @@ using VlanWindowFactory = IVlanWindowPtr(*const)(ISimulatorApp* app,
 												 IProjectWindow* pw,
 												 IProject* project,
 												 ISelection* selection,
-												 IActionList* actionList,
 												 HWND hWndParent,
 												 POINT location);
 extern const VlanWindowFactory vlanWindowFactory;

@@ -15,11 +15,12 @@ class Project : public EventManager, public IProject
 	vector<unique_ptr<Wire>> _wires;
 	STP_BRIDGE_ADDRESS _nextMacAddress = { 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x80 };
 	bool _simulationPaused = false;
+	bool _modified = false;
 
 public:
 	virtual const vector<unique_ptr<Bridge>>& GetBridges() const override final { return _bridges; }
 
-	virtual void InsertBridge (size_t index, unique_ptr<Bridge>&& bridge, std::vector<ConvertedWirePoint>* convertedWirePoints) override final
+	virtual void InsertBridge (size_t index, unique_ptr<Bridge>&& bridge) override final
 	{
 		if (index > _bridges.size())
 			throw invalid_argument("index");
@@ -31,22 +32,9 @@ public:
 		b->GetLinkPulseEvent().AddHandler (&OnLinkPulse, this);
 		BridgeInsertedEvent::InvokeHandlers (this, this, index, b);
 		InvalidateEvent::InvokeHandlers (this, this);
-
-		if (convertedWirePoints != nullptr)
-		{
-			for (size_t i = convertedWirePoints->size() - 1; i != -1; i--)
-			{
-				auto& cwp = convertedWirePoints->at(i);
-				if (cwp.port->GetBridge() == b)
-				{
-					cwp.wire->SetPoint(cwp.pointIndex, cwp.port);
-					convertedWirePoints->erase (convertedWirePoints->begin() + i);
-				}
-			}
-		}
 	}
 
-	virtual unique_ptr<Bridge> RemoveBridge(size_t index, vector<ConvertedWirePoint>* convertedWirePointsToAddTo) override final
+	virtual unique_ptr<Bridge> RemoveBridge(size_t index) override final
 	{
 		if (index >= _bridges.size())
 			throw invalid_argument("index");
@@ -64,11 +52,7 @@ public:
 				{
 					auto port = get<ConnectedWireEnd>(point);
 					if (port->GetBridge() == b)
-					{
-						assert (convertedWirePointsToAddTo != nullptr);
-						convertedWirePointsToAddTo->push_back(ConvertedWirePoint { w, i, port });
 						w->SetPoint(i, w->GetPointCoords(i));
-					}
 				}
 
 				wireIndex++;
@@ -336,7 +320,7 @@ public:
 				IXMLDOMElementPtr bridgeElement;
 				hr = bridgeNode->QueryInterface(&bridgeElement); ThrowIfFailed(hr);
 				auto bridge = Bridge::Deserialize(bridgeElement);
-				this->InsertBridge(_bridges.size(), move(bridge), nullptr);
+				this->InsertBridge(_bridges.size(), move(bridge));
 			}
 		}
 
@@ -377,6 +361,19 @@ public:
 	}
 
 	virtual bool IsSimulationPaused() const override final { return _simulationPaused; }
+
+	virtual bool GetModified() const override final { return _modified; }
+
+	virtual void SetModified (bool modified) override final
+	{
+		if (_modified != modified)
+		{
+			_modified = modified;
+			ModifiedChangedEvent::InvokeHandlers(this, this);
+		}
+	}
+
+	virtual ModifiedChangedEvent::Subscriber GetModifiedChangedEvent() override final { return ModifiedChangedEvent::Subscriber(this); }
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
 

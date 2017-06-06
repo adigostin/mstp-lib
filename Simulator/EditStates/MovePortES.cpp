@@ -45,25 +45,7 @@ public:
 
 	virtual void OnMouseUp (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
-		struct Action : public EditAction
-		{
-			Port* const _port;
-			Side  const _initialSide;
-			float const _initialOffset;
-			Side  const _finalSide;
-			float const _finalOffset;
-
-			Action (Port* port, Side initialSide, float initialOffset, Side finalSide, float finalOffset)
-				: _port(port), _initialSide(initialSide), _initialOffset(initialOffset), _finalSide(finalSide), _finalOffset(finalOffset)
-			{ }
-
-			virtual void Redo() override final { _port->SetSideAndOffset (_finalSide, _finalOffset); }
-			virtual void Undo() override final { _port->SetSideAndOffset (_initialSide, _initialOffset); }
-			virtual string GetName() const override final { return "Move Port"; }
-		};
-
-		auto action = unique_ptr<EditAction>(new Action(_port, _initialSide, _initialOffset, _port->GetSide(), _port->GetOffset()));
-		_actionList->AddPerformedUserAction (move(action));
+		_project->SetModified(true);
 		_completed = true;
 	}
 
