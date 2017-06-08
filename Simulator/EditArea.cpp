@@ -113,28 +113,13 @@ public:
 	static void OnBridgeRemoving (void* callbackArg, IProject* project, size_t index, Bridge* b)
 	{
 		auto area = static_cast<EditArea*>(callbackArg);
-		if (dynamic_cast<Bridge*>(area->_htResult.object) != nullptr)
-		{
-			auto htBridge = static_cast<Bridge*>(area->_htResult.object);
-			if (htBridge == b)
-			{
-				area->_htResult = { nullptr, 0 };
-				InvalidateRect (area->GetHWnd(), nullptr, FALSE);
-			}
-		}
-		else if (dynamic_cast<Port*>(area->_htResult.object) != nullptr)
-		{
-			auto htPort = static_cast<Port*>(area->_htResult.object);
-			if (htPort->GetBridge() == b)
-			{
-				area->_htResult = { nullptr, 0 };
-				InvalidateRect (area->GetHWnd(), nullptr, FALSE);
-			}
-		}
+		area->_htResult = { nullptr, 0 };
 	}
 
 	static void OnWireRemoving (void* callbackArg, IProject* project, size_t index, Wire* w)
 	{
+		auto area = static_cast<EditArea*>(callbackArg);
+		area->_htResult = { nullptr, 0 };
 	}
 
 	static void OnProjectInvalidate (void* callbackArg, IProject*)
