@@ -307,18 +307,24 @@ int PropertyGrid::ShowEditor (POINT ptScreen, const NVP* nameValuePairs)
 	auto hwnd = CreateWindowEx (WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, L"GIGI", L"aaa", WS_POPUP | WS_BORDER, 0, 0, 0, 0, GetHWnd(), nullptr, hInstance, nullptr); assert (hwnd != nullptr);
 
 	auto hdc = ::GetDC(hwnd);
-	int dpiX = GetDeviceCaps (hdc, LOGPIXELSX);
-	int dpiY = GetDeviceCaps (hdc, LOGPIXELSY);
-	int padding = 7 * dpiX / 96;
-	LONG buttonWidth = 100 * dpiX / 96;
-	LONG buttonHeight = 0;
-	for (auto nvp = nameValuePairs; nvp->first != nullptr; nvp++)
+
+	LONG maxTextWidth = 0;
+	LONG maxTextHeight = 0;
+	size_t count;
+	for (count = 0; nameValuePairs[count].first != nullptr; count++)
 	{
 		RECT rc = { };
-		DrawTextW (hdc, nvp->first, -1, &rc, DT_CALCRECT);
-		buttonWidth = max (buttonWidth, rc.right - rc.left + 2 * padding);
-		buttonHeight = rc.bottom - rc.top + 2 * padding;
+		DrawTextW (hdc, nameValuePairs[count].first, -1, &rc, DT_CALCRECT);
+		maxTextWidth = max (maxTextWidth, rc.right - rc.left);
+		maxTextHeight = max (maxTextHeight, rc.bottom - rc.top);
 	}
+
+	int dpiX = GetDeviceCaps (hdc, LOGPIXELSX);
+	int dpiY = GetDeviceCaps (hdc, LOGPIXELSY);
+	int lrpadding = 7 * dpiX / 96;
+	int udpadding = ((count <= 5) ? 7 : 1) * dpiY / 96;
+	LONG buttonWidth = max (100l * dpiX / 96, maxTextWidth + 2 * lrpadding);
+	LONG buttonHeight = maxTextHeight + 2 * udpadding;
 
 	NONCLIENTMETRICS ncMetrics = { sizeof(NONCLIENTMETRICS) };
 	SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncMetrics, 0);

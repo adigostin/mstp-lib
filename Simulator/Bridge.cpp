@@ -637,7 +637,27 @@ static const TypedProperty<wstring> AddressProperty
 	}
 );
 
-static const TypedProperty<unsigned short> PriorityProperty
+static const NVP BridgePrioNVPs[] =
+{
+	{ L"1000 (4096 dec)", 0x1000 },
+	{ L"2000 (8192 dec)", 0x2000 },
+	{ L"3000 (12288 dec)", 0x3000 },
+	{ L"4000 (16384 dec)", 0x4000 },
+	{ L"5000 (20480 dec)", 0x5000 },
+	{ L"6000 (24576 dec)", 0x6000 },
+	{ L"7000 (28672 dec)", 0x7000 },
+	{ L"8000 (32768 dec)", 0x8000 },
+	{ L"9000 (36864 dec)", 0x9000 },
+	{ L"A000 (40960 dec)", 0xA000 },
+	{ L"B000 (45056 dec)", 0xB000 },
+	{ L"C000 (49152 dec)", 0xC000 },
+	{ L"D000 (53248 dec)", 0xD000 },
+	{ L"E000 (57344 dec)", 0xE000 },
+	{ L"F000 (61440 dec)", 0xF000 },
+	{ nullptr, 0 },
+};
+
+static const EnumProperty PriorityProperty
 (
 	L"Bridge Priority",
 	[](const std::vector<Object*>& objs, unsigned int vlanNumber) -> wstring
@@ -658,16 +678,19 @@ static const TypedProperty<unsigned short> PriorityProperty
 			label << L"MSTI " << treeIndex << L")";
 		return label.str();
 	},
-	[](const Object* o, unsigned int vlanNumber) -> unsigned short
+	[](const Object* obj, unsigned int vlanNumber) -> int
 	{
-		auto b = static_cast<const Bridge*>(o);
-		auto treeIndex = STP_GetTreeIndexFromVlanNumber (b->GetStpBridge(), vlanNumber);
-		return STP_GetBridgePriority(b->GetStpBridge(), treeIndex);
+		auto stpb = static_cast<const Bridge*>(obj)->GetStpBridge();
+		auto treeIndex = STP_GetTreeIndexFromVlanNumber (stpb, vlanNumber);
+		return STP_GetBridgePriority(stpb, treeIndex);
 	},
-	[](Object* obj, unsigned short value, unsigned int vlanNumber, unsigned int timestamp)
+	[](Object* obj, int value, unsigned int vlanNumber, unsigned int timestamp)
 	{
-		throw not_implemented_exception();
-	}
+		auto stpb = static_cast<Bridge*>(obj)->GetStpBridge();
+		auto treeIndex = STP_GetTreeIndexFromVlanNumber (stpb, vlanNumber);
+		STP_SetBridgePriority (stpb, treeIndex, (unsigned short) value, timestamp);
+	},
+	BridgePrioNVPs
 );
 
 
