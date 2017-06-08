@@ -3,6 +3,7 @@
 #include "Resource.h"
 #include "Bridge.h"
 #include "Port.h"
+#include "PropertyGrid.h"
 
 using namespace std;
 
@@ -39,6 +40,7 @@ class ProjectWindow : public EventManager, public IProjectWindow
 	RECT _restoreBounds;
 	unsigned int _selectedVlanNumber = 1;
 	queue<function<void()>> _workQueue;
+	unique_ptr<PropertyGrid> _pg;
 
 public:
 	ProjectWindow (ISimulatorApp* app,
@@ -101,7 +103,7 @@ public:
 		SetMainMenuItemCheck (ID_VIEW_STPLOG, true);
 
 		auto propsPanel = _dockContainer->CreatePanel (PropsPanelUniqueName, Side::Left, L"Properties");
-		auto propsWindow = propertiesWindowFactory (app, this, project, _selection, propsPanel->GetContentRect(), propsPanel->GetHWnd());
+		_pg.reset (new PropertyGrid(app, this, project, propsPanel->GetContentRect(), propsPanel->GetHWnd(), app->GetDWriteFactory()));
 		propsPanel->GetVisibleChangedEvent().AddHandler (&OnPropsPanelVisibleChanged, this);
 		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
 
@@ -113,6 +115,8 @@ public:
 
 		_editArea = editAreaFactory (app, this, _project, _selection, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), _app->GetDWriteFactory());
 
+		_selection->GetAddedToSelectionEvent().AddHandler (&OnObjectAddedToSelection, this);
+		_selection->GetRemovingFromSelectionEvent().AddHandler (&OnObjectRemovingFromSelection, this);
 		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
 		_project->GetModifiedChangedEvent().AddHandler (&OnProjectModifiedChanged, this);
 		_app->GetProjectWindowAddedEvent().AddHandler (&OnProjectWindowAdded, this);
@@ -127,9 +131,33 @@ public:
 		_app->GetProjectWindowAddedEvent().RemoveHandler (&OnProjectWindowAdded, this);
 		_project->GetModifiedChangedEvent().AddHandler (&OnProjectModifiedChanged, this);
 		_selection->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
+		_selection->GetRemovingFromSelectionEvent().RemoveHandler (&OnObjectRemovingFromSelection, this);
+		_selection->GetAddedToSelectionEvent().RemoveHandler (&OnObjectAddedToSelection, this);
 
 		if (_hwnd != nullptr)
 			::DestroyWindow(_hwnd);
+	}
+
+	static void OnObjectAddedToSelection (void* callbackArg, ISelection* selection, Object* o)
+	{
+		auto pw = static_cast<ProjectWindow*>(callbackArg);
+		auto bridge = dynamic_cast<Bridge*>(o);
+		if (bridge != nullptr)
+			bridge->GetConfigChangedEvent().AddHandler (&OnBridgeConfigChanged, pw);
+	}
+
+	static void OnObjectRemovingFromSelection (void* callbackArg, ISelection* selection, Object* o)
+	{
+		auto pw = static_cast<ProjectWindow*>(callbackArg);
+		auto bridge = dynamic_cast<Bridge*>(o);
+		if (bridge != nullptr)
+			bridge->GetConfigChangedEvent().RemoveHandler (&OnBridgeConfigChanged, pw);
+	}
+
+	static void OnBridgeConfigChanged (void* callbackArg, Bridge* b)
+	{
+		auto pw = static_cast<ProjectWindow*>(callbackArg);
+		pw->_pg->ReloadPropertyValues();
 	}
 
 	static void OnProjectLoaded (void* callbackArg, IProject* project)
@@ -208,6 +236,11 @@ public:
 
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
 	{
+		auto pw = static_cast<ProjectWindow*>(callbackArg);
+		if (selection->GetObjects().empty())
+			pw->_pg->SelectObjects(nullptr, 0);
+		else
+			pw->_pg->SelectObjects (&selection->GetObjects().at(0), selection->GetObjects().size());
 	}
 
 	virtual HWND GetHWnd() const override { return _hwnd; }
@@ -592,6 +625,7 @@ public:
 			SelectedVlanNumerChangedEvent::InvokeHandlers(this, this, vlanNumber);
 			::InvalidateRect (GetHWnd(), nullptr, FALSE);
 			SetWindowTitle();
+			_pg->ReloadPropertyValues();
 		}
 	};
 

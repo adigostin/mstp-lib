@@ -175,20 +175,6 @@ extern const ProjectFactory projectFactory;
 
 // ============================================================================
 
-MIDL_INTERFACE("8C5BA174-3A21-4953-BAA4-D04E8F2EB87F") IPropertiesWindow : public IWin32Window
-{
-};
-_COM_SMARTPTR_TYPEDEF(IPropertiesWindow, __uuidof(IPropertiesWindow));
-using PropertiesWindowFactory = IPropertiesWindowPtr(*const)(ISimulatorApp* app,
-															 IProjectWindow* projectWindow,
-															 IProject* project,
-															 ISelection* selection,
-															 const RECT& rect,
-															 HWND hWndParent);
-extern const PropertiesWindowFactory propertiesWindowFactory;
-
-// ============================================================================
-
 MIDL_INTERFACE("6438D8FC-058B-4A83-A4DC-2B48AE028D09") IBridgePropsWindow : public IWin32Window
 {
 };

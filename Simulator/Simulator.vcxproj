@@ -250,7 +250,6 @@
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="PropertyGrid.cpp" />
-    <ClCompile Include="PropsWindow.cpp" />
     <ClCompile Include="Test.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>

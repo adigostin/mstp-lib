@@ -65,7 +65,6 @@
     <ClCompile Include="VlanWindow.cpp" />
     <ClCompile Include="BridgePropsWindow.cpp" />
     <ClCompile Include="MSTConfigIdDialog.cpp" />
-    <ClCompile Include="PropsWindow.cpp" />
     <ClCompile Include="Test.c" />
     <ClCompile Include="EditStates\MovePortES.cpp">
       <Filter>EditStates</Filter>
