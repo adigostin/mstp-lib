@@ -26,7 +26,7 @@ class Port : public Object
 public:
 	Port (Bridge* bridge, unsigned int portIndex, Side side, float offset);
 
-	virtual const Property* const* GetProperties() const override final;
+	virtual const PropertyOrGroup* const* GetProperties() const override final;
 
 	static constexpr int HTCodeInnerOuter = 1;
 	static constexpr int HTCodeCP = 2;

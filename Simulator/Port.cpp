@@ -326,6 +326,7 @@ bool Port::GetMacOperational() const
 static const TypedProperty<bool> PortPropAdminEdge
 (
 	L"AdminEdge",
+	nullptr,
 	[](const Object* o, unsigned int vlanNumber)
 	{
 		auto port = static_cast<const Port*>(o);
@@ -337,6 +338,7 @@ static const TypedProperty<bool> PortPropAdminEdge
 static const TypedProperty<bool> PortPropAutoEdge
 (
 	L"AutoEdge",
+	nullptr,
 	[](const Object* o, unsigned int vlanNumber)
 	{
 		auto port = static_cast<const Port*>(o);
@@ -345,14 +347,14 @@ static const TypedProperty<bool> PortPropAutoEdge
 	nullptr
 );
 
-static const Property* const PortProperties[] =
+static const PropertyOrGroup* const PortProperties[] =
 {
 	&PortPropAutoEdge,
 	&PortPropAdminEdge,
 	nullptr
 };
 
-const Property* const* Port::GetProperties() const
+const PropertyOrGroup* const* Port::GetProperties() const
 {
 	return PortProperties;
 }

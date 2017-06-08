@@ -5,14 +5,29 @@
 struct IZoomable;
 class Object;
 
-struct Property abstract
+struct PropertyOrGroup
 {
 	using LabelGetter = std::wstring(*)(const std::vector<Object*>& objects, unsigned int vlanNumber);
 
-	const wchar_t* const _name;
-	LabelGetter const _labelGetter;
+	const wchar_t* _name;
+	LabelGetter _labelGetter;
 
-	Property (const wchar_t* name, LabelGetter labelGetter) : _name(name), _labelGetter(labelGetter) { }
+	PropertyOrGroup (const wchar_t* name, LabelGetter labelGetter)
+		: _name(name), _labelGetter(labelGetter)
+	{ }
+
+	virtual ~PropertyOrGroup() = default;
+};
+
+struct PropertyGroup : PropertyOrGroup
+{
+	using PropertyOrGroup::PropertyOrGroup;
+};
+
+struct Property abstract : PropertyOrGroup
+{
+	using base = PropertyOrGroup;
+	using base::base;
 	virtual bool IsReadOnly() const = 0;
 	virtual std::wstring to_wstring (const Object* so, unsigned int vlanNumber) const = 0;
 };
@@ -25,7 +40,7 @@ struct TypedProperty : Property
 	Getter const _getter;
 	Setter const _setter;
 
-	TypedProperty (const wchar_t* name, Getter getter, Setter setter, LabelGetter labelGetter = nullptr)
+	TypedProperty (const wchar_t* name, LabelGetter labelGetter, Getter getter, Setter setter)
 		: Property(name, labelGetter), _getter(getter), _setter(setter)
 	{ }
 
@@ -49,9 +64,14 @@ using NVP = std::pair<const wchar_t*, int>;
 
 struct EnumProperty : TypedProperty<int>
 {
+	using base = TypedProperty<int>;
+
 	const NVP* const _nameValuePairs;
 
-	EnumProperty (const wchar_t* name, Getter getter, Setter setter, const NVP* nameValuePairs);
+	EnumProperty (const wchar_t* name, LabelGetter labelGetter, Getter getter, Setter setter, const NVP* nameValuePairs)
+		: base(name, labelGetter, getter, setter), _nameValuePairs(nameValuePairs)
+	{ }
+
 	virtual std::wstring to_wstring (const Object* obj, unsigned int vlanNumber) const override;
 };
 
@@ -98,5 +118,5 @@ public:
 	template<typename T>
 	bool Is() const { return dynamic_cast<const T*>(this) != nullptr; }
 
-	virtual const Property* const* GetProperties() const = 0;
+	virtual const PropertyOrGroup* const* GetProperties() const = 0;
 };

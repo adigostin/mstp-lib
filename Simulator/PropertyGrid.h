@@ -10,6 +10,7 @@ class PropertyGrid : public D2DWindow
 	IProjectWindow* const _projectWindow;
 	IProjectPtr const _project;
 	IDWriteTextFormatPtr _textFormat;
+	IDWriteTextFormatPtr _boldTextFormat;
 	IDWriteTextFormatPtr _wingdings;
 	float _nameColumnSize = 0.5f;
 	ID2D1SolidColorBrushPtr _windowBrush;
@@ -19,7 +20,7 @@ class PropertyGrid : public D2DWindow
 
 	struct Item
 	{
-		const Property* pd;
+		const PropertyOrGroup* pd;
 		TextLayout labelTL;
 		TextLayout valueTL;
 	};

@@ -16,7 +16,7 @@ public:
 	Wire() = default;
 	Wire (WireEnd firstEnd, WireEnd secondEnd);
 
-	virtual const Property* const* GetProperties() const override final;
+	virtual const PropertyOrGroup* const* GetProperties() const override final;
 
 	const std::array<WireEnd, 2>& GetPoints() const { return _points; }
 	void SetPoint (size_t pointIndex, const WireEnd& point);

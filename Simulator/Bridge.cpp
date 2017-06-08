@@ -619,9 +619,16 @@ void Bridge::ResumeSimulation()
 	ProcessReceivedPackets();
 }
 
-static const TypedProperty<wstring> BridgePropAddress
+static const PropertyGroup CommonPropGroup
+{
+	L"Common",
+	nullptr,
+};
+
+static const TypedProperty<wstring> AddressProperty
 (
 	L"Bridge Address",
+	nullptr,
 	[](const Object* o, unsigned int vlanNumber) { return static_cast<const Bridge*>(o)->GetBridgeAddressAsWString(); },
 	[](Object* obj, wstring str, unsigned int vlanNumber, unsigned int timestamp)
 	{
@@ -630,9 +637,44 @@ static const TypedProperty<wstring> BridgePropAddress
 	}
 );
 
+static const TypedProperty<unsigned short> PriorityProperty
+(
+	L"Bridge Priority",
+	[](const std::vector<Object*>& objs, unsigned int vlanNumber) -> wstring
+	{
+		auto treeIndex = STP_GetTreeIndexFromVlanNumber(static_cast<Bridge*>(objs[0])->GetStpBridge(), vlanNumber);
+		auto begin = reinterpret_cast<Bridge* const*>(&objs[0]);
+		auto end = begin + objs.size();
+		bool allSameTree = all_of (begin, end, [vlanNumber, treeIndex](Bridge* b) { return STP_GetTreeIndexFromVlanNumber(b->GetStpBridge(), vlanNumber) == treeIndex; });
+
+		if (!allSameTree)
+			return wstring(L"Bridge Priority");
+
+		wstringstream label;
+		label << L"Bridge Priority (";
+		if (treeIndex == 0)
+			label << L"CIST)";
+		else
+			label << L"MSTI " << treeIndex << L")";
+		return label.str();
+	},
+	[](const Object* o, unsigned int vlanNumber) -> unsigned short
+	{
+		auto b = static_cast<const Bridge*>(o);
+		auto treeIndex = STP_GetTreeIndexFromVlanNumber (b->GetStpBridge(), vlanNumber);
+		return STP_GetBridgePriority(b->GetStpBridge(), treeIndex);
+	},
+	[](Object* obj, unsigned short value, unsigned int vlanNumber, unsigned int timestamp)
+	{
+		throw not_implemented_exception();
+	}
+);
+
+
 static const TypedProperty<bool> BridgePropStpEnabled
 (
 	L"STP Enabled",
+	nullptr,
 	[](const Object* o, unsigned int vlanNumber) { return (bool) STP_IsBridgeStarted(static_cast<const Bridge*>(o)->GetStpBridge()); },
 	[](Object* obj, bool value, unsigned int vlanNumber, unsigned int timestamp)
 	{
@@ -649,6 +691,7 @@ static const NVP StpVersionNVPs[] = { { L"LegacySTP", STP_VERSION_LEGACY_STP }, 
 static const EnumProperty BridgePropStpVersion
 {
 	L"STP Version",
+	nullptr,
 	[](const Object* o, unsigned int vlanNumber) { return (int) STP_GetStpVersion(static_cast<const Bridge*>(o)->GetStpBridge()); },
 	[](Object* obj, int value, unsigned int vlanNumber, unsigned int timestamp)
 	{
@@ -663,6 +706,7 @@ static const EnumProperty BridgePropStpVersion
 static const TypedProperty<unsigned int> BridgePropPortCount
 {
 	L"Port Count",
+	nullptr,
 	[](const Object* o, unsigned int vlanNumber) { return (unsigned int) static_cast<const Bridge*>(o)->GetPorts().size(); },
 	nullptr
 };
@@ -670,53 +714,152 @@ static const TypedProperty<unsigned int> BridgePropPortCount
 static const TypedProperty<unsigned int> BridgePropMstiCount
 {
 	L"MSTI Count",
+	nullptr,
 	[](const Object* o, unsigned int vlanNumber) { return STP_GetMstiCount(static_cast<const Bridge*>(o)->GetStpBridge()); },
 	nullptr
 };
 
-static const TypedProperty<unsigned short> BridgePropPrio
-(
-	L"Bridge Priority",
-	[](const Object* o, unsigned int vlanNumber) -> unsigned short
-	{
-		auto b = static_cast<const Bridge*>(o);
-		auto treeIndex = STP_GetTreeIndexFromVlanNumber (b->GetStpBridge(), vlanNumber);
-		return STP_GetBridgePriority(b->GetStpBridge(), treeIndex);
-	},
+static const PropertyGroup RootPriorityVectorPropGroup
+{
+	L"Root Priority Vector",
 	nullptr,
-	[](const std::vector<Object*>& objs, unsigned int vlanNumber) -> wstring
+};
+
+static array<unsigned char, 36> GetRootPV (const Object* obj, unsigned int vlanNumber)
+{
+	auto stpb = static_cast<const Bridge*>(obj)->GetStpBridge();
+	auto treeIndex = STP_GetTreeIndexFromVlanNumber(stpb, vlanNumber);
+	array<unsigned char, 36> prioVector;
+	STP_GetRootPriorityVector(stpb, 0, prioVector.data());
+	return prioVector;
+}
+
+static const TypedProperty<wstring> RootBridgeId
+(
+	L"Root Bridge ID",
+	nullptr,
+	[](const Object* obj, unsigned int vlanNumber) -> wstring
 	{
-		auto treeIndex = STP_GetTreeIndexFromVlanNumber(dynamic_cast<Bridge*>(objs[0])->GetStpBridge(), vlanNumber);
-		auto begin = reinterpret_cast<Bridge* const*>(&objs[0]);
-		auto end = begin + objs.size();
-		bool allSameTree = all_of (begin, end, [vlanNumber, treeIndex](Bridge* b) { return STP_GetTreeIndexFromVlanNumber(b->GetStpBridge(), vlanNumber) == treeIndex; });
-
-		if (!allSameTree)
-			return wstring(L"Bridge Priority");
-
-		wstringstream label;
-		label << L"Bridge Priority (";
-		if (treeIndex == 0)
-			label << L"CIST)";
-		else
-			label << L"MSTI " << treeIndex << L")";
-		return label.str();
-	}
+		auto rpv = GetRootPV(obj, vlanNumber);
+		wstringstream ss;
+		ss << uppercase << setfill(L'0') << hex
+			<< setw(2) << rpv[0] << setw(2) << rpv[1] << "."
+			<< setw(2) << rpv[2] << setw(2) << rpv[3] << setw(2) << rpv[4]
+			<< setw(2) << rpv[5] << setw(2) << rpv[6] << setw(2) << rpv[7];
+		return ss.str();
+	},
+	nullptr
 );
 
+static const TypedProperty<unsigned int> ExternalRootPathCost
+(
+	L"External Root Path Cost",
+	nullptr,
+	[](const Object* obj, unsigned int vlanNumber)
+	{
+		auto rpv = GetRootPV(obj, vlanNumber);
+		auto cost = ((uint32_t) rpv[8] << 24) | ((uint32_t) rpv[9] << 16) | ((uint32_t) rpv[10] << 8) | rpv[11];
+		return (unsigned int) cost;
+	},
+	nullptr
+);
 
-static const Property* const BridgeProperties[] =
+static const TypedProperty<wstring> RegionalRootBridgeId
+(
+	L"Regional Root Bridge Id",
+	nullptr,
+	[](const Object* obj, unsigned int vlanNumber)
+	{
+		auto rpv = GetRootPV(obj, vlanNumber);
+		wstringstream ss;
+		ss << uppercase << setfill(L'0') << hex
+			<< setw(2) << rpv[12] << setw(2) << rpv[13] << "."
+			<< setw(2) << rpv[14] << setw(2) << rpv[15] << setw(2) << rpv[16]
+			<< setw(2) << rpv[17] << setw(2) << rpv[18] << setw(2) << rpv[19];
+		return ss.str();
+	},
+	nullptr
+);
+
+static const TypedProperty<unsigned int> InternalRootPathCost
+(
+	L"Internal Root Path Cost",
+	nullptr,
+	[](const Object* obj, unsigned int vlanNumber)
+	{
+		auto rpv = GetRootPV(obj, vlanNumber);
+		auto cost = ((uint32_t) rpv[20] << 24) | ((uint32_t) rpv[21] << 16) | ((uint32_t) rpv[22] << 8) | rpv[23];
+		return (unsigned int) cost;
+	},
+	nullptr
+);
+
+static const TypedProperty<wstring> DesignatedBridgeId
+(
+	L"Designated Bridge Id",
+	nullptr,
+	[](const Object* obj, unsigned int vlanNumber)
+	{
+		auto rpv = GetRootPV(obj, vlanNumber);
+		wstringstream ss;
+		ss << uppercase << setfill(L'0') << hex
+			<< setw(2) << rpv[24] << setw(2) << rpv[25] << "."
+			<< setw(2) << rpv[26] << setw(2) << rpv[27] << setw(2) << rpv[28]
+			<< setw(2) << rpv[29] << setw(2) << rpv[30] << setw(2) << rpv[31];
+		return ss.str();
+	},
+	nullptr
+);
+
+static const TypedProperty<wstring> DesignatedPortId
+(
+	L"Designated Port Id",
+	nullptr,
+	[](const Object* obj, unsigned int vlanNumber)
+	{
+		auto rpv = GetRootPV(obj, vlanNumber);
+		wstringstream ss;
+		ss << uppercase << setfill(L'0') << hex << setw(2) << rpv[32] << setw(2) << rpv[33];
+		return ss.str();
+	},
+	nullptr
+);
+
+static const TypedProperty<wstring> ReceivingPortId
+(
+	L"Receiving Port Id",
+	nullptr,
+	[](const Object* obj, unsigned int vlanNumber)
+	{
+		auto rpv = GetRootPV(obj, vlanNumber);
+		wstringstream ss;
+		ss << uppercase << setfill(L'0') << hex << setw(2) << rpv[34] << setw(2) << rpv[35];
+		return ss.str();
+	},
+	nullptr
+);
+
+static const PropertyOrGroup* const BridgeProperties[] =
 {
-	&BridgePropAddress,
+	&CommonPropGroup,
+	&AddressProperty,
+	&PriorityProperty,
 	&BridgePropStpEnabled,
 	&BridgePropStpVersion,
 	&BridgePropPortCount,
 	&BridgePropMstiCount,
-	&BridgePropPrio,
+	&RootPriorityVectorPropGroup,
+	&RootBridgeId,
+	&ExternalRootPathCost,
+	&RegionalRootBridgeId,
+	&InternalRootPathCost,
+	&DesignatedBridgeId,
+	&DesignatedPortId,
+	&ReceivingPortId,
 	nullptr,
 };
 
-const Property* const* Bridge::GetProperties() const
+const PropertyOrGroup* const* Bridge::GetProperties() const
 {
 	return BridgeProperties;
 }

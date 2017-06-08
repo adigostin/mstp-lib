@@ -195,12 +195,12 @@ WireEnd Wire::DeserializeEnd (IProject* project, IXMLDOMElement* element)
 		throw not_implemented_exception();
 }
 
-static const Property* const WireProperties[] =
+static const PropertyOrGroup* const WireProperties[] =
 {
 	nullptr
 };
 
-const Property* const* Wire::GetProperties() const
+const PropertyOrGroup* const* Wire::GetProperties() const
 {
 	return WireProperties;
 }

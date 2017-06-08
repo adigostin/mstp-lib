@@ -16,6 +16,9 @@ PropertyGrid::PropertyGrid (ISimulatorApp* app, IProjectWindow* projectWindow, I
 	auto hr = dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
 											   DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_textFormat); ThrowIfFailed(hr);
 
+	hr = dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL,
+										  DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_boldTextFormat); ThrowIfFailed(hr);
+
 	hr = dWriteFactory->CreateTextFormat (L"Wingdings", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
 										  DWRITE_FONT_STRETCH_NORMAL, 14, L"en-US", &_wingdings); ThrowIfFailed(hr);
 
@@ -68,13 +71,21 @@ void PropertyGrid::ProcessWmSetCursor (POINT pt) const
 {
 	auto dipLocation = GetDipLocationFromPixelLocation(pt);
 	auto item = GetItemAt(dipLocation);
-	if ((item != nullptr) && !item->pd->IsReadOnly())
+	if ((item == nullptr) || (dynamic_cast<const Property*>(item->pd) == nullptr))
 	{
-		if (dipLocation.x >= GetNameColumnWidth())
-			::SetCursor (::LoadCursor (nullptr, IDC_HAND));
-		else
-			::SetCursor (::LoadCursor (nullptr, IDC_ARROW));
+		::SetCursor (::LoadCursor (nullptr, IDC_ARROW));
+		return;
 	}
+
+	auto pd = static_cast<const Property*>(item->pd);
+	if (pd->IsReadOnly())
+	{
+		::SetCursor (::LoadCursor (nullptr, IDC_ARROW));
+		return;
+	}
+
+	if (dipLocation.x >= GetNameColumnWidth())
+		::SetCursor (::LoadCursor (nullptr, IDC_HAND));
 	else
 		::SetCursor (::LoadCursor (nullptr, IDC_ARROW));
 }
@@ -102,7 +113,7 @@ const PropertyGrid::Item* PropertyGrid::EnumItems (std::function<void(float text
 		func (y, lineY, lineWidth, item, cancelEnum);
 		if (cancelEnum)
 			return &item;
-		y = lineY + lineWidth;
+		y = lineY + lineWidth / 2;
 	}
 
 	return nullptr;
@@ -120,20 +131,27 @@ void PropertyGrid::Render (ID2D1RenderTarget* rt) const
 		return;
 	}
 
-	float lastLineY = 0;
-	EnumItems ([this, rt, &lastLineY](float textY, float lineY, float lineWidth, const Item& item, bool& stopEnum)
+	auto nameColumnWidth = GetNameColumnWidth();
+	EnumItems ([this, rt, nameColumnWidth](float textY, float lineY, float lineWidth, const Item& item, bool& stopEnum)
 	{
-		auto& brush = item.pd->IsReadOnly() ? _grayTextBrush : _windowTextBrush;
-		rt->DrawTextLayout ({ CellLRPadding, textY }, item.labelTL.layout, brush);
-		rt->DrawTextLayout ({ GetNameColumnWidth() + lineWidth + CellLRPadding, textY }, item.valueTL.layout, brush);
+		if (dynamic_cast<const PropertyGroup*>(item.pd) != nullptr)
+		{
+			rt->DrawTextLayout ({ CellLRPadding, textY }, item.labelTL.layout, _windowTextBrush);
+		}
+		else if (dynamic_cast<const Property*>(item.pd) != nullptr)
+		{
+			auto pd = static_cast<const Property*>(item.pd);
+			auto& brush = pd->IsReadOnly() ? _grayTextBrush : _windowTextBrush;
+			rt->DrawTextLayout ({ CellLRPadding, textY }, item.labelTL.layout, brush);
+			if (item.valueTL.layout != nullptr)
+			{
+				float x = nameColumnWidth + lineWidth / 2;
+				rt->DrawLine ({ x, textY }, { x, lineY - lineWidth / 2 }, _grayTextBrush, lineWidth);
+				rt->DrawTextLayout ({ nameColumnWidth + lineWidth + CellLRPadding, textY }, item.valueTL.layout, brush);
+			}
+		}
 		rt->DrawLine ({ 0, lineY }, { GetClientWidthDips(), lineY }, _grayTextBrush, lineWidth);
-		lastLineY = lineY;
 	});
-
-	float pixelWidth = GetDipSizeFromPixelSize ({ 1, 0 }).width;
-	float lineWidth = roundf(1.0f / pixelWidth) * pixelWidth;
-	float x = GetNameColumnWidth() + lineWidth / 2;
-	rt->DrawLine ({ x, 0 }, { x, lastLineY }, _grayTextBrush, lineWidth);
 }
 
 float PropertyGrid::GetNameColumnWidth() const
@@ -193,10 +211,14 @@ void PropertyGrid::CreateLabelTextLayouts()
 	float maxWidth = GetNameColumnWidth() - 2 * CellLRPadding;
 	for (auto& item : _items)
 	{
+		IDWriteTextFormat* textFormat = _textFormat;
+		if (dynamic_cast<const PropertyGroup*>(item.pd) != nullptr)
+			textFormat = _boldTextFormat;
+
 		if (item.pd->_labelGetter != nullptr)
-			item.labelTL = TextLayout::Create (GetDWriteFactory(), _textFormat, item.pd->_labelGetter(_selectedObjects, _projectWindow->GetSelectedVlanNumber()).c_str(), maxWidth);
+			item.labelTL = TextLayout::Create (GetDWriteFactory(), textFormat, item.pd->_labelGetter(_selectedObjects, _projectWindow->GetSelectedVlanNumber()).c_str(), maxWidth);
 		else
-			item.labelTL = TextLayout::Create (GetDWriteFactory(), _textFormat, item.pd->_name, maxWidth);
+			item.labelTL = TextLayout::Create (GetDWriteFactory(), textFormat, item.pd->_name, maxWidth);
 	}
 }
 
@@ -208,19 +230,24 @@ void PropertyGrid::CreateValueTextLayouts()
 
 	for (auto& item : _items)
 	{
-		auto str = item.pd->to_wstring (_selectedObjects[0], _projectWindow->GetSelectedVlanNumber());
-		item.valueTL.layout = nullptr;
-		for (size_t i = 1; i < _selectedObjects.size(); i++)
+		if (dynamic_cast<const Property*>(item.pd) != nullptr)
 		{
-			if (item.pd->to_wstring(_selectedObjects[i], _projectWindow->GetSelectedVlanNumber()) != str)
-			{
-				item.valueTL = TextLayout::Create (GetDWriteFactory(), _textFormat, L"(multiple selection)", maxWidth);
-				break;
-			}
-		}
+			auto pd = static_cast<const Property*>(item.pd);
 
-		if (item.valueTL.layout == nullptr)
-			item.valueTL = TextLayout::Create (GetDWriteFactory(), _textFormat, str.c_str(), maxWidth);
+			auto str = pd->to_wstring (_selectedObjects[0], _projectWindow->GetSelectedVlanNumber());
+			item.valueTL.layout = nullptr;
+			for (size_t i = 1; i < _selectedObjects.size(); i++)
+			{
+				if (pd->to_wstring(_selectedObjects[i], _projectWindow->GetSelectedVlanNumber()) != str)
+				{
+					item.valueTL = TextLayout::Create (GetDWriteFactory(), _textFormat, L"(multiple selection)", maxWidth);
+					break;
+				}
+			}
+
+			if (item.valueTL.layout == nullptr)
+				item.valueTL = TextLayout::Create (GetDWriteFactory(), _textFormat, str.c_str(), maxWidth);
+		}
 	}
 }
 
@@ -348,8 +375,18 @@ int PropertyGrid::ShowEditor (POINT ptScreen, const NVP* nameValuePairs)
 void PropertyGrid::ProcessLButtonUp (DWORD modifierKeys, POINT pt)
 {
 	auto item = GetItemAt (GetDipLocationFromPixelLocation(pt));
-	if ((item != nullptr) && !item->pd->IsReadOnly())
+	if (item == nullptr)
+		return;
+
+	if (dynamic_cast<const PropertyGroup*>(item->pd) != nullptr)
 	{
+	}
+	else if (dynamic_cast<const Property*>(item->pd) != nullptr)
+	{
+		auto pd = static_cast<const Property*>(item->pd);
+		if (pd->IsReadOnly())
+			return;
+
 		::ClientToScreen (GetHWnd(), &pt);
 
 		if (dynamic_cast<const TypedProperty<bool>*>(item->pd) != nullptr)
@@ -392,4 +429,6 @@ void PropertyGrid::ProcessLButtonUp (DWORD modifierKeys, POINT pt)
 		else
 			MessageBox (GetHWnd(), item->pd->_name, L"aaaa", 0);
 	}
+	else
+		throw not_implemented_exception();
 }
