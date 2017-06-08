@@ -322,19 +322,19 @@ int PropertyGrid::ShowEditor (POINT ptScreen, const NVP* nameValuePairs)
 	int dpiX = GetDeviceCaps (hdc, LOGPIXELSX);
 	int dpiY = GetDeviceCaps (hdc, LOGPIXELSY);
 	int lrpadding = 7 * dpiX / 96;
-	int udpadding = ((count <= 5) ? 7 : 1) * dpiY / 96;
-	LONG buttonWidth = max (100l * dpiX / 96, maxTextWidth + 2 * lrpadding);
-	LONG buttonHeight = maxTextHeight + 2 * udpadding;
+	int udpadding = ((count <= 5) ? 5 : 0) * dpiY / 96;
+	LONG buttonWidth = max (100l * dpiX / 96, maxTextWidth + 2 * lrpadding) + 2 * GetSystemMetrics(SM_CXSIZEFRAME);
+	LONG buttonHeight = maxTextHeight + 2 * udpadding + 2 * GetSystemMetrics(SM_CYSIZEFRAME);
 
 	NONCLIENTMETRICS ncMetrics = { sizeof(NONCLIENTMETRICS) };
 	SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncMetrics, 0);
-	HFONT_unique_ptr font (CreateFontIndirect (&ncMetrics.lfMessageFont));
+	HFONT_unique_ptr font (CreateFontIndirect (&ncMetrics.lfMenuFont));
 
 	int margin = 2 * dpiX / 96;
 	int y = margin;
 	for (auto nvp = nameValuePairs; nvp->first != nullptr; nvp++)
 	{
-		auto button = CreateWindowEx (0, L"Button", nvp->first, WS_CHILD | WS_VISIBLE | BS_NOTIFY, margin, y, buttonWidth, buttonHeight, hwnd, (HMENU) (INT_PTR) nvp->second, hInstance, nullptr);
+		auto button = CreateWindowEx (0, L"Button", nvp->first, WS_CHILD | WS_VISIBLE | BS_NOTIFY | BS_FLAT, margin, y, buttonWidth, buttonHeight, hwnd, (HMENU) (INT_PTR) nvp->second, hInstance, nullptr);
 		::SendMessage (button, WM_SETFONT, (WPARAM) font.get(), FALSE);
 		y += buttonHeight + margin;
 	}
