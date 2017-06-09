@@ -885,6 +885,78 @@ static const TypedProperty<wstring> ReceivingPortId
 	nullptr
 );
 
+static const PropertyGroup MstConfigIdGroup
+{
+	L"MST Config ID",
+	nullptr,
+};
+
+static const TypedProperty<wstring> MstConfigIdName
+(
+	L"Name",
+	nullptr,
+	[](const Object* obj, unsigned int vlanNumber) -> wstring
+	{
+		auto stpb = static_cast<const Bridge*>(obj)->GetStpBridge();
+		auto configId = STP_GetMstConfigId(stpb);
+		std::string ascii (configId->ConfigurationName, configId->ConfigurationName + strnlen (configId->ConfigurationName, 32));
+		wstring_convert<codecvt_utf8<wchar_t>> converter;
+		std::wstring utf16 = converter.from_bytes(ascii);
+		return utf16;
+	},
+	[](Object* obj, wstring value, unsigned int vlanNumber, unsigned int timestamp)
+	{
+		auto stpb = static_cast<const Bridge*>(obj)->GetStpBridge();
+		auto len = wcslen(value.c_str());
+		if (len > 32)
+			throw invalid_argument("Invalid MST Config Name: more than 32 characters.");
+
+		string ascii;
+		for (auto p = value.c_str(); *p != 0; p++)
+		{
+			if (*p >= 128)
+				throw invalid_argument("Invalid MST Config Name: non-ASCII characters.");
+
+			ascii.push_back((char) *p);
+		}
+		ascii.resize(32);
+
+		STP_SetMstConfigName (stpb, ascii.c_str(), timestamp);
+	}
+);
+
+static const TypedProperty<unsigned short> MstConfigIdRevLevel
+(
+	L"Revision Level",
+	nullptr,
+	[](const Object* obj, unsigned int vlanNumber) -> unsigned short
+	{
+		auto stpb = static_cast<const Bridge*>(obj)->GetStpBridge();
+		auto id = STP_GetMstConfigId(stpb);
+		return ((unsigned short) id->RevisionLevelHigh << 8) | (unsigned short) id->RevisionLevelLow;
+	},
+	nullptr
+);
+
+static const TypedProperty<wstring> MstConfigIdDigest
+(
+	L"Digest",
+	nullptr,
+	[](const Object* obj, unsigned int vlanNumber) -> wstring
+	{
+		auto stpb = static_cast<const Bridge*>(obj)->GetStpBridge();
+		const unsigned char* digest = STP_GetMstConfigId(stpb)->ConfigurationDigest;
+		wstringstream ss;
+		ss << uppercase << setfill(L'0') << hex
+			<< setw(2) << digest[0]  << setw(2) << digest[1]  << setw(2) << digest[2]  << setw(2) << digest[3]
+			<< setw(2) << digest[4]  << setw(2) << digest[5]  << setw(2) << digest[6]  << setw(2) << digest[7]
+			<< setw(2) << digest[8]  << setw(2) << digest[9]  << setw(2) << digest[10] << setw(2) << digest[11]
+			<< setw(2) << digest[12] << setw(2) << digest[13] << setw(2) << digest[14] << setw(2) << digest[15];
+		return ss.str();
+	},
+	nullptr
+);
+
 static const PropertyOrGroup* const BridgeProperties[] =
 {
 	&CommonPropGroup,
@@ -902,6 +974,10 @@ static const PropertyOrGroup* const BridgeProperties[] =
 	&DesignatedBridgeId,
 	&DesignatedPortId,
 	&ReceivingPortId,
+	&MstConfigIdGroup,
+	&MstConfigIdName,
+	&MstConfigIdRevLevel,
+	&MstConfigIdDigest,
 	nullptr,
 };
 
