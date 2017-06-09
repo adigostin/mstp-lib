@@ -6,6 +6,7 @@
 using namespace std;
 
 static constexpr float CellLRPadding = 3.0f;
+static constexpr UINT WM_CLOSE_POPUP = WM_APP + 1;
 
 PropertyGrid::PropertyGrid (ISimulatorApp* app, IProjectWindow* projectWindow, IProject* project, const RECT& rect, HWND hWndParent, IDWriteFactory* dWriteFactory)
 	: base (app->GetHInstance(), 0, WS_CHILD | WS_VISIBLE, rect, hWndParent, nullptr, dWriteFactory)
@@ -164,6 +165,8 @@ float PropertyGrid::GetNameColumnWidth() const
 
 void PropertyGrid::DiscardEditor()
 {
+	if (_editorInfo.has_value())
+		::SendMessage (_editorInfo->_popupHWnd, WM_CLOSE_POPUP, 0, 0);
 }
 
 void PropertyGrid::SelectObjects (Object* const* objects, size_t count)
@@ -260,94 +263,230 @@ void PropertyGrid::ReloadPropertyValues()
 	::InvalidateRect (GetHWnd(), NULL, FALSE);
 }
 
-static const UINT WM_CLOSE_EDITOR = WM_APP + 1;
-
-LRESULT CALLBACK EditorWndProc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+// static
+LRESULT CALLBACK PropertyGrid::EditSubclassProc (HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
-	if (msg == WM_ACTIVATE)
-		return 0; // DefWindowProc would set the keyboard focus
+	auto pg = reinterpret_cast<PropertyGrid*>(dwRefData);
 
-	if (msg == WM_MOUSEACTIVATE)
-		return MA_NOACTIVATE;
-
-	if ((msg == WM_COMMAND) && (HIWORD(wParam) == BN_CLICKED))
+	if ((msg == WM_CHAR) && ((wParam == VK_RETURN) || (wParam == VK_ESCAPE)))
 	{
-		::PostMessage (hwnd, WM_CLOSE_EDITOR, LOWORD(wParam), 0);
+		// disable the beep on these keys
 		return 0;
 	}
 
-	return DefWindowProc (hwnd, msg, wParam, lParam);
+	if (((msg == WM_KEYDOWN) && (wParam == VK_RETURN))
+		 /*|| (msg == WM_KILLFOCUS)*/)
+	{
+		if (pg->_editorInfo->_validating)
+			return DefSubclassProc (hWnd, msg, wParam, lParam);
+
+		wstring newStr (::GetWindowTextLength(hWnd) + 1, 0);
+		::GetWindowText (hWnd, newStr.data(), (int) newStr.length());
+		newStr.resize (newStr.length() - 1);
+		if (newStr == pg->_editorInfo->_initialString)
+		{
+			::PostMessage (pg->_editorInfo->_popupHWnd, WM_CLOSE_POPUP, 0, 0);
+			return 0;
+		}
+
+		try
+		{
+			pg->_editorInfo->_validating = true;
+			pg->_editorInfo->_validateAndSetFunction(newStr);
+			pg->_editorInfo->_validating = false;
+			::PostMessage (pg->_editorInfo->_popupHWnd, WM_CLOSE_POPUP, 0, 0);
+		}
+		catch (const exception& ex)
+		{
+			//::SetFocus (pg->_editorInfo->_editHWnd);
+			::SetFocus (nullptr);
+			pg->_projectWindow->PostWork ([pg, message=string(ex.what())] () mutable
+			{
+				message += "\r\n\r\n(You can press Escape to cancel your edits.)";
+				::MessageBoxA (pg->_editorInfo->_popupHWnd, message.c_str(), 0, 0);
+				::SetFocus (pg->_editorInfo->_editHWnd);
+				::SendMessage (pg->_editorInfo->_editHWnd, EM_SETSEL, 0, -1);
+				pg->_editorInfo->_validating = false;
+			});
+		}
+
+		return 0;
+	}
+	else if ((msg == WM_KEYDOWN) && (wParam == VK_ESCAPE))
+	{
+		::PostMessage (pg->_editorInfo->_popupHWnd, WM_CLOSE_POPUP, 0, 0);
+		return 0;
+	}
+
+	return DefSubclassProc (hWnd, msg, wParam, lParam);
 }
 
-int PropertyGrid::ShowEditor (POINT ptScreen, const NVP* nameValuePairs)
+void PropertyGrid::ShowEditor (POINT ptScreen, const wchar_t* str, VSF validateAndSetFunction)
 {
-	HINSTANCE hInstance;
-	BOOL bRes = ::GetModuleHandleExW (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &EditorWndProc, &hInstance); assert(bRes);
+	HINSTANCE hInstance = (HINSTANCE) GetWindowLongPtr (GetHWnd(), GWLP_HINSTANCE);
 
+	static constexpr wchar_t ClassName[] = L"GIGI-{F52B45B0-7543-4B85-A1A5-7BB88D678F02}";
 	static ATOM atom = 0;
 	if (atom == 0)
 	{
 		WNDCLASS EditorWndClass =
 		{
 			0, // style
-			EditorWndProc,
+			DefWindowProc,
 			0, // cbClsExtra
 			0, // cbWndExtra
 			hInstance,
 			nullptr, // hIcon
 			::LoadCursor(nullptr, IDC_ARROW), // hCursor
-			(HBRUSH) (COLOR_WINDOW + 1), // hbrBackground
-			nullptr, // lpszMenuName
-			L"GIGI", // lpszClassName
+			(HBRUSH) (COLOR_3DFACE + 1), // hbrBackground
+			nullptr,  // lpszMenuName
+			ClassName // lpszClassName
 		};
 
 		atom = ::RegisterClassW (&EditorWndClass); assert (atom != 0);
 	}
 
-	auto hwnd = CreateWindowEx (WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, L"GIGI", L"aaa", WS_POPUP | WS_BORDER, 0, 0, 0, 0, GetHWnd(), nullptr, hInstance, nullptr); assert (hwnd != nullptr);
+	NONCLIENTMETRICS ncMetrics = { sizeof(NONCLIENTMETRICS) };
+	SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncMetrics, 0);
+	HFONT_unique_ptr font (CreateFontIndirect (&ncMetrics.lfMenuFont));
 
-	auto hdc = ::GetDC(hwnd);
+	_editorInfo = EditorInfo();
+	_editorInfo->_initialString = str;
+	_editorInfo->_validateAndSetFunction = validateAndSetFunction;
+	_editorInfo->_popupHWnd = CreateWindowEx (WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, ClassName, L"aaa", WS_POPUP | WS_BORDER, 0, 0, 0, 0, GetHWnd(), nullptr, hInstance, nullptr);
+	assert (_editorInfo->_popupHWnd != nullptr);
+
+	auto hdc = ::GetDC(_editorInfo->_popupHWnd);
+	int dpiX = GetDeviceCaps (hdc, LOGPIXELSX);
+	int dpiY = GetDeviceCaps (hdc, LOGPIXELSY);
+	RECT rc = { };
+	auto oldFont = ::SelectObject (hdc, font.get());
+	::DrawTextW (hdc, L"Representative String", -1, &rc, DT_EDITCONTROL | DT_CALCRECT);
+	::SelectObject (hdc, oldFont);
+	::ReleaseDC (_editorInfo->_popupHWnd, hdc);
+
+	int margin = 4 * dpiX / 96;
+	auto editWidth = rc.right + 2 * GetSystemMetrics(SM_CXEDGE);
+	auto editHeight = rc.bottom + 2 * GetSystemMetrics(SM_CYEDGE);
+	_editorInfo->_editHWnd = CreateWindowEx (0, L"EDIT", str, WS_CHILD | WS_VISIBLE | WS_BORDER, margin, margin, editWidth, editHeight, _editorInfo->_popupHWnd, nullptr, hInstance, nullptr);
+	::SendMessage (_editorInfo->_editHWnd, WM_SETFONT, (WPARAM) font.get(), FALSE);
+	::SendMessageW(_editorInfo->_editHWnd, EM_SETSEL, 0, -1);
+	::SetFocus(_editorInfo->_editHWnd);
+	::SetWindowSubclass (_editorInfo->_editHWnd, EditSubclassProc, 1, (DWORD_PTR) this);
+
+	RECT wr = { 0, 0, margin + editWidth + margin, margin + editHeight + margin };
+	::AdjustWindowRectEx (&wr, (DWORD) GetWindowLongPtr(_editorInfo->_popupHWnd, GWL_STYLE), FALSE, (DWORD) GetWindowLongPtr(_editorInfo->_popupHWnd, GWL_EXSTYLE));
+	::SetWindowPos (_editorInfo->_popupHWnd, nullptr, ptScreen.x, ptScreen.y, wr.right - wr.left, wr.bottom - wr.top, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+
+	MSG msg;
+	while (GetMessage(&msg, 0, 0, 0))
+	{
+		//if ((msg.message < WM_APP) && (msg.message != 0x118))
+		//{
+		//	wstringstream ss;
+		//	ss << L"HWND=0x" << hex << uppercase << msg.hwnd << L", msg=0x" << hex << uppercase << msg.message << endl;
+		//	OutputDebugString (ss.str().c_str());
+		//}
+
+		if (msg.message == WM_ACTIVATE)
+			__debugbreak();
+
+		if ((msg.hwnd == _editorInfo->_popupHWnd) && (msg.message == WM_CLOSE_POPUP))
+			break;
+
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+
+	::DestroyWindow (_editorInfo->_popupHWnd);
+	_editorInfo.reset();
+}
+
+int PropertyGrid::ShowEditor (POINT ptScreen, const NVP* nameValuePairs)
+{
+	HINSTANCE hInstance = (HINSTANCE) GetWindowLongPtr (GetHWnd(), GWLP_HINSTANCE);
+
+	static constexpr wchar_t ClassName[] = L"GIGI-{655C4EA9-2A80-46D7-A7FB-D510A32DC6C6}";
+	static ATOM atom = 0;
+	if (atom == 0)
+	{
+		static const auto WndProc = [](HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT
+		{
+			if ((msg == WM_COMMAND) && (HIWORD(wParam) == BN_CLICKED))
+			{
+				::PostMessage (hwnd, WM_CLOSE_POPUP, LOWORD(wParam), 0);
+				return 0;
+			}
+
+			return DefWindowProc (hwnd, msg, wParam, lParam);
+		};
+
+		WNDCLASS EditorWndClass =
+		{
+			0, // style
+			WndProc,
+			0, // cbClsExtra
+			0, // cbWndExtra
+			hInstance,
+			nullptr, // hIcon
+			::LoadCursor(nullptr, IDC_ARROW), // hCursor
+			(HBRUSH) (COLOR_3DFACE + 1), // hbrBackground
+			nullptr, // lpszMenuName
+			ClassName, // lpszClassName
+		};
+
+		atom = ::RegisterClassW (&EditorWndClass); assert (atom != 0);
+	}
+
+	auto hwnd = CreateWindowEx (WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, ClassName, L"aaa", WS_POPUP | WS_BORDER, 0, 0, 0, 0, GetHWnd(), nullptr, hInstance, nullptr); assert (hwnd != nullptr);
 
 	LONG maxTextWidth = 0;
 	LONG maxTextHeight = 0;
-	size_t count;
-	for (count = 0; nameValuePairs[count].first != nullptr; count++)
-	{
-		RECT rc = { };
-		DrawTextW (hdc, nameValuePairs[count].first, -1, &rc, DT_CALCRECT);
-		maxTextWidth = max (maxTextWidth, rc.right - rc.left);
-		maxTextHeight = max (maxTextHeight, rc.bottom - rc.top);
-	}
-
-	int dpiX = GetDeviceCaps (hdc, LOGPIXELSX);
-	int dpiY = GetDeviceCaps (hdc, LOGPIXELSY);
-	int lrpadding = 7 * dpiX / 96;
-	int udpadding = ((count <= 5) ? 5 : 0) * dpiY / 96;
-	LONG buttonWidth = max (100l * dpiX / 96, maxTextWidth + 2 * lrpadding) + 2 * GetSystemMetrics(SM_CXSIZEFRAME);
-	LONG buttonHeight = maxTextHeight + 2 * udpadding + 2 * GetSystemMetrics(SM_CYSIZEFRAME);
 
 	NONCLIENTMETRICS ncMetrics = { sizeof(NONCLIENTMETRICS) };
 	SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncMetrics, 0);
 	HFONT_unique_ptr font (CreateFontIndirect (&ncMetrics.lfMenuFont));
 
-	int margin = 2 * dpiX / 96;
+	auto hdc = ::GetDC(hwnd);
+	auto oldFont = ::SelectObject (hdc, font.get());
+	size_t count;
+	for (count = 0; nameValuePairs[count].first != nullptr; count++)
+	{
+		RECT rc = { };
+		DrawTextW (hdc, nameValuePairs[count].first, -1, &rc, DT_CALCRECT);
+		maxTextWidth = max (maxTextWidth, rc.right);
+		maxTextHeight = max (maxTextHeight, rc.bottom);
+	}
+	::SelectObject (hdc, oldFont);
+	int dpiX = GetDeviceCaps (hdc, LOGPIXELSX);
+	int dpiY = GetDeviceCaps (hdc, LOGPIXELSY);
+	::ReleaseDC (hwnd, hdc);
+
+	int lrpadding = 7 * dpiX / 96;
+	int udpadding = ((count <= 5) ? 5 : 0) * dpiY / 96;
+	LONG buttonWidth = max (100l * dpiX / 96, maxTextWidth + 2 * lrpadding) + 2 * GetSystemMetrics(SM_CXEDGE);
+	LONG buttonHeight = maxTextHeight + 2 * udpadding + 2 * GetSystemMetrics(SM_CYEDGE);
+
+	int margin = 4 * dpiX / 96;
+	int spacing = 2 * dpiX / 96;
 	int y = margin;
-	for (auto nvp = nameValuePairs; nvp->first != nullptr; nvp++)
+	for (auto nvp = nameValuePairs; nvp->first != nullptr;)
 	{
 		auto button = CreateWindowEx (0, L"Button", nvp->first, WS_CHILD | WS_VISIBLE | BS_NOTIFY | BS_FLAT, margin, y, buttonWidth, buttonHeight, hwnd, (HMENU) (INT_PTR) nvp->second, hInstance, nullptr);
 		::SendMessage (button, WM_SETFONT, (WPARAM) font.get(), FALSE);
-		y += buttonHeight + margin;
+
+		nvp++;
+		y += buttonHeight + ((nvp->first != nullptr) ? spacing : margin);
 	}
 	RECT wr = { 0, 0, margin + buttonWidth + margin, y };
 	::AdjustWindowRectEx (&wr, (DWORD) GetWindowLongPtr(hwnd, GWL_STYLE), FALSE, (DWORD) GetWindowLongPtr(hwnd, GWL_EXSTYLE));
 	::SetWindowPos (hwnd, nullptr, ptScreen.x, ptScreen.y, wr.right - wr.left, wr.bottom - wr.top, SWP_NOACTIVATE | SWP_SHOWWINDOW);
-	::ReleaseDC (hwnd, hdc);
 
 	int result = -1;
 	MSG msg;
 	while (GetMessage(&msg, 0, 0, 0))
 	{
-		if ((msg.hwnd == hwnd) && (msg.message == WM_CLOSE_EDITOR))
+		if ((msg.hwnd == hwnd) && (msg.message == WM_CLOSE_POPUP))
 		{
 			result = (int) msg.wParam;
 			break;
@@ -431,6 +570,19 @@ void PropertyGrid::ProcessLButtonUp (DWORD modifierKeys, POINT pt)
 					}
 				}
 			}
+		}
+		else if (dynamic_cast<const TypedProperty<wstring>*>(item->pd) != nullptr)
+		{
+			auto stringPD = dynamic_cast<const TypedProperty<wstring>*>(item->pd);
+			auto vlanNumber = _projectWindow->GetSelectedVlanNumber();
+			auto value = stringPD->_getter (_selectedObjects[0], vlanNumber);
+
+			ShowEditor (pt, value.c_str(), [this, stringPD, vlanNumber](const wstring& newStr)
+			{
+				auto timestamp = GetTimestampMilliseconds();
+				for (Object* o : _selectedObjects)
+					stringPD->_setter (o, newStr, vlanNumber, timestamp);
+			});
 		}
 		else
 			MessageBox (GetHWnd(), item->pd->_name, L"aaaa", 0);

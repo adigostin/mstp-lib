@@ -142,7 +142,7 @@ public:
 		int dpiY = GetDeviceCaps (screen, LOGPIXELSY);
 		ReleaseDC (GetHWnd(), screen);
 
-		SIZE initialSize = { 250 * dpiX / 96, 250 * dpiY / 96 };
+		SIZE initialSize = { 270 * dpiX / 96, 250 * dpiY / 96 };
 		auto contentRect = LayOutPanels(nullptr, nullptr);
 		RECT panelRect = LayOutPanel (side, initialSize, &contentRect);
 

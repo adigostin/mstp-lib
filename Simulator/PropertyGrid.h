@@ -18,6 +18,19 @@ class PropertyGrid : public D2DWindow
 	ID2D1SolidColorBrushPtr _grayTextBrush;
 	std::vector<Object*> _selectedObjects;
 
+	using VSF = std::function<void(const std::wstring& newStr)>;
+
+	struct EditorInfo
+	{
+		std::wstring _initialString;
+		VSF          _validateAndSetFunction;
+		HWND         _popupHWnd;
+		HWND         _editHWnd;
+		bool         _validating = false;
+	};
+
+	std::optional<EditorInfo> _editorInfo;
+
 	struct Item
 	{
 		const PropertyOrGroup* pd;
@@ -45,5 +58,7 @@ private:
 	float GetNameColumnWidth() const;
 	void ProcessLButtonUp (DWORD modifierKeys, POINT pt);
 	int ShowEditor (POINT ptScreen, const NVP* nameValuePairs);
+	void ShowEditor (POINT ptScreen, const wchar_t* str, VSF validateAndSetFunction);
+	static LRESULT CALLBACK EditSubclassProc (HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 };
 

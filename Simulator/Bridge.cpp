@@ -757,12 +757,17 @@ static array<unsigned char, 36> GetRootPV (const Object* obj, unsigned int vlanN
 	return prioVector;
 }
 
+static constexpr wchar_t StpDisabledString[] = L"(STP disabled)";
+
 static const TypedProperty<wstring> RootBridgeId
 (
 	L"Root Bridge ID",
 	nullptr,
 	[](const Object* obj, unsigned int vlanNumber) -> wstring
 	{
+		if (!STP_IsBridgeStarted(static_cast<const Bridge*>(obj)->GetStpBridge()))
+			return StpDisabledString;
+
 		auto rpv = GetRootPV(obj, vlanNumber);
 		wstringstream ss;
 		ss << uppercase << setfill(L'0') << hex
@@ -774,15 +779,18 @@ static const TypedProperty<wstring> RootBridgeId
 	nullptr
 );
 
-static const TypedProperty<unsigned int> ExternalRootPathCost
+static const TypedProperty<wstring> ExternalRootPathCost
 (
 	L"External Root Path Cost",
 	nullptr,
-	[](const Object* obj, unsigned int vlanNumber)
+	[](const Object* obj, unsigned int vlanNumber) -> wstring
 	{
+		if (!STP_IsBridgeStarted(static_cast<const Bridge*>(obj)->GetStpBridge()))
+			return StpDisabledString;
+
 		auto rpv = GetRootPV(obj, vlanNumber);
 		auto cost = ((uint32_t) rpv[8] << 24) | ((uint32_t) rpv[9] << 16) | ((uint32_t) rpv[10] << 8) | rpv[11];
-		return (unsigned int) cost;
+		return to_wstring (cost);
 	},
 	nullptr
 );
@@ -791,8 +799,11 @@ static const TypedProperty<wstring> RegionalRootBridgeId
 (
 	L"Regional Root Bridge Id",
 	nullptr,
-	[](const Object* obj, unsigned int vlanNumber)
+	[](const Object* obj, unsigned int vlanNumber) -> wstring
 	{
+		if (!STP_IsBridgeStarted(static_cast<const Bridge*>(obj)->GetStpBridge()))
+			return StpDisabledString;
+
 		auto rpv = GetRootPV(obj, vlanNumber);
 		wstringstream ss;
 		ss << uppercase << setfill(L'0') << hex
@@ -804,15 +815,18 @@ static const TypedProperty<wstring> RegionalRootBridgeId
 	nullptr
 );
 
-static const TypedProperty<unsigned int> InternalRootPathCost
+static const TypedProperty<wstring> InternalRootPathCost
 (
 	L"Internal Root Path Cost",
 	nullptr,
-	[](const Object* obj, unsigned int vlanNumber)
+	[](const Object* obj, unsigned int vlanNumber) -> wstring
 	{
+		if (!STP_IsBridgeStarted(static_cast<const Bridge*>(obj)->GetStpBridge()))
+			return StpDisabledString;
+
 		auto rpv = GetRootPV(obj, vlanNumber);
 		auto cost = ((uint32_t) rpv[20] << 24) | ((uint32_t) rpv[21] << 16) | ((uint32_t) rpv[22] << 8) | rpv[23];
-		return (unsigned int) cost;
+		return to_wstring(cost);
 	},
 	nullptr
 );
@@ -821,8 +835,11 @@ static const TypedProperty<wstring> DesignatedBridgeId
 (
 	L"Designated Bridge Id",
 	nullptr,
-	[](const Object* obj, unsigned int vlanNumber)
+	[](const Object* obj, unsigned int vlanNumber) -> wstring
 	{
+		if (!STP_IsBridgeStarted(static_cast<const Bridge*>(obj)->GetStpBridge()))
+			return StpDisabledString;
+
 		auto rpv = GetRootPV(obj, vlanNumber);
 		wstringstream ss;
 		ss << uppercase << setfill(L'0') << hex
@@ -838,8 +855,11 @@ static const TypedProperty<wstring> DesignatedPortId
 (
 	L"Designated Port Id",
 	nullptr,
-	[](const Object* obj, unsigned int vlanNumber)
+	[](const Object* obj, unsigned int vlanNumber) -> wstring
 	{
+		if (!STP_IsBridgeStarted(static_cast<const Bridge*>(obj)->GetStpBridge()))
+			return StpDisabledString;
+
 		auto rpv = GetRootPV(obj, vlanNumber);
 		wstringstream ss;
 		ss << uppercase << setfill(L'0') << hex << setw(2) << rpv[32] << setw(2) << rpv[33];
@@ -852,8 +872,11 @@ static const TypedProperty<wstring> ReceivingPortId
 (
 	L"Receiving Port Id",
 	nullptr,
-	[](const Object* obj, unsigned int vlanNumber)
+	[](const Object* obj, unsigned int vlanNumber) -> wstring
 	{
+		if (!STP_IsBridgeStarted(static_cast<const Bridge*>(obj)->GetStpBridge()))
+			return StpDisabledString;
+
 		auto rpv = GetRootPV(obj, vlanNumber);
 		wstringstream ss;
 		ss << uppercase << setfill(L'0') << hex << setw(2) << rpv[34] << setw(2) << rpv[35];
