@@ -225,6 +225,18 @@ void PropertyGrid::CreateLabelTextLayouts()
 	}
 }
 
+wstring PropertyGrid::GetValueText (const Property* pd) const
+{
+	auto str = pd->to_wstring (_selectedObjects[0], _projectWindow->GetSelectedVlanNumber());
+	for (size_t i = 1; i < _selectedObjects.size(); i++)
+	{
+		if (pd->to_wstring(_selectedObjects[i], _projectWindow->GetSelectedVlanNumber()) != str)
+			return L"(multiple selection)";
+	}
+
+	return str;
+}
+
 void PropertyGrid::CreateValueTextLayouts()
 {
 	float pixelWidth = GetDipSizeFromPixelSize ({ 1, 0 }).width;
@@ -236,21 +248,14 @@ void PropertyGrid::CreateValueTextLayouts()
 		if (dynamic_cast<const Property*>(item.pd) != nullptr)
 		{
 			auto pd = static_cast<const Property*>(item.pd);
-
-			auto str = pd->to_wstring (_selectedObjects[0], _projectWindow->GetSelectedVlanNumber());
-			item.valueTL.layout = nullptr;
-			for (size_t i = 1; i < _selectedObjects.size(); i++)
-			{
-				if (pd->to_wstring(_selectedObjects[i], _projectWindow->GetSelectedVlanNumber()) != str)
-				{
-					item.valueTL = TextLayout::Create (GetDWriteFactory(), _textFormat, L"(multiple selection)", maxWidth);
-					break;
-				}
-			}
-
-			if (item.valueTL.layout == nullptr)
-				item.valueTL = TextLayout::Create (GetDWriteFactory(), _textFormat, str.c_str(), maxWidth);
+			auto str = GetValueText(pd);
+			item.valueTL = TextLayout::Create (GetDWriteFactory(), _textFormat, str.c_str(), maxWidth);
 		}
+		else if (dynamic_cast<const PropertyGroup*>(item.pd) != nullptr)
+		{
+		}
+		else
+			throw not_implemented_exception();
 	}
 }
 
@@ -263,6 +268,14 @@ void PropertyGrid::ReloadPropertyValues()
 	::InvalidateRect (GetHWnd(), NULL, FALSE);
 }
 
+static wstring GetText (HWND hwnd)
+{
+	wstring str (::GetWindowTextLength(hwnd) + 1, 0);
+	::GetWindowText (hwnd, str.data(), (int) str.length());
+	str.resize (str.length() - 1);
+	return str;
+};
+
 // static
 LRESULT CALLBACK PropertyGrid::EditSubclassProc (HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
@@ -274,47 +287,68 @@ LRESULT CALLBACK PropertyGrid::EditSubclassProc (HWND hWnd, UINT msg, WPARAM wPa
 		return 0;
 	}
 
-	if (((msg == WM_KEYDOWN) && (wParam == VK_RETURN))
-		 /*|| (msg == WM_KILLFOCUS)*/)
+	if ((msg == WM_KEYDOWN) && (wParam == VK_RETURN))
 	{
-		if (pg->_editorInfo->_validating)
-			return DefSubclassProc (hWnd, msg, wParam, lParam);
-
-		wstring newStr (::GetWindowTextLength(hWnd) + 1, 0);
-		::GetWindowText (hWnd, newStr.data(), (int) newStr.length());
-		newStr.resize (newStr.length() - 1);
-		if (newStr == pg->_editorInfo->_initialString)
-		{
-			::PostMessage (pg->_editorInfo->_popupHWnd, WM_CLOSE_POPUP, 0, 0);
-			return 0;
-		}
-
 		try
 		{
-			pg->_editorInfo->_validating = true;
-			pg->_editorInfo->_validateAndSetFunction(newStr);
-			pg->_editorInfo->_validating = false;
-			::PostMessage (pg->_editorInfo->_popupHWnd, WM_CLOSE_POPUP, 0, 0);
+			auto newStr = GetText(hWnd);
+			if (newStr != pg->_editorInfo->_initialString)
+			{
+				pg->_editorInfo->_validating = true;
+				pg->_editorInfo->_validateAndSetFunction(newStr);
+				pg->_editorInfo->_validating = false;
+			}
+
+			auto popup = pg->_editorInfo->_popupHWnd;
+			pg->_editorInfo.reset();
+			::DestroyWindow (popup);
 		}
 		catch (const exception& ex)
 		{
-			//::SetFocus (pg->_editorInfo->_editHWnd);
-			::SetFocus (nullptr);
-			pg->_projectWindow->PostWork ([pg, message=string(ex.what())] () mutable
-			{
-				message += "\r\n\r\n(You can press Escape to cancel your edits.)";
-				::MessageBoxA (pg->_editorInfo->_popupHWnd, message.c_str(), 0, 0);
-				::SetFocus (pg->_editorInfo->_editHWnd);
-				::SendMessage (pg->_editorInfo->_editHWnd, EM_SETSEL, 0, -1);
-				pg->_editorInfo->_validating = false;
-			});
+			string message (ex.what());
+			message += "\r\n\r\n(You can press Escape to cancel your edits.)";
+			::MessageBoxA (pg->_editorInfo->_popupHWnd, message.c_str(), 0, 0);
+			::SetFocus (pg->_editorInfo->_editHWnd);
+			::SendMessage (pg->_editorInfo->_editHWnd, EM_SETSEL, 0, -1);
+			pg->_editorInfo->_validating = false;
 		}
 
 		return 0;
 	}
+
+	if (msg == WM_KILLFOCUS)
+	{
+		if (!pg->_editorInfo.has_value() || pg->_editorInfo->_validating)
+			return DefSubclassProc (hWnd, msg, wParam, lParam);
+
+		auto newStr = GetText (hWnd);
+		if (newStr != pg->_editorInfo->_initialString)
+		{
+			try
+			{
+				pg->_editorInfo->_validating = true;
+				pg->_editorInfo->_validateAndSetFunction(newStr);
+				pg->_editorInfo->_validating = false;
+			}
+			catch (const exception& ex)
+			{
+				pg->_projectWindow->PostWork ([pw=pg->_projectWindow, message=string(ex.what())] ()
+				{
+					::MessageBoxA (pw->GetHWnd(), message.c_str(), 0, 0);
+				});
+			}
+		}
+
+		auto popup = pg->_editorInfo->_popupHWnd;
+		pg->_editorInfo.reset();
+		::DestroyWindow (popup);
+		return 0;
+	}
 	else if ((msg == WM_KEYDOWN) && (wParam == VK_ESCAPE))
 	{
-		::PostMessage (pg->_editorInfo->_popupHWnd, WM_CLOSE_POPUP, 0, 0);
+		auto popup = pg->_editorInfo->_popupHWnd;
+		pg->_editorInfo.reset();
+		::DestroyWindow (popup);
 		return 0;
 	}
 
@@ -348,19 +382,19 @@ void PropertyGrid::ShowEditor (POINT ptScreen, const wchar_t* str, VSF validateA
 
 	NONCLIENTMETRICS ncMetrics = { sizeof(NONCLIENTMETRICS) };
 	SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncMetrics, 0);
-	HFONT_unique_ptr font (CreateFontIndirect (&ncMetrics.lfMenuFont));
 
 	_editorInfo = EditorInfo();
 	_editorInfo->_initialString = str;
 	_editorInfo->_validateAndSetFunction = validateAndSetFunction;
 	_editorInfo->_popupHWnd = CreateWindowEx (WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, ClassName, L"aaa", WS_POPUP | WS_BORDER, 0, 0, 0, 0, GetHWnd(), nullptr, hInstance, nullptr);
 	assert (_editorInfo->_popupHWnd != nullptr);
+	_editorInfo->_font.reset (CreateFontIndirect (&ncMetrics.lfMenuFont));
 
 	auto hdc = ::GetDC(_editorInfo->_popupHWnd);
 	int dpiX = GetDeviceCaps (hdc, LOGPIXELSX);
 	int dpiY = GetDeviceCaps (hdc, LOGPIXELSY);
 	RECT rc = { };
-	auto oldFont = ::SelectObject (hdc, font.get());
+	auto oldFont = ::SelectObject (hdc, _editorInfo->_font.get());
 	::DrawTextW (hdc, L"Representative String", -1, &rc, DT_EDITCONTROL | DT_CALCRECT);
 	::SelectObject (hdc, oldFont);
 	::ReleaseDC (_editorInfo->_popupHWnd, hdc);
@@ -369,37 +403,14 @@ void PropertyGrid::ShowEditor (POINT ptScreen, const wchar_t* str, VSF validateA
 	auto editWidth = rc.right + 2 * GetSystemMetrics(SM_CXEDGE);
 	auto editHeight = rc.bottom + 2 * GetSystemMetrics(SM_CYEDGE);
 	_editorInfo->_editHWnd = CreateWindowEx (0, L"EDIT", str, WS_CHILD | WS_VISIBLE | WS_BORDER, margin, margin, editWidth, editHeight, _editorInfo->_popupHWnd, nullptr, hInstance, nullptr);
-	::SendMessage (_editorInfo->_editHWnd, WM_SETFONT, (WPARAM) font.get(), FALSE);
-	::SendMessageW(_editorInfo->_editHWnd, EM_SETSEL, 0, -1);
-	::SetFocus(_editorInfo->_editHWnd);
+	::SendMessageW (_editorInfo->_editHWnd, WM_SETFONT, (WPARAM) _editorInfo->_font.get(), FALSE);
+	::SendMessageW (_editorInfo->_editHWnd, EM_SETSEL, 0, -1);
+	::SetFocus (_editorInfo->_editHWnd);
 	::SetWindowSubclass (_editorInfo->_editHWnd, EditSubclassProc, 1, (DWORD_PTR) this);
 
 	RECT wr = { 0, 0, margin + editWidth + margin, margin + editHeight + margin };
 	::AdjustWindowRectEx (&wr, (DWORD) GetWindowLongPtr(_editorInfo->_popupHWnd, GWL_STYLE), FALSE, (DWORD) GetWindowLongPtr(_editorInfo->_popupHWnd, GWL_EXSTYLE));
 	::SetWindowPos (_editorInfo->_popupHWnd, nullptr, ptScreen.x, ptScreen.y, wr.right - wr.left, wr.bottom - wr.top, SWP_NOACTIVATE | SWP_SHOWWINDOW);
-
-	MSG msg;
-	while (GetMessage(&msg, 0, 0, 0))
-	{
-		//if ((msg.message < WM_APP) && (msg.message != 0x118))
-		//{
-		//	wstringstream ss;
-		//	ss << L"HWND=0x" << hex << uppercase << msg.hwnd << L", msg=0x" << hex << uppercase << msg.message << endl;
-		//	OutputDebugString (ss.str().c_str());
-		//}
-
-		if (msg.message == WM_ACTIVATE)
-			__debugbreak();
-
-		if ((msg.hwnd == _editorInfo->_popupHWnd) && (msg.message == WM_CLOSE_POPUP))
-			break;
-
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
-	}
-
-	::DestroyWindow (_editorInfo->_popupHWnd);
-	_editorInfo.reset();
 }
 
 int PropertyGrid::ShowEditor (POINT ptScreen, const NVP* nameValuePairs)
@@ -574,11 +585,11 @@ void PropertyGrid::ProcessLButtonUp (DWORD modifierKeys, POINT pt)
 		else if (dynamic_cast<const TypedProperty<wstring>*>(item->pd) != nullptr)
 		{
 			auto stringPD = dynamic_cast<const TypedProperty<wstring>*>(item->pd);
-			auto vlanNumber = _projectWindow->GetSelectedVlanNumber();
-			auto value = stringPD->_getter (_selectedObjects[0], vlanNumber);
+			auto value = GetValueText(stringPD);
 
-			ShowEditor (pt, value.c_str(), [this, stringPD, vlanNumber](const wstring& newStr)
+			ShowEditor (pt, value.c_str(), [this, stringPD](const wstring& newStr)
 			{
+				auto vlanNumber = _projectWindow->GetSelectedVlanNumber();
 				auto timestamp = GetTimestampMilliseconds();
 				for (Object* o : _selectedObjects)
 					stringPD->_setter (o, newStr, vlanNumber, timestamp);

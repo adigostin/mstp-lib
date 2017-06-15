@@ -26,6 +26,7 @@ class PropertyGrid : public D2DWindow
 		VSF          _validateAndSetFunction;
 		HWND         _popupHWnd;
 		HWND         _editHWnd;
+		HFONT_unique_ptr _font;
 		bool         _validating = false;
 	};
 
@@ -54,6 +55,7 @@ private:
 	const Item* GetItemAt (D2D1_POINT_2F location) const;
 	void CreateLabelTextLayouts();
 	void CreateValueTextLayouts();
+	std::wstring GetValueText(const Property* pd) const;
 	const Item* EnumItems (std::function<void(float textY, float lineY, float lineWidth, const Item& item, bool& stopEnum)> func) const;
 	float GetNameColumnWidth() const;
 	void ProcessLButtonUp (DWORD modifierKeys, POINT pt);
