@@ -345,7 +345,7 @@ LRESULT CALLBACK PropertyGrid::EditSubclassProc (HWND hWnd, UINT msg, WPARAM wPa
 	return DefSubclassProc (hWnd, msg, wParam, lParam);
 }
 
-void PropertyGrid::ShowEditor (POINT ptScreen, const wchar_t* str, VSF validateAndSetFunction)
+void PropertyGrid::ShowStringEditor (POINT ptScreen, const wchar_t* str, VSF validateAndSetFunction)
 {
 	HINSTANCE hInstance = (HINSTANCE) GetWindowLongPtr (GetHWnd(), GWLP_HINSTANCE);
 
@@ -540,10 +540,12 @@ void PropertyGrid::ProcessLButtonUp (DWORD modifierKeys, POINT pt)
 		{
 			::ClientToScreen (GetHWnd(), &pt);
 
+			bool changed = false;
+
 			// TODO: move this code to virtual functions
-			if (dynamic_cast<const TypedProperty<bool>*>(item->pd) != nullptr)
+			if (dynamic_cast<const TypedProperty<bool>*>(pd) != nullptr)
 			{
-				auto boolPD = dynamic_cast<const TypedProperty<bool>*>(item->pd);
+				auto boolPD = dynamic_cast<const TypedProperty<bool>*>(pd);
 				static constexpr NVP nvps[] = { { L"False", 0 }, { L"True", 1 }, { 0, 0 } };
 				int newValueInt = ShowEditor (pt, nvps);
 				if (newValueInt != -1)
@@ -556,14 +558,14 @@ void PropertyGrid::ProcessLButtonUp (DWORD modifierKeys, POINT pt)
 						if ((so->*(boolPD->_getter))() != newValue)
 						{
 							(so->*(boolPD->_setter)) (newValue, timestamp);
-							PropertyChangedEvent::InvokeHandlers (this, boolPD);
+							changed = true;
 						}
 					}
 				}
 			}
-			else if (dynamic_cast<const EnumProperty*>(item->pd) != nullptr)
+			else if (dynamic_cast<const EnumProperty*>(pd) != nullptr)
 			{
-				auto enumPD = dynamic_cast<const EnumProperty*>(item->pd);
+				auto enumPD = dynamic_cast<const EnumProperty*>(pd);
 				int newValue = ShowEditor (pt, enumPD->_nameValuePairs);
 				if (newValue != -1)
 				{
@@ -573,25 +575,33 @@ void PropertyGrid::ProcessLButtonUp (DWORD modifierKeys, POINT pt)
 						if ((so->*(enumPD->_getter))() != newValue)
 						{
 							(so->*(enumPD->_setter)) (newValue, timestamp);
-							PropertyChangedEvent::InvokeHandlers (this, enumPD);
+							changed = true;
 						}
 					}
 				}
 			}
-			else if (dynamic_cast<const TypedProperty<wstring>*>(item->pd) != nullptr)
+			else if (dynamic_cast<const TypedProperty<wstring>*>(pd) != nullptr)
 			{
-				auto stringPD = dynamic_cast<const TypedProperty<wstring>*>(item->pd);
+				auto stringPD = dynamic_cast<const TypedProperty<wstring>*>(pd);
 				auto value = GetValueText(stringPD);
-
-				ShowEditor (pt, value.c_str(), [this, stringPD](const wstring& newStr)
+				ShowStringEditor (pt, value.c_str(), [this, stringPD, &changed](const wstring& newStr)
 				{
 					auto timestamp = GetTimestampMilliseconds();
 					for (Object* so : _selectedObjects)
-						(so->*(stringPD->_setter)) (newStr, timestamp);
+					{
+						if ((so->*(stringPD->_getter))() != newStr)
+						{
+							(so->*(stringPD->_setter)) (newStr, timestamp);
+							changed = true;
+						}
+					}
 				});
 			}
 			else
 				MessageBox (GetHWnd(), item->pd->_name, L"aaaa", 0);
+
+			if (changed)
+				PropertyChangedEvent::InvokeHandlers (this, pd);
 		}
 	}
 	else

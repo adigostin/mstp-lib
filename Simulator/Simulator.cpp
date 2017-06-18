@@ -8,7 +8,6 @@
 #pragma comment (lib, "dwrite.lib")
 #pragma comment (lib, "D3D11.lib")
 #pragma comment (lib, "Dxgi.lib")
-#pragma comment (lib, "Windowscodecs.lib")
 #pragma comment (lib, "Shlwapi")
 #pragma comment (lib, "Version")
 #pragma comment (lib, "Comctl32")
@@ -21,7 +20,7 @@ using namespace D2D1;
 
 static const wchar_t CompanyName[] = L"Adi Gostin";
 static const wchar_t AppName[] = L"STP Simulator";
-static const wchar_t AppVersionString[] = L"2.0";
+static const wchar_t AppVersionString[] = L"2.1";
 
 #pragma region IWin32Window
 

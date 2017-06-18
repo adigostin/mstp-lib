@@ -129,10 +129,14 @@ public:
 		_app->GetProjectWindowAddedEvent().AddHandler (&OnProjectWindowAdded, this);
 		_app->GetProjectWindowRemovedEvent().AddHandler (&OnProjectWindowRemoved, this);
 		_project->GetLoadedEvent().AddHandler (&OnProjectLoaded, this);
+		_propertiesWindow->GetPG()->GetPropertyChangedEvent().AddHandler (&OnPropertyChanged, this);
+		_propertiesWindow->GetPGTree()->GetPropertyChangedEvent().AddHandler (&OnPropertyChanged, this);
 	}
 
 	~ProjectWindow()
 	{
+		_propertiesWindow->GetPGTree()->GetPropertyChangedEvent().RemoveHandler (&OnPropertyChanged, this);
+		_propertiesWindow->GetPG()->GetPropertyChangedEvent().RemoveHandler (&OnPropertyChanged, this);
 		_project->GetLoadedEvent().RemoveHandler (&OnProjectLoaded, this);
 		_app->GetProjectWindowRemovedEvent().RemoveHandler (&OnProjectWindowRemoved, this);
 		_app->GetProjectWindowAddedEvent().RemoveHandler (&OnProjectWindowAdded, this);
@@ -143,6 +147,12 @@ public:
 
 		if (_hwnd != nullptr)
 			::DestroyWindow(_hwnd);
+	}
+
+	static void OnPropertyChanged (void* callbackArg, const Property* property)
+	{
+		auto pw = static_cast<ProjectWindow*>(callbackArg);
+		pw->_project->SetModified(true);
 	}
 
 	static void OnObjectAddedToSelection (void* callbackArg, ISelection* selection, Object* o)
