@@ -1,7 +1,7 @@
 
 #include "pch.h"
 #include "PropertyGrid.h"
-#include "UtilityFunctions.h"
+#include "Win32/UtilityFunctions.h"
 
 using namespace std;
 

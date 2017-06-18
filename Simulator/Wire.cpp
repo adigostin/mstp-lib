@@ -3,7 +3,7 @@
 #include "Wire.h"
 #include "Bridge.h"
 #include "Port.h"
-#include "UtilityFunctions.h"
+#include "Win32/UtilityFunctions.h"
 
 using namespace std;
 

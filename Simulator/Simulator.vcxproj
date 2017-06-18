@@ -213,14 +213,14 @@
     <ClInclude Include="Bridge.h" />
     <ClInclude Include="BridgeTree.h" />
     <ClInclude Include="EditStates\EditState.h" />
-    <ClInclude Include="Object.h" />
+    <ClInclude Include="Reflection\Object.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Port.h" />
-    <ClInclude Include="PropertyGrid.h" />
+    <ClInclude Include="Reflection\PropertyGrid.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Simulator.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="UtilityFunctions.h" />
+    <ClInclude Include="Win32\UtilityFunctions.h" />
     <ClInclude Include="Win32\D2DWindow.h" />
     <ClInclude Include="Win32\EventManager.h" />
     <ClInclude Include="Win32\Win32Defs.h" />
@@ -240,7 +240,7 @@
     <ClCompile Include="EditStates\MoveWirePointES.cpp" />
     <ClCompile Include="LogArea.cpp" />
     <ClCompile Include="MSTConfigIdDialog.cpp" />
-    <ClCompile Include="Object.cpp" />
+    <ClCompile Include="Reflection\Object.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -251,7 +251,7 @@
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="PropertiesWindow.cpp" />
-    <ClCompile Include="PropertyGrid.cpp" />
+    <ClCompile Include="Reflection\PropertyGrid.cpp" />
     <ClCompile Include="Test.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
@@ -265,7 +265,7 @@
     <ClCompile Include="VlanWindow.cpp" />
     <ClCompile Include="Selection.cpp" />
     <ClCompile Include="Simulator.cpp" />
-    <ClCompile Include="UtilityFunctions.cpp" />
+    <ClCompile Include="Win32\UtilityFunctions.cpp" />
     <ClCompile Include="Win32\D2DWindow.cpp" />
     <ClCompile Include="Win32\DockablePanel.cpp" />
     <ClCompile Include="Win32\DockContainer.cpp" />

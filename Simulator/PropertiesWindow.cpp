@@ -1,8 +1,7 @@
 
 #include "pch.h"
-#include "Win32/Window.h"
 #include "Simulator.h"
-#include "PropertyGrid.h"
+#include "Reflection/PropertyGrid.h"
 
 using namespace std;
 

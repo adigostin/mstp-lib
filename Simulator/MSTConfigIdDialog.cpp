@@ -3,7 +3,7 @@
 #include "Simulator.h"
 #include "Resource.h"
 #include "Bridge.h"
-#include "UtilityFunctions.h"
+#include "Win32/UtilityFunctions.h"
 
 using namespace std;
 

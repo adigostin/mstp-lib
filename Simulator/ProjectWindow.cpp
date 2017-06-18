@@ -3,7 +3,6 @@
 #include "Resource.h"
 #include "Bridge.h"
 #include "Port.h"
-#include "PropertyGrid.h"
 
 using namespace std;
 

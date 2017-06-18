@@ -2,7 +2,7 @@
 #include "pch.h"
 #include "EditState.h"
 #include "Bridge.h"
-#include "UtilityFunctions.h"
+#include "Win32/UtilityFunctions.h"
 
 using namespace std;
 

@@ -7,6 +7,9 @@
     <Filter Include="Win32">
       <UniqueIdentifier>{6639324b-98b9-4102-a3ee-1dfa81922d14}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Reflection">
+      <UniqueIdentifier>{0f7d89c0-452b-49c6-89cb-0c419ea2a515}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -19,7 +22,6 @@
     </ClInclude>
     <ClInclude Include="Port.h" />
     <ClInclude Include="Simulator.h" />
-    <ClInclude Include="UtilityFunctions.h" />
     <ClInclude Include="Win32\D2DWindow.h">
       <Filter>Win32</Filter>
     </ClInclude>
@@ -35,9 +37,14 @@
     <ClInclude Include="Win32\EventManager.h">
       <Filter>Win32</Filter>
     </ClInclude>
-    <ClInclude Include="PropertyGrid.h" />
-    <ClInclude Include="Object.h" />
     <ClInclude Include="BridgeTree.h" />
+    <ClInclude Include="Win32\UtilityFunctions.h" />
+    <ClInclude Include="Reflection\Object.h">
+      <Filter>Reflection</Filter>
+    </ClInclude>
+    <ClInclude Include="Reflection\PropertyGrid.h">
+      <Filter>Reflection</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -56,7 +63,6 @@
     </ClCompile>
     <ClCompile Include="LogArea.cpp" />
     <ClCompile Include="Port.cpp" />
-    <ClCompile Include="UtilityFunctions.cpp" />
     <ClCompile Include="EditStates\MoveWirePointES.cpp">
       <Filter>EditStates</Filter>
     </ClCompile>
@@ -87,10 +93,15 @@
     <ClCompile Include="EditStates\BeginningDragES.cpp">
       <Filter>EditStates</Filter>
     </ClCompile>
-    <ClCompile Include="PropertyGrid.cpp" />
-    <ClCompile Include="Object.cpp" />
     <ClCompile Include="BridgeTree.cpp" />
     <ClCompile Include="PropertiesWindow.cpp" />
+    <ClCompile Include="Win32\UtilityFunctions.cpp" />
+    <ClCompile Include="Reflection\Object.cpp">
+      <Filter>Reflection</Filter>
+    </ClCompile>
+    <ClCompile Include="Reflection\PropertyGrid.cpp">
+      <Filter>Reflection</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Simulator.rc" />
