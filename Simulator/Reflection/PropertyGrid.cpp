@@ -520,6 +520,10 @@ int PropertyGrid::ShowEditor (POINT ptScreen, const NVP* nameValuePairs)
 
 void PropertyGrid::ProcessLButtonUp (DWORD modifierKeys, POINT pt)
 {
+	auto dLocation = GetDipLocationFromPixelLocation(pt);
+	if (dLocation.x < GetNameColumnWidth())
+		return;
+
 	auto item = GetItemAt (GetDipLocationFromPixelLocation(pt));
 	if (item == nullptr)
 		return;
