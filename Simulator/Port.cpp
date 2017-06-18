@@ -333,7 +333,7 @@ bool Port::GetAdminEdge() const
 	return (bool) STP_GetPortAdminEdge (_bridge->GetStpBridge(), (unsigned int) _portIndex);
 }
 
-static const TypedProperty<bool> PortPropAutoEdge
+static const TypedProperty<bool> AutoEdgeProperty
 (
 	L"AutoEdge",
 	nullptr,
@@ -341,7 +341,7 @@ static const TypedProperty<bool> PortPropAutoEdge
 	nullptr
 );
 
-static const TypedProperty<bool> PortPropAdminEdge
+static const TypedProperty<bool> AdminEdgeProperty
 (
 	L"AdminEdge",
 	nullptr,
@@ -349,10 +349,19 @@ static const TypedProperty<bool> PortPropAdminEdge
 	nullptr
 );
 
+static const TypedProperty<bool> MacOperationalProperty
+(
+	L"MAC_Operational",
+	nullptr,
+	static_cast<TypedProperty<bool>::Getter>(&Port::GetMacOperational),
+	nullptr
+);
+
 static const PropertyOrGroup* const PortProperties[] =
 {
-	&PortPropAutoEdge,
-	&PortPropAdminEdge,
+	&AutoEdgeProperty,
+	&AdminEdgeProperty,
+	&MacOperationalProperty,
 	nullptr
 };
 

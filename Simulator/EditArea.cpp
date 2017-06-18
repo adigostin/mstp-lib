@@ -81,6 +81,8 @@ public:
 
 		ssprops = { };
 		ssprops.dashStyle = D2D1_DASH_STYLE_DASH;
+		ssprops.startCap = D2D1_CAP_STYLE_ROUND;
+		ssprops.endCap = D2D1_CAP_STYLE_ROUND;
 		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawingObjects._strokeStyleNoForwardingWire); ThrowIfFailed(hr);
 
 		ssprops = { };
