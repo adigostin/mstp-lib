@@ -8,11 +8,9 @@ using namespace std;
 static constexpr float CellLRPadding = 3.0f;
 static constexpr UINT WM_CLOSE_POPUP = WM_APP + 1;
 
-PropertyGrid::PropertyGrid (ISimulatorApp* app, IProjectWindow* projectWindow, IProject* project, const RECT& rect, HWND hWndParent, IDWriteFactory* dWriteFactory)
-	: base (app->GetHInstance(), 0, WS_CHILD | WS_VISIBLE, rect, hWndParent, nullptr, dWriteFactory)
-	, _app(app)
-	, _projectWindow(projectWindow)
-	, _project(project)
+PropertyGrid::PropertyGrid (HINSTANCE hInstance, const RECT& rect, HWND hWndParent, IDWriteFactory* dWriteFactory, IWindowWithWorkQueue* iwwwq)
+	: base (hInstance, 0, WS_CHILD | WS_VISIBLE, rect, hWndParent, nullptr, dWriteFactory)
+	, _iwwwq(iwwwq)
 {
 	auto hr = dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
 											   DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_textFormat); ThrowIfFailed(hr);
@@ -79,16 +77,8 @@ void PropertyGrid::ProcessWmSetCursor (POINT pt) const
 	}
 
 	auto pd = static_cast<const Property*>(item->pd);
-	if (pd->IsReadOnly())
-	{
-		::SetCursor (::LoadCursor (nullptr, IDC_ARROW));
-		return;
-	}
-
-	if (dipLocation.x >= GetNameColumnWidth())
-		::SetCursor (::LoadCursor (nullptr, IDC_HAND));
-	else
-		::SetCursor (::LoadCursor (nullptr, IDC_ARROW));
+	bool canEdit = ((pd->_customEditor != nullptr) || pd->HasSetter()) && (dipLocation.x >= GetNameColumnWidth());
+	::SetCursor (::LoadCursor (nullptr, canEdit ? IDC_HAND : IDC_ARROW));
 }
 
 const PropertyGrid::Item* PropertyGrid::GetItemAt (D2D1_POINT_2F location) const
@@ -142,7 +132,7 @@ void PropertyGrid::Render (ID2D1RenderTarget* rt) const
 		else if (dynamic_cast<const Property*>(item.pd) != nullptr)
 		{
 			auto pd = static_cast<const Property*>(item.pd);
-			auto& brush = pd->IsReadOnly() ? _grayTextBrush : _windowTextBrush;
+			auto& brush = ((pd->_customEditor != nullptr) || pd->HasSetter()) ? _windowTextBrush : _grayTextBrush;
 			rt->DrawTextLayout ({ CellLRPadding, textY }, item.labelTL.layout, brush);
 			if (item.valueTL.layout != nullptr)
 			{
@@ -219,7 +209,7 @@ void PropertyGrid::CreateLabelTextLayouts()
 			textFormat = _boldTextFormat;
 
 		if (item.pd->_labelGetter != nullptr)
-			item.labelTL = TextLayout::Create (GetDWriteFactory(), textFormat, item.pd->_labelGetter(_selectedObjects, _projectWindow->GetSelectedVlanNumber()).c_str(), maxWidth);
+			item.labelTL = TextLayout::Create (GetDWriteFactory(), textFormat, item.pd->_labelGetter(_selectedObjects).c_str(), maxWidth);
 		else
 			item.labelTL = TextLayout::Create (GetDWriteFactory(), textFormat, item.pd->_name, maxWidth);
 	}
@@ -227,10 +217,10 @@ void PropertyGrid::CreateLabelTextLayouts()
 
 wstring PropertyGrid::GetValueText (const Property* pd) const
 {
-	auto str = pd->to_wstring (_selectedObjects[0], _projectWindow->GetSelectedVlanNumber());
+	auto str = pd->to_wstring (_selectedObjects[0]);
 	for (size_t i = 1; i < _selectedObjects.size(); i++)
 	{
-		if (pd->to_wstring(_selectedObjects[i], _projectWindow->GetSelectedVlanNumber()) != str)
+		if (pd->to_wstring(_selectedObjects[i]) != str)
 			return L"(multiple selection)";
 	}
 
@@ -332,9 +322,9 @@ LRESULT CALLBACK PropertyGrid::EditSubclassProc (HWND hWnd, UINT msg, WPARAM wPa
 			}
 			catch (const exception& ex)
 			{
-				pg->_projectWindow->PostWork ([pw=pg->_projectWindow, message=string(ex.what())] ()
+				pg->_iwwwq->PostWork ([hwnd=pg->GetHWnd(), message=string(ex.what())] ()
 				{
-					::MessageBoxA (pw->GetHWnd(), message.c_str(), 0, 0);
+					::MessageBoxA (hwnd, message.c_str(), 0, 0);
 				});
 			}
 		}
@@ -540,63 +530,69 @@ void PropertyGrid::ProcessLButtonUp (DWORD modifierKeys, POINT pt)
 	else if (dynamic_cast<const Property*>(item->pd) != nullptr)
 	{
 		auto pd = static_cast<const Property*>(item->pd);
-		if (pd->IsReadOnly())
-			return;
-
-		::ClientToScreen (GetHWnd(), &pt);
-
-		if (dynamic_cast<const TypedProperty<bool>*>(item->pd) != nullptr)
+		if (pd->_customEditor != nullptr)
 		{
-			auto boolPD = dynamic_cast<const TypedProperty<bool>*>(item->pd);
-			static constexpr NVP nvps[] = { { L"False", 0 }, { L"True", 1 }, { 0, 0 } };
-			int newValueInt = ShowEditor (pt, nvps);
-			if (newValueInt != -1)
-			{
-				bool newValue = (bool) newValueInt;
+			_customEditor = pd->_customEditor (_selectedObjects);
+			_customEditor->ShowModal(GetHWnd());
+			_customEditor = nullptr;
+		}
+		else if (pd->HasSetter())
+		{
+			::ClientToScreen (GetHWnd(), &pt);
 
-				auto timestamp = GetTimestampMilliseconds();
-				for (auto so : _selectedObjects)
+			// TODO: move this code to virtual functions
+			if (dynamic_cast<const TypedProperty<bool>*>(item->pd) != nullptr)
+			{
+				auto boolPD = dynamic_cast<const TypedProperty<bool>*>(item->pd);
+				static constexpr NVP nvps[] = { { L"False", 0 }, { L"True", 1 }, { 0, 0 } };
+				int newValueInt = ShowEditor (pt, nvps);
+				if (newValueInt != -1)
 				{
-					if (boolPD->_getter(so, _projectWindow->GetSelectedVlanNumber()) != newValue)
+					bool newValue = (bool) newValueInt;
+
+					auto timestamp = GetTimestampMilliseconds();
+					for (auto so : _selectedObjects)
 					{
-						boolPD->_setter (so, (bool) newValue, _projectWindow->GetSelectedVlanNumber(), timestamp);
-						_project->SetModified(true);
+						if ((so->*(boolPD->_getter))() != newValue)
+						{
+							boolPD->_setter (so, (bool) newValue, timestamp);
+							PropertyChangedEvent::InvokeHandlers (this, boolPD);
+						}
 					}
 				}
 			}
-		}
-		else if (dynamic_cast<const EnumProperty*>(item->pd) != nullptr)
-		{
-			auto enumPD = dynamic_cast<const EnumProperty*>(item->pd);
-			int newValue = ShowEditor (pt, enumPD->_nameValuePairs);
-			if (newValue != -1)
+			else if (dynamic_cast<const EnumProperty*>(item->pd) != nullptr)
 			{
-				auto timestamp = GetTimestampMilliseconds();
-				for (auto so : _selectedObjects)
+				auto enumPD = dynamic_cast<const EnumProperty*>(item->pd);
+				int newValue = ShowEditor (pt, enumPD->_nameValuePairs);
+				if (newValue != -1)
 				{
-					if (enumPD->_getter(so, _projectWindow->GetSelectedVlanNumber()) != newValue)
+					auto timestamp = GetTimestampMilliseconds();
+					for (auto so : _selectedObjects)
 					{
-						enumPD->_setter (so, newValue, _projectWindow->GetSelectedVlanNumber(), timestamp);
-						_project->SetModified(true);
+						if ((so->*(enumPD->_getter))() != newValue)
+						{
+							enumPD->_setter (so, newValue, timestamp);
+							PropertyChangedEvent::InvokeHandlers (this, enumPD);
+						}
 					}
 				}
 			}
-		}
-		else if (dynamic_cast<const TypedProperty<wstring>*>(item->pd) != nullptr)
-		{
-			auto stringPD = dynamic_cast<const TypedProperty<wstring>*>(item->pd);
-			auto value = GetValueText(stringPD);
-
-			ShowEditor (pt, value.c_str(), [this, stringPD](const wstring& newStr)
+			else if (dynamic_cast<const TypedProperty<wstring>*>(item->pd) != nullptr)
 			{
-				auto vlanNumber = _projectWindow->GetSelectedVlanNumber();
-				auto timestamp = GetTimestampMilliseconds();
-				for (Object* o : _selectedObjects)
-					stringPD->_setter (o, newStr, vlanNumber, timestamp);
-			});
+				auto stringPD = dynamic_cast<const TypedProperty<wstring>*>(item->pd);
+				auto value = GetValueText(stringPD);
+
+				ShowEditor (pt, value.c_str(), [this, stringPD](const wstring& newStr)
+				{
+					auto timestamp = GetTimestampMilliseconds();
+					for (Object* o : _selectedObjects)
+						stringPD->_setter (o, newStr, timestamp);
+				});
+			}
+			else
+				MessageBox (GetHWnd(), item->pd->_name, L"aaaa", 0);
 		}
-		else
-			MessageBox (GetHWnd(), item->pd->_name, L"aaaa", 0);
 	}
 	else
 		throw not_implemented_exception();

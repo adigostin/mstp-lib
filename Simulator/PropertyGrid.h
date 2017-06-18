@@ -1,14 +1,11 @@
 #pragma once
 #include "Win32/D2DWindow.h"
-#include "Simulator.h"
+#include "Object.h"
 
 class PropertyGrid : public D2DWindow
 {
 	using base = D2DWindow;
 
-	ISimulatorApp* const _app;
-	IProjectWindow* const _projectWindow;
-	IProjectPtr const _project;
 	IDWriteTextFormatPtr _textFormat;
 	IDWriteTextFormatPtr _boldTextFormat;
 	IDWriteTextFormatPtr _wingdings;
@@ -17,6 +14,7 @@ class PropertyGrid : public D2DWindow
 	ID2D1SolidColorBrushPtr _windowTextBrush;
 	ID2D1SolidColorBrushPtr _grayTextBrush;
 	std::vector<Object*> _selectedObjects;
+	std::unique_ptr<IPropertyEditor> _customEditor;
 
 	using VSF = std::function<void(const std::wstring& newStr)>;
 
@@ -40,13 +38,17 @@ class PropertyGrid : public D2DWindow
 	};
 
 	std::vector<Item> _items;
+	IWindowWithWorkQueue* const _iwwwq;
 
 public:
-	PropertyGrid (ISimulatorApp* app, IProjectWindow* projectWindow, IProject* project, const RECT& rect, HWND hWndParent, IDWriteFactory* dWriteFactory);
+	PropertyGrid (HINSTANCE hInstance, const RECT& rect, HWND hWndParent, IDWriteFactory* dWriteFactory, IWindowWithWorkQueue* iwwwq);
 
 	void DiscardEditor();
 	void SelectObjects (Object* const* objects, size_t count);
 	void ReloadPropertyValues();
+
+	struct PropertyChangedEvent : public Event<PropertyChangedEvent, void(const Property* property)> { };
+	PropertyChangedEvent::Subscriber GetPropertyChangedEvent() { return PropertyChangedEvent::Subscriber(this); }
 
 private:
 	virtual void Render(ID2D1RenderTarget* rt) const override final;

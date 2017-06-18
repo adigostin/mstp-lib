@@ -40,7 +40,7 @@ class ProjectWindow : public EventManager, public IProjectWindow
 	RECT _restoreBounds;
 	unsigned int _selectedVlanNumber = 1;
 	queue<function<void()>> _workQueue;
-	unique_ptr<PropertyGrid> _pg;
+	IPropertiesWindowPtr _propertiesWindow;
 
 public:
 	ProjectWindow (ISimulatorApp* app,
@@ -97,21 +97,28 @@ public:
 		const RECT clientRect = { 0, 0, _clientSize.cx, _clientSize.cy };
 		_dockContainer = dockContainerFactory (_app->GetHInstance(), _hwnd, clientRect);
 
-		auto logPanel = _dockContainer->CreatePanel (LogPanelUniqueName, Side::Right, L"STP Log");
-		auto logArea = logAreaFactory (_app->GetHInstance(), logPanel->GetHWnd(), logPanel->GetContentRect(), _app->GetDWriteFactory(), _selection);
-		logPanel->GetVisibleChangedEvent().AddHandler (&OnLogPanelVisibleChanged, this);
-		SetMainMenuItemCheck (ID_VIEW_STPLOG, true);
+		{
+			auto logPanel = _dockContainer->CreatePanel (LogPanelUniqueName, Side::Right, L"STP Log");
+			auto logArea = logAreaFactory (_app->GetHInstance(), logPanel->GetHWnd(), logPanel->GetContentRect(), _app->GetDWriteFactory(), _selection);
+			logPanel->GetVisibleChangedEvent().AddHandler (&OnLogPanelVisibleChanged, this);
+			SetMainMenuItemCheck (ID_VIEW_STPLOG, true);
+		}
 
-		auto propsPanel = _dockContainer->CreatePanel (PropsPanelUniqueName, Side::Left, L"Properties");
-		_pg.reset (new PropertyGrid(app, this, project, propsPanel->GetContentRect(), propsPanel->GetHWnd(), app->GetDWriteFactory()));
-		propsPanel->GetVisibleChangedEvent().AddHandler (&OnPropsPanelVisibleChanged, this);
-		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
+		{
+			auto propsPanel = _dockContainer->CreatePanel (PropsPanelUniqueName, Side::Left, L"Properties");
+			auto cr = propsPanel->GetContentRect();
+			_propertiesWindow = propertiesWindowFactory (app, this, project, _selection, propsPanel->GetContentRect(), propsPanel->GetHWnd());
+			propsPanel->GetVisibleChangedEvent().AddHandler (&OnPropsPanelVisibleChanged, this);
+			SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
+		}
 
-		auto vlanPanel = _dockContainer->CreatePanel (VlanPanelUniqueName, Side::Top, L"VLAN");
-		auto vlanWindow = vlanWindowFactory (_app, this, _project, _selection, vlanPanel->GetHWnd(), vlanPanel->GetContentLocation());
-		_dockContainer->ResizePanel (vlanPanel, vlanPanel->GetPanelSizeFromContentSize(vlanWindow->GetClientSize()));
-		vlanPanel->GetVisibleChangedEvent().AddHandler (&OnVlanPanelVisibleChanged, this);
-		SetMainMenuItemCheck (ID_VIEW_VLANS, true);
+		{
+			auto vlanPanel = _dockContainer->CreatePanel (VlanPanelUniqueName, Side::Top, L"VLAN");
+			auto vlanWindow = vlanWindowFactory (_app, this, _project, _selection, vlanPanel->GetHWnd(), vlanPanel->GetContentLocation());
+			_dockContainer->ResizePanel (vlanPanel, vlanPanel->GetPanelSizeFromContentSize(vlanWindow->GetClientSize()));
+			vlanPanel->GetVisibleChangedEvent().AddHandler (&OnVlanPanelVisibleChanged, this);
+			SetMainMenuItemCheck (ID_VIEW_VLANS, true);
+		}
 
 		_editArea = editAreaFactory (app, this, _project, _selection, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), _app->GetDWriteFactory());
 
@@ -157,7 +164,8 @@ public:
 	static void OnBridgeConfigChanged (void* callbackArg, Bridge* b)
 	{
 		auto pw = static_cast<ProjectWindow*>(callbackArg);
-		pw->_pg->ReloadPropertyValues();
+		pw->_propertiesWindow->GetPG()->ReloadPropertyValues();
+		pw->_propertiesWindow->GetPGTree()->ReloadPropertyValues();
 	}
 
 	static void OnProjectLoaded (void* callbackArg, IProject* project)
@@ -238,9 +246,29 @@ public:
 	{
 		auto pw = static_cast<ProjectWindow*>(callbackArg);
 		if (selection->GetObjects().empty())
-			pw->_pg->SelectObjects(nullptr, 0);
+		{
+			pw->_propertiesWindow->GetPG()->SelectObjects(nullptr, 0);
+			pw->_propertiesWindow->GetPGTree()->SelectObjects(nullptr, 0);
+		}
 		else
-			pw->_pg->SelectObjects (&selection->GetObjects().at(0), selection->GetObjects().size());
+		{
+			pw->_propertiesWindow->GetPG()->SelectObjects (&selection->GetObjects().at(0), selection->GetObjects().size());
+
+			if (all_of (selection->GetObjects().begin(), selection->GetObjects().end(), [](Object* o) { return o->Is<Bridge>(); }))
+			{
+				std::vector<BridgeTree*> bridgeTrees;
+				for (Object* o : selection->GetObjects())
+				{
+					auto b = static_cast<Bridge*>(o);
+					auto treeIndex = STP_GetTreeIndexFromVlanNumber(b->GetStpBridge(), pw->_selectedVlanNumber);
+					bridgeTrees.push_back (b->GetTrees().at(treeIndex).get());
+				}
+
+				pw->_propertiesWindow->GetPGTree()->SelectObjects ((Object**) &bridgeTrees[0], bridgeTrees.size());
+			}
+			else
+				pw->_propertiesWindow->GetPGTree()->SelectObjects(nullptr, 0);
+		}
 	}
 
 	virtual HWND GetHWnd() const override { return _hwnd; }
@@ -625,7 +653,7 @@ public:
 			SelectedVlanNumerChangedEvent::InvokeHandlers(this, this, vlanNumber);
 			::InvalidateRect (GetHWnd(), nullptr, FALSE);
 			SetWindowTitle();
-			_pg->ReloadPropertyValues();
+			_propertiesWindow->GetPG()->ReloadPropertyValues();
 		}
 	};
 

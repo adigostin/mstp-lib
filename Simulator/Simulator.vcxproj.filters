@@ -37,6 +37,7 @@
     </ClInclude>
     <ClInclude Include="PropertyGrid.h" />
     <ClInclude Include="Object.h" />
+    <ClInclude Include="BridgeTree.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -63,7 +64,6 @@
       <Filter>EditStates</Filter>
     </ClCompile>
     <ClCompile Include="VlanWindow.cpp" />
-    <ClCompile Include="BridgePropsWindow.cpp" />
     <ClCompile Include="MSTConfigIdDialog.cpp" />
     <ClCompile Include="Test.c" />
     <ClCompile Include="EditStates\MovePortES.cpp">
@@ -89,6 +89,8 @@
     </ClCompile>
     <ClCompile Include="PropertyGrid.cpp" />
     <ClCompile Include="Object.cpp" />
+    <ClCompile Include="BridgeTree.cpp" />
+    <ClCompile Include="PropertiesWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Simulator.rc" />

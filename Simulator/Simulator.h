@@ -2,6 +2,7 @@
 #include "Object.h"
 #include "Win32/Win32Defs.h"
 #include "stp.h"
+#include "PropertyGrid.h"
 
 struct ISimulatorApp;
 struct IProject;
@@ -97,7 +98,7 @@ extern const EditAreaFactory editAreaFactory;
 
 // ============================================================================
 
-MIDL_INTERFACE("62555843-4CB8-43FB-8C91-F229A4D318BD") IProjectWindow : public IWin32Window
+MIDL_INTERFACE("62555843-4CB8-43FB-8C91-F229A4D318BD") IProjectWindow : public IWindowWithWorkQueue
 {
 	struct SelectedVlanNumerChangedEvent : public Event<SelectedVlanNumerChangedEvent, void(IProjectWindow* pw, unsigned int vlanNumber)> { };
 	struct DestroyingEvent : public Event<DestroyingEvent, void(IProjectWindow* pw)> { };
@@ -108,7 +109,6 @@ MIDL_INTERFACE("62555843-4CB8-43FB-8C91-F229A4D318BD") IProjectWindow : public I
 	virtual unsigned int GetSelectedVlanNumber() const = 0;
 	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() = 0;
 	virtual DestroyingEvent::Subscriber GetDestroyingEvent() = 0;
-	virtual void PostWork (std::function<void()>&& work) = 0;
 };
 _COM_SMARTPTR_TYPEDEF(IProjectWindow, __uuidof(IProjectWindow));
 using ProjectWindowFactory = IProjectWindowPtr(*const)(ISimulatorApp* app,
@@ -175,17 +175,19 @@ extern const ProjectFactory projectFactory;
 
 // ============================================================================
 
-MIDL_INTERFACE("6438D8FC-058B-4A83-A4DC-2B48AE028D09") IBridgePropsWindow : public IWin32Window
+MIDL_INTERFACE("6438D8FC-058B-4A83-A4DC-2B48AE028D09") IPropertiesWindow : public IWin32Window
 {
+	virtual PropertyGrid* GetPG() const = 0;
+	virtual PropertyGrid* GetPGTree() const = 0;
 };
-_COM_SMARTPTR_TYPEDEF(IBridgePropsWindow, __uuidof(IBridgePropsWindow));
-using BridgePropsWindowFactory = IBridgePropsWindowPtr(*const)(ISimulatorApp* app,
-															   IProjectWindow* projectWindow,
-															   IProject* project,
-															   ISelection* selection,
-															   HWND hwndParent,
-															   POINT location);
-extern const BridgePropsWindowFactory bridgePropertiesControlFactory;
+_COM_SMARTPTR_TYPEDEF(IPropertiesWindow, __uuidof(IPropertiesWindow));
+using PropertiesWindowFactory = IPropertiesWindowPtr(*const)(ISimulatorApp* app,
+															 IProjectWindow* projectWindow,
+															 IProject* project,
+															 ISelection* selection,
+															 const RECT& rect,
+															 HWND hWndParent);
+extern const PropertiesWindowFactory propertiesWindowFactory;
 
 // ============================================================================
 
@@ -223,14 +225,4 @@ struct ISimulatorApp
 
 // ============================================================================
 
-struct IMSTConfigIdDialog
-{
-	virtual ~IMSTConfigIdDialog() { }
-	virtual UINT ShowModal (HWND hWndParent) = 0; // return IDOK, IDCANCEL, -1 (some error), 0 (hWndParent invalid or closed)
-};
-
-using MSTConfigIdDialogFactory = std::unique_ptr<IMSTConfigIdDialog>(*const)(ISimulatorApp* app,
-																			 IProjectWindow* projectWindow,
-																			 IProject* project,
-																			 ISelection* selection);
-extern const MSTConfigIdDialogFactory mstConfigIdDialogFactory;
+extern const PropertyEditorFactory mstConfigIdDialogFactory;

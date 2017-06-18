@@ -141,7 +141,7 @@ private:
 
 			if ((HIWORD(wParam) == BN_CLICKED) && (LOWORD(wParam) == IDC_BUTTON_EDIT_MST_CONFIG_TABLE))
 			{
-				auto dialog = mstConfigIdDialogFactory(_app, _pw, _project, _selection);
+				auto dialog = mstConfigIdDialogFactory(_selection->GetObjects());
 				dialog->ShowModal(_pw->GetHWnd());
 				return { TRUE, 0 };
 			}

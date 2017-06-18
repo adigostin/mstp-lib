@@ -2,9 +2,9 @@
 #include "pch.h"
 #include "Object.h"
 
-std::wstring EnumProperty::to_wstring (const Object* obj, unsigned int vlanNumber) const
+std::wstring EnumProperty::to_wstring (const Object* obj) const
 {
-	auto value = _getter(obj, vlanNumber);
+	auto value = (obj->*_getter)();
 	for (auto nvp = _nameValuePairs; nvp->first != nullptr; nvp++)
 	{
 		if (nvp->second == value)

@@ -64,6 +64,11 @@ MIDL_INTERFACE("C5D357E8-4A20-43D8-9C40-0CE4DC7C637C") IWin32Window : public IUn
 	SIZE GetClientSize() const;
 };
 
+struct IWindowWithWorkQueue : IWin32Window
+{
+	virtual void PostWork (std::function<void()>&& work) = 0;
+};
+
 // ============================================================================
 
 enum class Side { Left, Top, Right, Bottom };

@@ -7,7 +7,7 @@ class Object;
 
 struct PropertyOrGroup
 {
-	using LabelGetter = std::wstring(*)(const std::vector<Object*>& objects, unsigned int vlanNumber);
+	using LabelGetter = std::wstring(*)(const std::vector<Object*>& objects);
 
 	const wchar_t* _name;
 	LabelGetter _labelGetter;
@@ -24,40 +24,55 @@ struct PropertyGroup : PropertyOrGroup
 	using PropertyOrGroup::PropertyOrGroup;
 };
 
+struct IPropertyEditor
+{
+	virtual ~IPropertyEditor() { }
+	virtual UINT ShowModal (HWND hWndParent) = 0; // return IDOK, IDCANCEL, -1 (some error), 0 (hWndParent invalid or closed)
+	virtual void Cancel() = 0;
+};
+
+using PropertyEditorFactory = std::unique_ptr<IPropertyEditor>(*const)(const std::vector<Object*>& objects);
+
 struct Property abstract : PropertyOrGroup
 {
 	using base = PropertyOrGroup;
-	using base::base;
-	virtual bool IsReadOnly() const = 0;
-	virtual std::wstring to_wstring (const Object* so, unsigned int vlanNumber) const = 0;
+
+	PropertyEditorFactory const _customEditor;
+
+	Property (const wchar_t* name, LabelGetter labelGetter, PropertyEditorFactory customEditor = nullptr)
+		: base (name, labelGetter), _customEditor(customEditor)
+	{ }
+
+	virtual bool HasSetter() const = 0;
+	virtual std::wstring to_wstring (const Object* so) const = 0;
 };
 
 template<typename TValue>
 struct TypedProperty : Property
 {
-	using Getter = TValue(*)(const Object* object, unsigned int vlanNumber);
-	using Setter = void(*)(Object* object, TValue newValue, unsigned int vlanNumber, unsigned int timestamp);
+	using Getter = TValue(Object::*)() const;
+	using Setter = void(*)(Object* object, TValue newValue, unsigned int timestamp);
 	Getter const _getter;
 	Setter const _setter;
 
-	TypedProperty (const wchar_t* name, LabelGetter labelGetter, Getter getter, Setter setter)
-		: Property(name, labelGetter), _getter(getter), _setter(setter)
+	TypedProperty (const wchar_t* name, LabelGetter labelGetter, Getter getter, Setter setter, PropertyEditorFactory customEditor = nullptr)
+		: Property(name, labelGetter, customEditor), _getter(getter), _setter(setter)
 	{ }
 
-	virtual bool IsReadOnly() const override final { return _setter == nullptr; }
-	virtual std::wstring to_wstring (const Object* obj, unsigned int vlanNumber) const override { return std::to_wstring(_getter(obj, vlanNumber)); }
+	virtual bool HasSetter() const override final { return _setter != nullptr; }
+	virtual std::wstring to_wstring (const Object* obj) const override { return std::to_wstring((obj->*_getter)()); }
 };
 
 template<>
-std::wstring TypedProperty<std::wstring>::to_wstring(const Object* obj, unsigned int vlanNumber) const
+std::wstring TypedProperty<std::wstring>::to_wstring(const Object* obj) const
 {
-	return _getter(obj, vlanNumber);
+	return (obj->*_getter)();
 }
 
 template<>
-std::wstring TypedProperty<bool>::to_wstring(const Object* obj, unsigned int vlanNumber) const
+std::wstring TypedProperty<bool>::to_wstring(const Object* obj) const
 {
-	return _getter(obj, vlanNumber) ? L"True" : L"False";
+	return (obj->*_getter)() ? L"True" : L"False";
 }
 
 using NVP = std::pair<const wchar_t*, int>;
@@ -72,7 +87,7 @@ struct EnumProperty : TypedProperty<int>
 		: base(name, labelGetter, getter, setter), _nameValuePairs(nameValuePairs)
 	{ }
 
-	virtual std::wstring to_wstring (const Object* obj, unsigned int vlanNumber) const override;
+	virtual std::wstring to_wstring (const Object* obj) const override;
 };
 
 struct DrawingObjects
@@ -112,11 +127,15 @@ public:
 	struct InvalidateEvent : public Event<InvalidateEvent, void(Object*)> { };
 	InvalidateEvent::Subscriber GetInvalidateEvent() { return InvalidateEvent::Subscriber(this); }
 
-	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const = 0;
-	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) = 0;
-
 	template<typename T>
 	bool Is() const { return dynamic_cast<const T*>(this) != nullptr; }
 
 	virtual const PropertyOrGroup* const* GetProperties() const = 0;
+};
+
+class RenderableObject : public Object
+{
+public:
+	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const = 0;
+	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) = 0;
 };

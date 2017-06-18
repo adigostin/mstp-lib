@@ -1,6 +1,7 @@
 
 #pragma once
 #include "Win32/EventManager.h"
+#include "BridgeTree.h"
 #include "Port.h"
 
 struct BridgeLogLine
@@ -10,7 +11,7 @@ struct BridgeLogLine
 	int treeIndex;
 };
 
-class Bridge : public Object
+class Bridge : public RenderableObject
 {
 	float _x;
 	float _y;
@@ -25,6 +26,7 @@ class Bridge : public Object
 	TimerQueueTimer_unique_ptr _oneSecondTimerHandle;
 	bool _simulationPaused = false;
 	std::queue<std::pair<size_t, PacketInfo>> _rxQueue;
+	std::vector<std::unique_ptr<BridgeTree>> _trees;
 
 	// Let's keep things simple and do everything on the GUI thread.
 	struct HelperWindow : EventManager
@@ -54,7 +56,6 @@ public:
 
 	virtual const PropertyOrGroup* const* GetProperties() const override final;
 
-public:
 	static constexpr int HTCodeInner = 1;
 
 	static constexpr float DefaultHeight = 100;
@@ -75,6 +76,7 @@ public:
 
 	void SetCoordsForInteriorPort (Port* port, D2D1_POINT_2F proposedLocation);
 
+	const std::vector<std::unique_ptr<BridgeTree>>& GetTrees() const { return _trees; }
 	const std::vector<std::unique_ptr<Port>>& GetPorts() const { return _ports; }
 
 	std::string GetBridgeAddressAsString() const;
@@ -100,11 +102,6 @@ public:
 	void ProcessLinkPulse (size_t rxPortIndex, unsigned int timestamp);
 	void EnqueuePacket (PacketInfo&& packet, size_t rxPortIndex);
 
-private:
-	static void OnWmPacketReceived (WPARAM wParam, LPARAM lParam);
-	void ProcessReceivedPackets();
-
-public:
 	bool IsPowered() const { return _powered; }
 	const std::vector<std::unique_ptr<BridgeLogLine>>& GetLogLines() const { return _logLines; }
 	std::array<uint8_t, 6> GetPortAddress (size_t portIndex) const;
@@ -115,11 +112,22 @@ public:
 	void PauseSimulation();
 	void ResumeSimulation();
 
+	// Property getters and setters.
+	bool IsBridgeStarted() const { return (bool) STP_IsBridgeStarted(_stpBridge); }
+	int GetStpVersionAsInt() const { return (int) STP_GetStpVersion(_stpBridge); }
+	unsigned int GetPortCount() const { return STP_GetPortCount(_stpBridge); }
+	unsigned int GetMstiCount() const { return STP_GetMstiCount(_stpBridge); }
+	std::wstring GetMstConfigIdName() const;
+	unsigned short GetMstConfigIdRevLevel() const;
+	std::wstring GetMstConfigIdDigest() const;
+
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
 	static void OnWmOneSecondTimer (WPARAM wParam, LPARAM lParam);
 	static void OnPortInvalidate (void* callbackArg, Object* object);
 	static void OnLinkPulseTick(void* callbackArg);
+	static void OnWmPacketReceived (WPARAM wParam, LPARAM lParam);
+	void ProcessReceivedPackets();
 
 	static void* StpCallback_AllocAndZeroMemory (unsigned int size);
 	static void  StpCallback_FreeMemory (void* p);

@@ -18,7 +18,7 @@ public:
 	LONG GetClientHeightPixels() const { return _clientSize.cy; }
 
 	virtual HWND GetHWnd() const override { return _hwnd; }
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOINTERFACE; }
 	virtual ULONG STDMETHODCALLTYPE AddRef() override ;
 	virtual ULONG STDMETHODCALLTYPE Release() override ;
 

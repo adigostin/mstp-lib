@@ -211,6 +211,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Bridge.h" />
+    <ClInclude Include="BridgeTree.h" />
     <ClInclude Include="EditStates\EditState.h" />
     <ClInclude Include="Object.h" />
     <ClInclude Include="pch.h" />
@@ -229,7 +230,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Bridge.cpp" />
-    <ClCompile Include="BridgePropsWindow.cpp" />
+    <ClCompile Include="BridgeTree.cpp" />
     <ClCompile Include="EditArea.cpp" />
     <ClCompile Include="EditStates\BeginningDragES.cpp" />
     <ClCompile Include="EditStates\CreateBridgeES.cpp" />
@@ -249,6 +250,7 @@
     <ClCompile Include="Port.cpp" />
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
+    <ClCompile Include="PropertiesWindow.cpp" />
     <ClCompile Include="PropertyGrid.cpp" />
     <ClCompile Include="Test.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>

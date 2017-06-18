@@ -7,38 +7,26 @@
 
 using namespace std;
 
-class MSTConfigIdDialog : public IMSTConfigIdDialog
+class MSTConfigIdDialog : public IPropertyEditor
 {
-	ISimulatorApp* const _app;
-	IProjectWindow* const _projectWindow;
-	IProject* const _project;
-	ISelectionPtr const _selection;
 	vector<Bridge*> _bridges;
 	HWND _hwnd = nullptr;
 
 public:
-	MSTConfigIdDialog (ISimulatorApp* app, IProjectWindow* projectWindow, IProject* project, ISelection* selection)
-		: _app(app), _projectWindow(projectWindow), _project(project), _selection(selection)
+	MSTConfigIdDialog (const std::vector<Object*>& objects)
 	{
-		auto& objects = _selection->GetObjects();
-
 		assert (!objects.empty());
-
 		for (auto o : objects)
 		{
-			auto b = dynamic_cast<Bridge*>(o);
-			if (b == nullptr)
-				throw invalid_argument ("Selection must consists only of bridges.");
-			_bridges.push_back(b);
+			auto bridge = dynamic_cast<Bridge*>(o);
+			if (bridge == nullptr)
+				throw invalid_argument("");
+			_bridges.push_back(bridge);
 		}
-
-		_project->GetBridgeRemovingEvent().AddHandler (&OnBridgeRemoving, this);
 	}
 
 	~MSTConfigIdDialog()
-	{
-		_project->GetBridgeRemovingEvent().RemoveHandler (&OnBridgeRemoving, this);
-	}
+	{ }
 
 	static void OnBridgeRemoving (void* callbackArg, IProject* project, size_t index, Bridge* bridge)
 	{
@@ -51,6 +39,12 @@ public:
 	{
 		INT_PTR dr = DialogBoxParam (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDD_DIALOG_MST_CONFIG_ID), hWndParent, &DialogProcStatic, (LPARAM) this);
 		return (UINT) dr;
+	}
+
+	virtual void Cancel() override final
+	{
+		::EndDialog (_hwnd, IDCANCEL);
+		return;
 	}
 
 	static INT_PTR CALLBACK DialogProcStatic (HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -240,9 +234,9 @@ public:
 };
 
 template<typename... Args>
-static unique_ptr<IMSTConfigIdDialog> Create (Args... args)
+static unique_ptr<IPropertyEditor> Create (Args... args)
 {
-	return unique_ptr<IMSTConfigIdDialog>(new MSTConfigIdDialog (std::forward<Args>(args)...));
+	return unique_ptr<IPropertyEditor>(new MSTConfigIdDialog (std::forward<Args>(args)...));
 }
 
-const MSTConfigIdDialogFactory mstConfigIdDialogFactory = &Create;
+const PropertyEditorFactory mstConfigIdDialogFactory = &Create;

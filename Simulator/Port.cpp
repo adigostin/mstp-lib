@@ -323,27 +323,29 @@ bool Port::GetMacOperational() const
 	return _missedLinkPulseCounter < MissedLinkPulseCounterMax;
 }
 
-static const TypedProperty<bool> PortPropAdminEdge
-(
-	L"AdminEdge",
-	nullptr,
-	[](const Object* o, unsigned int vlanNumber)
-	{
-		auto port = static_cast<const Port*>(o);
-		return (bool) STP_GetPortAdminEdge(port->GetBridge()->GetStpBridge(), (unsigned int) port->GetPortIndex());
-	},
-	nullptr
-);
+bool Port::GetAutoEdge() const
+{
+	return (bool) STP_GetPortAutoEdge (_bridge->GetStpBridge(), (unsigned int) _portIndex);
+}
+
+bool Port::GetAdminEdge() const
+{
+	return (bool) STP_GetPortAdminEdge (_bridge->GetStpBridge(), (unsigned int) _portIndex);
+}
 
 static const TypedProperty<bool> PortPropAutoEdge
 (
 	L"AutoEdge",
 	nullptr,
-	[](const Object* o, unsigned int vlanNumber)
-	{
-		auto port = static_cast<const Port*>(o);
-		return (bool) STP_GetPortAutoEdge(port->GetBridge()->GetStpBridge(), (unsigned int) port->GetPortIndex());
-	},
+	static_cast<TypedProperty<bool>::Getter>(&Port::GetAutoEdge),
+	nullptr
+);
+
+static const TypedProperty<bool> PortPropAdminEdge
+(
+	L"AdminEdge",
+	nullptr,
+	static_cast<TypedProperty<bool>::Getter>(&Port::GetAdminEdge),
 	nullptr
 );
 

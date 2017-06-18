@@ -5,8 +5,6 @@
 
 Window::Window (HINSTANCE hInstance, const wchar_t* wndClassName, DWORD exStyle, DWORD style, const RECT& rect, HWND hWndParent, HMENU hMenuOrControlId)
 {
-	//auto wndClassName = this->GetWndClassName();
-
 	WNDCLASSEX wcex;
 	BOOL bRes = ::GetClassInfoEx (hInstance, wndClassName, &wcex);
 	if (!bRes)

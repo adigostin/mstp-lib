@@ -5,7 +5,7 @@ using ConnectedWireEnd = Port*;
 using LooseWireEnd = D2D1_POINT_2F;
 using WireEnd = std::variant<LooseWireEnd, ConnectedWireEnd>;
 
-class Wire : public Object
+class Wire : public RenderableObject
 {
 	std::array<WireEnd, 2> _points;
 	std::string _debugName;

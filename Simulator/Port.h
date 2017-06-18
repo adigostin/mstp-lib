@@ -11,7 +11,7 @@ struct PacketInfo
 	std::vector<std::array<uint8_t, 6>> txPortPath;
 };
 
-class Port : public Object
+class Port : public RenderableObject
 {
 	friend class Bridge;
 
@@ -59,4 +59,7 @@ public:
 
 	bool HitTestInnerOuter (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) const;
 	bool HitTestCP (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) const;
+
+	bool GetAutoEdge() const;
+	bool GetAdminEdge() const;
 };

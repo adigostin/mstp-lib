@@ -436,8 +436,11 @@ public:
 
 		RenderWires (rt);
 
-		for (auto& o : _selection->GetObjects())
-			o->RenderSelection(this, rt, _drawingObjects);
+		for (Object* o : _selection->GetObjects())
+		{
+			if (auto ro = dynamic_cast<RenderableObject*>(o))
+				ro->RenderSelection(this, rt, _drawingObjects);
+		}
 
 		RenderLegend(rt);
 
