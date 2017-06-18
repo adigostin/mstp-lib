@@ -123,6 +123,7 @@ public:
 	std::wstring GetMstConfigIdName() const;
 	void SetMstConfigIdName (std::wstring value, unsigned int timestamp);
 	unsigned short GetMstConfigIdRevLevel() const;
+	void SetMstConfigIdRevLevel (unsigned short revLevel, unsigned int timestamp);
 	std::wstring GetMstConfigIdDigest() const;
 
 private:

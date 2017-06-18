@@ -698,6 +698,11 @@ unsigned short Bridge::GetMstConfigIdRevLevel() const
 	return ((unsigned short) id->RevisionLevelHigh << 8) | (unsigned short) id->RevisionLevelLow;
 }
 
+void Bridge::SetMstConfigIdRevLevel (unsigned short revLevel, unsigned int timestamp)
+{
+	STP_SetMstConfigRevisionLevel (_stpBridge, revLevel, timestamp);
+}
+
 std::wstring Bridge::GetMstConfigIdDigest() const
 {
 	const unsigned char* digest = STP_GetMstConfigId(_stpBridge)->ConfigurationDigest;
@@ -793,7 +798,7 @@ static const TypedProperty<unsigned short> MstConfigIdRevLevel
 	L"Revision Level",
 	nullptr,
 	static_cast<TypedProperty<unsigned short>::Getter>(&Bridge::GetMstConfigIdRevLevel),
-	nullptr
+	static_cast<TypedProperty<unsigned short>::Setter>(&Bridge::SetMstConfigIdRevLevel)
 );
 
 static const TypedProperty<wstring> MstConfigIdDigest
