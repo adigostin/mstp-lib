@@ -81,6 +81,7 @@ public:
 
 	std::string GetBridgeAddressAsString() const;
 	std::wstring GetBridgeAddressAsWString() const;
+	void SetBridgeAddressFromWString (std::wstring address, unsigned int timestamp);
 
 	void Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned int vlanNumber, const D2D1_COLOR_F& configIdColor) const;
 
@@ -113,11 +114,14 @@ public:
 	void ResumeSimulation();
 
 	// Property getters and setters.
-	bool IsBridgeStarted() const { return (bool) STP_IsBridgeStarted(_stpBridge); }
+	bool GetStpEnabled() const { return (bool) STP_IsBridgeStarted(_stpBridge); }
+	void SetStpEnabled (bool enable, unsigned int timestamp);
 	int GetStpVersionAsInt() const { return (int) STP_GetStpVersion(_stpBridge); }
+	void SetStpVersionFromInt (int version, unsigned int timestamp);
 	unsigned int GetPortCount() const { return STP_GetPortCount(_stpBridge); }
 	unsigned int GetMstiCount() const { return STP_GetMstiCount(_stpBridge); }
 	std::wstring GetMstConfigIdName() const;
+	void SetMstConfigIdName (std::wstring value, unsigned int timestamp);
 	unsigned short GetMstConfigIdRevLevel() const;
 	std::wstring GetMstConfigIdDigest() const;
 

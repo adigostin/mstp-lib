@@ -360,6 +360,12 @@ std::wstring Bridge::GetBridgeAddressAsWString() const
 	return ss.str();
 }
 
+void Bridge::SetBridgeAddressFromWString (std::wstring str, unsigned int timestamp)
+{
+	auto newAddress = ConvertStringToBridgeAddress(str.c_str());
+	STP_SetBridgeAddress (_stpBridge, newAddress.bytes, timestamp);
+}
+
 std::array<uint8_t, 6> Bridge::GetPortAddress (size_t portIndex) const
 {
 	std::array<uint8_t, 6> pa;
@@ -630,6 +636,25 @@ std::wstring Bridge::GetMstConfigIdName() const
 	return utf16;
 }
 
+void Bridge::SetMstConfigIdName (std::wstring value, unsigned int timestamp)
+{
+	auto len = wcslen(value.c_str());
+	if (len > 32)
+		throw invalid_argument("Invalid MST Config Name: more than 32 characters.");
+
+	string ascii;
+	for (auto p = value.c_str(); *p != 0; p++)
+	{
+		if (*p >= 128)
+			throw invalid_argument("Invalid MST Config Name: non-ASCII characters.");
+
+		ascii.push_back((char) *p);
+	}
+	ascii.resize(32);
+
+	STP_SetMstConfigName (_stpBridge, ascii.c_str(), timestamp);
+}
+
 unsigned short Bridge::GetMstConfigIdRevLevel() const
 {
 	auto id = STP_GetMstConfigId(_stpBridge);
@@ -648,6 +673,21 @@ std::wstring Bridge::GetMstConfigIdDigest() const
 	return ss.str();
 }
 
+void Bridge::SetStpEnabled (bool value, unsigned int timestamp)
+{
+	if (value && !STP_IsBridgeStarted(_stpBridge))
+		STP_StartBridge (_stpBridge, timestamp);
+	else if (!value && STP_IsBridgeStarted(_stpBridge))
+		STP_StopBridge (_stpBridge, timestamp);
+}
+
+void Bridge::SetStpVersionFromInt (int value, unsigned int timestamp)
+{
+	auto newVersion = (STP_VERSION) value;
+	if (STP_GetStpVersion(_stpBridge) != newVersion)
+		STP_SetStpVersion(_stpBridge, newVersion, timestamp);
+}
+
 static const PropertyGroup CommonPropGroup
 {
 	L"Common",
@@ -659,26 +699,15 @@ static const TypedProperty<wstring> AddressProperty
 	L"Bridge Address",
 	nullptr,
 	static_cast<TypedProperty<wstring>::Getter>(&Bridge::GetBridgeAddressAsWString),
-	[](Object* obj, wstring str, unsigned int timestamp)
-	{
-		auto newAddress = ConvertStringToBridgeAddress(str.c_str());
-		STP_SetBridgeAddress (dynamic_cast<Bridge*>(obj)->GetStpBridge(), newAddress.bytes, timestamp);
-	}
+	static_cast<TypedProperty<wstring>::Setter>(&Bridge::SetBridgeAddressFromWString)
 );
 
 static const TypedProperty<bool> BridgePropStpEnabled
 (
 	L"STP Enabled",
 	nullptr,
-	static_cast<TypedProperty<bool>::Getter>(&Bridge::IsBridgeStarted),
-	[](Object* obj, bool value, unsigned int timestamp)
-	{
-		auto stpb = dynamic_cast<Bridge*>(obj)->GetStpBridge();
-		if (value && !STP_IsBridgeStarted(stpb))
-			STP_StartBridge (stpb, timestamp);
-		else if (!value && STP_IsBridgeStarted(stpb))
-			STP_StopBridge (stpb, timestamp);
-	}
+	static_cast<TypedProperty<bool>::Getter>(&Bridge::GetStpEnabled),
+	static_cast<TypedProperty<bool>::Setter>(&Bridge::SetStpEnabled)
 );
 
 static const NVP StpVersionNVPs[] = { { L"LegacySTP", STP_VERSION_LEGACY_STP }, { L"RSTP", STP_VERSION_RSTP }, { L"MSTP", STP_VERSION_MSTP }, { 0, 0 } };
@@ -688,13 +717,7 @@ static const EnumProperty BridgePropStpVersion
 	L"STP Version",
 	nullptr,
 	static_cast<EnumProperty::Getter>(&Bridge::GetStpVersionAsInt),
-	[](Object* obj, int value, unsigned int timestamp)
-	{
-		auto stpb = dynamic_cast<Bridge*>(obj)->GetStpBridge();
-		auto newVersion = (STP_VERSION) value;
-		if (STP_GetStpVersion(stpb) != newVersion)
-			STP_SetStpVersion(stpb, newVersion, timestamp);
-	},
+	static_cast<EnumProperty::Setter>(&Bridge::SetStpVersionFromInt),
 	StpVersionNVPs
 };
 
@@ -725,25 +748,7 @@ static const TypedProperty<wstring> MstConfigIdName
 	L"Name",
 	nullptr,
 	static_cast<TypedProperty<wstring>::Getter>(&Bridge::GetMstConfigIdName),
-	[](Object* obj, wstring value, unsigned int timestamp)
-	{
-		auto stpb = dynamic_cast<const Bridge*>(obj)->GetStpBridge();
-		auto len = wcslen(value.c_str());
-		if (len > 32)
-			throw invalid_argument("Invalid MST Config Name: more than 32 characters.");
-
-		string ascii;
-		for (auto p = value.c_str(); *p != 0; p++)
-		{
-			if (*p >= 128)
-				throw invalid_argument("Invalid MST Config Name: non-ASCII characters.");
-
-			ascii.push_back((char) *p);
-		}
-		ascii.resize(32);
-
-		STP_SetMstConfigName (stpb, ascii.c_str(), timestamp);
-	}
+	static_cast<TypedProperty<wstring>::Setter>(&Bridge::SetMstConfigIdName)
 );
 
 static const TypedProperty<unsigned short> MstConfigIdRevLevel

@@ -555,7 +555,7 @@ void PropertyGrid::ProcessLButtonUp (DWORD modifierKeys, POINT pt)
 					{
 						if ((so->*(boolPD->_getter))() != newValue)
 						{
-							boolPD->_setter (so, (bool) newValue, timestamp);
+							(so->*(boolPD->_setter)) (newValue, timestamp);
 							PropertyChangedEvent::InvokeHandlers (this, boolPD);
 						}
 					}
@@ -572,7 +572,7 @@ void PropertyGrid::ProcessLButtonUp (DWORD modifierKeys, POINT pt)
 					{
 						if ((so->*(enumPD->_getter))() != newValue)
 						{
-							enumPD->_setter (so, newValue, timestamp);
+							(so->*(enumPD->_setter)) (newValue, timestamp);
 							PropertyChangedEvent::InvokeHandlers (this, enumPD);
 						}
 					}
@@ -586,8 +586,8 @@ void PropertyGrid::ProcessLButtonUp (DWORD modifierKeys, POINT pt)
 				ShowEditor (pt, value.c_str(), [this, stringPD](const wstring& newStr)
 				{
 					auto timestamp = GetTimestampMilliseconds();
-					for (Object* o : _selectedObjects)
-						stringPD->_setter (o, newStr, timestamp);
+					for (Object* so : _selectedObjects)
+						(so->*(stringPD->_setter)) (newStr, timestamp);
 				});
 			}
 			else

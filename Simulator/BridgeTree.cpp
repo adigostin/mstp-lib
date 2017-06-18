@@ -157,7 +157,7 @@ static const EnumProperty PriorityProperty
 	L"Bridge Priority",
 	nullptr,//[](const std::vector<Object*>& objs) -> wstring
 	static_cast<EnumProperty::Getter>(&BridgeTree::GetPriority),
-	[](Object* obj, int value, unsigned int timestamp) { dynamic_cast<BridgeTree*>(obj)->SetPriority(value, timestamp); },
+	static_cast<EnumProperty::Setter>(&BridgeTree::SetPriority),
 	BridgePrioNVPs
 );
 
