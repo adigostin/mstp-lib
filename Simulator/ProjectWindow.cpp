@@ -105,7 +105,6 @@ public:
 
 		{
 			auto propsPanel = _dockContainer->CreatePanel (PropsPanelUniqueName, Side::Left, L"Properties");
-			auto cr = propsPanel->GetContentRect();
 			_propertiesWindow = propertiesWindowFactory (app, this, project, _selection, propsPanel->GetContentRect(), propsPanel->GetHWnd());
 			propsPanel->GetVisibleChangedEvent().AddHandler (&OnPropsPanelVisibleChanged, this);
 			SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);

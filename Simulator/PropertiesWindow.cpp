@@ -22,8 +22,8 @@ public:
 					  const RECT& rect,
 					  HWND hWndParent)
 		: base (app->GetHInstance(), ClassName, WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, rect, hWndParent, nullptr)
-		, _pg (new PropertyGrid(app->GetHInstance(), { rect.left, rect.top, rect.right, rect.bottom / 2 }, GetHWnd(), app->GetDWriteFactory(), projectWindow))
-		, _pgTree (new PropertyGrid(app->GetHInstance(), { rect.left, rect.bottom / 2, rect.right, rect.bottom }, GetHWnd(), app->GetDWriteFactory(), projectWindow))
+		, _pg (new PropertyGrid(app->GetHInstance(), { 0, 0, GetClientWidthPixels(), GetClientHeightPixels() / 2 }, GetHWnd(), app->GetDWriteFactory(), projectWindow))
+		, _pgTree (new PropertyGrid(app->GetHInstance(), { 0, GetClientHeightPixels() / 2, GetClientWidthPixels(), GetClientHeightPixels() }, GetHWnd(), app->GetDWriteFactory(), projectWindow))
 	{ }
 
 	template<typename... Args>
