@@ -147,7 +147,7 @@ public:
 			int translatedAccelerator = 0;
 			for (auto& pw : _projectWindows)
 			{
-				if (::IsChild(pw->GetHWnd(), msg.hwnd))
+				if ((msg.hwnd == pw->GetHWnd()) || ::IsChild(pw->GetHWnd(), msg.hwnd))
 				{
 					translatedAccelerator = TranslateAccelerator (pw->GetHWnd(), accelerators, &msg);
 					break;
