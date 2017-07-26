@@ -111,14 +111,6 @@ struct DrawingObjects
 	ID2D1StrokeStylePtr _strokeStyleSelectionRect;
 };
 
-struct HTResult
-{
-	Object* object;
-	int code;
-	bool operator==(const HTResult& other) const { return (this->object == other.object) && (this->code == other.code); }
-	bool operator!=(const HTResult& other) const { return (this->object != other.object) || (this->code != other.code); }
-};
-
 class Object : public EventManager
 {
 public:
@@ -136,6 +128,14 @@ public:
 class RenderableObject : public Object
 {
 public:
+	struct HTResult
+	{
+		RenderableObject* object;
+		int code;
+		bool operator==(const HTResult& other) const { return (this->object == other.object) && (this->code == other.code); }
+		bool operator!=(const HTResult& other) const { return (this->object != other.object) || (this->code != other.code); }
+	};
+
 	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const = 0;
 	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) = 0;
 };

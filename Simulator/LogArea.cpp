@@ -435,6 +435,8 @@ private:
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return base::QueryInterface(riid, ppvObject); }
 	virtual ULONG STDMETHODCALLTYPE AddRef() override { return base::AddRef(); }
 	virtual ULONG STDMETHODCALLTYPE Release() override { return base::Release(); }
+
+	virtual HWND GetHWnd() const override { return base::GetHWnd(); }
 };
 
 template<typename... Args>

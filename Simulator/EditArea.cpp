@@ -29,6 +29,8 @@ class EditArea : public ZoomableWindow, public IEditArea
 {
 	typedef ZoomableWindow base;
 
+	using HTResult = RenderableObject::HTResult;
+
 	ISimulatorApp*  const _app;
 	IProjectWindow* const _pw;
 	IProjectPtr     const _project;

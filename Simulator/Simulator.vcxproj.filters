@@ -78,12 +78,6 @@
     <ClCompile Include="Win32\D2DWindow.cpp">
       <Filter>Win32</Filter>
     </ClCompile>
-    <ClCompile Include="Win32\DockablePanel.cpp">
-      <Filter>Win32</Filter>
-    </ClCompile>
-    <ClCompile Include="Win32\DockContainer.cpp">
-      <Filter>Win32</Filter>
-    </ClCompile>
     <ClCompile Include="Win32\Window.cpp">
       <Filter>Win32</Filter>
     </ClCompile>

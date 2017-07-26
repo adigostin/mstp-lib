@@ -15,9 +15,8 @@ static constexpr wchar_t RegValueNameWindowLeft[] = L"WindowLeft";
 static constexpr wchar_t RegValueNameWindowTop[] = L"WindowTop";
 static constexpr wchar_t RegValueNameWindowRight[] = L"WindowRight";
 static constexpr wchar_t RegValueNameWindowBottom[] = L"WindowBottom";
-static constexpr char LogPanelUniqueName[] = "STP Log Panel";
-static constexpr char PropsPanelUniqueName[] = "Props Panel";
-static constexpr char VlanPanelUniqueName[] = "VLAN Panel";
+static constexpr wchar_t RegValueNamePropertiesWindowWidth[] = L"PropertiesWindowWidth";
+static constexpr wchar_t RegValueNameLogWindowWidth[] = L"LogWindowWidth";
 
 static COMDLG_FILTERSPEC const ProjectFileDialogFileTypes[] =
 {
@@ -26,6 +25,10 @@ static COMDLG_FILTERSPEC const ProjectFileDialogFileTypes[] =
 };
 static const wchar_t ProjectFileExtensionWithoutDot[] = L"stp";
 
+static constexpr LONG SplitterWidthDips = 4;
+static constexpr LONG PropertiesWindowDefaultWidthDips = 200;
+static constexpr LONG LogWindowDefaultWidthDips = 200;
+
 class ProjectWindow : public EventManager, public IProjectWindow
 {
 	ULONG _refCount = 1;
@@ -33,13 +36,21 @@ class ProjectWindow : public EventManager, public IProjectWindow
 	IProjectPtr    const _project;
 	ISelectionPtr  const _selection;
 	IEditAreaPtr         _editArea;
-	IDockContainerPtr    _dockContainer;
+	IPropertiesWindowPtr _propertiesWindow;
+	ILogAreaPtr          _logWindow;
+	IVlanWindowPtr       _vlanWindow;
 	HWND _hwnd;
 	SIZE _clientSize;
 	RECT _restoreBounds;
 	unsigned int _selectedVlanNumber = 1;
 	queue<function<void()>> _workQueue;
-	IPropertiesWindowPtr _propertiesWindow;
+	int _dpiX;
+	int _dpiY;
+	LONG _splitterWidthPixels;
+
+	enum class ToolWindow { None, Props, Vlan, Log };
+	ToolWindow _windowBeingResized = ToolWindow::None;
+	LONG _resizeOffset;
 
 public:
 	ProjectWindow (ISimulatorApp* app,
@@ -65,7 +76,7 @@ public:
 				_app->GetHInstance(),
 				LoadIcon(_app->GetHInstance(), MAKEINTRESOURCE(IDI_DESIGNER)), // hIcon
 				LoadCursor(nullptr, IDC_ARROW), // hCursor
-				nullptr,//(HBRUSH)(COLOR_WINDOW + 1), // hbrBackground
+				(HBRUSH)(COLOR_WINDOW + 1), // hbrBackground
 				MAKEINTRESOURCE(IDR_MAIN_MENU), // lpszMenuName
 				ProjectWindowWndClassName,      // lpszClassName
 				LoadIcon(_app->GetHInstance(), MAKEINTRESOURCE(IDI_DESIGNER))
@@ -77,7 +88,7 @@ public:
 		}
 
 		bool read = TryGetSavedWindowLocation (&_restoreBounds, &nCmdShow);
-		int x = CW_USEDEFAULT, y = CW_USEDEFAULT, w = CW_USEDEFAULT, h = CW_USEDEFAULT;
+		LONG x = CW_USEDEFAULT, y = CW_USEDEFAULT, w = CW_USEDEFAULT, h = CW_USEDEFAULT;
 		if (read)
 		{
 			x = _restoreBounds.left;
@@ -94,31 +105,23 @@ public:
 		::ShowWindow (_hwnd, nCmdShow);
 
 		const RECT clientRect = { 0, 0, _clientSize.cx, _clientSize.cy };
-		_dockContainer = dockContainerFactory (_app->GetHInstance(), _hwnd, clientRect);
 
-		{
-			auto logPanel = _dockContainer->CreatePanel (LogPanelUniqueName, Side::Right, L"STP Log");
-			auto logArea = logAreaFactory (_app->GetHInstance(), logPanel->GetHWnd(), logPanel->GetContentRect(), _app->GetDWriteFactory(), _selection);
-			logPanel->GetVisibleChangedEvent().AddHandler (&OnLogPanelVisibleChanged, this);
-			SetMainMenuItemCheck (ID_VIEW_STPLOG, true);
-		}
+		w = (PropertiesWindowDefaultWidthDips * _dpiX + 96 / 2) / 96;
+		TryReadRegDword (RegValueNamePropertiesWindowWidth, (DWORD*) &w);
+		w = RestrictToolWindowWidth(w);
+		_propertiesWindow = propertiesWindowFactory (app, this, project, _selection, { 0, 0, w, _clientSize.cy }, _hwnd);
+		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
 
-		{
-			auto propsPanel = _dockContainer->CreatePanel (PropsPanelUniqueName, Side::Left, L"Properties");
-			_propertiesWindow = propertiesWindowFactory (app, this, project, _selection, propsPanel->GetContentRect(), propsPanel->GetHWnd());
-			propsPanel->GetVisibleChangedEvent().AddHandler (&OnPropsPanelVisibleChanged, this);
-			SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
-		}
+		w = (LogWindowDefaultWidthDips * _dpiX + 96 / 2) / 96;
+		TryReadRegDword (RegValueNameLogWindowWidth, (DWORD*) &w);
+		w = RestrictToolWindowWidth(w);
+		_logWindow = logAreaFactory (_app->GetHInstance(), _hwnd, { _clientSize.cx - w, 0, _clientSize.cx, _clientSize.cy }, _app->GetDWriteFactory(), _selection);
+		SetMainMenuItemCheck (ID_VIEW_STPLOG, true);
 
-		{
-			auto vlanPanel = _dockContainer->CreatePanel (VlanPanelUniqueName, Side::Top, L"VLAN");
-			auto vlanWindow = vlanWindowFactory (_app, this, _project, _selection, vlanPanel->GetHWnd(), vlanPanel->GetContentLocation());
-			_dockContainer->ResizePanel (vlanPanel, vlanPanel->GetPanelSizeFromContentSize(vlanWindow->GetClientSize()));
-			vlanPanel->GetVisibleChangedEvent().AddHandler (&OnVlanPanelVisibleChanged, this);
-			SetMainMenuItemCheck (ID_VIEW_VLANS, true);
-		}
+		_vlanWindow = vlanWindowFactory (_app, this, _project, _selection, _hwnd, { _propertiesWindow->GetWidth() + _splitterWidthPixels, 0 });
+		SetMainMenuItemCheck (ID_VIEW_VLANS, true);
 
-		_editArea = editAreaFactory (app, this, _project, _selection, _dockContainer->GetHWnd(), _dockContainer->GetContentRect(), _app->GetDWriteFactory());
+		_editArea = editAreaFactory (app, this, _project, _selection, _hwnd, GetEditWindowRect(), _app->GetDWriteFactory());
 
 		_selection->GetAddedToSelectionEvent().AddHandler (&OnObjectAddedToSelection, this);
 		_selection->GetRemovingFromSelectionEvent().AddHandler (&OnObjectRemovingFromSelection, this);
@@ -202,6 +205,22 @@ public:
 		pw->SetWindowTitle();
 	}
 
+	RECT GetEditWindowRect() const
+	{
+		auto rect = GetClientRectPixels();
+
+		if (_propertiesWindow != nullptr)
+			rect.left += _propertiesWindow->GetWidth() + _splitterWidthPixels;
+
+		if (_logWindow != nullptr)
+			rect.right -= _logWindow->GetWidth() + _splitterWidthPixels;
+
+		if (_vlanWindow != nullptr)
+			rect.top += _vlanWindow->GetHeight();
+
+		return rect;
+	}
+
 	void SetWindowTitle()
 	{
 		wstringstream windowTitle;
@@ -233,21 +252,6 @@ public:
 		mii.fMask = MIIM_STATE;
 		mii.fState = checked ? MFS_CHECKED : MFS_UNCHECKED;
 		::SetMenuItemInfo (menu, item, FALSE, &mii);
-	}
-
-	static void OnPropsPanelVisibleChanged (void* callbackArg, IDockablePanel* panel, bool visible)
-	{
-		static_cast<ProjectWindow*>(callbackArg)->SetMainMenuItemCheck (ID_VIEW_PROPERTIES, visible);
-	}
-
-	static void OnLogPanelVisibleChanged (void* callbackArg, IDockablePanel* panel, bool visible)
-	{
-		static_cast<ProjectWindow*>(callbackArg)->SetMainMenuItemCheck (ID_VIEW_STPLOG, visible);
-	}
-
-	static void OnVlanPanelVisibleChanged (void* callbackArg, IDockablePanel* panel, bool visible)
-	{
-		static_cast<ProjectWindow*>(callbackArg)->SetMainMenuItemCheck (ID_VIEW_VLANS, visible);
 	}
 
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
@@ -326,6 +330,13 @@ public:
 		{
 			auto cs = reinterpret_cast<const CREATESTRUCT*>(lParam);
 			_clientSize = { cs->cx, cs->cy };
+
+			auto hdc = ::GetDC(_hwnd);
+			_dpiX = GetDeviceCaps (hdc, LOGPIXELSX);
+			_dpiY = GetDeviceCaps (hdc, LOGPIXELSY);
+			::ReleaseDC (_hwnd, hdc);
+
+			_splitterWidthPixels = (SplitterWidthDips * _dpiX + 96 / 2) / 96;
 			return 0;
 		}
 
@@ -338,19 +349,12 @@ public:
 		if (msg == WM_DESTROY)
 		{
 			DestroyingEvent::InvokeHandlers(this, this);
-			_dockContainer = nullptr; // destroy it early to avoid doing layout-related processing
 			return 0;
 		}
 
 		if (msg == WM_SIZE)
 		{
-			if (wParam == SIZE_RESTORED)
-				::GetWindowRect(_hwnd, &_restoreBounds);
-
-			_clientSize = { LOWORD(lParam), HIWORD(lParam) };
-			if (_dockContainer != nullptr)
-				::MoveWindow (_dockContainer->GetHWnd(), 0, 0, _clientSize.cx, _clientSize.cy, TRUE);
-
+			ProcessWmSize (wParam, { LOWORD(lParam), HIWORD(lParam) });
 			return 0;
 		}
 
@@ -363,14 +367,9 @@ public:
 			return 0;
 		}
 
-		if (msg == WM_ERASEBKGND)
-			return 1;
-
 		if (msg == WM_PAINT)
 		{
-			PAINTSTRUCT ps;
-			BeginPaint(GetHWnd(), &ps);
-			EndPaint(GetHWnd(), &ps);
+			ProcessWmPaint();
 			return 0;
 		}
 
@@ -390,18 +389,161 @@ public:
 			return 0;
 		}
 
+		if (msg == WM_SETCURSOR)
+		{
+			if (((HWND) wParam == _hwnd) && (LOWORD (lParam) == HTCLIENT))
+			{
+				POINT pt;
+				BOOL bRes = ::GetCursorPos (&pt);
+				if (bRes)
+				{
+					bRes = ::ScreenToClient (_hwnd, &pt); ThrowWin32IfFailed(bRes);
+					this->SetCursor(pt);
+					return 0;
+				}
+			}
+
+			return DefWindowProc (_hwnd, msg, wParam, lParam);
+		}
+
+		if (msg == WM_LBUTTONDOWN)
+		{
+			ProcessWmLButtonDown (POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) }, (UINT) wParam);
+			return 0;
+		}
+
+		if (msg == WM_MOUSEMOVE)
+		{
+			ProcessWmMouseMove (POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) }, (UINT) wParam);
+			return 0;
+		}
+
+		if (msg == WM_LBUTTONUP)
+		{
+			ProcessWmLButtonUp (POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) }, (UINT) wParam);
+			return 0;
+		}
+
 		return DefWindowProc(_hwnd, msg, wParam, lParam);
+	}
+
+	void ProcessWmSize (WPARAM wParam, SIZE newClientSize)
+	{
+		if (wParam == SIZE_RESTORED)
+			::GetWindowRect(_hwnd, &_restoreBounds);
+
+		_clientSize = newClientSize;
+
+		if (_propertiesWindow != nullptr)
+			_propertiesWindow->SetRect ({ 0, 0, RestrictToolWindowWidth(_propertiesWindow->GetWidth()), _clientSize.cy });
+
+		if (_logWindow != nullptr)
+			_logWindow->SetRect ({ _clientSize.cx - RestrictToolWindowWidth(_logWindow->GetWidth()), 0, _clientSize.cx, _clientSize.cy });
+
+		if (_vlanWindow != nullptr)
+			_vlanWindow->SetRect ({ _propertiesWindow->GetWidth() + _splitterWidthPixels, 0, _logWindow->GetX() - _splitterWidthPixels, _vlanWindow->GetHeight() });
+
+		if (_editArea != nullptr)
+			_editArea->SetRect (GetEditWindowRect());
+	}
+
+	void ProcessWmLButtonDown (POINT pt, UINT modifierKeysDown)
+	{
+		if ((pt.x >= _propertiesWindow->GetWidth()) && (pt.x < _propertiesWindow->GetWidth() + _splitterWidthPixels))
+		{
+			_windowBeingResized = ToolWindow::Props;
+			_resizeOffset = pt.x - _propertiesWindow->GetWidth();
+			::SetCapture(_hwnd);
+		}
+		else if ((pt.x >= _logWindow->GetX() - _splitterWidthPixels) && (pt.x < _logWindow->GetX()))
+		{
+			_windowBeingResized = ToolWindow::Log;
+			_resizeOffset = _logWindow->GetX() - pt.x;
+			::SetCapture(_hwnd);
+		}
+	}
+
+	void ProcessWmMouseMove (POINT pt, UINT modifierKeysDown)
+	{
+		if (_windowBeingResized == ToolWindow::Props)
+		{
+			_propertiesWindow->SetWidth (RestrictToolWindowWidth(pt.x - _resizeOffset));
+			_vlanWindow->SetRect ({ _propertiesWindow->GetWidth() + _splitterWidthPixels, 0, _logWindow->GetX() - _splitterWidthPixels, _vlanWindow->GetHeight() });
+			_editArea->SetRect (GetEditWindowRect());
+		}
+		else if (_windowBeingResized == ToolWindow::Log)
+		{
+			_logWindow->SetRect ({ _clientSize.cx - RestrictToolWindowWidth(_clientSize.cx - pt.x - _resizeOffset), 0, _clientSize.cx, _clientSize.cy});
+			_vlanWindow->SetRect ({ _propertiesWindow->GetWidth() + _splitterWidthPixels, 0, _logWindow->GetX() - _splitterWidthPixels, _vlanWindow->GetHeight() });
+			_editArea->SetRect (GetEditWindowRect());
+		}
+	}
+
+	void ProcessWmLButtonUp (POINT pt, UINT modifierKeysDown)
+	{
+		if (_windowBeingResized == ToolWindow::Props)
+		{
+			WriteRegDword (RegValueNamePropertiesWindowWidth, (DWORD) _propertiesWindow->GetWidth());
+			_windowBeingResized = ToolWindow::None;
+			::ReleaseCapture();
+		}
+		else if (_windowBeingResized == ToolWindow::Log)
+		{
+			WriteRegDword (RegValueNameLogWindowWidth, (DWORD) _logWindow->GetWidth());
+			_windowBeingResized = ToolWindow::None;
+			::ReleaseCapture();
+		}
+	}
+
+	void SetCursor (POINT pt)
+	{
+		if ((pt.x >= _propertiesWindow->GetWidth()) && (pt.x < _propertiesWindow->GetWidth() + _splitterWidthPixels))
+		{
+			::SetCursor (LoadCursor(nullptr, IDC_SIZEWE));
+		}
+		else if ((pt.x >= _logWindow->GetX() - _splitterWidthPixels) && (pt.x < _logWindow->GetX()))
+		{
+			::SetCursor (LoadCursor(nullptr, IDC_SIZEWE));
+		}
+		else
+			::SetCursor (LoadCursor(nullptr, IDC_ARROW));
+	}
+
+	LONG RestrictToolWindowWidth (LONG desiredWidth) const
+	{
+		if (desiredWidth > _clientSize.cx * 40 / 100)
+			desiredWidth = _clientSize.cx * 40 / 100;
+		else if (desiredWidth < 50)
+			desiredWidth = 50;
+		return desiredWidth;
+	}
+
+	void ProcessWmPaint()
+	{
+		PAINTSTRUCT ps;
+		BeginPaint(GetHWnd(), &ps);
+
+		RECT rect;
+		rect.left = _propertiesWindow->GetWidth();
+		rect.top = 0;
+		rect.right = rect.left + _splitterWidthPixels;
+		rect.bottom = _clientSize.cy;
+		FillRect (ps.hdc, &rect, GetSysColorBrush(COLOR_3DFACE));
+
+		rect.right = _logWindow->GetX();
+		rect.left = rect.right - _splitterWidthPixels;
+		rect.top = 0;
+		rect.bottom = _clientSize.cy;
+		FillRect (ps.hdc, &rect, GetSysColorBrush(COLOR_3DFACE));
+
+		EndPaint(GetHWnd(), &ps);
 	}
 
 	optional<LRESULT> ProcessWmCommand (WPARAM wParam, LPARAM lParam)
 	{
 		if ((wParam == ID_VIEW_PROPERTIES) || (wParam == ID_VIEW_STPLOG) || (wParam == ID_VIEW_VLANS))
 		{
-			auto panelId = (wParam == ID_VIEW_PROPERTIES) ? PropsPanelUniqueName : ((wParam == ID_VIEW_STPLOG) ? LogPanelUniqueName : VlanPanelUniqueName);
-			auto panel = _dockContainer->GetPanel(panelId);
-			auto style = (DWORD) GetWindowLongPtr(panel->GetHWnd(), GWL_STYLE);
-			style ^= WS_VISIBLE;
-			SetWindowLongPtr (panel->GetHWnd(), GWL_STYLE, style);
+			// TODO: show/hide tool windows.
 			return 0;
 		}
 
@@ -605,22 +747,33 @@ public:
 		return S_OK;
 	}
 
+	bool TryReadRegDword (const wchar_t* valueName, DWORD* valueOut)
+	{
+		DWORD dataSize = 4;
+		auto lresult = RegGetValue(HKEY_CURRENT_USER, _app->GetRegKeyPath(), valueName, RRF_RT_REG_DWORD, nullptr, valueOut, &dataSize);
+		return lresult == ERROR_SUCCESS;
+	}
+
+	void WriteRegDword (const wchar_t* valueName, DWORD value)
+	{
+		HKEY key;
+		auto lstatus = RegCreateKeyEx(HKEY_CURRENT_USER, _app->GetRegKeyPath(), 0, NULL, 0, KEY_WRITE, NULL, &key, NULL);
+		if (lstatus != ERROR_SUCCESS)
+			throw exception();
+
+		RegSetValueEx(key, valueName, 0, REG_DWORD, (BYTE*)&value, 4);
+		RegCloseKey(key);
+	}
+
 	bool TryGetSavedWindowLocation (_Out_ RECT* restoreBounds, _Out_ int* nCmdShow)
 	{
-		auto ReadDword = [this](const wchar_t* valueName, DWORD* valueOut) -> bool
-		{
-			DWORD dataSize = 4;
-			auto lresult = RegGetValue(HKEY_CURRENT_USER, _app->GetRegKeyPath(), valueName, RRF_RT_REG_DWORD, nullptr, valueOut, &dataSize);
-			return lresult == ERROR_SUCCESS;
-		};
-
 		int cmd;
 		RECT rb;
-		if (ReadDword(RegValueNameShowCmd, (DWORD*)&cmd)
-			&& ReadDword(RegValueNameWindowLeft, (DWORD*)&rb.left)
-			&& ReadDword(RegValueNameWindowTop, (DWORD*)&rb.top)
-			&& ReadDword(RegValueNameWindowRight, (DWORD*)&rb.right)
-			&& ReadDword(RegValueNameWindowBottom, (DWORD*)&rb.bottom))
+		if (   TryReadRegDword (RegValueNameShowCmd,      (DWORD*)&cmd)
+			&& TryReadRegDword (RegValueNameWindowLeft,   (DWORD*)&rb.left)
+			&& TryReadRegDword (RegValueNameWindowTop,    (DWORD*)&rb.top)
+			&& TryReadRegDword (RegValueNameWindowRight,  (DWORD*)&rb.right)
+			&& TryReadRegDword (RegValueNameWindowBottom, (DWORD*)&rb.bottom))
 		{
 			*restoreBounds = rb;
 			*nCmdShow = cmd;

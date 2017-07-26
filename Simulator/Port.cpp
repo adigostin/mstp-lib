@@ -287,7 +287,7 @@ bool Port::HitTestInnerOuter (const IZoomable* zoomable, D2D1_POINT_2F dLocation
 	return (dLocation.x >= lt.x) && (dLocation.y >= lt.y) && (dLocation.x < rb.x) && (dLocation.y < rb.y);
 }
 
-HTResult Port::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance)
+RenderableObject::HTResult Port::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance)
 {
 	if (HitTestCP (zoomable, dLocation, tolerance))
 		return { this, HTCodeCP };

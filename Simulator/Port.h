@@ -11,6 +11,8 @@ struct PacketInfo
 	std::vector<std::array<uint8_t, 6>> txPortPath;
 };
 
+enum class Side { Left, Top, Right, Bottom };
+
 class Port : public RenderableObject
 {
 	friend class Bridge;

@@ -22,44 +22,6 @@ static const wchar_t CompanyName[] = L"Adi Gostin";
 static const wchar_t AppName[] = L"STP Simulator";
 static const wchar_t AppVersionString[] = L"2.1";
 
-#pragma region IWin32Window
-
-bool IWin32Window::IsVisible() const
-{
-	return (GetWindowLongPtr (GetHWnd(), GWL_STYLE) & WS_VISIBLE) != 0;
-}
-
-RECT IWin32Window::GetWindowRect() const
-{
-	RECT rect;
-	BOOL bRes = ::GetWindowRect (GetHWnd(), &rect);
-	if (!bRes)
-		throw win32_exception(GetLastError());
-	return rect;
-}
-
-SIZE IWin32Window::GetWindowSize() const
-{
-	auto rect = GetWindowRect();
-	return SIZE { rect.right - rect.left, rect.bottom - rect.top };
-}
-
-SIZE IWin32Window::GetClientSize() const
-{
-	RECT rect = this->GetClientRectPixels();
-	return SIZE { rect.right, rect.bottom };
-}
-
-RECT IWin32Window::GetClientRectPixels() const
-{
-	RECT rect;
-	BOOL bRes = ::GetClientRect (GetHWnd(), &rect);
-	if (!bRes)
-		throw win32_exception(GetLastError());
-	return rect;
-};
-#pragma endregion
-
 #pragma region IProject
 pair<Wire*, size_t> IProject::GetWireConnectedToPort (const Port* port) const
 {

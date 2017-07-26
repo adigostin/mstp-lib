@@ -50,7 +50,7 @@ extern const SelectionFactory selectionFactory;
 
 // ============================================================================
 
-MIDL_INTERFACE("{47DD7E84-9550-42DD-AECE-296878C0C631}") ILogArea abstract : public IUnknown
+MIDL_INTERFACE("{47DD7E84-9550-42DD-AECE-296878C0C631}") ILogArea abstract : public IWin32Window
 {
 };
 _COM_SMARTPTR_TYPEDEF(ILogArea, __uuidof(ILogArea));

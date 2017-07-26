@@ -320,7 +320,7 @@ void Bridge::RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, 
 	rt->SetAntialiasMode(oldaa);
 }
 
-HTResult Bridge::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance)
+RenderableObject::HTResult Bridge::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance)
 {
 	for (auto& p : _ports)
 	{

@@ -83,7 +83,7 @@ void Wire::RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, co
 	rt->DrawLine (vertices[3], vertices[0], dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
 }
 
-HTResult Wire::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance)
+RenderableObject::HTResult Wire::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance)
 {
 	for (size_t i = 0; i < _points.size(); i++)
 	{

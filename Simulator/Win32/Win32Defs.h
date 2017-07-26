@@ -1,5 +1,4 @@
 #pragma once
-#include <assert.h>
 #include "EventManager.h"
 
 struct IDockablePanel;
@@ -53,73 +52,85 @@ typedef std::unique_ptr<std::remove_pointer<HANDLE>::type, TimerQueueTimerDelete
 
 // ============================================================================
 
-MIDL_INTERFACE("C5D357E8-4A20-43D8-9C40-0CE4DC7C637C") IWin32Window : public IUnknown
+struct IWin32Window : public IUnknown
 {
 	virtual HWND GetHWnd() const = 0;
 
-	bool IsVisible() const;
-	RECT GetClientRectPixels() const;
-	RECT GetWindowRect() const;
-	SIZE GetWindowSize() const;
-	SIZE GetClientSize() const;
+	bool IsVisible() const
+	{
+		return (GetWindowLongPtr (GetHWnd(), GWL_STYLE) & WS_VISIBLE) != 0;
+	}
+
+	RECT GetClientRectPixels() const
+	{
+		RECT rect;
+		BOOL bRes = ::GetClientRect (GetHWnd(), &rect);
+		if (!bRes)
+			throw win32_exception(GetLastError());
+		return rect;
+	};
+
+	SIZE GetClientSize() const
+	{
+		RECT rect = this->GetClientRectPixels();
+		return SIZE { rect.right, rect.bottom };
+	}
+
+	RECT GetRect() const
+	{
+		auto hwnd = this->GetHWnd();
+		auto parent = ::GetParent(hwnd); ThrowWin32IfFailed (parent != nullptr);
+		RECT rect;
+		BOOL bRes = ::GetWindowRect (hwnd, &rect); ThrowWin32IfFailed(bRes);
+		MapWindowPoints (HWND_DESKTOP, parent, (LPPOINT) &rect, 2);
+		return rect;
+	}
+
+private:
+	static POINT GetLocation (const RECT& rect) { return { rect.left, rect.top }; }
+	static SIZE GetSize (const RECT& rect) { return { rect.right - rect.left, rect.bottom - rect.top }; }
+	static LONG GetWidth (const RECT& rect) { return rect.right - rect.left; }
+	static LONG GetHeight (const RECT& rect) { return rect.bottom - rect.top; }
+
+public:
+	LONG GetX() const { return GetRect().left; }
+	LONG GetY() const { return GetRect().top; }
+	POINT GetLocation() const { return GetLocation(GetRect()); }
+	LONG GetWidth() const { return GetWidth(GetRect()); }
+	LONG GetHeight() const { return GetHeight(GetRect()); }
+	SIZE GetSize() const { return GetSize(GetRect()); }
+
+	void SetRect (const RECT& rect)
+	{
+		BOOL bRes = ::MoveWindow (GetHWnd(), rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE); ThrowWin32IfFailed(bRes);
+	}
+
+	void SetX (LONG x)
+	{
+		auto rect = GetRect();
+		rect.right = x + rect.right - rect.left;
+		rect.left = x;
+		SetRect (rect);
+	}
+
+	void SetY (LONG y);
+	void SetLocation (POINT pt);
+
+	void SetWidth (LONG width)
+	{
+		auto rect = GetRect();
+		rect.right = rect.left + width;
+		SetRect(rect);
+	}
+
+	void SetHeight (LONG height);
+	void SetSize (SIZE size);
 };
 
 struct IWindowWithWorkQueue : IWin32Window
 {
 	virtual void PostWork (std::function<void()>&& work) = 0;
 };
-
-// ============================================================================
-
-enum class Side { Left, Top, Right, Bottom };
-
-MIDL_INTERFACE("E97899CA-925F-43A7-A0C2-F8743A914BAB") IDockContainer : public IWin32Window
-{
-	virtual RECT GetContentRect() const = 0;
-	virtual IDockablePanel* CreatePanel (const char* panelUniqueName, Side side, const wchar_t* title) = 0;
-	virtual IDockablePanel* GetPanel (const char* panelUniqueName) const = 0;
-	virtual void ResizePanel (IDockablePanel* panel, SIZE size) = 0;
-};
-_COM_SMARTPTR_TYPEDEF(IDockContainer, __uuidof(IDockContainer));
-using DockContainerFactory = IDockContainerPtr(*const)(HINSTANCE hInstance, HWND hWndParent, const RECT& rect);
-extern const DockContainerFactory dockContainerFactory;
-
-// ============================================================================
-
-MIDL_INTERFACE("EE540D38-79DC-479B-9619-D253EB9BA812") IDockablePanel : public IWin32Window
-{
-	struct VisibleChangedEvent : public Event<VisibleChangedEvent, void(IDockablePanel* panel, bool visible)> {};
-	struct SplitterDragging : public Event<SplitterDragging, void(IDockablePanel* panel, SIZE proposedSize)> {};
-
-	virtual const std::string& GetUniqueName() const = 0;
-	virtual Side GetSide() const = 0;
-	virtual POINT GetContentLocation() const = 0;
-	virtual SIZE GetContentSize() const = 0;
-	virtual VisibleChangedEvent::Subscriber GetVisibleChangedEvent() = 0;
-	virtual SplitterDragging::Subscriber GetSplitterDraggingEvent() = 0;
-	virtual SIZE GetPanelSizeFromContentSize (SIZE contentSize) const = 0;
-
-	RECT GetContentRect() const
-	{
-		auto l = GetContentLocation();
-		auto s = GetContentSize();
-		return RECT { l.x, l.y, l.x + s.cx, l.y + s.cy };
-	}
-
-	SIZE GetWindowSize() const
-	{
-		RECT wr;
-		BOOL bRes = ::GetWindowRect(this->GetHWnd(), &wr);
-		if (!bRes)
-			throw win32_exception(GetLastError());
-		return { wr.right - wr.left, wr.bottom - wr.top };
-	}
-};
-_COM_SMARTPTR_TYPEDEF(IDockablePanel, __uuidof(IDockablePanel));
-using DockablePanelFactory = IDockablePanelPtr(*const)(HINSTANCE hInstance, const char* panelUniqueName, HWND hWndParent, const RECT& rect, Side side, const wchar_t* title);
-extern const DockablePanelFactory dockablePanelFactory;
-
-// ============================================================================
 
 struct IZoomable abstract
 {
