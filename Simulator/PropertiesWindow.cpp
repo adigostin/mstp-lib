@@ -4,15 +4,16 @@
 #include "Reflection/PropertyGrid.h"
 
 using namespace std;
+using namespace D2D1;
 
-static constexpr wchar_t ClassName[] = L"PropertiesWindow-{4AA600D1-E399-4A83-B04B-1B1842A6F738}";
-
-class PropertiesWindow : public Window, public IPropertiesWindow
+class PropertiesWindow : public D2DWindow, public IPropertiesWindow
 {
-	using base = Window;
+	using base = D2DWindow;
 
-	unique_ptr<PropertyGrid> _pg;
-	unique_ptr<PropertyGrid> _pgTree;
+	unique_ptr<PropertyGrid> _pg1;
+	unique_ptr<PropertyGrid> _pg2;
+	TextLayout _title1TextLayout;
+	TextLayout _title2TextLayout;
 
 public:
 	PropertiesWindow (ISimulatorApp* app,
@@ -21,10 +22,17 @@ public:
 					  ISelection* selection,
 					  const RECT& rect,
 					  HWND hWndParent)
-		: base (app->GetHInstance(), ClassName, WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, rect, hWndParent, nullptr)
-		, _pg (new PropertyGrid(app->GetHInstance(), { 0, 0, GetClientWidthPixels(), GetClientHeightPixels() / 2 }, GetHWnd(), app->GetDWriteFactory(), projectWindow))
-		, _pgTree (new PropertyGrid(app->GetHInstance(), { 0, GetClientHeightPixels() / 2, GetClientWidthPixels(), GetClientHeightPixels() }, GetHWnd(), app->GetDWriteFactory(), projectWindow))
-	{ }
+		: base (app->GetHInstance(), WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, rect, hWndParent, nullptr, app->GetDWriteFactory())
+	{
+		IDWriteTextFormatPtr format;
+		auto hr = app->GetDWriteFactory()->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &format); ThrowIfFailed(hr);
+
+		_title1TextLayout = TextLayout::Create (app->GetDWriteFactory(), format, L"Properties");
+		_title2TextLayout = TextLayout::Create (app->GetDWriteFactory(), format, L"VLAN-Specific Properties");
+
+		_pg1.reset (new PropertyGrid(app->GetHInstance(), GetPG1Rect(), GetHWnd(), app->GetDWriteFactory(), projectWindow));
+		_pg2.reset (new PropertyGrid(app->GetHInstance(), GetPG2Rect(), GetHWnd(), app->GetDWriteFactory(), projectWindow));
+	}
 
 	template<typename... Args>
 	static IPropertiesWindowPtr Create (Args... args)
@@ -38,14 +46,11 @@ public:
 
 		if (msg == WM_SIZE)
 		{
-			int width = LOWORD(lParam);
-			int height = HIWORD(lParam);
+			if (_pg1 != nullptr)
+				_pg1->SetRect(GetPG1Rect());
 
-			if (_pg != nullptr)
-			{
-				::MoveWindow (_pg->GetHWnd(), 0, 0, width, height / 2, TRUE);
-				::MoveWindow (_pgTree->GetHWnd(), 0, height / 2, width, height / 2, TRUE);
-			}
+			if (_pg2 != nullptr)
+				_pg2->SetRect(GetPG2Rect());
 
 			return 0;
 		}
@@ -53,8 +58,36 @@ public:
 		return resultBaseClass;
 	}
 
-	virtual PropertyGrid* GetPG() const override final { return _pg.get(); }
-	virtual PropertyGrid* GetPGTree() const override final { return _pgTree.get(); }
+	static constexpr float TitleBarPadding = 3;
+
+	RECT GetPG1Rect() const
+	{
+		float heightDips = TitleBarPadding + _title1TextLayout.metrics.height + TitleBarPadding;
+		LONG heightPixels = GetPixelSizeFromDipSize({ 0, heightDips }).cy;
+		auto cs = GetClientSizePixels();
+		return { 0, heightPixels, cs.cx, cs.cy / 2 };
+	}
+
+	RECT GetPG2Rect() const
+	{
+		float heightDips = TitleBarPadding + _title1TextLayout.metrics.height + TitleBarPadding;
+		LONG heightPixels = GetPixelSizeFromDipSize({ 0, heightDips }).cy;
+		auto cs = GetClientSizePixels();
+		return { 0, cs.cy / 2 + heightPixels, cs.cx, cs.cy };
+	}
+
+	virtual void Render (ID2D1RenderTarget* rt) const override final
+	{
+		rt->Clear(GetD2DSystemColor(COLOR_ACTIVECAPTION));
+
+		ID2D1SolidColorBrushPtr brush;
+		rt->CreateSolidColorBrush (GetD2DSystemColor(COLOR_CAPTIONTEXT), &brush);
+		rt->DrawTextLayout (Point2F(TitleBarPadding, TitleBarPadding), _title1TextLayout.layout, brush);
+		rt->DrawTextLayout (Point2F(TitleBarPadding, GetClientHeightDips() / 2 + TitleBarPadding), _title2TextLayout.layout, brush);
+	}
+
+	virtual PropertyGrid* GetPG1() const override final { return _pg1.get(); }
+	virtual PropertyGrid* GetPG2() const override final { return _pg2.get(); }
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return base::QueryInterface(riid, ppvObject); }
 	virtual ULONG STDMETHODCALLTYPE AddRef() override final { return base::AddRef(); }

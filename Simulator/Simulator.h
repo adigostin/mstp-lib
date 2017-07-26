@@ -175,8 +175,8 @@ extern const ProjectFactory projectFactory;
 
 MIDL_INTERFACE("6438D8FC-058B-4A83-A4DC-2B48AE028D09") IPropertiesWindow : public IWin32Window
 {
-	virtual PropertyGrid* GetPG() const = 0;
-	virtual PropertyGrid* GetPGTree() const = 0;
+	virtual PropertyGrid* GetPG1() const = 0;
+	virtual PropertyGrid* GetPG2() const = 0;
 };
 _COM_SMARTPTR_TYPEDEF(IPropertiesWindow, __uuidof(IPropertiesWindow));
 using PropertiesWindowFactory = IPropertiesWindowPtr(*const)(ISimulatorApp* app,

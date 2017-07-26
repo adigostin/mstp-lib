@@ -130,14 +130,14 @@ public:
 		_app->GetProjectWindowAddedEvent().AddHandler (&OnProjectWindowAdded, this);
 		_app->GetProjectWindowRemovedEvent().AddHandler (&OnProjectWindowRemoved, this);
 		_project->GetLoadedEvent().AddHandler (&OnProjectLoaded, this);
-		_propertiesWindow->GetPG()->GetPropertyChangedEvent().AddHandler (&OnPropertyChanged, this);
-		_propertiesWindow->GetPGTree()->GetPropertyChangedEvent().AddHandler (&OnPropertyChanged, this);
+		_propertiesWindow->GetPG1()->GetPropertyChangedEvent().AddHandler (&OnPropertyChanged, this);
+		_propertiesWindow->GetPG2()->GetPropertyChangedEvent().AddHandler (&OnPropertyChanged, this);
 	}
 
 	~ProjectWindow()
 	{
-		_propertiesWindow->GetPGTree()->GetPropertyChangedEvent().RemoveHandler (&OnPropertyChanged, this);
-		_propertiesWindow->GetPG()->GetPropertyChangedEvent().RemoveHandler (&OnPropertyChanged, this);
+		_propertiesWindow->GetPG2()->GetPropertyChangedEvent().RemoveHandler (&OnPropertyChanged, this);
+		_propertiesWindow->GetPG1()->GetPropertyChangedEvent().RemoveHandler (&OnPropertyChanged, this);
 		_project->GetLoadedEvent().RemoveHandler (&OnProjectLoaded, this);
 		_app->GetProjectWindowRemovedEvent().RemoveHandler (&OnProjectWindowRemoved, this);
 		_app->GetProjectWindowAddedEvent().RemoveHandler (&OnProjectWindowAdded, this);
@@ -175,8 +175,8 @@ public:
 	static void OnBridgeConfigChanged (void* callbackArg, Bridge* b)
 	{
 		auto pw = static_cast<ProjectWindow*>(callbackArg);
-		pw->_propertiesWindow->GetPG()->ReloadPropertyValues();
-		pw->_propertiesWindow->GetPGTree()->ReloadPropertyValues();
+		pw->_propertiesWindow->GetPG1()->ReloadPropertyValues();
+		pw->_propertiesWindow->GetPG2()->ReloadPropertyValues();
 	}
 
 	static void OnProjectLoaded (void* callbackArg, IProject* project)
@@ -259,12 +259,12 @@ public:
 		auto pw = static_cast<ProjectWindow*>(callbackArg);
 		if (selection->GetObjects().empty())
 		{
-			pw->_propertiesWindow->GetPG()->SelectObjects(nullptr, 0);
-			pw->_propertiesWindow->GetPGTree()->SelectObjects(nullptr, 0);
+			pw->_propertiesWindow->GetPG1()->SelectObjects(nullptr, 0);
+			pw->_propertiesWindow->GetPG2()->SelectObjects(nullptr, 0);
 		}
 		else
 		{
-			pw->_propertiesWindow->GetPG()->SelectObjects (&selection->GetObjects().at(0), selection->GetObjects().size());
+			pw->_propertiesWindow->GetPG1()->SelectObjects (selection->GetObjects().data(), selection->GetObjects().size());
 
 			if (all_of (selection->GetObjects().begin(), selection->GetObjects().end(), [](Object* o) { return o->Is<Bridge>(); }))
 			{
@@ -276,10 +276,10 @@ public:
 					bridgeTrees.push_back (b->GetTrees().at(treeIndex).get());
 				}
 
-				pw->_propertiesWindow->GetPGTree()->SelectObjects ((Object**) &bridgeTrees[0], bridgeTrees.size());
+				pw->_propertiesWindow->GetPG2()->SelectObjects ((Object**) &bridgeTrees[0], bridgeTrees.size());
 			}
 			else
-				pw->_propertiesWindow->GetPGTree()->SelectObjects(nullptr, 0);
+				pw->_propertiesWindow->GetPG2()->SelectObjects(nullptr, 0);
 		}
 	}
 
@@ -818,7 +818,7 @@ public:
 			SelectedVlanNumerChangedEvent::InvokeHandlers(this, this, vlanNumber);
 			::InvalidateRect (GetHWnd(), nullptr, FALSE);
 			SetWindowTitle();
-			_propertiesWindow->GetPG()->ReloadPropertyValues();
+			_propertiesWindow->GetPG2()->ReloadPropertyValues();
 		}
 	};
 
