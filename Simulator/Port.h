@@ -13,6 +13,15 @@ struct PacketInfo
 
 enum class Side { Left, Top, Right, Bottom };
 
+static constexpr NVP SideNVPs[] =
+{
+	{ L"Left", (int) Side::Left },
+	{ L"Top", (int) Side::Top },
+	{ L"Right", (int) Side::Right },
+	{ L"Bottom", (int) Side::Bottom },
+	{ 0, 0 },
+};
+
 class Port : public RenderableObject
 {
 	friend class Bridge;
@@ -27,6 +36,9 @@ class Port : public RenderableObject
 
 public:
 	Port (Bridge* bridge, unsigned int portIndex, Side side, float offset);
+
+	IXMLDOMElementPtr Serialize (IXMLDOMDocument3* doc) const;
+	void Deserialize (IXMLDOMElement* portElement);
 
 	virtual const PropertyOrGroup* const* GetProperties() const override final;
 

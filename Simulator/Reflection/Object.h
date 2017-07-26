@@ -77,6 +77,9 @@ std::wstring TypedProperty<bool>::to_wstring(const Object* obj) const
 
 using NVP = std::pair<const wchar_t*, int>;
 
+const wchar_t* GetEnumName (const NVP* nvps, int value);
+int GetEnumValue (const NVP* nvps, const wchar_t* name);
+
 struct EnumProperty : TypedProperty<int>
 {
 	using base = TypedProperty<int>;
@@ -116,9 +119,6 @@ class Object : public EventManager
 public:
 	virtual ~Object() = default;
 
-	struct InvalidateEvent : public Event<InvalidateEvent, void(Object*)> { };
-	InvalidateEvent::Subscriber GetInvalidateEvent() { return InvalidateEvent::Subscriber(this); }
-
 	template<typename T>
 	bool Is() const { return dynamic_cast<const T*>(this) != nullptr; }
 
@@ -135,6 +135,9 @@ public:
 		bool operator==(const HTResult& other) const { return (this->object == other.object) && (this->code == other.code); }
 		bool operator!=(const HTResult& other) const { return (this->object != other.object) || (this->code != other.code); }
 	};
+
+	struct InvalidateEvent : public Event<InvalidateEvent, void(Object*)> { };
+	InvalidateEvent::Subscriber GetInvalidateEvent() { return InvalidateEvent::Subscriber(this); }
 
 	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const = 0;
 	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) = 0;

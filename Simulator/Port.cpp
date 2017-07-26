@@ -333,6 +333,31 @@ bool Port::GetAdminEdge() const
 	return (bool) STP_GetPortAdminEdge (_bridge->GetStpBridge(), (unsigned int) _portIndex);
 }
 
+static const _bstr_t PortString = "Port";
+static const _bstr_t SideString = L"Side";
+static const _bstr_t OffsetString = L"Offset";
+
+IXMLDOMElementPtr Port::Serialize (IXMLDOMDocument3* doc) const
+{
+	IXMLDOMElementPtr portElement;
+	auto hr = doc->createElement (PortString, &portElement); ThrowIfFailed(hr);
+	portElement->setAttribute (SideString, _variant_t (GetEnumName (SideNVPs, (int) _side)));
+	portElement->setAttribute (OffsetString, _variant_t (_offset));
+	return portElement;
+}
+
+void Port::Deserialize (IXMLDOMElement* portElement)
+{
+	_variant_t value;
+	auto hr = portElement->getAttribute (SideString, &value);
+	if (SUCCEEDED(hr))
+		_side = (Side) GetEnumValue (SideNVPs, static_cast<_bstr_t>(value));
+
+	hr = portElement->getAttribute (OffsetString, &value);
+	if (SUCCEEDED(hr))
+		_offset = wcstof (static_cast<_bstr_t>(value), nullptr);
+}
+
 static const TypedProperty<bool> AutoEdgeProperty
 (
 	L"AutoEdge",
