@@ -3,6 +3,7 @@
 #include "Simulator.h"
 #include "Bridge.h"
 #include "Wire.h"
+#include "Resource.h"
 
 #pragma comment (lib, "d2d1.lib")
 #pragma comment (lib, "dwrite.lib")
@@ -128,6 +129,8 @@ public:
 
 	WPARAM RunMessageLoop()
 	{
+		auto accelerators = LoadAccelerators (_hInstance, MAKEINTRESOURCE(IDR_ACCELERATOR1));
+
 		MSG msg;
 		while (GetMessage(&msg, nullptr, 0, 0))
 		{
@@ -141,8 +144,21 @@ public:
 				}
 			}
 
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+			int translatedAccelerator = 0;
+			for (auto& pw : _projectWindows)
+			{
+				if (::IsChild(pw->GetHWnd(), msg.hwnd))
+				{
+					translatedAccelerator = TranslateAccelerator (pw->GetHWnd(), accelerators, &msg);
+					break;
+				}
+			}
+
+			if (!translatedAccelerator)
+			{
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
 		}
 
 		return msg.wParam;

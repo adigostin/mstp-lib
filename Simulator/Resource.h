@@ -9,6 +9,7 @@
 #define IDR_CONTEXT_MENU_PORT           132
 #define IDR_MAIN_MENU                   133
 #define IDD_DIALOG_MST_CONFIG_ID        134
+#define IDR_ACCELERATOR1                135
 #define IDC_BUTTON_EDIT_MST_CONFIG_TABLE 1005
 #define IDC_COMBO_SELECTED_VLAN         1009
 #define IDC_EDIT_SELECTED_TREE          1010
@@ -46,7 +47,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        135
+#define _APS_NEXT_RESOURCE_VALUE        136
 #define _APS_NEXT_COMMAND_VALUE         32795
 #define _APS_NEXT_CONTROL_VALUE         1025
 #define _APS_NEXT_SYMED_VALUE           110

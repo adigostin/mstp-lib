@@ -551,21 +551,27 @@ public:
 			return 0;
 		}
 
-		if (wParam == ID_FILE_SAVE)
+		if (((HIWORD(wParam) == 0) || (HIWORD(wParam) == 1)) && (LOWORD(wParam) == ID_FILE_SAVE))
 		{
 			Save();
 			return 0;
 		}
 
-		if (wParam == ID_FILE_OPEN)
+		if (((HIWORD(wParam) == 0) || (HIWORD(wParam) == 1)) && (LOWORD(wParam) == ID_FILE_OPEN))
 		{
 			Open();
 			return 0;
 		}
 
-		if ((wParam == ID_FILE_NEW) || (wParam == ID_FILE_SAVEAS))
+		if (((HIWORD(wParam) == 0) || (HIWORD(wParam) == 1)) && (LOWORD(wParam) == ID_FILE_NEW))
 		{
-			MessageBox (_hwnd, L"Saving and loading are not yet implemented.", _app->GetAppName(), 0);
+			MessageBox (_hwnd, L"Not yet implemented.", _app->GetAppName(), 0);
+			return 0;
+		}
+
+		if (wParam == ID_FILE_SAVEAS)
+		{
+			MessageBox (_hwnd, L"Not yet implemented.", _app->GetAppName(), 0);
 			return 0;
 		}
 
