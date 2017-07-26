@@ -134,8 +134,6 @@ private:
 	static void OnWmPacketReceived (WPARAM wParam, LPARAM lParam);
 	void ProcessReceivedPackets();
 
-	static STP_BRIDGE_ADDRESS ConvertStringToBridgeAddress (const wchar_t* str);
-
 	static void* StpCallback_AllocAndZeroMemory (unsigned int size);
 	static void  StpCallback_FreeMemory (void* p);
 	static void* StpCallback_TransmitGetBuffer        (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int bpduSize, unsigned int timestamp);
@@ -150,3 +148,6 @@ private:
 	static void  StpCallback_OnConfigChanged          (const STP_BRIDGE* bridge, unsigned int timestamp);
 };
 
+STP_BRIDGE_ADDRESS ConvertStringToBridgeAddress (const wchar_t* str);
+std::string ConvertBridgeAddressToString (const unsigned char address[6]);
+std::wstring ConvertBridgeAddressToWString (const unsigned char address[6]);

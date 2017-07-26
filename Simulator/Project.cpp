@@ -7,6 +7,8 @@
 
 using namespace std;
 
+static const _bstr_t NextMacAddressString = "NextMacAddress";
+
 class Project : public EventManager, public IProject
 {
 	ULONG _refCount = 1;
@@ -212,6 +214,7 @@ public:
 
 		IXMLDOMElementPtr projectElement;
 		hr = doc->createElement (_bstr_t("Project"), &projectElement); ThrowIfFailed(hr);
+		projectElement->setAttribute (NextMacAddressString, _variant_t(ConvertBridgeAddressToWString(_nextMacAddress.bytes).c_str()));
 		hr = doc->appendChild (projectElement, nullptr); ThrowIfFailed(hr);
 
 		IXMLDOMElementPtr bridgesElement;
@@ -307,6 +310,11 @@ public:
 		hr = projectNode->get_nodeName(nodeName.GetAddress()); ThrowIfFailed(hr);
 		if (_wcsicmp (nodeName.GetBSTR(), L"Project") != 0)
 			throw runtime_error("Missing \"Project\" element in the XML.");
+		IXMLDOMElementPtr projectElement = projectNode;
+
+		_variant_t value;
+		hr = projectElement->getAttribute (NextMacAddressString, &value); ThrowIfFailed(hr);
+		_nextMacAddress = ConvertStringToBridgeAddress (static_cast<_bstr_t>(value));
 
 		{
 			IXMLDOMNodeListPtr bridgeNodes;

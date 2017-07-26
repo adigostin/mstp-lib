@@ -38,7 +38,9 @@
       <Filter>Win32</Filter>
     </ClInclude>
     <ClInclude Include="BridgeTree.h" />
-    <ClInclude Include="Win32\UtilityFunctions.h" />
+    <ClInclude Include="Win32\UtilityFunctions.h">
+      <Filter>Win32</Filter>
+    </ClInclude>
     <ClInclude Include="Reflection\Object.h">
       <Filter>Reflection</Filter>
     </ClInclude>
@@ -89,7 +91,9 @@
     </ClCompile>
     <ClCompile Include="BridgeTree.cpp" />
     <ClCompile Include="PropertiesWindow.cpp" />
-    <ClCompile Include="Win32\UtilityFunctions.cpp" />
+    <ClCompile Include="Win32\UtilityFunctions.cpp">
+      <Filter>Win32</Filter>
+    </ClCompile>
     <ClCompile Include="Reflection\Object.cpp">
       <Filter>Reflection</Filter>
     </ClCompile>

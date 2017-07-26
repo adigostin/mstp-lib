@@ -340,61 +340,14 @@ RenderableObject::HTResult Bridge::HitTest (const IZoomable* zoomable, D2D1_POIN
 
 std::string Bridge::GetBridgeAddressAsString() const
 {
-	auto address = STP_GetBridgeAddress(_stpBridge)->bytes;
-
-	stringstream ss;
-	ss << uppercase << setfill('0') << hex
-		<< setw(2) << (int) address[0] << setw(2) << (int) address[1] << setw(2) << (int) address[2]
-		<< setw(2) << (int) address[3] << setw(2) << (int) address[4] << setw(2) << (int) address[5];
-	return ss.str();
+	auto address = STP_GetBridgeAddress(_stpBridge);
+	return ConvertBridgeAddressToString (address->bytes);
 }
 
 std::wstring Bridge::GetBridgeAddressAsWString() const
 {
-	auto address = STP_GetBridgeAddress(_stpBridge)->bytes;
-
-	wstringstream ss;
-	ss << uppercase << setfill(L'0') << hex
-		<< setw(2) << address[0] << setw(2) << address[1] << setw(2) << address[2]
-		<< setw(2) << address[3] << setw(2) << address[4] << setw(2) << address[5];
-	return ss.str();
-}
-
-// static
-STP_BRIDGE_ADDRESS Bridge::ConvertStringToBridgeAddress (const wchar_t* str)
-{
-	static constexpr char FormatErrorMessage[] = u8"Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX or XXXXXXXXXXXX (6 hex bytes).";
-
-	int offsetMultiplier;
-	if (wcslen(str) == 12)
-	{
-		offsetMultiplier = 2;
-	}
-	else if (wcslen(str) == 17)
-	{
-		if ((str[2] != ':') || (str[5] != ':') || (str[8] != ':') || (str[11] != ':') || (str[14] != ':'))
-			throw invalid_argument(FormatErrorMessage);
-
-		offsetMultiplier = 3;
-	}
-	else
-		throw invalid_argument(FormatErrorMessage);
-
-	STP_BRIDGE_ADDRESS newAddress;
-	for (size_t i = 0; i < 6; i++)
-	{
-		wchar_t ch0 = str[i * offsetMultiplier];
-		wchar_t ch1 = str[i * offsetMultiplier + 1];
-
-		if (!iswxdigit(ch0) || !iswxdigit(ch1))
-			throw invalid_argument(FormatErrorMessage);
-
-		auto hn = (ch0 <= '9') ? (ch0 - '0') : ((ch0 >= 'a') ? (ch0 - 'a' + 10) : (ch0 - 'A' + 10));
-		auto ln = (ch1 <= '9') ? (ch1 - '0') : ((ch1 >= 'a') ? (ch1 - 'a' + 10) : (ch1 - 'A' + 10));
-		newAddress.bytes[i] = (hn << 4) | ln;
-	}
-
-	return newAddress;
+	auto address = STP_GetBridgeAddress(_stpBridge);
+	return ConvertBridgeAddressToWString(address->bytes);
 }
 
 void Bridge::SetBridgeAddressFromWString (std::wstring str, unsigned int timestamp)
@@ -984,3 +937,59 @@ void Bridge::StpCallback_OnConfigChanged (const STP_BRIDGE* bridge, unsigned int
 	InvalidateEvent::InvokeHandlers(b, b);
 }
 #pragma endregion
+
+
+STP_BRIDGE_ADDRESS ConvertStringToBridgeAddress (const wchar_t* str)
+{
+	static constexpr char FormatErrorMessage[] = u8"Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX or XXXXXXXXXXXX (6 hex bytes).";
+
+	int offsetMultiplier;
+	if (wcslen(str) == 12)
+	{
+		offsetMultiplier = 2;
+	}
+	else if (wcslen(str) == 17)
+	{
+		if ((str[2] != ':') || (str[5] != ':') || (str[8] != ':') || (str[11] != ':') || (str[14] != ':'))
+			throw invalid_argument(FormatErrorMessage);
+
+		offsetMultiplier = 3;
+	}
+	else
+		throw invalid_argument(FormatErrorMessage);
+
+	STP_BRIDGE_ADDRESS newAddress;
+	for (size_t i = 0; i < 6; i++)
+	{
+		wchar_t ch0 = str[i * offsetMultiplier];
+		wchar_t ch1 = str[i * offsetMultiplier + 1];
+
+		if (!iswxdigit(ch0) || !iswxdigit(ch1))
+			throw invalid_argument(FormatErrorMessage);
+
+		auto hn = (ch0 <= '9') ? (ch0 - '0') : ((ch0 >= 'a') ? (ch0 - 'a' + 10) : (ch0 - 'A' + 10));
+		auto ln = (ch1 <= '9') ? (ch1 - '0') : ((ch1 >= 'a') ? (ch1 - 'a' + 10) : (ch1 - 'A' + 10));
+		newAddress.bytes[i] = (hn << 4) | ln;
+	}
+
+	return newAddress;
+}
+
+std::string ConvertBridgeAddressToString (const unsigned char address[6])
+{
+	stringstream ss;
+	ss << uppercase << setfill('0') << hex
+		<< setw(2) << (int) address[0] << setw(2) << (int) address[1] << setw(2) << (int) address[2]
+		<< setw(2) << (int) address[3] << setw(2) << (int) address[4] << setw(2) << (int) address[5];
+	return ss.str();
+}
+
+std::wstring ConvertBridgeAddressToWString (const unsigned char address[6])
+{
+	wstringstream ss;
+	ss << uppercase << setfill(L'0') << hex
+		<< setw(2) << address[0] << setw(2) << address[1] << setw(2) << address[2]
+		<< setw(2) << address[3] << setw(2) << address[4] << setw(2) << address[5];
+	return ss.str();
+}
+
