@@ -35,7 +35,7 @@ class ProjectWindow : public EventManager, public IProjectWindow
 	ISimulatorApp* const _app;
 	IProjectPtr    const _project;
 	ISelectionPtr  const _selection;
-	IEditAreaPtr         _editArea;
+	IEditAreaPtr         _editWindow;
 	IPropertiesWindowPtr _propertiesWindow;
 	ILogAreaPtr          _logWindow;
 	IVlanWindowPtr       _vlanWindow;
@@ -121,7 +121,7 @@ public:
 		_vlanWindow = vlanWindowFactory (_app, this, _project, _selection, _hwnd, { _propertiesWindow->GetWidth() + _splitterWidthPixels, 0 });
 		SetMainMenuItemCheck (ID_VIEW_VLANS, true);
 
-		_editArea = editAreaFactory (app, this, _project, _selection, _hwnd, GetEditWindowRect(), _app->GetDWriteFactory());
+		_editWindow = editAreaFactory (app, this, _project, _selection, _hwnd, GetEditWindowRect(), _app->GetDWriteFactory());
 
 		_selection->GetAddedToSelectionEvent().AddHandler (&OnObjectAddedToSelection, this);
 		_selection->GetRemovingFromSelectionEvent().AddHandler (&OnObjectRemovingFromSelection, this);
@@ -443,8 +443,8 @@ public:
 		if (_vlanWindow != nullptr)
 			_vlanWindow->SetRect ({ _propertiesWindow->GetWidth() + _splitterWidthPixels, 0, _logWindow->GetX() - _splitterWidthPixels, _vlanWindow->GetHeight() });
 
-		if (_editArea != nullptr)
-			_editArea->SetRect (GetEditWindowRect());
+		if (_editWindow != nullptr)
+			_editWindow->SetRect (GetEditWindowRect());
 	}
 
 	void ProcessWmLButtonDown (POINT pt, UINT modifierKeysDown)
@@ -469,13 +469,17 @@ public:
 		{
 			_propertiesWindow->SetWidth (RestrictToolWindowWidth(pt.x - _resizeOffset));
 			_vlanWindow->SetRect ({ _propertiesWindow->GetWidth() + _splitterWidthPixels, 0, _logWindow->GetX() - _splitterWidthPixels, _vlanWindow->GetHeight() });
-			_editArea->SetRect (GetEditWindowRect());
+			_editWindow->SetRect (GetEditWindowRect());
+			::UpdateWindow (_propertiesWindow->GetHWnd());
+			::UpdateWindow (_editWindow->GetHWnd());
 		}
 		else if (_windowBeingResized == ToolWindow::Log)
 		{
 			_logWindow->SetRect ({ _clientSize.cx - RestrictToolWindowWidth(_clientSize.cx - pt.x - _resizeOffset), 0, _clientSize.cx, _clientSize.cy});
 			_vlanWindow->SetRect ({ _propertiesWindow->GetWidth() + _splitterWidthPixels, 0, _logWindow->GetX() - _splitterWidthPixels, _vlanWindow->GetHeight() });
-			_editArea->SetRect (GetEditWindowRect());
+			_editWindow->SetRect (GetEditWindowRect());
+			::UpdateWindow (_logWindow->GetHWnd());
+			::UpdateWindow (_editWindow->GetHWnd());
 		}
 	}
 
@@ -826,7 +830,7 @@ public:
 
 	virtual IProject* GetProject() const override final { return _project; }
 
-	virtual IEditArea* GetEditArea() const override final { return _editArea; }
+	virtual IEditArea* GetEditArea() const override final { return _editWindow; }
 
 	virtual void PostWork (std::function<void()>&& work) override final
 	{
