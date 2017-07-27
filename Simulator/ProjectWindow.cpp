@@ -123,60 +123,21 @@ public:
 
 		_editWindow = editAreaFactory (app, this, _project, _selection, _hwnd, GetEditWindowRect(), _app->GetDWriteFactory());
 
-		_selection->GetAddedToSelectionEvent().AddHandler (&OnObjectAddedToSelection, this);
-		_selection->GetRemovingFromSelectionEvent().AddHandler (&OnObjectRemovingFromSelection, this);
-		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
 		_project->GetModifiedChangedEvent().AddHandler (&OnProjectModifiedChanged, this);
 		_app->GetProjectWindowAddedEvent().AddHandler (&OnProjectWindowAdded, this);
 		_app->GetProjectWindowRemovedEvent().AddHandler (&OnProjectWindowRemoved, this);
 		_project->GetLoadedEvent().AddHandler (&OnProjectLoaded, this);
-		_propertiesWindow->GetPG1()->GetPropertyChangedEvent().AddHandler (&OnPropertyChanged, this);
-		_propertiesWindow->GetPG2()->GetPropertyChangedEvent().AddHandler (&OnPropertyChanged, this);
 	}
 
 	~ProjectWindow()
 	{
-		_propertiesWindow->GetPG2()->GetPropertyChangedEvent().RemoveHandler (&OnPropertyChanged, this);
-		_propertiesWindow->GetPG1()->GetPropertyChangedEvent().RemoveHandler (&OnPropertyChanged, this);
 		_project->GetLoadedEvent().RemoveHandler (&OnProjectLoaded, this);
 		_app->GetProjectWindowRemovedEvent().RemoveHandler (&OnProjectWindowRemoved, this);
 		_app->GetProjectWindowAddedEvent().RemoveHandler (&OnProjectWindowAdded, this);
 		_project->GetModifiedChangedEvent().AddHandler (&OnProjectModifiedChanged, this);
-		_selection->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
-		_selection->GetRemovingFromSelectionEvent().RemoveHandler (&OnObjectRemovingFromSelection, this);
-		_selection->GetAddedToSelectionEvent().RemoveHandler (&OnObjectAddedToSelection, this);
 
 		if (_hwnd != nullptr)
 			::DestroyWindow(_hwnd);
-	}
-
-	static void OnPropertyChanged (void* callbackArg, const Property* property)
-	{
-		auto pw = static_cast<ProjectWindow*>(callbackArg);
-		pw->_project->SetModified(true);
-	}
-
-	static void OnObjectAddedToSelection (void* callbackArg, ISelection* selection, Object* o)
-	{
-		auto pw = static_cast<ProjectWindow*>(callbackArg);
-		auto bridge = dynamic_cast<Bridge*>(o);
-		if (bridge != nullptr)
-			bridge->GetConfigChangedEvent().AddHandler (&OnBridgeConfigChanged, pw);
-	}
-
-	static void OnObjectRemovingFromSelection (void* callbackArg, ISelection* selection, Object* o)
-	{
-		auto pw = static_cast<ProjectWindow*>(callbackArg);
-		auto bridge = dynamic_cast<Bridge*>(o);
-		if (bridge != nullptr)
-			bridge->GetConfigChangedEvent().RemoveHandler (&OnBridgeConfigChanged, pw);
-	}
-
-	static void OnBridgeConfigChanged (void* callbackArg, Bridge* b)
-	{
-		auto pw = static_cast<ProjectWindow*>(callbackArg);
-		pw->_propertiesWindow->GetPG1()->ReloadPropertyValues();
-		pw->_propertiesWindow->GetPG2()->ReloadPropertyValues();
 	}
 
 	static void OnProjectLoaded (void* callbackArg, IProject* project)
@@ -252,35 +213,6 @@ public:
 		mii.fMask = MIIM_STATE;
 		mii.fState = checked ? MFS_CHECKED : MFS_UNCHECKED;
 		::SetMenuItemInfo (menu, item, FALSE, &mii);
-	}
-
-	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
-	{
-		auto pw = static_cast<ProjectWindow*>(callbackArg);
-		if (selection->GetObjects().empty())
-		{
-			pw->_propertiesWindow->GetPG1()->SelectObjects(nullptr, 0);
-			pw->_propertiesWindow->GetPG2()->SelectObjects(nullptr, 0);
-		}
-		else
-		{
-			pw->_propertiesWindow->GetPG1()->SelectObjects (selection->GetObjects().data(), selection->GetObjects().size());
-
-			if (all_of (selection->GetObjects().begin(), selection->GetObjects().end(), [](Object* o) { return o->Is<Bridge>(); }))
-			{
-				std::vector<BridgeTree*> bridgeTrees;
-				for (Object* o : selection->GetObjects())
-				{
-					auto b = static_cast<Bridge*>(o);
-					auto treeIndex = STP_GetTreeIndexFromVlanNumber(b->GetStpBridge(), pw->_selectedVlanNumber);
-					bridgeTrees.push_back (b->GetTrees().at(treeIndex).get());
-				}
-
-				pw->_propertiesWindow->GetPG2()->SelectObjects ((Object**) &bridgeTrees[0], bridgeTrees.size());
-			}
-			else
-				pw->_propertiesWindow->GetPG2()->SelectObjects(nullptr, 0);
-		}
 	}
 
 	virtual HWND GetHWnd() const override { return _hwnd; }
@@ -827,7 +759,6 @@ public:
 			SelectedVlanNumerChangedEvent::InvokeHandlers(this, this, vlanNumber);
 			::InvalidateRect (GetHWnd(), nullptr, FALSE);
 			SetWindowTitle();
-			_propertiesWindow->GetPG2()->ReloadPropertyValues();
 		}
 	};
 

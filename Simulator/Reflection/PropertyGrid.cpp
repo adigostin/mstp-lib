@@ -26,6 +26,12 @@ PropertyGrid::PropertyGrid (HINSTANCE hInstance, const RECT& rect, HWND hWndPare
 	GetRenderTarget()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_GRAYTEXT), &_grayTextBrush);
 }
 
+PropertyGrid::~PropertyGrid()
+{
+	for (Object* so : _selectedObjects)
+		so->GetPropertyChangedEvent().RemoveHandler (&OnSelectedObjectPropertyChanged, this);
+}
+
 std::optional<LRESULT> PropertyGrid::WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	auto resultBaseClass = base::WindowProc (hwnd, msg, wParam, lParam);
@@ -33,7 +39,8 @@ std::optional<LRESULT> PropertyGrid::WindowProc(HWND hwnd, UINT msg, WPARAM wPar
 	if (msg == WM_SIZE)
 	{
 		CreateLabelTextLayouts();
-		CreateValueTextLayouts();
+		for (auto& item : _items)
+			item->CreateValueTextLayout();
 		return 0;
 	}
 
@@ -66,7 +73,7 @@ std::optional<LRESULT> PropertyGrid::WindowProc(HWND hwnd, UINT msg, WPARAM wPar
 	return resultBaseClass;
 }
 
-void PropertyGrid::ProcessWmSetCursor (POINT pt) const
+void PropertyGrid::ProcessWmSetCursor (POINT pt)
 {
 	auto dipLocation = GetDipLocationFromPixelLocation(pt);
 	auto item = GetItemAt(dipLocation);
@@ -81,9 +88,9 @@ void PropertyGrid::ProcessWmSetCursor (POINT pt) const
 	::SetCursor (::LoadCursor (nullptr, canEdit ? IDC_HAND : IDC_ARROW));
 }
 
-const PropertyGrid::Item* PropertyGrid::GetItemAt (D2D1_POINT_2F location) const
+PropertyGrid::Item* PropertyGrid::GetItemAt (D2D1_POINT_2F location)
 {
-	auto item = EnumItems ([location](float textY, float lineY, float lineWidth, const Item& item, bool& stopEnum)
+	auto item = EnumItems ([location](float textY, float lineY, float lineWidth, Item* item, bool& stopEnum)
 	{
 		stopEnum = lineY + lineWidth > location.y;
 	});
@@ -91,7 +98,7 @@ const PropertyGrid::Item* PropertyGrid::GetItemAt (D2D1_POINT_2F location) const
 	return item;
 }
 
-const PropertyGrid::Item* PropertyGrid::EnumItems (std::function<void(float textY, float lineY, float lineWidth, const Item& item, bool& stopEnum)> func) const
+PropertyGrid::Item* PropertyGrid::EnumItems (std::function<void(float textY, float lineY, float lineWidth, Item* item, bool& stopEnum)> func) const
 {
 	float pixelWidth = GetDipSizeFromPixelSize ({ 1, 0 }).width;
 	float lineWidth = roundf(1.0f / pixelWidth) * pixelWidth;
@@ -99,11 +106,11 @@ const PropertyGrid::Item* PropertyGrid::EnumItems (std::function<void(float text
 	bool cancelEnum = false;
 	for (auto& item : _items)
 	{
-		float lineY = y + std::max (item.labelTL.metrics.height, item.valueTL.metrics.height);
+		float lineY = y + std::max (item->labelTL.metrics.height, item->valueTL.metrics.height);
 		lineY = roundf (lineY / pixelWidth) * pixelWidth + lineWidth / 2;
-		func (y, lineY, lineWidth, item, cancelEnum);
+		func (y, lineY, lineWidth, item.get(), cancelEnum);
 		if (cancelEnum)
-			return &item;
+			return item.get();
 		y = lineY + lineWidth / 2;
 	}
 
@@ -123,22 +130,22 @@ void PropertyGrid::Render (ID2D1RenderTarget* rt) const
 	}
 
 	auto nameColumnWidth = GetNameColumnWidth();
-	EnumItems ([this, rt, nameColumnWidth](float textY, float lineY, float lineWidth, const Item& item, bool& stopEnum)
+	EnumItems ([this, rt, nameColumnWidth](float textY, float lineY, float lineWidth, Item* item, bool& stopEnum)
 	{
-		if (dynamic_cast<const PropertyGroup*>(item.pd) != nullptr)
+		if (dynamic_cast<const PropertyGroup*>(item->pd) != nullptr)
 		{
-			rt->DrawTextLayout ({ CellLRPadding, textY }, item.labelTL.layout, _windowTextBrush);
+			rt->DrawTextLayout ({ CellLRPadding, textY }, item->labelTL.layout, _windowTextBrush);
 		}
-		else if (dynamic_cast<const Property*>(item.pd) != nullptr)
+		else if (dynamic_cast<const Property*>(item->pd) != nullptr)
 		{
-			auto pd = static_cast<const Property*>(item.pd);
+			auto pd = static_cast<const Property*>(item->pd);
 			auto& brush = ((pd->_customEditor != nullptr) || pd->HasSetter()) ? _windowTextBrush : _grayTextBrush;
-			rt->DrawTextLayout ({ CellLRPadding, textY }, item.labelTL.layout, brush);
-			if (item.valueTL.layout != nullptr)
+			rt->DrawTextLayout ({ CellLRPadding, textY }, item->labelTL.layout, brush);
+			if (item->valueTL.layout != nullptr)
 			{
 				float x = nameColumnWidth + lineWidth / 2;
 				rt->DrawLine ({ x, textY }, { x, lineY - lineWidth / 2 }, _grayTextBrush, lineWidth);
-				rt->DrawTextLayout ({ nameColumnWidth + lineWidth + CellLRPadding, textY }, item.valueTL.layout, brush);
+				rt->DrawTextLayout ({ nameColumnWidth + lineWidth + CellLRPadding, textY }, item->valueTL.layout, brush);
 			}
 		}
 		rt->DrawLine ({ 0, lineY }, { GetClientWidthDips(), lineY }, _grayTextBrush, lineWidth);
@@ -155,7 +162,7 @@ float PropertyGrid::GetNameColumnWidth() const
 
 void PropertyGrid::DiscardEditor()
 {
-	if (_editorInfo.has_value())
+	if (_editorInfo != nullptr)
 		::SendMessage (_editorInfo->_popupHWnd, WM_CLOSE_POPUP, 0, 0);
 }
 
@@ -180,7 +187,14 @@ void PropertyGrid::SelectObjects (Object* const* objects, size_t count)
 
 	DiscardEditor();
 
+	for (Object* so : _selectedObjects)
+		so->GetPropertyChangedEvent().RemoveHandler (&OnSelectedObjectPropertyChanged, this);
+
 	_selectedObjects.assign (objects, objects + count);
+
+	for (Object* so : _selectedObjects)
+		so->GetPropertyChangedEvent().AddHandler (&OnSelectedObjectPropertyChanged, this);
+
 	_items.clear();
 
 	if (!_selectedObjects.empty())
@@ -189,14 +203,31 @@ void PropertyGrid::SelectObjects (Object* const* objects, size_t count)
 		if (all_of(_selectedObjects.begin(), _selectedObjects.end(), [props](Object* o) { return o->GetProperties() == props; }))
 		{
 			for (auto ppd = props; *ppd != nullptr; ppd++)
-				_items.push_back (Item { *ppd });
+				_items.push_back (make_unique<Item>(this, *ppd));
 
 			CreateLabelTextLayouts();
-			CreateValueTextLayouts();
+			for (auto& item : _items)
+				item->CreateValueTextLayout();
 		}
 	}
 
 	::InvalidateRect (GetHWnd(), NULL, FALSE);
+}
+
+//static
+void PropertyGrid::OnSelectedObjectPropertyChanged (void* callbackArg, Object* o, const Property* property)
+{
+	auto pg = static_cast<PropertyGrid*>(callbackArg);
+
+	if ((pg->_editorInfo != nullptr) && (pg->_editorInfo->_property == property))
+		pg->DiscardEditor();
+
+	auto it = std::find_if (pg->_items.begin(), pg->_items.end(), [property](const unique_ptr<Item>& i) { return i->pd == property; });
+	if (it != pg->_items.end())
+	{
+		it->get()->CreateValueTextLayout();
+		::InvalidateRect (pg->GetHWnd(), NULL, FALSE);
+	}
 }
 
 void PropertyGrid::CreateLabelTextLayouts()
@@ -205,13 +236,13 @@ void PropertyGrid::CreateLabelTextLayouts()
 	for (auto& item : _items)
 	{
 		IDWriteTextFormat* textFormat = _textFormat;
-		if (dynamic_cast<const PropertyGroup*>(item.pd) != nullptr)
+		if (dynamic_cast<const PropertyGroup*>(item->pd) != nullptr)
 			textFormat = _boldTextFormat;
 
-		if (item.pd->_labelGetter != nullptr)
-			item.labelTL = TextLayout::Create (GetDWriteFactory(), textFormat, item.pd->_labelGetter(_selectedObjects).c_str(), maxWidth);
+		if (item->pd->_labelGetter != nullptr)
+			item->labelTL = TextLayout::Create (GetDWriteFactory(), textFormat, item->pd->_labelGetter(_selectedObjects).c_str(), maxWidth);
 		else
-			item.labelTL = TextLayout::Create (GetDWriteFactory(), textFormat, item.pd->_name, maxWidth);
+			item->labelTL = TextLayout::Create (GetDWriteFactory(), textFormat, item->pd->_name, maxWidth);
 	}
 }
 
@@ -227,35 +258,23 @@ wstring PropertyGrid::GetValueText (const Property* pd) const
 	return str;
 }
 
-void PropertyGrid::CreateValueTextLayouts()
+void PropertyGrid::Item::CreateValueTextLayout()
 {
-	float pixelWidth = GetDipSizeFromPixelSize ({ 1, 0 }).width;
+	float pixelWidth = _pg->GetDipSizeFromPixelSize ({ 1, 0 }).width;
 	float lineWidth = roundf(1.0f / pixelWidth) * pixelWidth;
-	float maxWidth = std::max (100.0f, GetClientWidthDips()) - GetNameColumnWidth() - lineWidth - 2 * CellLRPadding;
+	float maxWidth = std::max (100.0f, _pg->GetClientWidthDips()) - _pg->GetNameColumnWidth() - lineWidth - 2 * CellLRPadding;
 
-	for (auto& item : _items)
+	if (dynamic_cast<const Property*>(pd) != nullptr)
 	{
-		if (dynamic_cast<const Property*>(item.pd) != nullptr)
-		{
-			auto pd = static_cast<const Property*>(item.pd);
-			auto str = GetValueText(pd);
-			item.valueTL = TextLayout::Create (GetDWriteFactory(), _textFormat, str.c_str(), maxWidth);
-		}
-		else if (dynamic_cast<const PropertyGroup*>(item.pd) != nullptr)
-		{
-		}
-		else
-			throw not_implemented_exception();
+		auto ppd = static_cast<const Property*>(pd);
+		auto str = _pg->GetValueText(ppd);
+		this->valueTL = TextLayout::Create (_pg->GetDWriteFactory(), _pg->_textFormat, str.c_str(), maxWidth);
 	}
-}
-
-void PropertyGrid::ReloadPropertyValues()
-{
-	DiscardEditor();
-
-	//throw not_implemented_exception()
-	CreateValueTextLayouts();
-	::InvalidateRect (GetHWnd(), NULL, FALSE);
+	else if (dynamic_cast<const PropertyGroup*>(pd) != nullptr)
+	{
+	}
+	else
+		throw not_implemented_exception();
 }
 
 static wstring GetText (HWND hwnd)
@@ -308,7 +327,7 @@ LRESULT CALLBACK PropertyGrid::EditSubclassProc (HWND hWnd, UINT msg, WPARAM wPa
 
 	if (msg == WM_KILLFOCUS)
 	{
-		if (!pg->_editorInfo.has_value() || pg->_editorInfo->_validating)
+		if ((pg->_editorInfo == nullptr) || pg->_editorInfo->_validating)
 			return DefSubclassProc (hWnd, msg, wParam, lParam);
 
 		auto newStr = GetText (hWnd);
@@ -345,7 +364,7 @@ LRESULT CALLBACK PropertyGrid::EditSubclassProc (HWND hWnd, UINT msg, WPARAM wPa
 	return DefSubclassProc (hWnd, msg, wParam, lParam);
 }
 
-void PropertyGrid::ShowStringEditor (POINT ptScreen, const wchar_t* str, VSF validateAndSetFunction)
+void PropertyGrid::ShowStringEditor (const TypedProperty<wstring>* property, Item* item, POINT ptScreen, const wchar_t* str, VSF validateAndSetFunction)
 {
 	HINSTANCE hInstance = (HINSTANCE) GetWindowLongPtr (GetHWnd(), GWLP_HINSTANCE);
 
@@ -373,7 +392,7 @@ void PropertyGrid::ShowStringEditor (POINT ptScreen, const wchar_t* str, VSF val
 	NONCLIENTMETRICS ncMetrics = { sizeof(NONCLIENTMETRICS) };
 	SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncMetrics, 0);
 
-	_editorInfo = EditorInfo();
+	_editorInfo.reset (new EditorInfo(property, item));
 	_editorInfo->_initialString = str;
 	_editorInfo->_validateAndSetFunction = validateAndSetFunction;
 	_editorInfo->_popupHWnd = CreateWindowEx (WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, ClassName, L"aaa", WS_POPUP | WS_BORDER, 0, 0, 0, 0, GetHWnd(), nullptr, hInstance, nullptr);
@@ -588,7 +607,7 @@ void PropertyGrid::ProcessLButtonUp (DWORD modifierKeys, POINT pt)
 			{
 				auto stringPD = dynamic_cast<const TypedProperty<wstring>*>(pd);
 				auto value = GetValueText(stringPD);
-				ShowStringEditor (pt, value.c_str(), [this, stringPD, &changed](const wstring& newStr)
+				ShowStringEditor (stringPD, item, pt, value.c_str(), [this, stringPD, &changed](const wstring& newStr)
 				{
 					auto timestamp = GetTimestampMilliseconds();
 					for (Object* so : _selectedObjects)
@@ -605,7 +624,7 @@ void PropertyGrid::ProcessLButtonUp (DWORD modifierKeys, POINT pt)
 				MessageBox (GetHWnd(), item->pd->_name, L"aaaa", 0);
 
 			if (changed)
-				PropertyChangedEvent::InvokeHandlers (this, pd);
+				PropertyChangedByUserEvent::InvokeHandlers (this, pd);
 		}
 	}
 	else

@@ -25,8 +25,10 @@ enum class MouseButton
 
 // ============================================================================
 
-MIDL_INTERFACE("3ADCEF4B-9335-4DD7-8016-5958883A4347") ISelection : public IUnknown
+struct __declspec(novtable) ISelection : public IUnknown
 {
+	using Interface = ISelection;
+
 	virtual const std::vector<Object*>& GetObjects() const = 0;
 	virtual void Select (Object* o) = 0;
 	virtual void Clear() = 0;
@@ -44,7 +46,7 @@ MIDL_INTERFACE("3ADCEF4B-9335-4DD7-8016-5958883A4347") ISelection : public IUnkn
 	struct ChangedEvent : public Event<ChangedEvent, void(ISelection*)> { };
 	virtual ChangedEvent::Subscriber GetChangedEvent() = 0;
 };
-_COM_SMARTPTR_TYPEDEF(ISelection, __uuidof(ISelection));
+using ISelectionPtr = _com_ptr_t<ISelection>;
 using SelectionFactory = ISelectionPtr(*const)(IProject* project);
 extern const SelectionFactory selectionFactory;
 
@@ -173,12 +175,11 @@ extern const ProjectFactory projectFactory;
 
 // ============================================================================
 
-MIDL_INTERFACE("6438D8FC-058B-4A83-A4DC-2B48AE028D09") IPropertiesWindow : public IWin32Window
+struct __declspec(novtable) IPropertiesWindow : public IWin32Window
 {
-	virtual PropertyGrid* GetPG1() const = 0;
-	virtual PropertyGrid* GetPG2() const = 0;
+	using Interface = IPropertiesWindow;
 };
-_COM_SMARTPTR_TYPEDEF(IPropertiesWindow, __uuidof(IPropertiesWindow));
+using IPropertiesWindowPtr = _com_ptr_t<IPropertiesWindow>;
 using PropertiesWindowFactory = IPropertiesWindowPtr(*const)(ISimulatorApp* app,
 															 IProjectWindow* projectWindow,
 															 IProject* project,

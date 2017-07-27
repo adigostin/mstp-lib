@@ -197,7 +197,7 @@ public:
 		entries.resize(1 + MaxVlanNumber);
 
 		for (auto b : _bridges)
-			STP_SetMstConfigTable (b->GetStpBridge(), &entries[0], (unsigned int) entries.size(), timestamp);
+			b->SetMstConfigTable (entries.data(), (unsigned int) entries.size(), timestamp);
 
 		HWND list = GetDlgItem (_hwnd, IDC_LIST_CONFIG_TABLE);
 		ListView_DeleteAllItems(list);
@@ -224,7 +224,7 @@ public:
 				entries[vid].treeIndex = (vid - 1) % treeCount;
 			}
 
-			STP_SetMstConfigTable (b->GetStpBridge(), &entries[0], (unsigned int) entries.size(), timestamp);
+			b->SetMstConfigTable (entries.data(), (unsigned int) entries.size(), timestamp);
 		}
 
 		HWND list = GetDlgItem (_hwnd, IDC_LIST_CONFIG_TABLE);

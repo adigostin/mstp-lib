@@ -122,6 +122,9 @@ public:
 	template<typename T>
 	bool Is() const { return dynamic_cast<const T*>(this) != nullptr; }
 
+	struct PropertyChangedEvent : public Event<PropertyChangedEvent, void(Object* o, const Property* property)> { };
+	PropertyChangedEvent::Subscriber GetPropertyChangedEvent() { return PropertyChangedEvent::Subscriber(this); }
+
 	virtual const PropertyOrGroup* const* GetProperties() const = 0;
 };
 

@@ -354,6 +354,7 @@ void Bridge::SetBridgeAddressFromWString (std::wstring str, unsigned int timesta
 {
 	auto newAddress = ConvertStringToBridgeAddress(str.c_str());
 	STP_SetBridgeAddress (_stpBridge, newAddress.bytes, timestamp);
+	PropertyChangedEvent::InvokeHandlers (this, this, &Address);
 }
 
 std::array<uint8_t, 6> Bridge::GetPortAddress (size_t portIndex) const
@@ -670,6 +671,7 @@ void Bridge::SetMstConfigIdName (std::wstring value, unsigned int timestamp)
 	ascii.resize(32);
 
 	STP_SetMstConfigName (_stpBridge, ascii.c_str(), timestamp);
+	PropertyChangedEvent::InvokeHandlers (this, this, &MstConfigIdName);
 }
 
 unsigned short Bridge::GetMstConfigIdRevLevel() const
@@ -680,7 +682,11 @@ unsigned short Bridge::GetMstConfigIdRevLevel() const
 
 void Bridge::SetMstConfigIdRevLevel (unsigned short revLevel, unsigned int timestamp)
 {
-	STP_SetMstConfigRevisionLevel (_stpBridge, revLevel, timestamp);
+	if (GetMstConfigIdRevLevel() != revLevel)
+	{
+		STP_SetMstConfigRevisionLevel (_stpBridge, revLevel, timestamp);
+		PropertyChangedEvent::InvokeHandlers (this, this, &MstConfigIdRevLevel);
+	}
 }
 
 std::wstring Bridge::GetMstConfigIdDigest() const
@@ -695,120 +701,122 @@ std::wstring Bridge::GetMstConfigIdDigest() const
 	return ss.str();
 }
 
+void Bridge::SetMstConfigTable (const STP_CONFIG_TABLE_ENTRY* entries, unsigned int entryCount, unsigned int timestamp)
+{
+	STP_SetMstConfigTable (_stpBridge, &entries[0], entryCount, timestamp);
+	PropertyChangedEvent::InvokeHandlers (this, this, &MstConfigIdDigest);
+}
+
 void Bridge::SetStpEnabled (bool value, unsigned int timestamp)
 {
 	if (value && !STP_IsBridgeStarted(_stpBridge))
+	{
 		STP_StartBridge (_stpBridge, timestamp);
+		PropertyChangedEvent::InvokeHandlers (this, this, &StpEnabled);
+	}
 	else if (!value && STP_IsBridgeStarted(_stpBridge))
+	{
 		STP_StopBridge (_stpBridge, timestamp);
+		PropertyChangedEvent::InvokeHandlers (this, this, &StpEnabled);
+	}
 }
 
 void Bridge::SetStpVersionFromInt (int value, unsigned int timestamp)
 {
 	auto newVersion = (STP_VERSION) value;
 	if (STP_GetStpVersion(_stpBridge) != newVersion)
+	{
 		STP_SetStpVersion(_stpBridge, newVersion, timestamp);
+		PropertyChangedEvent::InvokeHandlers(this, this, &StpVersion);
+	}
 }
 
-static const PropertyGroup CommonPropGroup
-{
-	L"Common",
-	nullptr,
-};
+const PropertyGroup Bridge::CommonPropGroup (L"Common", nullptr);
 
-static const TypedProperty<wstring> AddressProperty
+const TypedProperty<wstring> Bridge::Address
 (
 	L"Bridge Address",
 	nullptr,
-	static_cast<TypedProperty<wstring>::Getter>(&Bridge::GetBridgeAddressAsWString),
-	static_cast<TypedProperty<wstring>::Setter>(&Bridge::SetBridgeAddressFromWString)
+	static_cast<TypedProperty<wstring>::Getter>(&GetBridgeAddressAsWString),
+	static_cast<TypedProperty<wstring>::Setter>(&SetBridgeAddressFromWString)
 );
 
-static const TypedProperty<bool> BridgePropStpEnabled
+const TypedProperty<bool> Bridge::StpEnabled
 (
 	L"STP Enabled",
 	nullptr,
-	static_cast<TypedProperty<bool>::Getter>(&Bridge::GetStpEnabled),
-	static_cast<TypedProperty<bool>::Setter>(&Bridge::SetStpEnabled)
+	static_cast<TypedProperty<bool>::Getter>(&GetStpEnabled),
+	static_cast<TypedProperty<bool>::Setter>(&SetStpEnabled)
 );
 
 static const NVP StpVersionNVPs[] = { { L"LegacySTP", STP_VERSION_LEGACY_STP }, { L"RSTP", STP_VERSION_RSTP }, { L"MSTP", STP_VERSION_MSTP }, { 0, 0 } };
 
-static const EnumProperty BridgePropStpVersion
+const EnumProperty Bridge::StpVersion
 {
 	L"STP Version",
 	nullptr,
-	static_cast<EnumProperty::Getter>(&Bridge::GetStpVersionAsInt),
-	static_cast<EnumProperty::Setter>(&Bridge::SetStpVersionFromInt),
+	static_cast<EnumProperty::Getter>(&GetStpVersionAsInt),
+	static_cast<EnumProperty::Setter>(&SetStpVersionFromInt),
 	StpVersionNVPs
 };
 
-static const TypedProperty<unsigned int> BridgePropPortCount
+const TypedProperty<unsigned int> Bridge::PortCount
 {
 	L"Port Count",
 	nullptr,
-	static_cast<TypedProperty<unsigned int>::Getter>(&Bridge::GetPortCount),
+	static_cast<TypedProperty<unsigned int>::Getter>(&GetPortCount),
 	nullptr
 };
 
-static const TypedProperty<unsigned int> BridgePropMstiCount
+const TypedProperty<unsigned int> Bridge::MstiCount
 {
 	L"MSTI Count",
 	nullptr,
-	static_cast<TypedProperty<unsigned int>::Getter>(&Bridge::GetMstiCount),
+	static_cast<TypedProperty<unsigned int>::Getter>(&GetMstiCount),
 	nullptr
 };
 
-static const PropertyGroup MstConfigIdGroup
-{
-	L"MST Config ID",
-	nullptr,
-};
+const PropertyGroup Bridge::MstConfigIdGroup (L"MST Config ID", nullptr);
 
-static const TypedProperty<wstring> MstConfigIdName
+const TypedProperty<wstring> Bridge::MstConfigIdName
 (
 	L"Name",
 	nullptr,
-	static_cast<TypedProperty<wstring>::Getter>(&Bridge::GetMstConfigIdName),
-	static_cast<TypedProperty<wstring>::Setter>(&Bridge::SetMstConfigIdName)
+	static_cast<TypedProperty<wstring>::Getter>(&GetMstConfigIdName),
+	static_cast<TypedProperty<wstring>::Setter>(&SetMstConfigIdName)
 );
 
-static const TypedProperty<unsigned short> MstConfigIdRevLevel
+const TypedProperty<unsigned short> Bridge::MstConfigIdRevLevel
 (
 	L"Revision Level",
 	nullptr,
-	static_cast<TypedProperty<unsigned short>::Getter>(&Bridge::GetMstConfigIdRevLevel),
-	static_cast<TypedProperty<unsigned short>::Setter>(&Bridge::SetMstConfigIdRevLevel)
+	static_cast<TypedProperty<unsigned short>::Getter>(&GetMstConfigIdRevLevel),
+	static_cast<TypedProperty<unsigned short>::Setter>(&SetMstConfigIdRevLevel)
 );
 
-static const TypedProperty<wstring> MstConfigIdDigest
+const TypedProperty<wstring> Bridge::MstConfigIdDigest
 (
 	L"Digest",
 	nullptr,
-	static_cast<TypedProperty<wstring>::Getter>(&Bridge::GetMstConfigIdDigest),
+	static_cast<TypedProperty<wstring>::Getter>(&GetMstConfigIdDigest),
 	nullptr,
 	mstConfigIdDialogFactory
 );
 
-static const PropertyOrGroup* const BridgeProperties[] =
+const PropertyOrGroup* const Bridge::Properties[] =
 {
 	&CommonPropGroup,
-	&AddressProperty,
-	&BridgePropStpEnabled,
-	&BridgePropStpVersion,
-	&BridgePropPortCount,
-	&BridgePropMstiCount,
+	&Address,
+	&StpEnabled,
+	&StpVersion,
+	&PortCount,
+	&MstiCount,
 	&MstConfigIdGroup,
 	&MstConfigIdName,
 	&MstConfigIdRevLevel,
 	&MstConfigIdDigest,
 	nullptr,
 };
-
-const PropertyOrGroup* const* Bridge::GetProperties() const
-{
-	return BridgeProperties;
-}
 
 #pragma region STP Callbacks
 const STP_CALLBACKS Bridge::StpCallbacks =
@@ -932,9 +940,6 @@ void Bridge::StpCallback_OnPortRoleChanged (const STP_BRIDGE* bridge, unsigned i
 
 void Bridge::StpCallback_OnConfigChanged (const STP_BRIDGE* bridge, unsigned int timestamp)
 {
-	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
-	ConfigChangedEvent::InvokeHandlers (b, b);
-	InvalidateEvent::InvokeHandlers(b, b);
 }
 #pragma endregion
 

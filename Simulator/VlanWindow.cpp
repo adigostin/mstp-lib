@@ -156,17 +156,17 @@ private:
 	{
 		auto b = dynamic_cast<Bridge*>(obj);
 		if (b != nullptr)
-			b->GetConfigChangedEvent().AddHandler (&OnBridgeConfigChanged, callbackArg);
+			b->GetPropertyChangedEvent().AddHandler (&OnBridgePropertyChanged, callbackArg);
 	}
 
 	static void OnRemovingFromSelection (void* callbackArg, ISelection* selection, Object* obj)
 	{
 		auto b = dynamic_cast<Bridge*>(obj);
 		if (b != nullptr)
-			b->GetConfigChangedEvent().RemoveHandler (&OnBridgeConfigChanged, callbackArg);
+			b->GetPropertyChangedEvent().RemoveHandler (&OnBridgePropertyChanged, callbackArg);
 	}
 
-	static void OnBridgeConfigChanged (void* callbackArg, Bridge* bridge)
+	static void OnBridgePropertyChanged (void* callbackArg, Object* o, const Property* property)
 	{
 		static_cast<VlanWindow*>(callbackArg)->LoadSelectedTreeEdit();
 	}

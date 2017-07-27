@@ -54,8 +54,6 @@ public:
 	Bridge (unsigned int portCount, unsigned int mstiCount, const unsigned char macAddress[6]);
 	virtual ~Bridge();
 
-	virtual const PropertyOrGroup* const* GetProperties() const override final;
-
 	static constexpr int HTCodeInner = 1;
 
 	static constexpr float DefaultHeight = 100;
@@ -79,10 +77,6 @@ public:
 	const std::vector<std::unique_ptr<BridgeTree>>& GetTrees() const { return _trees; }
 	const std::vector<std::unique_ptr<Port>>& GetPorts() const { return _ports; }
 
-	std::string GetBridgeAddressAsString() const;
-	std::wstring GetBridgeAddressAsWString() const;
-	void SetBridgeAddressFromWString (std::wstring address, unsigned int timestamp);
-
 	void Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned int vlanNumber, const D2D1_COLOR_F& configIdColor) const;
 
 	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const override final;
@@ -91,12 +85,10 @@ public:
 	STP_BRIDGE* GetStpBridge() const { return _stpBridge; }
 
 	struct LogLineGenerated : public Event<LogLineGenerated, void(Bridge*, const BridgeLogLine* line)> { };
-	struct ConfigChangedEvent : public Event<ConfigChangedEvent, void(Bridge*)> { };
 	struct LinkPulseEvent : public Event<LinkPulseEvent, void(Bridge*, size_t txPortIndex, unsigned int timestamp)> { };
 	struct PacketTransmitEvent : public Event<PacketTransmitEvent, void(Bridge*, size_t txPortIndex, PacketInfo&& packet)> { };
 
 	LogLineGenerated::Subscriber GetLogLineGeneratedEvent() { return LogLineGenerated::Subscriber(this); }
-	ConfigChangedEvent::Subscriber GetConfigChangedEvent() { return ConfigChangedEvent::Subscriber(this); }
 	LinkPulseEvent::Subscriber GetLinkPulseEvent() { return LinkPulseEvent::Subscriber(this); }
 	PacketTransmitEvent::Subscriber GetPacketTransmitEvent() { return PacketTransmitEvent::Subscriber(this); }
 
@@ -125,6 +117,7 @@ public:
 	unsigned short GetMstConfigIdRevLevel() const;
 	void SetMstConfigIdRevLevel (unsigned short revLevel, unsigned int timestamp);
 	std::wstring GetMstConfigIdDigest() const;
+	void SetMstConfigTable (const STP_CONFIG_TABLE_ENTRY* entries, unsigned int entryCount, unsigned int timestamp);
 
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
@@ -146,6 +139,25 @@ private:
 	static void  StpCallback_OnNotifiedTopologyChange (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp);
 	static void  StpCallback_OnPortRoleChanged        (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role, unsigned int timestamp);
 	static void  StpCallback_OnConfigChanged          (const STP_BRIDGE* bridge, unsigned int timestamp);
+
+private:
+	std::string GetBridgeAddressAsString() const;
+	std::wstring GetBridgeAddressAsWString() const;
+	void SetBridgeAddressFromWString (std::wstring address, unsigned int timestamp);
+
+	static const PropertyGroup CommonPropGroup;
+	static const TypedProperty<std::wstring> Address;
+	static const TypedProperty<bool> StpEnabled;
+	static const EnumProperty StpVersion;
+	static const TypedProperty<unsigned int> PortCount;
+	static const TypedProperty<unsigned int> MstiCount;
+	static const PropertyGroup MstConfigIdGroup;
+	static const TypedProperty<std::wstring> MstConfigIdName;
+	static const TypedProperty<unsigned short> MstConfigIdRevLevel;
+	static const TypedProperty<std::wstring> MstConfigIdDigest;
+
+	static const PropertyOrGroup* const Properties[];
+	virtual const PropertyOrGroup* const* GetProperties() const override final { return Properties; }
 };
 
 STP_BRIDGE_ADDRESS ConvertStringToBridgeAddress (const wchar_t* str);
