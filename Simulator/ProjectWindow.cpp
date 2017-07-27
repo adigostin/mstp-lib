@@ -432,19 +432,22 @@ public:
 		if (wParam == SIZE_RESTORED)
 			::GetWindowRect(_hwnd, &_restoreBounds);
 
-		_clientSize = newClientSize;
+		if (wParam != SIZE_MINIMIZED)
+		{
+			_clientSize = newClientSize;
 
-		if (_propertiesWindow != nullptr)
-			_propertiesWindow->SetRect ({ 0, 0, RestrictToolWindowWidth(_propertiesWindow->GetWidth()), _clientSize.cy });
+			if (_propertiesWindow != nullptr)
+				_propertiesWindow->SetRect ({ 0, 0, RestrictToolWindowWidth(_propertiesWindow->GetWidth()), _clientSize.cy });
 
-		if (_logWindow != nullptr)
-			_logWindow->SetRect ({ _clientSize.cx - RestrictToolWindowWidth(_logWindow->GetWidth()), 0, _clientSize.cx, _clientSize.cy });
+			if (_logWindow != nullptr)
+				_logWindow->SetRect ({ _clientSize.cx - RestrictToolWindowWidth(_logWindow->GetWidth()), 0, _clientSize.cx, _clientSize.cy });
 
-		if (_vlanWindow != nullptr)
-			_vlanWindow->SetRect ({ _propertiesWindow->GetWidth() + _splitterWidthPixels, 0, _logWindow->GetX() - _splitterWidthPixels, _vlanWindow->GetHeight() });
+			if (_vlanWindow != nullptr)
+				_vlanWindow->SetRect ({ _propertiesWindow->GetWidth() + _splitterWidthPixels, 0, _logWindow->GetX() - _splitterWidthPixels, _vlanWindow->GetHeight() });
 
-		if (_editWindow != nullptr)
-			_editWindow->SetRect (GetEditWindowRect());
+			if (_editWindow != nullptr)
+				_editWindow->SetRect (GetEditWindowRect());
+		}
 	}
 
 	void ProcessWmLButtonDown (POINT pt, UINT modifierKeysDown)
