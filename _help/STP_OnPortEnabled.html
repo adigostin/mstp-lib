@@ -64,11 +64,6 @@ void STP_OnPortEnabled
 		on real hardware only with 
 		point-to-point links.</p>
 	<p>
-		The current version of the library ignores the <code>speedMegabitsPerSecond</code> parameter and uses a 
-		constant value of 200000 for port path costs. Anyway, it is recommended that
-		the application passes the correct value in this parameter, because the STP library will 
-		eventually implement calculation of the port path cost.</p>
-	<p>
 			Execution of this function is a potentially lengthy process. 
 			It may call various callbacks multiple times.</p>
 	<p>

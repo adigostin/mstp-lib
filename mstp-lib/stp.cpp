@@ -267,6 +267,29 @@ const struct STP_BRIDGE_ADDRESS* STP_GetBridgeAddress (const struct STP_BRIDGE* 
 
 // ============================================================================
 
+// Table 13-4 on page 348 of 802.1Q-2011
+static unsigned int GetDefaultPortPathCost (unsigned int speedMegabitsPerSecond)
+{
+	if (speedMegabitsPerSecond == 0)
+		return 200000000;
+	else if (speedMegabitsPerSecond <= 1)
+		return 20000000;
+	else if (speedMegabitsPerSecond <= 10)
+		return 2000000;
+	else if (speedMegabitsPerSecond <= 100)
+		return 200000;
+	else if (speedMegabitsPerSecond <= 1000)
+		return 20000;
+	else if (speedMegabitsPerSecond <= 10000)
+		return 2000;
+	else if (speedMegabitsPerSecond <= 100000)
+		return 200;
+	else if (speedMegabitsPerSecond <= 1000000)
+		return 20;
+	else
+		return 2;
+}
+
 void STP_OnPortEnabled (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int speedMegabitsPerSecond, unsigned int detectedPointToPointMAC, unsigned int timestamp)
 {
 	LOG (bridge, -1, -1, "{T}: Port {D} good\r\n", timestamp, 1 + portIndex);
@@ -279,6 +302,11 @@ void STP_OnPortEnabled (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int
 	port->portEnabled = true;
 
 	port->detectedPointToPointMAC = detectedPointToPointMAC;
+
+	if (port->AdminExternalPortPathCost != 0)
+		port->ExternalPortPathCost = port->AdminExternalPortPathCost;
+	else
+		port->ExternalPortPathCost = GetDefaultPortPathCost(speedMegabitsPerSecond);
 
 	// If STP_OnPortEnabled is called for the first time after software startup,
 	// and if STP_SetPortAdminP2P was not yet called or called with AUTO,
@@ -1061,7 +1089,7 @@ const char* STP_GetVersionString (enum STP_VERSION version)
 		case STP_VERSION_MSTP:			return MSTPString;
 		default:
 			assert(false);
-			return nullptr;
+			return NULL;
 	}
 }
 
@@ -1188,4 +1216,23 @@ bool STP_MST_CONFIG_ID::operator== (const STP_MST_CONFIG_ID& rhs) const
 bool STP_MST_CONFIG_ID::operator< (const STP_MST_CONFIG_ID& rhs) const
 {
 	return Cmp (this, &rhs, sizeof(*this)) < 0;
+}
+
+// ============================================================================
+
+void STP_SetAdminPortPathCost (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int adminPathCost, unsigned int debugTimestamp)
+{
+	assert(false); // not implemented
+}
+
+unsigned int STP_GetAdminPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex)
+{
+	assert(false); // not implemented
+	return 0;
+}
+
+unsigned int STP_GetPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex)
+{
+	assert(false); // not implemented
+	return 0;
 }

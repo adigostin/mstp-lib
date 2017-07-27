@@ -104,6 +104,8 @@ struct PORT
 	// If MSTP is implemented there is one instance per port, applicable to the CIST and to all MSTIs, of the following variable(s):
 	bool	rcvdInternal;	// 13.25.x) - 13.25.40
 
+	unsigned int AdminExternalPortPathCost; // Not in the standard. Stores ieee8021SpanningTreeRstpPortAdminPathCost / ieee8021MstpCistPortAdminPathCost
+
 	// If MSTP is implemented there is one instance per port of each of the following variables for the CIST:
 	unsigned int ExternalPortPathCost;	// 13.25.y) - 13.25.12
 	bool	infoInternal;	// 13.25.z) - 13.25.16

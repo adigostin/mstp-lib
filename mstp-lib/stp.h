@@ -198,6 +198,17 @@ void STP_GetRootTimes (const struct STP_BRIDGE* bridge,
 unsigned int STP_IsCistRoot (const struct STP_BRIDGE* bridge);
 unsigned int STP_IsRegionalRoot (const struct STP_BRIDGE* bridge, unsigned int treeIndex);
 
+// dot1dStpPortAdminPathCost
+// ieee8021SpanningTreeRstpPortAdminPathCost
+// ieee8021MstpCistPortAdminPathCost
+void STP_SetAdminPortPathCost (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int adminPathCost, unsigned int debugTimestamp);
+unsigned int STP_GetAdminPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex);
+
+// dot1dStpPortPathCost
+// ieee8021SpanningTreePortPathCost
+// ieee8021MstpCistPortCistPathCost
+unsigned int STP_GetPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex);
+
 void  STP_SetApplicationContext (struct STP_BRIDGE* bridge, void* applicationContext);
 void* STP_GetApplicationContext (const struct STP_BRIDGE* bridge);
 
