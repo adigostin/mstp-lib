@@ -133,11 +133,11 @@ public:
 		return resultBaseClass;
 	}
 
-	static constexpr float TitleBarPadding = 3;
+	static constexpr D2D1_RECT_F TitleBarPadding = { 3, 1, 3, 1 };
 
 	RECT GetPG1Rect() const
 	{
-		float heightDips = TitleBarPadding + _title1TextLayout.metrics.height + TitleBarPadding;
+		float heightDips = TitleBarPadding.top + _title1TextLayout.metrics.height + TitleBarPadding.bottom;
 		LONG heightPixels = GetPixelSizeFromDipSize({ 0, heightDips }).cy;
 		auto cs = GetClientSizePixels();
 		return { 0, heightPixels, cs.cx, cs.cy / 2 };
@@ -145,7 +145,7 @@ public:
 
 	RECT GetPG2Rect() const
 	{
-		float heightDips = TitleBarPadding + _title1TextLayout.metrics.height + TitleBarPadding;
+		float heightDips = TitleBarPadding.top + _title1TextLayout.metrics.height + TitleBarPadding.bottom;
 		LONG heightPixels = GetPixelSizeFromDipSize({ 0, heightDips }).cy;
 		auto cs = GetClientSizePixels();
 		return { 0, cs.cy / 2 + heightPixels, cs.cx, cs.cy };
@@ -157,8 +157,8 @@ public:
 
 		ID2D1SolidColorBrushPtr brush;
 		rt->CreateSolidColorBrush (GetD2DSystemColor(COLOR_CAPTIONTEXT), &brush);
-		rt->DrawTextLayout (Point2F(TitleBarPadding, TitleBarPadding), _title1TextLayout.layout, brush);
-		rt->DrawTextLayout (Point2F(TitleBarPadding, GetClientHeightDips() / 2 + TitleBarPadding), _title2TextLayout.layout, brush);
+		rt->DrawTextLayout (Point2F(TitleBarPadding.left, TitleBarPadding.top), _title1TextLayout.layout, brush);
+		rt->DrawTextLayout (Point2F(TitleBarPadding.left, GetClientHeightDips() / 2 + TitleBarPadding.top), _title2TextLayout.layout, brush);
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return base::QueryInterface(riid, ppvObject); }
