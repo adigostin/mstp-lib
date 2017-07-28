@@ -16,6 +16,7 @@ class PropertiesWindow : public D2DWindow, public IPropertiesWindow
 	IProjectPtr const _project;
 	unique_ptr<PropertyGrid> _pg1;
 	unique_ptr<PropertyGrid> _pg2;
+	IDWriteTextFormatPtr _titleTextFormat;
 	TextLayout _title1TextLayout;
 	TextLayout _title2TextLayout;
 
@@ -31,11 +32,9 @@ public:
 		, _project(project)
 		, _selection(selection)
 	{
-		IDWriteTextFormatPtr format;
-		auto hr = app->GetDWriteFactory()->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &format); ThrowIfFailed(hr);
+		auto hr = app->GetDWriteFactory()->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_titleTextFormat); ThrowIfFailed(hr);
 
-		_title1TextLayout = TextLayout::Create (app->GetDWriteFactory(), format, L"Properties");
-		_title2TextLayout = TextLayout::Create (app->GetDWriteFactory(), format, L"VLAN-Specific Properties");
+		CreateTitleTextLayouts();
 
 		_pg1.reset (new PropertyGrid(app->GetHInstance(), GetPG1Rect(), GetHWnd(), app->GetDWriteFactory(), projectWindow));
 		_pg2.reset (new PropertyGrid(app->GetHInstance(), GetPG2Rect(), GetHWnd(), app->GetDWriteFactory(), projectWindow));
@@ -58,6 +57,14 @@ public:
 	static IPropertiesWindowPtr Create (Args... args)
 	{
 		return IPropertiesWindowPtr (new PropertiesWindow(std::forward<Args>(args)...), false);
+	}
+
+	void CreateTitleTextLayouts()
+	{
+		_title1TextLayout = TextLayout::Create (GetDWriteFactory(), _titleTextFormat, L"Properties");
+		wstringstream ss;
+		ss << L"VLAN " << _projectWindow->GetSelectedVlanNumber() << L" Specific Properties";
+		_title2TextLayout = TextLayout::Create (GetDWriteFactory(), _titleTextFormat, ss.str().c_str());
 	}
 
 	void SetSelectionToPGs()
@@ -98,6 +105,8 @@ public:
 	{
 		auto window = static_cast<PropertiesWindow*>(callbackArg);
 		window->SetSelectionToPGs();
+		window->CreateTitleTextLayouts();
+		::InvalidateRect(window->GetHWnd(), nullptr, FALSE);
 	}
 
 	static void OnPropertyChangedInPG (void* callbackArg, const Property* property)
