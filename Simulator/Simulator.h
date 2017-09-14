@@ -1,5 +1,6 @@
 #pragma once
-#include "Reflection/PropertyGrid.h"
+#include "Win32/Win32Defs.h"
+#include "Object.h"
 #include "stp.h"
 
 struct ISimulatorApp;

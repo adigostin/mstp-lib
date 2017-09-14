@@ -213,10 +213,10 @@
     <ClInclude Include="Bridge.h" />
     <ClInclude Include="BridgeTree.h" />
     <ClInclude Include="EditStates\EditState.h" />
-    <ClInclude Include="Reflection\Object.h" />
+    <ClInclude Include="Object.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Port.h" />
-    <ClInclude Include="Reflection\PropertyGrid.h" />
+    <ClInclude Include="PropertyGrid.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Simulator.h" />
     <ClInclude Include="targetver.h" />
@@ -240,7 +240,7 @@
     <ClCompile Include="EditStates\MoveWirePointES.cpp" />
     <ClCompile Include="LogArea.cpp" />
     <ClCompile Include="MSTConfigIdDialog.cpp" />
-    <ClCompile Include="Reflection\Object.cpp" />
+    <ClCompile Include="Object.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -251,7 +251,7 @@
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="PropertiesWindow.cpp" />
-    <ClCompile Include="Reflection\PropertyGrid.cpp" />
+    <ClCompile Include="PropertyGrid.cpp" />
     <ClCompile Include="Test.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>

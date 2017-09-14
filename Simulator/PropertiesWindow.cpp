@@ -1,7 +1,7 @@
 
 #include "pch.h"
 #include "Simulator.h"
-#include "Reflection/PropertyGrid.h"
+#include "PropertyGrid.h"
 #include "Bridge.h"
 
 using namespace std;

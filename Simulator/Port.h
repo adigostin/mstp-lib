@@ -1,6 +1,6 @@
 
 #pragma once
-#include "Reflection/Object.h"
+#include "Object.h"
 #include "Win32/Win32Defs.h"
 #include "stp.h"
 
