@@ -1,6 +1,6 @@
 
 // This file is part of the mstp-lib library, available at http://sourceforge.net/projects/mstp-lib/
-// Copyright (c) 2011-2017 Adrian Gostin, distributed under the GNU General Public License v3.
+// Copyright (c) 2011-2017 Adrian Gostin, distributed under Apache License v2.0.
 
 #include "stp_base_types.h"
 #include "stp_log.h"
