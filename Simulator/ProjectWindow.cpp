@@ -134,7 +134,7 @@ public:
 		_project->GetLoadedEvent().RemoveHandler (&OnProjectLoaded, this);
 		_app->GetProjectWindowRemovedEvent().RemoveHandler (&OnProjectWindowRemoved, this);
 		_app->GetProjectWindowAddedEvent().RemoveHandler (&OnProjectWindowAdded, this);
-		_project->GetModifiedChangedEvent().AddHandler (&OnProjectModifiedChanged, this);
+		_project->GetModifiedChangedEvent().RemoveHandler (&OnProjectModifiedChanged, this);
 
 		if (_hwnd != nullptr)
 			::DestroyWindow(_hwnd);
