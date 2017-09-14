@@ -363,7 +363,7 @@ LRESULT CALLBACK PropertyGrid::EditSubclassProc (HWND hWnd, UINT msg, WPARAM wPa
 	return DefSubclassProc (hWnd, msg, wParam, lParam);
 }
 
-void PropertyGrid::ShowStringEditor (const TypedProperty<wstring>* property, Item* item, POINT ptScreen, const wchar_t* str, VSF validateAndSetFunction)
+void PropertyGrid::ShowStringEditor (const Property* property, Item* item, POINT ptScreen, const wchar_t* str, VSF validateAndSetFunction)
 {
 	HINSTANCE hInstance = (HINSTANCE) GetWindowLongPtr (GetHWnd(), GWLP_HINSTANCE);
 
@@ -600,14 +600,31 @@ void PropertyGrid::ProcessLButtonUp (DWORD modifierKeys, POINT pt)
 			}
 			else if (auto stringPD = dynamic_cast<const TypedProperty<wstring>*>(pd); stringPD != nullptr)
 			{
-				auto value = GetValueText(stringPD);
-				ShowStringEditor (stringPD, item, pt, value.c_str(), [this, stringPD, &changed](const wstring& newStr)
+				auto value = GetValueText(pd);
+				ShowStringEditor (pd, item, pt, value.c_str(), [this, stringPD, &changed](const wstring& newStr)
 				{
 					for (Object* so : _selectedObjects)
 					{
 						if ((so->*(stringPD->_getter))() != newStr)
 						{
 							(so->*(stringPD->_setter)) (newStr);
+							changed = true;
+						}
+					}
+				});
+			}
+			else if (auto u16pd = dynamic_cast<const TypedProperty<uint16_t>*>(pd); u16pd != nullptr)
+			{
+				auto value = GetValueText(pd);
+				ShowStringEditor (pd, item, pt, value.c_str(), [this, u16pd, &changed](const wstring& newStr)
+				{
+					uint16_t newVal = (uint16_t) std::stoul(newStr);
+
+					for (Object* so : _selectedObjects)
+					{
+						if ((so->*(u16pd->_getter))() != newVal)
+						{
+							(so->*(u16pd->_setter)) (newVal);
 							changed = true;
 						}
 					}

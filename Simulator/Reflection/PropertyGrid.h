@@ -70,7 +70,7 @@ private:
 	float GetNameColumnWidth() const;
 	void ProcessLButtonUp (DWORD modifierKeys, POINT pt);
 	int ShowEditor (POINT ptScreen, const NVP* nameValuePairs);
-	void ShowStringEditor (const TypedProperty<std::wstring>* property, Item* item, POINT ptScreen, const wchar_t* str, VSF validateAndSetFunction);
+	void ShowStringEditor (const Property* property, Item* item, POINT ptScreen, const wchar_t* str, VSF validateAndSetFunction);
 	static LRESULT CALLBACK EditSubclassProc (HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 	static void OnSelectedObjectPropertyChanged (void* callbackArg, Object* o, const Property* property);
 };
