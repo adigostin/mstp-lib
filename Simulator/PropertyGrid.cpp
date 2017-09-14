@@ -13,13 +13,13 @@ PropertyGrid::PropertyGrid (HINSTANCE hInstance, const RECT& rect, HWND hWndPare
 	, _iwwwq(iwwwq)
 {
 	auto hr = dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
-											   DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_textFormat); ThrowIfFailed(hr);
+											   DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_textFormat); assert(SUCCEEDED(hr));
 
 	hr = dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL,
-										  DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_boldTextFormat); ThrowIfFailed(hr);
+										  DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_boldTextFormat); assert(SUCCEEDED(hr));
 
 	hr = dWriteFactory->CreateTextFormat (L"Wingdings", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
-										  DWRITE_FONT_STRETCH_NORMAL, 14, L"en-US", &_wingdings); ThrowIfFailed(hr);
+										  DWRITE_FONT_STRETCH_NORMAL, 14, L"en-US", &_wingdings); assert(SUCCEEDED(hr));
 
 	GetRenderTarget()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOW), &_windowBrush);
 	GetRenderTarget()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOWTEXT), &_windowTextBrush);

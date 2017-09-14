@@ -56,41 +56,41 @@ public:
 	{
 		auto dc = base::GetRenderTarget();
 		_drawingObjects._dWriteFactory = dWriteFactory;
-		auto hr = dc->CreateSolidColorBrush (ColorF (ColorF::PaleGreen), &_drawingObjects._poweredFillBrush); ThrowIfFailed(hr);
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray), &_drawingObjects._unpoweredBrush); ThrowIfFailed(hr);
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray), &_drawingObjects._brushDiscardingPort); ThrowIfFailed(hr);
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gold), &_drawingObjects._brushLearningPort); ThrowIfFailed(hr);
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Green), &_drawingObjects._brushForwarding); ThrowIfFailed(hr);
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray), &_drawingObjects._brushNoForwardingWire); ThrowIfFailed(hr);
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Red), &_drawingObjects._brushLoop); ThrowIfFailed(hr);
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Blue), &_drawingObjects._brushTempWire); ThrowIfFailed(hr);
-		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOWTEXT), &_drawingObjects._brushWindowText); ThrowIfFailed(hr);
-		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOW), &_drawingObjects._brushWindow); ThrowIfFailed(hr);
-		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_HIGHLIGHT), &_drawingObjects._brushHighlight); ThrowIfFailed(hr);
+		auto hr = dc->CreateSolidColorBrush (ColorF (ColorF::PaleGreen), &_drawingObjects._poweredFillBrush); assert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray), &_drawingObjects._unpoweredBrush); assert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray), &_drawingObjects._brushDiscardingPort); assert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gold), &_drawingObjects._brushLearningPort); assert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Green), &_drawingObjects._brushForwarding); assert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray), &_drawingObjects._brushNoForwardingWire); assert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Red), &_drawingObjects._brushLoop); assert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Blue), &_drawingObjects._brushTempWire); assert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOWTEXT), &_drawingObjects._brushWindowText); assert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOW), &_drawingObjects._brushWindow); assert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_HIGHLIGHT), &_drawingObjects._brushHighlight); assert(SUCCEEDED(hr));
 		hr = GetDWriteFactory()->CreateTextFormat (L"Segoe UI", NULL, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
-			DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_drawingObjects._regularTextFormat); ThrowIfFailed(hr);
+			DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_drawingObjects._regularTextFormat); assert(SUCCEEDED(hr));
 		hr = GetDWriteFactory()->CreateTextFormat (L"Tahoma", NULL, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
-			DWRITE_FONT_STRETCH_NORMAL, 9.5f, L"en-US", &_drawingObjects._smallTextFormat); ThrowIfFailed(hr);
+			DWRITE_FONT_STRETCH_NORMAL, 9.5f, L"en-US", &_drawingObjects._smallTextFormat); assert(SUCCEEDED(hr));
 		GetDWriteFactory()->CreateTextFormat (L"Tahoma", nullptr,  DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
-			DWRITE_FONT_STRETCH_CONDENSED, 11, L"en-US", &_legendFont); ThrowIfFailed(hr);
+			DWRITE_FONT_STRETCH_CONDENSED, 11, L"en-US", &_legendFont); assert(SUCCEEDED(hr));
 
 		ID2D1FactoryPtr factory;
 		dc->GetFactory(&factory);
 
 		D2D1_STROKE_STYLE_PROPERTIES ssprops = {};
 		ssprops.dashStyle = D2D1_DASH_STYLE_DASH;
-		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawingObjects._strokeStyleSelectionRect); ThrowIfFailed(hr);
+		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawingObjects._strokeStyleSelectionRect); assert(SUCCEEDED(hr));
 
 		ssprops = { };
 		ssprops.dashStyle = D2D1_DASH_STYLE_DASH;
 		ssprops.startCap = D2D1_CAP_STYLE_ROUND;
 		ssprops.endCap = D2D1_CAP_STYLE_ROUND;
-		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawingObjects._strokeStyleNoForwardingWire); ThrowIfFailed(hr);
+		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawingObjects._strokeStyleNoForwardingWire); assert(SUCCEEDED(hr));
 
 		ssprops = { };
 		ssprops.startCap = D2D1_CAP_STYLE_ROUND;
 		ssprops.endCap = D2D1_CAP_STYLE_ROUND;
-		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawingObjects._strokeStyleForwardingWire); ThrowIfFailed(hr);
+		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawingObjects._strokeStyleForwardingWire); assert(SUCCEEDED(hr));
 
 		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
 		_project->GetBridgeRemovingEvent().AddHandler (&OnBridgeRemoving, this);
@@ -177,7 +177,7 @@ public:
 		for (auto& info : LegendInfo)
 		{
 			IDWriteTextLayoutPtr tl;
-			auto hr = GetDWriteFactory()->CreateTextLayout (info.text, (UINT32) wcslen(info.text), _legendFont, 1000, 1000, &tl); ThrowIfFailed(hr);
+			auto hr = GetDWriteFactory()->CreateTextLayout (info.text, (UINT32) wcslen(info.text), _legendFont, 1000, 1000, &tl); assert(SUCCEEDED(hr));
 
 			DWRITE_TEXT_METRICS metrics;
 			tl->GetMetrics (&metrics);
@@ -317,9 +317,9 @@ public:
 		float topBottomPadding = 1.5f;
 		auto textFormat = smallFont ? _drawingObjects._smallTextFormat.GetInterfacePtr() : _drawingObjects._regularTextFormat.GetInterfacePtr();
 		IDWriteTextLayoutPtr tl;
-		auto hr = _drawingObjects._dWriteFactory->CreateTextLayout(text, (UINT32) wcslen(text), textFormat, 10000, 10000, &tl); ThrowIfFailed(hr);
+		auto hr = _drawingObjects._dWriteFactory->CreateTextLayout(text, (UINT32) wcslen(text), textFormat, 10000, 10000, &tl); assert(SUCCEEDED(hr));
 		DWRITE_TEXT_METRICS metrics;
-		hr = tl->GetMetrics(&metrics); ThrowIfFailed(hr);
+		hr = tl->GetMetrics(&metrics); assert(SUCCEEDED(hr));
 
 		float pixelWidthDips = GetDipSizeFromPixelSize ({ 1, 0 }).width;
 		float lineWidthDips = roundf(1.0f / pixelWidthDips) * pixelWidthDips;

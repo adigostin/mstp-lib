@@ -213,27 +213,27 @@ public:
 			return hr;
 
 		IXMLDOMElementPtr projectElement;
-		hr = doc->createElement (_bstr_t("Project"), &projectElement); ThrowIfFailed(hr);
+		hr = doc->createElement (_bstr_t("Project"), &projectElement); assert(SUCCEEDED(hr));
 		projectElement->setAttribute (NextMacAddressString, _variant_t(ConvertBridgeAddressToWString(_nextMacAddress.bytes).c_str()));
-		hr = doc->appendChild (projectElement, nullptr); ThrowIfFailed(hr);
+		hr = doc->appendChild (projectElement, nullptr); assert(SUCCEEDED(hr));
 
 		IXMLDOMElementPtr bridgesElement;
-		hr = doc->createElement (_bstr_t("Bridges"), &bridgesElement); ThrowIfFailed(hr);
-		hr = projectElement->appendChild (bridgesElement, nullptr); ThrowIfFailed(hr);
+		hr = doc->createElement (_bstr_t("Bridges"), &bridgesElement); assert(SUCCEEDED(hr));
+		hr = projectElement->appendChild (bridgesElement, nullptr); assert(SUCCEEDED(hr));
 		for (size_t bridgeIndex = 0; bridgeIndex < _bridges.size(); bridgeIndex++)
 		{
 			auto b = _bridges.at(bridgeIndex).get();
 			auto e = b->Serialize(bridgeIndex, doc);
-			hr = bridgesElement->appendChild (e, nullptr); ThrowIfFailed(hr);
+			hr = bridgesElement->appendChild (e, nullptr); assert(SUCCEEDED(hr));
 		}
 
 		IXMLDOMElementPtr wiresElement;
-		hr = doc->createElement (_bstr_t("Wires"), &wiresElement); ThrowIfFailed(hr);
-		hr = projectElement->appendChild (wiresElement, nullptr); ThrowIfFailed(hr);
+		hr = doc->createElement (_bstr_t("Wires"), &wiresElement); assert(SUCCEEDED(hr));
+		hr = projectElement->appendChild (wiresElement, nullptr); assert(SUCCEEDED(hr));
 		for (auto& w : _wires)
 		{
 			hr = wiresElement->appendChild (w->Serialize(this, doc), nullptr);
-			ThrowIfFailed(hr);
+			assert(SUCCEEDED(hr));
 		}
 
 		FormatAndSaveToFile (doc, filePath);
@@ -257,16 +257,16 @@ public:
 			"";
 
 		IXMLDOMDocument3Ptr loadXML;
-		HRESULT hr = CoCreateInstance (CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(loadXML), (void**) &loadXML); ThrowIfFailed(hr);
+		HRESULT hr = CoCreateInstance (CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(loadXML), (void**) &loadXML); assert(SUCCEEDED(hr));
 		VARIANT_BOOL successful;
-		hr = loadXML->loadXML (_bstr_t(StylesheetText), &successful); ThrowIfFailed(hr);
+		hr = loadXML->loadXML (_bstr_t(StylesheetText), &successful); assert(SUCCEEDED(hr));
 
 		//Create the final document which will be indented properly
 		IXMLDOMDocument3Ptr pXMLFormattedDoc;
-		hr = CoCreateInstance(CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(pXMLFormattedDoc), (void**) &pXMLFormattedDoc); ThrowIfFailed(hr);
+		hr = CoCreateInstance(CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(pXMLFormattedDoc), (void**) &pXMLFormattedDoc); assert(SUCCEEDED(hr));
 
 		IDispatchPtr pDispatch;
-		hr = pXMLFormattedDoc->QueryInterface(IID_IDispatch, (void**)&pDispatch); ThrowIfFailed(hr);
+		hr = pXMLFormattedDoc->QueryInterface(IID_IDispatch, (void**)&pDispatch); assert(SUCCEEDED(hr));
 
 		_variant_t vtOutObject;
 		vtOutObject.vt = VT_DISPATCH;
@@ -278,55 +278,55 @@ public:
 
 		// By default it is writing the encoding = UTF-16. Let us change the encoding to UTF-8
 		IXMLDOMNodePtr firstChild;
-		hr = pXMLFormattedDoc->get_firstChild(&firstChild); ThrowIfFailed(hr);
+		hr = pXMLFormattedDoc->get_firstChild(&firstChild); assert(SUCCEEDED(hr));
 		IXMLDOMNamedNodeMapPtr pXMLAttributeMap;
-		hr = firstChild->get_attributes(&pXMLAttributeMap); ThrowIfFailed(hr);
+		hr = firstChild->get_attributes(&pXMLAttributeMap); assert(SUCCEEDED(hr));
 		IXMLDOMNodePtr encodingNode;
-		hr = pXMLAttributeMap->getNamedItem(_bstr_t("encoding"), &encodingNode); ThrowIfFailed(hr);
+		hr = pXMLAttributeMap->getNamedItem(_bstr_t("encoding"), &encodingNode); assert(SUCCEEDED(hr));
 		encodingNode->put_nodeValue (_variant_t("UTF-8"));
 
-		hr = pXMLFormattedDoc->save(_variant_t(path)); ThrowIfFailed(hr);
+		hr = pXMLFormattedDoc->save(_variant_t(path)); assert(SUCCEEDED(hr));
 	}
 
 	virtual void Load (const wchar_t* filePath) override final
 	{
 		IXMLDOMDocument3Ptr doc;
-		HRESULT hr = CoCreateInstance (CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(doc), (void**) &doc); ThrowIfFailed(hr);
+		HRESULT hr = CoCreateInstance (CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(doc), (void**) &doc); assert(SUCCEEDED(hr));
 
 		VARIANT_BOOL isSuccessful;
-		hr = doc->load(_variant_t(filePath), &isSuccessful); ThrowIfFailed(hr);
+		hr = doc->load(_variant_t(filePath), &isSuccessful); assert(SUCCEEDED(hr));
 		if (isSuccessful != VARIANT_TRUE)
 			throw runtime_error("Load failed.");
 
 		IXMLDOMNodePtr xmlDeclarationNode;
-		hr = doc->get_firstChild(&xmlDeclarationNode); ThrowIfFailed(hr);
+		hr = doc->get_firstChild(&xmlDeclarationNode); assert(SUCCEEDED(hr));
 		_bstr_t nodeName;
-		hr = xmlDeclarationNode->get_nodeName(nodeName.GetAddress()); ThrowIfFailed(hr);
+		hr = xmlDeclarationNode->get_nodeName(nodeName.GetAddress()); assert(SUCCEEDED(hr));
 		if (_wcsicmp (nodeName.GetBSTR(), L"xml") != 0)
 			throw runtime_error("Missing XML declaration.");
 
 		IXMLDOMNodePtr projectNode;
-		hr = xmlDeclarationNode->get_nextSibling(&projectNode); ThrowIfFailed(hr);
-		hr = projectNode->get_nodeName(nodeName.GetAddress()); ThrowIfFailed(hr);
+		hr = xmlDeclarationNode->get_nextSibling(&projectNode); assert(SUCCEEDED(hr));
+		hr = projectNode->get_nodeName(nodeName.GetAddress()); assert(SUCCEEDED(hr));
 		if (_wcsicmp (nodeName.GetBSTR(), L"Project") != 0)
 			throw runtime_error("Missing \"Project\" element in the XML.");
 		IXMLDOMElementPtr projectElement = projectNode;
 
 		_variant_t value;
-		hr = projectElement->getAttribute (NextMacAddressString, &value); ThrowIfFailed(hr);
+		hr = projectElement->getAttribute (NextMacAddressString, &value); assert(SUCCEEDED(hr));
 		_nextMacAddress = ConvertStringToBridgeAddress (static_cast<_bstr_t>(value));
 
 		{
 			IXMLDOMNodeListPtr bridgeNodes;
-			hr = doc->selectNodes(_bstr_t("Project/Bridges/Bridge"), &bridgeNodes); ThrowIfFailed(hr);
+			hr = doc->selectNodes(_bstr_t("Project/Bridges/Bridge"), &bridgeNodes); assert(SUCCEEDED(hr));
 			long bridgeCount;
-			hr = bridgeNodes->get_length(&bridgeCount); ThrowIfFailed(hr);
+			hr = bridgeNodes->get_length(&bridgeCount); assert(SUCCEEDED(hr));
 			for (long i = 0; i < bridgeCount; i++)
 			{
 				IXMLDOMNodePtr bridgeNode;
-				hr = bridgeNodes->get_item(i, &bridgeNode); ThrowIfFailed(hr);
+				hr = bridgeNodes->get_item(i, &bridgeNode); assert(SUCCEEDED(hr));
 				IXMLDOMElementPtr bridgeElement;
-				hr = bridgeNode->QueryInterface(&bridgeElement); ThrowIfFailed(hr);
+				hr = bridgeNode->QueryInterface(&bridgeElement); assert(SUCCEEDED(hr));
 				auto bridge = Bridge::Deserialize(bridgeElement);
 				this->InsertBridge(_bridges.size(), move(bridge));
 			}
@@ -334,15 +334,15 @@ public:
 
 		{
 			IXMLDOMNodeListPtr wireNodes;
-			hr = doc->selectNodes(_bstr_t("Project/Wires/Wire"), &wireNodes); ThrowIfFailed(hr);
+			hr = doc->selectNodes(_bstr_t("Project/Wires/Wire"), &wireNodes); assert(SUCCEEDED(hr));
 			long wireCount;
-			hr = wireNodes->get_length(&wireCount); ThrowIfFailed(hr);
+			hr = wireNodes->get_length(&wireCount); assert(SUCCEEDED(hr));
 			for (long i = 0; i < wireCount; i++)
 			{
 				IXMLDOMNodePtr wireNode;
-				hr = wireNodes->get_item(i, &wireNode); ThrowIfFailed(hr);
+				hr = wireNodes->get_item(i, &wireNode); assert(SUCCEEDED(hr));
 				IXMLDOMElementPtr wireElement;
-				hr = wireNode->QueryInterface(&wireElement); ThrowIfFailed(hr);
+				hr = wireNode->QueryInterface(&wireElement); assert(SUCCEEDED(hr));
 				auto wire = Wire::Deserialize (this, wireElement);
 				this->InsertWire(_wires.size(), move(wire));
 			}

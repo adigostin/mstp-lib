@@ -230,17 +230,17 @@ void Port::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, unsigned in
 	rt->DrawRectangle (&portRect, dos._brushWindowText, interiorPortOutlineWidth);
 
 	IDWriteTextFormatPtr format;
-	auto hr = dos._dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 9, L"en-US", &format); ThrowIfFailed(hr);
+	auto hr = dos._dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 9, L"en-US", &format); assert(SUCCEEDED(hr));
 	IDWriteTextLayoutPtr layout;
 	wstringstream ss;
 	ss << setfill(L'0') << setw(4) << hex << STP_GetPortIdentifier(b, (unsigned int) _portIndex, treeIndex);
 	auto portIdText = ss.str();
-	hr = dos._dWriteFactory->CreateTextLayout (portIdText.c_str(), (UINT32) portIdText.length(), format, 10000, 10000, &layout); ThrowIfFailed(hr);
+	hr = dos._dWriteFactory->CreateTextLayout (portIdText.c_str(), (UINT32) portIdText.length(), format, 10000, 10000, &layout); assert(SUCCEEDED(hr));
 	DWRITE_TEXT_METRICS metrics;
-	hr = layout->GetMetrics(&metrics); ThrowIfFailed(hr);
+	hr = layout->GetMetrics(&metrics); assert(SUCCEEDED(hr));
 	DWRITE_LINE_METRICS lineMetrics;
 	UINT32 actualLineCount;
-	hr = layout->GetLineMetrics(&lineMetrics, 1, &actualLineCount); ThrowIfFailed(hr);
+	hr = layout->GetLineMetrics(&lineMetrics, 1, &actualLineCount); assert(SUCCEEDED(hr));
 	rt->DrawTextLayout ({ -metrics.width / 2, -lineMetrics.baseline - OutlineWidth * 2 - 1}, layout, dos._brushWindowText);
 
 	rt->SetTransform (&oldtr);
@@ -340,7 +340,7 @@ static const _bstr_t OffsetString = L"Offset";
 IXMLDOMElementPtr Port::Serialize (IXMLDOMDocument3* doc) const
 {
 	IXMLDOMElementPtr portElement;
-	auto hr = doc->createElement (PortString, &portElement); ThrowIfFailed(hr);
+	auto hr = doc->createElement (PortString, &portElement); assert(SUCCEEDED(hr));
 	portElement->setAttribute (SideString, _variant_t (GetEnumName (SideNVPs, (int) _side)));
 	portElement->setAttribute (OffsetString, _variant_t (_offset));
 	return portElement;

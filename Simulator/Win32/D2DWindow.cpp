@@ -16,8 +16,7 @@ D2DWindow::D2DWindow (HINSTANCE hInstance, DWORD exStyle, DWORD style, const REC
 	: base(hInstance, WndClassName, exStyle, style, rect, hWndParent, hMenuOrControlId)
 	, _dWriteFactory(dWriteFactory)
 {
-	auto hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, IID_PPV_ARGS(&_d2dFactory));
-	ThrowIfFailed(hr);
+	auto hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, IID_PPV_ARGS(&_d2dFactory)); assert(SUCCEEDED(hr));
 
 	CreateD2DDeviceContext();
 
@@ -42,7 +41,7 @@ void D2DWindow::CreateD2DDeviceContext()
 	hwndrtprops.pixelSize = { (UINT32) GetClientWidthPixels(), (UINT32) GetClientHeightPixels() };
 
 	auto hr = _d2dFactory->CreateHwndRenderTarget(&props, &hwndrtprops, &_renderTarget);
-	ThrowIfFailed(hr);
+	assert(SUCCEEDED(hr));
 }
 
 std::optional<LRESULT> D2DWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -103,12 +102,16 @@ void D2DWindow::ProcessWmPaint (HWND hwnd)
 
 	_painting = true;
 
-	_renderTarget->BeginDraw();
-	_renderTarget->SetTransform(IdentityMatrix());
+	// If _renderTarget is nullptr, there's probably an assert window being shown.
+	if (_renderTarget != nullptr)
+	{
+		_renderTarget->BeginDraw();
+		_renderTarget->SetTransform(IdentityMatrix());
 
-	this->Render(_renderTarget);
+		this->Render(_renderTarget);
 
-	hr = _renderTarget->EndDraw(); ThrowIfFailed(hr);
+		hr = _renderTarget->EndDraw(); assert (SUCCEEDED(hr));
+	}
 
 	::EndPaint(hwnd, &ps); // this will show the caret in case BeginPaint above hid it.
 
@@ -163,9 +166,9 @@ ColorF GetD2DSystemColor (int sysColorIndex)
 TextLayout TextLayout::Create (IDWriteFactory* dWriteFactory, IDWriteTextFormat* format, const wchar_t* str, float maxWidth)
 {
 	IDWriteTextLayoutPtr tl;
-	auto hr = dWriteFactory->CreateTextLayout(str, (UINT32) wcslen(str), format, (maxWidth != 0) ? maxWidth : 10000, 10000, &tl); ThrowIfFailed(hr);
+	auto hr = dWriteFactory->CreateTextLayout(str, (UINT32) wcslen(str), format, (maxWidth != 0) ? maxWidth : 10000, 10000, &tl); assert(SUCCEEDED(hr));
 	DWRITE_TEXT_METRICS metrics;
-	hr = tl->GetMetrics(&metrics); ThrowIfFailed(hr);
+	hr = tl->GetMetrics(&metrics); assert(SUCCEEDED(hr));
 	return TextLayout { move(tl), metrics };
 }
 

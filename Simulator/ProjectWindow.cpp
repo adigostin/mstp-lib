@@ -82,9 +82,7 @@ public:
 				LoadIcon(_app->GetHInstance(), MAKEINTRESOURCE(IDI_DESIGNER))
 			};
 
-			wndClassAtom = RegisterClassEx(&wndClassEx);
-			if (wndClassAtom == 0)
-				throw win32_exception(GetLastError());
+			wndClassAtom = RegisterClassEx(&wndClassEx); assert (wndClassAtom != 0);
 		}
 
 		bool read = TryGetSavedWindowLocation (&_restoreBounds, &nCmdShow);
@@ -96,9 +94,7 @@ public:
 			w = _restoreBounds.right - _restoreBounds.left;
 			h = _restoreBounds.bottom - _restoreBounds.top;
 		}
-		auto hwnd = ::CreateWindow(ProjectWindowWndClassName, L"STP Simulator", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, x, y, w, h, nullptr, 0, _app->GetHInstance(), this);
-		if (hwnd == nullptr)
-			throw win32_exception(GetLastError());
+		auto hwnd = ::CreateWindow(ProjectWindowWndClassName, L"STP Simulator", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, x, y, w, h, nullptr, 0, _app->GetHInstance(), this); assert (hwnd != nullptr);
 		assert(hwnd == _hwnd);
 		if (!read)
 			::GetWindowRect(_hwnd, &_restoreBounds);
@@ -329,7 +325,7 @@ public:
 				BOOL bRes = ::GetCursorPos (&pt);
 				if (bRes)
 				{
-					bRes = ::ScreenToClient (_hwnd, &pt); ThrowWin32IfFailed(bRes);
+					bRes = ::ScreenToClient (_hwnd, &pt); assert(bRes);
 					this->SetCursor(pt);
 					return 0;
 				}
@@ -463,17 +459,24 @@ public:
 		BeginPaint(GetHWnd(), &ps);
 
 		RECT rect;
-		rect.left = _propertiesWindow->GetWidth();
-		rect.top = 0;
-		rect.right = rect.left + _splitterWidthPixels;
-		rect.bottom = _clientSize.cy;
-		FillRect (ps.hdc, &rect, GetSysColorBrush(COLOR_3DFACE));
 
-		rect.right = _logWindow->GetX();
-		rect.left = rect.right - _splitterWidthPixels;
-		rect.top = 0;
-		rect.bottom = _clientSize.cy;
-		FillRect (ps.hdc, &rect, GetSysColorBrush(COLOR_3DFACE));
+		if (_propertiesWindow != nullptr)
+		{
+			rect.left = _propertiesWindow->GetWidth();
+			rect.top = 0;
+			rect.right = rect.left + _splitterWidthPixels;
+			rect.bottom = _clientSize.cy;
+			FillRect (ps.hdc, &rect, GetSysColorBrush(COLOR_3DFACE));
+		}
+
+		if (_logWindow != nullptr)
+		{
+			rect.right = _logWindow->GetX();
+			rect.left = rect.right - _splitterWidthPixels;
+			rect.top = 0;
+			rect.bottom = _clientSize.cy;
+			FillRect (ps.hdc, &rect, GetSysColorBrush(COLOR_3DFACE));
+		}
 
 		EndPaint(GetHWnd(), &ps);
 	}

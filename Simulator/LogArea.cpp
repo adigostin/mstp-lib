@@ -35,7 +35,7 @@ public:
 		, _selection(selection)
 	{
 		auto hr = dWriteFactory->CreateTextFormat (L"Consolas", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
-			DWRITE_FONT_STRETCH_NORMAL, 11, L"en-US", &_textFormat); ThrowIfFailed(hr);
+			DWRITE_FONT_STRETCH_NORMAL, 11, L"en-US", &_textFormat); assert(SUCCEEDED(hr));
 
 		_numberOfLinesFitting = CalcNumberOfLinesFitting (_textFormat, GetClientSizeDips().height, dWriteFactory);
 
@@ -87,7 +87,7 @@ private:
 			_textFormat->SetTextAlignment (DWRITE_TEXT_ALIGNMENT_CENTER);
 			IDWriteTextLayoutPtr tl;
 			auto text = (_bridge == nullptr) ? TextNoBridge : TextNoEntries;
-			auto hr = GetDWriteFactory()->CreateTextLayout (text, (UINT32) wcslen(text), _textFormat, clientSize.width, 10000, &tl); ThrowIfFailed(hr);
+			auto hr = GetDWriteFactory()->CreateTextLayout (text, (UINT32) wcslen(text), _textFormat, clientSize.width, 10000, &tl); assert(SUCCEEDED(hr));
 			_textFormat->SetTextAlignment(oldta);
 			DWRITE_TEXT_METRICS metrics;
 			tl->GetMetrics (&metrics);
@@ -107,7 +107,7 @@ private:
 					line.resize (line.length() - 2);
 
 				IDWriteTextLayoutPtr tl;
-				auto hr = GetDWriteFactory()->CreateTextLayout (line.c_str(), (UINT32) line.length(), _textFormat, 10000, 10000, &tl); ThrowIfFailed(hr);
+				auto hr = GetDWriteFactory()->CreateTextLayout (line.c_str(), (UINT32) line.length(), _textFormat, 10000, 10000, &tl); assert(SUCCEEDED(hr));
 
 				if (lineHeight == 0)
 				{
@@ -289,16 +289,14 @@ private:
 		if (_animationScrollFramesRemaining > 0)
 		{
 			UINT animationFrameLengthMilliseconds = AnimationDurationMilliseconds / AnimationScrollFramesMax;
-			_timerId = SetTimer (GetHWnd(), (UINT_PTR) 1, animationFrameLengthMilliseconds, NULL);
-			if (_timerId == 0)
-				throw win32_exception(GetLastError());
+			_timerId = SetTimer (GetHWnd(), (UINT_PTR) 1, animationFrameLengthMilliseconds, NULL); assert (_timerId != 0);
 		}
 	}
 
 	static int CalcNumberOfLinesFitting (IDWriteTextFormat* textFormat, float clientHeightDips, IDWriteFactory* dWriteFactory)
 	{
 		IDWriteTextLayoutPtr tl;
-		auto hr = dWriteFactory->CreateTextLayout (L"A", 1, textFormat, 1000, 1000, &tl); ThrowIfFailed(hr);
+		auto hr = dWriteFactory->CreateTextLayout (L"A", 1, textFormat, 1000, 1000, &tl); assert(SUCCEEDED(hr));
 		DWRITE_TEXT_METRICS metrics;
 		hr = tl->GetMetrics(&metrics);
 		int numberOfLinesFitting = (int) floor(clientHeightDips / metrics.height);

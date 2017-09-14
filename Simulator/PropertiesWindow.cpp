@@ -32,7 +32,7 @@ public:
 		, _project(project)
 		, _selection(selection)
 	{
-		auto hr = app->GetDWriteFactory()->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_titleTextFormat); ThrowIfFailed(hr);
+		auto hr = app->GetDWriteFactory()->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_titleTextFormat); assert(SUCCEEDED(hr));
 
 		CreateTitleTextLayouts();
 

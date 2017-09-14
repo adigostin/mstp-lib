@@ -106,10 +106,10 @@ static const _bstr_t WireElementName = "Wire";
 IXMLDOMElementPtr Wire::Serialize (IProject* project, IXMLDOMDocument* doc) const
 {
 	IXMLDOMElementPtr wireElement;
-	HRESULT hr = doc->createElement (WireElementName, &wireElement); ThrowIfFailed(hr);
+	HRESULT hr = doc->createElement (WireElementName, &wireElement); assert(SUCCEEDED(hr));
 
-	hr = wireElement->appendChild(SerializeEnd(project, doc, _points[0]), nullptr); ThrowIfFailed(hr);
-	hr = wireElement->appendChild(SerializeEnd(project, doc, _points[1]), nullptr); ThrowIfFailed(hr);
+	hr = wireElement->appendChild(SerializeEnd(project, doc, _points[0]), nullptr); assert(SUCCEEDED(hr));
+	hr = wireElement->appendChild(SerializeEnd(project, doc, _points[1]), nullptr); assert(SUCCEEDED(hr));
 
 	return wireElement;
 }
@@ -118,11 +118,11 @@ IXMLDOMElementPtr Wire::Serialize (IProject* project, IXMLDOMDocument* doc) cons
 unique_ptr<Wire> Wire::Deserialize (IProject* project, IXMLDOMElement* wireElement)
 {
 	IXMLDOMNodePtr firstChild;
-	auto hr = wireElement->get_firstChild(&firstChild); ThrowIfFailed(hr);
+	auto hr = wireElement->get_firstChild(&firstChild); assert(SUCCEEDED(hr));
 	auto firstEnd = DeserializeEnd (project, (IXMLDOMElementPtr) firstChild);
 
 	IXMLDOMNodePtr secondChild;
-	hr = firstChild->get_nextSibling(&secondChild); ThrowIfFailed(hr);
+	hr = firstChild->get_nextSibling(&secondChild); assert(SUCCEEDED(hr));
 	auto secondEnd = DeserializeEnd (project, (IXMLDOMElementPtr) secondChild);
 
 	auto wire = make_unique<Wire>(firstEnd, secondEnd);
@@ -144,20 +144,20 @@ IXMLDOMElementPtr Wire::SerializeEnd (IProject* project, IXMLDOMDocument* doc, c
 
 	if (holds_alternative<ConnectedWireEnd>(end))
 	{
-		hr = doc->createElement (ConnectedEndString, &element); ThrowIfFailed(hr);
+		hr = doc->createElement (ConnectedEndString, &element); assert(SUCCEEDED(hr));
 		auto port = get<ConnectedWireEnd>(end);
 		auto& bridges = project->GetBridges();
 		auto it = find_if (bridges.begin(), bridges.end(), [port](auto& up) { return up.get() == port->GetBridge(); });
 		auto bridgeIndex = it - bridges.begin();
-		hr = element->setAttribute (BridgeIndexString, _variant_t(to_string(bridgeIndex).c_str())); ThrowIfFailed(hr);
-		hr = element->setAttribute (PortIndexString, _variant_t(to_string(port->GetPortIndex()).c_str())); ThrowIfFailed(hr);
+		hr = element->setAttribute (BridgeIndexString, _variant_t(to_string(bridgeIndex).c_str())); assert(SUCCEEDED(hr));
+		hr = element->setAttribute (PortIndexString, _variant_t(to_string(port->GetPortIndex()).c_str())); assert(SUCCEEDED(hr));
 	}
 	else if (holds_alternative<LooseWireEnd>(end))
 	{
 		auto& location = get<LooseWireEnd>(end);
-		hr = doc->createElement (LooseEndString, &element); ThrowIfFailed(hr);
-		hr = element->setAttribute (XString, _variant_t(location.x)); ThrowIfFailed(hr);
-		hr = element->setAttribute (YString, _variant_t(location.y)); ThrowIfFailed(hr);
+		hr = doc->createElement (LooseEndString, &element); assert(SUCCEEDED(hr));
+		hr = element->setAttribute (XString, _variant_t(location.x)); assert(SUCCEEDED(hr));
+		hr = element->setAttribute (YString, _variant_t(location.y)); assert(SUCCEEDED(hr));
 	}
 	else
 		throw not_implemented_exception();
@@ -171,23 +171,23 @@ WireEnd Wire::DeserializeEnd (IProject* project, IXMLDOMElement* element)
 	HRESULT hr;
 
 	_bstr_t name;
-	hr = element->get_nodeName(name.GetAddress()); ThrowIfFailed(hr);
+	hr = element->get_nodeName(name.GetAddress()); assert(SUCCEEDED(hr));
 
 	if (wcscmp(name, ConnectedEndString) == 0)
 	{
 		_variant_t value;
-		hr = element->getAttribute (BridgeIndexString, &value); ThrowIfFailed(hr);
+		hr = element->getAttribute (BridgeIndexString, &value); assert(SUCCEEDED(hr));
 		size_t bridgeIndex = wcstoul (value.bstrVal, nullptr, 10);
-		hr = element->getAttribute (PortIndexString, &value); ThrowIfFailed(hr);
+		hr = element->getAttribute (PortIndexString, &value); assert(SUCCEEDED(hr));
 		size_t portIndex = wcstoul (value.bstrVal, nullptr, 10);
 		return ConnectedWireEnd { project->GetBridges()[bridgeIndex]->GetPorts()[portIndex].get() };
 	}
 	else if (wcscmp (name, LooseEndString) == 0)
 	{
 		_variant_t value;
-		hr = element->getAttribute (XString, &value); ThrowIfFailed(hr);
+		hr = element->getAttribute (XString, &value); assert(SUCCEEDED(hr));
 		float x = wcstof (value.bstrVal, nullptr);
-		hr = element->getAttribute (YString, &value); ThrowIfFailed(hr);
+		hr = element->getAttribute (YString, &value); assert(SUCCEEDED(hr));
 		float y = wcstof (value.bstrVal, nullptr);
 		return LooseWireEnd { x, y };
 	}

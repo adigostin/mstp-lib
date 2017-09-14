@@ -4,32 +4,6 @@
 struct IDockablePanel;
 struct IDockContainer;
 
-class com_exception : public std::exception
-{
-public:
-	HRESULT const _hr;
-	com_exception(HRESULT hr) : _hr(hr) { }
-};
-
-class win32_exception : public std::exception
-{
-public:
-	DWORD const _lastError;
-	win32_exception(DWORD lastError) : _lastError(lastError) { }
-};
-
-inline void ThrowIfFailed(HRESULT hr)
-{
-	if (FAILED(hr))
-		throw com_exception(hr);
-}
-
-inline void ThrowWin32IfFailed(BOOL bRes)
-{
-	if (!bRes)
-		throw win32_exception(GetLastError());
-}
-
 class not_implemented_exception : public std::exception
 {
 public:
@@ -64,9 +38,7 @@ struct IWin32Window : public IUnknown
 	RECT GetClientRectPixels() const
 	{
 		RECT rect;
-		BOOL bRes = ::GetClientRect (GetHWnd(), &rect);
-		if (!bRes)
-			throw win32_exception(GetLastError());
+		BOOL bRes = ::GetClientRect (GetHWnd(), &rect); assert(bRes);
 		return rect;
 	};
 
@@ -79,9 +51,9 @@ struct IWin32Window : public IUnknown
 	RECT GetRect() const
 	{
 		auto hwnd = this->GetHWnd();
-		auto parent = ::GetParent(hwnd); ThrowWin32IfFailed (parent != nullptr);
+		auto parent = ::GetParent(hwnd); assert (parent != nullptr);
 		RECT rect;
-		BOOL bRes = ::GetWindowRect (hwnd, &rect); ThrowWin32IfFailed(bRes);
+		BOOL bRes = ::GetWindowRect (hwnd, &rect); assert(bRes);
 		MapWindowPoints (HWND_DESKTOP, parent, (LPPOINT) &rect, 2);
 		return rect;
 	}
@@ -102,7 +74,8 @@ public:
 
 	void SetRect (const RECT& rect)
 	{
-		BOOL bRes = ::MoveWindow (GetHWnd(), rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE); ThrowWin32IfFailed(bRes);
+		BOOL bRes = ::MoveWindow (GetHWnd(), rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE);
+		assert(bRes);
 	}
 
 	void SetX (LONG x)

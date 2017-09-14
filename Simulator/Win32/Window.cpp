@@ -21,18 +21,14 @@ Window::Window (HINSTANCE hInstance, const wchar_t* wndClassName, DWORD exStyle,
 		wcex.lpszMenuName = nullptr;
 		wcex.lpszClassName = wndClassName;
 		wcex.hIconSm = 0;
-		auto atom = RegisterClassEx (&wcex);
-		if (atom == 0)
-			throw win32_exception(GetLastError());
+		auto atom = RegisterClassEx (&wcex); assert (atom != 0);
 	}
 
 	int x = rect.left;
 	int y = rect.top;
 	int w = rect.right - rect.left;
 	int h = rect.bottom - rect.top;
-	auto hwnd = ::CreateWindowEx (exStyle, wndClassName, L"", style, x, y, w, h, hWndParent, hMenuOrControlId, hInstance, this);
-	if (hwnd == nullptr)
-		throw win32_exception(GetLastError());
+	auto hwnd = ::CreateWindowEx (exStyle, wndClassName, L"", style, x, y, w, h, hWndParent, hMenuOrControlId, hInstance, this); assert (hwnd != nullptr);
 	assert (hwnd == _hwnd);
 }
 

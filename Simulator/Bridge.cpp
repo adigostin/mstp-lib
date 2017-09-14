@@ -20,20 +20,14 @@ Bridge::HelperWindow Bridge::_helperWindow;
 Bridge::HelperWindow::HelperWindow()
 {
 	HINSTANCE hInstance;
-	BOOL bRes = ::GetModuleHandleExW (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &SubclassProc, &hInstance);
-	if (!bRes)
-		throw win32_exception(GetLastError());
+	BOOL bRes = ::GetModuleHandleExW (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &SubclassProc, &hInstance); assert(bRes);
 
-	_hwnd = ::CreateWindowExW (0, L"STATIC", L"", 0, 0, 0, 0, 0, HWND_MESSAGE, 0, hInstance, 0);
-	if (_hwnd == nullptr)
-		throw win32_exception(GetLastError());
+	_hwnd = ::CreateWindowExW (0, L"STATIC", L"", 0, 0, 0, 0, 0, HWND_MESSAGE, 0, hInstance, 0); assert (_hwnd != nullptr);
 
-	bRes = ::SetWindowSubclass (_hwnd, SubclassProc, 0, (DWORD_PTR) this);
-	if (!bRes)
-		throw win32_exception(GetLastError());
+	bRes = ::SetWindowSubclass (_hwnd, SubclassProc, 0, (DWORD_PTR) this); assert (bRes);
 
 	auto callback = [](void* lpParameter, BOOLEAN TimerOrWaitFired) { ::PostMessage (_helperWindow._hwnd, WM_LINK_PULSE_TIMER, 0, 0); };
-	bRes = ::CreateTimerQueueTimer (&_linkPulseTimerHandle, nullptr, callback, this, 16, 16, 0); ThrowWin32IfFailed(bRes);
+	bRes = ::CreateTimerQueueTimer (&_linkPulseTimerHandle, nullptr, callback, this, 16, 16, 0); assert(bRes);
 }
 
 Bridge::HelperWindow::~HelperWindow()
@@ -89,7 +83,7 @@ Bridge::Bridge (unsigned int portCount, unsigned int mstiCount, const unsigned c
 
 	DWORD period = 950 + (std::random_device()() % 100);
 	HANDLE handle;
-	BOOL bRes = ::CreateTimerQueueTimer (&handle, nullptr, OneSecondTimerCallback, this, period, period, 0); ThrowWin32IfFailed(bRes);
+	BOOL bRes = ::CreateTimerQueueTimer (&handle, nullptr, OneSecondTimerCallback, this, period, period, 0); assert(bRes);
 	_oneSecondTimerHandle.reset(handle);
 
 	_stpBridge = STP_CreateBridge (portCount, mstiCount, MaxVlanNumber, &StpCallbacks, macAddress, 256);
@@ -401,7 +395,7 @@ static const _bstr_t PortsString = "Ports";
 IXMLDOMElementPtr Bridge::Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) const
 {
 	IXMLDOMElementPtr bridgeElement;
-	auto hr = doc->createElement (BridgeString, &bridgeElement); ThrowIfFailed(hr);
+	auto hr = doc->createElement (BridgeString, &bridgeElement); assert(SUCCEEDED(hr));
 
 	bridgeElement->setAttribute (BridgeIndexString,   _variant_t(bridgeIndex));
 	bridgeElement->setAttribute (AddressString,       _variant_t(GetBridgeAddressAsWString().c_str()));
@@ -416,38 +410,38 @@ IXMLDOMElementPtr Bridge::Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) 
 	bridgeElement->setAttribute (HeightString,        _variant_t(_height));
 
 	IXMLDOMElementPtr configTableElement;
-	hr = doc->createElement (MstConfigTableString, &configTableElement); ThrowIfFailed(hr);
-	hr = bridgeElement->appendChild(configTableElement, nullptr); ThrowIfFailed(hr);
+	hr = doc->createElement (MstConfigTableString, &configTableElement); assert(SUCCEEDED(hr));
+	hr = bridgeElement->appendChild(configTableElement, nullptr); assert(SUCCEEDED(hr));
 	unsigned int entryCount;
 	auto configTable = STP_GetMstConfigTable(_stpBridge, &entryCount);
 	for (unsigned int vlan = 0; vlan < entryCount; vlan++)
 	{
 		IXMLDOMElementPtr entryElement;
-		hr = doc->createElement (EntryString, &entryElement); ThrowIfFailed(hr);
-		hr = entryElement->setAttribute (VlanString, _variant_t(vlan)); ThrowIfFailed(hr);
-		hr = entryElement->setAttribute (TreeString, _variant_t(configTable[vlan].treeIndex)); ThrowIfFailed(hr);
-		hr = configTableElement->appendChild(entryElement, nullptr); ThrowIfFailed(hr);
+		hr = doc->createElement (EntryString, &entryElement); assert(SUCCEEDED(hr));
+		hr = entryElement->setAttribute (VlanString, _variant_t(vlan)); assert(SUCCEEDED(hr));
+		hr = entryElement->setAttribute (TreeString, _variant_t(configTable[vlan].treeIndex)); assert(SUCCEEDED(hr));
+		hr = configTableElement->appendChild(entryElement, nullptr); assert(SUCCEEDED(hr));
 	}
 
 	IXMLDOMElementPtr bridgeTreesElement;
-	hr = doc->createElement (BridgeTreesString, &bridgeTreesElement); ThrowIfFailed(hr);
-	hr = bridgeElement->appendChild(bridgeTreesElement, nullptr); ThrowIfFailed(hr);
+	hr = doc->createElement (BridgeTreesString, &bridgeTreesElement); assert(SUCCEEDED(hr));
+	hr = bridgeElement->appendChild(bridgeTreesElement, nullptr); assert(SUCCEEDED(hr));
 	for (unsigned int treeIndex = 0; treeIndex <= STP_GetMstiCount(_stpBridge); treeIndex++)
 	{
 		IXMLDOMElementPtr bridgeTreeElement;
-		hr = doc->createElement (BridgeTreeString, &bridgeTreeElement); ThrowIfFailed(hr);
+		hr = doc->createElement (BridgeTreeString, &bridgeTreeElement); assert(SUCCEEDED(hr));
 		bridgeTreeElement->setAttribute (TreeIndexString, _variant_t(treeIndex));
 		bridgeTreeElement->setAttribute (BridgePriorityString, _variant_t(STP_GetBridgePriority(_stpBridge, treeIndex)));
 		bridgeTreesElement->appendChild(bridgeTreeElement, nullptr);
 	}
 
 	IXMLDOMElementPtr portsElement;
-	hr = doc->createElement (PortsString, &portsElement); ThrowIfFailed(hr);
-	hr = bridgeElement->appendChild(portsElement, nullptr); ThrowIfFailed(hr);
+	hr = doc->createElement (PortsString, &portsElement); assert(SUCCEEDED(hr));
+	hr = bridgeElement->appendChild(portsElement, nullptr); assert(SUCCEEDED(hr));
 	for (size_t portIndex = 0; portIndex < _ports.size(); portIndex++)
 	{
 		auto portElement = _ports[portIndex]->Serialize(doc);
-		hr = portsElement->appendChild(portElement, nullptr); ThrowIfFailed(hr);
+		hr = portsElement->appendChild(portElement, nullptr); assert(SUCCEEDED(hr));
 	}
 
 	return bridgeElement;
@@ -459,7 +453,7 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 	auto getAttribute = [element](const _bstr_t& name) -> _bstr_t
 	{
 		_variant_t value;
-		auto hr = element->getAttribute (name, &value); ThrowIfFailed(hr);
+		auto hr = element->getAttribute (name, &value); assert(SUCCEEDED(hr));
 		return (_bstr_t) value;
 	};
 
@@ -508,17 +502,17 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 	if (SUCCEEDED(hr) && (configTableNode != nullptr))
 	{
 		IXMLDOMNodeListPtr nodes;
-		hr = configTableNode->get_childNodes(&nodes); ThrowIfFailed(hr);
+		hr = configTableNode->get_childNodes(&nodes); assert(SUCCEEDED(hr));
 		long entryCount;
-		hr = nodes->get_length(&entryCount); ThrowIfFailed(hr);
+		hr = nodes->get_length(&entryCount); assert(SUCCEEDED(hr));
 		vector<STP_CONFIG_TABLE_ENTRY> configTable;
 		for (unsigned int vlan = 0; vlan < (unsigned int) entryCount; vlan++)
 		{
 			IXMLDOMNodePtr entryNode;
-			hr = nodes->get_item(vlan, &entryNode); ThrowIfFailed(hr);
+			hr = nodes->get_item(vlan, &entryNode); assert(SUCCEEDED(hr));
 			IXMLDOMElementPtr entryElement (entryNode);
 
-			hr = entryElement->getAttribute(TreeString, &value); ThrowIfFailed(hr);
+			hr = entryElement->getAttribute(TreeString, &value); assert(SUCCEEDED(hr));
 			auto treeIndex = wcstoul(value.bstrVal, nullptr, 10);
 			configTable.push_back (STP_CONFIG_TABLE_ENTRY { 0, (unsigned char) treeIndex });
 		}
@@ -531,14 +525,14 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 	if (SUCCEEDED(hr) && (bridgeTreesNode != nullptr))
 	{
 		IXMLDOMNodeListPtr bridgeTreeNodes;
-		hr = bridgeTreesNode->get_childNodes(&bridgeTreeNodes); ThrowIfFailed(hr);
+		hr = bridgeTreesNode->get_childNodes(&bridgeTreeNodes); assert(SUCCEEDED(hr));
 
 		long treeCount;
-		hr = bridgeTreeNodes->get_length(&treeCount); ThrowIfFailed(hr);
+		hr = bridgeTreeNodes->get_length(&treeCount); assert(SUCCEEDED(hr));
 		for (long treeIndex = 0; treeIndex < treeCount; treeIndex++)
 		{
 			IXMLDOMNodePtr bridgeTreeNode;
-			hr = bridgeTreeNodes->get_item(treeIndex, &bridgeTreeNode); ThrowIfFailed(hr);
+			hr = bridgeTreeNodes->get_item(treeIndex, &bridgeTreeNode); assert(SUCCEEDED(hr));
 			IXMLDOMElementPtr bridgeTreeElement = bridgeTreeNode;
 
 			hr = bridgeTreeElement->getAttribute(BridgePriorityString, &value);
@@ -555,12 +549,12 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 	if (SUCCEEDED(hr) && (portsNode != nullptr))
 	{
 		IXMLDOMNodeListPtr portNodes;
-		hr = portsNode->get_childNodes (&portNodes); ThrowIfFailed(hr);
+		hr = portsNode->get_childNodes (&portNodes); assert(SUCCEEDED(hr));
 
 		for (size_t portIndex = 0; portIndex < portCount; portIndex++)
 		{
 			IXMLDOMNodePtr portNode;
-			hr = portNodes->get_item((long) portIndex, &portNode); ThrowIfFailed(hr);
+			hr = portNodes->get_item((long) portIndex, &portNode); assert(SUCCEEDED(hr));
 			IXMLDOMElementPtr portElement = portNode;
 			bridge->_ports[portIndex]->Deserialize(portElement);
 		}
