@@ -560,7 +560,7 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 		for (size_t portIndex = 0; portIndex < portCount; portIndex++)
 		{
 			IXMLDOMNodePtr portNode;
-			hr = portNodes->get_item(portIndex, &portNode); ThrowIfFailed(hr);
+			hr = portNodes->get_item((long) portIndex, &portNode); ThrowIfFailed(hr);
 			IXMLDOMElementPtr portElement = portNode;
 			bridge->_ports[portIndex]->Deserialize(portElement);
 		}
@@ -700,7 +700,7 @@ std::wstring Bridge::GetMstConfigIdDigest() const
 
 void Bridge::SetMstConfigTable (const STP_CONFIG_TABLE_ENTRY* entries, size_t entryCount)
 {
-	STP_SetMstConfigTable (_stpBridge, &entries[0], entryCount, GetMessageTime());
+	STP_SetMstConfigTable (_stpBridge, &entries[0], (unsigned int) entryCount, GetMessageTime());
 	PropertyChangedEvent::InvokeHandlers (this, this, &MstConfigIdDigest);
 }
 
