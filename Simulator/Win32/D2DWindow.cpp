@@ -128,7 +128,7 @@ D2D1_POINT_2F D2DWindow::GetDipLocationFromPixelLocation(POINT p) const
 	return D2D1_POINT_2F{ p.x * 96.0f / dpiX, p.y * 96.0f / dpiY };
 }
 
-D2D1_POINT_2F D2DWindow::GetDipLocationFromPixelLocation(float xPixels, float yPixels) const
+D2D1_POINT_2F D2DWindow::GetDipLocationFromPixelLocation(LONG xPixels, LONG yPixels) const
 {
 	float dpiX, dpiY;
 	_renderTarget->GetDpi(&dpiX, &dpiY);

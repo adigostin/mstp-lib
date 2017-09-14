@@ -43,10 +43,12 @@ public:
 		_pg2->GetPropertyChangedByUserEvent().AddHandler (&OnPropertyChangedInPG, this);
 		_projectWindow->GetSelectedVlanNumerChangedEvent().AddHandler (&OnSelectedVlanChanged, this);
 		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
+		_pg1->GetGridHeightChangedEvent().AddHandler (&OnPG1GridHeightChanged, this);
 	}
 
 	virtual ~PropertiesWindow()
 	{
+		_pg1->GetGridHeightChangedEvent().RemoveHandler (&OnPG1GridHeightChanged, this);
 		_selection->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
 		_projectWindow->GetSelectedVlanNumerChangedEvent().RemoveHandler (&OnSelectedVlanChanged, this);
 		_pg2->GetPropertyChangedByUserEvent().RemoveHandler (&OnPropertyChangedInPG, this);
@@ -95,6 +97,13 @@ public:
 		}
 	}
 
+	static void OnPG1GridHeightChanged (void* callbackArg)
+	{
+		auto window = static_cast<PropertiesWindow*>(callbackArg);
+		window->_pg1->SetRect(window->GetPG1Rect());
+		window->_pg2->SetRect(window->GetPG2Rect());
+	}
+
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
 	{
 		auto window = static_cast<PropertiesWindow*>(callbackArg);
@@ -137,18 +146,24 @@ public:
 
 	RECT GetPG1Rect() const
 	{
-		float heightDips = TitleBarPadding.top + _title1TextLayout.metrics.height + TitleBarPadding.bottom;
-		LONG heightPixels = GetPixelSizeFromDipSize({ 0, heightDips }).cy;
+		float titleHeightDips = TitleBarPadding.top + _title1TextLayout.metrics.height + TitleBarPadding.bottom;
+		LONG titleHeightPixels = GetPixelSizeFromDipSize({ 0, titleHeightDips }).cy;
 		auto cs = GetClientSizePixels();
-		return { 0, heightPixels, cs.cx, cs.cy / 2 };
+		LONG bottom;
+		if ((_pg1 != nullptr) && !_pg1->GetSelectedObjects().empty())
+			bottom = titleHeightPixels + _pg1->GetGridHeightPixels();
+		else
+			bottom = cs.cy / 2;
+		return { 0, titleHeightPixels, cs.cx, bottom };
 	}
 
 	RECT GetPG2Rect() const
 	{
-		float heightDips = TitleBarPadding.top + _title1TextLayout.metrics.height + TitleBarPadding.bottom;
-		LONG heightPixels = GetPixelSizeFromDipSize({ 0, heightDips }).cy;
+		float titleHeightDips = TitleBarPadding.top + _title1TextLayout.metrics.height + TitleBarPadding.bottom;
+		LONG titleHeightPixels = GetPixelSizeFromDipSize({ 0, titleHeightDips }).cy;
 		auto cs = GetClientSizePixels();
-		return { 0, cs.cy / 2 + heightPixels, cs.cx, cs.cy };
+		auto pg1Rect = GetPG1Rect();
+		return { 0, pg1Rect.bottom + titleHeightPixels, cs.cx, cs.cy };
 	}
 
 	virtual void Render (ID2D1RenderTarget* rt) const override final
@@ -158,7 +173,8 @@ public:
 		ID2D1SolidColorBrushPtr brush;
 		rt->CreateSolidColorBrush (GetD2DSystemColor(COLOR_CAPTIONTEXT), &brush);
 		rt->DrawTextLayout (Point2F(TitleBarPadding.left, TitleBarPadding.top), _title1TextLayout.layout, brush);
-		rt->DrawTextLayout (Point2F(TitleBarPadding.left, GetClientHeightDips() / 2 + TitleBarPadding.top), _title2TextLayout.layout, brush);
+		float y = GetDipLocationFromPixelLocation({ 0, GetPG1Rect().bottom }).y;
+		rt->DrawTextLayout (Point2F(TitleBarPadding.left, y + TitleBarPadding.top), _title2TextLayout.layout, brush);
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return base::QueryInterface(riid, ppvObject); }

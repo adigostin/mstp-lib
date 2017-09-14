@@ -55,9 +55,14 @@ public:
 
 	void DiscardEditor();
 	void SelectObjects (Object* const* objects, size_t count);
+	const std::vector<Object*>& GetSelectedObjects() const { return _selectedObjects; }
+	LONG GetGridHeightPixels() const;
 
 	struct PropertyChangedByUserEvent : public Event<PropertyChangedByUserEvent, void(const Property* property)> { };
 	PropertyChangedByUserEvent::Subscriber GetPropertyChangedByUserEvent() { return PropertyChangedByUserEvent::Subscriber(this); }
+
+	struct GridHeightChangedEvent : public Event<GridHeightChangedEvent, void()> { };
+	GridHeightChangedEvent::Subscriber GetGridHeightChangedEvent() { return GridHeightChangedEvent::Subscriber(this); }
 
 private:
 	virtual void Render(ID2D1RenderTarget* rt) const override final;

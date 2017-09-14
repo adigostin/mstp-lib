@@ -41,6 +41,7 @@ std::optional<LRESULT> PropertyGrid::WindowProc(HWND hwnd, UINT msg, WPARAM wPar
 		CreateLabelTextLayouts();
 		for (auto& item : _items)
 			item->CreateValueTextLayout();
+		GridHeightChangedEvent::InvokeHandlers(this);
 		return 0;
 	}
 
@@ -210,7 +211,17 @@ void PropertyGrid::SelectObjects (Object* const* objects, size_t count)
 		}
 	}
 
+	GridHeightChangedEvent::InvokeHandlers(this);
+
 	::InvalidateRect (GetHWnd(), NULL, FALSE);
+}
+
+LONG PropertyGrid::GetGridHeightPixels() const
+{
+	float y = 0;
+	EnumItems ([&y](float textX, float lineY, float lineWidth, Item* item, bool& stopEnum) { y = lineY + lineWidth; });
+	LONG hp = GetPixelSizeFromDipSize({ 0, y }).cy;
+	return hp;
 }
 
 //static
