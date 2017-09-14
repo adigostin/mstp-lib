@@ -26,9 +26,9 @@ int BridgeTree::GetPriority() const
 	return STP_GetBridgePriority (_parent->GetStpBridge(), _treeIndex);
 }
 
-void BridgeTree::SetPriority (int priority, unsigned int timestamp)
+void BridgeTree::SetPriority (int priority)
 {
-	STP_SetBridgePriority (_parent->GetStpBridge(), _treeIndex, (unsigned short) priority, timestamp);
+	STP_SetBridgePriority (_parent->GetStpBridge(), _treeIndex, (unsigned short) priority, GetMessageTime());
 }
 
 static constexpr wchar_t StpDisabledString[] = L"(STP disabled)";

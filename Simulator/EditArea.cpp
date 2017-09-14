@@ -543,16 +543,15 @@ public:
 			else if ((wParam == ID_BRIDGE_ENABLE_STP) || (wParam == ID_BRIDGE_DISABLE_STP))
 			{
 				bool enable = (wParam == ID_BRIDGE_ENABLE_STP);
-				auto timestamp = GetTimestampMilliseconds();
 				for (Object* o : _selection->GetObjects())
 				{
 					auto b = dynamic_cast<Bridge*>(o);
 					if (b != nullptr)
 					{
 						if (enable && !STP_IsBridgeStarted(b->GetStpBridge()))
-							STP_StartBridge(b->GetStpBridge(), timestamp);
+							STP_StartBridge(b->GetStpBridge(), GetMessageTime());
 						else if (!enable && STP_IsBridgeStarted(b->GetStpBridge()))
-							STP_StopBridge(b->GetStpBridge(), timestamp);
+							STP_StopBridge(b->GetStpBridge(), GetMessageTime());
 					}
 				}
 

@@ -107,17 +107,17 @@ public:
 
 	// Property getters and setters.
 	bool GetStpEnabled() const { return (bool) STP_IsBridgeStarted(_stpBridge); }
-	void SetStpEnabled (bool enable, unsigned int timestamp);
+	void SetStpEnabled (bool enable);
 	int GetStpVersionAsInt() const { return (int) STP_GetStpVersion(_stpBridge); }
-	void SetStpVersionFromInt (int version, unsigned int timestamp);
+	void SetStpVersionFromInt (int version);
 	unsigned int GetPortCount() const { return STP_GetPortCount(_stpBridge); }
 	unsigned int GetMstiCount() const { return STP_GetMstiCount(_stpBridge); }
 	std::wstring GetMstConfigIdName() const;
-	void SetMstConfigIdName (std::wstring value, unsigned int timestamp);
+	void SetMstConfigIdName (std::wstring value);
 	unsigned short GetMstConfigIdRevLevel() const;
-	void SetMstConfigIdRevLevel (unsigned short revLevel, unsigned int timestamp);
+	void SetMstConfigIdRevLevel (unsigned short revLevel);
 	std::wstring GetMstConfigIdDigest() const;
-	void SetMstConfigTable (const STP_CONFIG_TABLE_ENTRY* entries, unsigned int entryCount, unsigned int timestamp);
+	void SetMstConfigTable (const STP_CONFIG_TABLE_ENTRY* entries, size_t entryCount);
 
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
@@ -143,7 +143,7 @@ private:
 private:
 	std::string GetBridgeAddressAsString() const;
 	std::wstring GetBridgeAddressAsWString() const;
-	void SetBridgeAddressFromWString (std::wstring address, unsigned int timestamp);
+	void SetBridgeAddressFromWString (std::wstring address);
 
 	static const PropertyGroup CommonPropGroup;
 	static const TypedProperty<std::wstring> Address;

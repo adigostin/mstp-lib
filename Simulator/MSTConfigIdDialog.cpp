@@ -191,13 +191,11 @@ public:
 
 	void LoadDefaultConfig()
 	{
-		auto timestamp = GetTimestampMilliseconds();
-
 		vector<STP_CONFIG_TABLE_ENTRY> entries;
 		entries.resize(1 + MaxVlanNumber);
 
 		for (auto b : _bridges)
-			b->SetMstConfigTable (entries.data(), (unsigned int) entries.size(), timestamp);
+			b->SetMstConfigTable (entries.data(), (unsigned int) entries.size());
 
 		HWND list = GetDlgItem (_hwnd, IDC_LIST_CONFIG_TABLE);
 		ListView_DeleteAllItems(list);
@@ -206,8 +204,6 @@ public:
 
 	void LoadTestConfig1()
 	{
-		auto timestamp = GetTimestampMilliseconds();
-
 		for (auto b : _bridges)
 		{
 			auto treeCount = 1 + STP_GetMstiCount(b->GetStpBridge());
@@ -224,7 +220,7 @@ public:
 				entries[vid].treeIndex = (vid - 1) % treeCount;
 			}
 
-			b->SetMstConfigTable (entries.data(), (unsigned int) entries.size(), timestamp);
+			b->SetMstConfigTable (entries.data(), (unsigned int) entries.size());
 		}
 
 		HWND list = GetDlgItem (_hwnd, IDC_LIST_CONFIG_TABLE);

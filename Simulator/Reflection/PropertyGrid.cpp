@@ -132,13 +132,12 @@ void PropertyGrid::Render (ID2D1RenderTarget* rt) const
 	auto nameColumnWidth = GetNameColumnWidth();
 	EnumItems ([this, rt, nameColumnWidth](float textY, float lineY, float lineWidth, Item* item, bool& stopEnum)
 	{
-		if (dynamic_cast<const PropertyGroup*>(item->pd) != nullptr)
+		if (auto pd = dynamic_cast<const PropertyGroup*>(item->pd); pd != nullptr)
 		{
 			rt->DrawTextLayout ({ CellLRPadding, textY }, item->labelTL.layout, _windowTextBrush);
 		}
-		else if (dynamic_cast<const Property*>(item->pd) != nullptr)
+		else if (auto pd = dynamic_cast<const Property*>(item->pd); pd != nullptr)
 		{
-			auto pd = static_cast<const Property*>(item->pd);
 			auto& brush = ((pd->_customEditor != nullptr) || pd->HasSetter()) ? _windowTextBrush : _grayTextBrush;
 			rt->DrawTextLayout ({ CellLRPadding, textY }, item->labelTL.layout, brush);
 			if (item->valueTL.layout != nullptr)
@@ -566,55 +565,49 @@ void PropertyGrid::ProcessLButtonUp (DWORD modifierKeys, POINT pt)
 			bool changed = false;
 
 			// TODO: move this code to virtual functions
-			if (dynamic_cast<const TypedProperty<bool>*>(pd) != nullptr)
+			if (auto boolPD = dynamic_cast<const TypedProperty<bool>*>(pd); boolPD != nullptr)
 			{
-				auto boolPD = dynamic_cast<const TypedProperty<bool>*>(pd);
 				static constexpr NVP nvps[] = { { L"False", 0 }, { L"True", 1 }, { 0, 0 } };
 				int newValueInt = ShowEditor (pt, nvps);
 				if (newValueInt != -1)
 				{
 					bool newValue = (bool) newValueInt;
 
-					auto timestamp = GetTimestampMilliseconds();
 					for (auto so : _selectedObjects)
 					{
 						if ((so->*(boolPD->_getter))() != newValue)
 						{
-							(so->*(boolPD->_setter)) (newValue, timestamp);
+							(so->*(boolPD->_setter)) (newValue);
 							changed = true;
 						}
 					}
 				}
 			}
-			else if (dynamic_cast<const EnumProperty*>(pd) != nullptr)
+			else if (auto enumPD = dynamic_cast<const EnumProperty*>(pd); enumPD != nullptr)
 			{
-				auto enumPD = dynamic_cast<const EnumProperty*>(pd);
 				int newValue = ShowEditor (pt, enumPD->_nameValuePairs);
 				if (newValue != -1)
 				{
-					auto timestamp = GetTimestampMilliseconds();
 					for (auto so : _selectedObjects)
 					{
 						if ((so->*(enumPD->_getter))() != newValue)
 						{
-							(so->*(enumPD->_setter)) (newValue, timestamp);
+							(so->*(enumPD->_setter)) (newValue);
 							changed = true;
 						}
 					}
 				}
 			}
-			else if (dynamic_cast<const TypedProperty<wstring>*>(pd) != nullptr)
+			else if (auto stringPD = dynamic_cast<const TypedProperty<wstring>*>(pd); stringPD != nullptr)
 			{
-				auto stringPD = dynamic_cast<const TypedProperty<wstring>*>(pd);
 				auto value = GetValueText(stringPD);
 				ShowStringEditor (stringPD, item, pt, value.c_str(), [this, stringPD, &changed](const wstring& newStr)
 				{
-					auto timestamp = GetTimestampMilliseconds();
 					for (Object* so : _selectedObjects)
 					{
 						if ((so->*(stringPD->_getter))() != newStr)
 						{
-							(so->*(stringPD->_setter)) (newStr, timestamp);
+							(so->*(stringPD->_setter)) (newStr);
 							changed = true;
 						}
 					}

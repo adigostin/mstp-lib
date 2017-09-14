@@ -15,7 +15,7 @@ struct BridgeTree : Object
 
 	//std::wstring GetPriorityLabel () const;
 	int GetPriority() const;
-	void SetPriority (int priority, unsigned int timestamp);
+	void SetPriority (int priority);
 
 	std::array<unsigned char, 36> GetRootPV() const;
 	std::wstring GetRootBridgeId() const;

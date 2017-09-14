@@ -51,7 +51,7 @@ template<typename TValue>
 struct TypedProperty : Property
 {
 	using Getter = TValue(Object::*)() const;
-	using Setter = void(Object::*)(TValue newValue, unsigned int timestamp);
+	using Setter = void(Object::*)(TValue newValue);
 	Getter const _getter;
 	Setter const _setter;
 

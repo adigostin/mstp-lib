@@ -5,7 +5,7 @@
 
 using namespace std;
 using namespace D2D1;
-
+/*
 unsigned int GetTimestampMilliseconds()
 {
 	SYSTEMTIME currentUtcTime;
@@ -25,7 +25,7 @@ unsigned int GetTimestampMilliseconds()
 	uint64_t milliseconds = (now - start) / 10000;
 	return (unsigned int)milliseconds;
 }
-
+*/
 bool HitTestLine (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance, D2D1_POINT_2F p0w, D2D1_POINT_2F p1w, float lineWidth)
 {
 	auto fd = zoomable->GetDLocationFromWLocation(p0w);

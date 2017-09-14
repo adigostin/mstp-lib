@@ -3,7 +3,7 @@
 
 struct IZoomable;
 
-unsigned int GetTimestampMilliseconds();
+//unsigned int GetTimestampMilliseconds();
 bool HitTestLine (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance, D2D1_POINT_2F p0w, D2D1_POINT_2F p1w, float lineWidth);
 bool PointInRect (const D2D1_RECT_F& rect, D2D1_POINT_2F location);
 bool PointInPolygon (const D2D1_POINT_2F* vertices, size_t vertexCount, D2D1_POINT_2F point);

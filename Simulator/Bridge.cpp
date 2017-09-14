@@ -135,7 +135,7 @@ void Bridge::OnWmOneSecondTimer (WPARAM wParam, LPARAM lParam)
 {
 	auto bridge = static_cast<Bridge*>((void*)wParam);
 	if (!bridge->_simulationPaused)
-		STP_OnOneSecondTick (bridge->_stpBridge, GetTimestampMilliseconds());
+		STP_OnOneSecondTick (bridge->_stpBridge, GetMessageTime());
 }
 
 // Checks the wires and computes macOperational for each port on this bridge.
@@ -146,8 +146,6 @@ void Bridge::OnLinkPulseTick (void* callbackArg)
 	if (b->_simulationPaused)
 		return;
 
-	auto timestamp = GetTimestampMilliseconds();
-
 	bool invalidate = false;
 	for (size_t portIndex = 0; portIndex < b->_ports.size(); portIndex++)
 	{
@@ -157,12 +155,12 @@ void Bridge::OnLinkPulseTick (void* callbackArg)
 			port->_missedLinkPulseCounter++;
 			if (port->_missedLinkPulseCounter == Port::MissedLinkPulseCounterMax)
 			{
-				STP_OnPortDisabled (b->_stpBridge, (unsigned int) portIndex, timestamp);
+				STP_OnPortDisabled (b->_stpBridge, (unsigned int) portIndex, GetMessageTime());
 				invalidate = true;
 			}
 		}
 
-		LinkPulseEvent::InvokeHandlers(b, b, portIndex, timestamp);
+		LinkPulseEvent::InvokeHandlers(b, b, portIndex, GetMessageTime());
 	}
 
 	if (invalidate)
@@ -350,10 +348,10 @@ std::wstring Bridge::GetBridgeAddressAsWString() const
 	return ConvertBridgeAddressToWString(address->bytes);
 }
 
-void Bridge::SetBridgeAddressFromWString (std::wstring str, unsigned int timestamp)
+void Bridge::SetBridgeAddressFromWString (std::wstring str)
 {
 	auto newAddress = ConvertStringToBridgeAddress(str.c_str());
-	STP_SetBridgeAddress (_stpBridge, newAddress.bytes, timestamp);
+	STP_SetBridgeAddress (_stpBridge, newAddress.bytes, GetMessageTime());
 	PropertyChangedEvent::InvokeHandlers (this, this, &Address);
 }
 
@@ -469,7 +467,6 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 	_variant_t value;
 	setlocale (LC_NUMERIC, "C");
 	wstring_convert<codecvt_utf8<wchar_t>> converter;
-	auto timestamp = GetTimestampMilliseconds();
 
 	unsigned int portCount = wcstoul(getAttribute(PortCountString), nullptr, 10);
 	unsigned int mstiCount = wcstoul(getAttribute(MstiCountString), nullptr, 10);
@@ -487,23 +484,23 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 	{
 		auto versionString = converter.to_bytes(value.bstrVal);
 		auto version = STP_GetVersionFromString(versionString.c_str());
-		STP_SetStpVersion (bridge->_stpBridge, version, timestamp);
+		STP_SetStpVersion (bridge->_stpBridge, version, GetMessageTime());
 	}
 
 	hr = element->getAttribute(MstConfigNameString, &value);
 	if (SUCCEEDED(hr) && (value.vt != VT_NULL))
 	{
 		auto name = converter.to_bytes(value.bstrVal);
-		STP_SetMstConfigName (bridge->_stpBridge, name.c_str(), timestamp);
+		STP_SetMstConfigName (bridge->_stpBridge, name.c_str(), GetMessageTime());
 	}
 
 	hr = element->getAttribute(StpEnabledString, &value);
 	if (SUCCEEDED(hr) && (value.vt != VT_NULL))
 	{
 		if (wcstoul(value.bstrVal, nullptr, 10) != 0)
-			STP_StartBridge (bridge->_stpBridge, timestamp);
+			STP_StartBridge (bridge->_stpBridge, GetMessageTime());
 		else
-			STP_StopBridge (bridge->_stpBridge, timestamp);
+			STP_StopBridge (bridge->_stpBridge, GetMessageTime());
 	}
 
 	IXMLDOMNodePtr configTableNode;
@@ -526,7 +523,7 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 			configTable.push_back (STP_CONFIG_TABLE_ENTRY { 0, (unsigned char) treeIndex });
 		}
 
-		STP_SetMstConfigTable(bridge->_stpBridge, &configTable[0], (unsigned int) configTable.size(), timestamp);
+		STP_SetMstConfigTable(bridge->_stpBridge, &configTable[0], (unsigned int) configTable.size(), GetMessageTime());
 	}
 
 	IXMLDOMNodePtr bridgeTreesNode;
@@ -548,7 +545,7 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 			if (SUCCEEDED(hr) && (value.vt != VT_NULL))
 			{
 				auto prio = wcstoul (value.bstrVal, nullptr, 10);
-				STP_SetBridgePriority (bridge->_stpBridge, (unsigned int) treeIndex, (unsigned short) prio, timestamp);
+				STP_SetBridgePriority (bridge->_stpBridge, (unsigned int) treeIndex, (unsigned short) prio, GetMessageTime());
 			}
 		}
 	}
@@ -654,7 +651,7 @@ std::wstring Bridge::GetMstConfigIdName() const
 	return utf16;
 }
 
-void Bridge::SetMstConfigIdName (std::wstring value, unsigned int timestamp)
+void Bridge::SetMstConfigIdName (std::wstring value)
 {
 	auto len = wcslen(value.c_str());
 	if (len > 32)
@@ -670,7 +667,7 @@ void Bridge::SetMstConfigIdName (std::wstring value, unsigned int timestamp)
 	}
 	ascii.resize(32);
 
-	STP_SetMstConfigName (_stpBridge, ascii.c_str(), timestamp);
+	STP_SetMstConfigName (_stpBridge, ascii.c_str(), GetMessageTime());
 	PropertyChangedEvent::InvokeHandlers (this, this, &MstConfigIdName);
 }
 
@@ -680,11 +677,11 @@ unsigned short Bridge::GetMstConfigIdRevLevel() const
 	return ((unsigned short) id->RevisionLevelHigh << 8) | (unsigned short) id->RevisionLevelLow;
 }
 
-void Bridge::SetMstConfigIdRevLevel (unsigned short revLevel, unsigned int timestamp)
+void Bridge::SetMstConfigIdRevLevel (unsigned short revLevel)
 {
 	if (GetMstConfigIdRevLevel() != revLevel)
 	{
-		STP_SetMstConfigRevisionLevel (_stpBridge, revLevel, timestamp);
+		STP_SetMstConfigRevisionLevel (_stpBridge, revLevel, GetMessageTime());
 		PropertyChangedEvent::InvokeHandlers (this, this, &MstConfigIdRevLevel);
 	}
 }
@@ -701,32 +698,32 @@ std::wstring Bridge::GetMstConfigIdDigest() const
 	return ss.str();
 }
 
-void Bridge::SetMstConfigTable (const STP_CONFIG_TABLE_ENTRY* entries, unsigned int entryCount, unsigned int timestamp)
+void Bridge::SetMstConfigTable (const STP_CONFIG_TABLE_ENTRY* entries, size_t entryCount)
 {
-	STP_SetMstConfigTable (_stpBridge, &entries[0], entryCount, timestamp);
+	STP_SetMstConfigTable (_stpBridge, &entries[0], entryCount, GetMessageTime());
 	PropertyChangedEvent::InvokeHandlers (this, this, &MstConfigIdDigest);
 }
 
-void Bridge::SetStpEnabled (bool value, unsigned int timestamp)
+void Bridge::SetStpEnabled (bool value)
 {
 	if (value && !STP_IsBridgeStarted(_stpBridge))
 	{
-		STP_StartBridge (_stpBridge, timestamp);
+		STP_StartBridge (_stpBridge, GetMessageTime());
 		PropertyChangedEvent::InvokeHandlers (this, this, &StpEnabled);
 	}
 	else if (!value && STP_IsBridgeStarted(_stpBridge))
 	{
-		STP_StopBridge (_stpBridge, timestamp);
+		STP_StopBridge (_stpBridge, GetMessageTime());
 		PropertyChangedEvent::InvokeHandlers (this, this, &StpEnabled);
 	}
 }
 
-void Bridge::SetStpVersionFromInt (int value, unsigned int timestamp)
+void Bridge::SetStpVersionFromInt (int value)
 {
 	auto newVersion = (STP_VERSION) value;
 	if (STP_GetStpVersion(_stpBridge) != newVersion)
 	{
-		STP_SetStpVersion(_stpBridge, newVersion, timestamp);
+		STP_SetStpVersion(_stpBridge, newVersion, GetMessageTime());
 		PropertyChangedEvent::InvokeHandlers(this, this, &StpVersion);
 	}
 }
