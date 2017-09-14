@@ -273,7 +273,7 @@ void PropertyGrid::Item::CreateValueTextLayout()
 	{
 	}
 	else
-		throw not_implemented_exception();
+		assert(false); // not implemented
 }
 
 static wstring GetText (HWND hwnd)
@@ -638,5 +638,5 @@ void PropertyGrid::ProcessLButtonUp (DWORD modifierKeys, POINT pt)
 		}
 	}
 	else
-		throw not_implemented_exception();
+		assert(false); // not implemented
 }

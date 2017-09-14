@@ -27,7 +27,8 @@ D2D1_POINT_2F Port::GetCPLocation() const
 	if (_side == Side::Bottom)
 		return Point2F (bounds.left + _offset, bounds.bottom + ExteriorHeight);
 
-	throw not_implemented_exception();
+	assert(false); // not implemented
+	return { 0, 0 };
 }
 
 Matrix3x2F Port::GetPortTransform() const
@@ -194,7 +195,7 @@ void Port::RenderExteriorStpPort (ID2D1RenderTarget* dc, const DrawingObjects& d
 		dc->DrawText (L"?", 1, dos._regularTextFormat, { 2, 0, 20, 20 }, dos._brushDiscardingPort, D2D1_DRAW_TEXT_OPTIONS_NO_SNAP);
 	}
 	else
-		throw not_implemented_exception();
+		assert(false); // not implemented
 
 	dc->SetAntialiasMode(oldaa);
 }

@@ -160,7 +160,7 @@ IXMLDOMElementPtr Wire::SerializeEnd (IProject* project, IXMLDOMDocument* doc, c
 		hr = element->setAttribute (YString, _variant_t(location.y)); assert(SUCCEEDED(hr));
 	}
 	else
-		throw not_implemented_exception();
+		assert(false); // not implemented
 
 	return element;
 }
@@ -192,7 +192,10 @@ WireEnd Wire::DeserializeEnd (IProject* project, IXMLDOMElement* element)
 		return LooseWireEnd { x, y };
 	}
 	else
-		throw not_implemented_exception();
+	{
+		assert(false); // not implemented
+		return nullptr;
+	}
 }
 
 static const PropertyOrGroup* const WireProperties[] =

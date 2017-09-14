@@ -197,7 +197,7 @@ public:
 		{
 			_nextMacAddress.bytes[4]++;
 			if (_nextMacAddress.bytes[4] == 0)
-				throw not_implemented_exception();
+				assert(false); // not implemented
 		}
 
 		return result;

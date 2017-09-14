@@ -237,7 +237,7 @@ void Bridge::ProcessReceivedPackets()
 			}
 		}
 		else
-			throw not_implemented_exception();
+			assert(false); // not implemented
 	}
 
 	if (invalidate)
@@ -361,7 +361,7 @@ std::array<uint8_t, 6> Bridge::GetPortAddress (size_t portIndex) const
 		{
 			pa[3]++;
 			if (pa[3] == 0)
-				throw not_implemented_exception();
+				assert(false); // not implemented
 		}
 	}
 

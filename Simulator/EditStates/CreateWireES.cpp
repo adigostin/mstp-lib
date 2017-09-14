@@ -52,7 +52,7 @@ public:
 		}
 		else if (_subState == WaitingSecondDown)
 		{
-			throw not_implemented_exception();
+			assert(false); // not implemented
 		}
 	}
 

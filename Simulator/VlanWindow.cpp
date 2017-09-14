@@ -195,7 +195,7 @@ private:
 		if (it != pws.end())
 		{
 			// bring to front and flash
-			throw not_implemented_exception();
+			assert(false); // not implemented
 		}
 		else
 		{

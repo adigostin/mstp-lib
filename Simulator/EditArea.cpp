@@ -876,7 +876,7 @@ public:
 		else if (dynamic_cast<Port*>(_selection->GetObjects().front()) != nullptr)
 			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_PORT));
 		else
-			throw not_implemented_exception();
+			assert(false); // not implemented
 
 		TrackPopupMenuEx (GetSubMenu(hMenu, 0), 0, pt.x, pt.y, GetHWnd(), nullptr);
 		return 0;
