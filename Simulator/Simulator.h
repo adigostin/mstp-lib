@@ -53,10 +53,11 @@ extern const SelectionFactory selectionFactory;
 
 // ============================================================================
 
-MIDL_INTERFACE("{47DD7E84-9550-42DD-AECE-296878C0C631}") ILogArea abstract : public IWin32Window
+struct __declspec(novtable) ILogArea abstract : public IWin32Window
 {
+	using Interface = ILogArea;
 };
-_COM_SMARTPTR_TYPEDEF(ILogArea, __uuidof(ILogArea));
+using ILogAreaPtr = _com_ptr_t<ILogArea>;
 using LogAreaFactory = ILogAreaPtr(*const)(HINSTANCE hInstance, HWND hWndParent, const RECT& rect, IDWriteFactory* dWriteFactory, ISelection* selection);
 extern const LogAreaFactory logAreaFactory;
 
@@ -79,15 +80,17 @@ struct MouseLocation
 	D2D1_POINT_2F w;
 };
 
-MIDL_INTERFACE("09C8FD2D-9A51-4B25-A3B4-3BCD3923FB9F") IEditArea : public IWin32Window
+struct __declspec(novtable) IEditArea : public IWin32Window
 {
+	using Interface = IEditArea;
+
 	virtual const DrawingObjects& GetDrawingObjects() const = 0;
 	virtual void EnterState (std::unique_ptr<EditState>&& state) = 0;
 	virtual Port* GetCPAt (D2D1_POINT_2F dLocation, float tolerance) const = 0;
 	virtual void RenderSnapRect (ID2D1RenderTarget* rt, D2D1_POINT_2F wLocation) const = 0;
 	virtual D2D1::Matrix3x2F GetZoomTransform() const = 0;
 };
-_COM_SMARTPTR_TYPEDEF(IEditArea, __uuidof(IEditArea));
+using IEditAreaPtr = _com_ptr_t<IEditArea>;
 using EditAreaFactory = IEditAreaPtr(*const)(ISimulatorApp* app,
 											 IProjectWindow* pw,
 											 IProject* project,
@@ -99,8 +102,10 @@ extern const EditAreaFactory editAreaFactory;
 
 // ============================================================================
 
-MIDL_INTERFACE("62555843-4CB8-43FB-8C91-F229A4D318BD") IProjectWindow : public IWindowWithWorkQueue
+struct __declspec(novtable) IProjectWindow : public IWindowWithWorkQueue
 {
+	using Interface = IProjectWindow;
+
 	struct SelectedVlanNumerChangedEvent : public Event<SelectedVlanNumerChangedEvent, void(IProjectWindow* pw, unsigned int vlanNumber)> { };
 	struct DestroyingEvent : public Event<DestroyingEvent, void(IProjectWindow* pw)> { };
 
@@ -111,7 +116,7 @@ MIDL_INTERFACE("62555843-4CB8-43FB-8C91-F229A4D318BD") IProjectWindow : public I
 	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() = 0;
 	virtual DestroyingEvent::Subscriber GetDestroyingEvent() = 0;
 };
-_COM_SMARTPTR_TYPEDEF(IProjectWindow, __uuidof(IProjectWindow));
+using IProjectWindowPtr = _com_ptr_t<IProjectWindow>;
 using ProjectWindowFactory = IProjectWindowPtr(*const)(ISimulatorApp* app,
 													   IProject* project,
 													   SelectionFactory selectionFactory,
@@ -130,8 +135,10 @@ struct WireRemovingEvent : public Event<WireRemovingEvent, void(IProject*, size_
 
 enum class SaveProjectOption { SaveUnconditionally, SaveIfChangedAskUserFirst };
 
-MIDL_INTERFACE("A7D9A5A8-DB3F-4147-B488-58D260365F65") IProject : public IUnknown
+struct __declspec(novtable) IProject : public IUnknown
 {
+	using Interface = IProject;
+
 	struct ConvertedWirePoint
 	{
 		Wire* wire;
@@ -170,7 +177,7 @@ MIDL_INTERFACE("A7D9A5A8-DB3F-4147-B488-58D260365F65") IProject : public IUnknow
 	std::pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const;
 	Port* FindConnectedPort (Port* txPort) const;
 };
-_COM_SMARTPTR_TYPEDEF(IProject, __uuidof(IProject));
+using IProjectPtr = _com_ptr_t<IProject>;
 using ProjectFactory = IProjectPtr(*const)();
 extern const ProjectFactory projectFactory;
 
@@ -191,10 +198,11 @@ extern const PropertiesWindowFactory propertiesWindowFactory;
 
 // ============================================================================
 
-MIDL_INTERFACE("A6A83670-0AE9-41EC-B98E-C1FD369FEB4D") IVlanWindow : public IWin32Window
+struct __declspec(novtable) IVlanWindow : public IWin32Window
 {
+	using Interface = IVlanWindow;
 };
-_COM_SMARTPTR_TYPEDEF(IVlanWindow, __uuidof(IVlanWindow));
+using IVlanWindowPtr = _com_ptr_t<IVlanWindow>;
 using VlanWindowFactory = IVlanWindowPtr(*const)(ISimulatorApp* app,
 												 IProjectWindow* pw,
 												 IProject* project,
