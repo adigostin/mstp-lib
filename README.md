@@ -15,6 +15,4 @@ switch IC. Drop me a message at
 [adigostin@gmail.com](mailto:adigostin@gmail.com)
 and I'll try to help.
 
-<img src="./Screenshot-v2.0.png" style="max-width: 100%; height: auto;" />
-
-![screenshot](./Screenshot-v2.0.png "Logo Title Text 1")
+![screenshot](./Screenshot-v2.0-half.png "Logo Title Text 1")
