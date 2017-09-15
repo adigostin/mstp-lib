@@ -313,7 +313,7 @@ public:
 		IXMLDOMElementPtr projectElement = projectNode;
 
 		_variant_t value;
-		hr = projectElement->getAttribute (NextMacAddressString, &value); assert(SUCCEEDED(hr));
+		hr = projectElement->getAttribute (NextMacAddressString, &value); assert (SUCCEEDED(hr) && (value.vt == VT_BSTR));
 		_nextMacAddress = ConvertStringToBridgeAddress (static_cast<_bstr_t>(value));
 
 		{

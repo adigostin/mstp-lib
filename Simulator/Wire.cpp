@@ -176,18 +176,18 @@ WireEnd Wire::DeserializeEnd (IProject* project, IXMLDOMElement* element)
 	if (wcscmp(name, ConnectedEndString) == 0)
 	{
 		_variant_t value;
-		hr = element->getAttribute (BridgeIndexString, &value); assert(SUCCEEDED(hr));
+		hr = element->getAttribute (BridgeIndexString, &value); assert (SUCCEEDED(hr) && (value.vt == VT_BSTR));
 		size_t bridgeIndex = wcstoul (value.bstrVal, nullptr, 10);
-		hr = element->getAttribute (PortIndexString, &value); assert(SUCCEEDED(hr));
+		hr = element->getAttribute (PortIndexString, &value); assert (SUCCEEDED(hr) && (value.vt == VT_BSTR));
 		size_t portIndex = wcstoul (value.bstrVal, nullptr, 10);
 		return ConnectedWireEnd { project->GetBridges()[bridgeIndex]->GetPorts()[portIndex].get() };
 	}
 	else if (wcscmp (name, LooseEndString) == 0)
 	{
 		_variant_t value;
-		hr = element->getAttribute (XString, &value); assert(SUCCEEDED(hr));
+		hr = element->getAttribute (XString, &value); assert (SUCCEEDED(hr) && (value.vt == VT_BSTR));
 		float x = wcstof (value.bstrVal, nullptr);
-		hr = element->getAttribute (YString, &value); assert(SUCCEEDED(hr));
+		hr = element->getAttribute (YString, &value); assert (SUCCEEDED(hr) && (value.vt == VT_BSTR));
 		float y = wcstof (value.bstrVal, nullptr);
 		return LooseWireEnd { x, y };
 	}
