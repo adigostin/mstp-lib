@@ -569,7 +569,9 @@ public:
 
 		if (((HIWORD(wParam) == 0) || (HIWORD(wParam) == 1)) && (LOWORD(wParam) == ID_FILE_NEW))
 		{
-			MessageBox (_hwnd, L"Not yet implemented.", _app->GetAppName(), 0);
+			auto project = projectFactory();
+			auto pw = projectWindowFactory(_app, project, selectionFactory, editAreaFactory, true, true, SW_SHOW, 1);
+			_app->AddProjectWindow(pw);
 			return 0;
 		}
 
