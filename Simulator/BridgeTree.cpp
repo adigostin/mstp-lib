@@ -9,19 +9,20 @@ static const _bstr_t BridgeTreeString = "BridgeTree";
 static const _bstr_t TreeIndexString = "TreeIndex";
 static const _bstr_t BridgePriorityString = "BridgePriority";
 
-IXMLDOMElementPtr BridgeTree::Serialize (IXMLDOMDocument3* doc) const
+HRESULT BridgeTree::Serialize (IXMLDOMDocument3* doc, IXMLDOMElementPtr& elementOut) const
 {
 	IXMLDOMElementPtr bridgeTreeElement;
 	auto hr = doc->createElement (BridgeTreeString, &bridgeTreeElement); assert(SUCCEEDED(hr));
 	bridgeTreeElement->setAttribute (TreeIndexString, _variant_t(_treeIndex));
 	bridgeTreeElement->setAttribute (BridgePriorityString, _variant_t(GetPriority()));
-	return bridgeTreeElement;
+	elementOut = bridgeTreeElement;
+	return S_OK;
 }
 
-HRESULT BridgeTree::Deserialize (IXMLDOMElement* portElement)
+HRESULT BridgeTree::Deserialize (IXMLDOMElement* bridgeTreeElement)
 {
 	_variant_t value;
-	auto hr = portElement->getAttribute (BridgePriorityString, &value);
+	auto hr = bridgeTreeElement->getAttribute (BridgePriorityString, &value);
 	if (FAILED(hr))
 		return hr;
 	if (value.vt == VT_BSTR)
@@ -151,7 +152,7 @@ std::wstring BridgeTree::GetReceivingPortId() const
 
 // ============================================================================
 
-static const PropertyGroup CommonPropGroup
+const PropertyGroup BridgeTree::Common
 {
 	L"Common",
 	nullptr,
@@ -177,12 +178,12 @@ static const NVP BridgePrioNVPs[] =
 	{ nullptr, 0 },
 };
 
-static const EnumProperty PriorityProperty
+const EnumProperty BridgeTree::Priority
 (
 	L"Bridge Priority",
 	nullptr,//[](const std::vector<Object*>& objs) -> wstring
-	static_cast<EnumProperty::Getter>(&BridgeTree::GetPriority),
-	static_cast<EnumProperty::Setter>(&BridgeTree::SetPriority),
+	static_cast<EnumProperty::Getter>(&GetPriority),
+	static_cast<EnumProperty::Setter>(&SetPriority),
 	BridgePrioNVPs
 );
 
@@ -248,10 +249,10 @@ static const TypedProperty<wstring> ReceivingPortId
 	nullptr
 );
 
-static const PropertyOrGroup* const BridgeTreeProperties[] =
+const PropertyOrGroup* const BridgeTree::Properties[] =
 {
-	&CommonPropGroup,
-	&PriorityProperty,
+	&Common,
+	&Priority,
 	&RootPriorityVectorPropGroup,
 	&RootBridgeId,
 	&ExternalRootPathCost,
@@ -262,9 +263,3 @@ static const PropertyOrGroup* const BridgeTreeProperties[] =
 	&ReceivingPortId,
 	nullptr,
 };
-
-const PropertyOrGroup* const* BridgeTree::GetProperties() const
-{
-	return BridgeTreeProperties;
-}
-

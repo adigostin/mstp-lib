@@ -40,6 +40,7 @@
     </ClInclude>
     <ClInclude Include="Object.h" />
     <ClInclude Include="PropertyGrid.h" />
+    <ClInclude Include="PortTree.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -89,6 +90,7 @@
     </ClCompile>
     <ClCompile Include="Object.cpp" />
     <ClCompile Include="PropertyGrid.cpp" />
+    <ClCompile Include="PortTree.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Simulator.rc" />

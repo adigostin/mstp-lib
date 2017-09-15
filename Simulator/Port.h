@@ -1,6 +1,7 @@
 
 #pragma once
 #include "Object.h"
+#include "PortTree.h"
 #include "Win32/Win32Defs.h"
 #include "stp.h"
 
@@ -27,9 +28,10 @@ class Port : public RenderableObject
 	friend class Bridge;
 
 	Bridge* const _bridge;
-	size_t const _portIndex;
+	unsigned int const _portIndex;
 	Side _side;
 	float _offset;
+	std::vector<std::unique_ptr<PortTree>> _trees;
 
 	static constexpr unsigned int MissedLinkPulseCounterMax = 5;
 	unsigned int _missedLinkPulseCounter = MissedLinkPulseCounterMax; // _missedLinkPulseCounter equal to MissedLinkPulseCounterMax means macOperational=false
@@ -51,7 +53,7 @@ public:
 	static constexpr float OutlineWidth = 2;
 
 	Bridge* GetBridge() const { return _bridge; }
-	size_t GetPortIndex() const { return _portIndex; }
+	unsigned int GetPortIndex() const { return _portIndex; }
 	Side GetSide() const { return _side; }
 	float GetOffset() const { return _offset; }
 	D2D1_POINT_2F GetCPLocation() const;
@@ -60,6 +62,7 @@ public:
 	D2D1_RECT_F GetInnerOuterRect() const;
 	bool IsForwarding (unsigned int vlanNumber) const;
 	void SetSideAndOffset (Side side, float offset);
+	const std::vector<std::unique_ptr<PortTree>>& GetTrees() const { return _trees; }
 
 	static void RenderExteriorNonStpPort (ID2D1RenderTarget* dc, const DrawingObjects& dos, bool macOperational);
 	static void RenderExteriorStpPort (ID2D1RenderTarget* dc, const DrawingObjects& dos, STP_PORT_ROLE role, bool learning, bool forwarding, bool operEdge);

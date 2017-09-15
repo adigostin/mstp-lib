@@ -68,10 +68,10 @@ Bridge::Bridge (unsigned int portCount, unsigned int mstiCount, const unsigned c
 		_trees.push_back (make_unique<BridgeTree>(this, i));
 
 	float offset = 0;
-	for (unsigned int i = 0; i < portCount; i++)
+	for (unsigned int portIndex = 0; portIndex < portCount; portIndex++)
 	{
 		offset += (Port::PortToPortSpacing / 2 + Port::InteriorWidth / 2);
-		auto port = unique_ptr<Port>(new Port(this, i, Side::Bottom, offset));
+		auto port = unique_ptr<Port>(new Port(this, portIndex, Side::Bottom, offset));
 		_ports.push_back (move(port));
 		offset += (Port::InteriorWidth / 2 + Port::PortToPortSpacing / 2);
 	}
@@ -423,10 +423,11 @@ IXMLDOMElementPtr Bridge::Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) 
 	IXMLDOMElementPtr bridgeTreesElement;
 	hr = doc->createElement (BridgeTreesString, &bridgeTreesElement); assert(SUCCEEDED(hr));
 	hr = bridgeElement->appendChild(bridgeTreesElement, nullptr); assert(SUCCEEDED(hr));
-	for (size_t treeIndex = 0; treeIndex <= _trees.size(); treeIndex++)
+	for (size_t treeIndex = 0; treeIndex < _trees.size(); treeIndex++)
 	{
-		auto bridgeTreeElement = _trees.at(treeIndex)->Serialize(doc);
-		hr = bridgeTreesElement->appendChild(bridgeTreeElement, nullptr); assert(SUCCEEDED(hr));
+		IXMLDOMElementPtr bridgeTreeElement;
+		hr = _trees.at(treeIndex)->Serialize (doc, bridgeTreeElement); assert(SUCCEEDED(hr));
+		hr = bridgeTreesElement->appendChild (bridgeTreeElement, nullptr); assert(SUCCEEDED(hr));
 	}
 
 	IXMLDOMElementPtr portsElement;

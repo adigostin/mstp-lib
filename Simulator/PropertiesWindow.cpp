@@ -94,6 +94,18 @@ public:
 
 				_pg2->SelectObjects ((Object**) &bridgeTrees[0], bridgeTrees.size());
 			}
+			else if (all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [](Object* o) { return o->Is<Port>(); }))
+			{
+				std::vector<PortTree*> portTrees;
+				for (Object* o : _selection->GetObjects())
+				{
+					auto p = static_cast<Port*>(o);
+					auto treeIndex = STP_GetTreeIndexFromVlanNumber(p->GetBridge()->GetStpBridge(), _projectWindow->GetSelectedVlanNumber());
+					portTrees.push_back (p->GetTrees().at(treeIndex).get());
+				}
+
+				_pg2->SelectObjects ((Object**) &portTrees[0], portTrees.size());
+			}
 			else
 				_pg2->SelectObjects(nullptr, 0);
 		}

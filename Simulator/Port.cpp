@@ -9,7 +9,10 @@ using namespace D2D1;
 
 Port::Port (Bridge* bridge, unsigned int portIndex, Side side, float offset)
 	: _bridge(bridge), _portIndex(portIndex), _side(side), _offset(offset)
-{ }
+{
+	for (unsigned int treeIndex = 0; treeIndex < (unsigned int) bridge->GetTrees().size(); treeIndex++)
+		_trees.push_back (unique_ptr<PortTree>(new PortTree(this, treeIndex)));
+}
 
 D2D1_POINT_2F Port::GetCPLocation() const
 {
@@ -349,6 +352,7 @@ static const _bstr_t SideString = L"Side";
 static const _bstr_t OffsetString = L"Offset";
 static const _bstr_t AutoEdgeString = L"AutoEdge";
 static const _bstr_t AdminEdgeString = L"AdminEdge";
+static const _bstr_t PortTreesString = "PortTrees";
 
 IXMLDOMElementPtr Port::Serialize (IXMLDOMDocument3* doc) const
 {
@@ -358,6 +362,17 @@ IXMLDOMElementPtr Port::Serialize (IXMLDOMDocument3* doc) const
 	portElement->setAttribute (OffsetString, _variant_t (_offset));
 	portElement->setAttribute (AutoEdgeString, _variant_t (GetAutoEdge() ? L"True" : L"False"));
 	portElement->setAttribute (AdminEdgeString, _variant_t (GetAdminEdge() ? L"True" : L"False"));
+
+	IXMLDOMElementPtr portTreesElement;
+	hr = doc->createElement (PortTreesString, &portTreesElement); assert(SUCCEEDED(hr));
+	hr = portElement->appendChild(portTreesElement, nullptr); assert(SUCCEEDED(hr));
+	for (size_t treeIndex = 0; treeIndex < _trees.size(); treeIndex++)
+	{
+		IXMLDOMElementPtr portTreeElement;
+		hr = _trees.at(treeIndex)->Serialize (doc, portTreeElement); assert(SUCCEEDED(hr));
+		hr = portTreesElement->appendChild (portTreeElement, nullptr); assert(SUCCEEDED(hr));
+	}
+
 	return portElement;
 }
 
@@ -387,6 +402,22 @@ HRESULT Port::Deserialize (IXMLDOMElement* portElement)
 		return hr;
 	if (value.vt == VT_BSTR)
 		SetAdminEdge (_wcsicmp (value.bstrVal, L"True") == 0);
+
+	IXMLDOMNodePtr portTreesNode;
+	hr = portElement->selectSingleNode(PortTreesString, &portTreesNode);
+	if (SUCCEEDED(hr) && (portTreesNode != nullptr))
+	{
+		IXMLDOMNodeListPtr portTreeNodes;
+		hr = portTreesNode->get_childNodes(&portTreeNodes); assert(SUCCEEDED(hr));
+
+		for (size_t treeIndex = 0; treeIndex < _trees.size(); treeIndex++)
+		{
+			IXMLDOMNodePtr portTreeNode;
+			hr = portTreeNodes->get_item((long) treeIndex, &portTreeNode); assert(SUCCEEDED(hr));
+			IXMLDOMElementPtr portTreeElement = portTreeNode;
+			hr = _trees.at(treeIndex)->Deserialize(portTreeElement); assert(SUCCEEDED(hr));
+		}
+	}
 
 	return S_OK;
 }

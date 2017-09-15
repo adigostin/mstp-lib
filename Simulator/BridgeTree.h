@@ -13,8 +13,8 @@ struct BridgeTree : Object
 		: _parent(parent), _treeIndex(treeIndex)
 	{ }
 
-	IXMLDOMElementPtr Serialize (IXMLDOMDocument3* doc) const;
-	HRESULT Deserialize (IXMLDOMElement* portElement);
+	HRESULT Serialize (IXMLDOMDocument3* doc, IXMLDOMElementPtr& elementOut) const;
+	HRESULT Deserialize (IXMLDOMElement* bridgeTreeElement);
 
 	//std::wstring GetPriorityLabel () const;
 	int GetPriority() const;
@@ -29,6 +29,9 @@ struct BridgeTree : Object
 	std::wstring GetDesignatedPortId() const;
 	std::wstring GetReceivingPortId() const;
 
-	virtual const PropertyOrGroup* const* GetProperties() const override final;
+	static const PropertyGroup Common;
+	static const EnumProperty Priority;
+	static const PropertyOrGroup* const Properties[];
+	virtual const PropertyOrGroup* const* GetProperties() const override final { return Properties; }
 };
 
