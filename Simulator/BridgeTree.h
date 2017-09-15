@@ -13,6 +13,9 @@ struct BridgeTree : Object
 		: _parent(parent), _treeIndex(treeIndex)
 	{ }
 
+	IXMLDOMElementPtr Serialize (IXMLDOMDocument3* doc) const;
+	HRESULT Deserialize (IXMLDOMElement* portElement);
+
 	//std::wstring GetPriorityLabel () const;
 	int GetPriority() const;
 	void SetPriority (int priority);

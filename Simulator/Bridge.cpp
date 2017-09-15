@@ -385,9 +385,6 @@ static const _bstr_t YString = "Y";
 static const _bstr_t WidthString = "Width";
 static const _bstr_t HeightString = "Height";
 static const _bstr_t BridgeTreesString = "BridgeTrees";
-static const _bstr_t BridgeTreeString = "BridgeTree";
-static const _bstr_t TreeIndexString = "TreeIndex";
-static const _bstr_t BridgePriorityString = "BridgePriority";
 static const _bstr_t VlanString = "Vlan";
 static const _bstr_t TreeString = "Tree";
 static const _bstr_t PortsString = "Ports";
@@ -426,13 +423,10 @@ IXMLDOMElementPtr Bridge::Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) 
 	IXMLDOMElementPtr bridgeTreesElement;
 	hr = doc->createElement (BridgeTreesString, &bridgeTreesElement); assert(SUCCEEDED(hr));
 	hr = bridgeElement->appendChild(bridgeTreesElement, nullptr); assert(SUCCEEDED(hr));
-	for (unsigned int treeIndex = 0; treeIndex <= STP_GetMstiCount(_stpBridge); treeIndex++)
+	for (size_t treeIndex = 0; treeIndex <= _trees.size(); treeIndex++)
 	{
-		IXMLDOMElementPtr bridgeTreeElement;
-		hr = doc->createElement (BridgeTreeString, &bridgeTreeElement); assert(SUCCEEDED(hr));
-		bridgeTreeElement->setAttribute (TreeIndexString, _variant_t(treeIndex));
-		bridgeTreeElement->setAttribute (BridgePriorityString, _variant_t(STP_GetBridgePriority(_stpBridge, treeIndex)));
-		bridgeTreesElement->appendChild(bridgeTreeElement, nullptr);
+		auto bridgeTreeElement = _trees.at(treeIndex)->Serialize(doc);
+		hr = bridgeTreesElement->appendChild(bridgeTreeElement, nullptr); assert(SUCCEEDED(hr));
 	}
 
 	IXMLDOMElementPtr portsElement;
@@ -440,7 +434,7 @@ IXMLDOMElementPtr Bridge::Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) 
 	hr = bridgeElement->appendChild(portsElement, nullptr); assert(SUCCEEDED(hr));
 	for (size_t portIndex = 0; portIndex < _ports.size(); portIndex++)
 	{
-		auto portElement = _ports[portIndex]->Serialize(doc);
+		auto portElement = _ports.at(portIndex)->Serialize(doc);
 		hr = portsElement->appendChild(portElement, nullptr); assert(SUCCEEDED(hr));
 	}
 
@@ -528,20 +522,12 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 		IXMLDOMNodeListPtr bridgeTreeNodes;
 		hr = bridgeTreesNode->get_childNodes(&bridgeTreeNodes); assert(SUCCEEDED(hr));
 
-		long treeCount;
-		hr = bridgeTreeNodes->get_length(&treeCount); assert(SUCCEEDED(hr));
-		for (long treeIndex = 0; treeIndex < treeCount; treeIndex++)
+		for (size_t treeIndex = 0; treeIndex < 1 + mstiCount; treeIndex++)
 		{
 			IXMLDOMNodePtr bridgeTreeNode;
-			hr = bridgeTreeNodes->get_item(treeIndex, &bridgeTreeNode); assert(SUCCEEDED(hr));
+			hr = bridgeTreeNodes->get_item((long) treeIndex, &bridgeTreeNode); assert(SUCCEEDED(hr));
 			IXMLDOMElementPtr bridgeTreeElement = bridgeTreeNode;
-
-			hr = bridgeTreeElement->getAttribute(BridgePriorityString, &value);
-			if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
-			{
-				auto prio = wcstoul (value.bstrVal, nullptr, 10);
-				STP_SetBridgePriority (bridge->_stpBridge, (unsigned int) treeIndex, (unsigned short) prio, GetMessageTime());
-			}
+			hr = bridge->_trees.at(treeIndex)->Deserialize(bridgeTreeElement); assert(SUCCEEDED(hr));
 		}
 	}
 
@@ -557,7 +543,7 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 			IXMLDOMNodePtr portNode;
 			hr = portNodes->get_item((long) portIndex, &portNode); assert(SUCCEEDED(hr));
 			IXMLDOMElementPtr portElement = portNode;
-			bridge->_ports[portIndex]->Deserialize(portElement);
+			hr = bridge->_ports[portIndex]->Deserialize(portElement); assert(SUCCEEDED(hr));
 		}
 	}
 

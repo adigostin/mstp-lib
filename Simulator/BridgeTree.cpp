@@ -5,6 +5,31 @@
 
 using namespace std;
 
+static const _bstr_t BridgeTreeString = "BridgeTree";
+static const _bstr_t TreeIndexString = "TreeIndex";
+static const _bstr_t BridgePriorityString = "BridgePriority";
+
+IXMLDOMElementPtr BridgeTree::Serialize (IXMLDOMDocument3* doc) const
+{
+	IXMLDOMElementPtr bridgeTreeElement;
+	auto hr = doc->createElement (BridgeTreeString, &bridgeTreeElement); assert(SUCCEEDED(hr));
+	bridgeTreeElement->setAttribute (TreeIndexString, _variant_t(_treeIndex));
+	bridgeTreeElement->setAttribute (BridgePriorityString, _variant_t(GetPriority()));
+	return bridgeTreeElement;
+}
+
+HRESULT BridgeTree::Deserialize (IXMLDOMElement* portElement)
+{
+	_variant_t value;
+	auto hr = portElement->getAttribute (BridgePriorityString, &value);
+	if (FAILED(hr))
+		return hr;
+	if (value.vt == VT_BSTR)
+		SetPriority (wcstol (value.bstrVal, nullptr, 10));
+	
+	return S_OK;
+}
+
 //std::wstring BridgeTree::GetPriorityLabel() const
 //{
 //	auto treeIndex = dynamic_cast<BridgeTree*>(objs[0])->_treeIndex;

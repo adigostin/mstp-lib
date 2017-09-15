@@ -361,24 +361,34 @@ IXMLDOMElementPtr Port::Serialize (IXMLDOMDocument3* doc) const
 	return portElement;
 }
 
-void Port::Deserialize (IXMLDOMElement* portElement)
+HRESULT Port::Deserialize (IXMLDOMElement* portElement)
 {
 	_variant_t value;
 	auto hr = portElement->getAttribute (SideString, &value);
-	if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
+	if (FAILED(hr))
+		return hr;
+	if (value.vt == VT_BSTR)
 		_side = (Side) GetEnumValue (SideNVPs, value.bstrVal);
 
 	hr = portElement->getAttribute (OffsetString, &value);
-	if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
+	if (FAILED(hr))
+		return hr;
+	if (value.vt == VT_BSTR)
 		_offset = wcstof (value.bstrVal, nullptr);
 
 	hr = portElement->getAttribute (AutoEdgeString, &value);
-	if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
+	if (FAILED(hr))
+		return hr;
+	if (value.vt == VT_BSTR)
 		SetAutoEdge (_wcsicmp (value.bstrVal, L"True") == 0);
 
 	hr = portElement->getAttribute (AdminEdgeString, &value);
-	if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
+	if (FAILED(hr))
+		return hr;
+	if (value.vt == VT_BSTR)
 		SetAdminEdge (_wcsicmp (value.bstrVal, L"True") == 0);
+
+	return S_OK;
 }
 
 const TypedProperty<bool> Port::AutoEdge

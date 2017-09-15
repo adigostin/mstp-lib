@@ -38,7 +38,7 @@ public:
 	Port (Bridge* bridge, unsigned int portIndex, Side side, float offset);
 
 	IXMLDOMElementPtr Serialize (IXMLDOMDocument3* doc) const;
-	void Deserialize (IXMLDOMElement* portElement);
+	HRESULT Deserialize (IXMLDOMElement* portElement);
 
 	static constexpr int HTCodeInnerOuter = 1;
 	static constexpr int HTCodeCP = 2;
