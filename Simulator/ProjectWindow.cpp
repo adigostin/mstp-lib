@@ -57,6 +57,8 @@ public:
 				   IProject* project,
 				   SelectionFactory selectionFactory,
 				   EditAreaFactory editAreaFactory,
+				   bool showPropertiesWindow,
+				   bool showLogWindow,
 				   int nCmdShow,
 				   unsigned int selectedVlan)
 		: _app(app)
@@ -102,19 +104,13 @@ public:
 
 		const RECT clientRect = { 0, 0, _clientSize.cx, _clientSize.cy };
 
-		w = (PropertiesWindowDefaultWidthDips * _dpiX + 96 / 2) / 96;
-		TryReadRegDword (RegValueNamePropertiesWindowWidth, (DWORD*) &w);
-		w = RestrictToolWindowWidth(w);
-		_propertiesWindow = propertiesWindowFactory (app, this, project, _selection, { 0, 0, w, _clientSize.cy }, _hwnd);
-		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
+		if (showPropertiesWindow)
+			CreatePropertiesWindow();
 
-		w = (LogWindowDefaultWidthDips * _dpiX + 96 / 2) / 96;
-		TryReadRegDword (RegValueNameLogWindowWidth, (DWORD*) &w);
-		w = RestrictToolWindowWidth(w);
-		_logWindow = logAreaFactory (_app->GetHInstance(), _hwnd, { _clientSize.cx - w, 0, _clientSize.cx, _clientSize.cy }, _app->GetDWriteFactory(), _selection);
-		SetMainMenuItemCheck (ID_VIEW_STPLOG, true);
+		if (showLogWindow)
+			CreateLogWindow();
 
-		_vlanWindow = vlanWindowFactory (_app, this, _project, _selection, _hwnd, { _propertiesWindow->GetWidth() + _splitterWidthPixels, 0 });
+		_vlanWindow = vlanWindowFactory (_app, this, _project, _selection, _hwnd, { GetVlanWindowLeft(), 0 });
 		SetMainMenuItemCheck (ID_VIEW_VLANS, true);
 
 		_editWindow = editAreaFactory (app, this, _project, _selection, _hwnd, GetEditWindowRect(), _app->GetDWriteFactory());
@@ -134,6 +130,36 @@ public:
 
 		if (_hwnd != nullptr)
 			::DestroyWindow(_hwnd);
+	}
+
+	void CreatePropertiesWindow()
+	{
+		LONG w = (PropertiesWindowDefaultWidthDips * _dpiX + 96 / 2) / 96;
+		TryReadRegDword (RegValueNamePropertiesWindowWidth, (DWORD*) &w);
+		w = RestrictToolWindowWidth(w);
+		_propertiesWindow = propertiesWindowFactory (_app, this, _project, _selection, { 0, 0, w, _clientSize.cy }, _hwnd);
+		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
+	}
+
+	void DestroyPropertiesWindow()
+	{
+		_propertiesWindow = nullptr;
+		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, false);
+	}
+
+	void CreateLogWindow()
+	{
+		LONG w = (LogWindowDefaultWidthDips * _dpiX + 96 / 2) / 96;
+		TryReadRegDword (RegValueNameLogWindowWidth, (DWORD*) &w);
+		w = RestrictToolWindowWidth(w);
+		_logWindow = logAreaFactory (_app->GetHInstance(), _hwnd, { _clientSize.cx - w, 0, _clientSize.cx, _clientSize.cy }, _app->GetDWriteFactory(), _selection);
+		SetMainMenuItemCheck (ID_VIEW_STPLOG, true);
+	}
+
+	void DestroyLogWindow()
+	{
+		_logWindow = nullptr;
+		SetMainMenuItemCheck (ID_VIEW_STPLOG, false);
 	}
 
 	static void OnProjectLoaded (void* callbackArg, IProject* project)
@@ -160,6 +186,22 @@ public:
 	{
 		auto pw = static_cast<ProjectWindow*>(callbackArg);
 		pw->SetWindowTitle();
+	}
+
+	LONG GetVlanWindowLeft() const
+	{
+		if (_propertiesWindow != nullptr)
+			return _propertiesWindow->GetWidth() + _splitterWidthPixels;
+		else
+			return 0;
+	}
+
+	LONG GetVlanWindowRight() const
+	{
+		if (_logWindow != nullptr)
+			return _clientSize.cx - _logWindow->GetWidth() - _splitterWidthPixels;
+		else
+			return _clientSize.cx;
 	}
 
 	RECT GetEditWindowRect() const
@@ -363,30 +405,34 @@ public:
 		if (wParam != SIZE_MINIMIZED)
 		{
 			_clientSize = newClientSize;
-
-			if (_propertiesWindow != nullptr)
-				_propertiesWindow->SetRect ({ 0, 0, RestrictToolWindowWidth(_propertiesWindow->GetWidth()), _clientSize.cy });
-
-			if (_logWindow != nullptr)
-				_logWindow->SetRect ({ _clientSize.cx - RestrictToolWindowWidth(_logWindow->GetWidth()), 0, _clientSize.cx, _clientSize.cy });
-
-			if (_vlanWindow != nullptr)
-				_vlanWindow->SetRect ({ _propertiesWindow->GetWidth() + _splitterWidthPixels, 0, _logWindow->GetX() - _splitterWidthPixels, _vlanWindow->GetHeight() });
-
-			if (_editWindow != nullptr)
-				_editWindow->SetRect (GetEditWindowRect());
+			ResizeChildWindows();
 		}
+	}
+
+	void ResizeChildWindows()
+	{
+		if (_propertiesWindow != nullptr)
+			_propertiesWindow->SetRect ({ 0, 0, RestrictToolWindowWidth(_propertiesWindow->GetWidth()), _clientSize.cy });
+
+		if (_logWindow != nullptr)
+			_logWindow->SetRect ({ _clientSize.cx - RestrictToolWindowWidth(_logWindow->GetWidth()), 0, _clientSize.cx, _clientSize.cy });
+
+		if (_vlanWindow != nullptr)
+			_vlanWindow->SetRect ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->GetHeight() });
+
+		if (_editWindow != nullptr)
+			_editWindow->SetRect (GetEditWindowRect());
 	}
 
 	void ProcessWmLButtonDown (POINT pt, UINT modifierKeysDown)
 	{
-		if ((pt.x >= _propertiesWindow->GetWidth()) && (pt.x < _propertiesWindow->GetWidth() + _splitterWidthPixels))
+		if ((_propertiesWindow != nullptr) && (pt.x >= _propertiesWindow->GetWidth()) && (pt.x < _propertiesWindow->GetWidth() + _splitterWidthPixels))
 		{
 			_windowBeingResized = ToolWindow::Props;
 			_resizeOffset = pt.x - _propertiesWindow->GetWidth();
 			::SetCapture(_hwnd);
 		}
-		else if ((pt.x >= _logWindow->GetX() - _splitterWidthPixels) && (pt.x < _logWindow->GetX()))
+		else if ((_logWindow != nullptr) && (pt.x >= _logWindow->GetX() - _splitterWidthPixels) && (pt.x < _logWindow->GetX()))
 		{
 			_windowBeingResized = ToolWindow::Log;
 			_resizeOffset = _logWindow->GetX() - pt.x;
@@ -399,7 +445,7 @@ public:
 		if (_windowBeingResized == ToolWindow::Props)
 		{
 			_propertiesWindow->SetWidth (RestrictToolWindowWidth(pt.x - _resizeOffset));
-			_vlanWindow->SetRect ({ _propertiesWindow->GetWidth() + _splitterWidthPixels, 0, _logWindow->GetX() - _splitterWidthPixels, _vlanWindow->GetHeight() });
+			_vlanWindow->SetRect ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->GetHeight() });
 			_editWindow->SetRect (GetEditWindowRect());
 			::UpdateWindow (_propertiesWindow->GetHWnd());
 			::UpdateWindow (_editWindow->GetHWnd());
@@ -407,7 +453,7 @@ public:
 		else if (_windowBeingResized == ToolWindow::Log)
 		{
 			_logWindow->SetRect ({ _clientSize.cx - RestrictToolWindowWidth(_clientSize.cx - pt.x - _resizeOffset), 0, _clientSize.cx, _clientSize.cy});
-			_vlanWindow->SetRect ({ _propertiesWindow->GetWidth() + _splitterWidthPixels, 0, _logWindow->GetX() - _splitterWidthPixels, _vlanWindow->GetHeight() });
+			_vlanWindow->SetRect ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->GetHeight() });
 			_editWindow->SetRect (GetEditWindowRect());
 			::UpdateWindow (_logWindow->GetHWnd());
 			::UpdateWindow (_editWindow->GetHWnd());
@@ -432,11 +478,11 @@ public:
 
 	void SetCursor (POINT pt)
 	{
-		if ((pt.x >= _propertiesWindow->GetWidth()) && (pt.x < _propertiesWindow->GetWidth() + _splitterWidthPixels))
+		if ((_propertiesWindow != nullptr) && (pt.x >= _propertiesWindow->GetWidth()) && (pt.x < _propertiesWindow->GetWidth() + _splitterWidthPixels))
 		{
 			::SetCursor (LoadCursor(nullptr, IDC_SIZEWE));
 		}
-		else if ((pt.x >= _logWindow->GetX() - _splitterWidthPixels) && (pt.x < _logWindow->GetX()))
+		else if ((_logWindow != nullptr) && (pt.x >= _logWindow->GetX() - _splitterWidthPixels) && (pt.x < _logWindow->GetX()))
 		{
 			::SetCursor (LoadCursor(nullptr, IDC_SIZEWE));
 		}
@@ -483,9 +529,29 @@ public:
 
 	optional<LRESULT> ProcessWmCommand (WPARAM wParam, LPARAM lParam)
 	{
-		if ((wParam == ID_VIEW_PROPERTIES) || (wParam == ID_VIEW_STPLOG) || (wParam == ID_VIEW_VLANS))
+		if (wParam == ID_VIEW_PROPERTIES)
 		{
-			// TODO: show/hide tool windows.
+			if (_propertiesWindow != nullptr)
+				DestroyPropertiesWindow();
+			else
+				CreatePropertiesWindow();
+			ResizeChildWindows();
+			return 0;
+		}
+
+		if (wParam == ID_VIEW_STPLOG)
+		{
+			if (_logWindow != nullptr)
+				DestroyLogWindow();
+			else
+				CreateLogWindow();
+			ResizeChildWindows();
+			return 0;
+		}
+
+		if (wParam == ID_VIEW_VLANS)
+		{
+			// TODO: show/hide.
 			return 0;
 		}
 
@@ -554,7 +620,7 @@ public:
 
 		if (projectToLoadTo.GetInterfacePtr() != _project.GetInterfacePtr())
 		{
-			auto newWindow = projectWindowFactory(_app, projectToLoadTo, selectionFactory, editAreaFactory, SW_SHOW, 1);
+			auto newWindow = projectWindowFactory(_app, projectToLoadTo, selectionFactory, editAreaFactory, true, true, SW_SHOW, 1);
 			_app->AddProjectWindow(newWindow);
 		}
 	}

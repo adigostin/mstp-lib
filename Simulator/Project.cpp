@@ -375,7 +375,10 @@ public:
 	virtual void SetChangedFlag (bool changedFlag) override final
 	{
 		if (changedFlag)
+		{
 			ChangedEvent::InvokeHandlers(this, this);
+			InvalidateEvent::InvokeHandlers(this, this);
+		}
 
 		if (_changedFlag != changedFlag)
 		{

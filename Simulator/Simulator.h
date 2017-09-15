@@ -121,6 +121,8 @@ using ProjectWindowFactory = IProjectWindowPtr(*const)(ISimulatorApp* app,
 													   IProject* project,
 													   SelectionFactory selectionFactory,
 													   EditAreaFactory editAreaFactory,
+													   bool showPropertiesWindow,
+													   bool showLogWindow,
 													   int nCmdShow,
 													   unsigned int selectedVlan);
 extern const ProjectWindowFactory projectWindowFactory;

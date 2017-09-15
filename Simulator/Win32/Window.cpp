@@ -54,7 +54,6 @@ LRESULT CALLBACK Window::WindowProcStatic (HWND hwnd, UINT uMsg, WPARAM wParam, 
 	{
 		LPCREATESTRUCT lpcs = reinterpret_cast<LPCREATESTRUCT>(lParam);
 		window = reinterpret_cast<Window*>(lpcs->lpCreateParams);
-		window->AddRef();
 		window->_hwnd = hwnd;
 		SetWindowLongPtr (hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(window));
 	}
@@ -73,7 +72,6 @@ LRESULT CALLBACK Window::WindowProcStatic (HWND hwnd, UINT uMsg, WPARAM wParam, 
 	{
 		window->_hwnd = nullptr;
 		SetWindowLongPtr (hwnd, GWLP_USERDATA, 0);
-		window->Release();
 	}
 
 	if (result)

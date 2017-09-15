@@ -178,7 +178,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 
 		{
 			auto project = projectFactory();
-			auto projectWindow = projectWindowFactory (&app, project, selectionFactory, editAreaFactory, nCmdShow, 1);
+			auto projectWindow = projectWindowFactory (&app, project, selectionFactory, editAreaFactory, true, true, nCmdShow, 1);
 			app.AddProjectWindow(move(projectWindow));
 		}
 

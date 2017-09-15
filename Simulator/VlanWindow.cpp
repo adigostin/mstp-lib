@@ -41,11 +41,23 @@ public:
 		_selection->GetRemovingFromSelectionEvent().AddHandler (&OnRemovingFromSelection, this);
 		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
 		_pw->GetSelectedVlanNumerChangedEvent().AddHandler (&OnSelectedVlanChanged, this);
+
+		for (Object* o : _selection->GetObjects())
+		{
+			if (auto b = dynamic_cast<Bridge*>(o); b != nullptr)
+				b->GetPropertyChangedEvent().AddHandler (&OnBridgePropertyChanged, this);
+		}
 	}
 
 private:
 	~VlanWindow()
 	{
+		for (Object* o : _selection->GetObjects())
+		{
+			if (auto b = dynamic_cast<Bridge*>(o); b != nullptr)
+				b->GetPropertyChangedEvent().RemoveHandler (&OnBridgePropertyChanged, this);
+		}
+
 		_pw->GetSelectedVlanNumerChangedEvent().RemoveHandler (&OnSelectedVlanChanged, this);
 		_selection->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
 		_selection->GetRemovingFromSelectionEvent().RemoveHandler (&OnRemovingFromSelection, this);
@@ -199,7 +211,7 @@ private:
 		}
 		else
 		{
-			auto pw = projectWindowFactory(_app, _project, selectionFactory, editAreaFactory, SW_SHOWNORMAL, vlanNumber);
+			auto pw = projectWindowFactory(_app, _project, selectionFactory, editAreaFactory, false, false, SW_SHOWNORMAL, vlanNumber);
 			_app->AddProjectWindow(move(pw));
 		}
 
