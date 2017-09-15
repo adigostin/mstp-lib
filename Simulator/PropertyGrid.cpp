@@ -195,6 +195,11 @@ void PropertyGrid::SelectObjects (Object* const* objects, size_t count)
 	for (Object* so : _selectedObjects)
 		so->GetPropertyChangedEvent().AddHandler (&OnSelectedObjectPropertyChanged, this);
 
+	ReloadProperties();
+}
+
+void PropertyGrid::ReloadProperties()
+{
 	_items.clear();
 
 	if (!_selectedObjects.empty())

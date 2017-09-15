@@ -148,7 +148,8 @@ struct __declspec(novtable) IProject : public IUnknown
 
 	struct InvalidateEvent : public Event<InvalidateEvent, void(IProject*)> { };
 	struct LoadedEvent : public Event<LoadedEvent, void(IProject*)> { };
-	struct ModifiedChangedEvent : public Event<ModifiedChangedEvent, void(IProject*)> { };
+	struct ChangedFlagChangedEvent : public Event<ChangedFlagChangedEvent, void(IProject*)> { };
+	struct ChangedEvent : public Event<ChangedEvent, void(IProject*)> { };
 
 	virtual const std::vector<std::unique_ptr<Bridge>>& GetBridges() const = 0;
 	virtual void InsertBridge (size_t index, std::unique_ptr<Bridge>&& bridge) = 0;
@@ -170,9 +171,10 @@ struct __declspec(novtable) IProject : public IUnknown
 	virtual void PauseSimulation() = 0;
 	virtual void ResumeSimulation() = 0;
 	virtual bool IsSimulationPaused() const = 0;
-	virtual bool GetModified() const = 0;
-	virtual void SetModified (bool modified) = 0;
-	virtual ModifiedChangedEvent::Subscriber GetModifiedChangedEvent() = 0;
+	virtual bool GetChangedFlag() const = 0;
+	virtual void SetChangedFlag (bool projectChangedFlag) = 0;
+	virtual ChangedFlagChangedEvent::Subscriber GetChangedFlagChangedEvent() = 0;
+	virtual ChangedEvent::Subscriber GetChangedEvent() = 0;
 
 	std::pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const;
 	Port* FindConnectedPort (Port* txPort) const;

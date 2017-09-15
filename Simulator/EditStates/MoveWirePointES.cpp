@@ -74,7 +74,7 @@ public:
 	{
 		if (_subState == WaitingSecondUp)
 		{
-			_project->SetModified(true);
+			_project->SetChangedFlag(true);
 			_subState = Done;
 		}
 	}

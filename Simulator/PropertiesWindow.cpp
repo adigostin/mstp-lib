@@ -44,10 +44,12 @@ public:
 		_projectWindow->GetSelectedVlanNumerChangedEvent().AddHandler (&OnSelectedVlanChanged, this);
 		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
 		_pg1->GetGridHeightChangedEvent().AddHandler (&OnPG1GridHeightChanged, this);
+		_project->GetChangedEvent().AddHandler (&OnProjectChanged, this);
 	}
 
 	virtual ~PropertiesWindow()
 	{
+		_project->GetChangedEvent().RemoveHandler (&OnProjectChanged, this);
 		_pg1->GetGridHeightChangedEvent().RemoveHandler (&OnPG1GridHeightChanged, this);
 		_selection->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
 		_projectWindow->GetSelectedVlanNumerChangedEvent().RemoveHandler (&OnSelectedVlanChanged, this);
@@ -97,6 +99,23 @@ public:
 		}
 	}
 
+	static void OnProjectChanged (void* callbackArg, IProject* project)
+	{
+		auto window = static_cast<PropertiesWindow*>(callbackArg);
+
+		if (window->_pg1 != nullptr)
+		{
+			window->_pg1->DiscardEditor();
+			window->_pg1->ReloadProperties();
+		}
+
+		if (window->_pg2 != nullptr)
+		{
+			window->_pg2->DiscardEditor();
+			window->_pg1->ReloadProperties();
+		}
+	}
+
 	static void OnPG1GridHeightChanged (void* callbackArg)
 	{
 		auto window = static_cast<PropertiesWindow*>(callbackArg);
@@ -121,7 +140,7 @@ public:
 	static void OnPropertyChangedInPG (void* callbackArg, const Property* property)
 	{
 		auto pw = static_cast<PropertiesWindow*>(callbackArg);
-		pw->_project->SetModified(true);
+		pw->_project->SetChangedFlag(true);
 	}
 
 	virtual optional<LRESULT> WindowProc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) override

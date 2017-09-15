@@ -57,6 +57,7 @@ public:
 	void SelectObjects (Object* const* objects, size_t count);
 	const std::vector<Object*>& GetSelectedObjects() const { return _selectedObjects; }
 	LONG GetGridHeightPixels() const;
+	void ReloadProperties();
 
 	struct PropertyChangedByUserEvent : public Event<PropertyChangedByUserEvent, void(const Property* property)> { };
 	PropertyChangedByUserEvent::Subscriber GetPropertyChangedByUserEvent() { return PropertyChangedByUserEvent::Subscriber(this); }

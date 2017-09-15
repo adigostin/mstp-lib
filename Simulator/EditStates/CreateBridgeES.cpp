@@ -39,7 +39,7 @@ public:
 			size_t insertIndex = _project->GetBridges().size();
 			_project->InsertBridge(insertIndex, move(_bridge));
 			STP_StartBridge (_project->GetBridges().back()->GetStpBridge(), GetMessageTime());
-			_project->SetModified(true);
+			_project->SetChangedFlag(true);
 			_selection->Select(b);
 		}
 

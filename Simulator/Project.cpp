@@ -17,7 +17,7 @@ class Project : public EventManager, public IProject
 	vector<unique_ptr<Wire>> _wires;
 	STP_BRIDGE_ADDRESS _nextMacAddress = { 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x80 };
 	bool _simulationPaused = false;
-	bool _modified = false;
+	bool _changedFlag = false;
 
 public:
 	virtual const vector<unique_ptr<Bridge>>& GetBridges() const override final { return _bridges; }
@@ -370,18 +370,23 @@ public:
 
 	virtual bool IsSimulationPaused() const override final { return _simulationPaused; }
 
-	virtual bool GetModified() const override final { return _modified; }
+	virtual bool GetChangedFlag() const override final { return _changedFlag; }
 
-	virtual void SetModified (bool modified) override final
+	virtual void SetChangedFlag (bool changedFlag) override final
 	{
-		if (_modified != modified)
+		if (changedFlag)
+			ChangedEvent::InvokeHandlers(this, this);
+
+		if (_changedFlag != changedFlag)
 		{
-			_modified = modified;
-			ModifiedChangedEvent::InvokeHandlers(this, this);
+			_changedFlag = changedFlag;
+			ChangedFlagChangedEvent::InvokeHandlers(this, this);
 		}
 	}
 
-	virtual ModifiedChangedEvent::Subscriber GetModifiedChangedEvent() override final { return ModifiedChangedEvent::Subscriber(this); }
+	virtual ChangedFlagChangedEvent::Subscriber GetChangedFlagChangedEvent() override final { return ChangedFlagChangedEvent::Subscriber(this); }
+
+	virtual ChangedEvent::Subscriber GetChangedEvent() override final { return ChangedEvent::Subscriber(this); }
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
 

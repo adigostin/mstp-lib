@@ -45,7 +45,7 @@ public:
 
 	virtual void OnMouseUp (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
-		_project->SetModified(true);
+		_project->SetChangedFlag(true);
 		_completed = true;
 	}
 

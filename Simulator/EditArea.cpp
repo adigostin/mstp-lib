@@ -555,7 +555,7 @@ public:
 					}
 				}
 
-				_project->SetModified(true);
+				_project->SetChangedFlag(true);
 			}
 			else if (wParam == ID_PAUSE_SIMULATION)
 			{
@@ -651,7 +651,7 @@ public:
 					{
 						size_t bi = it - _project->GetBridges().begin();
 						_project->RemoveBridge(bi);
-						_project->SetModified(true);
+						_project->SetChangedFlag(true);
 					}
 				}
 				else if (auto w = dynamic_cast<Wire*>(_selection->GetObjects().front()))
@@ -661,7 +661,7 @@ public:
 					{
 						size_t wi = it - _project->GetWires().begin();
 						_project->RemoveWire(wi);
-						_project->SetModified(true);
+						_project->SetChangedFlag(true);
 					}
 				}
 			}

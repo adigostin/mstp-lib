@@ -119,7 +119,7 @@ public:
 
 		_editWindow = editAreaFactory (app, this, _project, _selection, _hwnd, GetEditWindowRect(), _app->GetDWriteFactory());
 
-		_project->GetModifiedChangedEvent().AddHandler (&OnProjectModifiedChanged, this);
+		_project->GetChangedFlagChangedEvent().AddHandler (&OnProjectChangedFlagChanged, this);
 		_app->GetProjectWindowAddedEvent().AddHandler (&OnProjectWindowAdded, this);
 		_app->GetProjectWindowRemovedEvent().AddHandler (&OnProjectWindowRemoved, this);
 		_project->GetLoadedEvent().AddHandler (&OnProjectLoaded, this);
@@ -130,7 +130,7 @@ public:
 		_project->GetLoadedEvent().RemoveHandler (&OnProjectLoaded, this);
 		_app->GetProjectWindowRemovedEvent().RemoveHandler (&OnProjectWindowRemoved, this);
 		_app->GetProjectWindowAddedEvent().RemoveHandler (&OnProjectWindowAdded, this);
-		_project->GetModifiedChangedEvent().RemoveHandler (&OnProjectModifiedChanged, this);
+		_project->GetChangedFlagChangedEvent().RemoveHandler (&OnProjectChangedFlagChanged, this);
 
 		if (_hwnd != nullptr)
 			::DestroyWindow(_hwnd);
@@ -156,7 +156,7 @@ public:
 			thispw->SetWindowTitle();
 	}
 
-	static void OnProjectModifiedChanged (void* callbackArg, IProject* project)
+	static void OnProjectChangedFlagChanged (void* callbackArg, IProject* project)
 	{
 		auto pw = static_cast<ProjectWindow*>(callbackArg);
 		pw->SetWindowTitle();
@@ -192,7 +192,7 @@ public:
 		else
 			windowTitle << L"Untitled";
 
-		if (_project->GetModified())
+		if (_project->GetChangedFlag())
 			windowTitle << L"*";
 
 		auto& pws = _app->GetProjectWindows();
@@ -538,7 +538,7 @@ public:
 		if (FAILED(hr))
 			return;
 
-		IProjectPtr projectToLoadTo = _project->GetModified() ? projectFactory() : _project;
+		IProjectPtr projectToLoadTo = _project->GetChangedFlag() ? projectFactory() : _project;
 
 		try
 		{
@@ -578,7 +578,7 @@ public:
 			return hr;
 		}
 
-		_project->SetModified(false);
+		_project->SetChangedFlag(false);
 		return S_OK;
 	}
 
@@ -674,7 +674,7 @@ public:
 		if (count == 1)
 		{
 			// Closing last window of this project.
-			if (_project->GetModified())
+			if (_project->GetChangedFlag())
 			{
 				bool saveChosen;
 				auto hr = AskSaveDiscardCancel(L"Save changes?", &saveChosen);
