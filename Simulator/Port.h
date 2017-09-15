@@ -40,8 +40,6 @@ public:
 	IXMLDOMElementPtr Serialize (IXMLDOMDocument3* doc) const;
 	void Deserialize (IXMLDOMElement* portElement);
 
-	virtual const PropertyOrGroup* const* GetProperties() const override final;
-
 	static constexpr int HTCodeInnerOuter = 1;
 	static constexpr int HTCodeCP = 2;
 
@@ -75,5 +73,14 @@ public:
 	bool HitTestCP (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) const;
 
 	bool GetAutoEdge() const;
+	void SetAutoEdge (bool autoEdge);
+
 	bool GetAdminEdge() const;
+	void SetAdminEdge (bool adminEdge);
+
+	static const TypedProperty<bool> AutoEdge;
+	static const TypedProperty<bool> AdminEdge;
+	static const TypedProperty<bool> MacOperational;
+	static const PropertyOrGroup* const Properties[];
+	virtual const PropertyOrGroup* const* GetProperties() const override final { return Properties; }
 };

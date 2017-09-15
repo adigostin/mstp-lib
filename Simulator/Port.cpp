@@ -329,14 +329,26 @@ bool Port::GetAutoEdge() const
 	return (bool) STP_GetPortAutoEdge (_bridge->GetStpBridge(), (unsigned int) _portIndex);
 }
 
+void Port::SetAutoEdge (bool autoEdge)
+{
+	STP_SetPortAutoEdge (_bridge->GetStpBridge(), (unsigned int) _portIndex, autoEdge, (unsigned int) GetMessageTime());
+}
+
 bool Port::GetAdminEdge() const
 {
 	return (bool) STP_GetPortAdminEdge (_bridge->GetStpBridge(), (unsigned int) _portIndex);
 }
 
+void Port::SetAdminEdge (bool adminEdge)
+{
+	STP_SetPortAdminEdge (_bridge->GetStpBridge(), (unsigned int) _portIndex, adminEdge, (unsigned int) GetMessageTime());
+}
+
 static const _bstr_t PortString = "Port";
 static const _bstr_t SideString = L"Side";
 static const _bstr_t OffsetString = L"Offset";
+static const _bstr_t AutoEdgeString = L"AutoEdge";
+static const _bstr_t AdminEdgeString = L"AdminEdge";
 
 IXMLDOMElementPtr Port::Serialize (IXMLDOMDocument3* doc) const
 {
@@ -344,6 +356,8 @@ IXMLDOMElementPtr Port::Serialize (IXMLDOMDocument3* doc) const
 	auto hr = doc->createElement (PortString, &portElement); assert(SUCCEEDED(hr));
 	portElement->setAttribute (SideString, _variant_t (GetEnumName (SideNVPs, (int) _side)));
 	portElement->setAttribute (OffsetString, _variant_t (_offset));
+	portElement->setAttribute (AutoEdgeString, _variant_t (GetAutoEdge() ? L"True" : L"False"));
+	portElement->setAttribute (AdminEdgeString, _variant_t (GetAdminEdge() ? L"True" : L"False"));
 	return portElement;
 }
 
@@ -351,48 +365,51 @@ void Port::Deserialize (IXMLDOMElement* portElement)
 {
 	_variant_t value;
 	auto hr = portElement->getAttribute (SideString, &value);
-	if (SUCCEEDED(hr))
-		_side = (Side) GetEnumValue (SideNVPs, static_cast<_bstr_t>(value));
+	if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
+		_side = (Side) GetEnumValue (SideNVPs, value.bstrVal);
 
 	hr = portElement->getAttribute (OffsetString, &value);
-	if (SUCCEEDED(hr))
-		_offset = wcstof (static_cast<_bstr_t>(value), nullptr);
+	if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
+		_offset = wcstof (value.bstrVal, nullptr);
+
+	hr = portElement->getAttribute (AutoEdgeString, &value);
+	if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
+		SetAutoEdge (_wcsicmp (value.bstrVal, L"True") == 0);
+
+	hr = portElement->getAttribute (AdminEdgeString, &value);
+	if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
+		SetAdminEdge (_wcsicmp (value.bstrVal, L"True") == 0);
 }
 
-static const TypedProperty<bool> AutoEdgeProperty
+const TypedProperty<bool> Port::AutoEdge
 (
 	L"AutoEdge",
 	nullptr,
-	static_cast<TypedProperty<bool>::Getter>(&Port::GetAutoEdge),
-	nullptr
+	static_cast<TypedProperty<bool>::Getter>(&GetAutoEdge),
+	static_cast<TypedProperty<bool>::Setter>(&SetAutoEdge)
 );
 
-static const TypedProperty<bool> AdminEdgeProperty
+const TypedProperty<bool> Port::AdminEdge
 (
 	L"AdminEdge",
 	nullptr,
-	static_cast<TypedProperty<bool>::Getter>(&Port::GetAdminEdge),
-	nullptr
+	static_cast<TypedProperty<bool>::Getter>(&GetAdminEdge),
+	static_cast<TypedProperty<bool>::Setter>(&SetAdminEdge)
 );
 
-static const TypedProperty<bool> MacOperationalProperty
+const TypedProperty<bool> Port::MacOperational
 (
 	L"MAC_Operational",
 	nullptr,
-	static_cast<TypedProperty<bool>::Getter>(&Port::GetMacOperational),
+	static_cast<TypedProperty<bool>::Getter>(&GetMacOperational),
 	nullptr
 );
 
-static const PropertyOrGroup* const PortProperties[] =
+const PropertyOrGroup* const Port::Properties[] =
 {
-	&AutoEdgeProperty,
-	&AdminEdgeProperty,
-	&MacOperationalProperty,
+	&AutoEdge,
+	&AdminEdge,
+	&MacOperational,
 	nullptr
 };
-
-const PropertyOrGroup* const* Port::GetProperties() const
-{
-	return PortProperties;
-}
 
