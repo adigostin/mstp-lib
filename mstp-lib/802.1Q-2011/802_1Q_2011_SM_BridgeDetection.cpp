@@ -68,10 +68,7 @@ SM_STATE BridgeDetection_802_1Q_2011_CheckConditions (STP_BRIDGE* bridge, int gi
 	
 	if (state == NOT_EDGE)
 	{
-		// Missing info in the specs: "proposing" of WHICH tree??
-		// This is clarified in this document (Chapter 4, paragraph b): http://www.ieee802.org/1/files/public/docs2008/aq-seaman-fragile-bridges-0908.pdf
-		//
-		// We changed this condition slightly because we were looping endlessly between EDGE and NOT_EDGE.
+		// I changed this condition slightly because it was looping endlessly between EDGE and NOT_EDGE.
 		// The condition specified in 802.1Q-2011 was:
 		//
 		//	if ((!port->portEnabled && port->AdminEdge) ||
@@ -93,7 +90,7 @@ SM_STATE BridgeDetection_802_1Q_2011_CheckConditions (STP_BRIDGE* bridge, int gi
 
 	if (state == EDGE)
 	{
-		// We changed this condition slightly because we were looping endlessly between EDGE and NOT_EDGE.
+		// I changed this condition slightly because it was looping endlessly between EDGE and NOT_EDGE.
 		// The condition specified in 802.1Q-2011 was:
 		//
 		// if (((!port->portEnabled || !port->AutoEdge) && !port->AdminEdge) || !port->operEdge)
@@ -132,10 +129,17 @@ void BridgeDetection_802_1Q_2011_InitState (STP_BRIDGE* bridge, int givenPort, i
 	if (state == EDGE)
 	{
 		port->operEdge = true;
+		port->isolate = false;
 	}
 	else if (state == NOT_EDGE)
 	{
 		port->operEdge = false;
+		port->isolate = false;
+	}
+	else if (state == ISOLATED)
+	{
+		port->operEdge = false;
+		port->isolate = true;
 	}
 	else
 		assert (false);
