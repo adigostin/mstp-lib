@@ -73,4 +73,5 @@ const EnumProperty PortTree::Priority
 const PropertyOrGroup* const PortTree::Properties[] =
 {
 	&Priority,
+	nullptr
 };
