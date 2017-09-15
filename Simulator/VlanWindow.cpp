@@ -206,8 +206,8 @@ private:
 			{ return (pw->GetProject() == _pw->GetProject()) && (pw->GetSelectedVlanNumber() == vlanNumber); });
 		if (it != pws.end())
 		{
-			// bring to front and flash
-			assert(false); // not implemented
+			::BringWindowToTop (it->GetInterfacePtr()->GetHWnd());
+			::FlashWindow (it->GetInterfacePtr()->GetHWnd(), FALSE);
 		}
 		else
 		{
