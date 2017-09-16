@@ -18,14 +18,14 @@ Visual Studio 2017 version 15.3.
 
 ### Embedded Application Example
 The repository includes sources for a sample RSTP implementation
-on an embedded device. This highlights the platform-specific
+on an embedded device: a project for IAR Embedded Workbench 6.50,
+for a device with an LPC2000 microcontroller and an IP175C
+switch chip.
+
+This sample highlights the platform-specific
 code needed by the library -- mostly code that writes to
 the hardware registers of the switch chip. This is typically
 a few dozen lines of code spread over several functions.
-
-This example is a project for IAR Embedded Workbench 6.50, for a
-device with an LPC2000 microcontroller and an IP175C
-switch chip.
 
 You're going to have to write the platform-specific code
 for your particular switch IC. Drop me a message at
