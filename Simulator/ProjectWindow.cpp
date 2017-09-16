@@ -102,6 +102,9 @@ public:
 			::GetWindowRect(_hwnd, &_restoreBounds);
 		::ShowWindow (_hwnd, nCmdShow);
 
+		if (auto recentFiles = GetRecentFileList(); !recentFiles.empty())
+			AddRecentFileMenuItems(recentFiles);
+
 		const RECT clientRect = { 0, 0, _clientSize.cx, _clientSize.cy };
 
 		if (showPropertiesWindow)
@@ -563,7 +566,10 @@ public:
 
 		if (((HIWORD(wParam) == 0) || (HIWORD(wParam) == 1)) && (LOWORD(wParam) == ID_FILE_OPEN))
 		{
-			Open();
+			wstring openPath;
+			HRESULT hr = TryChooseFilePath (OpenOrSave::Open, _hwnd, nullptr, openPath);
+			if (SUCCEEDED(hr))
+				Open(openPath.c_str());
 			return 0;
 		}
 
@@ -587,6 +593,20 @@ public:
 			return 0;
 		}
 
+		if ((wParam >= ID_RECENT_FILE_FIRST) && (wParam <= ID_RECENT_FILE_LAST))
+		{
+			UINT recentFileIndex = wParam - ID_RECENT_FILE_FIRST;
+			auto mainMenu = ::GetMenu(_hwnd);
+			auto fileMenu = ::GetSubMenu (mainMenu, 0);
+			int charCount = ::GetMenuString (fileMenu, wParam, nullptr, 0, MF_BYCOMMAND);
+			if (charCount > 0)
+			{
+				auto path = make_unique<wchar_t[]>(charCount + 1);
+				::GetMenuString (fileMenu, wParam, path.get(), charCount + 1, MF_BYCOMMAND);
+				Open(path.get());
+			}
+		}
+
 		if (wParam == ID_HELP_ABOUT)
 		{
 			wstring text (_app->GetAppName());
@@ -599,18 +619,13 @@ public:
 		return nullopt;
 	}
 
-	void Open()
+	void Open (const wchar_t* openPath)
 	{
-		wstring openPath;
-		HRESULT hr = TryChooseFilePath (OpenOrSave::Open, _hwnd, nullptr, openPath);
-		if (FAILED(hr))
-			return;
-
 		IProjectPtr projectToLoadTo = _project->GetChangedFlag() ? projectFactory() : _project;
 
 		try
 		{
-			projectToLoadTo->Load(openPath.c_str());
+			projectToLoadTo->Load(openPath);
 		}
 		catch (const exception& ex)
 		{
@@ -847,6 +862,90 @@ public:
 	{
 		_workQueue.push (move(work));
 		::PostMessage (_hwnd, WM_WORK, 0, 0);
+	}
+
+	_COM_SMARTPTR_TYPEDEF(IApplicationDocumentLists, __uuidof(IApplicationDocumentLists));
+	_COM_SMARTPTR_TYPEDEF(IObjectArray, __uuidof(IObjectArray));
+	_COM_SMARTPTR_TYPEDEF(IShellItem2, __uuidof(IShellItem2));
+	
+	static vector<wstring> GetRecentFileList()
+	{
+		// We ignore errors in this particular function.
+
+		vector<wstring> fileList;
+
+		IApplicationDocumentListsPtr docList;
+		auto hr = CoCreateInstance (CLSID_ApplicationDocumentLists, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IApplicationDocumentLists), (void**) &docList);
+		if (FAILED(hr))
+			return fileList;
+
+		// This function retrieves the list created via calls to SHAddToRecentDocs.
+		// We use the standard file dialogs througout the application, which call SHAddToRecentDocs for us.
+		IObjectArrayPtr objects;
+		hr = docList->GetList(APPDOCLISTTYPE::ADLT_RECENT, 16, __uuidof(IObjectArray), (void**) &objects);
+		if (FAILED(hr))
+			return fileList;
+
+		UINT count;
+		hr = objects->GetCount(&count);
+		if (FAILED(hr))
+			return fileList;
+
+		for (UINT i = 0; i < count; i++)
+		{
+			IShellItem2Ptr si;
+			hr = objects->GetAt(i, __uuidof(IShellItem2), (void**) &si);
+			if (SUCCEEDED(hr))
+			{
+				wchar_t* path = nullptr;
+				hr = si->GetDisplayName(SIGDN_FILESYSPATH, &path);
+				if (SUCCEEDED(hr))
+				{
+					fileList.push_back(path);
+					CoTaskMemFree(path);
+				}
+			}
+		}
+
+		return fileList;
+	}
+
+	int GetMenuPosFromID (HMENU menu, UINT id)
+	{
+		auto itemCount = ::GetMenuItemCount(menu);
+		for (int pos = 0; pos < itemCount; pos++)
+		{
+			if (::GetMenuItemID (menu, pos) == id)
+				return pos;
+		}
+
+		return -1;
+	}
+
+	void AddRecentFileMenuItems (const vector<wstring>& recentFiles)
+	{
+		auto mainMenu = ::GetMenu(_hwnd);
+		auto fileMenu = ::GetSubMenu (mainMenu, 0);
+		auto itemCount = ::GetMenuItemCount(fileMenu);
+		int pos = GetMenuPosFromID (fileMenu, ID_FILE_RECENT);
+		if (pos != -1)
+		{
+			::RemoveMenu (fileMenu, pos, MF_BYPOSITION);
+
+			MENUITEMINFO mii = { sizeof(mii) };
+			mii.fMask = MIIM_STRING | MIIM_ID;
+			mii.wID = ID_RECENT_FILE_FIRST;
+
+			for (auto& file : recentFiles)
+			{
+				mii.dwTypeData = const_cast<wchar_t*>(file.c_str());
+				::InsertMenuItem (fileMenu, pos, TRUE, &mii);
+				pos++;
+				mii.wID++;
+				if (mii.wID > ID_RECENT_FILE_LAST)
+					break;
+			}
+		}
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }

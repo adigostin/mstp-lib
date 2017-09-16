@@ -75,15 +75,8 @@ public:
 		ss << L"SOFTWARE\\" << CompanyName << L"\\" << ::AppName << L"\\" << ::AppVersionString;
 		_regKeyPath = ss.str();
 
-		bool tryDebugFirst = false;
-		#ifdef _DEBUG
-		tryDebugFirst = true;
-		#endif
-
-		auto hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof (IDWriteFactory), reinterpret_cast<IUnknown**>(&_dWriteFactory)); assert(SUCCEEDED(hr));
-
-		//IWICImagingFactory2Ptr wicFactory;
-		//hr = CoCreateInstance(CLSID_WICImagingFactory2, NULL, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory2), (void**)&wicFactory); assert(SUCCEEDED(hr));
+		auto hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof (IDWriteFactory), reinterpret_cast<IUnknown**>(&_dWriteFactory));
+		assert(SUCCEEDED(hr));
 	}
 
 	virtual HINSTANCE GetHInstance() const override final { return _hInstance; }
@@ -165,12 +158,62 @@ public:
 	}
 };
 
+static void RegisterApplicationAndFileTypes()
+{
+	auto exePath = make_unique<wchar_t[]>(MAX_PATH);
+	DWORD dwRes = GetModuleFileName (nullptr, exePath.get(), MAX_PATH); assert(dwRes);
+	wstringstream ss;
+	ss << L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\" << PathFindFileName(exePath.get());
+	auto appPathKeyName = ss.str();
+
+	bool notifyShell = false;
+	auto buffer = make_unique<wchar_t[]>(MAX_PATH);
+	DWORD cbData = MAX_PATH;
+	auto ls = RegGetValue (HKEY_CURRENT_USER, appPathKeyName.c_str(), nullptr, RRF_RT_REG_SZ, nullptr, buffer.get(), &cbData);
+	if ((ls != ERROR_SUCCESS) || (_wcsicmp (buffer.get(), exePath.get()) != 0))
+	{
+		RegSetValue (HKEY_CURRENT_USER, appPathKeyName.c_str(), REG_SZ, exePath.get(), 0);
+		notifyShell = true;
+	}
+
+	static constexpr wchar_t ProgID[] = L"AGO.StpFile.1";
+	ss.str(L"");
+	ss << L"SOFTWARE\\Classes\\" << ProgID << L"\\shell\\open\\command";
+	auto progIdKeyName = ss.str();
+	ss.str(L"");
+	ss << L"\"" << exePath.get() << L"\" \"%%1\"";
+	auto progIdKeyValue = ss.str();
+	cbData = MAX_PATH;
+	ls = RegGetValue (HKEY_CURRENT_USER, progIdKeyName.c_str(), nullptr, RRF_RT_REG_SZ, nullptr, buffer.get(), &cbData);
+	if ((ls != ERROR_SUCCESS) || (_wcsicmp (buffer.get(), progIdKeyValue.c_str()) != 0))
+	{
+		RegSetValue (HKEY_CURRENT_USER, progIdKeyName.c_str(), REG_SZ, progIdKeyValue.c_str(), 0);
+		notifyShell = true;
+	}
+
+	ss.str(L"");
+	ss << L"SOFTWARE\\Classes\\" << FileExtensionWithDot;
+	auto fileExtKeyName = ss.str();
+	cbData = MAX_PATH;
+	ls = RegGetValue (HKEY_CURRENT_USER, fileExtKeyName.c_str(), nullptr, RRF_RT_REG_SZ, nullptr, buffer.get(), &cbData);
+	if ((ls != ERROR_SUCCESS) || (_wcsicmp (buffer.get(), ProgID) != 0))
+	{
+		RegSetValue (HKEY_CURRENT_USER, fileExtKeyName.c_str(), REG_SZ, ProgID, 0);
+		notifyShell = true;
+	}
+
+	if (notifyShell)
+		SHChangeNotify (SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
+}
+
 int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
 	int tmp = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
 	_CrtSetDbgFlag(tmp | _CRTDBG_LEAK_CHECK_DF);
 
 	HRESULT hr = CoInitialize(0);
+
+	RegisterApplicationAndFileTypes();
 
 	int processExitValue;
 	{

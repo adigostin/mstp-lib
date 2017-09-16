@@ -40,6 +40,9 @@
 #define ID_HELP_ABOUT                   32792
 #define ID_PAUSE_SIMULATION             32793
 #define ID_RESUME_SIMULATION            32794
+#define ID_FILE_RECENT                  32795
+#define ID_RECENT_FILE_FIRST            32796
+#define ID_RECENT_FILE_LAST             32815
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -48,7 +51,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        136
-#define _APS_NEXT_COMMAND_VALUE         32795
+#define _APS_NEXT_COMMAND_VALUE         32816
 #define _APS_NEXT_CONTROL_VALUE         1025
 #define _APS_NEXT_SYMED_VALUE           110
 #endif

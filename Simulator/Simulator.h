@@ -16,6 +16,9 @@ static constexpr unsigned char DefaultConfigTableDigest[16] = { 0xAC, 0x36, 0x17
 
 static constexpr unsigned int MaxVlanNumber = 16; // 4094 must be maximum
 
+static constexpr wchar_t FileExtensionWithoutDot[] = L"stp";
+static constexpr wchar_t FileExtensionWithDot[] = L".stp";
+
 enum class MouseButton
 {
 	None = 0,
