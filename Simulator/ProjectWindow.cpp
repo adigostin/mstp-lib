@@ -621,7 +621,17 @@ public:
 
 	void Open (const wchar_t* openPath)
 	{
-		IProjectPtr projectToLoadTo = _project->GetChangedFlag() ? projectFactory() : _project;
+		for (auto& pw : _app->GetProjectWindows())
+		{
+			if (_wcsicmp (pw->GetProject()->GetFilePath().c_str(), openPath) == 0)
+			{
+				::BringWindowToTop (pw->GetHWnd());
+				::FlashWindow (pw->GetHWnd(), FALSE);
+				return;
+			}
+		}
+
+		IProjectPtr projectToLoadTo = (_project->GetBridges().empty() && _project->GetWires().empty()) ? _project : projectFactory();
 
 		try
 		{
