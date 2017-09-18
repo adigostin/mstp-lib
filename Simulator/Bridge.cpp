@@ -15,6 +15,7 @@ static constexpr UINT WM_PACKET_RECEIVED   = WM_APP + 3;
 
 static constexpr uint8_t BpduDestAddress[6] = { 1, 0x80, 0xC2, 0, 0, 0 };
 
+#pragma region Bridge::HelperWindow
 Bridge::HelperWindow Bridge::_helperWindow;
 
 Bridge::HelperWindow::HelperWindow()
@@ -61,6 +62,7 @@ LRESULT CALLBACK Bridge::HelperWindow::SubclassProc (HWND hWnd, UINT uMsg, WPARA
 
 	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
 }
+#pragma endregion
 
 Bridge::Bridge (unsigned int portCount, unsigned int mstiCount, const unsigned char macAddress[6])
 {
@@ -93,13 +95,19 @@ Bridge::Bridge (unsigned int portCount, unsigned int mstiCount, const unsigned c
 	_helperWindow.GetLinkPulseEvent().AddHandler (&OnLinkPulseTick, this);
 
 	for (auto& port : _ports)
+	{
 		port->GetInvalidateEvent().AddHandler(&OnPortInvalidate, this);
+		port->GetPropertyChangedEvent().AddHandler(&OnPortPropertyChanged, this);
+	}
 }
 
 Bridge::~Bridge()
 {
 	for (auto& port : _ports)
+	{
+		port->GetPropertyChangedEvent().RemoveHandler(&OnPortPropertyChanged, this);
 		port->GetInvalidateEvent().RemoveHandler(&OnPortInvalidate, this);
+	}
 
 	_helperWindow.GetLinkPulseEvent().RemoveHandler (&OnLinkPulseTick, this);
 
@@ -107,6 +115,13 @@ Bridge::~Bridge()
 	_oneSecondTimerHandle = nullptr;
 
 	STP_DestroyBridge (_stpBridge);
+}
+
+// static
+void Bridge::OnPortPropertyChanged (void* callbackArg, Object* object, const Property* property)
+{
+	auto bridge = static_cast<Bridge*>(callbackArg);
+	PropertyChangedEvent::InvokeHandlers (bridge, object, property);
 }
 
 //static

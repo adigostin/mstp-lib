@@ -35,9 +35,11 @@ class Port : public RenderableObject
 
 	static constexpr unsigned int MissedLinkPulseCounterMax = 5;
 	unsigned int _missedLinkPulseCounter = MissedLinkPulseCounterMax; // _missedLinkPulseCounter equal to MissedLinkPulseCounterMax means macOperational=false
+	static void OnTreePropertyChanged (void* callbackArg, Object* o, const Property* property);
 
 public:
 	Port (Bridge* bridge, unsigned int portIndex, Side side, float offset);
+	~Port();
 
 	IXMLDOMElementPtr Serialize (IXMLDOMDocument3* doc) const;
 	HRESULT Deserialize (IXMLDOMElement* portElement);

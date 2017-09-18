@@ -7,12 +7,12 @@ class PortTree : public Object
 {
 	using base = Object;
 
-	Port* const _parent;
+	Port* const _port;
 	unsigned int const _treeIndex;
 
 public:
-	PortTree (Port* parent, unsigned int treeIndex)
-		: _parent(parent), _treeIndex(treeIndex)
+	PortTree (Port* port, unsigned int treeIndex)
+		: _port(port), _treeIndex(treeIndex)
 	{ }
 
 	HRESULT Serialize (IXMLDOMDocument3* doc, IXMLDOMElementPtr& elementOut) const;

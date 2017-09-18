@@ -123,6 +123,7 @@ private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
 	static void OnWmOneSecondTimer (WPARAM wParam, LPARAM lParam);
 	static void OnPortInvalidate (void* callbackArg, Object* object);
+	static void OnPortPropertyChanged (void* callbackArg, Object* object, const Property* property);
 	static void OnLinkPulseTick(void* callbackArg);
 	static void OnWmPacketReceived (WPARAM wParam, LPARAM lParam);
 	void ProcessReceivedPackets();
