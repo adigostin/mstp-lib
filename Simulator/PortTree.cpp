@@ -33,12 +33,16 @@ HRESULT PortTree::Deserialize (IXMLDOMElement* portTreeElement)
 
 int PortTree::GetPriority() const
 {
-	return STP_GetPortPriority (_parent->GetBridge()->GetStpBridge(), _parent->GetPortIndex(), _treeIndex);
+	return STP_GetPortPriority (_port->GetBridge()->GetStpBridge(), _port->GetPortIndex(), _treeIndex);
 }
 
 void PortTree::SetPriority (int priority)
 {
-	STP_SetPortPriority (_parent->GetBridge()->GetStpBridge(), _parent->GetPortIndex(), _treeIndex, (unsigned char) priority, GetMessageTime());
+	if (STP_GetPortPriority (_port->GetBridge()->GetStpBridge(), _port->GetPortIndex(), _treeIndex) != priority)
+	{
+		STP_SetPortPriority (_port->GetBridge()->GetStpBridge(), _port->GetPortIndex(), _treeIndex, (unsigned char) priority, GetMessageTime());
+		PropertyChangedEvent::InvokeHandlers(this, this, &Priority);
+	}
 }
 
 static const NVP PortPrioNVPs[] =
@@ -63,7 +67,7 @@ static const NVP PortPrioNVPs[] =
 
 const EnumProperty PortTree::Priority
 (
-	L"Bridge Priority",
+	L"PortPriority",
 	nullptr,//[](const std::vector<Object*>& objs) -> wstring
 	static_cast<EnumProperty::Getter>(&GetPriority),
 	static_cast<EnumProperty::Setter>(&SetPriority),
