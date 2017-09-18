@@ -367,8 +367,7 @@ void Bridge::SetBridgeAddressFromWString (std::wstring str)
 
 std::array<uint8_t, 6> Bridge::GetPortAddress (size_t portIndex) const
 {
-	std::array<uint8_t, 6> pa;
-	memcpy (pa.data(), STP_GetBridgeAddress(_stpBridge)->bytes, 6);
+	std::array<uint8_t, 6> pa = GetBridgeAddress();
 	pa[5]++;
 	if (pa[5] == 0)
 	{
@@ -382,6 +381,13 @@ std::array<uint8_t, 6> Bridge::GetPortAddress (size_t portIndex) const
 	}
 
 	return pa;
+}
+
+std::array<uint8_t, 6> Bridge::GetBridgeAddress() const
+{
+	std::array<uint8_t, 6> address;
+	memcpy (address.data(), STP_GetBridgeAddress(_stpBridge)->bytes, 6);
+	return address;
 }
 
 static const _bstr_t BridgeString = "Bridge";

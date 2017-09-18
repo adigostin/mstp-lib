@@ -98,6 +98,7 @@ public:
 	bool IsPowered() const { return _powered; }
 	const std::vector<std::unique_ptr<BridgeLogLine>>& GetLogLines() const { return _logLines; }
 	std::array<uint8_t, 6> GetPortAddress (size_t portIndex) const;
+	std::array<uint8_t, 6> GetBridgeAddress() const;
 
 	IXMLDOMElementPtr Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) const;
 	static std::unique_ptr<Bridge> Deserialize (IXMLDOMElement* element);

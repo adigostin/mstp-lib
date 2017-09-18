@@ -311,7 +311,7 @@ public:
 		rt->SetAntialiasMode(oldaa);
 	}
 
-	void RenderHint (ID2D1RenderTarget* rt, float centerX, float y, const wchar_t* text, bool smallFont = false, bool alignBottom = false) const
+	virtual void RenderHint (ID2D1RenderTarget* rt, float centerX, float y, const wchar_t* text, bool smallFont = false, bool alignBottom = false) const override final
 	{
 		float leftRightPadding = 3;
 		float topBottomPadding = 1.5f;

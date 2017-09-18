@@ -46,12 +46,35 @@ public:
 		_completed = true;
 	}
 
+	void RecreateBridge (unsigned int numberOfPorts)
+	{
+		auto centerX = _bridge->GetLeft() + _bridge->GetWidth() / 2;
+		auto centerY = _bridge->GetTop() + _bridge->GetHeight() / 2;
+		_bridge.reset (new Bridge(numberOfPorts, _bridge->GetMstiCount(), _bridge->GetBridgeAddress().data()));
+		_bridge->SetLocation (centerX - _bridge->GetWidth() / 2, centerY - _bridge->GetHeight() / 2);
+		::InvalidateRect (_pw->GetEditArea()->GetHWnd(), nullptr, FALSE);
+	}
+
 	virtual std::optional<LRESULT> OnKeyDown (UINT virtualKey, UINT modifierKeys) override final
 	{
 		if (virtualKey == VK_ESCAPE)
 		{
 			_completed = true;
 			::InvalidateRect (_pw->GetEditArea()->GetHWnd(), nullptr, FALSE);
+			return 0;
+		}
+
+		if ((virtualKey == VK_SUBTRACT) || (virtualKey == VK_OEM_MINUS))
+		{
+			if (_bridge->GetPortCount() > 2)
+				RecreateBridge (_bridge->GetPortCount() - 1);
+			return 0;
+		}
+
+		if ((virtualKey == VK_ADD) || (virtualKey == VK_OEM_PLUS))
+		{
+			if (_bridge->GetPortCount() < 4095)
+				RecreateBridge (_bridge->GetPortCount() + 1);
 			return 0;
 		}
 
@@ -67,6 +90,10 @@ public:
 			rt->SetTransform(_pw->GetEditArea()->GetZoomTransform());
 			_bridge->Render (rt, _pw->GetEditArea()->GetDrawingObjects(), _pw->GetSelectedVlanNumber(), ColorF(ColorF::LightGreen));
 			rt->SetTransform(&oldtr);
+
+			auto centerX = _bridge->GetLeft() + _bridge->GetWidth() / 2;
+			auto centerY = _bridge->GetTop() + _bridge->GetHeight() / 2;
+			_editArea->RenderHint (rt, centerX, centerY + 15, L"Press + or - to change the number of ports.", true);
 		}
 	}
 

@@ -91,6 +91,7 @@ struct __declspec(novtable) IEditArea : public IWin32Window
 	virtual void EnterState (std::unique_ptr<EditState>&& state) = 0;
 	virtual Port* GetCPAt (D2D1_POINT_2F dLocation, float tolerance) const = 0;
 	virtual void RenderSnapRect (ID2D1RenderTarget* rt, D2D1_POINT_2F wLocation) const = 0;
+	virtual void RenderHint (ID2D1RenderTarget* rt, float centerX, float y, const wchar_t* text, bool smallFont = false, bool alignBottom = false) const = 0;
 	virtual D2D1::Matrix3x2F GetZoomTransform() const = 0;
 };
 using IEditAreaPtr = _com_ptr_t<IEditArea>;
