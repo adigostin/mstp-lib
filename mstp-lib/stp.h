@@ -198,16 +198,23 @@ void STP_GetRootTimes (const struct STP_BRIDGE* bridge,
 unsigned int STP_IsCistRoot (const struct STP_BRIDGE* bridge);
 unsigned int STP_IsRegionalRoot (const struct STP_BRIDGE* bridge, unsigned int treeIndex);
 
-// dot1dStpPortAdminPathCost
-// ieee8021SpanningTreeRstpPortAdminPathCost
-// ieee8021MstpCistPortAdminPathCost
-void STP_SetAdminPortPathCost (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int adminPathCost, unsigned int debugTimestamp);
-unsigned int STP_GetAdminPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex);
+unsigned int STP_GetDetectedPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
-// dot1dStpPortPathCost
-// ieee8021SpanningTreePortPathCost
-// ieee8021MstpCistPortCistPathCost
-unsigned int STP_GetPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex);
+// References are to 802.1Q-2014.
+// for treeIndex = 0: dot1dStpPortAdminPathCost / ieee8021SpanningTreeRstpPortAdminPathCost / ieee8021MstpCistPortAdminPathCost (ExternalPortPathCost)
+// for treeIndex > 0: ieee8021MstpPortAdminPathCost (13.27.33 InternalPortPathCost)
+void STP_SetAdminPortPathCost (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int adminPathCost, unsigned int debugTimestamp);
+unsigned int STP_GetAdminPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
+
+// References are to 802.1Q-2014.
+// for treeIndex = 0: dot1dStpPortPathCost / ieee8021SpanningTreePortPathCost / ieee8021MstpCistPortCistPathCost (ExternalPortPathCost)
+// for treeIndex > 0: ieee8021MstpPortPathCost (13.27.33 InternalPortPathCost)
+unsigned int STP_GetPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned treeIndex);
+
+// References are to 802.1Q-2014.
+// for treeIndex = 0: ieee8021MstpCistPathCost - path cost to CIST Regional Root (13.9 d) CIST Internal Root Path Cost)
+// for treeIndex > 0: ieee8021MstpRootPathCost - path cost to Root Bridge for the MSTI (13.27.20 designatedPriority)
+unsigned int STP_GetPathCostToRootBridge (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned treeIndex);
 
 void  STP_SetApplicationContext (struct STP_BRIDGE* bridge, void* applicationContext);
 void* STP_GetApplicationContext (const struct STP_BRIDGE* bridge);

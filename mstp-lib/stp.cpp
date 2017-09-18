@@ -129,7 +129,6 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 		port->AutoEdge = 1;
 		port->enableBPDUrx = true;
 		port->enableBPDUtx = true;
-		port->ExternalPortPathCost = 200000;
 	}
 
 	bridge->receivedBpduContent = NULL; // see comment at declaration of receivedBpduContent
@@ -303,10 +302,13 @@ void STP_OnPortEnabled (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int
 
 	port->detectedPointToPointMAC = detectedPointToPointMAC;
 
-	if (port->AdminExternalPortPathCost != 0)
-		port->ExternalPortPathCost = port->AdminExternalPortPathCost;
+	port->detectedPortPathCost = GetDefaultPortPathCost(speedMegabitsPerSecond);
+	if (port->adminExternalPortPathCost != 0)
+		port->ExternalPortPathCost = port->adminExternalPortPathCost;
 	else
-		port->ExternalPortPathCost = GetDefaultPortPathCost(speedMegabitsPerSecond);
+		port->ExternalPortPathCost = port->detectedPortPathCost;
+
+// TODO: calculated also InternalPortPathCost
 
 	// If STP_OnPortEnabled is called for the first time after software startup,
 	// and if STP_SetPortAdminP2P was not yet called or called with AUTO,
@@ -331,6 +333,10 @@ void STP_OnPortDisabled (STP_BRIDGE* bridge, unsigned int portIndex, unsigned in
 	// We allow disabling an already disabled port.
 	if (bridge->ports [portIndex]->portEnabled)
 	{
+		bridge->ports [portIndex]->ExternalPortPathCost = 0;
+
+// TODO: clear also InternalPortPathCost
+
 		bridge->ports [portIndex]->portEnabled = false;
 
 		if (bridge->started)
@@ -1220,18 +1226,77 @@ bool STP_MST_CONFIG_ID::operator< (const STP_MST_CONFIG_ID& rhs) const
 
 // ============================================================================
 
-void STP_SetAdminPortPathCost (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int adminPathCost, unsigned int debugTimestamp)
+unsigned int STP_GetDetectedPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex)
 {
-	assert(false); // not implemented
+	return bridge->ports[portIndex]->detectedPortPathCost;
 }
 
-unsigned int STP_GetAdminPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex)
+void STP_SetAdminPortPathCost (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int adminPathCost, unsigned int timestamp)
 {
-	assert(false); // not implemented
-	return 0;
+	LOG (bridge, -1, -1, "{T}: Setting Port {D} Admin {S} Port Path Cost to {D}...",
+		 timestamp, 1 + portIndex, (treeIndex == CIST_INDEX) ? "External" : "MSTI", adminPathCost);
+
+	unsigned int old = STP_GetAdminPortPathCost (bridge, portIndex, treeIndex);
+	if (old == adminPathCost)
+	{
+		LOG (bridge, -1, -1, " nothing changed.\r\n");
+	}
+	else
+	{
+		LOG (bridge, -1, -1, "\r\n");
+
+		PORT* port = bridge->ports[portIndex];
+
+		if (treeIndex == CIST_INDEX)
+		{
+			port->adminExternalPortPathCost = adminPathCost;
+			if (port->adminExternalPortPathCost != 0)
+				port->ExternalPortPathCost = port->adminExternalPortPathCost;
+			else
+				port->ExternalPortPathCost = port->detectedPortPathCost;
+
+			LOG (bridge, -1, -1, "  ExternalPortPathCost is now {D}.\r\n", port->ExternalPortPathCost);
+
+			if (bridge->started)
+				RecomputePrioritiesAndPortRoles (bridge, CIST_INDEX, timestamp);
+
+			bridge->callbacks.onConfigChanged(bridge, timestamp);
+		}
+		else
+		{
+			assert(false);
+		}
+	}
+	
+	LOG (bridge, -1, -1, "------------------------------------\r\n");
+	FLUSH_LOG (bridge);
 }
 
-unsigned int STP_GetPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex)
+unsigned int STP_GetAdminPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
+{
+	PORT* port = bridge->ports[portIndex];
+	if (treeIndex == CIST_INDEX)
+		return port->adminExternalPortPathCost;
+	else
+	{
+		assert(false); // not implemented
+		return 0;
+	}
+}
+
+unsigned int STP_GetPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned treeIndex)
+{
+	PORT* port = bridge->ports[portIndex];
+	if (treeIndex == CIST_INDEX)
+		return port->ExternalPortPathCost;
+	else
+	{
+		assert(false); // not implemented
+		return 0;
+	}
+}
+
+unsigned int STP_GetPathCostToRootBridge (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned treeIndex)
 {
 	assert(false); // not implemented
 	return 0;

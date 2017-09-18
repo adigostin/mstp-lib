@@ -646,6 +646,23 @@ void PropertyGrid::ProcessLButtonUp (DWORD modifierKeys, POINT pt)
 					}
 				});
 			}
+			else if (auto u32pd = dynamic_cast<const TypedProperty<uint32_t>*>(pd); u32pd != nullptr)
+			{
+				auto value = GetValueText(pd);
+				ShowStringEditor (pd, item, pt, value.c_str(), [this, u32pd, &changed](const wstring& newStr)
+				{
+					uint32_t newVal = (uint32_t) std::stoul(newStr);
+
+					for (Object* so : _selectedObjects)
+					{
+						if ((so->*(u32pd->_getter))() != newVal)
+						{
+							(so->*(u32pd->_setter)) (newVal);
+							changed = true;
+						}
+					}
+				});
+			}
 			else
 				MessageBox (GetHWnd(), item->pd->_name, L"aaaa", 0);
 

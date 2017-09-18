@@ -83,9 +83,17 @@ public:
 	bool GetAdminEdge() const;
 	void SetAdminEdge (bool adminEdge);
 
+	unsigned int GetDetectedPortPathCost() const;
+	unsigned int GetAdminExternalPortPathCost() const;
+	void SetAdminExternalPortPathCost(unsigned int adminExternalPortPathCost);
+	unsigned int GetExternalPortPathCost() const;
+
 	static const TypedProperty<bool> AutoEdge;
 	static const TypedProperty<bool> AdminEdge;
 	static const TypedProperty<bool> MacOperational;
+	static const TypedProperty<unsigned int> DetectedPortPathCost;
+	static const TypedProperty<unsigned int> AdminExternalPortPathCost;
+	static const TypedProperty<unsigned int> ExternalPortPathCost;
 	static const PropertyOrGroup* const Properties[];
 	virtual const PropertyOrGroup* const* GetProperties() const override final { return Properties; }
 };

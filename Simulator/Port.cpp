@@ -439,6 +439,28 @@ HRESULT Port::Deserialize (IXMLDOMElement* portElement)
 	return S_OK;
 }
 
+unsigned int Port::GetDetectedPortPathCost() const
+{
+	return STP_GetDetectedPortPathCost(_bridge->GetStpBridge(), _portIndex);
+}
+
+unsigned int Port::GetAdminExternalPortPathCost() const
+{
+	return STP_GetAdminPortPathCost (_bridge->GetStpBridge(), _portIndex, 0);
+}
+
+void Port::SetAdminExternalPortPathCost(unsigned int adminExternalPortPathCost)
+{
+	STP_SetAdminPortPathCost (_bridge->GetStpBridge(), _portIndex, 0, adminExternalPortPathCost, GetMessageTime());
+	// TODO: invoke PropertyChangedEvent
+}
+
+unsigned int Port::GetExternalPortPathCost() const
+{
+	unsigned int treeIndex = 0; // CIST
+	return STP_GetPortPathCost (_bridge->GetStpBridge(), _portIndex, treeIndex);
+}
+
 const TypedProperty<bool> Port::AutoEdge
 (
 	L"AutoEdge",
@@ -463,11 +485,32 @@ const TypedProperty<bool> Port::MacOperational
 	nullptr
 );
 
+const TypedProperty<unsigned int> Port::DetectedPortPathCost (
+	L"DetectedPortPathCost",
+	nullptr,
+	static_cast<TypedProperty<unsigned int>::Getter>(&GetDetectedPortPathCost),
+	nullptr);
+
+const TypedProperty<unsigned int> Port::AdminExternalPortPathCost (
+	L"AdminExternalPortPathCost",
+	nullptr,
+	static_cast<TypedProperty<unsigned int>::Getter>(&GetAdminExternalPortPathCost),
+	static_cast<TypedProperty<unsigned int>::Setter>(&SetAdminExternalPortPathCost));
+
+const TypedProperty<unsigned int> Port::ExternalPortPathCost (
+	L"ExternalPortPathCost",
+	nullptr,
+	static_cast<TypedProperty<unsigned int>::Getter>(&GetExternalPortPathCost),
+	nullptr);
+
 const PropertyOrGroup* const Port::Properties[] =
 {
 	&AutoEdge,
 	&AdminEdge,
 	&MacOperational,
+	&DetectedPortPathCost,
+	&AdminExternalPortPathCost,
+	&ExternalPortPathCost,
 	nullptr
 };
 

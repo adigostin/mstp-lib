@@ -2,8 +2,6 @@
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
 // Copyright (c) 2011-2017 Adi Gostin, distributed under Apache License v2.0.
 
-#define _CRT_SECURE_NO_WARNINGS
-
 #include "stp_bridge.h"
 #include "stp_log.h"
 #include <stddef.h>

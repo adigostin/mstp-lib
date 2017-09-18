@@ -104,8 +104,13 @@ struct PORT
 	// If MSTP is implemented there is one instance per port, applicable to the CIST and to all MSTIs, of the following variable(s):
 	bool	rcvdInternal;	// 13.25.x) - 13.25.40
 
-	unsigned int AdminExternalPortPathCost; // Not in the standard. Stores ieee8021SpanningTreeRstpPortAdminPathCost / ieee8021MstpCistPortAdminPathCost
+	// Not in the standard. Stores the path cost calculated in STP_OnPortEnabled, in case the user later resets the admin cost.
+	// See also detectedPointToPointMAC.
+	unsigned int detectedPortPathCost;
 
+	// Not in the standard. Stores ieee8021SpanningTreeRstpPortAdminPathCost / ieee8021MstpCistPortAdminPathCost
+	unsigned int adminExternalPortPathCost;
+	
 	// If MSTP is implemented there is one instance per port of each of the following variables for the CIST:
 	unsigned int ExternalPortPathCost;	// 13.25.y) - 13.25.12
 	bool	infoInternal;	// 13.25.z) - 13.25.16
@@ -137,6 +142,7 @@ struct PORT
 	//  - application calls STP_SetAdminP2P(FORCE_TRUE) => the library will set operPointToPointMAC to true.
 	//  - application calls STP_OnPortEnabled (pointToPointMAC = XXX) => the library will write XXX to this variable and keep operPointToPointMAC true.
 	//  - application calls STP_SetAdminP2P(AUTO) => the library must set operPointToPointMAC to XXX, which it reads from this variable.
+	// See also detectedExternalPortPathCost.
 	bool detectedPointToPointMAC;
 };
 
