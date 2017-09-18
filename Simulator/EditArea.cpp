@@ -436,6 +436,8 @@ public:
 
 		rt->Clear(GetD2DSystemColor(COLOR_WINDOW));
 
+		RenderLegend(rt);
+
 		RenderBridges (rt, configIds);
 
 		RenderWires (rt);
@@ -445,8 +447,6 @@ public:
 			if (auto ro = dynamic_cast<RenderableObject*>(o))
 				ro->RenderSelection(this, rt, _drawingObjects);
 		}
-
-		RenderLegend(rt);
 
 		if (!configIds.empty())
 			RenderConfigIdList (rt, configIds);
