@@ -16,8 +16,6 @@ static constexpr UINT WM_PACKET_RECEIVED   = WM_APP + 3;
 static constexpr uint8_t BpduDestAddress[6] = { 1, 0x80, 0xC2, 0, 0, 0 };
 
 #pragma region Bridge::HelperWindow
-Bridge::HelperWindow Bridge::_helperWindow;
-
 Bridge::HelperWindow::HelperWindow()
 {
 	HINSTANCE hInstance;
@@ -27,7 +25,12 @@ Bridge::HelperWindow::HelperWindow()
 
 	bRes = ::SetWindowSubclass (_hwnd, SubclassProc, 0, (DWORD_PTR) this); assert (bRes);
 
-	auto callback = [](void* lpParameter, BOOLEAN TimerOrWaitFired) { ::PostMessage (_helperWindow._hwnd, WM_LINK_PULSE_TIMER, 0, 0); };
+	auto callback = [](void* lpParameter, BOOLEAN TimerOrWaitFired)
+	{
+		auto helperWindow = static_cast<HelperWindow*>(lpParameter);
+		::PostMessage (helperWindow->_hwnd, WM_LINK_PULSE_TIMER, 0, 0);
+	};
+
 	bRes = ::CreateTimerQueueTimer (&_linkPulseTimerHandle, nullptr, callback, this, 16, 16, 0); assert(bRes);
 }
 
@@ -84,9 +87,7 @@ Bridge::Bridge (unsigned int portCount, unsigned int mstiCount, const unsigned c
 	_height = DefaultHeight;
 
 	DWORD period = 950 + (std::random_device()() % 100);
-	HANDLE handle;
-	BOOL bRes = ::CreateTimerQueueTimer (&handle, nullptr, OneSecondTimerCallback, this, period, period, 0); assert(bRes);
-	_oneSecondTimerHandle.reset(handle);
+	BOOL bRes = ::CreateTimerQueueTimer (&_oneSecondTimerHandle, nullptr, OneSecondTimerCallback, this, period, period, 0); assert(bRes);
 
 	_stpBridge = STP_CreateBridge (portCount, mstiCount, MaxVlanNumber, &StpCallbacks, macAddress, 256);
 	STP_EnableLogging (_stpBridge, true);
@@ -112,7 +113,7 @@ Bridge::~Bridge()
 	_helperWindow.GetLinkPulseEvent().RemoveHandler (&OnLinkPulseTick, this);
 
 	// First stop the timers, to be sure the mutex won't be acquired in a background thread (when we'll have background threads).
-	_oneSecondTimerHandle = nullptr;
+	::DeleteTimerQueueTimer (nullptr, _oneSecondTimerHandle, INVALID_HANDLE_VALUE);
 
 	STP_DestroyBridge (_stpBridge);
 }
@@ -136,7 +137,7 @@ void CALLBACK Bridge::OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOr
 {
 	auto bridge = static_cast<Bridge*>(lpParameter);
 	// We're on a worker thread. Let's post this message and continue processing on the GUI thread.
-	::PostMessage (_helperWindow._hwnd, WM_ONE_SECOND_TIMER, (WPARAM) bridge, 0);
+	::PostMessage (bridge->_helperWindow._hwnd, WM_ONE_SECOND_TIMER, (WPARAM) bridge, 0);
 }
 
 //static

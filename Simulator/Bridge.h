@@ -23,7 +23,7 @@ class Bridge : public RenderableObject
 	static const STP_CALLBACKS StpCallbacks;
 	std::vector<std::unique_ptr<BridgeLogLine>> _logLines;
 	BridgeLogLine _currentLogLine;
-	TimerQueueTimer_unique_ptr _oneSecondTimerHandle;
+	HANDLE _oneSecondTimerHandle;
 	bool _simulationPaused = false;
 	std::queue<std::pair<size_t, PacketInfo>> _rxQueue;
 	std::vector<std::unique_ptr<BridgeTree>> _trees;
@@ -43,7 +43,7 @@ class Bridge : public RenderableObject
 		LinkPulseEvent::Subscriber GetLinkPulseEvent() { return LinkPulseEvent::Subscriber(this); }
 	};
 
-	static HelperWindow _helperWindow;
+	HelperWindow _helperWindow;
 
 	// variables used by TransmitGetBuffer/ReleaseBuffer
 	std::vector<uint8_t> _txPacketData;

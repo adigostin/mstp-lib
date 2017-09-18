@@ -10,14 +10,6 @@ struct GdiObjectDeleter
 };
 typedef std::unique_ptr<std::remove_pointer<HFONT>::type, GdiObjectDeleter> HFONT_unique_ptr;
 
-struct TimerQueueTimerDeleter
-{
-	void operator() (HANDLE handle) { ::DeleteTimerQueueTimer (nullptr, handle, INVALID_HANDLE_VALUE); }
-};
-typedef std::unique_ptr<std::remove_pointer<HANDLE>::type, TimerQueueTimerDeleter> TimerQueueTimer_unique_ptr;
-
-// ============================================================================
-
 struct IWin32Window : public IUnknown
 {
 	virtual HWND GetHWnd() const = 0;
