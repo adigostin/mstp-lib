@@ -87,7 +87,11 @@ public:
 		}
 
 		if (msg == WM_CTLCOLORSTATIC)
+		{
+			HDC hdc = (HDC)wParam;
+			::SetBkMode (hdc, TRANSPARENT);
 			return { (INT_PTR) GetSysColorBrush(COLOR_INFOBK), 0 };
+		}
 
 		if (msg == WM_COMMAND)
 		{
