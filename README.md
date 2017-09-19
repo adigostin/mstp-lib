@@ -11,9 +11,9 @@ I'm aware of it being used in other products as well.
 
 ### Simulator
 A Simulator application for Windows is provided - both
-sources and binaries. The Simulator lets you create
-networks and see the library in action.
-See the screenshot below. This is a project for
+sources and [binaries](https://github.com/adigostin/mstp-lib/releases).
+The Simulator lets you create networks and see the library
+in action. See the screenshot below. This is a project for
 Visual Studio 2017 version 15.3.
 
 ### Embedded Application Example
