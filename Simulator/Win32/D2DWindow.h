@@ -45,7 +45,7 @@ D2D1::ColorF GetD2DSystemColor (int sysColorIndex);
 struct TextLayout
 {
 	IDWriteTextLayoutPtr layout;
-	DWRITE_TEXT_METRICS metrics;
+	DWRITE_TEXT_METRICS metrics = { };
 
 	static TextLayout Create (IDWriteFactory* dWriteFactory, IDWriteTextFormat* format, const wchar_t* str, float maxWidth = 0);
 };
