@@ -13,9 +13,9 @@ class PropertiesWindow : public Window, public IPropertiesWindow
 {
 	using base = Window;
 
-	ISelectionPtr const _selection;
+	com_ptr<ISelection> const _selection;
 	IProjectWindow* const _projectWindow;
-	IProjectPtr const _project;
+	com_ptr<IProject> const _project;
 	unique_ptr<PropertyGrid> _pg;
 
 public:
@@ -49,9 +49,9 @@ public:
 	}
 
 	template<typename... Args>
-	static IPropertiesWindowPtr Create (Args... args)
+	static com_ptr<IPropertiesWindow> Create (Args... args)
 	{
-		return IPropertiesWindowPtr (new PropertiesWindow(std::forward<Args>(args)...), false);
+		return com_ptr<IPropertiesWindow> (new PropertiesWindow(std::forward<Args>(args)...), false);
 	}
 
 	void SetSelectionToPGs()

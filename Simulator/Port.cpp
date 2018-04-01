@@ -250,9 +250,9 @@ void Port::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, unsigned in
 	rt->FillRectangle (&portRect, GetMacOperational() ? dos._poweredFillBrush : dos._unpoweredBrush);
 	rt->DrawRectangle (&portRect, dos._brushWindowText, interiorPortOutlineWidth);
 
-	IDWriteTextFormatPtr format;
+	com_ptr<IDWriteTextFormat> format;
 	auto hr = dos._dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 9, L"en-US", &format); assert(SUCCEEDED(hr));
-	IDWriteTextLayoutPtr layout;
+	com_ptr<IDWriteTextLayout> layout;
 	wstringstream ss;
 	ss << setfill(L'0') << setw(4) << hex << STP_GetPortIdentifier(b, (unsigned int) _portIndex, treeIndex);
 	auto portIdText = ss.str();
@@ -371,21 +371,21 @@ static const _bstr_t AutoEdgeString = L"AutoEdge";
 static const _bstr_t AdminEdgeString = L"AdminEdge";
 static const _bstr_t PortTreesString = "PortTrees";
 
-IXMLDOMElementPtr Port::Serialize (IXMLDOMDocument3* doc) const
+com_ptr<IXMLDOMElement> Port::Serialize (IXMLDOMDocument3* doc) const
 {
-	IXMLDOMElementPtr portElement;
+	com_ptr<IXMLDOMElement> portElement;
 	auto hr = doc->createElement (PortString, &portElement); assert(SUCCEEDED(hr));
 	portElement->setAttribute (SideString, _variant_t (GetEnumName (SideNVPs, (int) _side)));
 	portElement->setAttribute (OffsetString, _variant_t (_offset));
 	portElement->setAttribute (AutoEdgeString, _variant_t (GetAutoEdge() ? L"True" : L"False"));
 	portElement->setAttribute (AdminEdgeString, _variant_t (GetAdminEdge() ? L"True" : L"False"));
 
-	IXMLDOMElementPtr portTreesElement;
+	com_ptr<IXMLDOMElement> portTreesElement;
 	hr = doc->createElement (PortTreesString, &portTreesElement); assert(SUCCEEDED(hr));
 	hr = portElement->appendChild(portTreesElement, nullptr); assert(SUCCEEDED(hr));
 	for (size_t treeIndex = 0; treeIndex < _trees.size(); treeIndex++)
 	{
-		IXMLDOMElementPtr portTreeElement;
+		com_ptr<IXMLDOMElement> portTreeElement;
 		hr = _trees.at(treeIndex)->Serialize (doc, portTreeElement); assert(SUCCEEDED(hr));
 		hr = portTreesElement->appendChild (portTreeElement, nullptr); assert(SUCCEEDED(hr));
 	}
@@ -420,18 +420,18 @@ HRESULT Port::Deserialize (IXMLDOMElement* portElement)
 	if (value.vt == VT_BSTR)
 		SetAdminEdge (_wcsicmp (value.bstrVal, L"True") == 0);
 
-	IXMLDOMNodePtr portTreesNode;
+	com_ptr<IXMLDOMNode> portTreesNode;
 	hr = portElement->selectSingleNode(PortTreesString, &portTreesNode);
 	if (SUCCEEDED(hr) && (portTreesNode != nullptr))
 	{
-		IXMLDOMNodeListPtr portTreeNodes;
+		com_ptr<IXMLDOMNodeList> portTreeNodes;
 		hr = portTreesNode->get_childNodes(&portTreeNodes); assert(SUCCEEDED(hr));
 
 		for (size_t treeIndex = 0; treeIndex < _trees.size(); treeIndex++)
 		{
-			IXMLDOMNodePtr portTreeNode;
+			com_ptr<IXMLDOMNode> portTreeNode;
 			hr = portTreeNodes->get_item((long) treeIndex, &portTreeNode); assert(SUCCEEDED(hr));
-			IXMLDOMElementPtr portTreeElement = portTreeNode;
+			com_ptr<IXMLDOMElement> portTreeElement = portTreeNode;
 			hr = _trees.at(treeIndex)->Deserialize(portTreeElement); assert(SUCCEEDED(hr));
 		}
 	}

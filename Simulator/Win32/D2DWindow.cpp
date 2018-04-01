@@ -164,10 +164,10 @@ ColorF GetD2DSystemColor (int sysColorIndex)
 
 TextLayout TextLayout::Create (IDWriteFactory* dWriteFactory, IDWriteTextFormat* format, const wchar_t* str, float maxWidth)
 {
-	IDWriteTextLayoutPtr tl;
+	com_ptr<IDWriteTextLayout> tl;
 	auto hr = dWriteFactory->CreateTextLayout(str, (UINT32) wcslen(str), format, (maxWidth != 0) ? maxWidth : 10000, 10000, &tl); assert(SUCCEEDED(hr));
 	DWRITE_TEXT_METRICS metrics;
 	hr = tl->GetMetrics(&metrics); assert(SUCCEEDED(hr));
-	return TextLayout { move(tl), metrics };
+	return TextLayout { std::move(tl), metrics };
 }
 

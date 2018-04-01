@@ -11,8 +11,8 @@ class VlanWindow : public IVlanWindow
 {
 	ISimulatorApp*  const _app;
 	IProjectWindow* const _pw;
-	IProjectPtr     const _project;
-	ISelectionPtr   const _selection;
+	com_ptr<IProject>     const _project;
+	com_ptr<ISelection>   const _selection;
 	ULONG _refCount = 1;
 	HWND _hwnd = nullptr;
 
@@ -206,8 +206,8 @@ private:
 			{ return (pw->GetProject() == _pw->GetProject()) && (pw->GetSelectedVlanNumber() == vlanNumber); });
 		if (it != pws.end())
 		{
-			::BringWindowToTop (it->GetInterfacePtr()->GetHWnd());
-			::FlashWindow (it->GetInterfacePtr()->GetHWnd(), FALSE);
+			::BringWindowToTop (it->get()->GetHWnd());
+			::FlashWindow (it->get()->GetHWnd(), FALSE);
 		}
 		else
 		{
@@ -282,9 +282,9 @@ private:
 };
 
 template<typename... Args>
-static IVlanWindowPtr Create (Args... args)
+static com_ptr<IVlanWindow> Create (Args... args)
 {
-	return IVlanWindowPtr(new VlanWindow (std::forward<Args>(args)...), false);
+	return com_ptr<IVlanWindow>(new VlanWindow (std::forward<Args>(args)...), false);
 }
 
 const VlanWindowFactory vlanWindowFactory = &Create;

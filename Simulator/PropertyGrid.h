@@ -6,14 +6,14 @@ class PropertyGrid : public D2DWindow
 {
 	using base = D2DWindow;
 
-	IDWriteTextFormatPtr _textFormat;
-	IDWriteTextFormatPtr _boldTextFormat;
-	IDWriteTextFormatPtr _wingdings;
-	IDWriteTextFormatPtr _headingTextFormat;
+	com_ptr<IDWriteTextFormat> _textFormat;
+	com_ptr<IDWriteTextFormat> _boldTextFormat;
+	com_ptr<IDWriteTextFormat> _wingdings;
+	com_ptr<IDWriteTextFormat> _headingTextFormat;
+	com_ptr<ID2D1SolidColorBrush> _windowBrush;
+	com_ptr<ID2D1SolidColorBrush> _windowTextBrush;
+	com_ptr<ID2D1SolidColorBrush> _grayTextBrush;
 	float _nameColumnSize = 0.5f;
-	ID2D1SolidColorBrushPtr _windowBrush;
-	ID2D1SolidColorBrushPtr _windowTextBrush;
-	ID2D1SolidColorBrushPtr _grayTextBrush;
 	std::unique_ptr<IPropertyEditor> _customEditor;
 
 	class Item abstract

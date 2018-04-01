@@ -303,7 +303,7 @@ void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned 
 	// Draw bridge outline.
 	D2D1_ROUNDED_RECT rr = RoundedRect (GetBounds(), RoundRadius, RoundRadius);
 	InflateRoundedRect (&rr, -bridgeOutlineWidth / 2);
-	ID2D1SolidColorBrushPtr brush;
+	com_ptr<ID2D1SolidColorBrush> brush;
 	dc->CreateSolidColorBrush (configIdColor, &brush);
 	dc->FillRoundedRectangle (&rr, brush/*_powered ? dos._poweredFillBrush : dos._unpoweredBrush*/);
 	dc->DrawRoundedRectangle (&rr, dos._brushWindowText, bridgeOutlineWidth);
@@ -411,9 +411,9 @@ static const _bstr_t VlanString = "Vlan";
 static const _bstr_t TreeString = "Tree";
 static const _bstr_t PortsString = "Ports";
 
-IXMLDOMElementPtr Bridge::Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) const
+com_ptr<IXMLDOMElement> Bridge::Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) const
 {
-	IXMLDOMElementPtr bridgeElement;
+	com_ptr<IXMLDOMElement> bridgeElement;
 	auto hr = doc->createElement (BridgeString, &bridgeElement); assert(SUCCEEDED(hr));
 
 	bridgeElement->setAttribute (BridgeIndexString,   _variant_t(bridgeIndex));
@@ -428,31 +428,31 @@ IXMLDOMElementPtr Bridge::Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) 
 	bridgeElement->setAttribute (WidthString,         _variant_t(_width));
 	bridgeElement->setAttribute (HeightString,        _variant_t(_height));
 
-	IXMLDOMElementPtr configTableElement;
+	com_ptr<IXMLDOMElement> configTableElement;
 	hr = doc->createElement (MstConfigTableString, &configTableElement); assert(SUCCEEDED(hr));
 	hr = bridgeElement->appendChild(configTableElement, nullptr); assert(SUCCEEDED(hr));
 	unsigned int entryCount;
 	auto configTable = STP_GetMstConfigTable(_stpBridge, &entryCount);
 	for (unsigned int vlan = 0; vlan < entryCount; vlan++)
 	{
-		IXMLDOMElementPtr entryElement;
+		com_ptr<IXMLDOMElement> entryElement;
 		hr = doc->createElement (EntryString, &entryElement); assert(SUCCEEDED(hr));
 		hr = entryElement->setAttribute (VlanString, _variant_t(vlan)); assert(SUCCEEDED(hr));
 		hr = entryElement->setAttribute (TreeString, _variant_t(configTable[vlan].treeIndex)); assert(SUCCEEDED(hr));
 		hr = configTableElement->appendChild(entryElement, nullptr); assert(SUCCEEDED(hr));
 	}
 
-	IXMLDOMElementPtr bridgeTreesElement;
+	com_ptr<IXMLDOMElement> bridgeTreesElement;
 	hr = doc->createElement (BridgeTreesString, &bridgeTreesElement); assert(SUCCEEDED(hr));
 	hr = bridgeElement->appendChild(bridgeTreesElement, nullptr); assert(SUCCEEDED(hr));
 	for (size_t treeIndex = 0; treeIndex < _trees.size(); treeIndex++)
 	{
-		IXMLDOMElementPtr bridgeTreeElement;
+		com_ptr<IXMLDOMElement> bridgeTreeElement;
 		hr = _trees.at(treeIndex)->Serialize (doc, bridgeTreeElement); assert(SUCCEEDED(hr));
 		hr = bridgeTreesElement->appendChild (bridgeTreeElement, nullptr); assert(SUCCEEDED(hr));
 	}
 
-	IXMLDOMElementPtr portsElement;
+	com_ptr<IXMLDOMElement> portsElement;
 	hr = doc->createElement (PortsString, &portsElement); assert(SUCCEEDED(hr));
 	hr = bridgeElement->appendChild(portsElement, nullptr); assert(SUCCEEDED(hr));
 	for (size_t portIndex = 0; portIndex < _ports.size(); portIndex++)
@@ -477,8 +477,16 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 
 	HRESULT hr;
 	_variant_t value;
-	setlocale (LC_NUMERIC, "C");
-	wstring_convert<codecvt_utf8<wchar_t>> converter;
+
+	auto make_string = [](const _variant_t& v)
+	{
+		assert (v.vt == VT_BSTR);
+		size_t len = wcslen(v.bstrVal);
+		std::string str (len, (char) 0);
+		for (size_t i = 0; i < len; i++)
+			str[i] = (char) v.bstrVal[i];
+		return str;
+	};
 
 	unsigned int portCount = wcstoul(getAttribute(PortCountString).bstrVal, nullptr, 10);
 	unsigned int mstiCount = wcstoul(getAttribute(MstiCountString).bstrVal, nullptr, 10);
@@ -494,7 +502,7 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 	hr = element->getAttribute(StpVersionString, &value);
 	if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
 	{
-		auto versionString = converter.to_bytes(value.bstrVal);
+		auto versionString = make_string(value.bstrVal);
 		auto version = STP_GetVersionFromString(versionString.c_str());
 		STP_SetStpVersion (bridge->_stpBridge, version, GetMessageTime());
 	}
@@ -502,7 +510,7 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 	hr = element->getAttribute(MstConfigNameString, &value);
 	if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
 	{
-		auto name = converter.to_bytes(value.bstrVal);
+		auto name = make_string(value.bstrVal);
 		STP_SetMstConfigName (bridge->_stpBridge, name.c_str(), GetMessageTime());
 	}
 
@@ -515,20 +523,20 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 			STP_StopBridge (bridge->_stpBridge, GetMessageTime());
 	}
 
-	IXMLDOMNodePtr configTableNode;
+	com_ptr<IXMLDOMNode> configTableNode;
 	hr = element->selectSingleNode(MstConfigTableString, &configTableNode);
 	if (SUCCEEDED(hr) && (configTableNode != nullptr))
 	{
-		IXMLDOMNodeListPtr nodes;
+		com_ptr<IXMLDOMNodeList> nodes;
 		hr = configTableNode->get_childNodes(&nodes); assert(SUCCEEDED(hr));
 		long entryCount;
 		hr = nodes->get_length(&entryCount); assert(SUCCEEDED(hr));
 		vector<STP_CONFIG_TABLE_ENTRY> configTable;
 		for (unsigned int vlan = 0; vlan < (unsigned int) entryCount; vlan++)
 		{
-			IXMLDOMNodePtr entryNode;
+			com_ptr<IXMLDOMNode> entryNode;
 			hr = nodes->get_item(vlan, &entryNode); assert(SUCCEEDED(hr));
-			IXMLDOMElementPtr entryElement (entryNode);
+			com_ptr<IXMLDOMElement> entryElement (entryNode);
 
 			hr = entryElement->getAttribute(TreeString, &value); assert(SUCCEEDED(hr) && (value.vt == VT_BSTR));
 			auto treeIndex = wcstoul(value.bstrVal, nullptr, 10);
@@ -538,34 +546,34 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 		STP_SetMstConfigTable(bridge->_stpBridge, &configTable[0], (unsigned int) configTable.size(), GetMessageTime());
 	}
 
-	IXMLDOMNodePtr bridgeTreesNode;
+	com_ptr<IXMLDOMNode> bridgeTreesNode;
 	hr = element->selectSingleNode(BridgeTreesString, &bridgeTreesNode);
 	if (SUCCEEDED(hr) && (bridgeTreesNode != nullptr))
 	{
-		IXMLDOMNodeListPtr bridgeTreeNodes;
+		com_ptr<IXMLDOMNodeList> bridgeTreeNodes;
 		hr = bridgeTreesNode->get_childNodes(&bridgeTreeNodes); assert(SUCCEEDED(hr));
 
 		for (size_t treeIndex = 0; treeIndex < 1 + mstiCount; treeIndex++)
 		{
-			IXMLDOMNodePtr bridgeTreeNode;
+			com_ptr<IXMLDOMNode> bridgeTreeNode;
 			hr = bridgeTreeNodes->get_item((long) treeIndex, &bridgeTreeNode); assert(SUCCEEDED(hr));
-			IXMLDOMElementPtr bridgeTreeElement = bridgeTreeNode;
+			com_ptr<IXMLDOMElement> bridgeTreeElement = bridgeTreeNode;
 			hr = bridge->_trees.at(treeIndex)->Deserialize(bridgeTreeElement); assert(SUCCEEDED(hr));
 		}
 	}
 
-	IXMLDOMNodePtr portsNode;
+	com_ptr<IXMLDOMNode> portsNode;
 	hr = element->selectSingleNode (PortsString, &portsNode);
 	if (SUCCEEDED(hr) && (portsNode != nullptr))
 	{
-		IXMLDOMNodeListPtr portNodes;
+		com_ptr<IXMLDOMNodeList> portNodes;
 		hr = portsNode->get_childNodes (&portNodes); assert(SUCCEEDED(hr));
 
 		for (size_t portIndex = 0; portIndex < portCount; portIndex++)
 		{
-			IXMLDOMNodePtr portNode;
+			com_ptr<IXMLDOMNode> portNode;
 			hr = portNodes->get_item((long) portIndex, &portNode); assert(SUCCEEDED(hr));
-			IXMLDOMElementPtr portElement = portNode;
+			com_ptr<IXMLDOMElement> portElement = portNode;
 			hr = bridge->_ports[portIndex]->Deserialize(portElement); assert(SUCCEEDED(hr));
 		}
 	}
@@ -649,10 +657,9 @@ void Bridge::ResumeSimulation()
 std::wstring Bridge::GetMstConfigIdName() const
 {
 	auto configId = STP_GetMstConfigId(_stpBridge);
-	std::string ascii (configId->ConfigurationName, configId->ConfigurationName + strnlen (configId->ConfigurationName, 32));
-	wstring_convert<codecvt_utf8<wchar_t>> converter;
-	std::wstring utf16 = converter.from_bytes(ascii);
-	return utf16;
+	size_t len = strnlen (configId->ConfigurationName, 32);
+	auto str = std::wstring (std::begin(configId->ConfigurationName), std::begin(configId->ConfigurationName) + len);
+	return str;
 }
 
 void Bridge::SetMstConfigIdName (std::wstring value)

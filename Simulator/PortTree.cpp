@@ -9,13 +9,13 @@ static const _bstr_t PortTreeString = "PortTree";
 static const _bstr_t TreeIndexString = "TreeIndex";
 static const _bstr_t PortPriorityString = "PortPriority";
 
-HRESULT PortTree::Serialize (IXMLDOMDocument3* doc, IXMLDOMElementPtr& elementOut) const
+HRESULT PortTree::Serialize (IXMLDOMDocument3* doc, com_ptr<IXMLDOMElement>& elementOut) const
 {
-	IXMLDOMElementPtr portTreeElement;
+	com_ptr<IXMLDOMElement> portTreeElement;
 	auto hr = doc->createElement (PortTreeString, &portTreeElement); assert(SUCCEEDED(hr));
 	portTreeElement->setAttribute (TreeIndexString, _variant_t(_treeIndex));
 	portTreeElement->setAttribute (PortPriorityString, _variant_t(GetPriority()));
-	elementOut = portTreeElement;
+	elementOut = std::move(portTreeElement);
 	return S_OK;
 }
 

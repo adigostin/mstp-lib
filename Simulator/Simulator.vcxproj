@@ -221,6 +221,7 @@
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Simulator.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="Win32\com_ptr.h" />
     <ClInclude Include="Win32\UtilityFunctions.h" />
     <ClInclude Include="Win32\D2DWindow.h" />
     <ClInclude Include="Win32\EventManager.h" />

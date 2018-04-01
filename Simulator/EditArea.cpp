@@ -33,9 +33,9 @@ class EditArea : public ZoomableWindow, public IEditArea
 
 	ISimulatorApp*  const _app;
 	IProjectWindow* const _pw;
-	IProjectPtr     const _project;
-	ISelectionPtr   const _selection;
-	IDWriteTextFormatPtr _legendFont;
+	com_ptr<IProject>     const _project;
+	com_ptr<ISelection>   const _selection;
+	com_ptr<IDWriteTextFormat> _legendFont;
 	DrawingObjects _drawingObjects;
 	unique_ptr<EditState> _state;
 	HTResult _htResult = { nullptr, 0 };
@@ -74,7 +74,7 @@ public:
 		GetDWriteFactory()->CreateTextFormat (L"Tahoma", nullptr,  DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
 			DWRITE_FONT_STRETCH_CONDENSED, 11, L"en-US", &_legendFont); assert(SUCCEEDED(hr));
 
-		ID2D1FactoryPtr factory;
+		com_ptr<ID2D1Factory> factory;
 		dc->GetFactory(&factory);
 
 		D2D1_STROKE_STYLE_PROPERTIES ssprops = {};
@@ -173,10 +173,10 @@ public:
 
 		float maxLineWidth = 0;
 		float maxLineHeight = 0;
-		vector<IDWriteTextLayoutPtr> layouts;
+		vector<com_ptr<IDWriteTextLayout>> layouts;
 		for (auto& info : LegendInfo)
 		{
-			IDWriteTextLayoutPtr tl;
+			com_ptr<IDWriteTextLayout> tl;
 			auto hr = GetDWriteFactory()->CreateTextLayout (info.text, (UINT32) wcslen(info.text), _legendFont, 1000, 1000, &tl); assert(SUCCEEDED(hr));
 
 			DWRITE_TEXT_METRICS metrics;
@@ -201,7 +201,7 @@ public:
 
 		auto oldaa = dc->GetAntialiasMode();
 		dc->SetAntialiasMode (D2D1_ANTIALIAS_MODE_ALIASED);
-		ID2D1SolidColorBrushPtr brush;
+		com_ptr<ID2D1SolidColorBrush> brush;
 		dc->CreateSolidColorBrush (GetD2DSystemColor(COLOR_INFOBK), &brush);
 		brush->SetOpacity (0.8f);
 		dc->FillRectangle (D2D1_RECT_F { lineX, y, clientSizeDips.width, clientSizeDips.height }, brush);
@@ -276,7 +276,7 @@ public:
 		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
 		float lineWidth = GetDipSizeFromPixelSize({ 0, 1 }).height;
 		float lineX = LeftRightPadding + coloredRectWidth + LeftRightPadding + maxLineWidth + LeftRightPadding;
-		ID2D1SolidColorBrushPtr brush;
+		com_ptr<ID2D1SolidColorBrush> brush;
 		dc->CreateSolidColorBrush (GetD2DSystemColor(COLOR_INFOBK), &brush);
 		brush->SetOpacity (0.8f);
 		dc->FillRectangle ({ 0, y, lineX, clientSizeDips.height }, brush);
@@ -289,7 +289,7 @@ public:
 
 		for (auto& p : lines)
 		{
-			ID2D1SolidColorBrushPtr brush;
+			com_ptr<ID2D1SolidColorBrush> brush;
 			dc->CreateSolidColorBrush (p.second, &brush);
 			D2D1_RECT_F rect = { LeftRightPadding, y + UpDownPadding, LeftRightPadding + coloredRectWidth, y + UpDownPadding + lineHeight };
 			dc->FillRectangle (&rect, brush);
@@ -315,8 +315,8 @@ public:
 	{
 		float leftRightPadding = 3;
 		float topBottomPadding = 1.5f;
-		auto textFormat = smallFont ? _drawingObjects._smallTextFormat.GetInterfacePtr() : _drawingObjects._regularTextFormat.GetInterfacePtr();
-		IDWriteTextLayoutPtr tl;
+		auto textFormat = smallFont ? _drawingObjects._smallTextFormat.get() : _drawingObjects._regularTextFormat.get();
+		com_ptr<IDWriteTextLayout> tl;
 		auto hr = _drawingObjects._dWriteFactory->CreateTextLayout(text, (UINT32) wcslen(text), textFormat, 10000, 10000, &tl); assert(SUCCEEDED(hr));
 		DWRITE_TEXT_METRICS metrics;
 		hr = tl->GetMetrics(&metrics); assert(SUCCEEDED(hr));
@@ -334,7 +334,7 @@ public:
 		bottom = roundf (bottom / pixelWidthDips) * pixelWidthDips + lineWidthDips / 2;
 
 		D2D1_ROUNDED_RECT rr = { { left, top, right, bottom }, 4, 4 };
-		ID2D1SolidColorBrushPtr brush;
+		com_ptr<ID2D1SolidColorBrush> brush;
 		rt->CreateSolidColorBrush (GetD2DSystemColor(COLOR_INFOBK), &brush);
 		rt->FillRoundedRectangle (&rr, brush);
 
@@ -897,9 +897,9 @@ public:
 };
 
 template<typename... Args>
-static IEditAreaPtr Create (Args... args)
+static com_ptr<IEditArea> Create (Args... args)
 {
-	return IEditAreaPtr(new EditArea (std::forward<Args>(args)...), false);
+	return com_ptr<IEditArea>(new EditArea (std::forward<Args>(args)...), false);
 }
 
 extern const EditAreaFactory editAreaFactory = &Create;

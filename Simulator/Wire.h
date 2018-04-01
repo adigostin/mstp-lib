@@ -30,7 +30,7 @@ public:
 
 	D2D1_POINT_2F GetPointCoords (size_t pointIndex) const;
 
-	IXMLDOMElementPtr Serialize (IProject* project, IXMLDOMDocument* doc) const;
+	com_ptr<IXMLDOMElement> Serialize (IProject* project, IXMLDOMDocument* doc) const;
 	static std::unique_ptr<Wire> Deserialize (IProject* project, IXMLDOMElement* element);
 
 	void Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, bool forwarding, bool hasLoop) const;
@@ -39,6 +39,6 @@ public:
 	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
 
 private:
-	static IXMLDOMElementPtr SerializeEnd (IProject* project, IXMLDOMDocument* doc, const WireEnd& end);
+	static com_ptr<IXMLDOMElement> SerializeEnd (IProject* project, IXMLDOMDocument* doc, const WireEnd& end);
 	static WireEnd DeserializeEnd (IProject* project, IXMLDOMElement* element);
 };

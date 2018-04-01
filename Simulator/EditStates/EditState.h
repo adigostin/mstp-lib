@@ -14,8 +14,8 @@ class EditState abstract
 protected:
 	IProjectWindow* const _pw;
 	IEditArea* const _editArea;
-	IProjectPtr const _project;
-	ISelectionPtr const _selection;
+	com_ptr<IProject> const _project;
+	com_ptr<ISelection> const _selection;
 
 public:
 	EditState (const EditStateDeps& deps)

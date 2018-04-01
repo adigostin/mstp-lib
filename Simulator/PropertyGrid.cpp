@@ -29,7 +29,7 @@ public:
 
 	virtual void Render (ID2D1RenderTarget* rt, float lineY, float textY, float nameColumnWidth, float lineWidth) const override final
 	{
-		ID2D1SolidColorBrushPtr brush;
+		com_ptr<ID2D1SolidColorBrush> brush;
 		rt->CreateSolidColorBrush (GetD2DSystemColor(COLOR_ACTIVECAPTION), &brush);
 		rt->FillRectangle (D2D1::RectF(0, textY, _pg->GetClientWidthDips(), lineY), brush);
 		brush->SetColor (GetD2DSystemColor(COLOR_CAPTIONTEXT));

@@ -13,6 +13,7 @@
 #pragma comment (lib, "Version")
 #pragma comment (lib, "Comctl32")
 #pragma comment (lib, "msxml6.lib")
+#pragma comment (lib, "comsuppwd.lib")
 
 #pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
@@ -62,10 +63,10 @@ Port* IProject::FindConnectedPort (Port* txPort) const
 class SimulatorApp : public EventManager, public ISimulatorApp
 {
 	HINSTANCE const _hInstance;
-	IDWriteFactoryPtr _dWriteFactory;
+	com_ptr<IDWriteFactory> _dWriteFactory;
 
 	wstring _regKeyPath;
-	vector<IProjectWindowPtr> _projectWindows;
+	vector<com_ptr<IProjectWindow>> _projectWindows;
 
 public:
 	SimulatorApp (HINSTANCE hInstance)
@@ -94,17 +95,17 @@ public:
 
 		pw->GetDestroyingEvent().RemoveHandler (&OnProjectWindowDestroying, app);
 
-		auto it = find_if (app->_projectWindows.begin(), app->_projectWindows.end(), [pw](const IProjectWindowPtr& p) { return p.GetInterfacePtr() == pw; });
+		auto it = find_if (app->_projectWindows.begin(), app->_projectWindows.end(), [pw](const com_ptr<IProjectWindow>& p) { return p == pw; });
 		assert (it != app->_projectWindows.end());
 		ProjectWindowRemovingEvent::InvokeHandlers(app, pw);
-		IProjectWindowPtr pwLastRef = move(*it);
+		com_ptr<IProjectWindow> pwLastRef = move(*it);
 		app->_projectWindows.erase(it);
 		ProjectWindowRemovedEvent::InvokeHandlers(app, pwLastRef);
 		if (app->_projectWindows.empty())
 			PostQuitMessage(0);
 	}
 
-	virtual const std::vector<IProjectWindowPtr>& GetProjectWindows() const override final { return _projectWindows; }
+	virtual const std::vector<com_ptr<IProjectWindow>>& GetProjectWindows() const override final { return _projectWindows; }
 
 	virtual IDWriteFactory* GetDWriteFactory() const override final { return _dWriteFactory; }
 

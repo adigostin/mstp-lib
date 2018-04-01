@@ -2,6 +2,7 @@
 #pragma once
 #include "EventManager.h"
 #include "Window.h"
+#include "com_ptr.h"
 
 class D2DWindow abstract : public Window
 {
@@ -9,9 +10,9 @@ class D2DWindow abstract : public Window
 	D2D1_SIZE_F _clientSizeDips;
 	bool _painting = false;
 	bool _forceFullPresentation;
-	IDWriteFactoryPtr const _dWriteFactory;
-	ID2D1FactoryPtr _d2dFactory;
-	ID2D1HwndRenderTargetPtr _renderTarget;
+	com_ptr<IDWriteFactory> const _dWriteFactory;
+	com_ptr<ID2D1Factory> _d2dFactory;
+	com_ptr<ID2D1HwndRenderTarget> _renderTarget;
 
 public:
 	D2DWindow (HINSTANCE hInstance, DWORD exStyle, DWORD style, const RECT& rect, HWND hWndParent, HMENU hMenuOrControlId, IDWriteFactory* dWriteFactory);
@@ -44,7 +45,7 @@ D2D1::ColorF GetD2DSystemColor (int sysColorIndex);
 
 struct TextLayout
 {
-	IDWriteTextLayoutPtr layout;
+	com_ptr<IDWriteTextLayout> layout;
 	DWRITE_TEXT_METRICS metrics = { };
 
 	static TextLayout Create (IDWriteFactory* dWriteFactory, IDWriteTextFormat* format, const wchar_t* str, float maxWidth = 0);

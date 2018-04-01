@@ -9,13 +9,13 @@ static const _bstr_t BridgeTreeString = "BridgeTree";
 static const _bstr_t TreeIndexString = "TreeIndex";
 static const _bstr_t BridgePriorityString = "BridgePriority";
 
-HRESULT BridgeTree::Serialize (IXMLDOMDocument3* doc, IXMLDOMElementPtr& elementOut) const
+HRESULT BridgeTree::Serialize (IXMLDOMDocument3* doc, com_ptr<IXMLDOMElement>& elementOut) const
 {
-	IXMLDOMElementPtr bridgeTreeElement;
+	com_ptr<IXMLDOMElement> bridgeTreeElement;
 	auto hr = doc->createElement (BridgeTreeString, &bridgeTreeElement); assert(SUCCEEDED(hr));
 	bridgeTreeElement->setAttribute (TreeIndexString, _variant_t(_treeIndex));
 	bridgeTreeElement->setAttribute (BridgePriorityString, _variant_t(GetPriority()));
-	elementOut = bridgeTreeElement;
+	elementOut = std::move(bridgeTreeElement);
 	return S_OK;
 }
 

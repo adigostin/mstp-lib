@@ -103,9 +103,9 @@ RenderableObject::HTResult Wire::HitTest (const IZoomable* zoomable, D2D1_POINT_
 
 static const _bstr_t WireElementName = "Wire";
 
-IXMLDOMElementPtr Wire::Serialize (IProject* project, IXMLDOMDocument* doc) const
+com_ptr<IXMLDOMElement> Wire::Serialize (IProject* project, IXMLDOMDocument* doc) const
 {
-	IXMLDOMElementPtr wireElement;
+	com_ptr<IXMLDOMElement> wireElement;
 	HRESULT hr = doc->createElement (WireElementName, &wireElement); assert(SUCCEEDED(hr));
 
 	hr = wireElement->appendChild(SerializeEnd(project, doc, _points[0]), nullptr); assert(SUCCEEDED(hr));
@@ -117,13 +117,13 @@ IXMLDOMElementPtr Wire::Serialize (IProject* project, IXMLDOMDocument* doc) cons
 // static
 unique_ptr<Wire> Wire::Deserialize (IProject* project, IXMLDOMElement* wireElement)
 {
-	IXMLDOMNodePtr firstChild;
+	com_ptr<IXMLDOMNode> firstChild;
 	auto hr = wireElement->get_firstChild(&firstChild); assert(SUCCEEDED(hr));
-	auto firstEnd = DeserializeEnd (project, (IXMLDOMElementPtr) firstChild);
+	auto firstEnd = DeserializeEnd (project, (com_ptr<IXMLDOMElement>) firstChild);
 
-	IXMLDOMNodePtr secondChild;
+	com_ptr<IXMLDOMNode> secondChild;
 	hr = firstChild->get_nextSibling(&secondChild); assert(SUCCEEDED(hr));
-	auto secondEnd = DeserializeEnd (project, (IXMLDOMElementPtr) secondChild);
+	auto secondEnd = DeserializeEnd (project, (com_ptr<IXMLDOMElement>) secondChild);
 
 	auto wire = make_unique<Wire>(firstEnd, secondEnd);
 	return wire;
@@ -137,10 +137,10 @@ static const _bstr_t XString            = "X";
 static const _bstr_t YString            = "Y";
 
 //static
-IXMLDOMElementPtr Wire::SerializeEnd (IProject* project, IXMLDOMDocument* doc, const WireEnd& end)
+com_ptr<IXMLDOMElement> Wire::SerializeEnd (IProject* project, IXMLDOMDocument* doc, const WireEnd& end)
 {
 	HRESULT hr;
-	IXMLDOMElementPtr element;
+	com_ptr<IXMLDOMElement> element;
 
 	if (holds_alternative<ConnectedWireEnd>(end))
 	{

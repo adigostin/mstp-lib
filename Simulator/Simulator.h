@@ -50,8 +50,7 @@ struct __declspec(novtable) ISelection : public IUnknown
 	struct ChangedEvent : public Event<ChangedEvent, void(ISelection*)> { };
 	virtual ChangedEvent::Subscriber GetChangedEvent() = 0;
 };
-using ISelectionPtr = _com_ptr_t<ISelection>;
-using SelectionFactory = ISelectionPtr(*const)(IProject* project);
+using SelectionFactory = com_ptr<ISelection>(*const)(IProject* project);
 extern const SelectionFactory selectionFactory;
 
 // ============================================================================
@@ -60,8 +59,7 @@ struct __declspec(novtable) ILogArea abstract : public IWin32Window
 {
 	using Interface = ILogArea;
 };
-using ILogAreaPtr = _com_ptr_t<ILogArea>;
-using LogAreaFactory = ILogAreaPtr(*const)(HINSTANCE hInstance, HWND hWndParent, const RECT& rect, IDWriteFactory* dWriteFactory, ISelection* selection);
+using LogAreaFactory = com_ptr<ILogArea>(*const)(HINSTANCE hInstance, HWND hWndParent, const RECT& rect, IDWriteFactory* dWriteFactory, ISelection* selection);
 extern const LogAreaFactory logAreaFactory;
 
 // ============================================================================
@@ -94,8 +92,7 @@ struct __declspec(novtable) IEditArea : public IWin32Window
 	virtual void RenderHint (ID2D1RenderTarget* rt, float centerX, float y, const wchar_t* text, bool smallFont = false, bool alignBottom = false) const = 0;
 	virtual D2D1::Matrix3x2F GetZoomTransform() const = 0;
 };
-using IEditAreaPtr = _com_ptr_t<IEditArea>;
-using EditAreaFactory = IEditAreaPtr(*const)(ISimulatorApp* app,
+using EditAreaFactory = com_ptr<IEditArea>(*const)(ISimulatorApp* app,
 											 IProjectWindow* pw,
 											 IProject* project,
 											 ISelection* selection,
@@ -120,8 +117,7 @@ struct __declspec(novtable) IProjectWindow : public IWindowWithWorkQueue
 	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() = 0;
 	virtual DestroyingEvent::Subscriber GetDestroyingEvent() = 0;
 };
-using IProjectWindowPtr = _com_ptr_t<IProjectWindow>;
-using ProjectWindowFactory = IProjectWindowPtr(*const)(ISimulatorApp* app,
+using ProjectWindowFactory = com_ptr<IProjectWindow>(*const)(ISimulatorApp* app,
 													   IProject* project,
 													   SelectionFactory selectionFactory,
 													   EditAreaFactory editAreaFactory,
@@ -185,8 +181,7 @@ struct __declspec(novtable) IProject : public IUnknown
 	std::pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const;
 	Port* FindConnectedPort (Port* txPort) const;
 };
-using IProjectPtr = _com_ptr_t<IProject>;
-using ProjectFactory = IProjectPtr(*const)();
+using ProjectFactory = com_ptr<IProject>(*const)();
 extern const ProjectFactory projectFactory;
 
 // ============================================================================
@@ -195,8 +190,7 @@ struct __declspec(novtable) IPropertiesWindow : public IWin32Window
 {
 	using Interface = IPropertiesWindow;
 };
-using IPropertiesWindowPtr = _com_ptr_t<IPropertiesWindow>;
-using PropertiesWindowFactory = IPropertiesWindowPtr(*const)(ISimulatorApp* app,
+using PropertiesWindowFactory = com_ptr<IPropertiesWindow>(*const)(ISimulatorApp* app,
 															 IProjectWindow* projectWindow,
 															 IProject* project,
 															 ISelection* selection,
@@ -210,8 +204,7 @@ struct __declspec(novtable) IVlanWindow : public IWin32Window
 {
 	using Interface = IVlanWindow;
 };
-using IVlanWindowPtr = _com_ptr_t<IVlanWindow>;
-using VlanWindowFactory = IVlanWindowPtr(*const)(ISimulatorApp* app,
+using VlanWindowFactory = com_ptr<IVlanWindow>(*const)(ISimulatorApp* app,
 												 IProjectWindow* pw,
 												 IProject* project,
 												 ISelection* selection,
@@ -231,7 +224,7 @@ struct ISimulatorApp
 	virtual IDWriteFactory* GetDWriteFactory() const = 0;
 	virtual const wchar_t* GetRegKeyPath() const = 0;
 	virtual void AddProjectWindow (IProjectWindow* pw) = 0;
-	virtual const std::vector<IProjectWindowPtr>& GetProjectWindows() const = 0;
+	virtual const std::vector<com_ptr<IProjectWindow>>& GetProjectWindows() const = 0;
 	virtual const wchar_t* GetAppName() const = 0;
 	virtual const wchar_t* GetAppVersionString() const = 0;
 	virtual ProjectWindowAddedEvent::Subscriber GetProjectWindowAddedEvent() = 0;

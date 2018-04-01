@@ -57,20 +57,3 @@
 #include <unordered_set>
 #include <variant>
 #include <wincodec.h>
-
-_COM_SMARTPTR_TYPEDEF(IXMLDOMDocument3, __uuidof(IXMLDOMDocument3));
-
-_COM_SMARTPTR_TYPEDEF(ID2D1RenderTarget, __uuidof(ID2D1RenderTarget));
-_COM_SMARTPTR_TYPEDEF(ID2D1Factory, __uuidof(ID2D1Factory));
-_COM_SMARTPTR_TYPEDEF(ID2D1HwndRenderTarget, __uuidof(ID2D1HwndRenderTarget));
-_COM_SMARTPTR_TYPEDEF(ID2D1SolidColorBrush, __uuidof(ID2D1SolidColorBrush));
-_COM_SMARTPTR_TYPEDEF(ID2D1StrokeStyle, __uuidof(ID2D1StrokeStyle));
-
-_COM_SMARTPTR_TYPEDEF(IDWriteFactory, __uuidof(IDWriteFactory));
-_COM_SMARTPTR_TYPEDEF(IDWriteTextFormat, __uuidof(IDWriteTextFormat));
-_COM_SMARTPTR_TYPEDEF(IDWriteTextLayout, __uuidof(IDWriteTextLayout));
-
-_COM_SMARTPTR_TYPEDEF(IFileDialog, __uuidof(IFileDialog));
-_COM_SMARTPTR_TYPEDEF(IFileOpenDialog, __uuidof(IFileOpenDialog));
-_COM_SMARTPTR_TYPEDEF(IFileSaveDialog, __uuidof(IFileSaveDialog));
-_COM_SMARTPTR_TYPEDEF(IShellItem, __uuidof(IShellItem));

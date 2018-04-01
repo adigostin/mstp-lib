@@ -9,7 +9,7 @@ using namespace std;
 
 class Selection : public EventManager, public ISelection
 {
-	IProjectPtr const _project;
+	com_ptr<IProject> const _project;
 	ULONG _refCount = 1;
 	vector<Object*> _objects;
 
@@ -146,9 +146,9 @@ private:
 };
 
 template<typename... Args>
-static ISelectionPtr Create (Args... args)
+static com_ptr<ISelection> Create (Args... args)
 {
-	return ISelectionPtr(new Selection (std::forward<Args>(args)...), false);
+	return com_ptr<ISelection>(new Selection (std::forward<Args>(args)...), false);
 }
 
 const SelectionFactory selectionFactory = &Create;

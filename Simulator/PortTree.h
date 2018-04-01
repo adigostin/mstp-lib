@@ -15,7 +15,7 @@ public:
 		: _port(port), _treeIndex(treeIndex)
 	{ }
 
-	HRESULT Serialize (IXMLDOMDocument3* doc, IXMLDOMElementPtr& elementOut) const;
+	HRESULT Serialize (IXMLDOMDocument3* doc, com_ptr<IXMLDOMElement>& elementOut) const;
 	HRESULT Deserialize (IXMLDOMElement* portTreeElement);
 
 	//std::wstring GetPriorityLabel () const;

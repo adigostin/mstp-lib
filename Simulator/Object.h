@@ -1,6 +1,7 @@
 
 #pragma once
 #include "Win32/EventManager.h"
+#include "Win32/com_ptr.h"
 
 struct IZoomable;
 class Object;
@@ -95,23 +96,23 @@ struct EnumProperty : TypedProperty<int>
 
 struct DrawingObjects
 {
-	IDWriteFactoryPtr _dWriteFactory;
-	ID2D1SolidColorBrushPtr _poweredFillBrush;
-	ID2D1SolidColorBrushPtr _unpoweredBrush;
-	ID2D1SolidColorBrushPtr _brushWindowText;
-	ID2D1SolidColorBrushPtr _brushWindow;
-	ID2D1SolidColorBrushPtr _brushHighlight;
-	ID2D1SolidColorBrushPtr _brushDiscardingPort;
-	ID2D1SolidColorBrushPtr _brushLearningPort;
-	ID2D1SolidColorBrushPtr _brushForwarding;
-	ID2D1SolidColorBrushPtr _brushNoForwardingWire;
-	ID2D1SolidColorBrushPtr _brushLoop;
-	ID2D1SolidColorBrushPtr _brushTempWire;
-	ID2D1StrokeStylePtr _strokeStyleForwardingWire;
-	ID2D1StrokeStylePtr _strokeStyleNoForwardingWire;
-	IDWriteTextFormatPtr _regularTextFormat;
-	IDWriteTextFormatPtr _smallTextFormat;
-	ID2D1StrokeStylePtr _strokeStyleSelectionRect;
+	com_ptr<IDWriteFactory> _dWriteFactory;
+	com_ptr<ID2D1SolidColorBrush> _poweredFillBrush;
+	com_ptr<ID2D1SolidColorBrush> _unpoweredBrush;
+	com_ptr<ID2D1SolidColorBrush> _brushWindowText;
+	com_ptr<ID2D1SolidColorBrush> _brushWindow;
+	com_ptr<ID2D1SolidColorBrush> _brushHighlight;
+	com_ptr<ID2D1SolidColorBrush> _brushDiscardingPort;
+	com_ptr<ID2D1SolidColorBrush> _brushLearningPort;
+	com_ptr<ID2D1SolidColorBrush> _brushForwarding;
+	com_ptr<ID2D1SolidColorBrush> _brushNoForwardingWire;
+	com_ptr<ID2D1SolidColorBrush> _brushLoop;
+	com_ptr<ID2D1SolidColorBrush> _brushTempWire;
+	com_ptr<ID2D1StrokeStyle> _strokeStyleForwardingWire;
+	com_ptr<ID2D1StrokeStyle> _strokeStyleNoForwardingWire;
+	com_ptr<IDWriteTextFormat> _regularTextFormat;
+	com_ptr<IDWriteTextFormat> _smallTextFormat;
+	com_ptr<ID2D1StrokeStyle> _strokeStyleSelectionRect;
 };
 
 class Object : public EventManager

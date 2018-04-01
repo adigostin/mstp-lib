@@ -33,12 +33,12 @@ class ProjectWindow : public EventManager, public IProjectWindow
 {
 	ULONG _refCount = 1;
 	ISimulatorApp* const _app;
-	IProjectPtr    const _project;
-	ISelectionPtr  const _selection;
-	IEditAreaPtr         _editWindow;
-	IPropertiesWindowPtr _propertiesWindow;
-	ILogAreaPtr          _logWindow;
-	IVlanWindowPtr       _vlanWindow;
+	com_ptr<IProject>    const _project;
+	com_ptr<ISelection>  const _selection;
+	com_ptr<IEditArea>         _editWindow;
+	com_ptr<IPropertiesWindow> _propertiesWindow;
+	com_ptr<ILogArea>          _logWindow;
+	com_ptr<IVlanWindow>       _vlanWindow;
 	HWND _hwnd;
 	SIZE _clientSize;
 	RECT _restoreBounds;
@@ -241,7 +241,7 @@ public:
 			windowTitle << L"*";
 
 		auto& pws = _app->GetProjectWindows();
-		if (any_of (pws.begin(), pws.end(), [this](const IProjectWindowPtr& pw) { return (pw.GetInterfacePtr() != this) && (pw->GetProject() == _project.GetInterfacePtr()); }))
+		if (any_of (pws.begin(), pws.end(), [this](const com_ptr<IProjectWindow>& pw) { return (pw != this) && (pw->GetProject() == _project); }))
 			windowTitle << L" - VLAN " << _selectedVlanNumber;
 
 		::SetWindowText (_hwnd, windowTitle.str().c_str());
@@ -631,7 +631,7 @@ public:
 			}
 		}
 
-		IProjectPtr projectToLoadTo = (_project->GetBridges().empty() && _project->GetWires().empty()) ? _project : projectFactory();
+		com_ptr<IProject> projectToLoadTo = (_project->GetBridges().empty() && _project->GetWires().empty()) ? _project : projectFactory();
 
 		try
 		{
@@ -645,7 +645,7 @@ public:
 			return;
 		}
 
-		if (projectToLoadTo.GetInterfacePtr() != _project.GetInterfacePtr())
+		if (projectToLoadTo != _project)
 		{
 			auto newWindow = projectWindowFactory(_app, projectToLoadTo, selectionFactory, editAreaFactory, true, true, SW_SHOW, 1);
 			_app->AddProjectWindow(newWindow);
@@ -710,8 +710,8 @@ public:
 
 	static HRESULT TryChooseFilePath (OpenOrSave which, HWND fileDialogParentHWnd, const wchar_t* pathToInitializeDialogTo, wstring& sbOut)
 	{
-		IFileDialogPtr dialog;
-		HRESULT hr = dialog.CreateInstance ((which == OpenOrSave::Save) ? CLSID_FileSaveDialog : CLSID_FileOpenDialog);
+		com_ptr<IFileDialog> dialog;
+		HRESULT hr = CoCreateInstance ((which == OpenOrSave::Save) ? CLSID_FileSaveDialog : CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, __uuidof(dialog), (void**) &dialog);
 		if (FAILED(hr))
 			return hr;
 
@@ -732,7 +732,7 @@ public:
 			dialog->SetFileName(filePtr);
 
 			wstring dir (pathToInitializeDialogTo, filePtr - pathToInitializeDialogTo);
-			IShellItemPtr si;
+			com_ptr<IShellItem> si;
 			hr = SHCreateItemFromParsingName (dir.c_str(), nullptr, IID_PPV_ARGS(&si));
 			if (SUCCEEDED(hr))
 				dialog->SetFolder(si);
@@ -742,7 +742,7 @@ public:
 		if (FAILED(hr))
 			return hr;
 
-		IShellItemPtr item;
+		com_ptr<IShellItem> item;
 		hr = dialog->GetResult (&item);
 		if (FAILED(hr))
 			return hr;
@@ -763,7 +763,7 @@ public:
 	HRESULT TryClose()
 	{
 		auto count = count_if (_app->GetProjectWindows().begin(), _app->GetProjectWindows().end(),
-							   [this] (auto& pw) { return pw->GetProject() == _project.GetInterfacePtr(); });
+							   [this] (auto& pw) { return pw->GetProject() == _project; });
 		if (count == 1)
 		{
 			// Closing last window of this project.
@@ -874,24 +874,20 @@ public:
 		::PostMessage (_hwnd, WM_WORK, 0, 0);
 	}
 
-	_COM_SMARTPTR_TYPEDEF(IApplicationDocumentLists, __uuidof(IApplicationDocumentLists));
-	_COM_SMARTPTR_TYPEDEF(IObjectArray, __uuidof(IObjectArray));
-	_COM_SMARTPTR_TYPEDEF(IShellItem2, __uuidof(IShellItem2));
-	
 	static vector<wstring> GetRecentFileList()
 	{
 		// We ignore errors in this particular function.
 
 		vector<wstring> fileList;
 
-		IApplicationDocumentListsPtr docList;
+		com_ptr<IApplicationDocumentLists> docList;
 		auto hr = CoCreateInstance (CLSID_ApplicationDocumentLists, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IApplicationDocumentLists), (void**) &docList);
 		if (FAILED(hr))
 			return fileList;
 
 		// This function retrieves the list created via calls to SHAddToRecentDocs.
 		// We use the standard file dialogs througout the application, which call SHAddToRecentDocs for us.
-		IObjectArrayPtr objects;
+		com_ptr<IObjectArray> objects;
 		hr = docList->GetList(APPDOCLISTTYPE::ADLT_RECENT, 16, __uuidof(IObjectArray), (void**) &objects);
 		if (FAILED(hr))
 			return fileList;
@@ -903,7 +899,7 @@ public:
 
 		for (UINT i = 0; i < count; i++)
 		{
-			IShellItem2Ptr si;
+			com_ptr<IShellItem2> si;
 			hr = objects->GetAt(i, __uuidof(IShellItem2), (void**) &si);
 			if (SUCCEEDED(hr))
 			{
@@ -976,9 +972,9 @@ public:
 };
 
 template<typename... Args>
-static IProjectWindowPtr Create (Args... args)
+static com_ptr<IProjectWindow> Create (Args... args)
 {
-	return IProjectWindowPtr(new ProjectWindow (std::forward<Args>(args)...), false);
+	return com_ptr<IProjectWindow>(new ProjectWindow (std::forward<Args>(args)...), false);
 }
 
 extern const ProjectWindowFactory projectWindowFactory = &Create;

@@ -12,10 +12,10 @@ class LogArea : public D2DWindow, public ILogArea
 {
 	typedef D2DWindow base;
 
-	ISelectionPtr const _selection;
-	IDWriteTextFormatPtr _textFormat;
-	ID2D1SolidColorBrushPtr _windowBrush;
-	ID2D1SolidColorBrushPtr _windowTextBrush;
+	com_ptr<ISelection> const _selection;
+	com_ptr<IDWriteTextFormat> _textFormat;
+	com_ptr<ID2D1SolidColorBrush> _windowBrush;
+	com_ptr<ID2D1SolidColorBrush> _windowTextBrush;
 	Bridge* _bridge = nullptr;
 	int _selectedPort = -1;
 	int _selectedTree = -1;
@@ -85,7 +85,7 @@ private:
 
 			auto oldta = _textFormat->GetTextAlignment();
 			_textFormat->SetTextAlignment (DWRITE_TEXT_ALIGNMENT_CENTER);
-			IDWriteTextLayoutPtr tl;
+			com_ptr<IDWriteTextLayout> tl;
 			auto text = (_bridge == nullptr) ? TextNoBridge : TextNoEntries;
 			auto hr = GetDWriteFactory()->CreateTextLayout (text, (UINT32) wcslen(text), _textFormat, clientSize.width, 10000, &tl); assert(SUCCEEDED(hr));
 			_textFormat->SetTextAlignment(oldta);
@@ -95,18 +95,16 @@ private:
 		}
 		else
 		{
-			wstring_convert<codecvt_utf8<wchar_t>> converter;
-
 			float y = 0;
 			float lineHeight = 0;
 			for (int lineIndex = _topLineIndex; (lineIndex < _animationCurrentLineCount) && (y < clientSize.height); lineIndex++)
 			{
-				auto& line = converter.from_bytes(_lines[lineIndex]->text);
+				wstring line (_lines[lineIndex]->text.begin(), _lines[lineIndex]->text.end());
 
 				if ((line.length() >= 2) && (line[line.length() - 2] == '\r') && (line[line.length() - 1] == '\n'))
 					line.resize (line.length() - 2);
 
-				IDWriteTextLayoutPtr tl;
+				com_ptr<IDWriteTextLayout> tl;
 				auto hr = GetDWriteFactory()->CreateTextLayout (line.c_str(), (UINT32) line.length(), _textFormat, 10000, 10000, &tl); assert(SUCCEEDED(hr));
 
 				if (lineHeight == 0)
@@ -295,7 +293,7 @@ private:
 
 	static int CalcNumberOfLinesFitting (IDWriteTextFormat* textFormat, float clientHeightDips, IDWriteFactory* dWriteFactory)
 	{
-		IDWriteTextLayoutPtr tl;
+		com_ptr<IDWriteTextLayout> tl;
 		auto hr = dWriteFactory->CreateTextLayout (L"A", 1, textFormat, 1000, 1000, &tl); assert(SUCCEEDED(hr));
 		DWRITE_TEXT_METRICS metrics;
 		hr = tl->GetMetrics(&metrics);
@@ -438,9 +436,9 @@ private:
 };
 
 template<typename... Args>
-static ILogAreaPtr Create (Args... args)
+static com_ptr<ILogArea> Create (Args... args)
 {
-	return ILogAreaPtr (new LogArea(std::forward<Args>(args)...), false);
+	return com_ptr<ILogArea> (new LogArea(std::forward<Args>(args)...), false);
 }
 
 extern const LogAreaFactory logAreaFactory = &Create;

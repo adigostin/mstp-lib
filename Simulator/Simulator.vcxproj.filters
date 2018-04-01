@@ -41,6 +41,9 @@
     <ClInclude Include="Object.h" />
     <ClInclude Include="PropertyGrid.h" />
     <ClInclude Include="PortTree.h" />
+    <ClInclude Include="Win32\com_ptr.h">
+      <Filter>Win32</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
