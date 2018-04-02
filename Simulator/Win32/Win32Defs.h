@@ -84,11 +84,6 @@ public:
 	void SetSize (SIZE size);
 };
 
-struct IWindowWithWorkQueue : IWin32Window
-{
-	virtual void PostWork (std::function<void()>&& work) = 0;
-};
-
 struct IZoomable abstract
 {
 	virtual D2D1_POINT_2F GetWLocationFromDLocation (D2D1_POINT_2F dLocation) const = 0;

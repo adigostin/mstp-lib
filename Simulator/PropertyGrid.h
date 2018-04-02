@@ -53,10 +53,10 @@ class PropertyGrid : public D2DWindow
 	};
 	std::unique_ptr<EditorInfo> _editorInfo;
 
-	IWindowWithWorkQueue* const _iwwwq; // TODO: delete this and implement the helper window here
+	std::queue<std::function<void()>> _workQueue;
 
 public:
-	PropertyGrid (HINSTANCE hInstance, const RECT& rect, HWND hWndParent, IDWriteFactory* dWriteFactory, IWindowWithWorkQueue* iwwwq);
+	PropertyGrid (HINSTANCE hInstance, const RECT& rect, HWND hWndParent, IDWriteFactory* dWriteFactory);
 	~PropertyGrid();
 
 	void AddProperties (Object* const* objects, size_t count, const wchar_t* heading);

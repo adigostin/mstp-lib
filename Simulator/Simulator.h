@@ -98,7 +98,7 @@ extern const EditAreaFactory editAreaFactory;
 
 // ============================================================================
 
-struct __declspec(novtable) IProjectWindow : public IWindowWithWorkQueue
+struct __declspec(novtable) IProjectWindow : public IWin32Window
 {
 	struct SelectedVlanNumerChangedEvent : public Event<SelectedVlanNumerChangedEvent, void(IProjectWindow* pw, unsigned int vlanNumber)> { };
 	struct DestroyingEvent : public Event<DestroyingEvent, void(IProjectWindow* pw)> { };

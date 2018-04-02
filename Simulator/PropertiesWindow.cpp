@@ -30,7 +30,7 @@ public:
 		, _project(project)
 		, _selection(selection)
 	{
-		_pg.reset (new PropertyGrid(app->GetHInstance(), this->base::GetClientRectPixels(), GetHWnd(), app->GetDWriteFactory(), projectWindow));
+		_pg.reset (new PropertyGrid(app->GetHInstance(), this->base::GetClientRectPixels(), GetHWnd(), app->GetDWriteFactory()));
 		_pg->GetPropertyChangedByUserEvent().AddHandler (&OnPropertyChangedInPG, this);
 		this->SetSelectionToPGs();
 

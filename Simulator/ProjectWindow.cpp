@@ -6,8 +6,6 @@
 
 using namespace std;
 
-#define WM_WORK  (WM_APP + 1)
-
 static ATOM wndClassAtom;
 static constexpr wchar_t ProjectWindowWndClassName[] = L"ProjectWindow-{24B42526-2970-4B3C-A753-2DABD22C4BB0}";
 static constexpr wchar_t RegValueNameShowCmd[] = L"WindowShowCmd";
@@ -43,7 +41,6 @@ class ProjectWindow : public EventManager, public IProjectWindow
 	SIZE _clientSize;
 	RECT _restoreBounds;
 	unsigned int _selectedVlanNumber = 1;
-	queue<function<void()>> _workQueue;
 	int _dpiX;
 	int _dpiY;
 	LONG _splitterWidthPixels;
@@ -353,13 +350,6 @@ public:
 				return olr.value();
 
 			return DefWindowProc(_hwnd, msg, wParam, lParam);
-		}
-
-		if (msg == WM_WORK)
-		{
-			_workQueue.front()();
-			_workQueue.pop();
-			return 0;
 		}
 
 		if (msg == WM_SETCURSOR)
@@ -867,12 +857,6 @@ public:
 	virtual IProject* GetProject() const override final { return _project; }
 
 	virtual IEditArea* GetEditArea() const override final { return _editWindow; }
-
-	virtual void PostWork (std::function<void()>&& work) override final
-	{
-		_workQueue.push (move(work));
-		::PostMessage (_hwnd, WM_WORK, 0, 0);
-	}
 
 	static vector<wstring> GetRecentFileList()
 	{

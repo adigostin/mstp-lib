@@ -6,6 +6,7 @@
 using namespace std;
 
 static constexpr UINT WM_CLOSE_POPUP = WM_APP + 1;
+static constexpr UINT WM_WORK        = WM_APP + 2;
 
 static constexpr float CellLRPadding = 3.0f;
 static constexpr D2D1_RECT_F HeadingTextPadding = { 5, 2, 5, 2 };
@@ -125,9 +126,8 @@ public:
 };
 #pragma endregion
 
-PropertyGrid::PropertyGrid (HINSTANCE hInstance, const RECT& rect, HWND hWndParent, IDWriteFactory* dWriteFactory, IWindowWithWorkQueue* iwwwq)
+PropertyGrid::PropertyGrid (HINSTANCE hInstance, const RECT& rect, HWND hWndParent, IDWriteFactory* dWriteFactory)
 	: base (hInstance, 0, WS_CHILD | WS_VISIBLE, rect, hWndParent, nullptr, dWriteFactory)
-	, _iwwwq(iwwwq)
 {
 	auto hr = dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
 											   DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_textFormat); assert(SUCCEEDED(hr));
@@ -187,6 +187,13 @@ std::optional<LRESULT> PropertyGrid::WindowProc(HWND hwnd, UINT msg, WPARAM wPar
 		}
 
 		return nullopt;
+	}
+
+	if (msg == WM_WORK)
+	{
+		_workQueue.front()();
+		_workQueue.pop();
+		return 0;
 	}
 
 	return resultBaseClass;
@@ -422,10 +429,11 @@ LRESULT CALLBACK PropertyGrid::EditSubclassProc (HWND hWnd, UINT msg, WPARAM wPa
 			}
 			catch (const exception& ex)
 			{
-				pg->_iwwwq->PostWork ([hwnd=pg->GetHWnd(), message=string(ex.what())] ()
+				pg->_workQueue.push ([hwnd=pg->GetHWnd(), message=string(ex.what())] ()
 				{
 					::MessageBoxA (hwnd, message.c_str(), 0, 0);
 				});
+				::PostMessage (pg->GetHWnd(), WM_WORK, 0, 0);
 			}
 		}
 
