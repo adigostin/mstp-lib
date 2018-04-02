@@ -31,8 +31,6 @@ enum class MouseButton
 
 struct __declspec(novtable) ISelection : public IUnknown
 {
-	using Interface = ISelection;
-
 	virtual const std::vector<Object*>& GetObjects() const = 0;
 	virtual void Select (Object* o) = 0;
 	virtual void Clear() = 0;
@@ -57,7 +55,6 @@ extern const SelectionFactory selectionFactory;
 
 struct __declspec(novtable) ILogArea abstract : public IWin32Window
 {
-	using Interface = ILogArea;
 };
 using LogAreaFactory = com_ptr<ILogArea>(*const)(HINSTANCE hInstance, HWND hWndParent, const RECT& rect, IDWriteFactory* dWriteFactory, ISelection* selection);
 extern const LogAreaFactory logAreaFactory;
@@ -83,8 +80,6 @@ struct MouseLocation
 
 struct __declspec(novtable) IEditArea : public IWin32Window
 {
-	using Interface = IEditArea;
-
 	virtual const DrawingObjects& GetDrawingObjects() const = 0;
 	virtual void EnterState (std::unique_ptr<EditState>&& state) = 0;
 	virtual Port* GetCPAt (D2D1_POINT_2F dLocation, float tolerance) const = 0;
@@ -105,8 +100,6 @@ extern const EditAreaFactory editAreaFactory;
 
 struct __declspec(novtable) IProjectWindow : public IWindowWithWorkQueue
 {
-	using Interface = IProjectWindow;
-
 	struct SelectedVlanNumerChangedEvent : public Event<SelectedVlanNumerChangedEvent, void(IProjectWindow* pw, unsigned int vlanNumber)> { };
 	struct DestroyingEvent : public Event<DestroyingEvent, void(IProjectWindow* pw)> { };
 
@@ -139,8 +132,6 @@ enum class SaveProjectOption { SaveUnconditionally, SaveIfChangedAskUserFirst };
 
 struct __declspec(novtable) IProject : public IUnknown
 {
-	using Interface = IProject;
-
 	struct ConvertedWirePoint
 	{
 		Wire* wire;
@@ -188,7 +179,6 @@ extern const ProjectFactory projectFactory;
 
 struct __declspec(novtable) IPropertiesWindow : public IWin32Window
 {
-	using Interface = IPropertiesWindow;
 };
 using PropertiesWindowFactory = com_ptr<IPropertiesWindow>(*const)(ISimulatorApp* app,
 															 IProjectWindow* projectWindow,
@@ -202,7 +192,6 @@ extern const PropertiesWindowFactory propertiesWindowFactory;
 
 struct __declspec(novtable) IVlanWindow : public IWin32Window
 {
-	using Interface = IVlanWindow;
 };
 using VlanWindowFactory = com_ptr<IVlanWindow>(*const)(ISimulatorApp* app,
 												 IProjectWindow* pw,
