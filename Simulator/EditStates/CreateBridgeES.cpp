@@ -85,15 +85,18 @@ public:
 	{
 		if (_bridge != nullptr)
 		{
+			auto zoom_tr = _pw->GetEditArea()->GetZoomTransform();
 			D2D1_MATRIX_3X2_F oldtr;
 			rt->GetTransform(&oldtr);
-			rt->SetTransform(_pw->GetEditArea()->GetZoomTransform());
+			rt->SetTransform(zoom_tr);
 			_bridge->Render (rt, _pw->GetEditArea()->GetDrawingObjects(), _pw->GetSelectedVlanNumber(), ColorF(ColorF::LightGreen));
 			rt->SetTransform(&oldtr);
 
-			auto centerX = _bridge->GetLeft() + _bridge->GetWidth() / 2;
-			auto centerY = _bridge->GetTop() + _bridge->GetHeight() / 2;
-			_editArea->RenderHint (rt, centerX, centerY + 15, L"Press + or - to change the number of ports.", true);
+			auto x = _bridge->GetLeft() + _bridge->GetWidth() / 2;
+			auto y = _bridge->GetBottom() + Port::ExteriorHeight * 1.1f;
+			auto centerD = zoom_tr.TransformPoint({ x, y });
+			_editArea->RenderHint (rt, centerD, L"Press + or - to change the number of ports.",
+								   DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, true);
 		}
 	}
 

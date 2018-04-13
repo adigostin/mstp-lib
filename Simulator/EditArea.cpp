@@ -311,7 +311,12 @@ public:
 		rt->SetAntialiasMode(oldaa);
 	}
 
-	virtual void RenderHint (ID2D1RenderTarget* rt, float centerX, float y, const wchar_t* text, bool smallFont = false, bool alignBottom = false) const override final
+	virtual void RenderHint (ID2D1RenderTarget* rt,
+							 D2D1_POINT_2F dLocation,
+							 const wchar_t* text,
+							 DWRITE_TEXT_ALIGNMENT ha,
+							 DWRITE_PARAGRAPH_ALIGNMENT va,
+							 bool smallFont) const override final
 	{
 		float leftRightPadding = 3;
 		float topBottomPadding = 1.5f;
@@ -324,12 +329,22 @@ public:
 		float pixelWidthDips = GetDipSizeFromPixelSize ({ 1, 0 }).width;
 		float lineWidthDips = roundf(1.0f / pixelWidthDips) * pixelWidthDips;
 
-		float left = centerX - metrics.width / 2 - leftRightPadding;
-		float top = y - (alignBottom ? (topBottomPadding + metrics.height + topBottomPadding + lineWidthDips) : 0);
-		float right = centerX + metrics.width / 2 + leftRightPadding;
-		float bottom = y + 2 * topBottomPadding + metrics.height;
-		left   = roundf (left   / pixelWidthDips) * pixelWidthDips + lineWidthDips / 2;
-		top    = roundf (top    / pixelWidthDips) * pixelWidthDips + lineWidthDips / 2;
+		float left = dLocation.x - leftRightPadding;
+		if (ha == DWRITE_TEXT_ALIGNMENT_CENTER)
+			left -= metrics.width / 2;
+		else if (ha == DWRITE_TEXT_ALIGNMENT_TRAILING)
+			left -= metrics.width;
+
+		float top = dLocation.y;
+		if (va == DWRITE_PARAGRAPH_ALIGNMENT_FAR)
+			top -= (topBottomPadding * 2 + metrics.height + lineWidthDips * 2);
+		else if (va == DWRITE_PARAGRAPH_ALIGNMENT_CENTER)
+			top -= (topBottomPadding + metrics.height + lineWidthDips);
+		
+		float right = left + 2 * leftRightPadding + metrics.width;
+		float bottom = top + 2 * topBottomPadding + metrics.height;
+		left   = roundf (left   / pixelWidthDips) * pixelWidthDips - lineWidthDips / 2;
+		top    = roundf (top    / pixelWidthDips) * pixelWidthDips - lineWidthDips / 2;
 		right  = roundf (right  / pixelWidthDips) * pixelWidthDips + lineWidthDips / 2;
 		bottom = roundf (bottom / pixelWidthDips) * pixelWidthDips + lineWidthDips / 2;
 
@@ -386,11 +401,11 @@ public:
 
 		if (_project->GetBridges().empty())
 		{
-			RenderHint (dc, GetClientWidthDips() / 2, GetClientHeightDips() / 2, L"No bridges created. Right-click to create some.");
+			RenderHint (dc, { GetClientWidthDips() / 2, GetClientHeightDips() / 2 }, L"No bridges created. Right-click to create some.", DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, false);
 		}
 		else if (_project->GetBridges().size() == 1)
 		{
-			RenderHint (dc, GetClientWidthDips() / 2, GetClientHeightDips() / 2, L"Right-click to add more bridges.");
+			RenderHint (dc, { GetClientWidthDips() / 2, GetClientHeightDips() / 2 }, L"Right-click to add more bridges.", DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, false);
 		}
 		else
 		{
@@ -405,7 +420,7 @@ public:
 				auto text = L"No port connected. You can connect\r\nports by drawing wires with the mouse.";
 				auto wl = D2D1_POINT_2F { b->GetLeft() + b->GetWidth() / 2, b->GetBottom() + Port::ExteriorHeight * 1.5f };
 				auto dl = GetDLocationFromWLocation(wl);
-				RenderHint (dc, dl.x, dl.y, text);
+				RenderHint (dc, { dl.x, dl.y }, text, DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, false);
 			}
 		}
 	}
@@ -454,10 +469,14 @@ public:
 		if (_htResult.object != nullptr)
 			RenderHover(rt);
 
-		RenderHint (rt, GetClientWidthDips() / 2, GetClientHeightDips(), L"Rotate mouse wheel for zooming, press wheel and drag for panning.", true, true);
+		RenderHint (rt, { GetClientWidthDips() / 2, GetClientHeightDips() },
+					L"Rotate mouse wheel for zooming, press wheel and drag for panning.",
+					DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_FAR, true);
 
 		if (_project->IsSimulationPaused())
-			RenderHint (rt, GetClientWidthDips() / 2, 10, L"Simulation is paused. Right-click to resume.");
+			RenderHint (rt, { GetClientWidthDips() / 2, 10 },
+						L"Simulation is paused. Right-click to resume.",
+						DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, true);
 
 		if (_state != nullptr)
 			_state->Render(rt);
