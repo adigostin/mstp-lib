@@ -119,6 +119,9 @@ public:
 	void SetMstConfigIdRevLevel (unsigned short revLevel);
 	std::wstring GetMstConfigIdDigest() const;
 	void SetMstConfigTable (const STP_CONFIG_TABLE_ENTRY* entries, size_t entryCount);
+	uint32_t GetBridgeHelloTime() const;
+	void SetBridgeHelloTime (uint32_t helloTime);
+	uint32_t GetHelloTime() const;
 
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
@@ -157,6 +160,8 @@ private:
 	static const TypedProperty<std::wstring> MstConfigIdName;
 	static const TypedProperty<unsigned short> MstConfigIdRevLevel;
 	static const TypedProperty<std::wstring> MstConfigIdDigest;
+	static const TypedProperty<uint32_t> BridgeHelloTime;
+	static const TypedProperty<uint32_t> HelloTime;
 
 	static const PropertyOrGroup* const Properties[];
 	virtual const PropertyOrGroup* const* GetProperties() const override final { return Properties; }

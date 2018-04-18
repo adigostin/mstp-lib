@@ -253,15 +253,8 @@ struct TIMES
 	unsigned short MessageAge;
 	unsigned char remainingHops;
 
-	bool operator!= (const TIMES& rhs) const
-	{
-		return Cmp (this, &rhs, sizeof (*this)) != 0;
-	}
-
-	bool operator== (const TIMES& rhs) const
-	{
-		return Cmp (this, &rhs, sizeof (*this)) == 0;
-	}
+	bool operator== (const TIMES& other) const;
+	bool operator!= (const TIMES& other) const;
 };
 
 // ============================================================================

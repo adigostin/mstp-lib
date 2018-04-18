@@ -319,10 +319,13 @@ void rcvMsgs (STP_BRIDGE* bridge, int givenPort)
 		portCistTree->msgTimes.HelloTime    = bridge->receivedBpduContent->HelloTime.GetValue () / 256;
 		portCistTree->msgTimes.MaxAge       = bridge->receivedBpduContent->MaxAge.GetValue () / 256;
 		portCistTree->msgTimes.MessageAge   = bridge->receivedBpduContent->MessageAge.GetValue () / 256;
+		// This "if" condition deviates from the standard. The standard says "If the BPDU is an STP or RST BPDU
+		// without MSTP parameters", but I'm pretty sure also BPDUs from a different MST region should be treated
+		// the same. A false value in rcvdInternal covers both cases.
 		if (port->rcvdInternal)
 			portCistTree->msgTimes.remainingHops = bridge->receivedBpduContent->cistRemainingHops;
 		else
-			portCistTree->msgTimes.remainingHops = bridge->MaxHops;
+			portCistTree->msgTimes.remainingHops = bridge->trees[CIST_INDEX]->BridgeTimes.remainingHops;
 
 		// flags
 		if (bridge->receivedBpduType == VALIDATED_BPDU_TYPE_STP_CONFIG)
@@ -668,8 +671,7 @@ void recordTimes (STP_BRIDGE* bridge, int givenPort, int givenTree)
 		portTree->portTimes.MaxAge        = portTree->msgTimes.MaxAge;
 		portTree->portTimes.ForwardDelay  = portTree->msgTimes.ForwardDelay;
 		portTree->portTimes.remainingHops = portTree->msgTimes.remainingHops;
-
-		portTree->portTimes.HelloTime = STP_BRIDGE::BridgeHelloTime;
+		portTree->portTimes.HelloTime     = STP_BRIDGE::DefaultBridgeHelloTime;
 	}
 	else
 	{

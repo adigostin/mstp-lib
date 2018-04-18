@@ -216,6 +216,13 @@ unsigned int STP_GetPortPathCost (const struct STP_BRIDGE* bridge, unsigned int 
 // for treeIndex > 0: ieee8021MstpRootPathCost - path cost to Root Bridge for the MSTI (13.27.20 designatedPriority)
 unsigned int STP_GetPathCostToRootBridge (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned treeIndex);
 
+// ieee8021SpanningTreeBridgeHelloTime / dot1dStpBridgeHelloTime
+void STP_SetBridgeHelloTime (struct STP_BRIDGE* bridge, unsigned int helloTimeCentiseconds, unsigned int timestamp);
+unsigned int STP_GetBridgeHelloTime (const struct STP_BRIDGE* bridge); // centiseconds
+
+// ieee8021SpanningTreeHelloTime / dot1dStpHelloTime
+unsigned int STP_GetHelloTime (const struct STP_BRIDGE* bridge); // centiseconds
+
 void  STP_SetApplicationContext (struct STP_BRIDGE* bridge, void* applicationContext);
 void* STP_GetApplicationContext (const struct STP_BRIDGE* bridge);
 

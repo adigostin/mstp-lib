@@ -120,3 +120,16 @@ bool PORT_ID::IsBetterThan (const PORT_ID& rhs) const
 	return better;
 }
 
+bool TIMES::operator== (const TIMES& other) const
+{
+	return (this->ForwardDelay  == other.ForwardDelay)
+		&& (this->HelloTime     == other.HelloTime)
+		&& (this->MaxAge        == other.MaxAge)
+		&& (this->MessageAge    == other.MessageAge)
+		&& (this->remainingHops == other.remainingHops);
+}
+
+bool TIMES::operator!= (const TIMES& other) const
+{
+	return !this->operator==(other);
+}

@@ -90,10 +90,11 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	assert (bridge->trees [CIST_INDEX] != NULL);
 	bridge->trees [CIST_INDEX]->SetBridgeIdentifier (0x8000, CIST_INDEX, bridgeAddress);
 	// 13.24.3 in 802.1Q-2011
-	bridge->trees [CIST_INDEX]->BridgeTimes.HelloTime		= STP_BRIDGE::BridgeHelloTime;
-	bridge->trees [CIST_INDEX]->BridgeTimes.remainingHops	= bridge->MaxHops;
-	bridge->trees [CIST_INDEX]->BridgeTimes.ForwardDelay	= bridge->BridgeForwardDelay;
-	bridge->trees [CIST_INDEX]->BridgeTimes.MaxAge			= bridge->BridgeMaxAge;
+	// Defaults from Table 13-5 on page 356 in 802.1Q-2011
+	bridge->trees [CIST_INDEX]->BridgeTimes.HelloTime		= STP_BRIDGE::DefaultBridgeHelloTime;
+	bridge->trees [CIST_INDEX]->BridgeTimes.remainingHops	= STP_BRIDGE::DefaultMaxHops;
+	bridge->trees [CIST_INDEX]->BridgeTimes.ForwardDelay	= STP_BRIDGE::DefaultBridgeForwardDelay;
+	bridge->trees [CIST_INDEX]->BridgeTimes.MaxAge			= STP_BRIDGE::DefaultBridgeMaxAge;
 	bridge->trees [CIST_INDEX]->BridgeTimes.MessageAge		= 0;
 
 	// per-bridge MSTI vars
@@ -102,7 +103,7 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 		bridge->trees [treeIndex] = (BRIDGE_TREE*) callbacks->allocAndZeroMemory (sizeof (BRIDGE_TREE));
 		assert (bridge->trees [treeIndex] != NULL);
 		bridge->trees [treeIndex]->SetBridgeIdentifier (0x8000, treeIndex, bridgeAddress);
-		bridge->trees [treeIndex]->BridgeTimes.remainingHops = bridge->MaxHops;
+		bridge->trees [treeIndex]->BridgeTimes.remainingHops = STP_BRIDGE::DefaultMaxHops;
 	}
 
 	// per-port vars
@@ -122,7 +123,7 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 			port->trees [treeIndex] = (PORT_TREE*) callbacks->allocAndZeroMemory (sizeof (PORT_TREE));
 			assert (port->trees [treeIndex] != NULL);
 			port->trees [treeIndex]->portId.Set (0x80, (unsigned short) portIndex + 1);
-			port->trees [treeIndex]->portTimes.HelloTime = STP_BRIDGE::BridgeHelloTime;
+			port->trees[treeIndex]->portTimes = bridge->trees[treeIndex]->BridgeTimes;
 			port->trees [treeIndex]->InternalPortPathCost = 200000;
 		}
 
@@ -1301,3 +1302,39 @@ unsigned int STP_GetPathCostToRootBridge (const struct STP_BRIDGE* bridge, unsig
 	assert(false); // not implemented
 	return 0;
 }
+
+// Note that the 2011 standard fixes this to two seconds (Table 13-5 on page 356 in 802.1Q-2011),
+// and it even requires ignoring any HelloTime value received and using two seconds instead
+// (13.27.19 in 802.1Q-2011).
+//
+// About the only case when setting a non-default BridgeHelloTime would have an effect
+// is when this bridge is the root bridge in a network, is connected directly to switches
+// that run older versions of STP, and the network administrator for some strange reason
+// sets a HelloTime different than two seconds.
+//
+extern "C" void STP_SetBridgeHelloTime (struct STP_BRIDGE* bridge, unsigned int helloTimeCentiseconds, unsigned int timestamp)
+{
+	// The 2011 version of the standard fixes this to two seconds, but I prefer to allow the user to set it anyway.
+	assert ((helloTimeCentiseconds >= 100) && (helloTimeCentiseconds <= 1000));
+	unsigned short newHelloTime = (unsigned short) (helloTimeCentiseconds + 50) / 100;
+	if (bridge->trees[CIST_INDEX]->BridgeTimes.HelloTime != newHelloTime)
+	{
+		bridge->trees[CIST_INDEX]->BridgeTimes.HelloTime = newHelloTime;
+
+		if (bridge->started)
+			RecomputePrioritiesAndPortRoles (bridge, CIST_INDEX, timestamp);
+
+		bridge->callbacks.onConfigChanged(bridge, timestamp);
+	}
+}
+
+extern "C" unsigned int STP_GetBridgeHelloTime (const struct STP_BRIDGE* bridge)
+{
+	return bridge->trees[CIST_INDEX]->BridgeTimes.HelloTime * 100;
+}
+
+extern "C" unsigned int STP_GetHelloTime (const struct STP_BRIDGE* bridge)
+{
+	return bridge->trees[CIST_INDEX]->rootTimes.HelloTime * 100;
+}
+

@@ -739,6 +739,21 @@ void Bridge::SetStpVersionFromInt (int value)
 	}
 }
 
+uint32_t Bridge::GetBridgeHelloTime() const
+{
+	return (uint32_t ) STP_GetBridgeHelloTime(_stpBridge);
+}
+
+void Bridge::SetBridgeHelloTime (uint32_t helloTime)
+{
+	STP_SetBridgeHelloTime(_stpBridge, helloTime, GetMessageTime());
+}
+
+uint32_t Bridge::GetHelloTime() const
+{
+	return STP_GetHelloTime(_stpBridge);
+}
+
 const PropertyGroup Bridge::CommonPropGroup (L"Common", nullptr);
 
 const TypedProperty<wstring> Bridge::Address
@@ -811,6 +826,24 @@ const TypedProperty<wstring> Bridge::MstConfigIdDigest
 	mstConfigIdDialogFactory
 );
 
+const TypedProperty<uint32_t> Bridge::BridgeHelloTime
+(
+	L"BridgeHelloTime",
+	nullptr,
+	static_cast<TypedProperty<uint32_t>::Getter>(&GetBridgeHelloTime),
+	static_cast<TypedProperty<uint32_t>::Setter>(&SetBridgeHelloTime),
+	nullptr
+);
+
+const TypedProperty<uint32_t> Bridge::HelloTime
+(
+	L"HelloTime",
+	nullptr,
+	static_cast<TypedProperty<uint32_t>::Getter>(&GetHelloTime),
+	nullptr,
+	nullptr
+);
+
 const PropertyOrGroup* const Bridge::Properties[] =
 {
 	&CommonPropGroup,
@@ -823,6 +856,8 @@ const PropertyOrGroup* const Bridge::Properties[] =
 	&MstConfigIdName,
 	&MstConfigIdRevLevel,
 	&MstConfigIdDigest,
+	&BridgeHelloTime,
+	&HelloTime,
 	nullptr,
 };
 
