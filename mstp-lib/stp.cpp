@@ -1314,7 +1314,6 @@ unsigned int STP_GetPathCostToRootBridge (const struct STP_BRIDGE* bridge, unsig
 //
 extern "C" void STP_SetBridgeHelloTime (struct STP_BRIDGE* bridge, unsigned int helloTimeCentiseconds, unsigned int timestamp)
 {
-	// The 2011 version of the standard fixes this to two seconds, but I prefer to allow the user to set it anyway.
 	assert ((helloTimeCentiseconds >= 100) && (helloTimeCentiseconds <= 1000));
 	unsigned short newHelloTime = (unsigned short) (helloTimeCentiseconds + 50) / 100;
 	if (bridge->trees[CIST_INDEX]->BridgeTimes.HelloTime != newHelloTime)
