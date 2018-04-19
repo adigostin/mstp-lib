@@ -1297,11 +1297,13 @@ unsigned int STP_GetPortPathCost (const struct STP_BRIDGE* bridge, unsigned int 
 	}
 }
 
-unsigned int STP_GetPathCostToRootBridge (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned treeIndex)
+unsigned int STP_GetPathCostToRootBridge (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
 {
 	assert(false); // not implemented
 	return 0;
 }
+
+// ============================================================================
 
 // Note that the 2011 standard fixes this to two seconds (Table 13-5 on page 356 in 802.1Q-2011),
 // and it even requires ignoring any HelloTime value received and using two seconds instead
@@ -1337,3 +1339,29 @@ extern "C" unsigned int STP_GetHelloTime (const struct STP_BRIDGE* bridge)
 	return bridge->trees[CIST_INDEX]->rootTimes.HelloTime * 100;
 }
 
+// ============================================================================
+
+extern "C" void STP_SetBridgeMaxAge (struct STP_BRIDGE* bridge, unsigned int maxAgeCentiseconds, unsigned int timestamp)
+{
+	assert ((maxAgeCentiseconds >= 600) && (maxAgeCentiseconds <= 4000));
+	unsigned short newMaxAge = (unsigned short) (maxAgeCentiseconds + 50) / 100;
+	if (bridge->trees[CIST_INDEX]->BridgeTimes.MaxAge != newMaxAge)
+	{
+		bridge->trees[CIST_INDEX]->BridgeTimes.MaxAge = newMaxAge;
+
+		if (bridge->started)
+			RecomputePrioritiesAndPortRoles (bridge, CIST_INDEX, timestamp);
+
+		bridge->callbacks.onConfigChanged(bridge, timestamp);
+	}
+}
+
+extern "C" unsigned int STP_GetBridgeMaxAge (const struct STP_BRIDGE* bridge)
+{
+	return bridge->trees[CIST_INDEX]->BridgeTimes.MaxAge * 100;
+}
+
+extern "C" unsigned int STP_GetMaxAge (const struct STP_BRIDGE* bridge)
+{
+	return bridge->trees[CIST_INDEX]->rootTimes.MaxAge * 100;
+}

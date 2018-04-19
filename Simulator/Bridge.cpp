@@ -741,17 +741,32 @@ void Bridge::SetStpVersionFromInt (int value)
 
 uint32_t Bridge::GetBridgeHelloTime() const
 {
-	return (uint32_t ) STP_GetBridgeHelloTime(_stpBridge);
+	return (uint32_t) STP_GetBridgeHelloTime(_stpBridge) / 100;
 }
 
 void Bridge::SetBridgeHelloTime (uint32_t helloTime)
 {
-	STP_SetBridgeHelloTime(_stpBridge, helloTime, GetMessageTime());
+	STP_SetBridgeHelloTime(_stpBridge, helloTime * 100, GetMessageTime());
 }
 
 uint32_t Bridge::GetHelloTime() const
 {
-	return STP_GetHelloTime(_stpBridge);
+	return STP_GetHelloTime(_stpBridge) / 100;
+}
+
+uint32_t Bridge::GetBridgeMaxAge() const
+{
+	return (uint32_t) STP_GetBridgeMaxAge(_stpBridge) / 100;
+}
+
+void Bridge::SetBridgeMaxAge (uint32_t maxAge)
+{
+	STP_SetBridgeMaxAge (_stpBridge, maxAge * 100, GetMessageTime());
+}
+
+uint32_t Bridge::GetMaxAge() const
+{
+	return STP_GetMaxAge(_stpBridge) / 100;
 }
 
 const PropertyGroup Bridge::CommonPropGroup (L"Common", nullptr);
@@ -844,6 +859,24 @@ const TypedProperty<uint32_t> Bridge::HelloTime
 	nullptr
 );
 
+const TypedProperty<uint32_t> Bridge::BridgeMaxAge
+(
+	L"BridgeMaxAge",
+	nullptr,
+	static_cast<TypedProperty<uint32_t>::Getter>(&GetBridgeMaxAge),
+	static_cast<TypedProperty<uint32_t>::Setter>(&SetBridgeMaxAge),
+	nullptr
+);
+
+const TypedProperty<uint32_t> Bridge::MaxAge
+(
+	L"MaxAge",
+	nullptr,
+	static_cast<TypedProperty<uint32_t>::Getter>(&GetMaxAge),
+	nullptr,
+	nullptr
+);
+
 const PropertyOrGroup* const Bridge::Properties[] =
 {
 	&CommonPropGroup,
@@ -858,6 +891,8 @@ const PropertyOrGroup* const Bridge::Properties[] =
 	&MstConfigIdDigest,
 	&BridgeHelloTime,
 	&HelloTime,
+	&BridgeMaxAge,
+	&MaxAge,
 	nullptr,
 };
 
