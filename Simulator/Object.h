@@ -8,13 +8,10 @@ class Object;
 
 struct PropertyOrGroup
 {
-	using LabelGetter = std::wstring(*)(const std::vector<Object*>& objects);
-
 	const wchar_t* _name;
-	LabelGetter _labelGetter;
 
-	PropertyOrGroup (const wchar_t* name, LabelGetter labelGetter)
-		: _name(name), _labelGetter(labelGetter)
+	PropertyOrGroup (const wchar_t* name)
+		: _name(name)
 	{ }
 
 	virtual ~PropertyOrGroup() = default;
@@ -40,8 +37,8 @@ struct Property abstract : PropertyOrGroup
 
 	PropertyEditorFactory const _customEditor;
 
-	Property (const wchar_t* name, LabelGetter labelGetter, PropertyEditorFactory customEditor = nullptr)
-		: base (name, labelGetter), _customEditor(customEditor)
+	Property (const wchar_t* name, PropertyEditorFactory customEditor = nullptr)
+		: base (name), _customEditor(customEditor)
 	{ }
 
 	virtual bool HasSetter() const = 0;
@@ -56,8 +53,8 @@ struct TypedProperty : Property
 	Getter const _getter;
 	Setter const _setter;
 
-	TypedProperty (const wchar_t* name, LabelGetter labelGetter, Getter getter, Setter setter, PropertyEditorFactory customEditor = nullptr)
-		: Property(name, labelGetter, customEditor), _getter(getter), _setter(setter)
+	TypedProperty (const wchar_t* name, Getter getter, Setter setter, PropertyEditorFactory customEditor = nullptr)
+		: Property(name, customEditor), _getter(getter), _setter(setter)
 	{ }
 
 	virtual bool HasSetter() const override final { return _setter != nullptr; }
@@ -87,8 +84,8 @@ struct EnumProperty : TypedProperty<int>
 
 	const NVP* const _nameValuePairs;
 
-	EnumProperty (const wchar_t* name, LabelGetter labelGetter, Getter getter, Setter setter, const NVP* nameValuePairs)
-		: base(name, labelGetter, getter, setter), _nameValuePairs(nameValuePairs)
+	EnumProperty (const wchar_t* name, Getter getter, Setter setter, const NVP* nameValuePairs)
+		: base(name, getter, setter), _nameValuePairs(nameValuePairs)
 	{ }
 
 	virtual std::wstring to_wstring (const Object* obj) const override;

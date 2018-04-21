@@ -68,7 +68,6 @@ static const NVP PortPrioNVPs[] =
 const EnumProperty PortTree::Priority
 (
 	L"PortPriority",
-	nullptr,//[](const std::vector<Object*>& objs) -> wstring
 	static_cast<EnumProperty::Getter>(&GetPriority),
 	static_cast<EnumProperty::Setter>(&SetPriority),
 	PortPrioNVPs

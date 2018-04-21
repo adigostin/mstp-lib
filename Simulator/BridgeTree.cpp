@@ -155,7 +155,6 @@ std::wstring BridgeTree::GetReceivingPortId() const
 const PropertyGroup BridgeTree::Common
 {
 	L"Common",
-	nullptr,
 };
 
 static const NVP BridgePrioNVPs[] =
@@ -181,7 +180,6 @@ static const NVP BridgePrioNVPs[] =
 const EnumProperty BridgeTree::Priority
 (
 	L"Bridge Priority",
-	nullptr,//[](const std::vector<Object*>& objs) -> wstring
 	static_cast<EnumProperty::Getter>(&GetPriority),
 	static_cast<EnumProperty::Setter>(&SetPriority),
 	BridgePrioNVPs
@@ -190,13 +188,11 @@ const EnumProperty BridgeTree::Priority
 static const PropertyGroup RootPriorityVectorPropGroup
 {
 	L"Root Priority Vector",
-	nullptr,
 };
 
 static const TypedProperty<wstring> RootBridgeId
 (
 	L"Root Bridge ID",
-	nullptr,
 	static_cast<TypedProperty<wstring>::Getter>(&BridgeTree::GetRootBridgeId),
 	nullptr
 );
@@ -204,7 +200,6 @@ static const TypedProperty<wstring> RootBridgeId
 static const TypedProperty<wstring> ExternalRootPathCost
 (
 	L"External Root Path Cost",
-	nullptr,
 	static_cast<TypedProperty<wstring>::Getter>(&BridgeTree::GetExternalRootPathCost),
 	nullptr
 );
@@ -212,7 +207,6 @@ static const TypedProperty<wstring> ExternalRootPathCost
 static const TypedProperty<wstring> RegionalRootBridgeId
 (
 	L"Regional Root Bridge Id",
-	nullptr,
 	static_cast<TypedProperty<wstring>::Getter>(&BridgeTree::GetRegionalRootBridgeId),
 	nullptr
 );
@@ -220,7 +214,6 @@ static const TypedProperty<wstring> RegionalRootBridgeId
 static const TypedProperty<wstring> InternalRootPathCost
 (
 	L"Internal Root Path Cost",
-	nullptr,
 	static_cast<TypedProperty<wstring>::Getter>(&BridgeTree::GetInternalRootPathCost),
 	nullptr
 );
@@ -228,7 +221,6 @@ static const TypedProperty<wstring> InternalRootPathCost
 static const TypedProperty<wstring> DesignatedBridgeId
 (
 	L"Designated Bridge Id",
-	nullptr,
 	static_cast<TypedProperty<wstring>::Getter>(&BridgeTree::GetDesignatedBridgeId),
 	nullptr
 );
@@ -236,7 +228,6 @@ static const TypedProperty<wstring> DesignatedBridgeId
 static const TypedProperty<wstring> DesignatedPortId
 (
 	L"Designated Port Id",
-	nullptr,
 	static_cast<TypedProperty<wstring>::Getter>(&BridgeTree::GetDesignatedPortId),
 	nullptr
 );
@@ -244,7 +235,6 @@ static const TypedProperty<wstring> DesignatedPortId
 static const TypedProperty<wstring> ReceivingPortId
 (
 	L"Receiving Port Id",
-	nullptr,
 	static_cast<TypedProperty<wstring>::Getter>(&BridgeTree::GetReceivingPortId),
 	nullptr
 );

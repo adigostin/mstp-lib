@@ -54,13 +54,7 @@ public:
 
 	virtual void RecreateTextLayouts (float nameColumnWidth) override final
 	{
-		std::wstring label;
-		if (_pd->_labelGetter != nullptr)
-			label = _pd->_labelGetter (_selectedObjects);
-		else
-			label = _pd->_name;
-
-		_tl = TextLayout::Create (_pg->GetDWriteFactory(), _pg->_headingTextFormat, label.c_str(), _pg->GetClientWidthDips());
+		_tl = TextLayout::Create (_pg->GetDWriteFactory(), _pg->_headingTextFormat, _pd->_name, _pg->GetClientWidthDips());
 	}
 
 	virtual void Render (ID2D1RenderTarget* rt, float lineY, float textY, float nameColumnWidth, float lineWidth) const override final
@@ -88,13 +82,7 @@ public:
 	{
 		float maxWidth = _pg->GetNameColumnWidth() - 2 * CellLRPadding;
 
-		if (_pd->_labelGetter != nullptr)
-		{
-			assert(false);
-			//item->labelTL = TextLayout::Create (GetDWriteFactory(), _pg->_textFormat, item->pd->_labelGetter(_selectedObjects).c_str(), maxWidth);
-		}
-		else
-			_labelTL = TextLayout::Create (_pg->GetDWriteFactory(), _pg->_textFormat, _pd->_name, maxWidth);
+		_labelTL = TextLayout::Create (_pg->GetDWriteFactory(), _pg->_textFormat, _pd->_name, maxWidth);
 
 		float pixelWidth = _pg->GetDipSizeFromPixelSize ({ 1, 0 }).width;
 		float lineWidth = roundf(1.0f / pixelWidth) * pixelWidth;

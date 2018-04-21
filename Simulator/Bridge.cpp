@@ -803,12 +803,11 @@ uint32_t Bridge::GetForwardDelay() const
 	return (uint32_t) STP_GetForwardDelay(_stpBridge) / 100;
 }
 
-const PropertyGroup Bridge::CommonPropGroup (L"Common", nullptr);
+const PropertyGroup Bridge::CommonPropGroup (L"Common");
 
 const TypedProperty<wstring> Bridge::Address
 (
 	L"Bridge Address",
-	nullptr,
 	static_cast<TypedProperty<wstring>::Getter>(&GetBridgeAddressAsWString),
 	static_cast<TypedProperty<wstring>::Setter>(&SetBridgeAddressFromWString)
 );
@@ -816,7 +815,6 @@ const TypedProperty<wstring> Bridge::Address
 const TypedProperty<bool> Bridge::StpEnabled
 (
 	L"STP Enabled",
-	nullptr,
 	static_cast<TypedProperty<bool>::Getter>(&GetStpEnabled),
 	static_cast<TypedProperty<bool>::Setter>(&SetStpEnabled)
 );
@@ -826,7 +824,6 @@ static const NVP StpVersionNVPs[] = { { L"LegacySTP", STP_VERSION_LEGACY_STP }, 
 const EnumProperty Bridge::StpVersion
 {
 	L"STP Version",
-	nullptr,
 	static_cast<EnumProperty::Getter>(&GetStpVersionAsInt),
 	static_cast<EnumProperty::Setter>(&SetStpVersionFromInt),
 	StpVersionNVPs
@@ -835,7 +832,6 @@ const EnumProperty Bridge::StpVersion
 const TypedProperty<unsigned int> Bridge::PortCount
 {
 	L"Port Count",
-	nullptr,
 	static_cast<TypedProperty<unsigned int>::Getter>(&GetPortCount),
 	nullptr
 };
@@ -843,17 +839,15 @@ const TypedProperty<unsigned int> Bridge::PortCount
 const TypedProperty<unsigned int> Bridge::MstiCount
 {
 	L"MSTI Count",
-	nullptr,
 	static_cast<TypedProperty<unsigned int>::Getter>(&GetMstiCount),
 	nullptr
 };
 
-const PropertyGroup Bridge::MstConfigIdGroup (L"MST Config ID", nullptr);
+const PropertyGroup Bridge::MstConfigIdGroup (L"MST Config ID");
 
 const TypedProperty<wstring> Bridge::MstConfigIdName
 (
 	L"Name",
-	nullptr,
 	static_cast<TypedProperty<wstring>::Getter>(&GetMstConfigIdName),
 	static_cast<TypedProperty<wstring>::Setter>(&SetMstConfigIdName)
 );
@@ -861,7 +855,6 @@ const TypedProperty<wstring> Bridge::MstConfigIdName
 const TypedProperty<unsigned short> Bridge::MstConfigIdRevLevel
 (
 	L"Revision Level",
-	nullptr,
 	static_cast<TypedProperty<unsigned short>::Getter>(&GetMstConfigIdRevLevel),
 	static_cast<TypedProperty<unsigned short>::Setter>(&SetMstConfigIdRevLevel)
 );
@@ -869,7 +862,6 @@ const TypedProperty<unsigned short> Bridge::MstConfigIdRevLevel
 const TypedProperty<wstring> Bridge::MstConfigIdDigest
 (
 	L"Digest",
-	nullptr,
 	static_cast<TypedProperty<wstring>::Getter>(&GetMstConfigIdDigest),
 	nullptr,
 	mstConfigIdDialogFactory
@@ -878,7 +870,6 @@ const TypedProperty<wstring> Bridge::MstConfigIdDigest
 const TypedProperty<uint32_t> Bridge::BridgeHelloTime
 (
 	L"BridgeHelloTime",
-	nullptr,
 	static_cast<TypedProperty<uint32_t>::Getter>(&GetBridgeHelloTime),
 	static_cast<TypedProperty<uint32_t>::Setter>(&SetBridgeHelloTime),
 	nullptr
@@ -887,7 +878,6 @@ const TypedProperty<uint32_t> Bridge::BridgeHelloTime
 const TypedProperty<uint32_t> Bridge::HelloTime
 (
 	L"HelloTime",
-	nullptr,
 	static_cast<TypedProperty<uint32_t>::Getter>(&GetHelloTime),
 	nullptr,
 	nullptr
@@ -896,7 +886,6 @@ const TypedProperty<uint32_t> Bridge::HelloTime
 const TypedProperty<uint32_t> Bridge::BridgeMaxAge
 (
 	L"BridgeMaxAge",
-	nullptr,
 	static_cast<TypedProperty<uint32_t>::Getter>(&GetBridgeMaxAge),
 	static_cast<TypedProperty<uint32_t>::Setter>(&SetBridgeMaxAge),
 	nullptr
@@ -905,7 +894,6 @@ const TypedProperty<uint32_t> Bridge::BridgeMaxAge
 const TypedProperty<uint32_t> Bridge::MaxAge
 (
 	L"MaxAge",
-	nullptr,
 	static_cast<TypedProperty<uint32_t>::Getter>(&GetMaxAge),
 	nullptr,
 	nullptr
@@ -914,7 +902,6 @@ const TypedProperty<uint32_t> Bridge::MaxAge
 const TypedProperty<uint32_t> Bridge::BridgeForwardDelay
 (
 	L"BridgeForwardDelay",
-	nullptr,
 	static_cast<TypedProperty<uint32_t>::Getter>(&GetBridgeForwardDelay),
 	static_cast<TypedProperty<uint32_t>::Setter>(&SetBridgeForwardDelay),
 	nullptr
@@ -923,7 +910,6 @@ const TypedProperty<uint32_t> Bridge::BridgeForwardDelay
 const TypedProperty<uint32_t> Bridge::ForwardDelay
 (
 	L"ForwardDelay",
-	nullptr,
 	static_cast<TypedProperty<uint32_t>::Getter>(&GetForwardDelay),
 	nullptr,
 	nullptr
