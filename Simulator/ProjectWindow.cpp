@@ -585,14 +585,14 @@ public:
 
 		if ((wParam >= ID_RECENT_FILE_FIRST) && (wParam <= ID_RECENT_FILE_LAST))
 		{
-			UINT recentFileIndex = wParam - ID_RECENT_FILE_FIRST;
+			UINT recentFileIndex = (UINT)wParam - ID_RECENT_FILE_FIRST;
 			auto mainMenu = ::GetMenu(_hwnd);
 			auto fileMenu = ::GetSubMenu (mainMenu, 0);
-			int charCount = ::GetMenuString (fileMenu, wParam, nullptr, 0, MF_BYCOMMAND);
+			int charCount = ::GetMenuString (fileMenu, (UINT)wParam, nullptr, 0, MF_BYCOMMAND);
 			if (charCount > 0)
 			{
 				auto path = make_unique<wchar_t[]>(charCount + 1);
-				::GetMenuString (fileMenu, wParam, path.get(), charCount + 1, MF_BYCOMMAND);
+				::GetMenuString (fileMenu, (UINT)wParam, path.get(), charCount + 1, MF_BYCOMMAND);
 				Open(path.get());
 			}
 		}
