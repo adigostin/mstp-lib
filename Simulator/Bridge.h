@@ -125,6 +125,9 @@ public:
 	uint32_t GetBridgeMaxAge() const;
 	void SetBridgeMaxAge (uint32_t maxAge);
 	uint32_t GetMaxAge() const;
+	uint32_t GetBridgeForwardDelay() const;
+	void SetBridgeForwardDelay (uint32_t forwardDelay);
+	uint32_t GetForwardDelay() const;
 
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
@@ -167,6 +170,8 @@ private:
 	static const TypedProperty<uint32_t> HelloTime;
 	static const TypedProperty<uint32_t> BridgeMaxAge;
 	static const TypedProperty<uint32_t> MaxAge;
+	static const TypedProperty<uint32_t> BridgeForwardDelay;
+	static const TypedProperty<uint32_t> ForwardDelay;
 
 	static const PropertyOrGroup* const Properties[];
 	virtual const PropertyOrGroup* const* GetProperties() const override final { return Properties; }

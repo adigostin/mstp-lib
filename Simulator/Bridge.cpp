@@ -410,6 +410,10 @@ static const _bstr_t BridgeTreesString = "BridgeTrees";
 static const _bstr_t VlanString = "Vlan";
 static const _bstr_t TreeString = "Tree";
 static const _bstr_t PortsString = "Ports";
+static const _bstr_t BridgeHelloTimeString = L"BridgeHelloTime";
+static const _bstr_t BridgeMaxAgeString = L"BridgeMaxAge";
+static const _bstr_t BridgeForwardDelayString = L"BridgeForwardDelay";
+
 
 com_ptr<IXMLDOMElement> Bridge::Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) const
 {
@@ -427,6 +431,9 @@ com_ptr<IXMLDOMElement> Bridge::Serialize (size_t bridgeIndex, IXMLDOMDocument3*
 	bridgeElement->setAttribute (YString,             _variant_t(_y));
 	bridgeElement->setAttribute (WidthString,         _variant_t(_width));
 	bridgeElement->setAttribute (HeightString,        _variant_t(_height));
+	bridgeElement->setAttribute (BridgeHelloTimeString,    _variant_t(GetBridgeHelloTime()));
+	bridgeElement->setAttribute (BridgeMaxAgeString,       _variant_t(GetBridgeMaxAge()));
+	bridgeElement->setAttribute (BridgeForwardDelayString, _variant_t(GetBridgeForwardDelay()));
 
 	com_ptr<IXMLDOMElement> configTableElement;
 	hr = doc->createElement (MstConfigTableString, &configTableElement); assert(SUCCEEDED(hr));
@@ -522,6 +529,18 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 		else
 			STP_StopBridge (bridge->_stpBridge, GetMessageTime());
 	}
+
+	hr = element->getAttribute(BridgeHelloTimeString, &value);
+	if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
+		bridge->SetBridgeHelloTime (wcstoul (value.bstrVal, nullptr, 10));
+
+	hr = element->getAttribute(BridgeMaxAgeString, &value);
+	if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
+		bridge->SetBridgeMaxAge (wcstoul (value.bstrVal, nullptr, 10));
+
+	hr = element->getAttribute(BridgeForwardDelayString, &value);
+	if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
+		bridge->SetBridgeForwardDelay (wcstoul (value.bstrVal, nullptr, 10));
 
 	com_ptr<IXMLDOMNode> configTableNode;
 	hr = element->selectSingleNode(MstConfigTableString, &configTableNode);
@@ -769,6 +788,21 @@ uint32_t Bridge::GetMaxAge() const
 	return STP_GetMaxAge(_stpBridge) / 100;
 }
 
+uint32_t Bridge::GetBridgeForwardDelay() const
+{
+	return (uint32_t) STP_GetBridgeForwardDelay(_stpBridge) / 100;
+}
+
+void Bridge::SetBridgeForwardDelay (uint32_t forwardDelay)
+{
+	STP_SetBridgeForwardDelay (_stpBridge, forwardDelay * 100, GetMessageTime());
+}
+
+uint32_t Bridge::GetForwardDelay() const
+{
+	return (uint32_t) STP_GetForwardDelay(_stpBridge) / 100;
+}
+
 const PropertyGroup Bridge::CommonPropGroup (L"Common", nullptr);
 
 const TypedProperty<wstring> Bridge::Address
@@ -877,6 +911,25 @@ const TypedProperty<uint32_t> Bridge::MaxAge
 	nullptr
 );
 
+const TypedProperty<uint32_t> Bridge::BridgeForwardDelay
+(
+	L"BridgeForwardDelay",
+	nullptr,
+	static_cast<TypedProperty<uint32_t>::Getter>(&GetBridgeForwardDelay),
+	static_cast<TypedProperty<uint32_t>::Setter>(&SetBridgeForwardDelay),
+	nullptr
+);
+
+const TypedProperty<uint32_t> Bridge::ForwardDelay
+(
+	L"ForwardDelay",
+	nullptr,
+	static_cast<TypedProperty<uint32_t>::Getter>(&GetForwardDelay),
+	nullptr,
+	nullptr
+);
+
+
 const PropertyOrGroup* const Bridge::Properties[] =
 {
 	&CommonPropGroup,
@@ -893,6 +946,8 @@ const PropertyOrGroup* const Bridge::Properties[] =
 	&HelloTime,
 	&BridgeMaxAge,
 	&MaxAge,
+	&BridgeForwardDelay,
+	&ForwardDelay,
 	nullptr,
 };
 

@@ -1343,7 +1343,7 @@ extern "C" unsigned int STP_GetHelloTime (const struct STP_BRIDGE* bridge)
 
 extern "C" void STP_SetBridgeMaxAge (struct STP_BRIDGE* bridge, unsigned int maxAgeCentiseconds, unsigned int timestamp)
 {
-	assert ((maxAgeCentiseconds >= 600) && (maxAgeCentiseconds <= 4000));
+	assert ((maxAgeCentiseconds >= 600) && (maxAgeCentiseconds <= 4000)); // Table 13-5 in 802.1Q-2011
 	unsigned short newMaxAge = (unsigned short) (maxAgeCentiseconds + 50) / 100;
 	if (bridge->trees[CIST_INDEX]->BridgeTimes.MaxAge != newMaxAge)
 	{
@@ -1365,3 +1365,32 @@ extern "C" unsigned int STP_GetMaxAge (const struct STP_BRIDGE* bridge)
 {
 	return bridge->trees[CIST_INDEX]->rootTimes.MaxAge * 100;
 }
+
+// ============================================================================
+
+extern "C" void STP_SetBridgeForwardDelay (struct STP_BRIDGE* bridge, unsigned int forwardDelayCentiseconds, unsigned int timestamp)
+{
+	assert ((forwardDelayCentiseconds >= 400) && (forwardDelayCentiseconds <= 3000)); // Table 13-5 in 802.1Q-2011
+	unsigned short newForwardDelay = (unsigned short) (forwardDelayCentiseconds + 50) / 100;
+	if (bridge->trees[CIST_INDEX]->BridgeTimes.ForwardDelay != newForwardDelay)
+	{
+		bridge->trees[CIST_INDEX]->BridgeTimes.ForwardDelay = newForwardDelay;
+
+		if (bridge->started)
+			RecomputePrioritiesAndPortRoles (bridge, CIST_INDEX, timestamp);
+
+		bridge->callbacks.onConfigChanged(bridge, timestamp);
+	}
+}
+
+extern "C" unsigned int STP_GetBridgeForwardDelay (const struct STP_BRIDGE* bridge)
+{
+	return bridge->trees[CIST_INDEX]->BridgeTimes.ForwardDelay * 100;
+}
+
+extern "C" unsigned int STP_GetForwardDelay (const struct STP_BRIDGE* bridge)
+{
+	return bridge->trees[CIST_INDEX]->rootTimes.ForwardDelay * 100;
+}
+
+// ============================================================================

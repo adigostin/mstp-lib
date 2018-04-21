@@ -124,6 +124,7 @@ unsigned int STP_IsLoggingEnabled (const struct STP_BRIDGE* bridge);
 unsigned int STP_GetPortCount (const struct STP_BRIDGE* bridge);
 unsigned int STP_GetMstiCount (const struct STP_BRIDGE* bridge);
 
+// ieee8021SpanningTreeVersion / dot1dStpVersion
 enum STP_VERSION STP_GetStpVersion (const struct STP_BRIDGE* bridge);
 void STP_SetStpVersion (struct STP_BRIDGE* bridge, enum STP_VERSION version, unsigned int timestamp);
 
@@ -228,7 +229,11 @@ unsigned int STP_GetBridgeMaxAge (const struct STP_BRIDGE* bridge); // centiseco
 // ieee8021SpanningTreeMaxAge / dot1dStpMaxAge
 unsigned int STP_GetMaxAge (const struct STP_BRIDGE* bridge); // centiseconds
 
-
+// ieee8021SpanningTreeBridgeForwardDelay / dot1dStpBridgeForwardDelay
+void STP_SetBridgeForwardDelay (struct STP_BRIDGE* bridge, unsigned int forwardDelayCentiseconds, unsigned int timestamp);
+unsigned int STP_GetBridgeForwardDelay (const struct STP_BRIDGE* bridge); // centiseconds
+// ieee8021SpanningTreeForwardDelay / dot1dStpForwardDelay
+unsigned int STP_GetForwardDelay (const struct STP_BRIDGE* bridge); // centiseconds
 
 void  STP_SetApplicationContext (struct STP_BRIDGE* bridge, void* applicationContext);
 void* STP_GetApplicationContext (const struct STP_BRIDGE* bridge);
