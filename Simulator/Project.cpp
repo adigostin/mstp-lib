@@ -43,27 +43,16 @@ public:
 
 		Bridge* b = _bridges[index].get();
 
-		size_t wireIndex = 0;
-		while (wireIndex < _wires.size())
-		{
-			Wire* w = _wires[wireIndex].get();
-			for (size_t i = 0; i < w->GetPoints().size(); i++)
-			{
-				auto& point = w->GetPoints()[i];
-				if (holds_alternative<ConnectedWireEnd>(point))
-				{
-					auto port = get<ConnectedWireEnd>(point);
-					if (port->GetBridge() == b)
-						w->SetPoint(i, w->GetPointCoords(i));
-				}
-
-				wireIndex++;
-			}
-		}
+		if (any_of (_wires.begin(), _wires.end(), [b](const unique_ptr<Wire>& w) {
+			return any_of (w->GetPoints().begin(), w->GetPoints().end(), [b] (WireEnd p) {
+				return std::holds_alternative<ConnectedWireEnd>(p) && (std::get<ConnectedWireEnd>(p)->GetBridge() == b);
+			});
+		}))
+			throw invalid_argument("cannot remove a connected bridge");
 
 		BridgeRemovingEvent::InvokeHandlers(this, this, index, b);
 		_bridges[index]->GetLinkPulseEvent().RemoveHandler (&OnLinkPulse, this);
-		_bridges[index]->GetPacketTransmitEvent().AddHandler (&OnPacketTransmit, this);
+		_bridges[index]->GetPacketTransmitEvent().RemoveHandler (&OnPacketTransmit, this);
 		_bridges[index]->GetInvalidateEvent().RemoveHandler (&OnObjectInvalidate, this);
 		auto result = move(_bridges[index]);
 		_bridges.erase (_bridges.begin() + index);

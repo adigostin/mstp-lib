@@ -633,6 +633,86 @@ public:
 		return { };
 	}
 
+	void DeleteSelection()
+	{
+		if (any_of(_selection->GetObjects().begin(), _selection->GetObjects().end(), [](Object* o) { return o->Is<Port>(); }))
+		{
+			TaskDialog (GetHWnd(), nullptr, _app->GetAppName(), nullptr, L"Ports cannot be deleted.", 0, nullptr, nullptr);
+			return;
+		}
+
+		if (any_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [](Object* o) { return o->Is<Port>(); }))
+		{
+			TaskDialog (_pw->GetHWnd(), nullptr, _app->GetAppName(), L"Can't Delete Ports", L"The Simulator does not yet support deleting ports.", 0, TD_INFORMATION_ICON, nullptr);
+			return;
+		}
+
+		std::set<Bridge*> bridgesToRemove;
+		std::set<Wire*> wiresToRemove;
+		std::unordered_map<Wire*, std::vector<size_t>> pointsToDisconnect;
+
+		for (Object* o : _selection->GetObjects())
+		{
+			if (auto w = dynamic_cast<Wire*>(o); w != nullptr)
+				wiresToRemove.insert(w);
+			else if (auto b = dynamic_cast<Bridge*>(o); b != nullptr)
+				bridgesToRemove.insert(b);
+			else
+				assert(false);
+		}
+
+		for (auto& w : _project->GetWires())
+		{
+			if (wiresToRemove.find(w.get()) != wiresToRemove.end())
+				continue;
+
+			for (size_t pi = 0; pi < w->GetPoints().size(); pi++)
+			{
+				if (!std::holds_alternative<ConnectedWireEnd>(w->GetPoints()[pi]))
+					continue;
+
+				auto port = std::get<ConnectedWireEnd>(w->GetPoints()[pi]);
+				if (bridgesToRemove.find(port->GetBridge()) == bridgesToRemove.end())
+					continue;
+
+				// point is connected to bridge being removed.
+				pointsToDisconnect[w.get()].push_back(pi);
+			}
+		}
+
+		for (auto it = pointsToDisconnect.begin(); it != pointsToDisconnect.end(); )
+		{
+			Wire* wire = it->first;
+			bool anyPointRemainsConnected = any_of (wire->GetPoints().begin(), wire->GetPoints().end(),
+				[&bridgesToRemove](auto& pt) { return std::holds_alternative<ConnectedWireEnd>(pt)
+				&& (bridgesToRemove.count(std::get<ConnectedWireEnd>(pt)->GetBridge()) == 0); });
+			
+			auto it1 = it;
+			it++;
+
+			if (!anyPointRemainsConnected)
+			{
+				wiresToRemove.insert(wire);
+				pointsToDisconnect.erase(it1);
+			}
+		}
+
+		if (!bridgesToRemove.empty() || !wiresToRemove.empty() || !pointsToDisconnect.empty())
+		{
+			for (auto& p : pointsToDisconnect)
+				for (auto pi : p.second)
+					p.first->SetPoint(pi, p.first->GetPointCoords(pi));
+
+			for (auto w : wiresToRemove)
+				_project->RemoveWire(w);
+
+			for (auto b : bridgesToRemove)
+				_project->RemoveBridge(b);
+
+			_project->SetChangedFlag(true);
+		}
+	}
+
 	std::optional<LRESULT> ProcessKeyOrSysKeyDown (UINT virtualKey, UINT modifierKeys)
 	{
 		if (_state != nullptr)
@@ -649,42 +729,7 @@ public:
 
 		if (virtualKey == VK_DELETE)
 		{
-			if (any_of(_selection->GetObjects().begin(), _selection->GetObjects().end(), [](Object* o) { return o->Is<Port>(); }))
-			{
-				TaskDialog (GetHWnd(), nullptr, _app->GetAppName(), nullptr, L"Ports cannot be deleted.", 0, nullptr, nullptr);
-				return 0;
-			}
-
-			if (any_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [](Object* o) { return o->Is<Port>(); }))
-			{
-				TaskDialog (_pw->GetHWnd(), nullptr, _app->GetAppName(), L"Can't Delete Ports", L"The Simulator does not yet support deleting ports.", 0, TD_INFORMATION_ICON, nullptr);
-				return 0;
-			}
-
-			while (!_selection->GetObjects().empty())
-			{
-				if (auto b = dynamic_cast<Bridge*>(_selection->GetObjects().front()))
-				{
-					auto it = find_if (_project->GetBridges().begin(), _project->GetBridges().end(), [b](const unique_ptr<Bridge>& pb) { return pb.get() == b; });
-					if (it != _project->GetBridges().end())
-					{
-						size_t bi = it - _project->GetBridges().begin();
-						_project->RemoveBridge(bi);
-						_project->SetChangedFlag(true);
-					}
-				}
-				else if (auto w = dynamic_cast<Wire*>(_selection->GetObjects().front()))
-				{
-					auto it = find_if (_project->GetWires().begin(), _project->GetWires().end(), [w](const unique_ptr<Wire>& pw) { return pw.get() == w; });
-					if (it != _project->GetWires().end())
-					{
-						size_t wi = it - _project->GetWires().begin();
-						_project->RemoveWire(wi);
-						_project->SetChangedFlag(true);
-					}
-				}
-			}
-
+			DeleteSelection();
 			return 0;
 		}
 
@@ -883,7 +928,7 @@ public:
 		//_elementsAtContextMenuLocation.clear();
 		//GetElementsAt(_project->GetInnerRootElement(), { dipLocation.x, dipLocation.y }, _elementsAtContextMenuLocation);
 
-		HMENU hMenu;
+		HMENU hMenu = nullptr;
 		if (_selection->GetObjects().empty())
 		{
 			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_EMPTY_SPACE));
@@ -894,10 +939,10 @@ public:
 			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_BRIDGE));
 		else if (dynamic_cast<Port*>(_selection->GetObjects().front()) != nullptr)
 			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_PORT));
-		else
-			assert(false); // not implemented
 
-		TrackPopupMenuEx (GetSubMenu(hMenu, 0), 0, pt.x, pt.y, GetHWnd(), nullptr);
+		if (hMenu != nullptr)
+			TrackPopupMenuEx (GetSubMenu(hMenu, 0), 0, pt.x, pt.y, GetHWnd(), nullptr);
+
 		return 0;
 	}
 

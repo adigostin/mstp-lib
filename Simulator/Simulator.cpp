@@ -58,6 +58,30 @@ Port* IProject::FindConnectedPort (Port* txPort) const
 
 	return nullptr;
 }
+
+std::unique_ptr<Wire> IProject::RemoveWire (Wire* w)
+{
+	auto& wires = this->GetWires();
+	for (size_t wi = 0; wi < wires.size(); wi++)
+	{
+		if (wires[wi].get() == w)
+			return this->RemoveWire(wi);
+	}
+
+	assert(false); return nullptr;
+}
+
+std::unique_ptr<Bridge> IProject::RemoveBridge (Bridge* b)
+{
+	auto& bridges = this->GetBridges();
+	for (size_t bi = 0; bi < bridges.size(); bi++)
+	{
+		if (bridges[bi].get() == b)
+			return this->RemoveBridge(bi);
+	}
+
+	assert(false); return nullptr;
+}
 #pragma endregion
 
 class SimulatorApp : public EventManager, public ISimulatorApp

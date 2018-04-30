@@ -176,6 +176,8 @@ struct __declspec(novtable) IProject : public IUnknown
 
 	std::pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const;
 	Port* FindConnectedPort (Port* txPort) const;
+	std::unique_ptr<Wire> RemoveWire (Wire* w);
+	std::unique_ptr<Bridge> RemoveBridge (Bridge* b);
 };
 using ProjectFactory = com_ptr<IProject>(*const)();
 extern const ProjectFactory projectFactory;
