@@ -1,6 +1,6 @@
 
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
-// Copyright (c) 2011-2017 Adi Gostin, distributed under Apache License v2.0.
+// Copyright (c) 2011-2018 Adi Gostin, distributed under Apache License v2.0.
 
 #include "../stp_bridge.h"
 

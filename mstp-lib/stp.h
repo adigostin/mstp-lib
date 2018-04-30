@@ -1,13 +1,10 @@
 
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
-// Copyright (c) 2011-2017 Adi Gostin, distributed under Apache License v2.0.
+// Copyright (c) 2011-2018 Adi Gostin, distributed under Apache License v2.0.
 //
-// Find documentation for all STP functions in the _help directory in the source code tree.
+// This header file is the entire library interface; you should have no need to include any other header file.
 //
-// Improvements and bug fixes may have been made in the source code, but not put up yet as a zip download;
-// Have a look at the latest source code on the Sourceforge website to learn about these.
-//
-// Also check the open tickets to learn about known issues: http://sourceforge.net/p/mstp-lib/tickets
+// Find documentation for all STP functions in the "_help" directory in the source code tree.
 
 #ifndef MSTP_LIB_H
 #define MSTP_LIB_H
