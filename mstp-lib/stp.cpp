@@ -127,6 +127,7 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 			port->trees [treeIndex]->InternalPortPathCost = 200000;
 		}
 
+		port->adminPointToPointMAC = STP_ADMIN_P2P_AUTO;
 		port->AutoEdge = 1;
 		port->enableBPDUrx = true;
 		port->enableBPDUtx = true;
@@ -662,9 +663,7 @@ void STP_SetPortAdminPointToPointMAC (STP_BRIDGE* bridge, unsigned int portIndex
 			port->operPointToPointMAC = port->detectedPointToPointMAC;
 		}
 		else
-		{
 			assert (false);
-		}
 
 		// operPointToPointMAC has changed, and there's logic in the STP state machines that depends on it,
 		// but reruning the state machines here seems to me like overkill; they run anyway every second.

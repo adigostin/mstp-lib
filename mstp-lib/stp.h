@@ -57,13 +57,12 @@ struct STP_CALLBACKS
 	STP_CALLBACK_FREE_MEMORY				 freeMemory;
 };
 
-// 6.6.3 Point-to-point parameters
+// 6.6.3 Point-to-point parameters (values correspond to ieee8021BridgeBasePortAdminPointToPoint)
 enum STP_ADMIN_P2P
 {
-	// There's logic in the STP library that counts on AUTO being equal to 0, so don't move it from the top of the enumeration.
-	STP_ADMIN_P2P_AUTO,
-	STP_ADMIN_P2P_FORCE_TRUE,
-	STP_ADMIN_P2P_FORCE_FALSE,
+	STP_ADMIN_P2P_FORCE_TRUE = 1,
+	STP_ADMIN_P2P_FORCE_FALSE = 2,
+	STP_ADMIN_P2P_AUTO = 3,
 };
 
 enum STP_VERSION
@@ -136,24 +135,31 @@ const struct STP_BRIDGE_ADDRESS* STP_GetBridgeAddress (const struct STP_BRIDGE* 
 void STP_OnPortEnabled (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int speedMegabitsPerSecond, unsigned int detectedPointToPointMAC, unsigned int timestamp);
 void STP_OnPortDisabled (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int timestamp);
 
+// Call this once a second.
 void STP_OnOneSecondTick (struct STP_BRIDGE* bridge, unsigned int timestamp);
 
-// 0-61440 in steps of 4096
+// ieee8021SpanningTreePriority / dot1dStpPriority (0-61440 in steps of 4096)
 void           STP_SetBridgePriority (struct STP_BRIDGE* bridge, unsigned int treeIndex, unsigned short bridgePriority, unsigned int timestamp);
 unsigned short STP_GetBridgePriority (const struct STP_BRIDGE* bridge, unsigned int treeIndex);
 
-// 0-240 in steps of 16
+// ieee8021SpanningTreePortPriority / dot1dStpPortPriority (0-240 in steps of 16)
 void          STP_SetPortPriority (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned char portPriority, unsigned int timestamp);
 unsigned char STP_GetPortPriority (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
+
 unsigned short STP_GetPortIdentifier (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
 
+// ieee8021SpanningTreeRstpPortAdminEdgePort / dot1dStpPortAdminEdgePort / ieee8021MstpCistPortAdminEdgePort
+// Note that this library uses 0 for False and 1 for True; you'll need some glue code to interface with SNMP, which uses true=1 and false=2.
 void STP_SetPortAdminEdge (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int adminEdge, unsigned int timestamp);
 unsigned int STP_GetPortAdminEdge (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
+// ieee8021SpanningTreeRstpPortAutoEdgePort / ieee8021MstpCistPortAutoEdgePort
+// Note that this library uses 0 for False and 1 for True; you'll need some glue code to interface with SNMP, which uses true=1 and false=2.
 void STP_SetPortAutoEdge (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int autoEdge, unsigned int timestamp);
 unsigned int STP_GetPortAutoEdge (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
-void          STP_SetPortAdminPointToPointMAC (struct STP_BRIDGE* bridge, unsigned int portIndex, enum STP_ADMIN_P2P adminPointToPointMAC, unsigned int timestamp);
+// ieee8021BridgeBasePortAdminPointToPoint / dot1dStpPortAdminPointToPoint
+void STP_SetPortAdminPointToPointMAC (struct STP_BRIDGE* bridge, unsigned int portIndex, enum STP_ADMIN_P2P adminPointToPointMAC, unsigned int timestamp);
 enum STP_ADMIN_P2P STP_GetPortAdminPointToPointMAC (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
 unsigned int STP_GetPortEnabled             (const struct STP_BRIDGE* bridge, unsigned int portIndex);
@@ -161,6 +167,9 @@ enum STP_PORT_ROLE STP_GetPortRole          (const struct STP_BRIDGE* bridge, un
 unsigned int STP_GetPortLearning            (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
 unsigned int STP_GetPortForwarding          (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
 unsigned int STP_GetPortOperEdge            (const struct STP_BRIDGE* bridge, unsigned int portIndex);
+
+// ieee8021BridgeBasePortOperPointToPoint / dot1dStpPortOperPointToPoint
+// Note that this library uses 0 for False and 1 for True; you'll need some glue code to interface with SNMP, which uses true=1 and false=2.
 unsigned int STP_GetPortOperPointToPointMAC (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
 void STP_GetDefaultMstConfigName (const unsigned char bridgeAddress[6], char nameOut[18]);
