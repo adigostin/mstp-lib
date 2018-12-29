@@ -243,3 +243,4 @@ ModelManifest.xml
 TestAppLPC2387+IP175D/settings/
 TestAppLPC2387+IP175D/_Debug
 *.dep
+/TestAppTM4C129+88E6352/Executable_1 THUMB Debug

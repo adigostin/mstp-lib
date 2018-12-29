@@ -1,7 +1,6 @@
 
 #include "clock.h"
 #include <TM4C1294KCPDT.h>
-#include <driverlib/sysctl.h>
 
 static volatile uint32_t tick_count;
 static volatile uint32_t frequency;

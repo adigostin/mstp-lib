@@ -241,7 +241,7 @@ int main()
 	{
 		now = clock_get_time_ms();
 
-		ethernet_try_get_received_frames(process_received_frame);
+		ethernet_get_received(process_received_frame);
 
 		if (clock_get_time_ms() >= next_stp_1s_tick)
 		{
