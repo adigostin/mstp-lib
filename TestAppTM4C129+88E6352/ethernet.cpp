@@ -3,7 +3,6 @@
 #include "clock.h"
 #include <TM4C1294KCPDT.h>
 #include <assert.h>
-#include <driverlib/emac.h>
 #include <string.h>
 
 struct dma_descriptor_t
@@ -122,18 +121,8 @@ void ethernet_init (const uint8_t *mac_address)
 	EMAC0->MMCRXIM = 0xFFFFFFFF;
     EMAC0->MMCTXIM = 0xFFFFFFFF;
 
-	// Set MAC configuration options.
-	EMACConfigSet(EMAC0_BASE,
-	    (EMAC_CONFIG_FULL_DUPLEX | EMAC_CONFIG_CHECKSUM_OFFLOAD |
-	        EMAC_CONFIG_7BYTE_PREAMBLE | EMAC_CONFIG_IF_GAP_96BITS |
-	        EMAC_CONFIG_USE_MACADDR0 |
-	        EMAC_CONFIG_SA_FROM_DESCRIPTOR |
-	        EMAC_CONFIG_BO_LIMIT_1024),
-	    (EMAC_MODE_RX_STORE_FORWARD |
-	        EMAC_MODE_TX_STORE_FORWARD |
-	        EMAC_MODE_TX_THRESHOLD_64_BYTES |
-	        EMAC_MODE_RX_THRESHOLD_64_BYTES),
-	    0);
+	EMAC0->CFG = (1 << 11) | (1 << 10); // DUPM and IPC (Checksum Offload Enable)
+	EMAC0->DMAOPMODE = (1 << 25) | (1 << 21); // RSF and TSF
 
 	// ----------------------------------------------------------
 	// Initialize descriptors.
@@ -166,17 +155,15 @@ void ethernet_init (const uint8_t *mac_address)
 
 	// ----------------------------------------------------------
 
-	// Program the hardware with its MAC address (for filtering).
-	EMACAddrSet(EMAC0_BASE, 0, mac_address);
+	// Program the hardware with its MAC address (for filtering). Note that we must set
+	// the registers in this order since the address is latched internally on the write to EMAC_O_ADDRL.
+	EMAC0->ADDR0H = mac_address[4] | (mac_address[5] << 8);
+	EMAC0->ADDR0L = mac_address[0] | (mac_address[1] << 8) | (mac_address[2] << 16) | (mac_address[3] << 24);
 
 	// Set MAC filtering options.  We receive all broadcast and multicast
 	// packets along with those addressed specifically for us.
-	EMACFrameFilterSet(EMAC0_BASE, (EMAC_FRMFILTER_SADDR |
-	                                   EMAC_FRMFILTER_PASS_MULTICAST |
-	                                   EMAC_FRMFILTER_PASS_NO_CTRL));
+	EMAC0->FRAMEFLTR = (1 << 9) | (1 << 4); // SAF (Source Address Filter) and PM (Pass All Multicast)
 
-	// Clear any pending interrupts.
-	EMACIntClear(EMAC0_BASE, EMACIntStatus(EMAC0_BASE, false));
 /*
     // Configure Ethernet LEDs.
 	uint8_t ui8PHYAddr = 0;
@@ -187,10 +174,6 @@ void ethernet_init (const uint8_t *mac_address)
     GPIOPinTypeEthernetLED(GPIO_PORTK_BASE, GPIO_PIN_4);
     GPIOPinTypeEthernetLED(GPIO_PORTK_BASE, GPIO_PIN_5);
 */
-	// Mark all receive descriptors as available to the DMA to start RX processing.
-	for (uint32_t i = 0; i < rx_desc_count; i++)
-		rx_descriptors[i].ui32CtrlStatus = DES0_RX_CTRL_OWN;
-
 	// Enable the Ethernet MAC transmitter and receiver.
 	EMAC0->DMAOPMODE |= (1 << 13) | (1 << 1); // set ST and SR
 	EMAC0->CFG |= (1 << 3) | (1 << 2);        // set TE and RE

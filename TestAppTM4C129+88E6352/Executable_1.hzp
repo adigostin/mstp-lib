@@ -22,7 +22,7 @@
       arm_target_loader_default_loader="Flash"
       arm_target_restrict_memory_accesses="Yes"
       c_preprocessor_definitions="UVS;PART_TM4C1294KCPDT;gcc"
-      c_user_include_directories="$(ProjectDir);$(TargetsDir)/TIVA/Include;C:/ti/TivaWare_C_Series-2.1.4.178"
+      c_user_include_directories="$(ProjectDir);$(TargetsDir)/TIVA/Include"
       debug_initial_breakpoint=""
       debug_register_definition_file="$(TargetsDir)/TIVA/TM4C1294KCPDT.svd_Peripherals.xml"
       gcc_c_language_standard="c11"
@@ -61,17 +61,6 @@
       <file file_name="$(TargetsDir)/TIVA/Source/system_$(FAMILY).c" />
       <file file_name="$(TargetsDir)/TIVA/TM4C129.vec" />
       <file file_name="$(TargetsDir)/TIVA/Include/TM4C1294KCPDT.h" />
-    </folder>
-    <folder Name="driverlib">
-      <file file_name="C:/ti/TivaWare_C_Series-2.1.4.178/driverlib/emac.c" />
-      <file file_name="C:/ti/TivaWare_C_Series-2.1.4.178/driverlib/emac.h" />
-      <file file_name="C:/ti/TivaWare_C_Series-2.1.4.178/driverlib/gpio.c" />
-      <file file_name="C:/ti/TivaWare_C_Series-2.1.4.178/driverlib/gpio.h" />
-      <file file_name="C:/ti/TivaWare_C_Series-2.1.4.178/driverlib/interrupt.c" />
-      <file file_name="C:/ti/TivaWare_C_Series-2.1.4.178/driverlib/interrupt.h" />
-      <file file_name="C:/ti/TivaWare_C_Series-2.1.4.178/driverlib/pin_map.h" />
-      <file file_name="C:/ti/TivaWare_C_Series-2.1.4.178/driverlib/sysctl.c" />
-      <file file_name="C:/ti/TivaWare_C_Series-2.1.4.178/driverlib/sysctl.h" />
     </folder>
     <file file_name="stp_hw_specific.cpp">
       <configuration Name="THUMB Debug" build_exclude_from_build="Yes" />
