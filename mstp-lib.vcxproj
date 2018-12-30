@@ -53,6 +53,7 @@
     <ProjectGuid>{1DC9DD21-A2C5-46FC-B13E-C3382471BED2}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>mstplib</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
