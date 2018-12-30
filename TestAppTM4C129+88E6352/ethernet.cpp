@@ -7,14 +7,14 @@
 
 struct dma_descriptor_t
 {
-    volatile uint32_t ui32CtrlStatus;
-    volatile uint32_t ui32Count;
-    void *pvBuffer1;
+    volatile uint32_t status;
+    volatile uint32_t count;
+    void* buffer1;
 	union
 	{
-		dma_descriptor_t* pLink;
-		void* pvBuffer2;
-	} DES3;
+		dma_descriptor_t* next;
+		void* buffer2;
+	};
 };
 
 static constexpr size_t tx_desc_count = 3;
@@ -43,14 +43,14 @@ void ethernet_get_received (ethernet_rx_callback rx_callback)
 	while (true)
 	{
 		auto desc = &rx_descriptors[rx_desc_read_index];
-		if (desc->ui32CtrlStatus & (1u << 31))
+		if (desc->status & (1u << 31))
 			break;
 
 		const uint8_t* data = rx_buffers[rx_desc_read_index];
-		size_t size = (desc->ui32CtrlStatus & 0x3FFF0000) >> 16;
+		size_t size = (desc->status & 0x3FFF0000) >> 16;
 		rx_callback (data, size);
 	
-		desc->ui32CtrlStatus |= (1u << 31);
+		desc->status |= (1u << 31);
 
 		rx_desc_read_index++;
 		if (rx_desc_read_index == rx_desc_count)
@@ -67,11 +67,11 @@ void ethernet_transmit (const void *data, size_t size)
 
 	memcpy (tx_buffer, data, size);
 
-	assert((tx_descriptors[tx_desc_write_index].ui32CtrlStatus & DES0_TX_CTRL_OWN) == 0);
+	assert((tx_descriptors[tx_desc_write_index].status & DES0_TX_CTRL_OWN) == 0);
 
 	// Fill in the packet size and tell the transmitter to start work.
-	tx_descriptors[tx_desc_write_index].ui32Count = (uint32_t)size;
-	tx_descriptors[tx_desc_write_index].ui32CtrlStatus =
+	tx_descriptors[tx_desc_write_index].count = (uint32_t)size;
+	tx_descriptors[tx_desc_write_index].status =
 	    (DES0_TX_CTRL_LAST_SEG | DES0_TX_CTRL_FIRST_SEG |
 	        DES0_TX_CTRL_INTERRUPT | DES0_TX_CTRL_IP_ALL_CKHSUMS |
 	        DES0_TX_CTRL_CHAINED | DES0_TX_CTRL_OWN);
@@ -129,22 +129,22 @@ void ethernet_init (const uint8_t *mac_address)
 
 	for (size_t i = 0; i < tx_desc_count; i++)
 	{
-		tx_descriptors[i].ui32CtrlStatus = (1 << 29) // LS: Last Segment
+		tx_descriptors[i].status = (1 << 29) // LS: Last Segment
 			| (1 << 28) // FS: First Segment
 			| (1 << 30) // IC: Interrupt on Completion
 			| (1 << 20) // TCH: Second Address Chained
 			| (3 << 22); // CIC: Checksum Insertion Control - 0x3 = Insert a TCP/UDP/ICMP checksum that is fully calculated in this engine
-		tx_descriptors[i].ui32Count = sizeof(tx_buffer);
-		tx_descriptors[i].pvBuffer1 = tx_buffer;
-		tx_descriptors[i].DES3.pLink = &tx_descriptors[(i + 1) % tx_desc_count];
+		tx_descriptors[i].count = sizeof(tx_buffer);
+		tx_descriptors[i].buffer1 = tx_buffer;
+		tx_descriptors[i].next = &tx_descriptors[(i + 1) % tx_desc_count];
 	}
 
 	for (size_t i = 0; i < rx_desc_count; i++)
 	{
-		rx_descriptors[i].ui32CtrlStatus = (1u << 31);
-		rx_descriptors[i].ui32Count = (1 << 14) | rx_buffer_size;
-		rx_descriptors[i].pvBuffer1 = &rx_buffers[i];
-		rx_descriptors[i].DES3.pLink = &rx_descriptors[(i + 1) % rx_desc_count];
+		rx_descriptors[i].status = (1u << 31);
+		rx_descriptors[i].count = (1 << 14) | rx_buffer_size;
+		rx_descriptors[i].buffer1 = &rx_buffers[i];
+		rx_descriptors[i].next = &rx_descriptors[(i + 1) % rx_desc_count];
 	}
 
     EMAC0->RXDLADDR = (uint32_t)rx_descriptors;
