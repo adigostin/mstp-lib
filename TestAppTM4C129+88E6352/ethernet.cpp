@@ -39,14 +39,19 @@ static bool rx_flag;
 
 extern "C" void EMAC0_IRQHandler()
 {
-	uint32_t ints = EMAC0->DMARIS & EMAC0->DMAIM & 0xFFFFu;
+	uint32_t ints = EMAC0->DMARIS & EMAC0->DMAIM & 0x1FFFFu;
 	EMAC0->DMARIS = ints;
 
-	if (ints & (1u << 6))
+	if (ints & (1 << 16))
 	{
-		// receive interrupt
-		ints &= ~(1u << 6);
-		rx_flag = true;
+		ints &= ~(1 << 16);
+
+		if (ints & (1u << 6))
+		{
+			// receive interrupt
+			ints &= ~(1u << 6);
+			rx_flag = true;
+		}
 	}
 
 	assert(ints == 0);
@@ -104,15 +109,13 @@ static void init_descriptors()
 {
 	// Initialize each of the transmit descriptors. Note that we leave the OWN
 	// bit clear here since we have not set up any transmissions yet.
-	uint32_t tx_desc_status = (1 << 29) // LS: Last Segment
-		| (1 << 28) // FS: First Segment
-		| (1 << 30) // IC: Interrupt on Completion
-		| (1 << 20) // TCH: Second Address Chained
-		| (3 << 22); // CIC: Checksum Insertion Control - 0x3 = Insert a TCP/UDP/ICMP checksum that is fully calculated in this engine
-
 	for (size_t i = 0; i < tx_desc_count; i++)
 	{
-		tx_descriptors[i].ui32CtrlStatus = tx_desc_status;
+		tx_descriptors[i].ui32CtrlStatus = (1 << 29) // LS: Last Segment
+			| (1 << 28) // FS: First Segment
+			| (1 << 30) // IC: Interrupt on Completion
+			| (1 << 20) // TCH: Second Address Chained
+			| (3 << 22); // CIC: Checksum Insertion Control - 0x3 = Insert a TCP/UDP/ICMP checksum that is fully calculated in this engine
 		tx_descriptors[i].ui32Count = sizeof(tx_buffer);
 		tx_descriptors[i].pvBuffer1 = tx_buffer;
 		tx_descriptors[i].DES3.pLink = &tx_descriptors[(i + 1) % tx_desc_count];
@@ -122,7 +125,7 @@ static void init_descriptors()
 	// to make sure that the receiver doesn't start writing anything immediately.
 	for (size_t i = 0; i < rx_desc_count; i++)
 	{
-		rx_descriptors[i].ui32CtrlStatus = 0;
+		rx_descriptors[i].ui32CtrlStatus = (1u << 31);
 		rx_descriptors[i].ui32Count = (1 << 14) | rx_buffer_size;
 		rx_descriptors[i].pvBuffer1 = &rx_buffers[i];
 		rx_descriptors[i].DES3.pLink = &rx_descriptors[(i + 1) % rx_desc_count];
@@ -141,9 +144,6 @@ void ethernet_init (const uint8_t *mac_address)
 	// Enable the Ethernet modules.
 	SYSCTL->RCGCEMAC |= 1;
 	SYSCTL->RCGCEPHY |= 1;
-	// TODO: reset them too
-	//SysCtlPeripheralReset(SYSCTL_PERIPH_EMAC0);
-	//SysCtlPeripheralReset(SYSCTL_PERIPH_EPHY0);
 
 	// Wait until the MAC peripheral is ready.
 	while ((SYSCTL->PREMAC & 1) == 0)
@@ -158,12 +158,9 @@ void ethernet_init (const uint8_t *mac_address)
 	for (volatile int i = 0; i < 16; i++);
 	SYSCTL->SREPHY = 0;
 	while ((SYSCTL->PREPHY & 1) == 0);
-	// Delay a bit longer to ensure that the PHY reset has completed.
-	//for (volatile int i = 0; i < 10000; i++);
     // Reset the MAC regardless of whether the PHY connection changed or not.
 	EMAC0->DMABUSMOD |= 1;
 	while (EMAC0->DMABUSMOD & 1);
-	//for (volatile int i = 0; i < 1000; i++);
 
 	// Initialise the MAC and set the DMA mode.
 	EMACInit(EMAC0_BASE, clock_get_freq(), EMAC_BCONFIG_MIXED_BURST | EMAC_BCONFIG_PRIORITY_FIXED, 4, 4, 0);
@@ -221,5 +218,5 @@ void ethernet_init (const uint8_t *mac_address)
 
 	NVIC_EnableIRQ(EMAC0_IRQn);
 
-	EMAC0->DMAIM |= (1 << 6); // set RIE (Receive Interrupt Enable)
+	EMAC0->DMAIM |= (1 << 6) | (1 << 16); // set RIE (Receive Interrupt Enable) and NIE
 }
