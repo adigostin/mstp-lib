@@ -23,7 +23,6 @@ static constexpr size_t rx_desc_count = 20;
 static dma_descriptor_t rx_descriptors[rx_desc_count];
 static dma_descriptor_t tx_descriptors[tx_desc_count];
 
-//static uint32_t muRxDescIndex;
 static size_t tx_desc_write_index;
 static size_t rx_desc_read_index;
 
@@ -60,30 +59,38 @@ void ethernet_get_received (ethernet_rx_callback rx_callback)
 	// In case we ran out of descriptors and the RX HW was suspended, wake it up.
 	EMAC0->RXPOLLD = 0;
 }
-/*
-void ethernet_transmit (const void *data, size_t size)
+
+void* ethernet_transmit_get_buffer (size_t size)
 {
-	assert (size <= sizeof(tx_buffer));
+	assert (size > 0);
+	assert (size <= tx_buffer_size);
 
-	memcpy (tx_buffer, data, size);
+	while (tx_descriptors[tx_desc_write_index].status & (1u << 31))
+		;
 
-	assert((tx_descriptors[tx_desc_write_index].status & DES0_TX_CTRL_OWN) == 0);
+	tx_descriptors[tx_desc_write_index].count = size;
+	return tx_buffer;
+}
 
-	// Fill in the packet size and tell the transmitter to start work.
-	tx_descriptors[tx_desc_write_index].count = (uint32_t)size;
+void ethernet_transmit_release_buffer (void* buffer)
+{
+	assert (buffer == tx_buffer);
+
 	tx_descriptors[tx_desc_write_index].status =
-	    (DES0_TX_CTRL_LAST_SEG | DES0_TX_CTRL_FIRST_SEG |
-	        DES0_TX_CTRL_INTERRUPT | DES0_TX_CTRL_IP_ALL_CKHSUMS |
-	        DES0_TX_CTRL_CHAINED | DES0_TX_CTRL_OWN);
+		  (1 << 8)    // LS  - Last Descriptor
+		| (1 << 9)    // FS  - First Descriptor
+		| (3 << 22)   // CIC = 3 - all checksums
+		| (1 << 20)   // TCH - Second Address Chained
+	    | (1u << 31); // OWN - Owned by DMA
+	       
+	// Tell the DMA to reacquire the descriptor now that we've filled it in.
+	EMAC0->TXPOLLD = 0;
 
 	tx_desc_write_index++;
 	if (tx_desc_write_index == tx_desc_count)
 		tx_desc_write_index = 0;
-
-	// Tell the DMA to reacquire the descriptor now that we've filled it in.
-	EMAC0->TXPOLLD = 0;
 }
-*/
+
 void ethernet_init (const uint8_t *mac_address)
 {
 	// Enable the Ethernet modules.
