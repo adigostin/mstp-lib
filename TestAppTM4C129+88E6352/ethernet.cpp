@@ -34,33 +34,13 @@ static constexpr size_t tx_buffer_size = 1500;
 static uint8_t rx_buffers[rx_desc_count][rx_buffer_size];
 static uint8_t tx_buffer[tx_buffer_size];
 
-static ethernet_rx_callback rx_callback;
-static bool rx_flag;
-
 extern "C" void EMAC0_IRQHandler()
 {
-	uint32_t ints = EMAC0->DMARIS & EMAC0->DMAIM & 0x1FFFFu;
-	EMAC0->DMARIS = ints;
-
-	if (ints & (1 << 16))
-	{
-		ints &= ~(1 << 16);
-
-		if (ints & (1u << 6))
-		{
-			// receive interrupt
-			ints &= ~(1u << 6);
-			rx_flag = true;
-		}
-	}
-
-	assert(ints == 0);
+	assert(false);
 }
 
 void ethernet_get_received (ethernet_rx_callback rx_callback)
 {
-	rx_flag = false;
-
 	while (true)
 	{
 		auto desc = &rx_descriptors[rx_desc_read_index];
@@ -105,40 +85,6 @@ void ethernet_transmit (const void *data, size_t size)
 	EMAC0->TXPOLLD = 0;
 }
 */
-static void init_descriptors()
-{
-	// Initialize each of the transmit descriptors. Note that we leave the OWN
-	// bit clear here since we have not set up any transmissions yet.
-	for (size_t i = 0; i < tx_desc_count; i++)
-	{
-		tx_descriptors[i].ui32CtrlStatus = (1 << 29) // LS: Last Segment
-			| (1 << 28) // FS: First Segment
-			| (1 << 30) // IC: Interrupt on Completion
-			| (1 << 20) // TCH: Second Address Chained
-			| (3 << 22); // CIC: Checksum Insertion Control - 0x3 = Insert a TCP/UDP/ICMP checksum that is fully calculated in this engine
-		tx_descriptors[i].ui32Count = sizeof(tx_buffer);
-		tx_descriptors[i].pvBuffer1 = tx_buffer;
-		tx_descriptors[i].DES3.pLink = &tx_descriptors[(i + 1) % tx_desc_count];
-	}
-
-	// Initialize each of the receive descriptors.  We clear the OWN bit here
-	// to make sure that the receiver doesn't start writing anything immediately.
-	for (size_t i = 0; i < rx_desc_count; i++)
-	{
-		rx_descriptors[i].ui32CtrlStatus = (1u << 31);
-		rx_descriptors[i].ui32Count = (1 << 14) | rx_buffer_size;
-		rx_descriptors[i].pvBuffer1 = &rx_buffers[i];
-		rx_descriptors[i].DES3.pLink = &rx_descriptors[(i + 1) % rx_desc_count];
-	}
-
-	// Set the descriptor pointers in the hardware.
-    EMAC0->RXDLADDR = (uint32_t)rx_descriptors;
-	EMAC0->TXDLADDR = (uint32_t)tx_descriptors;
-
-	tx_desc_write_index = 0;
-	rx_desc_read_index = 0;
-}
-
 void ethernet_init (const uint8_t *mac_address)
 {
 	// Enable the Ethernet modules.
@@ -162,8 +108,19 @@ void ethernet_init (const uint8_t *mac_address)
 	EMAC0->DMABUSMOD |= 1;
 	while (EMAC0->DMABUSMOD & 1);
 
-	// Initialise the MAC and set the DMA mode.
-	EMACInit(EMAC0_BASE, clock_get_freq(), EMAC_BCONFIG_MIXED_BURST | EMAC_BCONFIG_PRIORITY_FIXED, 4, 4, 0);
+    // Make sure that the DMA software reset is clear before continuing.
+    while (EMAC0->DMABUSMOD & 1);
+
+	EMAC0->DMABUSMOD = (1 << 26) // MB
+		| (4 << 8) // Programmable Burst Length
+		| (1 << 1); // DMA Arbitration Scheme (Fixed Prio)
+
+	// The frequency of the System Clock is 100 to 150 MHz providing a MDIO clock of SYSCLK/62.
+	EMAC0->MIIADDR = EMAC0->MIIADDR & ~(15 << 2) | (1 << 2);
+
+    // Disable all the MMC interrupts as these are enabled by default at reset.
+	EMAC0->MMCRXIM = 0xFFFFFFFF;
+    EMAC0->MMCTXIM = 0xFFFFFFFF;
 
 	// Set MAC configuration options.
 	EMACConfigSet(EMAC0_BASE,
@@ -178,17 +135,39 @@ void ethernet_init (const uint8_t *mac_address)
 	        EMAC_MODE_RX_THRESHOLD_64_BYTES),
 	    0);
 
-	init_descriptors();
+	// ----------------------------------------------------------
+	// Initialize descriptors.
+
+	for (size_t i = 0; i < tx_desc_count; i++)
+	{
+		tx_descriptors[i].ui32CtrlStatus = (1 << 29) // LS: Last Segment
+			| (1 << 28) // FS: First Segment
+			| (1 << 30) // IC: Interrupt on Completion
+			| (1 << 20) // TCH: Second Address Chained
+			| (3 << 22); // CIC: Checksum Insertion Control - 0x3 = Insert a TCP/UDP/ICMP checksum that is fully calculated in this engine
+		tx_descriptors[i].ui32Count = sizeof(tx_buffer);
+		tx_descriptors[i].pvBuffer1 = tx_buffer;
+		tx_descriptors[i].DES3.pLink = &tx_descriptors[(i + 1) % tx_desc_count];
+	}
+
+	for (size_t i = 0; i < rx_desc_count; i++)
+	{
+		rx_descriptors[i].ui32CtrlStatus = (1u << 31);
+		rx_descriptors[i].ui32Count = (1 << 14) | rx_buffer_size;
+		rx_descriptors[i].pvBuffer1 = &rx_buffers[i];
+		rx_descriptors[i].DES3.pLink = &rx_descriptors[(i + 1) % rx_desc_count];
+	}
+
+    EMAC0->RXDLADDR = (uint32_t)rx_descriptors;
+	EMAC0->TXDLADDR = (uint32_t)tx_descriptors;
+
+	tx_desc_write_index = 0;
+	rx_desc_read_index = 0;
+
+	// ----------------------------------------------------------
 
 	// Program the hardware with its MAC address (for filtering).
 	EMACAddrSet(EMAC0_BASE, 0, mac_address);
-
-	//	ETH_DBG("Waiting for Link...\r\n");
-	//	while ((EMACPHYRead(EMAC0_BASE, 0, EPHY_BMSR) & EPHY_BMSR_LINKSTAT) == 0)
-	//		;
-	//	printf("Ethernet MAC is ready and the link is active.\r\n");
-
-	uint8_t ui8PHYAddr = 0;
 
 	// Set MAC filtering options.  We receive all broadcast and multicast
 	// packets along with those addressed specifically for us.
@@ -199,8 +178,8 @@ void ethernet_init (const uint8_t *mac_address)
 	// Clear any pending interrupts.
 	EMACIntClear(EMAC0_BASE, EMACIntStatus(EMAC0_BASE, false));
 /*
-    // Configure Ethernet LEDs. NV doesn't have them.
-    // LED Config 0x223: LED 0: RX, LED 1/2: TX. Can be used for both PWS and UVS.
+    // Configure Ethernet LEDs.
+	uint8_t ui8PHYAddr = 0;
     EMACPHYWrite(EMAC0_BASE, ui8PHYAddr, EPHY_LEDCFG, 0x223);
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOK);
     GPIOPinConfigure(GPIO_PK4_EN0LED0);
@@ -216,7 +195,6 @@ void ethernet_init (const uint8_t *mac_address)
 	EMAC0->DMAOPMODE |= (1 << 13) | (1 << 1); // set ST and SR
 	EMAC0->CFG |= (1 << 3) | (1 << 2);        // set TE and RE
 
-	NVIC_EnableIRQ(EMAC0_IRQn);
-
-	EMAC0->DMAIM |= (1 << 6) | (1 << 16); // set RIE (Receive Interrupt Enable) and NIE
+	//NVIC_EnableIRQ(EMAC0_IRQn);
+	//EMAC0->DMAIM |= (1 << 6) | (1 << 16); // set RIE (Receive Interrupt Enable) and NIE
 }
