@@ -1310,7 +1310,7 @@ void updtRolesTree (STP_BRIDGE* bridge, int givenTree)
 			{
 				portTree->updtInfo = true;
 			}
-			else if ((rootPortTree != NULL) && (portTree->portTimes != rootPortTree->portTimes))
+			else if ((rootPortTree != NULL) && (portTree->portTimes != rootPortTree->designatedTimes))
 			{
 				portTree->updtInfo = true;
 			}
@@ -1354,7 +1354,7 @@ void updtRolesTree (STP_BRIDGE* bridge, int givenTree)
 				{
 					portTree->updtInfo = true;
 				}
-				else if ((rootPortTree != NULL) && (portTree->portTimes != rootPortTree->portTimes))
+				else if ((rootPortTree != NULL) && (portTree->portTimes != rootPortTree->designatedTimes))
 				{
 					portTree->updtInfo = true;
 				}
