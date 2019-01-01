@@ -1,0 +1,3 @@
+[submodule "win32_lib"]
+	path = win32_lib
+	url = https://mez.visualstudio.com/_git/win32_lib
