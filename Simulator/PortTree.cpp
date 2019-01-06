@@ -35,17 +35,17 @@ HRESULT PortTree::Deserialize (IXMLDOMElement* portTreeElement)
 
 uint32_t PortTree::GetPriority() const
 {
-	return STP_GetPortPriority (_port->GetBridge()->GetStpBridge(), _port->GetPortIndex(), _treeIndex);
+	return STP_GetPortPriority (_port->bridge()->stp_bridge(), _port->GetPortIndex(), _treeIndex);
 }
 
 void PortTree::SetPriority (uint32_t priority)
 {
-	if (STP_GetPortPriority (_port->GetBridge()->GetStpBridge(), _port->GetPortIndex(), _treeIndex) != priority)
+	if (STP_GetPortPriority (_port->bridge()->stp_bridge(), _port->GetPortIndex(), _treeIndex) != priority)
 	{
 		assert(false);
 		/*
 		this->on_property_changing(&Priority);
-		STP_SetPortPriority (_port->GetBridge()->GetStpBridge(), _port->GetPortIndex(), _treeIndex, (unsigned char) priority, GetMessageTime());
+		STP_SetPortPriority (_port->bridge()->stp_bridge(), _port->GetPortIndex(), _treeIndex, (unsigned char) priority, GetMessageTime());
 		this->on_property_changed(&Priority);
 		*/
 	}

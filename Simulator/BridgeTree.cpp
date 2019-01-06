@@ -50,12 +50,12 @@ HRESULT BridgeTree::Deserialize (IXMLDOMElement* bridgeTreeElement)
 
 uint32_t BridgeTree::GetPriority() const
 {
-	return STP_GetBridgePriority (_parent->GetStpBridge(), _treeIndex);
+	return STP_GetBridgePriority (_parent->stp_bridge(), _treeIndex);
 }
 
 void BridgeTree::SetPriority (uint32_t priority)
 {
-	STP_SetBridgePriority (_parent->GetStpBridge(), _treeIndex, (unsigned short) priority, GetMessageTime());
+	STP_SetBridgePriority (_parent->stp_bridge(), _treeIndex, (unsigned short) priority, GetMessageTime());
 }
 
 static constexpr char StpDisabledString[] = "(STP disabled)";
@@ -63,13 +63,13 @@ static constexpr char StpDisabledString[] = "(STP disabled)";
 array<unsigned char, 36> BridgeTree::GetRootPV() const
 {
 	array<unsigned char, 36> prioVector;
-	STP_GetRootPriorityVector(_parent->GetStpBridge(), _treeIndex, prioVector.data());
+	STP_GetRootPriorityVector(_parent->stp_bridge(), _treeIndex, prioVector.data());
 	return prioVector;
 }
 
 std::string BridgeTree::GetRootBridgeId() const
 {
-	if (!STP_IsBridgeStarted (_parent->GetStpBridge()))
+	if (!STP_IsBridgeStarted (_parent->stp_bridge()))
 		return StpDisabledString;
 
 	auto rpv = GetRootPV();
@@ -83,7 +83,7 @@ std::string BridgeTree::GetRootBridgeId() const
 
 std::string BridgeTree::GetExternalRootPathCost() const
 {
-	if (!STP_IsBridgeStarted(_parent->GetStpBridge()))
+	if (!STP_IsBridgeStarted(_parent->stp_bridge()))
 		return StpDisabledString;
 
 	auto rpv = GetRootPV();
@@ -93,7 +93,7 @@ std::string BridgeTree::GetExternalRootPathCost() const
 
 std::string BridgeTree::GetRegionalRootBridgeId() const
 {
-	if (!STP_IsBridgeStarted (_parent->GetStpBridge()))
+	if (!STP_IsBridgeStarted (_parent->stp_bridge()))
 		return StpDisabledString;
 
 	auto rpv = GetRootPV();
@@ -107,7 +107,7 @@ std::string BridgeTree::GetRegionalRootBridgeId() const
 
 std::string BridgeTree::GetInternalRootPathCost() const
 {
-	if (!STP_IsBridgeStarted(_parent->GetStpBridge()))
+	if (!STP_IsBridgeStarted(_parent->stp_bridge()))
 		return StpDisabledString;
 
 	auto rpv = GetRootPV();
@@ -117,7 +117,7 @@ std::string BridgeTree::GetInternalRootPathCost() const
 
 std::string BridgeTree::GetDesignatedBridgeId() const
 {
-	if (!STP_IsBridgeStarted(_parent->GetStpBridge()))
+	if (!STP_IsBridgeStarted(_parent->stp_bridge()))
 		return StpDisabledString;
 
 	auto rpv = GetRootPV();
@@ -131,7 +131,7 @@ std::string BridgeTree::GetDesignatedBridgeId() const
 
 std::string BridgeTree::GetDesignatedPortId() const
 {
-	if (!STP_IsBridgeStarted(_parent->GetStpBridge()))
+	if (!STP_IsBridgeStarted(_parent->stp_bridge()))
 		return StpDisabledString;
 
 	auto rpv = GetRootPV();
@@ -142,7 +142,7 @@ std::string BridgeTree::GetDesignatedPortId() const
 
 std::string BridgeTree::GetReceivingPortId() const
 {
-	if (!STP_IsBridgeStarted(_parent->GetStpBridge()))
+	if (!STP_IsBridgeStarted(_parent->stp_bridge()))
 		return StpDisabledString;
 
 	auto rpv = GetRootPV();

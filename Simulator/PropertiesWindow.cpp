@@ -17,9 +17,9 @@ class PropertiesWindow : public window, public virtual IPropertiesWindow
 {
 	using base = window;
 
-	ISelection* const _selection;
-	IProjectWindow* const _projectWindow;
-	IProject* const _project;
+	ISelection*     const _selection;
+	IProjectWindow* const _project_window;
+	IProject*       const _project;
 	unique_ptr<property_grid_i> _pg;
 	unique_ptr<property_grid_i> _pg_tree;
 
@@ -33,7 +33,7 @@ public:
 					  ID3D11DeviceContext1* d3d_dc,
 					  IDWriteFactory* dwrite_factory)
 		: base (app->GetHInstance(), WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, rect, hWndParent, 0)
-		, _projectWindow(projectWindow)
+		, _project_window(projectWindow)
 		, _project(project)
 		, _selection(selection)
 		, _pg(property_grid_factory(app->GetHInstance(), client_rect_pixels(), hwnd(), d3d_dc, dwrite_factory))
@@ -41,7 +41,7 @@ public:
 	{
 		this->SetSelectionToPGs();
 
-		_projectWindow->GetSelectedVlanNumerChangedEvent().add_handler (&OnSelectedVlanChanged, this);
+		_project_window->GetSelectedVlanNumerChangedEvent().add_handler (&OnSelectedVlanChanged, this);
 		_selection->GetChangedEvent().add_handler (&OnSelectionChanged, this);
 		_project->GetChangedEvent().add_handler (&OnProjectChanged, this);
 	}
@@ -50,7 +50,7 @@ public:
 	{
 		_project->GetChangedEvent().remove_handler (&OnProjectChanged, this);
 		_selection->GetChangedEvent().remove_handler (&OnSelectionChanged, this);
-		_projectWindow->GetSelectedVlanNumerChangedEvent().remove_handler (&OnSelectedVlanChanged, this);
+		_project_window->GetSelectedVlanNumerChangedEvent().remove_handler (&OnSelectedVlanChanged, this);
 	}
 
 	template<typename... Args>
@@ -71,8 +71,8 @@ public:
 		}
 
 		stringstream ss;
-		ss << "VLAN " << _projectWindow->GetSelectedVlanNumber() << " Specific Properties";
-		auto vlanPropsHeading = ss.str();
+		ss << "VLAN " << _project_window->selected_vlan_number() << " Specific Properties";
+		auto pg_tree_title = ss.str();
 
 		if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<Bridge>(); }))
 		{
@@ -83,29 +83,28 @@ public:
 			for (object* o : objs)
 			{
 				auto b = static_cast<Bridge*>(o);
-				auto treeIndex = STP_GetTreeIndexFromVlanNumber(b->GetStpBridge(), _projectWindow->GetSelectedVlanNumber());
-				bridge_trees.push_back (b->GetTrees().at(treeIndex).get());
+				auto tree_index = STP_GetTreeIndexFromVlanNumber(b->stp_bridge(), _project_window->selected_vlan_number());
+				bridge_trees.push_back (b->trees().at(tree_index).get());
 			}
 
-			_pg_tree->set_title (vlanPropsHeading);
+			_pg_tree->set_title (pg_tree_title);
 			_pg_tree->select_objects (bridge_trees.data(), bridge_trees.size());
 		}
 		else if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<Port>(); }))
 		{
-			assert(false);
-			/*
-			_pg->AddProperties(objs.data(), objs.size(), L"Port Properties");
+			_pg->set_title ("Port Properties");
+			_pg->select_objects (objs.data(), objs.size());
 
-			std::vector<PortTree*> portTrees;
-			for (Object* o : objs)
+			std::vector<object*> port_trees;
+			for (object* o : objs)
 			{
 				auto p = static_cast<Port*>(o);
-				auto treeIndex = STP_GetTreeIndexFromVlanNumber(p->GetBridge()->GetStpBridge(), _projectWindow->GetSelectedVlanNumber());
-				portTrees.push_back (p->GetTrees().at(treeIndex).get());
+				auto tree_index = STP_GetTreeIndexFromVlanNumber(p->bridge()->stp_bridge(), _project_window->selected_vlan_number());
+				port_trees.push_back (p->trees().at(tree_index).get());
 			}
 
-			_pg->AddProperties ((Object**) &portTrees[0], portTrees.size(), vlanPropsHeading.c_str());
-			*/
+			_pg_tree->set_title (pg_tree_title);
+			_pg_tree->select_objects (port_trees.data(), port_trees.size());
 		}
 		else if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<Wire>(); }))
 		{

@@ -115,7 +115,7 @@ struct __declspec(novtable) IProjectWindow : public virtual edge::win32_window_i
 	virtual IProject* GetProject() const = 0;
 	virtual IEditArea* GetEditArea() const = 0;
 	virtual void SelectVlan (unsigned int vlanNumber) = 0;
-	virtual unsigned int GetSelectedVlanNumber() const = 0;
+	virtual unsigned int selected_vlan_number() const = 0;
 	virtual SelectedVlanNumerChangedEvent::subscriber GetSelectedVlanNumerChangedEvent() = 0;
 };
 

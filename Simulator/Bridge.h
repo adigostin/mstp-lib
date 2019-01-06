@@ -83,7 +83,7 @@ public:
 
 	void SetCoordsForInteriorPort (Port* port, D2D1_POINT_2F proposedLocation);
 
-	const std::vector<std::unique_ptr<BridgeTree>>& GetTrees() const { return _trees; }
+	const std::vector<std::unique_ptr<BridgeTree>>& trees() const { return _trees; }
 	const std::vector<std::unique_ptr<Port>>& GetPorts() const { return _ports; }
 
 	void Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned int vlanNumber, const D2D1_COLOR_F& configIdColor) const;
@@ -91,7 +91,7 @@ public:
 	virtual void RenderSelection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const override final;
 	virtual HTResult HitTest (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
 
-	STP_BRIDGE* GetStpBridge() const { return _stpBridge; }
+	STP_BRIDGE* stp_bridge() const { return _stpBridge; }
 
 	struct LogLineGenerated : public edge::event<LogLineGenerated, Bridge*, const BridgeLogLine*> { };
 	struct LinkPulseEvent : public edge::event<LinkPulseEvent, Bridge*, size_t, unsigned int> { };

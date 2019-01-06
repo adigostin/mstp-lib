@@ -39,7 +39,7 @@ public:
 			Bridge* b = _bridge.get();
 			size_t insertIndex = _project->GetBridges().size();
 			_project->InsertBridge(insertIndex, move(_bridge));
-			STP_StartBridge (_project->GetBridges().back()->GetStpBridge(), GetMessageTime());
+			STP_StartBridge (_project->GetBridges().back()->stp_bridge(), GetMessageTime());
 			_project->SetChangedFlag(true);
 			_selection->Select(b);
 		}
@@ -90,7 +90,7 @@ public:
 			D2D1_MATRIX_3X2_F oldtr;
 			rt->GetTransform(&oldtr);
 			rt->SetTransform(zoom_tr);
-			_bridge->Render (rt, _pw->GetEditArea()->GetDrawingObjects(), _pw->GetSelectedVlanNumber(), ColorF(ColorF::LightGreen));
+			_bridge->Render (rt, _pw->GetEditArea()->GetDrawingObjects(), _pw->selected_vlan_number(), ColorF(ColorF::LightGreen));
 			rt->SetTransform(&oldtr);
 
 			auto x = _bridge->GetLeft() + _bridge->GetWidth() / 2;

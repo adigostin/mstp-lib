@@ -35,7 +35,7 @@ public:
 		for (size_t i = 0; i < selection->_objects.size(); )
 		{
 			auto so = selection->_objects[i];
-			if ((so == b) || ((dynamic_cast<Port*>(so) != nullptr) && (static_cast<Port*>(so)->GetBridge() == b)))
+			if ((so == b) || ((dynamic_cast<Port*>(so) != nullptr) && (static_cast<Port*>(so)->bridge() == b)))
 				selection->RemoveInternal(i);
 			else
 				i++;

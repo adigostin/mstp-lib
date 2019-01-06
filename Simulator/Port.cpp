@@ -11,7 +11,7 @@ using namespace edge;
 Port::Port (Bridge* bridge, unsigned int portIndex, Side side, float offset)
 	: _bridge(bridge), _portIndex(portIndex), _side(side), _offset(offset)
 {
-	for (unsigned int treeIndex = 0; treeIndex < (unsigned int) bridge->GetTrees().size(); treeIndex++)
+	for (unsigned int treeIndex = 0; treeIndex < (unsigned int) bridge->trees().size(); treeIndex++)
 	{
 		auto tree = unique_ptr<PortTree>(new PortTree(this, treeIndex));
 		tree->property_changed().add_handler (&OnTreePropertyChanged, this);
@@ -230,7 +230,7 @@ void Port::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, unsigned in
 
 	// Draw the exterior of the port.
 	float interiorPortOutlineWidth = OutlineWidth;
-	auto b = _bridge->GetStpBridge();
+	auto b = _bridge->stp_bridge();
 	auto treeIndex  = STP_GetTreeIndexFromVlanNumber(b, vlanNumber);
 	if (STP_IsBridgeStarted (b))
 	{
@@ -323,7 +323,7 @@ renderable_object::HTResult Port::HitTest (const edge::zoomable_i* zoomable, D2D
 
 bool Port::IsForwarding (unsigned int vlanNumber) const
 {
-	auto stpb = _bridge->GetStpBridge();
+	auto stpb = _bridge->stp_bridge();
 	if (!STP_IsBridgeStarted(stpb))
 		return true;
 
@@ -348,22 +348,22 @@ bool Port::GetMacOperational() const
 
 bool Port::GetAutoEdge() const
 {
-	return (bool) STP_GetPortAutoEdge (_bridge->GetStpBridge(), (unsigned int) _portIndex);
+	return (bool) STP_GetPortAutoEdge (_bridge->stp_bridge(), (unsigned int) _portIndex);
 }
 
 void Port::SetAutoEdge (bool autoEdge)
 {
-	STP_SetPortAutoEdge (_bridge->GetStpBridge(), (unsigned int) _portIndex, autoEdge, (unsigned int) GetMessageTime());
+	STP_SetPortAutoEdge (_bridge->stp_bridge(), (unsigned int) _portIndex, autoEdge, (unsigned int) GetMessageTime());
 }
 
 bool Port::GetAdminEdge() const
 {
-	return (bool) STP_GetPortAdminEdge (_bridge->GetStpBridge(), (unsigned int) _portIndex);
+	return (bool) STP_GetPortAdminEdge (_bridge->stp_bridge(), (unsigned int) _portIndex);
 }
 
 void Port::SetAdminEdge (bool adminEdge)
 {
-	STP_SetPortAdminEdge (_bridge->GetStpBridge(), (unsigned int) _portIndex, adminEdge, (unsigned int) GetMessageTime());
+	STP_SetPortAdminEdge (_bridge->stp_bridge(), (unsigned int) _portIndex, adminEdge, (unsigned int) GetMessageTime());
 }
 
 static const _bstr_t PortString = "Port";
@@ -446,24 +446,24 @@ HRESULT Port::Deserialize (IXMLDOMElement* portElement)
 
 unsigned int Port::GetDetectedPortPathCost() const
 {
-	return STP_GetDetectedPortPathCost(_bridge->GetStpBridge(), _portIndex);
+	return STP_GetDetectedPortPathCost(_bridge->stp_bridge(), _portIndex);
 }
 
 unsigned int Port::GetAdminExternalPortPathCost() const
 {
-	return STP_GetAdminPortPathCost (_bridge->GetStpBridge(), _portIndex, 0);
+	return STP_GetAdminPortPathCost (_bridge->stp_bridge(), _portIndex, 0);
 }
 
 void Port::SetAdminExternalPortPathCost(unsigned int adminExternalPortPathCost)
 {
-	STP_SetAdminPortPathCost (_bridge->GetStpBridge(), _portIndex, 0, adminExternalPortPathCost, GetMessageTime());
+	STP_SetAdminPortPathCost (_bridge->stp_bridge(), _portIndex, 0, adminExternalPortPathCost, GetMessageTime());
 	// TODO: invoke PropertyChangedEvent
 }
 
 unsigned int Port::GetExternalPortPathCost() const
 {
 	unsigned int treeIndex = 0; // CIST
-	return STP_GetPortPathCost (_bridge->GetStpBridge(), _portIndex, treeIndex);
+	return STP_GetPortPathCost (_bridge->stp_bridge(), _portIndex, treeIndex);
 }
 
 const bool_property Port::AutoEdge

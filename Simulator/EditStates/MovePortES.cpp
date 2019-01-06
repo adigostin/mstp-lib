@@ -28,7 +28,7 @@ public:
 
 	virtual void OnMouseMove (const MouseLocation& location) override final
 	{
-		_port->GetBridge()->SetCoordsForInteriorPort (_port, location.w);
+		_port->bridge()->SetCoordsForInteriorPort (_port, location.w);
 	}
 
 	virtual std::optional<LRESULT> OnKeyDown (UINT virtualKey, UINT modifierKeys) override final

@@ -149,7 +149,7 @@ com_ptr<IXMLDOMElement> Wire::SerializeEnd (IProject* project, IXMLDOMDocument* 
 		hr = doc->createElement (ConnectedEndString, &element); assert(SUCCEEDED(hr));
 		auto port = get<ConnectedWireEnd>(end);
 		auto& bridges = project->GetBridges();
-		auto it = find_if (bridges.begin(), bridges.end(), [port](auto& up) { return up.get() == port->GetBridge(); });
+		auto it = find_if (bridges.begin(), bridges.end(), [port](auto& up) { return up.get() == port->bridge(); });
 		auto bridgeIndex = it - bridges.begin();
 		hr = element->setAttribute (BridgeIndexString, _variant_t(to_string(bridgeIndex).c_str())); assert(SUCCEEDED(hr));
 		hr = element->setAttribute (PortIndexString, _variant_t(to_string(port->GetPortIndex()).c_str())); assert(SUCCEEDED(hr));

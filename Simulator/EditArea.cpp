@@ -367,9 +367,9 @@ public:
 		for (const unique_ptr<Bridge>& bridge : _project->GetBridges())
 		{
 			D2D1_COLOR_F color = ColorF(ColorF::LightGreen);
-			if (STP_GetStpVersion(bridge->GetStpBridge()) >= STP_VERSION_MSTP)
+			if (STP_GetStpVersion(bridge->stp_bridge()) >= STP_VERSION_MSTP)
 			{
-				auto it = find (configIds.begin(), configIds.end(), *STP_GetMstConfigId(bridge->GetStpBridge()));
+				auto it = find (configIds.begin(), configIds.end(), *STP_GetMstConfigId(bridge->stp_bridge()));
 				if (it != configIds.end())
 				{
 					size_t colorIndex = (std::distance (configIds.begin(), it)) % _countof(RegionColors);
@@ -377,7 +377,7 @@ public:
 				}
 			}
 
-			bridge->Render (dc, _drawingObjects, _pw->GetSelectedVlanNumber(), color);
+			bridge->Render (dc, _drawingObjects, _pw->selected_vlan_number(), color);
 		}
 
 		dc->SetTransform(oldtr);
@@ -392,7 +392,7 @@ public:
 		for (const unique_ptr<Wire>& w : _project->GetWires())
 		{
 			bool hasLoop;
-			bool forwarding = _project->IsWireForwarding(w.get(), _pw->GetSelectedVlanNumber(), &hasLoop);
+			bool forwarding = _project->IsWireForwarding(w.get(), _pw->selected_vlan_number(), &hasLoop);
 			w->Render (dc, _drawingObjects, forwarding, hasLoop);
 		}
 
@@ -443,7 +443,7 @@ public:
 		std::set<STP_MST_CONFIG_ID> configIds;
 		for (auto& bridge : _project->GetBridges())
 		{
-			auto stpb = bridge->GetStpBridge();
+			auto stpb = bridge->stp_bridge();
 			if (STP_GetStpVersion(stpb) >= STP_VERSION_MSTP)
 				configIds.insert (*STP_GetMstConfigId(stpb));
 		}
@@ -564,10 +564,10 @@ public:
 					auto b = dynamic_cast<Bridge*>(o);
 					if (b != nullptr)
 					{
-						if (enable && !STP_IsBridgeStarted(b->GetStpBridge()))
-							STP_StartBridge(b->GetStpBridge(), GetMessageTime());
-						else if (!enable && STP_IsBridgeStarted(b->GetStpBridge()))
-							STP_StopBridge(b->GetStpBridge(), GetMessageTime());
+						if (enable && !STP_IsBridgeStarted(b->stp_bridge()))
+							STP_StartBridge(b->stp_bridge(), GetMessageTime());
+						else if (!enable && STP_IsBridgeStarted(b->stp_bridge()))
+							STP_StopBridge(b->stp_bridge(), GetMessageTime());
 					}
 				}
 
@@ -669,7 +669,7 @@ public:
 					continue;
 
 				auto port = std::get<ConnectedWireEnd>(w->GetPoints()[pi]);
-				if (bridgesToRemove.find(port->GetBridge()) == bridgesToRemove.end())
+				if (bridgesToRemove.find(port->bridge()) == bridgesToRemove.end())
 					continue;
 
 				// point is connected to bridge being removed.
@@ -682,7 +682,7 @@ public:
 			Wire* wire = it->first;
 			bool anyPointRemainsConnected = any_of (wire->GetPoints().begin(), wire->GetPoints().end(),
 				[&bridgesToRemove](auto& pt) { return std::holds_alternative<ConnectedWireEnd>(pt)
-				&& (bridgesToRemove.count(std::get<ConnectedWireEnd>(pt)->GetBridge()) == 0); });
+				&& (bridgesToRemove.count(std::get<ConnectedWireEnd>(pt)->bridge()) == 0); });
 			
 			auto it1 = it;
 			it++;

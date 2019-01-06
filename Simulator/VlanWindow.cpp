@@ -205,7 +205,7 @@ public:
 		auto vlanNumber = (unsigned int) (index + 1);
 		auto& pws = _app->GetProjectWindows();
 		auto it = find_if (pws.begin(), pws.end(), [this, vlanNumber](auto& pw)
-			{ return (pw->GetProject() == _pw->GetProject()) && (pw->GetSelectedVlanNumber() == vlanNumber); });
+			{ return (pw->GetProject() == _pw->GetProject()) && (pw->selected_vlan_number() == vlanNumber); });
 		if (it != pws.end())
 		{
 			::BringWindowToTop (it->get()->hwnd());
@@ -225,7 +225,7 @@ public:
 
 	void LoadSelectedVlanCombo()
 	{
-		ComboBox_SetCurSel (GetDlgItem (_hwnd, IDC_COMBO_SELECTED_VLAN), _pw->GetSelectedVlanNumber() - 1);
+		ComboBox_SetCurSel (GetDlgItem (_hwnd, IDC_COMBO_SELECTED_VLAN), _pw->selected_vlan_number() - 1);
 	}
 
 	void LoadSelectedTreeEdit()
@@ -253,8 +253,8 @@ public:
 		if (objects[0]->is<Bridge>() || objects[0]->is<Port>())
 		{
 			auto obj = objects[0];
-			auto bridge = obj->is<Bridge>() ? dynamic_cast<Bridge*>(obj) : dynamic_cast<Port*>(obj)->GetBridge();
-			auto treeIndex = STP_GetTreeIndexFromVlanNumber (bridge->GetStpBridge(), _pw->GetSelectedVlanNumber());
+			auto bridge = obj->is<Bridge>() ? dynamic_cast<Bridge*>(obj) : dynamic_cast<Port*>(obj)->bridge();
+			auto treeIndex = STP_GetTreeIndexFromVlanNumber (bridge->stp_bridge(), _pw->selected_vlan_number());
 			if (treeIndex == 0)
 				::SetWindowText (edit, L"CIST (0)");
 			else

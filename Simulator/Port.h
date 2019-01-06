@@ -55,7 +55,7 @@ public:
 	static constexpr float ExteriorHeight = 20;
 	static constexpr float OutlineWidth = 2;
 
-	Bridge* GetBridge() const { return _bridge; }
+	Bridge* bridge() const { return _bridge; }
 	unsigned int GetPortIndex() const { return _portIndex; }
 	Side GetSide() const { return _side; }
 	float GetOffset() const { return _offset; }
@@ -65,7 +65,7 @@ public:
 	D2D1_RECT_F GetInnerOuterRect() const;
 	bool IsForwarding (unsigned int vlanNumber) const;
 	void SetSideAndOffset (Side side, float offset);
-	const std::vector<std::unique_ptr<PortTree>>& GetTrees() const { return _trees; }
+	const std::vector<std::unique_ptr<PortTree>>& trees() const { return _trees; }
 
 	static void RenderExteriorNonStpPort (ID2D1RenderTarget* dc, const DrawingObjects& dos, bool macOperational);
 	static void RenderExteriorStpPort (ID2D1RenderTarget* dc, const DrawingObjects& dos, STP_PORT_ROLE role, bool learning, bool forwarding, bool operEdge);

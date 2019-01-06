@@ -46,7 +46,7 @@ public:
 
 		if (any_of (_wires.begin(), _wires.end(), [b](const unique_ptr<Wire>& w) {
 			return any_of (w->GetPoints().begin(), w->GetPoints().end(), [b] (WireEnd p) {
-				return std::holds_alternative<ConnectedWireEnd>(p) && (std::get<ConnectedWireEnd>(p)->GetBridge() == b);
+				return std::holds_alternative<ConnectedWireEnd>(p) && (std::get<ConnectedWireEnd>(p)->bridge() == b);
 			});
 		}))
 			throw invalid_argument("cannot remove a connected bridge");
@@ -96,7 +96,7 @@ public:
 		if (rxPort != nullptr)
 		{
 			pi.txPortPath.push_back (bridge->GetPortAddress(txPortIndex));
-			rxPort->GetBridge()->EnqueuePacket(move(pi), rxPort->GetPortIndex());
+			rxPort->bridge()->EnqueuePacket(move(pi), rxPort->GetPortIndex());
 		}
 	}
 
@@ -106,7 +106,7 @@ public:
 		auto txPort = bridge->GetPorts().at(txPortIndex).get();
 		auto rxPort = project->FindConnectedPort(txPort);
 		if (rxPort != nullptr)
-			rxPort->GetBridge()->ProcessLinkPulse(rxPort->GetPortIndex(), timestamp);
+			rxPort->bridge()->ProcessLinkPulse(rxPort->GetPortIndex(), timestamp);
 	}
 
 	static void OnObjectInvalidate (void* callbackArg, renderable_object* object)
@@ -149,11 +149,11 @@ public:
 					{
 						txPorts.insert(txPort);
 
-						for (unsigned int i = 0; i < (unsigned int) rx->GetBridge()->GetPorts().size(); i++)
+						for (unsigned int i = 0; i < (unsigned int) rx->bridge()->GetPorts().size(); i++)
 						{
 							if ((i != rx->GetPortIndex()) && rx->IsForwarding(vlanNumber))
 							{
-								Port* otherTxPort = rx->GetBridge()->GetPorts()[i].get();
+								Port* otherTxPort = rx->bridge()->GetPorts()[i].get();
 								if (otherTxPort == targetPort)
 									return true;
 

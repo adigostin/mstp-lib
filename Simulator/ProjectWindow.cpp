@@ -788,7 +788,7 @@ public:
 		}
 	};
 
-	virtual unsigned int GetSelectedVlanNumber() const override final { return _selectedVlanNumber; }
+	virtual unsigned int selected_vlan_number() const override final { return _selectedVlanNumber; }
 
 	virtual SelectedVlanNumerChangedEvent::subscriber GetSelectedVlanNumerChangedEvent() override final { return SelectedVlanNumerChangedEvent::subscriber(this); }
 

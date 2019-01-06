@@ -138,8 +138,8 @@ public:
 		ListView_SetExtendedListViewStyle (list, LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
 		//ListView_SetBkColor (list, GetSysColor(COLOR_3DFACE));
 
-		auto& configId = *STP_GetMstConfigId(_bridges[0]->GetStpBridge());
-		bool allSameConfig = all_of(_bridges.begin(), _bridges.end(), [&](Bridge* b) { return *STP_GetMstConfigId(b->GetStpBridge()) == configId; });
+		auto& configId = *STP_GetMstConfigId(_bridges[0]->stp_bridge());
+		bool allSameConfig = all_of(_bridges.begin(), _bridges.end(), [&](Bridge* b) { return *STP_GetMstConfigId(b->stp_bridge()) == configId; });
 
 		LVCOLUMN lvc = { 0 };
 		lvc.mask = LVCF_TEXT | LVCF_WIDTH;
@@ -161,7 +161,7 @@ public:
 		}
 
 		HWND hint = GetDlgItem (_hwnd, IDC_STATIC_HINT_NOT_MSTP);
-		bool showHint = any_of (_bridges.begin(), _bridges.end(), [](Bridge* b) { return STP_GetStpVersion(b->GetStpBridge()) < STP_VERSION_MSTP; });
+		bool showHint = any_of (_bridges.begin(), _bridges.end(), [](Bridge* b) { return STP_GetStpVersion(b->stp_bridge()) < STP_VERSION_MSTP; });
 		auto style = ::GetWindowLongPtr (hint, GWL_STYLE);
 		style = (style & ~WS_VISIBLE) | (showHint ? WS_VISIBLE : 0);
 		::SetWindowLongPtr (hint, GWL_STYLE, style);
@@ -178,7 +178,7 @@ public:
 		lvi.mask = LVIF_TEXT;
 
 		unsigned int entryCount;
-		auto entries = STP_GetMstConfigTable (bridge->GetStpBridge(), &entryCount);
+		auto entries = STP_GetMstConfigTable (bridge->stp_bridge(), &entryCount);
 
 		for (unsigned int vlanNumber = 0; vlanNumber <= MaxVlanNumber; vlanNumber++)
 		{
@@ -214,7 +214,7 @@ public:
 	{
 		for (auto b : _bridges)
 		{
-			auto treeCount = 1 + STP_GetMstiCount(b->GetStpBridge());
+			auto treeCount = 1 + STP_GetMstiCount(b->stp_bridge());
 
 			vector<STP_CONFIG_TABLE_ENTRY> entries;
 			entries.resize(1 + MaxVlanNumber);

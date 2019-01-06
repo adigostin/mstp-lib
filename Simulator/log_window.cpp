@@ -68,7 +68,7 @@ public:
 			{
 				auto port = dynamic_cast<Port*>(selection->GetObjects().front());
 				if (port != nullptr)
-					b = port->GetBridge();
+					b = port->bridge();
 			}
 
 			logArea->SelectBridge(b);
