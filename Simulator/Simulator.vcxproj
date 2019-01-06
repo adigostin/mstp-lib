@@ -239,7 +239,7 @@
     <ClCompile Include="EditStates\MoveBridgesES.cpp" />
     <ClCompile Include="EditStates\MovePortES.cpp" />
     <ClCompile Include="EditStates\MoveWirePointES.cpp" />
-    <ClCompile Include="LogArea.cpp" />
+    <ClCompile Include="log_window.cpp" />
     <ClCompile Include="MSTConfigIdDialog.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

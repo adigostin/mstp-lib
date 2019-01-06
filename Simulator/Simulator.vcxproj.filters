@@ -35,7 +35,7 @@
     <ClCompile Include="EditStates\MoveBridgesES.cpp">
       <Filter>EditStates</Filter>
     </ClCompile>
-    <ClCompile Include="LogArea.cpp" />
+    <ClCompile Include="log_window.cpp" />
     <ClCompile Include="Port.cpp" />
     <ClCompile Include="EditStates\MoveWirePointES.cpp">
       <Filter>EditStates</Filter>

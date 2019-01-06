@@ -27,7 +27,7 @@ static const wchar_t ProjectFileExtensionWithoutDot[] = L"stp";
 
 static constexpr LONG SplitterWidthDips = 4;
 static constexpr LONG PropertiesWindowDefaultWidthDips = 200;
-static constexpr LONG LogWindowDefaultWidthDips = 200;
+static constexpr LONG log_window_default_width_dips = 200;
 
 static const wnd_class_params class_params = 
 {
@@ -51,7 +51,7 @@ class ProjectWindow : public window, public virtual IProjectWindow
 	std::unique_ptr<ISelection> const _selection;
 	std::unique_ptr<IEditArea>          _editWindow;
 	std::unique_ptr<IPropertiesWindow>  _propertiesWindow;
-	std::unique_ptr<ILogArea>           _logWindow;
+	std::unique_ptr<log_window_i>       _log_window;
 	std::unique_ptr<IVlanWindow>        _vlanWindow;
 	SIZE _clientSize;
 	RECT _restoreBounds;
@@ -134,16 +134,16 @@ public:
 
 	void CreateLogWindow()
 	{
-		LONG w = (LogWindowDefaultWidthDips * _dpiX + 96 / 2) / 96;
+		LONG w = (log_window_default_width_dips * _dpiX + 96 / 2) / 96;
 		TryReadRegDword (RegValueNameLogWindowWidth, (DWORD*) &w);
 		w = RestrictToolWindowWidth(w);
-		_logWindow = logAreaFactory (_app->GetHInstance(), hwnd(), { _clientSize.cx - w, 0, _clientSize.cx, _clientSize.cy }, _d3d_dc, _dwrite_factory, _selection.get());
+		_log_window = log_window_factory (_app->GetHInstance(), hwnd(), { _clientSize.cx - w, 0, _clientSize.cx, _clientSize.cy }, _d3d_dc, _dwrite_factory, _selection.get());
 		SetMainMenuItemCheck (ID_VIEW_STPLOG, true);
 	}
 
 	void DestroyLogWindow()
 	{
-		_logWindow = nullptr;
+		_log_window = nullptr;
 		SetMainMenuItemCheck (ID_VIEW_STPLOG, false);
 	}
 
@@ -188,8 +188,8 @@ public:
 
 	LONG GetVlanWindowRight() const
 	{
-		if (_logWindow != nullptr)
-			return _clientSize.cx - _logWindow->GetWidth() - _splitterWidthPixels;
+		if (_log_window != nullptr)
+			return _clientSize.cx - _log_window->GetWidth() - _splitterWidthPixels;
 		else
 			return _clientSize.cx;
 	}
@@ -201,8 +201,8 @@ public:
 		if (_propertiesWindow != nullptr)
 			rect.left += _propertiesWindow->GetWidth() + _splitterWidthPixels;
 
-		if (_logWindow != nullptr)
-			rect.right -= _logWindow->GetWidth() + _splitterWidthPixels;
+		if (_log_window != nullptr)
+			rect.right -= _log_window->GetWidth() + _splitterWidthPixels;
 
 		if (_vlanWindow != nullptr)
 		{
@@ -343,8 +343,8 @@ public:
 		if (_propertiesWindow != nullptr)
 			_propertiesWindow->SetRect ({ 0, 0, RestrictToolWindowWidth(_propertiesWindow->GetWidth()), _clientSize.cy });
 
-		if (_logWindow != nullptr)
-			_logWindow->SetRect ({ _clientSize.cx - RestrictToolWindowWidth(_logWindow->GetWidth()), 0, _clientSize.cx, _clientSize.cy });
+		if (_log_window != nullptr)
+			_log_window->SetRect ({ _clientSize.cx - RestrictToolWindowWidth(_log_window->GetWidth()), 0, _clientSize.cx, _clientSize.cy });
 
 		if (_vlanWindow != nullptr)
 			_vlanWindow->SetRect ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->GetHeight() });
@@ -361,10 +361,10 @@ public:
 			_resizeOffset = pt.x - _propertiesWindow->GetWidth();
 			::SetCapture(hwnd());
 		}
-		else if ((_logWindow != nullptr) && (pt.x >= _logWindow->GetX() - _splitterWidthPixels) && (pt.x < _logWindow->GetX()))
+		else if ((_log_window != nullptr) && (pt.x >= _log_window->GetX() - _splitterWidthPixels) && (pt.x < _log_window->GetX()))
 		{
 			_windowBeingResized = ToolWindow::Log;
-			_resizeOffset = _logWindow->GetX() - pt.x;
+			_resizeOffset = _log_window->GetX() - pt.x;
 			::SetCapture(hwnd());
 		}
 	}
@@ -381,10 +381,10 @@ public:
 		}
 		else if (_windowBeingResized == ToolWindow::Log)
 		{
-			_logWindow->SetRect ({ _clientSize.cx - RestrictToolWindowWidth(_clientSize.cx - pt.x - _resizeOffset), 0, _clientSize.cx, _clientSize.cy});
+			_log_window->SetRect ({ _clientSize.cx - RestrictToolWindowWidth(_clientSize.cx - pt.x - _resizeOffset), 0, _clientSize.cx, _clientSize.cy});
 			_vlanWindow->SetRect ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->GetHeight() });
 			_editWindow->SetRect (GetEditWindowRect());
-			::UpdateWindow (_logWindow->hwnd());
+			::UpdateWindow (_log_window->hwnd());
 			::UpdateWindow (_editWindow->hwnd());
 		}
 	}
@@ -399,7 +399,7 @@ public:
 		}
 		else if (_windowBeingResized == ToolWindow::Log)
 		{
-			WriteRegDword (RegValueNameLogWindowWidth, (DWORD) _logWindow->GetWidth());
+			WriteRegDword (RegValueNameLogWindowWidth, (DWORD) _log_window->GetWidth());
 			_windowBeingResized = ToolWindow::None;
 			::ReleaseCapture();
 		}
@@ -411,7 +411,7 @@ public:
 		{
 			::SetCursor (LoadCursor(nullptr, IDC_SIZEWE));
 		}
-		else if ((_logWindow != nullptr) && (pt.x >= _logWindow->GetX() - _splitterWidthPixels) && (pt.x < _logWindow->GetX()))
+		else if ((_log_window != nullptr) && (pt.x >= _log_window->GetX() - _splitterWidthPixels) && (pt.x < _log_window->GetX()))
 		{
 			::SetCursor (LoadCursor(nullptr, IDC_SIZEWE));
 		}
@@ -444,9 +444,9 @@ public:
 			FillRect (ps.hdc, &rect, GetSysColorBrush(COLOR_3DFACE));
 		}
 
-		if (_logWindow != nullptr)
+		if (_log_window != nullptr)
 		{
-			rect.right = _logWindow->GetX();
+			rect.right = _log_window->GetX();
 			rect.left = rect.right - _splitterWidthPixels;
 			rect.top = 0;
 			rect.bottom = _clientSize.cy;
@@ -470,7 +470,7 @@ public:
 
 		if (wParam == ID_VIEW_STPLOG)
 		{
-			if (_logWindow != nullptr)
+			if (_log_window != nullptr)
 				DestroyLogWindow();
 			else
 				CreateLogWindow();

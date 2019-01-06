@@ -12,9 +12,9 @@ using namespace edge;
 
 #pragma warning (disable: 4250)
 
-class LogArea : public d2d_window, public ILogArea
+class log_window : public d2d_window, public log_window_i
 {
-	typedef d2d_window base;
+	using base = d2d_window;
 
 	ISelection* const _selection;
 	com_ptr<IDWriteTextFormat> _textFormat;
@@ -34,7 +34,7 @@ class LogArea : public d2d_window, public ILogArea
 	static constexpr UINT AnimationScrollFramesMax = 10;
 
 public:
-	LogArea (HINSTANCE hInstance, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dWriteFactory, ISelection* selection)
+	log_window (HINSTANCE hInstance, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dWriteFactory, ISelection* selection)
 		: base (hInstance, WS_EX_CLIENTEDGE, WS_VISIBLE | WS_CHILD | WS_HSCROLL | WS_VSCROLL, rect, hWndParent, 0, d3d_dc, dWriteFactory)
 		, _selection(selection)
 	{
@@ -48,7 +48,7 @@ public:
 		_selection->GetChangedEvent().add_handler (&OnSelectionChanged, this);
 	}
 
-	~LogArea()
+	~log_window()
 	{
 		_selection->GetChangedEvent().remove_handler(&OnSelectionChanged, this);
 		if (_bridge != nullptr)
@@ -57,7 +57,7 @@ public:
 
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
 	{
-		auto logArea = static_cast<LogArea*>(callbackArg);
+		auto logArea = static_cast<log_window*>(callbackArg);
 
 		if (selection->GetObjects().size() != 1)
 			logArea->SelectBridge(nullptr);
@@ -126,7 +126,7 @@ public:
 
 	static void OnLogLineGeneratedStatic (void* callbackArg, Bridge* b, const BridgeLogLine* ll)
 	{
-		static_cast<LogArea*>(callbackArg)->OnLogLineGenerated(ll);
+		static_cast<log_window*>(callbackArg)->OnLogLineGenerated(ll);
 	}
 
 	void OnLogLineGenerated (const BridgeLogLine* ll)
@@ -431,9 +431,9 @@ public:
 };
 
 template<typename... Args>
-static std::unique_ptr<ILogArea> Create (Args... args)
+static std::unique_ptr<log_window_i> Create (Args... args)
 {
-	return std::make_unique<LogArea>(std::forward<Args>(args)...);
+	return std::make_unique<log_window>(std::forward<Args>(args)...);
 }
 
-extern const LogAreaFactory logAreaFactory = &Create;
+extern const log_window_factory_t log_window_factory = &Create;

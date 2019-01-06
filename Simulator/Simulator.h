@@ -8,7 +8,7 @@ struct ISimulatorApp;
 struct IProject;
 struct IProjectWindow;
 struct ISelection;
-struct ILogArea;
+struct log_window_i;
 class Bridge;
 class Port;
 class Wire;
@@ -56,12 +56,12 @@ extern const SelectionFactory selectionFactory;
 
 // ============================================================================
 
-struct __declspec(novtable) ILogArea abstract : virtual edge::win32_window_i
+struct __declspec(novtable) log_window_i abstract : virtual edge::win32_window_i
 {
-	virtual ~ILogArea() { }
+	virtual ~log_window_i() { }
 };
-using LogAreaFactory = std::unique_ptr<ILogArea>(*const)(HINSTANCE hInstance, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dWriteFactory, ISelection* selection);
-extern const LogAreaFactory logAreaFactory;
+using log_window_factory_t = std::unique_ptr<log_window_i>(*const)(HINSTANCE hInstance, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dWriteFactory, ISelection* selection);
+extern const log_window_factory_t log_window_factory;
 
 // ============================================================================
 
