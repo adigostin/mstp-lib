@@ -101,7 +101,7 @@ public:
 		_vlanWindow = vlanWindowFactory (_app, this, _project, _selection.get(), hwnd(), { GetVlanWindowLeft(), 0 });
 		SetMainMenuItemCheck (ID_VIEW_VLANS, true);
 
-		_editWindow = editAreaFactory (create_params.app, this, _project.get(), _selection.get(), hwnd(), GetEditWindowRect(), create_params.d3d_dc, create_params.dwrite_factory);
+		_editWindow = editAreaFactory (create_params.app, this, _project.get(), _selection.get(), hwnd(), edit_window_rect(), create_params.d3d_dc, create_params.dwrite_factory);
 
 		_project->GetChangedFlagChangedEvent().add_handler (&OnProjectChangedFlagChanged, this);
 		_app->GetProjectWindowAddedEvent().add_handler (&OnProjectWindowAdded, this);
@@ -194,7 +194,7 @@ public:
 			return _clientSize.cx;
 	}
 
-	RECT GetEditWindowRect() const
+	RECT edit_window_rect() const
 	{
 		auto rect = GetClientRectPixels();
 
@@ -205,12 +205,7 @@ public:
 			rect.right -= _log_window->GetWidth() + _splitterWidthPixels;
 
 		if (_vlanWindow != nullptr)
-		{
-			//rect.top += _vlanWindow->GetHeight();
-			RECT rect;
-			::GetWindowRect (_vlanWindow->hwnd(), &rect);
-			rect.top += (rect.bottom - rect.top);
-		}
+			rect.top += _vlanWindow->GetHeight();
 
 		return rect;
 	}
@@ -350,7 +345,7 @@ public:
 			_vlanWindow->SetRect ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->GetHeight() });
 
 		if (_editWindow != nullptr)
-			_editWindow->SetRect (GetEditWindowRect());
+			_editWindow->SetRect (edit_window_rect());
 	}
 
 	void ProcessWmLButtonDown (POINT pt, UINT modifierKeysDown)
@@ -375,7 +370,7 @@ public:
 		{
 			_propertiesWindow->SetWidth (RestrictToolWindowWidth(pt.x - _resizeOffset));
 			_vlanWindow->SetRect ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->GetHeight() });
-			_editWindow->SetRect (GetEditWindowRect());
+			_editWindow->SetRect (edit_window_rect());
 			::UpdateWindow (_propertiesWindow->hwnd());
 			::UpdateWindow (_editWindow->hwnd());
 		}
@@ -383,7 +378,7 @@ public:
 		{
 			_log_window->SetRect ({ _clientSize.cx - RestrictToolWindowWidth(_clientSize.cx - pt.x - _resizeOffset), 0, _clientSize.cx, _clientSize.cy});
 			_vlanWindow->SetRect ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->GetHeight() });
-			_editWindow->SetRect (GetEditWindowRect());
+			_editWindow->SetRect (edit_window_rect());
 			::UpdateWindow (_log_window->hwnd());
 			::UpdateWindow (_editWindow->hwnd());
 		}
