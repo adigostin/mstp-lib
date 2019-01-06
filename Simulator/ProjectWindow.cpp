@@ -196,7 +196,7 @@ public:
 
 	RECT edit_window_rect() const
 	{
-		auto rect = GetClientRectPixels();
+		auto rect = client_rect_pixels();
 
 		if (_propertiesWindow != nullptr)
 			rect.left += _propertiesWindow->GetWidth() + _splitterWidthPixels;
