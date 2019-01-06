@@ -1310,8 +1310,8 @@ unsigned int STP_GetPathCostToRootBridge (const struct STP_BRIDGE* bridge, unsig
 //
 // About the only case when setting a non-default BridgeHelloTime would have an effect
 // is when this bridge is the root bridge in a network, is connected directly to switches
-// that run older versions of STP, and the network administrator for some strange reason
-// sets a HelloTime different than two seconds.
+// that run Legacy STP (those don't ignore the received HelloTime value), and the
+// network admin for some strange reason sets a HelloTime different than two seconds.
 //
 extern "C" void STP_SetBridgeHelloTime (struct STP_BRIDGE* bridge, unsigned int helloTimeCentiseconds, unsigned int timestamp)
 {
