@@ -3,9 +3,11 @@
 #include "Wire.h"
 #include "Bridge.h"
 #include "Port.h"
-#include "Win32/UtilityFunctions.h"
+#include "win32/utility_functions.h"
+#include "Simulator.h"
 
 using namespace std;
+using namespace edge;
 
 Wire::Wire (WireEnd firstEnd, WireEnd secondEnd)
 	: _points({ firstEnd, secondEnd })
@@ -28,7 +30,7 @@ void Wire::SetPoint (size_t pointIndex, const WireEnd& point)
 	if (!Same(_points[pointIndex], point))
 	{
 		_points[pointIndex] = point;
-		InvalidateEvent::InvokeHandlers(this, this);
+		event_invoker<invalidate_e>()(this);
 	}
 }
 
@@ -59,10 +61,10 @@ void Wire::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, bool forwar
 	rt->DrawLine (GetPointCoords(0), GetPointCoords(1), brush, width, ss);
 }
 
-void Wire::RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const
+void Wire::RenderSelection (const zoomable_i* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const
 {
-	auto fd = zoomable->GetDLocationFromWLocation(GetPointCoords(0));
-	auto td = zoomable->GetDLocationFromWLocation(GetPointCoords(1));
+	auto fd = zoomable->pointw_to_pointd(GetPointCoords(0));
+	auto td = zoomable->pointw_to_pointd(GetPointCoords(1));
 
 	float halfw = 10;
 	float angle = atan2(td.y - fd.y, td.x - fd.x);
@@ -83,15 +85,15 @@ void Wire::RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, co
 	rt->DrawLine (vertices[3], vertices[0], dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
 }
 
-RenderableObject::HTResult Wire::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance)
+renderable_object::HTResult Wire::HitTest (const zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance)
 {
 	for (size_t i = 0; i < _points.size(); i++)
 	{
 		auto pointWLocation = this->GetPointCoords(i);
-		auto pointDLocation = zoomable->GetDLocationFromWLocation(pointWLocation);
+		auto pointDLocation = zoomable->pointw_to_pointd(pointWLocation);
 		D2D1_RECT_F rect = { pointDLocation.x, pointDLocation.y, pointDLocation.x, pointDLocation.y };
 		InflateRect(&rect, tolerance);
-		if (PointInRect (rect, dLocation))
+		if (point_in_rect (rect, dLocation))
 			return { this, (int) i };
 	}
 
@@ -197,14 +199,3 @@ WireEnd Wire::DeserializeEnd (IProject* project, IXMLDOMElement* element)
 		return nullptr;
 	}
 }
-
-static const PropertyOrGroup* const WireProperties[] =
-{
-	nullptr
-};
-
-const PropertyOrGroup* const* Wire::GetProperties() const
-{
-	return WireProperties;
-}
-

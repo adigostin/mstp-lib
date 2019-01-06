@@ -3,9 +3,11 @@
 #include "Simulator.h"
 #include "Resource.h"
 #include "Bridge.h"
-#include "Win32/UtilityFunctions.h"
+#include "win32/utility_functions.h"
+#include "property_descriptor.h"
 
 using namespace std;
+using namespace edge;
 
 class MSTConfigIdDialog : public IPropertyEditor
 {
@@ -13,7 +15,7 @@ class MSTConfigIdDialog : public IPropertyEditor
 	HWND _hwnd = nullptr;
 
 public:
-	MSTConfigIdDialog (const std::vector<Object*>& objects)
+	MSTConfigIdDialog (const std::vector<object*>& objects)
 	{
 		assert (!objects.empty());
 		for (auto o : objects)
@@ -35,10 +37,12 @@ public:
 			::EndDialog (dialog->_hwnd, IDCANCEL);
 	}
 
-	virtual UINT ShowModal (HWND hWndParent) override final
+	bool show (property_editor_parent_i* parent) final
 	{
-		INT_PTR dr = DialogBoxParam (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDD_DIALOG_MST_CONFIG_ID), hWndParent, &DialogProcStatic, (LPARAM) this);
-		return (UINT) dr;
+		auto parent_window = dynamic_cast<win32_window_i*>(parent);
+		assert (parent_window != nullptr);
+		INT_PTR dr = DialogBoxParam (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDD_DIALOG_MST_CONFIG_ID), parent_window->hwnd(), &DialogProcStatic, (LPARAM) this);
+		return (dr == IDOK);
 	}
 
 	virtual void Cancel() override final

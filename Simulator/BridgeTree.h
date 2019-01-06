@@ -1,11 +1,18 @@
 
 #pragma once
-#include "Object.h"
+#include "object.h"
+#include "win32/com_ptr.h"
 
 class Bridge;
 
-struct BridgeTree : Object
+extern const edge::NVP bridge_priority_nvps[];
+extern const char bridge_priority_type_name[];
+using bridge_priority_property = edge::enum_property<uint32_t, bridge_priority_type_name, bridge_priority_nvps>;
+
+struct BridgeTree : edge::object
 {
+	using base = edge::object;
+
 	Bridge* const _parent;
 	unsigned int const _treeIndex;
 
@@ -13,25 +20,26 @@ struct BridgeTree : Object
 		: _parent(parent), _treeIndex(treeIndex)
 	{ }
 
-	HRESULT Serialize (IXMLDOMDocument3* doc, com_ptr<IXMLDOMElement>& elementOut) const;
+	HRESULT Serialize (IXMLDOMDocument3* doc, edge::com_ptr<IXMLDOMElement>& elementOut) const;
 	HRESULT Deserialize (IXMLDOMElement* bridgeTreeElement);
 
 	//std::wstring GetPriorityLabel () const;
-	int GetPriority() const;
-	void SetPriority (int priority);
+	uint32_t GetPriority() const;
+	void SetPriority (uint32_t priority);
 
 	std::array<unsigned char, 36> GetRootPV() const;
-	std::wstring GetRootBridgeId() const;
-	std::wstring GetExternalRootPathCost() const;
-	std::wstring GetRegionalRootBridgeId() const;
-	std::wstring GetInternalRootPathCost() const;
-	std::wstring GetDesignatedBridgeId() const;
-	std::wstring GetDesignatedPortId() const;
-	std::wstring GetReceivingPortId() const;
+	std::string GetRootBridgeId() const;
+	std::string GetExternalRootPathCost() const;
+	std::string GetRegionalRootBridgeId() const;
+	std::string GetInternalRootPathCost() const;
+	std::string GetDesignatedBridgeId() const;
+	std::string GetDesignatedPortId() const;
+	std::string GetReceivingPortId() const;
 
-	static const PropertyGroup Common;
-	static const EnumProperty Priority;
-	static const PropertyOrGroup* const Properties[];
-	virtual const PropertyOrGroup* const* GetProperties() const override final { return Properties; }
+	static const bridge_priority_property Priority;
+	static const edge::temp_string_property RootBridgeId;
+	static const edge::property* const _properties[];
+	static const edge::type_t _type;
+	const edge::type_t* type() const override { return &_type; }
 };
 

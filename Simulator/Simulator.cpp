@@ -19,6 +19,7 @@
 
 using namespace std;
 using namespace D2D1;
+using namespace edge;
 
 static const wchar_t CompanyName[] = L"Adi Gostin";
 static const wchar_t AppName[] = L"STP Simulator";
@@ -84,13 +85,13 @@ std::unique_ptr<Bridge> IProject::RemoveBridge (Bridge* b)
 }
 #pragma endregion
 
-class SimulatorApp : public EventManager, public ISimulatorApp
+class SimulatorApp : public event_manager, public ISimulatorApp
 {
 	HINSTANCE const _hInstance;
 	com_ptr<IDWriteFactory> _dWriteFactory;
 
 	wstring _regKeyPath;
-	vector<com_ptr<IProjectWindow>> _projectWindows;
+	vector<std::unique_ptr<IProjectWindow>> _projectWindows;
 
 public:
 	SimulatorApp (HINSTANCE hInstance)
@@ -106,32 +107,31 @@ public:
 
 	virtual HINSTANCE GetHInstance() const override final { return _hInstance; }
 
-	virtual void AddProjectWindow (IProjectWindow* pw) override final
+	virtual void AddProjectWindow (std::unique_ptr<IProjectWindow>&& pw) override final
 	{
-		pw->GetDestroyingEvent().AddHandler (&OnProjectWindowDestroying, this);
-		_projectWindows.push_back(move(pw));
-		ProjectWindowAddedEvent::InvokeHandlers(this, pw);
+		pw->destroying().add_handler(&OnProjectWindowDestroying, this);
+		_projectWindows.push_back(std::move(pw));
+		this->event_invoker<ProjectWindowAddedEvent>()(_projectWindows.back().get());
 	}
 
-	static void OnProjectWindowDestroying (void* callbackArg, IProjectWindow* pw)
+	static void OnProjectWindowDestroying (void* callbackArg, edge::win32_window_i* w)
 	{
+		auto pw = dynamic_cast<IProjectWindow*>(w);
 		auto app = static_cast<SimulatorApp*>(callbackArg);
 
-		pw->GetDestroyingEvent().RemoveHandler (&OnProjectWindowDestroying, app);
+		pw->destroying().remove_handler (&OnProjectWindowDestroying, app);
 
-		auto it = find_if (app->_projectWindows.begin(), app->_projectWindows.end(), [pw](const com_ptr<IProjectWindow>& p) { return p == pw; });
+		auto it = find_if (app->_projectWindows.begin(), app->_projectWindows.end(), [pw](auto& p) { return p.get() == pw; });
 		assert (it != app->_projectWindows.end());
-		ProjectWindowRemovingEvent::InvokeHandlers(app, pw);
-		com_ptr<IProjectWindow> pwLastRef = move(*it);
+		app->event_invoker<ProjectWindowRemovingEvent>()(pw);
+		auto pwLastRef = std::move(*it);
 		app->_projectWindows.erase(it);
-		ProjectWindowRemovedEvent::InvokeHandlers(app, pwLastRef);
+		app->event_invoker<ProjectWindowRemovedEvent>()(pwLastRef.get());
 		if (app->_projectWindows.empty())
 			PostQuitMessage(0);
 	}
 
-	virtual const std::vector<com_ptr<IProjectWindow>>& GetProjectWindows() const override final { return _projectWindows; }
-
-	virtual IDWriteFactory* GetDWriteFactory() const override final { return _dWriteFactory; }
+	virtual const std::vector<std::unique_ptr<IProjectWindow>>& GetProjectWindows() const override final { return _projectWindows; }
 
 	virtual const wchar_t* GetRegKeyPath() const override final { return _regKeyPath.c_str(); }
 
@@ -139,11 +139,11 @@ public:
 
 	virtual const wchar_t* GetAppVersionString() const override final { return AppVersionString; }
 
-	virtual ProjectWindowAddedEvent::Subscriber GetProjectWindowAddedEvent() override final { return ProjectWindowAddedEvent::Subscriber(this); }
+	virtual ProjectWindowAddedEvent::subscriber GetProjectWindowAddedEvent() override final { return ProjectWindowAddedEvent::subscriber(this); }
 
-	virtual ProjectWindowRemovingEvent::Subscriber GetProjectWindowRemovingEvent() override final { return ProjectWindowRemovingEvent::Subscriber(this); }
+	virtual ProjectWindowRemovingEvent::subscriber GetProjectWindowRemovingEvent() override final { return ProjectWindowRemovingEvent::subscriber(this); }
 
-	virtual ProjectWindowRemovedEvent::Subscriber GetProjectWindowRemovedEvent() override final { return ProjectWindowRemovedEvent::Subscriber(this); }
+	virtual ProjectWindowRemovedEvent::subscriber GetProjectWindowRemovedEvent() override final { return ProjectWindowRemovedEvent::subscriber(this); }
 
 	WPARAM RunMessageLoop()
 	{
@@ -165,9 +165,9 @@ public:
 			int translatedAccelerator = 0;
 			for (auto& pw : _projectWindows)
 			{
-				if ((msg.hwnd == pw->GetHWnd()) || ::IsChild(pw->GetHWnd(), msg.hwnd))
+				if ((msg.hwnd == pw->hwnd()) || ::IsChild(pw->hwnd(), msg.hwnd))
 				{
-					translatedAccelerator = TranslateAccelerator (pw->GetHWnd(), accelerators, &msg);
+					translatedAccelerator = TranslateAccelerator (pw->hwnd(), accelerators, &msg);
 					break;
 				}
 			}
@@ -240,24 +240,62 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 
 	RegisterApplicationAndFileTypes();
 
+	bool tryDebugFirst = false;
+#ifdef _DEBUG
+	tryDebugFirst = true;
+#endif
+
+	com_ptr<ID3D11Device> d3d_device;
+	com_ptr<ID3D11DeviceContext1> d3d_dc;
+
+	{
+		auto d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
+		com_ptr<ID3D11DeviceContext> deviceContext;
+
+		if (tryDebugFirst)
+		{
+			hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
+								   D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_DEBUG,
+								   &d3dFeatureLevel, 1,
+								   D3D11_SDK_VERSION, &d3d_device, nullptr, &deviceContext);
+		}
+
+		if (!tryDebugFirst || FAILED(hr))
+		{
+			hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
+								   D3D11_CREATE_DEVICE_BGRA_SUPPORT,
+								   &d3dFeatureLevel, 1,
+								   D3D11_SDK_VERSION, &d3d_device, nullptr, &deviceContext);
+			assert(SUCCEEDED(hr));
+		}
+
+		d3d_dc = deviceContext;
+	}
+
+	com_ptr<IDWriteFactory> dwrite_factory;
+	hr = DWriteCreateFactory (DWRITE_FACTORY_TYPE_SHARED, __uuidof (IDWriteFactory), reinterpret_cast<IUnknown**>(&dwrite_factory)); assert(SUCCEEDED(hr));
+
 	int processExitValue;
 	{
 		SimulatorApp app (hInstance);
 
+		auto project = projectFactory();
+		project_window_create_params params = 
 		{
-			auto project = projectFactory();
-			auto projectWindow = projectWindowFactory (&app, project, selectionFactory, editAreaFactory, true, true, nCmdShow, 1);
-			app.AddProjectWindow(move(projectWindow));
-		}
+			&app, project, selectionFactory, editAreaFactory, true, true, 1, SW_SHOW, d3d_dc, dwrite_factory
+		};
+
+		auto projectWindow = projectWindowFactory (params);
+		app.AddProjectWindow(move(projectWindow));
 
 		processExitValue = (int)app.RunMessageLoop();
 	}
 	/*
-	if (device->GetCreationFlags() & D3D11_CREATE_DEVICE_DEBUG)
+	if (d3d_device->GetCreationFlags() & D3D11_CREATE_DEVICE_DEBUG)
 	{
 		deviceContext = nullptr;
 		ID3D11DebugPtr debug;
-		hr = device->QueryInterface(&debug);
+		hr = d3d_device->QueryInterface(&debug);
 		if (SUCCEEDED(hr))
 			debug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
 	}

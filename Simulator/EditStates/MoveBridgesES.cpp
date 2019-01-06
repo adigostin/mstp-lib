@@ -2,7 +2,7 @@
 #include "pch.h"
 #include "EditState.h"
 #include "Bridge.h"
-#include "Win32/UtilityFunctions.h"
+#include "win32/utility_functions.h"
 
 using namespace std;
 
@@ -56,7 +56,7 @@ public:
 				_infos[i].b->SetLocation (_firstBridgeInitialLocation + _infos[i].offsetFromFirst);
 
 			_completed = true;
-			::InvalidateRect (_pw->GetEditArea()->GetHWnd(), nullptr, FALSE);
+			::InvalidateRect (_editArea->hwnd(), nullptr, FALSE);
 			return 0;
 		}
 

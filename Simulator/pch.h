@@ -3,8 +3,8 @@
 
 #define NOMINMAX
 #define _USE_MATH_DEFINES
-
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
+#define _HAS_EXCEPTIONS 0
 
 #include "targetver.h"
 
@@ -24,7 +24,6 @@
 
 #include <algorithm>
 #include <array>
-#include <assert.h>
 #include <codecvt>
 #include <comdef.h>
 #include <Commctrl.h>

@@ -4,9 +4,6 @@
     <Filter Include="EditStates">
       <UniqueIdentifier>{44c75b95-8381-4205-bb9c-ff949707452e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Win32">
-      <UniqueIdentifier>{6639324b-98b9-4102-a3ee-1dfa81922d14}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -19,31 +16,9 @@
     </ClInclude>
     <ClInclude Include="Port.h" />
     <ClInclude Include="Simulator.h" />
-    <ClInclude Include="Win32\D2DWindow.h">
-      <Filter>Win32</Filter>
-    </ClInclude>
-    <ClInclude Include="Win32\Win32Defs.h">
-      <Filter>Win32</Filter>
-    </ClInclude>
-    <ClInclude Include="Win32\Window.h">
-      <Filter>Win32</Filter>
-    </ClInclude>
-    <ClInclude Include="Win32\ZoomableWindow.h">
-      <Filter>Win32</Filter>
-    </ClInclude>
-    <ClInclude Include="Win32\EventManager.h">
-      <Filter>Win32</Filter>
-    </ClInclude>
     <ClInclude Include="BridgeTree.h" />
-    <ClInclude Include="Win32\UtilityFunctions.h">
-      <Filter>Win32</Filter>
-    </ClInclude>
-    <ClInclude Include="Object.h" />
-    <ClInclude Include="PropertyGrid.h" />
     <ClInclude Include="PortTree.h" />
-    <ClInclude Include="Win32\com_ptr.h">
-      <Filter>Win32</Filter>
-    </ClInclude>
+    <ClInclude Include="renderable_object.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -74,25 +49,11 @@
     <ClCompile Include="EditStates\MovePortES.cpp">
       <Filter>EditStates</Filter>
     </ClCompile>
-    <ClCompile Include="Win32\D2DWindow.cpp">
-      <Filter>Win32</Filter>
-    </ClCompile>
-    <ClCompile Include="Win32\Window.cpp">
-      <Filter>Win32</Filter>
-    </ClCompile>
-    <ClCompile Include="Win32\ZoomableWindow.cpp">
-      <Filter>Win32</Filter>
-    </ClCompile>
     <ClCompile Include="EditStates\BeginningDragES.cpp">
       <Filter>EditStates</Filter>
     </ClCompile>
     <ClCompile Include="BridgeTree.cpp" />
     <ClCompile Include="PropertiesWindow.cpp" />
-    <ClCompile Include="Win32\UtilityFunctions.cpp">
-      <Filter>Win32</Filter>
-    </ClCompile>
-    <ClCompile Include="Object.cpp" />
-    <ClCompile Include="PropertyGrid.cpp" />
     <ClCompile Include="PortTree.cpp" />
   </ItemGroup>
   <ItemGroup>

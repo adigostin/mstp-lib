@@ -86,12 +86,14 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)mstp-lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)mstp-lib;$(SolutionDir)edge;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <StringPooling>true</StringPooling>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <ExceptionHandling>false</ExceptionHandling>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -117,12 +119,14 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)mstp-lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)mstp-lib;$(SolutionDir)edge;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <StringPooling>true</StringPooling>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <ExceptionHandling>false</ExceptionHandling>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -148,12 +152,14 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)mstp-lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)mstp-lib;$(SolutionDir)edge;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <StringPooling>true</StringPooling>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <ExceptionHandling>false</ExceptionHandling>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -182,12 +188,14 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)mstp-lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)mstp-lib;$(SolutionDir)edge;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <StringPooling>true</StringPooling>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <ExceptionHandling>false</ExceptionHandling>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -212,21 +220,13 @@
     <ClInclude Include="Bridge.h" />
     <ClInclude Include="BridgeTree.h" />
     <ClInclude Include="EditStates\EditState.h" />
-    <ClInclude Include="Object.h" />
+    <ClInclude Include="renderable_object.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Port.h" />
     <ClInclude Include="PortTree.h" />
-    <ClInclude Include="PropertyGrid.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Simulator.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="Win32\com_ptr.h" />
-    <ClInclude Include="Win32\UtilityFunctions.h" />
-    <ClInclude Include="Win32\D2DWindow.h" />
-    <ClInclude Include="Win32\EventManager.h" />
-    <ClInclude Include="Win32\Win32Defs.h" />
-    <ClInclude Include="Win32\Window.h" />
-    <ClInclude Include="Win32\ZoomableWindow.h" />
     <ClInclude Include="Wire.h" />
   </ItemGroup>
   <ItemGroup>
@@ -241,7 +241,6 @@
     <ClCompile Include="EditStates\MoveWirePointES.cpp" />
     <ClCompile Include="LogArea.cpp" />
     <ClCompile Include="MSTConfigIdDialog.cpp" />
-    <ClCompile Include="Object.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -253,7 +252,6 @@
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="PropertiesWindow.cpp" />
-    <ClCompile Include="PropertyGrid.cpp" />
     <ClCompile Include="Test.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
@@ -267,10 +265,6 @@
     <ClCompile Include="VlanWindow.cpp" />
     <ClCompile Include="Selection.cpp" />
     <ClCompile Include="Simulator.cpp" />
-    <ClCompile Include="Win32\UtilityFunctions.cpp" />
-    <ClCompile Include="Win32\D2DWindow.cpp" />
-    <ClCompile Include="Win32\Window.cpp" />
-    <ClCompile Include="Win32\ZoomableWindow.cpp" />
     <ClCompile Include="Wire.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -280,6 +274,9 @@
     <Image Include="Simulator.ico" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\edge\edge.vcxproj">
+      <Project>{c4c530f1-e67c-48a2-81ed-41e428f17ed9}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\mstp-lib.vcxproj">
       <Project>{1dc9dd21-a2c5-46fc-b13e-c3382471bed2}</Project>
     </ProjectReference>

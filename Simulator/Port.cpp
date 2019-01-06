@@ -2,10 +2,11 @@
 #include "pch.h"
 #include "Port.h"
 #include "Bridge.h"
-#include "Win32/UtilityFunctions.h"
+#include "win32/utility_functions.h"
 
 using namespace std;
 using namespace D2D1;
+using namespace edge;
 
 Port::Port (Bridge* bridge, unsigned int portIndex, Side side, float offset)
 	: _bridge(bridge), _portIndex(portIndex), _side(side), _offset(offset)
@@ -13,7 +14,7 @@ Port::Port (Bridge* bridge, unsigned int portIndex, Side side, float offset)
 	for (unsigned int treeIndex = 0; treeIndex < (unsigned int) bridge->GetTrees().size(); treeIndex++)
 	{
 		auto tree = unique_ptr<PortTree>(new PortTree(this, treeIndex));
-		tree->GetPropertyChangedEvent().AddHandler (&OnTreePropertyChanged, this);
+		tree->property_changed().add_handler (&OnTreePropertyChanged, this);
 		_trees.push_back (move(tree));
 	}
 }
@@ -21,14 +22,15 @@ Port::Port (Bridge* bridge, unsigned int portIndex, Side side, float offset)
 Port::~Port()
 {
 	for (auto& tree : _trees)
-		tree->GetPropertyChangedEvent().RemoveHandler (&OnTreePropertyChanged, this);
+		tree->property_changed().remove_handler (&OnTreePropertyChanged, this);
 }
 
 //static
-void Port::OnTreePropertyChanged (void* callbackArg, Object* o, const Property* property)
+void Port::OnTreePropertyChanged (void* callbackArg, edge::object* o, const edge::property* property)
 {
 	auto port = static_cast<Port*>(callbackArg);
-	PropertyChangedEvent::InvokeHandlers (port, o, property);
+	assert(false);
+	//PropertyChangedEvent::InvokeHandlers (port, o, property);
 }
 
 D2D1_POINT_2F Port::GetCPLocation() const
@@ -79,7 +81,7 @@ Matrix3x2F Port::GetPortTransform() const
 // static
 void Port::RenderExteriorNonStpPort (ID2D1RenderTarget* dc, const DrawingObjects& dos, bool macOperational)
 {
-	auto brush = macOperational ? dos._brushForwarding : dos._brushDiscardingPort;
+	auto& brush = macOperational ? dos._brushForwarding : dos._brushDiscardingPort;
 	dc->DrawLine (Point2F (0, 0), Point2F (0, ExteriorHeight), brush, 2);
 }
 
@@ -277,38 +279,38 @@ D2D1_RECT_F Port::GetInnerOuterRect() const
 	return { min(tl.x, br.x), min (tl.y, br.y), max(tl.x, br.x), max(tl.y, br.y) };
 }
 
-void Port::RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const
+void Port::RenderSelection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const
 {
 	auto ir = GetInnerOuterRect();
 
 	auto oldaa = rt->GetAntialiasMode();
 	rt->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
 
-	auto lt = zoomable->GetDLocationFromWLocation ({ ir.left, ir.top });
-	auto rb = zoomable->GetDLocationFromWLocation ({ ir.right, ir.bottom });
+	auto lt = zoomable->pointw_to_pointd ({ ir.left, ir.top });
+	auto rb = zoomable->pointw_to_pointd ({ ir.right, ir.bottom });
 	rt->DrawRectangle ({ lt.x - 10, lt.y - 10, rb.x + 10, rb.y + 10 }, dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
 
 	rt->SetAntialiasMode(oldaa);
 }
 
-bool Port::HitTestCP (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) const
+bool Port::HitTestCP (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) const
 {
 	auto cpWLocation = GetCPLocation();
-	auto cpDLocation = zoomable->GetDLocationFromWLocation(cpWLocation);
+	auto cpDLocation = zoomable->pointw_to_pointd(cpWLocation);
 
 	return (abs (cpDLocation.x - dLocation.x) <= tolerance)
 		&& (abs (cpDLocation.y - dLocation.y) <= tolerance);
 }
 
-bool Port::HitTestInnerOuter (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) const
+bool Port::HitTestInnerOuter (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) const
 {
 	auto ir = GetInnerOuterRect();
-	auto lt = zoomable->GetDLocationFromWLocation ({ ir.left, ir.top });
-	auto rb = zoomable->GetDLocationFromWLocation ({ ir.right, ir.bottom });
+	auto lt = zoomable->pointw_to_pointd ({ ir.left, ir.top });
+	auto rb = zoomable->pointw_to_pointd ({ ir.right, ir.bottom });
 	return (dLocation.x >= lt.x) && (dLocation.y >= lt.y) && (dLocation.x < rb.x) && (dLocation.y < rb.y);
 }
 
-RenderableObject::HTResult Port::HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance)
+renderable_object::HTResult Port::HitTest (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance)
 {
 	if (HitTestCP (zoomable, dLocation, tolerance))
 		return { this, HTCodeCP };
@@ -335,7 +337,7 @@ void Port::SetSideAndOffset (Side side, float offset)
 	{
 		_side = side;
 		_offset = offset;
-		InvalidateEvent::InvokeHandlers (this, this);
+		event_invoker<invalidate_e>()(this);
 	}
 }
 
@@ -400,7 +402,10 @@ HRESULT Port::Deserialize (IXMLDOMElement* portElement)
 	if (FAILED(hr))
 		return hr;
 	if (value.vt == VT_BSTR)
-		_side = (Side) GetEnumValue (SideNVPs, value.bstrVal);
+	{
+		bool ok = enum_converters<Side, SideNVPs>::enum_from_string(wstring_view(value.bstrVal), _side);
+		assert(ok);
+	}
 
 	hr = portElement->getAttribute (OffsetString, &value);
 	if (FAILED(hr))
@@ -461,43 +466,47 @@ unsigned int Port::GetExternalPortPathCost() const
 	return STP_GetPortPathCost (_bridge->GetStpBridge(), _portIndex, treeIndex);
 }
 
-const TypedProperty<bool> Port::AutoEdge
+const bool_property Port::AutoEdge
 (
-	L"AutoEdge",
-	static_cast<TypedProperty<bool>::Getter>(&GetAutoEdge),
-	static_cast<TypedProperty<bool>::Setter>(&SetAutoEdge)
+	"AutoEdge",
+	static_cast<bool_property::getter_t>(&GetAutoEdge),
+	static_cast<bool_property::setter_t>(&SetAutoEdge),
+	true
 );
 
-const TypedProperty<bool> Port::AdminEdge
+const bool_property Port::AdminEdge
 (
-	L"AdminEdge",
-	static_cast<TypedProperty<bool>::Getter>(&GetAdminEdge),
-	static_cast<TypedProperty<bool>::Setter>(&SetAdminEdge)
+	"AdminEdge",
+	static_cast<bool_property::getter_t>(&GetAdminEdge),
+	static_cast<bool_property::setter_t>(&SetAdminEdge),
+	false
 );
 
-const TypedProperty<bool> Port::MacOperational
-(
-	L"MAC_Operational",
-	static_cast<TypedProperty<bool>::Getter>(&GetMacOperational),
-	nullptr
-);
+const bool_property Port::MacOperational (
+	"MAC_Operational",
+	static_cast<bool_property::getter_t>(&GetMacOperational),
+	nullptr,
+	false);
 
-const TypedProperty<unsigned int> Port::DetectedPortPathCost (
-	L"DetectedPortPathCost",
-	static_cast<TypedProperty<unsigned int>::Getter>(&GetDetectedPortPathCost),
-	nullptr);
+const uint32_property Port::DetectedPortPathCost (
+	"DetectedPortPathCost",
+	static_cast<uint32_property::getter_t>(&GetDetectedPortPathCost),
+	nullptr,
+	0);
 
-const TypedProperty<unsigned int> Port::AdminExternalPortPathCost (
-	L"AdminExternalPortPathCost",
-	static_cast<TypedProperty<unsigned int>::Getter>(&GetAdminExternalPortPathCost),
-	static_cast<TypedProperty<unsigned int>::Setter>(&SetAdminExternalPortPathCost));
+const uint32_property Port::AdminExternalPortPathCost (
+	"AdminExternalPortPathCost",
+	static_cast<uint32_property::getter_t>(&GetAdminExternalPortPathCost),
+	static_cast<uint32_property::setter_t>(&SetAdminExternalPortPathCost),
+	0);
 
-const TypedProperty<unsigned int> Port::ExternalPortPathCost (
-	L"ExternalPortPathCost",
-	static_cast<TypedProperty<unsigned int>::Getter>(&GetExternalPortPathCost),
-	nullptr);
+const uint32_property Port::ExternalPortPathCost (
+	"ExternalPortPathCost",
+	static_cast<uint32_property::getter_t>(&GetExternalPortPathCost),
+	nullptr,
+	0);
 
-const PropertyOrGroup* const Port::Properties[] =
+const edge::property* const Port::_properties[] =
 {
 	&AutoEdge,
 	&AdminEdge,
@@ -507,4 +516,6 @@ const PropertyOrGroup* const Port::Properties[] =
 	&ExternalPortPathCost,
 	nullptr
 };
+
+const edge::type_t Port::_type = { "port", &base::_type, _properties };
 

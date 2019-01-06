@@ -1,11 +1,16 @@
 #pragma once
-#include "Simulator.h"
+#include "renderable_object.h"
+#include "win32/win32_lib.h"
+#include "win32/utility_functions.h"
+
+class Port;
+struct IProject;
 
 using ConnectedWireEnd = Port*;
 using LooseWireEnd = D2D1_POINT_2F;
 using WireEnd = std::variant<LooseWireEnd, ConnectedWireEnd>;
 
-class Wire : public RenderableObject
+class Wire : public renderable_object
 {
 	std::array<WireEnd, 2> _points;
 	std::string _debugName;
@@ -15,8 +20,6 @@ public:
 
 	Wire() = default;
 	Wire (WireEnd firstEnd, WireEnd secondEnd);
-
-	virtual const PropertyOrGroup* const* GetProperties() const override final;
 
 	const std::array<WireEnd, 2>& GetPoints() const { return _points; }
 	void SetPoint (size_t pointIndex, const WireEnd& point);
@@ -30,15 +33,15 @@ public:
 
 	D2D1_POINT_2F GetPointCoords (size_t pointIndex) const;
 
-	com_ptr<IXMLDOMElement> Serialize (IProject* project, IXMLDOMDocument* doc) const;
+	edge::com_ptr<IXMLDOMElement> Serialize (IProject* project, IXMLDOMDocument* doc) const;
 	static std::unique_ptr<Wire> Deserialize (IProject* project, IXMLDOMElement* element);
 
 	void Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, bool forwarding, bool hasLoop) const;
 
-	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const override final;
-	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
+	virtual void RenderSelection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const override final;
+	virtual HTResult HitTest (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
 
 private:
-	static com_ptr<IXMLDOMElement> SerializeEnd (IProject* project, IXMLDOMDocument* doc, const WireEnd& end);
+	static edge::com_ptr<IXMLDOMElement> SerializeEnd (IProject* project, IXMLDOMDocument* doc, const WireEnd& end);
 	static WireEnd DeserializeEnd (IProject* project, IXMLDOMElement* element);
 };

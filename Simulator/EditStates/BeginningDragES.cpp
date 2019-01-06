@@ -8,18 +8,18 @@ class BeginningDragES : public EditState
 {
 	using base = EditState;
 
-	Object*       const _clickedObject;
-	MouseButton   const _button;
-	UINT          const _modifierKeysDown;
-	MouseLocation const _location;
-	HCURSOR       const _cursor;
+	renderable_object* const _clickedObject;
+	MouseButton       const _button;
+	UINT              const _modifierKeysDown;
+	MouseLocation     const _location;
+	HCURSOR           const _cursor;
 	unique_ptr<EditState> _stateMoveThreshold;
 	unique_ptr<EditState> _stateButtonUp;
 	bool _completed = false;
 
 public:
 	BeginningDragES (const EditStateDeps& deps,
-					 Object* clickedObject,
+					 renderable_object* clickedObject,
 					 MouseButton button,
 					 UINT modifierKeysDown,
 					 const MouseLocation& location,
@@ -105,7 +105,7 @@ public:
 };
 
 std::unique_ptr<EditState> CreateStateBeginningDrag (const EditStateDeps& deps,
-													 Object* clickedObject,
+													 renderable_object* clickedObject,
 													 MouseButton button,
 													 UINT modifierKeysDown,
 													 const MouseLocation& location,

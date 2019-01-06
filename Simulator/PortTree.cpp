@@ -5,6 +5,8 @@
 #include "Bridge.h"
 #include "stp.h"
 
+using namespace edge;
+
 static const _bstr_t PortTreeString = "PortTree";
 static const _bstr_t TreeIndexString = "TreeIndex";
 static const _bstr_t PortPriorityString = "PortPriority";
@@ -31,50 +33,56 @@ HRESULT PortTree::Deserialize (IXMLDOMElement* portTreeElement)
 	return S_OK;
 }
 
-int PortTree::GetPriority() const
+uint32_t PortTree::GetPriority() const
 {
 	return STP_GetPortPriority (_port->GetBridge()->GetStpBridge(), _port->GetPortIndex(), _treeIndex);
 }
 
-void PortTree::SetPriority (int priority)
+void PortTree::SetPriority (uint32_t priority)
 {
 	if (STP_GetPortPriority (_port->GetBridge()->GetStpBridge(), _port->GetPortIndex(), _treeIndex) != priority)
 	{
+		assert(false);
+		/*
+		this->on_property_changing(&Priority);
 		STP_SetPortPriority (_port->GetBridge()->GetStpBridge(), _port->GetPortIndex(), _treeIndex, (unsigned char) priority, GetMessageTime());
-		PropertyChangedEvent::InvokeHandlers(this, this, &Priority);
+		this->on_property_changed(&Priority);
+		*/
 	}
 }
 
-static const NVP PortPrioNVPs[] =
-{
-	{ L"10 (16 dec)",  0x10 },
-	{ L"20 (32 dec)",  0x20 },
-	{ L"30 (48 dec)",  0x30 },
-	{ L"40 (64 dec)",  0x40 },
-	{ L"50 (80 dec)",  0x50 },
-	{ L"60 (96 dec)",  0x60 },
-	{ L"70 (112 dec)", 0x70 },
-	{ L"80 (128 dec)", 0x80 },
-	{ L"90 (144 dec)", 0x90 },
-	{ L"A0 (160 dec)", 0xA0 },
-	{ L"B0 (176 dec)", 0xB0 },
-	{ L"C0 (192 dec)", 0xC0 },
-	{ L"D0 (208 dec)", 0xD0 },
-	{ L"E0 (224 dec)", 0xE0 },
-	{ L"F0 (240 dec)", 0xF0 },
+const edge::NVP port_priority_nvps[] {
+	{ "10 (16 dec)",  0x10 },
+	{ "20 (32 dec)",  0x20 },
+	{ "30 (48 dec)",  0x30 },
+	{ "40 (64 dec)",  0x40 },
+	{ "50 (80 dec)",  0x50 },
+	{ "60 (96 dec)",  0x60 },
+	{ "70 (112 dec)", 0x70 },
+	{ "80 (128 dec)", 0x80 },
+	{ "90 (144 dec)", 0x90 },
+	{ "A0 (160 dec)", 0xA0 },
+	{ "B0 (176 dec)", 0xB0 },
+	{ "C0 (192 dec)", 0xC0 },
+	{ "D0 (208 dec)", 0xD0 },
+	{ "E0 (224 dec)", 0xE0 },
+	{ "F0 (240 dec)", 0xF0 },
 	{ nullptr, 0 },
 };
 
-const EnumProperty PortTree::Priority
+const char port_priority_type_name[] = "PortPriority";
+
+const port_priority_property PortTree::Priority
 (
-	L"PortPriority",
-	static_cast<EnumProperty::Getter>(&GetPriority),
-	static_cast<EnumProperty::Setter>(&SetPriority),
-	PortPrioNVPs
+	"PortPriority",
+	static_cast<port_priority_property::getter_t>(&GetPriority),
+	static_cast<port_priority_property::setter_t>(&SetPriority),
+	0x80
 );
 
-const PropertyOrGroup* const PortTree::Properties[] =
+const edge::property* const PortTree::_properties[] =
 {
 	&Priority,
-	nullptr
 };
+
+const edge::type_t PortTree::_type = { "PortTree", &base::_type, _properties };

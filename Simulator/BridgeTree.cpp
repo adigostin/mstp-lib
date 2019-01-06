@@ -4,6 +4,7 @@
 #include "Bridge.h"
 
 using namespace std;
+using namespace edge;
 
 static const _bstr_t BridgeTreeString = "BridgeTree";
 static const _bstr_t TreeIndexString = "TreeIndex";
@@ -47,17 +48,17 @@ HRESULT BridgeTree::Deserialize (IXMLDOMElement* bridgeTreeElement)
 //	return label.str();
 //}
 
-int BridgeTree::GetPriority() const
+uint32_t BridgeTree::GetPriority() const
 {
 	return STP_GetBridgePriority (_parent->GetStpBridge(), _treeIndex);
 }
 
-void BridgeTree::SetPriority (int priority)
+void BridgeTree::SetPriority (uint32_t priority)
 {
 	STP_SetBridgePriority (_parent->GetStpBridge(), _treeIndex, (unsigned short) priority, GetMessageTime());
 }
 
-static constexpr wchar_t StpDisabledString[] = L"(STP disabled)";
+static constexpr char StpDisabledString[] = "(STP disabled)";
 
 array<unsigned char, 36> BridgeTree::GetRootPV() const
 {
@@ -66,137 +67,129 @@ array<unsigned char, 36> BridgeTree::GetRootPV() const
 	return prioVector;
 }
 
-std::wstring BridgeTree::GetRootBridgeId() const
+std::string BridgeTree::GetRootBridgeId() const
 {
 	if (!STP_IsBridgeStarted (_parent->GetStpBridge()))
 		return StpDisabledString;
 
 	auto rpv = GetRootPV();
-	wstringstream ss;
-	ss << uppercase << setfill(L'0') << hex
+	stringstream ss;
+	ss << uppercase << setfill('0') << hex
 		<< setw(2) << rpv[0] << setw(2) << rpv[1] << "."
 		<< setw(2) << rpv[2] << setw(2) << rpv[3] << setw(2) << rpv[4]
 		<< setw(2) << rpv[5] << setw(2) << rpv[6] << setw(2) << rpv[7];
 	return ss.str();
 }
 
-std::wstring BridgeTree::GetExternalRootPathCost() const
+std::string BridgeTree::GetExternalRootPathCost() const
 {
 	if (!STP_IsBridgeStarted(_parent->GetStpBridge()))
 		return StpDisabledString;
 
 	auto rpv = GetRootPV();
 	auto cost = ((uint32_t) rpv[8] << 24) | ((uint32_t) rpv[9] << 16) | ((uint32_t) rpv[10] << 8) | rpv[11];
-	return to_wstring (cost);
+	return to_string (cost);
 }
 
-std::wstring BridgeTree::GetRegionalRootBridgeId() const
+std::string BridgeTree::GetRegionalRootBridgeId() const
 {
 	if (!STP_IsBridgeStarted (_parent->GetStpBridge()))
 		return StpDisabledString;
 
 	auto rpv = GetRootPV();
-	wstringstream ss;
-	ss << uppercase << setfill(L'0') << hex
+	stringstream ss;
+	ss << uppercase << setfill('0') << hex
 		<< setw(2) << rpv[12] << setw(2) << rpv[13] << "."
 		<< setw(2) << rpv[14] << setw(2) << rpv[15] << setw(2) << rpv[16]
 		<< setw(2) << rpv[17] << setw(2) << rpv[18] << setw(2) << rpv[19];
 	return ss.str();
 }
 
-std::wstring BridgeTree::GetInternalRootPathCost() const
+std::string BridgeTree::GetInternalRootPathCost() const
 {
 	if (!STP_IsBridgeStarted(_parent->GetStpBridge()))
 		return StpDisabledString;
 
 	auto rpv = GetRootPV();
 	auto cost = ((uint32_t) rpv[20] << 24) | ((uint32_t) rpv[21] << 16) | ((uint32_t) rpv[22] << 8) | rpv[23];
-	return to_wstring(cost);
+	return to_string(cost);
 }
 
-std::wstring BridgeTree::GetDesignatedBridgeId() const
+std::string BridgeTree::GetDesignatedBridgeId() const
 {
 	if (!STP_IsBridgeStarted(_parent->GetStpBridge()))
 		return StpDisabledString;
 
 	auto rpv = GetRootPV();
-	wstringstream ss;
-	ss << uppercase << setfill(L'0') << hex
+	stringstream ss;
+	ss << uppercase << setfill('0') << hex
 		<< setw(2) << rpv[24] << setw(2) << rpv[25] << "."
 		<< setw(2) << rpv[26] << setw(2) << rpv[27] << setw(2) << rpv[28]
 		<< setw(2) << rpv[29] << setw(2) << rpv[30] << setw(2) << rpv[31];
 	return ss.str();
 }
 
-std::wstring BridgeTree::GetDesignatedPortId() const
+std::string BridgeTree::GetDesignatedPortId() const
 {
 	if (!STP_IsBridgeStarted(_parent->GetStpBridge()))
 		return StpDisabledString;
 
 	auto rpv = GetRootPV();
-	wstringstream ss;
-	ss << uppercase << setfill(L'0') << hex << setw(2) << rpv[32] << setw(2) << rpv[33];
+	stringstream ss;
+	ss << uppercase << setfill('0') << hex << setw(2) << rpv[32] << setw(2) << rpv[33];
 	return ss.str();
 }
 
-std::wstring BridgeTree::GetReceivingPortId() const
+std::string BridgeTree::GetReceivingPortId() const
 {
 	if (!STP_IsBridgeStarted(_parent->GetStpBridge()))
 		return StpDisabledString;
 
 	auto rpv = GetRootPV();
-	wstringstream ss;
-	ss << uppercase << setfill(L'0') << hex << setw(2) << rpv[34] << setw(2) << rpv[35];
+	stringstream ss;
+	ss << uppercase << setfill('0') << hex << setw(2) << rpv[34] << setw(2) << rpv[35];
 	return ss.str();
 }
 
 // ============================================================================
 
-const PropertyGroup BridgeTree::Common
+const NVP bridge_priority_nvps[] =
 {
-	L"Common",
-};
-
-static const NVP BridgePrioNVPs[] =
-{
-	{ L"1000 (4096 dec)", 0x1000 },
-	{ L"2000 (8192 dec)", 0x2000 },
-	{ L"3000 (12288 dec)", 0x3000 },
-	{ L"4000 (16384 dec)", 0x4000 },
-	{ L"5000 (20480 dec)", 0x5000 },
-	{ L"6000 (24576 dec)", 0x6000 },
-	{ L"7000 (28672 dec)", 0x7000 },
-	{ L"8000 (32768 dec)", 0x8000 },
-	{ L"9000 (36864 dec)", 0x9000 },
-	{ L"A000 (40960 dec)", 0xA000 },
-	{ L"B000 (45056 dec)", 0xB000 },
-	{ L"C000 (49152 dec)", 0xC000 },
-	{ L"D000 (53248 dec)", 0xD000 },
-	{ L"E000 (57344 dec)", 0xE000 },
-	{ L"F000 (61440 dec)", 0xF000 },
+	{ "1000 (4096 dec)", 0x1000 },
+	{ "2000 (8192 dec)", 0x2000 },
+	{ "3000 (12288 dec)", 0x3000 },
+	{ "4000 (16384 dec)", 0x4000 },
+	{ "5000 (20480 dec)", 0x5000 },
+	{ "6000 (24576 dec)", 0x6000 },
+	{ "7000 (28672 dec)", 0x7000 },
+	{ "8000 (32768 dec)", 0x8000 },
+	{ "9000 (36864 dec)", 0x9000 },
+	{ "A000 (40960 dec)", 0xA000 },
+	{ "B000 (45056 dec)", 0xB000 },
+	{ "C000 (49152 dec)", 0xC000 },
+	{ "D000 (53248 dec)", 0xD000 },
+	{ "E000 (57344 dec)", 0xE000 },
+	{ "F000 (61440 dec)", 0xF000 },
 	{ nullptr, 0 },
 };
 
-const EnumProperty BridgeTree::Priority
-(
-	L"Bridge Priority",
-	static_cast<EnumProperty::Getter>(&GetPriority),
-	static_cast<EnumProperty::Setter>(&SetPriority),
-	BridgePrioNVPs
+const char bridge_priority_type_name[] = "bridge_priority";
+
+const bridge_priority_property BridgeTree::Priority (
+	"Bridge Priority",
+	static_cast<bridge_priority_property::getter_t>(&GetPriority),
+	static_cast<bridge_priority_property::setter_t>(&SetPriority),
+	0x8000
 );
 
-static const PropertyGroup RootPriorityVectorPropGroup
-{
-	L"Root Priority Vector",
-};
-
-static const TypedProperty<wstring> RootBridgeId
+const temp_string_property BridgeTree::RootBridgeId
 (
-	L"Root Bridge ID",
-	static_cast<TypedProperty<wstring>::Getter>(&BridgeTree::GetRootBridgeId),
-	nullptr
+	"Root Bridge ID",
+	static_cast<temp_string_property::getter_t>(&GetRootBridgeId),
+	nullptr,
+	std::nullopt
 );
-
+/*
 static const TypedProperty<wstring> ExternalRootPathCost
 (
 	L"External Root Path Cost",
@@ -238,18 +231,17 @@ static const TypedProperty<wstring> ReceivingPortId
 	static_cast<TypedProperty<wstring>::Getter>(&BridgeTree::GetReceivingPortId),
 	nullptr
 );
-
-const PropertyOrGroup* const BridgeTree::Properties[] =
+*/
+const edge::property* const BridgeTree::_properties[] =
 {
-	&Common,
 	&Priority,
-	&RootPriorityVectorPropGroup,
 	&RootBridgeId,
-	&ExternalRootPathCost,
+/*	&ExternalRootPathCost,
 	&RegionalRootBridgeId,
 	&InternalRootPathCost,
 	&DesignatedBridgeId,
 	&DesignatedPortId,
 	&ReceivingPortId,
-	nullptr,
-};
+*/};
+
+const edge::type_t BridgeTree::_type = { "BridgeTree", &base::_type, _properties };

@@ -37,7 +37,7 @@ public:
 
 		if (_subState == WaitingFirstDown)
 		{
-			auto fromPort = _pw->GetEditArea()->GetCPAt(location.d, SnapDistance);
+			auto fromPort = _editArea->GetCPAt(location.d, SnapDistance);
 			if (fromPort != nullptr)
 			{
 				_firstDownLocation = location.pt;
@@ -61,7 +61,7 @@ public:
 		if (_subState == WaitingFirstDown)
 			return;
 
-		auto port = _pw->GetEditArea()->GetCPAt (location.d, SnapDistance);
+		auto port = _editArea->GetCPAt (location.d, SnapDistance);
 		if (port != nullptr)
 		{
 			if (port != get<ConnectedWireEnd>(_wire->GetP0()))
@@ -73,7 +73,7 @@ public:
 		}
 		else
 			_wire->SetP1(location.w);
-		::InvalidateRect (_pw->GetEditArea()->GetHWnd(), nullptr, FALSE);
+		::InvalidateRect (_editArea->hwnd(), nullptr, FALSE);
 
 		if (_subState == WaitingFirstUp)
 		{
@@ -108,7 +108,7 @@ public:
 			}
 
 			_subState = Done;
-			::InvalidateRect (_pw->GetEditArea()->GetHWnd(), nullptr, FALSE);
+			::InvalidateRect (_editArea->hwnd(), nullptr, FALSE);
 			return 0;
 		}
 
@@ -119,7 +119,7 @@ public:
 	{
 		base::Render(rt);
 		if ((_wire != nullptr) && holds_alternative<ConnectedWireEnd>(_wire->GetP1()))
-			_pw->GetEditArea()->RenderSnapRect (rt, get<ConnectedWireEnd>(_wire->GetP1())->GetCPLocation());
+			_editArea->RenderSnapRect (rt, get<ConnectedWireEnd>(_wire->GetP1())->GetCPLocation());
 	}
 
 	virtual bool Completed() const override final

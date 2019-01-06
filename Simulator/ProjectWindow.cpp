@@ -3,8 +3,10 @@
 #include "Resource.h"
 #include "Bridge.h"
 #include "Port.h"
+#include "win32/window.h"
 
 using namespace std;
+using namespace edge;
 
 static ATOM wndClassAtom;
 static constexpr wchar_t ProjectWindowWndClassName[] = L"ProjectWindow-{24B42526-2970-4B3C-A753-2DABD22C4BB0}";
@@ -27,17 +29,30 @@ static constexpr LONG SplitterWidthDips = 4;
 static constexpr LONG PropertiesWindowDefaultWidthDips = 200;
 static constexpr LONG LogWindowDefaultWidthDips = 200;
 
-class ProjectWindow : public EventManager, public IProjectWindow
+static const wnd_class_params class_params = 
 {
-	ULONG _refCount = 1;
+	ProjectWindowWndClassName,      // lpszClassName
+	CS_DBLCLKS,                     // style
+	MAKEINTRESOURCE(IDR_MAIN_MENU), // lpszMenuName
+	MAKEINTRESOURCE(IDI_DESIGNER),  // lpIconName
+	MAKEINTRESOURCE(IDI_DESIGNER),  // lpIconSmName
+};
+
+#pragma warning (disable: 4250)
+
+class ProjectWindow : public window, public virtual IProjectWindow
+{
+	using base = window;
+
 	ISimulatorApp* const _app;
-	com_ptr<IProject>    const _project;
-	com_ptr<ISelection>  const _selection;
-	com_ptr<IEditArea>         _editWindow;
-	com_ptr<IPropertiesWindow> _propertiesWindow;
-	com_ptr<ILogArea>          _logWindow;
-	com_ptr<IVlanWindow>       _vlanWindow;
-	HWND _hwnd;
+	com_ptr<ID3D11DeviceContext1> const _d3d_dc;
+	com_ptr<IDWriteFactory>       const _dwrite_factory;
+	std::shared_ptr<IProject>   const _project;
+	std::unique_ptr<ISelection> const _selection;
+	std::unique_ptr<IEditArea>          _editWindow;
+	std::unique_ptr<IPropertiesWindow>  _propertiesWindow;
+	std::unique_ptr<ILogArea>           _logWindow;
+	std::unique_ptr<IVlanWindow>        _vlanWindow;
 	SIZE _clientSize;
 	RECT _restoreBounds;
 	unsigned int _selectedVlanNumber = 1;
@@ -50,86 +65,56 @@ class ProjectWindow : public EventManager, public IProjectWindow
 	LONG _resizeOffset;
 
 public:
-	ProjectWindow (ISimulatorApp* app,
-				   IProject* project,
-				   SelectionFactory selectionFactory,
-				   EditAreaFactory editAreaFactory,
-				   bool showPropertiesWindow,
-				   bool showLogWindow,
-				   int nCmdShow,
-				   unsigned int selectedVlan)
-		: _app(app)
-		, _project(project)
-		, _selection(selectionFactory(project))
-		, _selectedVlanNumber(selectedVlan)
+	ProjectWindow (const project_window_create_params& create_params)
+		: window(create_params.app->GetHInstance(), class_params, 0, WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+				 CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr)
+		, _app(create_params.app)
+		, _project(create_params.project)
+		, _selection(selectionFactory(create_params.project.get()))
+		, _selectedVlanNumber(create_params.selectedVlan)
+		, _d3d_dc(create_params.d3d_dc)
+		, _dwrite_factory(create_params.dwrite_factory)
 	{
-		if (wndClassAtom == 0)
-		{
-			WNDCLASSEX wndClassEx =
-			{
-				sizeof(wndClassEx),
-				CS_DBLCLKS, // style
-				&WindowProcStatic, // lpfnWndProc
-				0, // cbClsExtra
-				0, // cbWndExtra
-				_app->GetHInstance(),
-				LoadIcon(_app->GetHInstance(), MAKEINTRESOURCE(IDI_DESIGNER)), // hIcon
-				LoadCursor(nullptr, IDC_ARROW), // hCursor
-				(HBRUSH)(COLOR_WINDOW + 1), // hbrBackground
-				MAKEINTRESOURCE(IDR_MAIN_MENU), // lpszMenuName
-				ProjectWindowWndClassName,      // lpszClassName
-				LoadIcon(_app->GetHInstance(), MAKEINTRESOURCE(IDI_DESIGNER))
-			};
-
-			wndClassAtom = RegisterClassEx(&wndClassEx); assert (wndClassAtom != 0);
-		}
-
+		int nCmdShow = create_params.nCmdShow;
 		bool read = TryGetSavedWindowLocation (&_restoreBounds, &nCmdShow);
-		LONG x = CW_USEDEFAULT, y = CW_USEDEFAULT, w = CW_USEDEFAULT, h = CW_USEDEFAULT;
-		if (read)
-		{
-			x = _restoreBounds.left;
-			y = _restoreBounds.top;
-			w = _restoreBounds.right - _restoreBounds.left;
-			h = _restoreBounds.bottom - _restoreBounds.top;
-		}
-		auto hwnd = ::CreateWindow(ProjectWindowWndClassName, L"STP Simulator", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, x, y, w, h, nullptr, 0, _app->GetHInstance(), this); assert (hwnd != nullptr);
-		assert(hwnd == _hwnd);
 		if (!read)
-			::GetWindowRect(_hwnd, &_restoreBounds);
-		::ShowWindow (_hwnd, nCmdShow);
+			::GetWindowRect(hwnd(), &_restoreBounds);
+		::ShowWindow (hwnd(), nCmdShow);
+
+		auto hdc = ::GetDC(hwnd());
+		_dpiX = GetDeviceCaps (hdc, LOGPIXELSX);
+		_dpiY = GetDeviceCaps (hdc, LOGPIXELSY);
+		::ReleaseDC (hwnd(), hdc);
+		_splitterWidthPixels = (SplitterWidthDips * _dpiX + 96 / 2) / 96;
 
 		if (auto recentFiles = GetRecentFileList(); !recentFiles.empty())
 			AddRecentFileMenuItems(recentFiles);
 
 		const RECT clientRect = { 0, 0, _clientSize.cx, _clientSize.cy };
 
-		if (showPropertiesWindow)
+		if (create_params.showPropertiesWindow)
 			CreatePropertiesWindow();
 
-		if (showLogWindow)
+		if (create_params.showLogWindow)
 			CreateLogWindow();
 
-		_vlanWindow = vlanWindowFactory (_app, this, _project, _selection, _hwnd, { GetVlanWindowLeft(), 0 });
+		_vlanWindow = vlanWindowFactory (_app, this, _project, _selection.get(), hwnd(), { GetVlanWindowLeft(), 0 });
 		SetMainMenuItemCheck (ID_VIEW_VLANS, true);
 
-		_editWindow = editAreaFactory (app, this, _project, _selection, _hwnd, GetEditWindowRect(), _app->GetDWriteFactory());
+		_editWindow = editAreaFactory (create_params.app, this, _project.get(), _selection.get(), hwnd(), GetEditWindowRect(), create_params.d3d_dc, create_params.dwrite_factory);
 
-		_project->GetChangedFlagChangedEvent().AddHandler (&OnProjectChangedFlagChanged, this);
-		_app->GetProjectWindowAddedEvent().AddHandler (&OnProjectWindowAdded, this);
-		_app->GetProjectWindowRemovedEvent().AddHandler (&OnProjectWindowRemoved, this);
-		_project->GetLoadedEvent().AddHandler (&OnProjectLoaded, this);
+		_project->GetChangedFlagChangedEvent().add_handler (&OnProjectChangedFlagChanged, this);
+		_app->GetProjectWindowAddedEvent().add_handler (&OnProjectWindowAdded, this);
+		_app->GetProjectWindowRemovedEvent().add_handler (&OnProjectWindowRemoved, this);
+		_project->GetLoadedEvent().add_handler (&OnProjectLoaded, this);
 	}
 
 	~ProjectWindow()
 	{
-		_project->GetLoadedEvent().RemoveHandler (&OnProjectLoaded, this);
-		_app->GetProjectWindowRemovedEvent().RemoveHandler (&OnProjectWindowRemoved, this);
-		_app->GetProjectWindowAddedEvent().RemoveHandler (&OnProjectWindowAdded, this);
-		_project->GetChangedFlagChangedEvent().RemoveHandler (&OnProjectChangedFlagChanged, this);
-
-		if (_hwnd != nullptr)
-			::DestroyWindow(_hwnd);
+		_project->GetLoadedEvent().remove_handler (&OnProjectLoaded, this);
+		_app->GetProjectWindowRemovedEvent().remove_handler (&OnProjectWindowRemoved, this);
+		_app->GetProjectWindowAddedEvent().remove_handler (&OnProjectWindowAdded, this);
+		_project->GetChangedFlagChangedEvent().remove_handler (&OnProjectChangedFlagChanged, this);
 	}
 
 	void CreatePropertiesWindow()
@@ -137,7 +122,7 @@ public:
 		LONG w = (PropertiesWindowDefaultWidthDips * _dpiX + 96 / 2) / 96;
 		TryReadRegDword (RegValueNamePropertiesWindowWidth, (DWORD*) &w);
 		w = RestrictToolWindowWidth(w);
-		_propertiesWindow = propertiesWindowFactory (_app, this, _project, _selection, { 0, 0, w, _clientSize.cy }, _hwnd);
+		_propertiesWindow = propertiesWindowFactory (_app, this, _project.get(), _selection.get(), { 0, 0, w, _clientSize.cy }, hwnd(), _d3d_dc, _dwrite_factory);
 		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
 	}
 
@@ -152,7 +137,7 @@ public:
 		LONG w = (LogWindowDefaultWidthDips * _dpiX + 96 / 2) / 96;
 		TryReadRegDword (RegValueNameLogWindowWidth, (DWORD*) &w);
 		w = RestrictToolWindowWidth(w);
-		_logWindow = logAreaFactory (_app->GetHInstance(), _hwnd, { _clientSize.cx - w, 0, _clientSize.cx, _clientSize.cy }, _app->GetDWriteFactory(), _selection);
+		_logWindow = logAreaFactory (_app->GetHInstance(), hwnd(), { _clientSize.cx - w, 0, _clientSize.cx, _clientSize.cy }, _d3d_dc, _dwrite_factory, _selection.get());
 		SetMainMenuItemCheck (ID_VIEW_STPLOG, true);
 	}
 
@@ -191,7 +176,12 @@ public:
 	LONG GetVlanWindowLeft() const
 	{
 		if (_propertiesWindow != nullptr)
-			return _propertiesWindow->GetWidth() + _splitterWidthPixels;
+		{
+			//return _propertiesWindow->GetWidth() + _splitterWidthPixels;
+			RECT rect;
+			::GetWindowRect (_propertiesWindow->hwnd(), &rect);
+			return rect.right - rect.left + _splitterWidthPixels;
+		}
 		else
 			return 0;
 	}
@@ -215,7 +205,12 @@ public:
 			rect.right -= _logWindow->GetWidth() + _splitterWidthPixels;
 
 		if (_vlanWindow != nullptr)
-			rect.top += _vlanWindow->GetHeight();
+		{
+			//rect.top += _vlanWindow->GetHeight();
+			RECT rect;
+			::GetWindowRect (_vlanWindow->hwnd(), &rect);
+			rect.top += (rect.bottom - rect.top);
+		}
 
 		return rect;
 	}
@@ -238,77 +233,24 @@ public:
 			windowTitle << L"*";
 
 		auto& pws = _app->GetProjectWindows();
-		if (any_of (pws.begin(), pws.end(), [this](const com_ptr<IProjectWindow>& pw) { return (pw != this) && (pw->GetProject() == _project); }))
+		if (any_of (pws.begin(), pws.end(), [this](const std::unique_ptr<IProjectWindow>& pw) { return (pw.get() != this) && (pw->GetProject() == _project.get()); }))
 			windowTitle << L" - VLAN " << _selectedVlanNumber;
 
-		::SetWindowText (_hwnd, windowTitle.str().c_str());
+		::SetWindowText (hwnd(), windowTitle.str().c_str());
 	}
 
 	void SetMainMenuItemCheck (UINT item, bool checked)
 	{
-		auto menu = ::GetMenu(_hwnd);
+		auto menu = ::GetMenu(hwnd());
 		MENUITEMINFO mii = { sizeof(mii) };
 		mii.fMask = MIIM_STATE;
 		mii.fState = checked ? MFS_CHECKED : MFS_UNCHECKED;
 		::SetMenuItemInfo (menu, item, FALSE, &mii);
 	}
 
-	virtual HWND GetHWnd() const override { return _hwnd; }
-
-	// From http://blogs.msdn.com/b/oldnewthing/archive/2005/04/22/410773.aspx
-	static LRESULT CALLBACK WindowProcStatic(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+	std::optional<LRESULT> window_proc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) final
 	{
-		//if (AssertFunctionRunning)
-		//{
-		//	// Let's try not to run application code while the assertion dialog is shown. We'll probably mess things up even more.
-		//	return DefWindowProc(hwnd, uMsg, wParam, lParam);
-		//}
-
-		ProjectWindow* window;
-		if (uMsg == WM_NCCREATE)
-		{
-			LPCREATESTRUCT lpcs = reinterpret_cast<LPCREATESTRUCT>(lParam);
-			window = reinterpret_cast<ProjectWindow*>(lpcs->lpCreateParams);
-			window->AddRef();
-			window->_hwnd = hwnd;
-			SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(window));
-		}
-		else
-			window = reinterpret_cast<ProjectWindow*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
-
-		if (window == nullptr)
-		{
-			// this must be one of those messages sent before WM_NCCREATE or after WM_NCDESTROY.
-			return DefWindowProc(hwnd, uMsg, wParam, lParam);
-		}
-
-		LRESULT result = window->WindowProc(uMsg, wParam, lParam);
-
-		if (uMsg == WM_NCDESTROY)
-		{
-			window->_hwnd = nullptr;
-			SetWindowLongPtr(hwnd, GWLP_USERDATA, 0);
-			window->Release();
-		}
-
-		return result;
-	}
-
-	LRESULT WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
-	{
-		if (msg == WM_CREATE)
-		{
-			auto cs = reinterpret_cast<const CREATESTRUCT*>(lParam);
-			_clientSize = { cs->cx, cs->cy };
-
-			auto hdc = ::GetDC(_hwnd);
-			_dpiX = GetDeviceCaps (hdc, LOGPIXELSX);
-			_dpiY = GetDeviceCaps (hdc, LOGPIXELSY);
-			::ReleaseDC (_hwnd, hdc);
-
-			_splitterWidthPixels = (SplitterWidthDips * _dpiX + 96 / 2) / 96;
-			return 0;
-		}
+		auto base_class_result = base::window_proc (hwnd, msg, wParam, lParam);
 
 		if (msg == WM_CLOSE)
 		{
@@ -316,24 +258,18 @@ public:
 			return 0;
 		}
 
-		if (msg == WM_DESTROY)
-		{
-			DestroyingEvent::InvokeHandlers(this, this);
-			return 0;
-		}
-
 		if (msg == WM_SIZE)
 		{
-			ProcessWmSize (wParam, { LOWORD(lParam), HIWORD(lParam) });
+			ProcessWmSize (hwnd, wParam, { LOWORD(lParam), HIWORD(lParam) });
 			return 0;
 		}
 
 		if (msg == WM_MOVE)
 		{
 			WINDOWPLACEMENT wp = { sizeof(wp) };
-			::GetWindowPlacement(GetHWnd(), &wp);
+			::GetWindowPlacement (hwnd, &wp);
 			if (wp.showCmd == SW_NORMAL)
-				::GetWindowRect(GetHWnd(), &_restoreBounds);
+				::GetWindowRect (hwnd, &_restoreBounds);
 			return 0;
 		}
 
@@ -348,25 +284,25 @@ public:
 			auto olr = ProcessWmCommand (wParam, lParam);
 			if (olr)
 				return olr.value();
-
-			return DefWindowProc(_hwnd, msg, wParam, lParam);
+			else
+				return base_class_result;
 		}
 
 		if (msg == WM_SETCURSOR)
 		{
-			if (((HWND) wParam == _hwnd) && (LOWORD (lParam) == HTCLIENT))
+			if (((HWND) wParam == hwnd) && (LOWORD (lParam) == HTCLIENT))
 			{
 				POINT pt;
 				BOOL bRes = ::GetCursorPos (&pt);
 				if (bRes)
 				{
-					bRes = ::ScreenToClient (_hwnd, &pt); assert(bRes);
+					bRes = ::ScreenToClient (hwnd, &pt); assert(bRes);
 					this->SetCursor(pt);
 					return 0;
 				}
 			}
 
-			return DefWindowProc (_hwnd, msg, wParam, lParam);
+			return base_class_result;
 		}
 
 		if (msg == WM_LBUTTONDOWN)
@@ -387,13 +323,13 @@ public:
 			return 0;
 		}
 
-		return DefWindowProc(_hwnd, msg, wParam, lParam);
+		return base_class_result;
 	}
 
-	void ProcessWmSize (WPARAM wParam, SIZE newClientSize)
+	void ProcessWmSize (HWND hwnd, WPARAM wParam, SIZE newClientSize)
 	{
 		if (wParam == SIZE_RESTORED)
-			::GetWindowRect(_hwnd, &_restoreBounds);
+			::GetWindowRect(hwnd, &_restoreBounds);
 
 		if (wParam != SIZE_MINIMIZED)
 		{
@@ -423,13 +359,13 @@ public:
 		{
 			_windowBeingResized = ToolWindow::Props;
 			_resizeOffset = pt.x - _propertiesWindow->GetWidth();
-			::SetCapture(_hwnd);
+			::SetCapture(hwnd());
 		}
 		else if ((_logWindow != nullptr) && (pt.x >= _logWindow->GetX() - _splitterWidthPixels) && (pt.x < _logWindow->GetX()))
 		{
 			_windowBeingResized = ToolWindow::Log;
 			_resizeOffset = _logWindow->GetX() - pt.x;
-			::SetCapture(_hwnd);
+			::SetCapture(hwnd());
 		}
 	}
 
@@ -440,16 +376,16 @@ public:
 			_propertiesWindow->SetWidth (RestrictToolWindowWidth(pt.x - _resizeOffset));
 			_vlanWindow->SetRect ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->GetHeight() });
 			_editWindow->SetRect (GetEditWindowRect());
-			::UpdateWindow (_propertiesWindow->GetHWnd());
-			::UpdateWindow (_editWindow->GetHWnd());
+			::UpdateWindow (_propertiesWindow->hwnd());
+			::UpdateWindow (_editWindow->hwnd());
 		}
 		else if (_windowBeingResized == ToolWindow::Log)
 		{
 			_logWindow->SetRect ({ _clientSize.cx - RestrictToolWindowWidth(_clientSize.cx - pt.x - _resizeOffset), 0, _clientSize.cx, _clientSize.cy});
 			_vlanWindow->SetRect ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->GetHeight() });
 			_editWindow->SetRect (GetEditWindowRect());
-			::UpdateWindow (_logWindow->GetHWnd());
-			::UpdateWindow (_editWindow->GetHWnd());
+			::UpdateWindow (_logWindow->hwnd());
+			::UpdateWindow (_editWindow->hwnd());
 		}
 	}
 
@@ -495,7 +431,7 @@ public:
 	void ProcessWmPaint()
 	{
 		PAINTSTRUCT ps;
-		BeginPaint(GetHWnd(), &ps);
+		BeginPaint(hwnd(), &ps);
 
 		RECT rect;
 
@@ -517,7 +453,7 @@ public:
 			FillRect (ps.hdc, &rect, GetSysColorBrush(COLOR_3DFACE));
 		}
 
-		EndPaint(GetHWnd(), &ps);
+		EndPaint(hwnd(), &ps);
 	}
 
 	optional<LRESULT> ProcessWmCommand (WPARAM wParam, LPARAM lParam)
@@ -557,7 +493,7 @@ public:
 		if (((HIWORD(wParam) == 0) || (HIWORD(wParam) == 1)) && (LOWORD(wParam) == ID_FILE_OPEN))
 		{
 			wstring openPath;
-			HRESULT hr = TryChooseFilePath (OpenOrSave::Open, _hwnd, nullptr, openPath);
+			HRESULT hr = TryChooseFilePath (OpenOrSave::Open, hwnd(), nullptr, openPath);
 			if (SUCCEEDED(hr))
 				Open(openPath.c_str());
 			return 0;
@@ -566,27 +502,32 @@ public:
 		if (((HIWORD(wParam) == 0) || (HIWORD(wParam) == 1)) && (LOWORD(wParam) == ID_FILE_NEW))
 		{
 			auto project = projectFactory();
-			auto pw = projectWindowFactory(_app, project, selectionFactory, editAreaFactory, true, true, SW_SHOW, 1);
-			_app->AddProjectWindow(pw);
+			project_window_create_params params = 
+			{
+				_app, project, selectionFactory, editAreaFactory, true, true, 1, SW_SHOW, _d3d_dc, _dwrite_factory
+			};
+			
+			auto pw = projectWindowFactory(params);
+			_app->AddProjectWindow(std::move(pw));
 			return 0;
 		}
 
 		if (wParam == ID_FILE_SAVEAS)
 		{
-			MessageBox (_hwnd, L"Not yet implemented.", _app->GetAppName(), 0);
+			MessageBox (hwnd(), L"Not yet implemented.", _app->GetAppName(), 0);
 			return 0;
 		}
 
 		if (wParam == ID_FILE_EXIT)
 		{
-			PostMessage (_hwnd, WM_CLOSE, 0, 0);
+			PostMessage (hwnd(), WM_CLOSE, 0, 0);
 			return 0;
 		}
 
 		if ((wParam >= ID_RECENT_FILE_FIRST) && (wParam <= ID_RECENT_FILE_LAST))
 		{
 			UINT recentFileIndex = (UINT)wParam - ID_RECENT_FILE_FIRST;
-			auto mainMenu = ::GetMenu(_hwnd);
+			auto mainMenu = ::GetMenu(hwnd());
 			auto fileMenu = ::GetSubMenu (mainMenu, 0);
 			int charCount = ::GetMenuString (fileMenu, (UINT)wParam, nullptr, 0, MF_BYCOMMAND);
 			if (charCount > 0)
@@ -602,7 +543,7 @@ public:
 			wstring text (_app->GetAppName());
 			text += L" v";
 			text += _app->GetAppVersionString();
-			MessageBox (_hwnd, text.c_str(), _app->GetAppName(), 0);
+			MessageBox (hwnd(), text.c_str(), _app->GetAppName(), 0);
 			return 0;
 		}
 
@@ -615,14 +556,16 @@ public:
 		{
 			if (_wcsicmp (pw->GetProject()->GetFilePath().c_str(), openPath) == 0)
 			{
-				::BringWindowToTop (pw->GetHWnd());
-				::FlashWindow (pw->GetHWnd(), FALSE);
+				::BringWindowToTop (pw->hwnd());
+				::FlashWindow (pw->hwnd(), FALSE);
 				return;
 			}
 		}
 
-		com_ptr<IProject> projectToLoadTo = (_project->GetBridges().empty() && _project->GetWires().empty()) ? _project : projectFactory();
+		std::shared_ptr<IProject> projectToLoadTo = (_project->GetBridges().empty() && _project->GetWires().empty()) ? _project : projectFactory();
 
+		assert(false);
+		/*
 		try
 		{
 			projectToLoadTo->Load(openPath);
@@ -631,15 +574,17 @@ public:
 		{
 			wstringstream ss;
 			ss << ex.what() << endl << endl << openPath;
-			TaskDialog (_hwnd, nullptr, _app->GetAppName(), L"Could Not Open", ss.str().c_str(), 0, nullptr, nullptr);
+			TaskDialog (hwnd(), nullptr, _app->GetAppName(), L"Could Not Open", ss.str().c_str(), 0, nullptr, nullptr);
 			return;
 		}
 
 		if (projectToLoadTo != _project)
 		{
-			auto newWindow = projectWindowFactory(_app, projectToLoadTo, selectionFactory, editAreaFactory, true, true, SW_SHOW, 1);
-			_app->AddProjectWindow(newWindow);
+			assert(false);
+			//auto newWindow = projectWindowFactory(_app, projectToLoadTo, selectionFactory, editAreaFactory, true, true, SW_SHOW, 1);
+			//_app->AddProjectWindow(newWindow);
 		}
+		*/
 	}
 
 	HRESULT Save()
@@ -649,7 +594,7 @@ public:
 		auto savePath = _project->GetFilePath();
 		if (savePath.empty())
 		{
-			hr = TryChooseFilePath (OpenOrSave::Save, _hwnd, L"", savePath);
+			hr = TryChooseFilePath (OpenOrSave::Save, hwnd(), L"", savePath);
 			if (FAILED(hr))
 				return hr;
 		}
@@ -657,7 +602,7 @@ public:
 		hr = _project->Save (savePath.c_str());
 		if (FAILED(hr))
 		{
-			TaskDialog (_hwnd, nullptr, _app->GetAppName(), L"Could Not Save", _com_error(hr).ErrorMessage(), 0, nullptr, nullptr);
+			TaskDialog (hwnd(), nullptr, _app->GetAppName(), L"Could Not Save", _com_error(hr).ErrorMessage(), 0, nullptr, nullptr);
 			return hr;
 		}
 
@@ -675,7 +620,7 @@ public:
 		};
 
 		TASKDIALOGCONFIG tdc = { sizeof (tdc) };
-		tdc.hwndParent = _hwnd;
+		tdc.hwndParent = hwnd();
 		tdc.pszWindowTitle = _app->GetAppName();
 		tdc.pszMainIcon = TD_WARNING_ICON;
 		tdc.pszMainInstruction = L"File was changed";
@@ -753,7 +698,7 @@ public:
 	HRESULT TryClose()
 	{
 		auto count = count_if (_app->GetProjectWindows().begin(), _app->GetProjectWindows().end(),
-							   [this] (auto& pw) { return pw->GetProject() == _project; });
+							   [this] (const std::unique_ptr<IProjectWindow>& pw) { return pw->GetProject() == _project.get(); });
 		if (count == 1)
 		{
 			// Closing last window of this project.
@@ -774,7 +719,8 @@ public:
 		}
 
 		SaveWindowLocation();
-		::DestroyWindow (_hwnd);
+		assert(false);
+		//::DestroyWindow (hwnd());
 		return S_OK;
 	}
 
@@ -817,7 +763,7 @@ public:
 	void SaveWindowLocation() const
 	{
 		WINDOWPLACEMENT wp = { sizeof(WINDOWPLACEMENT) };
-		BOOL bRes = GetWindowPlacement(GetHWnd(), &wp);
+		BOOL bRes = GetWindowPlacement(hwnd(), &wp);
 		if (bRes && ((wp.showCmd == SW_NORMAL) || (wp.showCmd == SW_MAXIMIZE)))
 		{
 			HKEY key;
@@ -842,21 +788,19 @@ public:
 		if (_selectedVlanNumber != vlanNumber)
 		{
 			_selectedVlanNumber = vlanNumber;
-			SelectedVlanNumerChangedEvent::InvokeHandlers(this, this, vlanNumber);
-			::InvalidateRect (GetHWnd(), nullptr, FALSE);
+			event_invoker<SelectedVlanNumerChangedEvent>()(this, vlanNumber);
+			::InvalidateRect (hwnd(), nullptr, FALSE);
 			SetWindowTitle();
 		}
 	};
 
 	virtual unsigned int GetSelectedVlanNumber() const override final { return _selectedVlanNumber; }
 
-	virtual SelectedVlanNumerChangedEvent::Subscriber GetSelectedVlanNumerChangedEvent() override final { return SelectedVlanNumerChangedEvent::Subscriber(this); }
+	virtual SelectedVlanNumerChangedEvent::subscriber GetSelectedVlanNumerChangedEvent() override final { return SelectedVlanNumerChangedEvent::subscriber(this); }
 
-	virtual DestroyingEvent::Subscriber GetDestroyingEvent() override final { return DestroyingEvent::Subscriber(this); }
+	virtual IProject* GetProject() const override final { return _project.get(); }
 
-	virtual IProject* GetProject() const override final { return _project; }
-
-	virtual IEditArea* GetEditArea() const override final { return _editWindow; }
+	virtual IEditArea* GetEditArea() const override final { return _editWindow.get(); }
 
 	static vector<wstring> GetRecentFileList()
 	{
@@ -914,7 +858,7 @@ public:
 
 	void AddRecentFileMenuItems (const vector<wstring>& recentFiles)
 	{
-		auto mainMenu = ::GetMenu(_hwnd);
+		auto mainMenu = ::GetMenu(hwnd());
 		auto fileMenu = ::GetSubMenu (mainMenu, 0);
 		auto itemCount = ::GetMenuItemCount(fileMenu);
 		int pos = GetMenuPosFromID (fileMenu, ID_FILE_RECENT);
@@ -937,28 +881,9 @@ public:
 			}
 		}
 	}
-
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
-
-	virtual ULONG STDMETHODCALLTYPE AddRef() override final
-	{
-		return InterlockedIncrement(&_refCount);
-	}
-
-	virtual ULONG STDMETHODCALLTYPE Release() override final
-	{
-		assert (_refCount > 0);
-		ULONG newRefCount = InterlockedDecrement(&_refCount);
-		if (newRefCount == 0)
-			delete this;
-		return newRefCount;
-	}
 };
 
-template<typename... Args>
-static com_ptr<IProjectWindow> Create (Args... args)
+extern const ProjectWindowFactory projectWindowFactory = [](const project_window_create_params& create_params) -> std::unique_ptr<IProjectWindow>
 {
-	return com_ptr<IProjectWindow>(new ProjectWindow (std::forward<Args>(args)...), false);
-}
-
-extern const ProjectWindowFactory projectWindowFactory = &Create;
+	return std::make_unique<ProjectWindow>(create_params);
+};

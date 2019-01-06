@@ -1,6 +1,5 @@
 
 #pragma once
-#include "Win32/EventManager.h"
 #include "BridgeTree.h"
 #include "Port.h"
 
@@ -11,8 +10,14 @@ struct BridgeLogLine
 	int treeIndex;
 };
 
-class Bridge : public RenderableObject
+extern const edge::NVP stp_version_nvps[];
+extern const char stp_version_type_name[];
+using stp_version_property = edge::enum_property<STP_VERSION, stp_version_type_name, stp_version_nvps>;
+
+class Bridge : public renderable_object
 {
+	using base = renderable_object;
+
 	float _x;
 	float _y;
 	float _width;
@@ -29,7 +34,7 @@ class Bridge : public RenderableObject
 	std::vector<std::unique_ptr<BridgeTree>> _trees;
 
 	// Let's keep things simple and do everything on the GUI thread.
-	struct HelperWindow : EventManager
+	struct HelperWindow : edge::event_manager
 	{
 		HWND _hwnd;
 		HANDLE _linkPulseTimerHandle;
@@ -39,8 +44,8 @@ class Bridge : public RenderableObject
 
 		static LRESULT CALLBACK SubclassProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 
-		struct LinkPulseEvent : public Event<LinkPulseEvent, void()> { };
-		LinkPulseEvent::Subscriber GetLinkPulseEvent() { return LinkPulseEvent::Subscriber(this); }
+		struct LinkPulseEvent : public edge::event<LinkPulseEvent> { };
+		LinkPulseEvent::subscriber GetLinkPulseEvent() { return LinkPulseEvent::subscriber(this); }
 	};
 
 	HelperWindow _helperWindow;
@@ -79,18 +84,18 @@ public:
 
 	void Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned int vlanNumber, const D2D1_COLOR_F& configIdColor) const;
 
-	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const override final;
-	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
+	virtual void RenderSelection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const override final;
+	virtual HTResult HitTest (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
 
 	STP_BRIDGE* GetStpBridge() const { return _stpBridge; }
 
-	struct LogLineGenerated : public Event<LogLineGenerated, void(Bridge*, const BridgeLogLine* line)> { };
-	struct LinkPulseEvent : public Event<LinkPulseEvent, void(Bridge*, size_t txPortIndex, unsigned int timestamp)> { };
-	struct PacketTransmitEvent : public Event<PacketTransmitEvent, void(Bridge*, size_t txPortIndex, PacketInfo&& packet)> { };
+	struct LogLineGenerated : public edge::event<LogLineGenerated, Bridge*, const BridgeLogLine*> { };
+	struct LinkPulseEvent : public edge::event<LinkPulseEvent, Bridge*, size_t, unsigned int> { };
+	struct PacketTransmitEvent : public edge::event<PacketTransmitEvent, Bridge*, size_t, PacketInfo&&> { };
 
-	LogLineGenerated::Subscriber GetLogLineGeneratedEvent() { return LogLineGenerated::Subscriber(this); }
-	LinkPulseEvent::Subscriber GetLinkPulseEvent() { return LinkPulseEvent::Subscriber(this); }
-	PacketTransmitEvent::Subscriber GetPacketTransmitEvent() { return PacketTransmitEvent::Subscriber(this); }
+	LogLineGenerated::subscriber GetLogLineGeneratedEvent() { return LogLineGenerated::subscriber(this); }
+	LinkPulseEvent::subscriber GetLinkPulseEvent() { return LinkPulseEvent::subscriber(this); }
+	PacketTransmitEvent::subscriber GetPacketTransmitEvent() { return PacketTransmitEvent::subscriber(this); }
 
 	void ProcessLinkPulse (size_t rxPortIndex, unsigned int timestamp);
 	void EnqueuePacket (PacketInfo&& packet, size_t rxPortIndex);
@@ -100,7 +105,7 @@ public:
 	std::array<uint8_t, 6> GetPortAddress (size_t portIndex) const;
 	std::array<uint8_t, 6> GetBridgeAddress() const;
 
-	com_ptr<IXMLDOMElement> Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) const;
+	edge::com_ptr<IXMLDOMElement> Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) const;
 	static std::unique_ptr<Bridge> Deserialize (IXMLDOMElement* element);
 
 	void PauseSimulation();
@@ -109,15 +114,15 @@ public:
 	// Property getters and setters.
 	bool GetStpEnabled() const { return (bool) STP_IsBridgeStarted(_stpBridge); }
 	void SetStpEnabled (bool enable);
-	int GetStpVersionAsInt() const { return (int) STP_GetStpVersion(_stpBridge); }
-	void SetStpVersionFromInt (int version);
+	STP_VERSION GetStpVersion() const { return STP_GetStpVersion(_stpBridge); }
+	void SetStpVersion(STP_VERSION version);
 	unsigned int GetPortCount() const { return STP_GetPortCount(_stpBridge); }
 	unsigned int GetMstiCount() const { return STP_GetMstiCount(_stpBridge); }
-	std::wstring GetMstConfigIdName() const;
-	void SetMstConfigIdName (std::wstring value);
-	unsigned short GetMstConfigIdRevLevel() const;
-	void SetMstConfigIdRevLevel (unsigned short revLevel);
-	std::wstring GetMstConfigIdDigest() const;
+	std::string GetMstConfigIdName() const;
+	void SetMstConfigIdName (std::string_view value);
+	uint32_t GetMstConfigIdRevLevel() const;
+	void SetMstConfigIdRevLevel (uint32_t revLevel);
+	std::string GetMstConfigIdDigest() const;
 	void SetMstConfigTable (const STP_CONFIG_TABLE_ENTRY* entries, size_t entryCount);
 	uint32_t GetBridgeHelloTime() const;
 	void SetBridgeHelloTime (uint32_t helloTime);
@@ -129,11 +134,16 @@ public:
 	void SetBridgeForwardDelay (uint32_t forwardDelay);
 	uint32_t GetForwardDelay() const;
 
+	std::string GetBridgeAddressAsString() const;
+	//std::wstring GetBridgeAddressAsWString() const;
+	void SetBridgeAddressFromString (std::string_view address);
+	//void SetBridgeAddressFromWString (std::wstring address);
+
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
 	static void OnWmOneSecondTimer (WPARAM wParam, LPARAM lParam);
-	static void OnPortInvalidate (void* callbackArg, Object* object);
-	static void OnPortPropertyChanged (void* callbackArg, Object* object, const Property* property);
+	static void OnPortInvalidate (void* callbackArg, renderable_object* object);
+	static void OnPortPropertyChanged (void* callbackArg, edge::object* object, const edge::property* property);
 	static void OnLinkPulseTick(void* callbackArg);
 	static void OnWmPacketReceived (WPARAM wParam, LPARAM lParam);
 	void ProcessReceivedPackets();
@@ -150,33 +160,28 @@ private:
 	static void  StpCallback_OnNotifiedTopologyChange (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp);
 	static void  StpCallback_OnPortRoleChanged        (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role, unsigned int timestamp);
 	static void  StpCallback_OnConfigChanged          (const STP_BRIDGE* bridge, unsigned int timestamp);
+	
+public:
+	static const edge::temp_string_property Address;
+	static const edge::bool_property        StpEnabled;
+	static const stp_version_property       StpVersion;
+	static const edge::uint32_property      PortCount;
+	static const edge::uint32_property      MstiCount;
+	static const edge::temp_string_property MstConfigIdName;
+	static const edge::uint32_property      MstConfigIdRevLevel;
+	static const edge::temp_string_property MstConfigIdDigest;
+	static const edge::uint32_property      BridgeHelloTime;
+	static const edge::uint32_property      HelloTime;
+	static const edge::uint32_property      BridgeMaxAge;
+	static const edge::uint32_property      MaxAge;
+	static const edge::uint32_property      BridgeForwardDelay;
+	static const edge::uint32_property      ForwardDelay;
 
-private:
-	std::string GetBridgeAddressAsString() const;
-	std::wstring GetBridgeAddressAsWString() const;
-	void SetBridgeAddressFromWString (std::wstring address);
-
-	static const PropertyGroup CommonPropGroup;
-	static const TypedProperty<std::wstring> Address;
-	static const TypedProperty<bool> StpEnabled;
-	static const EnumProperty StpVersion;
-	static const TypedProperty<unsigned int> PortCount;
-	static const TypedProperty<unsigned int> MstiCount;
-	static const PropertyGroup MstConfigIdGroup;
-	static const TypedProperty<std::wstring> MstConfigIdName;
-	static const TypedProperty<unsigned short> MstConfigIdRevLevel;
-	static const TypedProperty<std::wstring> MstConfigIdDigest;
-	static const TypedProperty<uint32_t> BridgeHelloTime;
-	static const TypedProperty<uint32_t> HelloTime;
-	static const TypedProperty<uint32_t> BridgeMaxAge;
-	static const TypedProperty<uint32_t> MaxAge;
-	static const TypedProperty<uint32_t> BridgeForwardDelay;
-	static const TypedProperty<uint32_t> ForwardDelay;
-
-	static const PropertyOrGroup* const Properties[];
-	virtual const PropertyOrGroup* const* GetProperties() const override final { return Properties; }
+	static const edge::property* const _properties[];
+	static const edge::type_t _type;
+	const edge::type_t* type() const override { return &_type; }
 };
 
 STP_BRIDGE_ADDRESS ConvertStringToBridgeAddress (const wchar_t* str);
 std::string ConvertBridgeAddressToString (const unsigned char address[6]);
-std::wstring ConvertBridgeAddressToWString (const unsigned char address[6]);
+//std::wstring ConvertBridgeAddressToWString (const unsigned char address[6]);

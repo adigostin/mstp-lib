@@ -1,22 +1,27 @@
 
 #include "pch.h"
 #include "Simulator.h"
-#include "PropertyGrid.h"
 #include "Bridge.h"
 #include "Wire.h"
+#include "win32/property_grid.h"
+#include "win32/window.h"
 
 using namespace std;
+using namespace edge;
 
 static const wchar_t WndClassName[] = L"PropertiesWindow-{6ED5A45A-9BF5-4EA2-9F43-4EFEDC11994E}";
 
-class PropertiesWindow : public Window, public IPropertiesWindow
-{
-	using base = Window;
+#pragma warning (disable: 4250)
 
-	com_ptr<ISelection> const _selection;
+class PropertiesWindow : public window, public virtual IPropertiesWindow
+{
+	using base = window;
+
+	ISelection* const _selection;
 	IProjectWindow* const _projectWindow;
-	com_ptr<IProject> const _project;
-	unique_ptr<PropertyGrid> _pg;
+	IProject* const _project;
+	unique_ptr<property_grid_i> _pg;
+	unique_ptr<property_grid_i> _pg_tree;
 
 public:
 	PropertiesWindow (ISimulatorApp* app,
@@ -24,43 +29,49 @@ public:
 					  IProject* project,
 					  ISelection* selection,
 					  const RECT& rect,
-					  HWND hWndParent)
-		: base (app->GetHInstance(), WndClassName, WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, rect, hWndParent, nullptr)
+					  HWND hWndParent,
+					  ID3D11DeviceContext1* d3d_dc,
+					  IDWriteFactory* dwrite_factory)
+		: base (app->GetHInstance(), WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, rect, hWndParent, 0)
 		, _projectWindow(projectWindow)
 		, _project(project)
 		, _selection(selection)
+		, _pg(property_grid_factory(app->GetHInstance(), client_rect_pixels(), hwnd(), d3d_dc, dwrite_factory))
+		, _pg_tree(property_grid_factory(app->GetHInstance(), client_rect_pixels(), hwnd(), d3d_dc, dwrite_factory))
 	{
-		_pg.reset (new PropertyGrid(app->GetHInstance(), this->base::GetClientRectPixels(), GetHWnd(), app->GetDWriteFactory()));
-		_pg->GetPropertyChangedByUserEvent().AddHandler (&OnPropertyChangedInPG, this);
 		this->SetSelectionToPGs();
 
-		_projectWindow->GetSelectedVlanNumerChangedEvent().AddHandler (&OnSelectedVlanChanged, this);
-		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
-		_project->GetChangedEvent().AddHandler (&OnProjectChanged, this);
+		_projectWindow->GetSelectedVlanNumerChangedEvent().add_handler (&OnSelectedVlanChanged, this);
+		_selection->GetChangedEvent().add_handler (&OnSelectionChanged, this);
+		_project->GetChangedEvent().add_handler (&OnProjectChanged, this);
 	}
 
 	virtual ~PropertiesWindow()
 	{
-		_project->GetChangedEvent().RemoveHandler (&OnProjectChanged, this);
-		_selection->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
-		_projectWindow->GetSelectedVlanNumerChangedEvent().RemoveHandler (&OnSelectedVlanChanged, this);
-
-		_pg->GetPropertyChangedByUserEvent().RemoveHandler (&OnPropertyChangedInPG, this);
+		_project->GetChangedEvent().remove_handler (&OnProjectChanged, this);
+		_selection->GetChangedEvent().remove_handler (&OnSelectionChanged, this);
+		_projectWindow->GetSelectedVlanNumerChangedEvent().remove_handler (&OnSelectedVlanChanged, this);
 	}
 
 	template<typename... Args>
-	static com_ptr<IPropertiesWindow> Create (Args... args)
+	static std::unique_ptr<IPropertiesWindow> Create (Args... args)
 	{
-		return com_ptr<IPropertiesWindow> (new PropertiesWindow(std::forward<Args>(args)...), false);
+		return std::make_unique<PropertiesWindow>(std::forward<Args>(args)...);
 	}
 
 	void SetSelectionToPGs()
 	{
-		_pg->ClearProperties();
+		const auto& objs = _selection->GetObjects();
 
-		if (_selection->GetObjects().empty())
+		if (objs.empty())
+		{
+			_pg->select_objects (nullptr, 0);
+			_pg_tree->select_objects (nullptr, 0);
 			return;
+		}
 
+		assert(false);
+		/*
 		wstringstream ss;
 		ss << L"VLAN " << _projectWindow->GetSelectedVlanNumber() << L" Specific Properties";
 		auto vlanPropsHeading = ss.str();
@@ -99,6 +110,7 @@ public:
 		}
 		else
 			assert(false); // not implemented
+		*/
 	}
 
 	static void OnProjectChanged (void* callbackArg, IProject* project)
@@ -119,30 +131,25 @@ public:
 		window->SetSelectionToPGs();
 	}
 
-	static void OnPropertyChangedInPG (void* callbackArg, const Property* property)
+	optional<LRESULT> window_proc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) final
 	{
-		auto pw = static_cast<PropertiesWindow*>(callbackArg);
-		pw->_project->SetChangedFlag(true);
-	}
-
-	virtual optional<LRESULT> WindowProc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) override
-	{
-		auto resultBaseClass = base::WindowProc (hwnd, msg, wParam, lParam);
+		auto resultBaseClass = base::window_proc (hwnd, msg, wParam, lParam);
 
 		if (msg == WM_SIZE)
 		{
 			if (_pg != nullptr)
-				_pg->SetRect(this->base::GetClientRectPixels());
+			{
+				auto rect = this->client_rect_pixels();
+				BOOL bRes = ::MoveWindow (_pg->hwnd(), rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE); assert(bRes);
+			}
+
 			return 0;
 		}
 
 		return resultBaseClass;
 	}
 
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return base::QueryInterface(riid, ppvObject); }
-	virtual ULONG STDMETHODCALLTYPE AddRef() override final { return base::AddRef(); }
-	virtual ULONG STDMETHODCALLTYPE Release() override final { return base::Release(); }
-	virtual HWND GetHWnd() const override final { return base::GetHWnd(); }
+	HWND hwnd() const final { return base::hwnd(); }
 };
 
 const PropertiesWindowFactory propertiesWindowFactory = &PropertiesWindow::Create;

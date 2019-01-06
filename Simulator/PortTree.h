@@ -1,11 +1,16 @@
 #pragma once
-#include "Object.h"
+#include "object.h"
+#include "win32/com_ptr.h"
 
 class Port;
 
-class PortTree : public Object
+extern const edge::NVP port_priority_nvps[];
+extern const char port_priority_type_name[];
+using port_priority_property = edge::enum_property<uint32_t, port_priority_type_name, port_priority_nvps>;
+
+class PortTree : public edge::object
 {
-	using base = Object;
+	using base = edge::object;
 
 	Port* const _port;
 	unsigned int const _treeIndex;
@@ -15,14 +20,15 @@ public:
 		: _port(port), _treeIndex(treeIndex)
 	{ }
 
-	HRESULT Serialize (IXMLDOMDocument3* doc, com_ptr<IXMLDOMElement>& elementOut) const;
+	HRESULT Serialize (IXMLDOMDocument3* doc, edge::com_ptr<IXMLDOMElement>& elementOut) const;
 	HRESULT Deserialize (IXMLDOMElement* portTreeElement);
 
 	//std::wstring GetPriorityLabel () const;
-	int GetPriority() const;
-	void SetPriority (int priority);
+	uint32_t GetPriority() const;
+	void SetPriority (uint32_t priority);
 
-	static const EnumProperty Priority;
-	static const PropertyOrGroup* const Properties[];
-	virtual const PropertyOrGroup* const* GetProperties() const override final { return Properties; }
+	static const port_priority_property Priority;
+	static const edge::property* const _properties[];
+	static const edge::type_t _type;
+	const edge::type_t* type() const override { return &_type; }
 };

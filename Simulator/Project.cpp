@@ -6,10 +6,11 @@
 #include "Port.h"
 
 using namespace std;
+using namespace edge;
 
 static const _bstr_t NextMacAddressString = "NextMacAddress";
 
-class Project : public EventManager, public IProject
+class Project : public event_manager, public IProject
 {
 	ULONG _refCount = 1;
 	wstring _path;
@@ -29,11 +30,11 @@ public:
 
 		Bridge* b = bridge.get();
 		auto it = _bridges.insert (_bridges.begin() + index, (move(bridge)));
-		b->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
-		b->GetPacketTransmitEvent().AddHandler (&OnPacketTransmit, this);
-		b->GetLinkPulseEvent().AddHandler (&OnLinkPulse, this);
-		BridgeInsertedEvent::InvokeHandlers (this, this, index, b);
-		InvalidateEvent::InvokeHandlers (this, this);
+		b->GetInvalidateEvent().add_handler (&OnObjectInvalidate, this);
+		b->GetPacketTransmitEvent().add_handler (&OnPacketTransmit, this);
+		b->GetLinkPulseEvent().add_handler (&OnLinkPulse, this);
+		this->event_invoker<BridgeInsertedEvent>()(this, index, b);
+		this->event_invoker<invalidate_e>()(this);
 	}
 
 	virtual unique_ptr<Bridge> RemoveBridge(size_t index) override final
@@ -50,13 +51,13 @@ public:
 		}))
 			throw invalid_argument("cannot remove a connected bridge");
 
-		BridgeRemovingEvent::InvokeHandlers(this, this, index, b);
-		_bridges[index]->GetLinkPulseEvent().RemoveHandler (&OnLinkPulse, this);
-		_bridges[index]->GetPacketTransmitEvent().RemoveHandler (&OnPacketTransmit, this);
-		_bridges[index]->GetInvalidateEvent().RemoveHandler (&OnObjectInvalidate, this);
+		this->event_invoker<BridgeRemovingEvent>()(this, index, b);
+		_bridges[index]->GetLinkPulseEvent().remove_handler (&OnLinkPulse, this);
+		_bridges[index]->GetPacketTransmitEvent().remove_handler (&OnPacketTransmit, this);
+		_bridges[index]->GetInvalidateEvent().remove_handler (&OnObjectInvalidate, this);
 		auto result = move(_bridges[index]);
 		_bridges.erase (_bridges.begin() + index);
-		InvalidateEvent::InvokeHandlers (this, this);
+		this->event_invoker<invalidate_e>()(this);
 		return result;
 	}
 
@@ -69,9 +70,9 @@ public:
 
 		Wire* w = wire.get();
 		auto it = _wires.insert (_wires.begin() + index, move(wire));
-		w->GetInvalidateEvent().AddHandler (&OnObjectInvalidate, this);
-		WireInsertedEvent::InvokeHandlers (this, this, index, w);
-		InvalidateEvent::InvokeHandlers (this, this);
+		w->GetInvalidateEvent().add_handler (&OnObjectInvalidate, this);
+		this->event_invoker<WireInsertedEvent>()(this, index, w);
+		this->event_invoker<invalidate_e>()(this);
 	}
 
 	virtual unique_ptr<Wire> RemoveWire (size_t index) override final
@@ -79,11 +80,11 @@ public:
 		if (index >= _wires.size())
 			throw invalid_argument("index");
 
-		WireRemovingEvent::InvokeHandlers(this, this, index, _wires[index].get());
-		_wires[index]->GetInvalidateEvent().RemoveHandler (&OnObjectInvalidate, this);
+		this->event_invoker<WireRemovingEvent>()(this, index, _wires[index].get());
+		_wires[index]->GetInvalidateEvent().remove_handler (&OnObjectInvalidate, this);
 		auto result = move(_wires[index]);
 		_wires.erase(_wires.begin() + index);
-		InvalidateEvent::InvokeHandlers (this, this);
+		this->event_invoker<invalidate_e>()(this);
 		return result;
 	}
 
@@ -108,20 +109,20 @@ public:
 			rxPort->GetBridge()->ProcessLinkPulse(rxPort->GetPortIndex(), timestamp);
 	}
 
-	static void OnObjectInvalidate (void* callbackArg, Object* object)
+	static void OnObjectInvalidate (void* callbackArg, renderable_object* object)
 	{
 		auto project = static_cast<Project*>(callbackArg);
-		InvalidateEvent::InvokeHandlers (project, project);
+		project->event_invoker<invalidate_e>()(project);
 	}
 
-	virtual BridgeInsertedEvent::Subscriber GetBridgeInsertedEvent() override final { return BridgeInsertedEvent::Subscriber(this); }
-	virtual BridgeRemovingEvent::Subscriber GetBridgeRemovingEvent() override final { return BridgeRemovingEvent::Subscriber(this); }
+	virtual BridgeInsertedEvent::subscriber GetBridgeInsertedEvent() override final { return BridgeInsertedEvent::subscriber(this); }
+	virtual BridgeRemovingEvent::subscriber GetBridgeRemovingEvent() override final { return BridgeRemovingEvent::subscriber(this); }
 
-	virtual WireInsertedEvent::Subscriber GetWireInsertedEvent() override final { return WireInsertedEvent::Subscriber(this); }
-	virtual WireRemovingEvent::Subscriber GetWireRemovingEvent() override final { return WireRemovingEvent::Subscriber(this); }
+	virtual WireInsertedEvent::subscriber GetWireInsertedEvent() override final { return WireInsertedEvent::subscriber(this); }
+	virtual WireRemovingEvent::subscriber GetWireRemovingEvent() override final { return WireRemovingEvent::subscriber(this); }
 
-	virtual InvalidateEvent::Subscriber GetInvalidateEvent() override final { return InvalidateEvent::Subscriber(this); }
-	virtual LoadedEvent::Subscriber GetLoadedEvent() override final { return LoadedEvent::Subscriber(this); }
+	virtual invalidate_e::subscriber GetInvalidateEvent() override final { return invalidate_e::subscriber(this); }
+	virtual LoadedEvent::subscriber GetLoadedEvent() override final { return LoadedEvent::subscriber(this); }
 
 	virtual bool IsWireForwarding (Wire* wire, unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const override final
 	{
@@ -203,7 +204,7 @@ public:
 
 		com_ptr<IXMLDOMElement> projectElement;
 		hr = doc->createElement (_bstr_t("Project"), &projectElement); assert(SUCCEEDED(hr));
-		projectElement->setAttribute (NextMacAddressString, _variant_t(ConvertBridgeAddressToWString(_nextMacAddress.bytes).c_str()));
+		projectElement->setAttribute (NextMacAddressString, _variant_t(ConvertBridgeAddressToString(_nextMacAddress.bytes).c_str()));
 		hr = doc->appendChild (projectElement, nullptr); assert(SUCCEEDED(hr));
 
 		com_ptr<IXMLDOMElement> bridgesElement;
@@ -358,7 +359,7 @@ public:
 		}
 
 		_path = filePath;
-		LoadedEvent::InvokeHandlers(this, this);
+		this->event_invoker<LoadedEvent>()(this);
 	}
 
 	virtual void PauseSimulation() override final
@@ -366,7 +367,7 @@ public:
 		_simulationPaused = true;
 		for (auto& b : _bridges)
 			b->PauseSimulation();
-		InvalidateEvent::InvokeHandlers (this, this);
+		this->event_invoker<invalidate_e>()(this);
 	}
 
 	virtual void ResumeSimulation() override final
@@ -374,7 +375,7 @@ public:
 		_simulationPaused = false;
 		for (auto& b : _bridges)
 			b->ResumeSimulation();
-		InvalidateEvent::InvokeHandlers (this, this);
+		this->event_invoker<invalidate_e>()(this);
 	}
 
 	virtual bool IsSimulationPaused() const override final { return _simulationPaused; }
@@ -385,42 +386,20 @@ public:
 	{
 		if (changedFlag)
 		{
-			ChangedEvent::InvokeHandlers(this, this);
-			InvalidateEvent::InvokeHandlers(this, this);
+			this->event_invoker<ChangedEvent>()(this);
+			this->event_invoker<invalidate_e>()(this);
 		}
 
 		if (_changedFlag != changedFlag)
 		{
 			_changedFlag = changedFlag;
-			ChangedFlagChangedEvent::InvokeHandlers(this, this);
+			this->event_invoker<ChangedFlagChangedEvent>()(this);
 		}
 	}
 
-	virtual ChangedFlagChangedEvent::Subscriber GetChangedFlagChangedEvent() override final { return ChangedFlagChangedEvent::Subscriber(this); }
+	virtual ChangedFlagChangedEvent::subscriber GetChangedFlagChangedEvent() override final { return ChangedFlagChangedEvent::subscriber(this); }
 
-	virtual ChangedEvent::Subscriber GetChangedEvent() override final { return ChangedEvent::Subscriber(this); }
-
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
-
-	virtual ULONG STDMETHODCALLTYPE AddRef() override final
-	{
-		return InterlockedIncrement(&_refCount);
-	}
-
-	virtual ULONG STDMETHODCALLTYPE Release() override final
-	{
-		assert (_refCount > 0);
-		ULONG newRefCount = InterlockedDecrement(&_refCount);
-		if (newRefCount == 0)
-			delete this;
-		return newRefCount;
-	}
+	virtual ChangedEvent::subscriber GetChangedEvent() override final { return ChangedEvent::subscriber(this); }
 };
 
-template<typename... Args>
-static com_ptr<IProject> Create (Args... args)
-{
-	return com_ptr<IProject>(new Project(std::forward<Args>(args)...), false);
-}
-
-extern const ProjectFactory projectFactory = &Create;
+extern const ProjectFactory projectFactory = []() -> std::shared_ptr<IProject> { return std::make_shared<Project>(); };

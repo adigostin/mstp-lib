@@ -28,6 +28,8 @@ Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "_help", "_help\", "{FF53569
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mstp-lib", "mstp-lib.vcxproj", "{1DC9DD21-A2C5-46FC-B13E-C3382471BED2}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "edge", "edge\edge.vcxproj", "{C4C530F1-E67C-48A2-81ED-41E428F17ED9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -62,8 +64,19 @@ Global
 		{1DC9DD21-A2C5-46FC-B13E-C3382471BED2}.Release|Win32.Build.0 = Release|Win32
 		{1DC9DD21-A2C5-46FC-B13E-C3382471BED2}.Release|x64.ActiveCfg = Release|x64
 		{1DC9DD21-A2C5-46FC-B13E-C3382471BED2}.Release|x64.Build.0 = Release|x64
+		{C4C530F1-E67C-48A2-81ED-41E428F17ED9}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C4C530F1-E67C-48A2-81ED-41E428F17ED9}.Debug|Win32.Build.0 = Debug|Win32
+		{C4C530F1-E67C-48A2-81ED-41E428F17ED9}.Debug|x64.ActiveCfg = Debug|x64
+		{C4C530F1-E67C-48A2-81ED-41E428F17ED9}.Debug|x64.Build.0 = Debug|x64
+		{C4C530F1-E67C-48A2-81ED-41E428F17ED9}.Release|Win32.ActiveCfg = Release|Win32
+		{C4C530F1-E67C-48A2-81ED-41E428F17ED9}.Release|Win32.Build.0 = Release|Win32
+		{C4C530F1-E67C-48A2-81ED-41E428F17ED9}.Release|x64.ActiveCfg = Release|x64
+		{C4C530F1-E67C-48A2-81ED-41E428F17ED9}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {0EC9F504-9850-4D5E-A6D1-BB1B3B585EA6}
 	EndGlobalSection
 EndGlobal

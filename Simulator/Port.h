@@ -1,8 +1,7 @@
 
 #pragma once
-#include "Object.h"
+#include "renderable_object.h"
 #include "PortTree.h"
-#include "Win32/Win32Defs.h"
 #include "stp.h"
 
 struct PacketInfo
@@ -14,17 +13,19 @@ struct PacketInfo
 
 enum class Side { Left, Top, Right, Bottom };
 
-static constexpr NVP SideNVPs[] =
+static constexpr edge::NVP SideNVPs[] =
 {
-	{ L"Left", (int) Side::Left },
-	{ L"Top", (int) Side::Top },
-	{ L"Right", (int) Side::Right },
-	{ L"Bottom", (int) Side::Bottom },
+	{ "Left",   (int) Side::Left },
+	{ "Top",    (int) Side::Top },
+	{ "Right",  (int) Side::Right },
+	{ "Bottom", (int) Side::Bottom },
 	{ 0, 0 },
 };
 
-class Port : public RenderableObject
+class Port : public renderable_object
 {
+	using base = renderable_object;
+
 	friend class Bridge;
 
 	Bridge* const _bridge;
@@ -35,13 +36,13 @@ class Port : public RenderableObject
 
 	static constexpr unsigned int MissedLinkPulseCounterMax = 5;
 	unsigned int _missedLinkPulseCounter = MissedLinkPulseCounterMax; // _missedLinkPulseCounter equal to MissedLinkPulseCounterMax means macOperational=false
-	static void OnTreePropertyChanged (void* callbackArg, Object* o, const Property* property);
+	static void OnTreePropertyChanged (void* callbackArg, edge::object* o, const edge::property* property);
 
 public:
 	Port (Bridge* bridge, unsigned int portIndex, Side side, float offset);
 	~Port();
 
-	com_ptr<IXMLDOMElement> Serialize (IXMLDOMDocument3* doc) const;
+	edge::com_ptr<IXMLDOMElement> Serialize (IXMLDOMDocument3* doc) const;
 	HRESULT Deserialize (IXMLDOMElement* portElement);
 
 	static constexpr int HTCodeInnerOuter = 1;
@@ -71,11 +72,11 @@ public:
 
 	void Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned int vlanNumber) const;
 
-	virtual void RenderSelection (const IZoomable* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const override final;
-	virtual HTResult HitTest (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
+	virtual void RenderSelection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const override final;
+	virtual HTResult HitTest (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
 
-	bool HitTestInnerOuter (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) const;
-	bool HitTestCP (const IZoomable* zoomable, D2D1_POINT_2F dLocation, float tolerance) const;
+	bool HitTestInnerOuter (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) const;
+	bool HitTestCP (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) const;
 
 	bool GetAutoEdge() const;
 	void SetAutoEdge (bool autoEdge);
@@ -88,12 +89,16 @@ public:
 	void SetAdminExternalPortPathCost(unsigned int adminExternalPortPathCost);
 	unsigned int GetExternalPortPathCost() const;
 
-	static const TypedProperty<bool> AutoEdge;
-	static const TypedProperty<bool> AdminEdge;
-	static const TypedProperty<bool> MacOperational;
-	static const TypedProperty<unsigned int> DetectedPortPathCost;
-	static const TypedProperty<unsigned int> AdminExternalPortPathCost;
-	static const TypedProperty<unsigned int> ExternalPortPathCost;
-	static const PropertyOrGroup* const Properties[];
-	virtual const PropertyOrGroup* const* GetProperties() const override final { return Properties; }
+private:
+	static const edge::bool_property AutoEdge;
+	static const edge::bool_property AdminEdge;
+	static const edge::bool_property MacOperational;
+	static const edge::uint32_property DetectedPortPathCost;
+	static const edge::uint32_property AdminExternalPortPathCost;
+	static const edge::uint32_property ExternalPortPathCost;
+	static const edge::property* const Port::_properties[];
+	static const edge::type_t _type;
+
+public:
+	virtual const edge::type_t* type() const { return &_type; }
 };

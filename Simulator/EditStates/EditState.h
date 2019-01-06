@@ -14,8 +14,8 @@ class EditState abstract
 protected:
 	IProjectWindow* const _pw;
 	IEditArea* const _editArea;
-	com_ptr<IProject> const _project;
-	com_ptr<ISelection> const _selection;
+	IProject* const _project;
+	ISelection* const _selection;
 
 public:
 	EditState (const EditStateDeps& deps)
@@ -39,7 +39,7 @@ std::unique_ptr<EditState> CreateStateCreateBridge (const EditStateDeps& deps);
 std::unique_ptr<EditState> CreateStateCreateWire (const EditStateDeps& deps);
 std::unique_ptr<EditState> CreateStateMoveWirePoint (const EditStateDeps& deps, Wire* wire, size_t pointIndex);
 std::unique_ptr<EditState> CreateStateBeginningDrag (const EditStateDeps& deps,
-													 Object* clickedObject,
+													 renderable_object* clickedObject,
 													 MouseButton button,
 													 UINT modifierKeysDown,
 													 const MouseLocation& location,

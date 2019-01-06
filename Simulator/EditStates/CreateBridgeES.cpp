@@ -2,10 +2,11 @@
 #include "pch.h"
 #include "EditState.h"
 #include "Bridge.h"
-#include "Win32/UtilityFunctions.h"
+#include "win32/utility_functions.h"
 
 using namespace std;
 using namespace D2D1;
+using namespace edge;
 
 class CreateBridgeES : public EditState
 {
@@ -28,7 +29,7 @@ public:
 		}
 
 		_bridge->SetLocation (location.w.x - _bridge->GetWidth() / 2, location.w.y - _bridge->GetHeight() / 2);
-		::InvalidateRect (_pw->GetEditArea()->GetHWnd(), nullptr, FALSE);
+		::InvalidateRect (_editArea->hwnd(), nullptr, FALSE);
 	}
 
 	virtual void OnMouseUp (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
@@ -52,7 +53,7 @@ public:
 		auto centerY = _bridge->GetTop() + _bridge->GetHeight() / 2;
 		_bridge.reset (new Bridge(numberOfPorts, _bridge->GetMstiCount(), _bridge->GetBridgeAddress().data()));
 		_bridge->SetLocation (centerX - _bridge->GetWidth() / 2, centerY - _bridge->GetHeight() / 2);
-		::InvalidateRect (_pw->GetEditArea()->GetHWnd(), nullptr, FALSE);
+		::InvalidateRect (_editArea->hwnd(), nullptr, FALSE);
 	}
 
 	virtual std::optional<LRESULT> OnKeyDown (UINT virtualKey, UINT modifierKeys) override final
@@ -60,7 +61,7 @@ public:
 		if (virtualKey == VK_ESCAPE)
 		{
 			_completed = true;
-			::InvalidateRect (_pw->GetEditArea()->GetHWnd(), nullptr, FALSE);
+			::InvalidateRect (_editArea->hwnd(), nullptr, FALSE);
 			return 0;
 		}
 

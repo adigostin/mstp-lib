@@ -5,21 +5,18 @@
 #include "Bridge.h"
 #include "Port.h"
 
-using namespace std;
-
-class VlanWindow : public IVlanWindow
+class VlanWindow : public virtual IVlanWindow
 {
 	ISimulatorApp*  const _app;
 	IProjectWindow* const _pw;
-	com_ptr<IProject>     const _project;
-	com_ptr<ISelection>   const _selection;
-	ULONG _refCount = 1;
+	std::shared_ptr<IProject> const _project;
+	ISelection*    const _selection;
 	HWND _hwnd = nullptr;
 
 public:
 	VlanWindow (ISimulatorApp* app,
 				IProjectWindow* pw,
-				IProject* project,
+				const std::shared_ptr<IProject>& project,
 				ISelection* selection,
 				HWND hWndParent,
 				POINT location)
@@ -37,37 +34,41 @@ public:
 		::GetWindowRect(_hwnd, &rc);
 		::MoveWindow (_hwnd, location.x, location.y, rc.right - rc.left, rc.bottom - rc.top, TRUE);
 
-		_selection->GetAddedToSelectionEvent().AddHandler (&OnAddedToSelection, this);
-		_selection->GetRemovingFromSelectionEvent().AddHandler (&OnRemovingFromSelection, this);
-		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
-		_pw->GetSelectedVlanNumerChangedEvent().AddHandler (&OnSelectedVlanChanged, this);
+		_selection->GetAddedToSelectionEvent().add_handler (&OnAddedToSelection, this);
+		_selection->GetRemovingFromSelectionEvent().add_handler (&OnRemovingFromSelection, this);
+		_selection->GetChangedEvent().add_handler (&OnSelectionChanged, this);
+		_pw->GetSelectedVlanNumerChangedEvent().add_handler (&OnSelectedVlanChanged, this);
 
-		for (Object* o : _selection->GetObjects())
+		for (auto o : _selection->GetObjects())
 		{
 			if (auto b = dynamic_cast<Bridge*>(o); b != nullptr)
-				b->GetPropertyChangedEvent().AddHandler (&OnBridgePropertyChanged, this);
+				b->property_changed().add_handler (&OnBridgePropertyChanged, this);
 		}
 	}
 
-private:
 	~VlanWindow()
 	{
-		for (Object* o : _selection->GetObjects())
+		for (auto o : _selection->GetObjects())
 		{
 			if (auto b = dynamic_cast<Bridge*>(o); b != nullptr)
-				b->GetPropertyChangedEvent().RemoveHandler (&OnBridgePropertyChanged, this);
+				b->property_changed().remove_handler (&OnBridgePropertyChanged, this);
 		}
 
-		_pw->GetSelectedVlanNumerChangedEvent().RemoveHandler (&OnSelectedVlanChanged, this);
-		_selection->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
-		_selection->GetRemovingFromSelectionEvent().RemoveHandler (&OnRemovingFromSelection, this);
-		_selection->GetAddedToSelectionEvent().RemoveHandler (&OnAddedToSelection, this);
+		_pw->GetSelectedVlanNumerChangedEvent().remove_handler (&OnSelectedVlanChanged, this);
+		_selection->GetChangedEvent().remove_handler (&OnSelectionChanged, this);
+		_selection->GetRemovingFromSelectionEvent().remove_handler (&OnRemovingFromSelection, this);
+		_selection->GetAddedToSelectionEvent().remove_handler (&OnAddedToSelection, this);
 
 		if (_hwnd != nullptr)
 			::DestroyWindow(_hwnd);
 	}
 
-	virtual HWND GetHWnd() const override final { return _hwnd; }
+	virtual destroying_event::subscriber destroying() final
+	{
+		assert(false); return nullptr;
+	}
+
+	virtual HWND hwnd() const override final { return _hwnd; }
 
 	static INT_PTR CALLBACK DialogProcStatic (HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
@@ -75,7 +76,7 @@ private:
 		if (uMsg == WM_INITDIALOG)
 		{
 			window = reinterpret_cast<VlanWindow*>(lParam);
-			window->AddRef();
+			//window->AddRef();
 			window->_hwnd = hwnd;
 			assert (GetWindowLongPtr(hwnd, GWLP_USERDATA) == 0);
 			SetWindowLongPtr (hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(window));
@@ -95,7 +96,7 @@ private:
 		{
 			window->_hwnd = nullptr;
 			SetWindowLongPtr (hwnd, GWLP_USERDATA, 0);
-			window->Release(); // this one last cause it might call Release() which would try to destroy the hwnd again.
+			//window->Release(); // this one last cause it might call Release() which would try to destroy the hwnd again.
 		}
 
 		::SetWindowLongPtr (hwnd, DWLP_MSGRESULT, result.messageResult);
@@ -151,8 +152,9 @@ private:
 
 			if ((HIWORD(wParam) == BN_CLICKED) && (LOWORD(wParam) == IDC_BUTTON_EDIT_MST_CONFIG_TABLE))
 			{
-				auto dialog = mstConfigIdDialogFactory(_selection->GetObjects());
-				dialog->ShowModal(_pw->GetHWnd());
+				assert(false);
+				//auto dialog = mstConfigIdDialogFactory(_selection->GetObjects());
+				//dialog->ShowModal(_pw->GetHWnd());
 				return { TRUE, 0 };
 			}
 
@@ -162,21 +164,21 @@ private:
 		return { FALSE, 0 };
 	}
 
-	static void OnAddedToSelection (void* callbackArg, ISelection* selection, Object* obj)
+	static void OnAddedToSelection (void* callbackArg, ISelection* selection, edge::object* obj)
 	{
 		auto b = dynamic_cast<Bridge*>(obj);
 		if (b != nullptr)
-			b->GetPropertyChangedEvent().AddHandler (&OnBridgePropertyChanged, callbackArg);
+			b->property_changed().add_handler (&OnBridgePropertyChanged, callbackArg);
 	}
 
-	static void OnRemovingFromSelection (void* callbackArg, ISelection* selection, Object* obj)
+	static void OnRemovingFromSelection (void* callbackArg, ISelection* selection, edge::object* obj)
 	{
 		auto b = dynamic_cast<Bridge*>(obj);
 		if (b != nullptr)
-			b->GetPropertyChangedEvent().RemoveHandler (&OnBridgePropertyChanged, callbackArg);
+			b->property_changed().remove_handler (&OnBridgePropertyChanged, callbackArg);
 	}
 
-	static void OnBridgePropertyChanged (void* callbackArg, Object* o, const Property* property)
+	static void OnBridgePropertyChanged (void* callbackArg, edge::object* o, const edge::property* property)
 	{
 		static_cast<VlanWindow*>(callbackArg)->LoadSelectedTreeEdit();
 	}
@@ -206,13 +208,16 @@ private:
 			{ return (pw->GetProject() == _pw->GetProject()) && (pw->GetSelectedVlanNumber() == vlanNumber); });
 		if (it != pws.end())
 		{
-			::BringWindowToTop (it->get()->GetHWnd());
-			::FlashWindow (it->get()->GetHWnd(), FALSE);
+			::BringWindowToTop (it->get()->hwnd());
+			::FlashWindow (it->get()->hwnd(), FALSE);
 		}
 		else
 		{
-			auto pw = projectWindowFactory(_app, _project, selectionFactory, editAreaFactory, false, false, SW_SHOWNORMAL, vlanNumber);
-			_app->AddProjectWindow(move(pw));
+			assert(false);
+			//project_window_create_params create_params = 
+			//	{ _app, _project, selectionFactory, editAreaFactory, false, false, vlanNumber, SW_SHOW, _d3d_dc, _dwrite_factory };
+			//auto pw = projectWindowFactory (create_params);
+			//_app->AddProjectWindow(move(pw));
 		}
 
 		ComboBox_SetCurSel (hwnd, -1);
@@ -245,15 +250,15 @@ private:
 			return;
 		}
 
-		if (objects[0]->Is<Bridge>() || objects[0]->Is<Port>())
+		if (objects[0]->is<Bridge>() || objects[0]->is<Port>())
 		{
-			Object* obj = objects[0];
-			auto bridge = obj->Is<Bridge>() ? dynamic_cast<Bridge*>(obj) : dynamic_cast<Port*>(obj)->GetBridge();
+			auto obj = objects[0];
+			auto bridge = obj->is<Bridge>() ? dynamic_cast<Bridge*>(obj) : dynamic_cast<Port*>(obj)->GetBridge();
 			auto treeIndex = STP_GetTreeIndexFromVlanNumber (bridge->GetStpBridge(), _pw->GetSelectedVlanNumber());
 			if (treeIndex == 0)
 				::SetWindowText (edit, L"CIST (0)");
 			else
-				::SetWindowText (edit, (wstring(L"MSTI ") + to_wstring(treeIndex)).c_str());
+				::SetWindowText (edit, (std::wstring(L"MSTI ") + std::to_wstring(treeIndex)).c_str());
 			::EnableWindow (edit, TRUE);
 			::EnableWindow (tableButton, TRUE);
 			return;
@@ -263,28 +268,12 @@ private:
 		::EnableWindow (edit, FALSE);
 		::EnableWindow (tableButton, FALSE);
 	}
-
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return E_NOTIMPL; }
-
-	virtual ULONG STDMETHODCALLTYPE AddRef() override final
-	{
-		return InterlockedIncrement(&_refCount);
-	}
-
-	virtual ULONG STDMETHODCALLTYPE Release() override final
-	{
-		assert (_refCount > 0);
-		ULONG newRefCount = InterlockedDecrement(&_refCount);
-		if (newRefCount == 0)
-			delete this;
-		return newRefCount;
-	}
 };
 
 template<typename... Args>
-static com_ptr<IVlanWindow> Create (Args... args)
+static std::unique_ptr<IVlanWindow> Create (Args... args)
 {
-	return com_ptr<IVlanWindow>(new VlanWindow (std::forward<Args>(args)...), false);
+	return std::make_unique<VlanWindow> (std::forward<Args>(args)...);
 }
 
 const VlanWindowFactory vlanWindowFactory = &Create;

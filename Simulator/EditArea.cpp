@@ -1,16 +1,17 @@
 
 #include "pch.h"
 #include "Simulator.h"
-#include "Win32/ZoomableWindow.h"
 #include "Resource.h"
 #include "EditStates/EditState.h"
 #include "Bridge.h"
 #include "Port.h"
 #include "Wire.h"
-#include "Win32/UtilityFunctions.h"
+#include "win32/zoomable_window.h"
+#include "win32/utility_functions.h"
 
 using namespace std;
 using namespace D2D1;
+using namespace edge;
 
 static const D2D1_COLOR_F RegionColors[] =
 {
@@ -24,17 +25,18 @@ static const D2D1_COLOR_F RegionColors[] =
 	ColorF(ColorF::DarkMagenta),
 };
 
+#pragma warning (disable: 4250)
 
-class EditArea : public ZoomableWindow, public IEditArea
+class EditArea : public zoomable_window, public IEditArea
 {
-	typedef ZoomableWindow base;
+	typedef zoomable_window base;
 
-	using HTResult = RenderableObject::HTResult;
+	using HTResult = renderable_object::HTResult;
 
 	ISimulatorApp*  const _app;
 	IProjectWindow* const _pw;
-	com_ptr<IProject>     const _project;
-	com_ptr<ISelection>   const _selection;
+	IProject*       const _project;
+	ISelection*     const _selection;
 	com_ptr<IDWriteTextFormat> _legendFont;
 	DrawingObjects _drawingObjects;
 	unique_ptr<EditState> _state;
@@ -47,14 +49,15 @@ public:
 			  ISelection* selection,
 			  HWND hWndParent,
 			  const RECT& rect,
+			  ID3D11DeviceContext1* d3d_dc,
 			  IDWriteFactory* dWriteFactory)
-		: base (app->GetHInstance(), WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, hWndParent, nullptr, dWriteFactory)
+		: base(app->GetHInstance(), WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, hWndParent, 0, d3d_dc, dWriteFactory)
 		, _app(app)
 		, _pw(pw)
 		, _project(project)
 		, _selection(selection)
 	{
-		auto dc = base::GetRenderTarget();
+		auto dc = base::d2d_dc();
 		_drawingObjects._dWriteFactory = dWriteFactory;
 		auto hr = dc->CreateSolidColorBrush (ColorF (ColorF::PaleGreen), &_drawingObjects._poweredFillBrush); assert(SUCCEEDED(hr));
 		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray), &_drawingObjects._unpoweredBrush); assert(SUCCEEDED(hr));
@@ -67,11 +70,11 @@ public:
 		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOWTEXT), &_drawingObjects._brushWindowText); assert(SUCCEEDED(hr));
 		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOW), &_drawingObjects._brushWindow); assert(SUCCEEDED(hr));
 		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_HIGHLIGHT), &_drawingObjects._brushHighlight); assert(SUCCEEDED(hr));
-		hr = GetDWriteFactory()->CreateTextFormat (L"Segoe UI", NULL, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
+		hr = dwrite_factory()->CreateTextFormat (L"Segoe UI", NULL, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
 			DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_drawingObjects._regularTextFormat); assert(SUCCEEDED(hr));
-		hr = GetDWriteFactory()->CreateTextFormat (L"Tahoma", NULL, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
+		hr = dwrite_factory()->CreateTextFormat (L"Tahoma", NULL, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
 			DWRITE_FONT_STRETCH_NORMAL, 9.5f, L"en-US", &_drawingObjects._smallTextFormat); assert(SUCCEEDED(hr));
-		GetDWriteFactory()->CreateTextFormat (L"Tahoma", nullptr,  DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
+		dwrite_factory()->CreateTextFormat (L"Tahoma", nullptr,  DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
 			DWRITE_FONT_STRETCH_CONDENSED, 11, L"en-US", &_legendFont); assert(SUCCEEDED(hr));
 
 		com_ptr<ID2D1Factory> factory;
@@ -92,26 +95,26 @@ public:
 		ssprops.endCap = D2D1_CAP_STYLE_ROUND;
 		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawingObjects._strokeStyleForwardingWire); assert(SUCCEEDED(hr));
 
-		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
-		_project->GetBridgeRemovingEvent().AddHandler (&OnBridgeRemoving, this);
-		_project->GetWireRemovingEvent().AddHandler (&OnWireRemoving, this);
-		_project->GetInvalidateEvent().AddHandler (&OnProjectInvalidate, this);
-		_pw->GetSelectedVlanNumerChangedEvent().AddHandler (&OnSelectedVlanChanged, this);
+		_selection->GetChangedEvent().add_handler (&OnSelectionChanged, this);
+		_project->GetBridgeRemovingEvent().add_handler (&OnBridgeRemoving, this);
+		_project->GetWireRemovingEvent().add_handler (&OnWireRemoving, this);
+		_project->GetInvalidateEvent().add_handler (&OnProjectInvalidate, this);
+		_pw->GetSelectedVlanNumerChangedEvent().add_handler (&OnSelectedVlanChanged, this);
 	}
 
 	virtual ~EditArea()
 	{
-		_pw->GetSelectedVlanNumerChangedEvent().RemoveHandler (&OnSelectedVlanChanged, this);
-		_project->GetInvalidateEvent().RemoveHandler(&OnProjectInvalidate, this);
-		_project->GetWireRemovingEvent().RemoveHandler (&OnWireRemoving, this);
-		_project->GetBridgeRemovingEvent().RemoveHandler (&OnBridgeRemoving, this);
-		_selection->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
+		_pw->GetSelectedVlanNumerChangedEvent().remove_handler (&OnSelectedVlanChanged, this);
+		_project->GetInvalidateEvent().remove_handler (&OnProjectInvalidate, this);
+		_project->GetWireRemovingEvent().remove_handler (&OnWireRemoving, this);
+		_project->GetBridgeRemovingEvent().remove_handler (&OnBridgeRemoving, this);
+		_selection->GetChangedEvent().remove_handler (&OnSelectionChanged, this);
 	}
 
 	static void OnSelectedVlanChanged (void* callbackArg, IProjectWindow* pw, unsigned int vlanNumber)
 	{
 		auto area = static_cast<EditArea*>(callbackArg);
-		::InvalidateRect (area->GetHWnd(), nullptr, FALSE);
+		::InvalidateRect (area->hwnd(), nullptr, FALSE);
 	}
 
 	static void OnBridgeRemoving (void* callbackArg, IProject* project, size_t index, Bridge* b)
@@ -129,13 +132,13 @@ public:
 	static void OnProjectInvalidate (void* callbackArg, IProject*)
 	{
 		auto area = static_cast<EditArea*>(callbackArg);
-		::InvalidateRect (area->GetHWnd(), nullptr, FALSE);
+		::InvalidateRect (area->hwnd(), nullptr, FALSE);
 	}
 
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
 	{
 		auto editArea = static_cast<EditArea*>(callbackArg);
-		::InvalidateRect (editArea->GetHWnd(), nullptr, FALSE);
+		::InvalidateRect (editArea->hwnd(), nullptr, FALSE);
 	}
 
 	struct LegendInfoEntry
@@ -169,15 +172,13 @@ public:
 
 	void RenderLegend (ID2D1RenderTarget* dc) const
 	{
-		auto clientSizeDips = GetClientSizeDips();
-
 		float maxLineWidth = 0;
 		float maxLineHeight = 0;
 		vector<com_ptr<IDWriteTextLayout>> layouts;
 		for (auto& info : LegendInfo)
 		{
 			com_ptr<IDWriteTextLayout> tl;
-			auto hr = GetDWriteFactory()->CreateTextLayout (info.text, (UINT32) wcslen(info.text), _legendFont, 1000, 1000, &tl); assert(SUCCEEDED(hr));
+			auto hr = dwrite_factory()->CreateTextLayout (info.text, (UINT32) wcslen(info.text), _legendFont, 1000, 1000, &tl); assert(SUCCEEDED(hr));
 
 			DWRITE_TEXT_METRICS metrics;
 			tl->GetMetrics (&metrics);
@@ -191,11 +192,11 @@ public:
 			layouts.push_back(move(tl));
 		}
 
-		float textX = clientSizeDips.width - (5 + maxLineWidth + 5 + Port::ExteriorHeight + 5);
+		float textX = client_width() - (5 + maxLineWidth + 5 + Port::ExteriorHeight + 5);
 		float lineX = textX - 3;
-		float bitmapX = clientSizeDips.width - (5 + Port::ExteriorHeight + 5);
+		float bitmapX = client_width() - (5 + Port::ExteriorHeight + 5);
 		float rowHeight = 2 + max (maxLineHeight, Port::ExteriorWidth);
-		float y = clientSizeDips.height - _countof(LegendInfo) * rowHeight;
+		float y = client_height() - _countof(LegendInfo) * rowHeight;
 
 		auto lineWidth = GetDipSizeFromPixelSize({ 0, 1 }).height;
 
@@ -204,8 +205,8 @@ public:
 		com_ptr<ID2D1SolidColorBrush> brush;
 		dc->CreateSolidColorBrush (GetD2DSystemColor(COLOR_INFOBK), &brush);
 		brush->SetOpacity (0.8f);
-		dc->FillRectangle (D2D1_RECT_F { lineX, y, clientSizeDips.width, clientSizeDips.height }, brush);
-		dc->DrawLine ({ lineX, y }, { lineX, clientSizeDips.height }, _drawingObjects._brushWindowText, lineWidth);
+		dc->FillRectangle (D2D1_RECT_F { lineX, y, client_width(), client_height() }, brush);
+		dc->DrawLine ({ lineX, y }, { lineX, client_height() }, _drawingObjects._brushWindowText, lineWidth);
 		dc->SetAntialiasMode (oldaa);
 
 		Matrix3x2F oldTransform;
@@ -217,7 +218,7 @@ public:
 
 			auto oldaa = dc->GetAntialiasMode();
 			dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-			dc->DrawLine (Point2F (lineX, y), Point2F (clientSizeDips.width, y), _drawingObjects._brushWindowText, lineWidth);
+			dc->DrawLine (Point2F (lineX, y), Point2F (client_width(), y), _drawingObjects._brushWindowText, lineWidth);
 			dc->SetAntialiasMode(oldaa);
 
 			dc->DrawTextLayout (Point2F (textX, y + 1), layouts[i], _drawingObjects._brushWindowText);
@@ -239,20 +240,18 @@ public:
 	{
 		size_t colorIndex = 0;
 
-		auto clientSizeDips = GetClientSizeDips();
-
 		float maxLineWidth = 0;
 		float lineHeight = 0;
-		vector<pair<TextLayout, D2D1_COLOR_F>> lines;
+		vector<pair<text_layout, D2D1_COLOR_F>> lines;
 		for (const STP_MST_CONFIG_ID& configId : configIds)
 		{
-			wstringstream ss;
+			stringstream ss;
 			ss << configId.ConfigurationName << " -- " << (configId.RevisionLevelLow | (configId.RevisionLevelHigh << 8)) << " -- "
-				<< uppercase << setfill(L'0') << hex
+				<< uppercase << setfill('0') << hex
 				<< setw(2) << configId.ConfigurationDigest[0] << setw(2) << configId.ConfigurationDigest[1] << ".."
 				<< setw(2) << configId.ConfigurationDigest[14] << setw(2) << configId.ConfigurationDigest[15];
-			wstring line = ss.str();
-			auto tl = TextLayout::Create (GetDWriteFactory(), _legendFont, line.c_str());
+			string line = ss.str();
+			auto tl = text_layout::create (dwrite_factory(), _legendFont, line.c_str());
 
 			if (tl.metrics.width > maxLineWidth)
 				maxLineWidth = tl.metrics.width;
@@ -268,9 +267,9 @@ public:
 		float UpDownPadding = 2;
 		float coloredRectWidth = lineHeight * 2;
 
-		auto title = TextLayout::Create (GetDWriteFactory(), _legendFont, L"MST Config IDs:");
+		auto title = text_layout::create (dwrite_factory(), _legendFont, "MST Config IDs:");
 
-		float y = clientSizeDips.height - lines.size() * (lineHeight + 2 * UpDownPadding) - title.metrics.height - 2 * UpDownPadding;
+		float y = client_height() - lines.size() * (lineHeight + 2 * UpDownPadding) - title.metrics.height - 2 * UpDownPadding;
 
 		auto oldaa = dc->GetAntialiasMode();
 		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
@@ -279,9 +278,9 @@ public:
 		com_ptr<ID2D1SolidColorBrush> brush;
 		dc->CreateSolidColorBrush (GetD2DSystemColor(COLOR_INFOBK), &brush);
 		brush->SetOpacity (0.8f);
-		dc->FillRectangle ({ 0, y, lineX, clientSizeDips.height }, brush);
+		dc->FillRectangle ({ 0, y, lineX, client_height() }, brush);
 		dc->DrawLine ({ 0, y }, { lineX, y }, _drawingObjects._brushWindowText, lineWidth);
-		dc->DrawLine ({ lineX, y }, { lineX, clientSizeDips.height }, _drawingObjects._brushWindowText, lineWidth);
+		dc->DrawLine ({ lineX, y }, { lineX, client_height() }, _drawingObjects._brushWindowText, lineWidth);
 		dc->SetAntialiasMode(oldaa);
 
 		dc->DrawTextLayout ({ LeftRightPadding, y + UpDownPadding }, title.layout, _drawingObjects._brushWindowText);
@@ -304,7 +303,7 @@ public:
 		auto oldaa = rt->GetAntialiasMode();
 		rt->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
 
-		auto cpd = GetDLocationFromWLocation(wLocation);
+		auto cpd = pointw_to_pointd(wLocation);
 		auto rect = RectF (cpd.x - SnapDistance, cpd.y - SnapDistance, cpd.x + SnapDistance, cpd.y + SnapDistance);
 		rt->DrawRectangle (rect, _drawingObjects._brushHighlight, 2);
 
@@ -401,11 +400,11 @@ public:
 
 		if (_project->GetBridges().empty())
 		{
-			RenderHint (dc, { GetClientWidthDips() / 2, GetClientHeightDips() / 2 }, L"No bridges created. Right-click to create some.", DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, false);
+			RenderHint (dc, { client_width() / 2, client_height() / 2 }, L"No bridges created. Right-click to create some.", DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, false);
 		}
 		else if (_project->GetBridges().size() == 1)
 		{
-			RenderHint (dc, { GetClientWidthDips() / 2, GetClientHeightDips() / 2 }, L"Right-click to add more bridges.", DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, false);
+			RenderHint (dc, { client_width() / 2, client_height() / 2 }, L"Right-click to add more bridges.", DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, false);
 		}
 		else
 		{
@@ -419,7 +418,7 @@ public:
 				Bridge* b = _project->GetBridges().front().get();
 				auto text = L"No port connected. You can connect\r\nports by drawing wires with the mouse.";
 				auto wl = D2D1_POINT_2F { b->GetLeft() + b->GetWidth() / 2, b->GetBottom() + Port::ExteriorHeight * 1.5f };
-				auto dl = GetDLocationFromWLocation(wl);
+				auto dl = pointw_to_pointd(wl);
 				RenderHint (dc, { dl.x, dl.y }, text, DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, false);
 			}
 		}
@@ -439,7 +438,7 @@ public:
 		}
 	}
 
-	virtual void Render(ID2D1RenderTarget* rt) const override final
+	void render(ID2D1DeviceContext* rt) const final
 	{
 		std::set<STP_MST_CONFIG_ID> configIds;
 		for (auto& bridge : _project->GetBridges())
@@ -457,9 +456,9 @@ public:
 
 		RenderWires (rt);
 
-		for (Object* o : _selection->GetObjects())
+		for (object* o : _selection->GetObjects())
 		{
-			if (auto ro = dynamic_cast<RenderableObject*>(o))
+			if (auto ro = dynamic_cast<renderable_object*>(o))
 				ro->RenderSelection(this, rt, _drawingObjects);
 		}
 
@@ -469,20 +468,18 @@ public:
 		if (_htResult.object != nullptr)
 			RenderHover(rt);
 
-		RenderHint (rt, { GetClientWidthDips() / 2, GetClientHeightDips() },
+		RenderHint (rt, { client_width() / 2, client_height() },
 					L"Rotate mouse wheel for zooming, press wheel and drag for panning.",
 					DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_FAR, true);
 
 		if (_project->IsSimulationPaused())
-			RenderHint (rt, { GetClientWidthDips() / 2, 10 },
+			RenderHint (rt, { client_width() / 2, 10 },
 						L"Simulation is paused. Right-click to resume.",
 						DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, true);
 
 		if (_state != nullptr)
 			_state->Render(rt);
 	}
-
-	virtual HWND GetHWnd() const override final { return base::GetHWnd(); }
 
 	static UINT GetModifierKeys()
 	{
@@ -500,32 +497,32 @@ public:
 		return modifierKeys;
 	}
 
-	virtual std::optional<LRESULT> WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override
+	std::optional<LRESULT> window_proc (HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) final
 	{
 		if ((uMsg == WM_LBUTTONDOWN) || (uMsg == WM_RBUTTONDOWN))
 		{
 			auto button = (uMsg == WM_LBUTTONDOWN) ? MouseButton::Left : MouseButton::Right;
 			UINT modifierKeysDown = (UINT) wParam;
 			auto result = ProcessMouseButtonDown (button, modifierKeysDown, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
-			return result ? result.value() : base::WindowProc (hwnd, uMsg, wParam, lParam);
+			return result ? result.value() : base::window_proc (hwnd, uMsg, wParam, lParam);
 		}
 		else if ((uMsg == WM_LBUTTONUP) || (uMsg == WM_RBUTTONUP))
 		{
 			auto button = (uMsg == WM_LBUTTONUP) ? MouseButton::Left : MouseButton::Right;
 			UINT modifierKeysDown = (UINT) wParam;
 			auto result = ProcessMouseButtonUp (button, modifierKeysDown, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
-			return result ? result.value() : base::WindowProc (hwnd, uMsg, wParam, lParam);
+			return result ? result.value() : base::window_proc (hwnd, uMsg, wParam, lParam);
 		}
 		else if (uMsg == WM_SETCURSOR)
 		{
-			if (((HWND) wParam == GetHWnd()) && (LOWORD (lParam) == HTCLIENT))
+			if (((HWND) wParam == hwnd) && (LOWORD (lParam) == HTCLIENT))
 			{
 				// Let's check the result because GetCursorPos fails when the input desktop is not the current desktop
 				// (happens for example when the monitor goes to sleep and then the lock screen is displayed).
 				POINT pt;
 				if (::GetCursorPos (&pt))
 				{
-					if (ScreenToClient (GetHWnd(), &pt))
+					if (ScreenToClient (hwnd, &pt))
 					{
 						this->ProcessWmSetCursor(pt);
 						return TRUE;
@@ -538,7 +535,7 @@ public:
 		else if (uMsg == WM_MOUSEMOVE)
 		{
 			ProcessWmMouseMove (POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
-			base::WindowProc (hwnd, uMsg, wParam, lParam);
+			base::window_proc (hwnd, uMsg, wParam, lParam);
 			return 0;
 		}
 		else if (uMsg == WM_CONTEXTMENU)
@@ -562,7 +559,7 @@ public:
 			else if ((wParam == ID_BRIDGE_ENABLE_STP) || (wParam == ID_BRIDGE_DISABLE_STP))
 			{
 				bool enable = (wParam == ID_BRIDGE_ENABLE_STP);
-				for (Object* o : _selection->GetObjects())
+				for (object* o : _selection->GetObjects())
 				{
 					auto b = dynamic_cast<Bridge*>(o);
 					if (b != nullptr)
@@ -590,7 +587,7 @@ public:
 			return 0;
 		}
 
-		return base::WindowProc (hwnd, uMsg, wParam, lParam);
+		return base::window_proc (hwnd, uMsg, wParam, lParam);
 	}
 
 	virtual Port* GetCPAt (D2D1_POINT_2F dLocation, float tolerance) const override final
@@ -635,15 +632,15 @@ public:
 
 	void DeleteSelection()
 	{
-		if (any_of(_selection->GetObjects().begin(), _selection->GetObjects().end(), [](Object* o) { return o->Is<Port>(); }))
+		if (any_of(_selection->GetObjects().begin(), _selection->GetObjects().end(), [](object* o) { return o->is<Port>(); }))
 		{
-			TaskDialog (GetHWnd(), nullptr, _app->GetAppName(), nullptr, L"Ports cannot be deleted.", 0, nullptr, nullptr);
+			TaskDialog (hwnd(), nullptr, _app->GetAppName(), nullptr, L"Ports cannot be deleted.", 0, nullptr, nullptr);
 			return;
 		}
 
-		if (any_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [](Object* o) { return o->Is<Port>(); }))
+		if (any_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [](object* o) { return o->is<Port>(); }))
 		{
-			TaskDialog (_pw->GetHWnd(), nullptr, _app->GetAppName(), L"Can't Delete Ports", L"The Simulator does not yet support deleting ports.", 0, TD_INFORMATION_ICON, nullptr);
+			TaskDialog (_pw->hwnd(), nullptr, _app->GetAppName(), L"Can't Delete Ports", L"The Simulator does not yet support deleting ports.", 0, TD_INFORMATION_ICON, nullptr);
 			return;
 		}
 
@@ -651,7 +648,7 @@ public:
 		std::set<Wire*> wiresToRemove;
 		std::unordered_map<Wire*, std::vector<size_t>> pointsToDisconnect;
 
-		for (Object* o : _selection->GetObjects())
+		for (object* o : _selection->GetObjects())
 		{
 			if (auto w = dynamic_cast<Wire*>(o); w != nullptr)
 				wiresToRemove.insert(w);
@@ -746,15 +743,15 @@ public:
 
 	std::optional<LRESULT> ProcessMouseButtonDown (MouseButton button, UINT modifierKeysDown, POINT pt)
 	{
-		::SetFocus(GetHWnd());
-		if (::GetFocus() != GetHWnd())
+		::SetFocus(hwnd());
+		if (::GetFocus() != hwnd())
 			// Some validation code (maybe in the Properties Window) must have failed and taken focus back.
 			return nullopt;
 
 		MouseLocation mouseLocation;
 		mouseLocation.pt = pt;
-		mouseLocation.d = GetDipLocationFromPixelLocation(pt);
-		mouseLocation.w = GetWLocationFromDLocation(mouseLocation.d);
+		mouseLocation.d = pointp_to_pointd(pt);
+		mouseLocation.w = pointd_to_pointw(mouseLocation.d);
 
 		if (_state != nullptr)
 		{
@@ -842,8 +839,8 @@ public:
 
 	std::optional<LRESULT> ProcessMouseButtonUp (MouseButton button, UINT modifierKeysDown, POINT pt)
 	{
-		auto dLocation = GetDipLocationFromPixelLocation(pt);
-		auto wLocation = GetWLocationFromDLocation(dLocation);
+		auto dLocation = pointp_to_pointd(pt);
+		auto wLocation = pointd_to_pointw(dLocation);
 
 		if (_state != nullptr)
 		{
@@ -869,8 +866,8 @@ public:
 
 	void ProcessWmSetCursor (POINT pt)
 	{
-		auto dLocation = GetDipLocationFromPixelLocation(pt);
-		auto wLocation = GetWLocationFromDLocation(dLocation);
+		auto dLocation = pointp_to_pointd(pt);
+		auto wLocation = pointd_to_pointw(dLocation);
 
 		if (_state != nullptr)
 		{
@@ -901,15 +898,15 @@ public:
 			if (_htResult != ht)
 			{
 				_htResult = ht;
-				::InvalidateRect(GetHWnd(), nullptr, 0);
+				::InvalidateRect(hwnd(), nullptr, 0);
 			}
 		}
 	}
 
 	void ProcessWmMouseMove (POINT pt)
 	{
-		auto dLocation = GetDipLocationFromPixelLocation(pt);
-		auto wLocation = GetWLocationFromDLocation(dLocation);
+		auto dLocation = pointp_to_pointd(pt);
+		auto wLocation = pointd_to_pointw(dLocation);
 
 		if (_state != nullptr)
 		{
@@ -924,7 +921,7 @@ public:
 
 	std::optional<LRESULT> ProcessWmContextMenu (HWND hwnd, POINT pt)
 	{
-		//D2D1_POINT_2F dipLocation = GetDipLocationFromPixelLocation(pt);
+		//D2D1_POINT_2F dipLocation = pointp_to_pointd(pt);
 		//_elementsAtContextMenuLocation.clear();
 		//GetElementsAt(_project->GetInnerRootElement(), { dipLocation.x, dipLocation.y }, _elementsAtContextMenuLocation);
 
@@ -941,7 +938,7 @@ public:
 			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_PORT));
 
 		if (hMenu != nullptr)
-			TrackPopupMenuEx (GetSubMenu(hMenu, 0), 0, pt.x, pt.y, GetHWnd(), nullptr);
+			TrackPopupMenuEx (GetSubMenu(hMenu, 0), 0, pt.x, pt.y, hwnd, nullptr);
 
 		return 0;
 	}
@@ -954,16 +951,12 @@ public:
 	{
 		return EditStateDeps { _pw, this, _project, _selection };
 	}
-
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return base::QueryInterface(riid, ppvObject); }
-	virtual ULONG STDMETHODCALLTYPE AddRef() override { return base::AddRef(); }
-	virtual ULONG STDMETHODCALLTYPE Release() override { return base::Release(); }
 };
 
 template<typename... Args>
-static com_ptr<IEditArea> Create (Args... args)
+static std::unique_ptr<IEditArea> Create (Args... args)
 {
-	return com_ptr<IEditArea>(new EditArea (std::forward<Args>(args)...), false);
+	return std::make_unique<EditArea>(std::forward<Args>(args)...);
 }
 
 extern const EditAreaFactory editAreaFactory = &Create;

@@ -1,18 +1,22 @@
 
 #include "pch.h"
 #include "Simulator.h"
-#include "Win32/D2DWindow.h"
+#include "win32/d2d_window.h"
+#include "win32/utility_functions.h"
 #include "Bridge.h"
 #include "Port.h"
 
 using namespace std;
 using namespace D2D1;
+using namespace edge;
 
-class LogArea : public D2DWindow, public ILogArea
+#pragma warning (disable: 4250)
+
+class LogArea : public d2d_window, public ILogArea
 {
-	typedef D2DWindow base;
+	typedef d2d_window base;
 
-	com_ptr<ISelection> const _selection;
+	ISelection* const _selection;
 	com_ptr<IDWriteTextFormat> _textFormat;
 	com_ptr<ID2D1SolidColorBrush> _windowBrush;
 	com_ptr<ID2D1SolidColorBrush> _windowTextBrush;
@@ -30,26 +34,25 @@ class LogArea : public D2DWindow, public ILogArea
 	static constexpr UINT AnimationScrollFramesMax = 10;
 
 public:
-	LogArea (HINSTANCE hInstance, HWND hWndParent, const RECT& rect, IDWriteFactory* dWriteFactory, ISelection* selection)
-		: base (hInstance, WS_EX_CLIENTEDGE, WS_VISIBLE | WS_CHILD | WS_HSCROLL | WS_VSCROLL, rect, hWndParent, nullptr, dWriteFactory)
+	LogArea (HINSTANCE hInstance, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dWriteFactory, ISelection* selection)
+		: base (hInstance, WS_EX_CLIENTEDGE, WS_VISIBLE | WS_CHILD | WS_HSCROLL | WS_VSCROLL, rect, hWndParent, 0, d3d_dc, dWriteFactory)
 		, _selection(selection)
 	{
 		auto hr = dWriteFactory->CreateTextFormat (L"Consolas", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
 			DWRITE_FONT_STRETCH_NORMAL, 11, L"en-US", &_textFormat); assert(SUCCEEDED(hr));
 
-		_numberOfLinesFitting = CalcNumberOfLinesFitting (_textFormat, GetClientSizeDips().height, dWriteFactory);
+		_numberOfLinesFitting = CalcNumberOfLinesFitting (_textFormat, client_height(), dWriteFactory);
 
-		GetRenderTarget()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOW), &_windowBrush);
-		GetRenderTarget()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOWTEXT), &_windowTextBrush);
-		_selection->GetChangedEvent().AddHandler (&OnSelectionChanged, this);
+		d2d_dc()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOW), &_windowBrush);
+		d2d_dc()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOWTEXT), &_windowTextBrush);
+		_selection->GetChangedEvent().add_handler (&OnSelectionChanged, this);
 	}
 
-private:
 	~LogArea()
 	{
-		_selection->GetChangedEvent().RemoveHandler (&OnSelectionChanged, this);
+		_selection->GetChangedEvent().remove_handler(&OnSelectionChanged, this);
 		if (_bridge != nullptr)
-			_bridge->GetLogLineGeneratedEvent().RemoveHandler (OnLogLineGeneratedStatic, this);
+			_bridge->GetLogLineGeneratedEvent().remove_handler(OnLogLineGeneratedStatic, this);
 	}
 
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
@@ -72,11 +75,9 @@ private:
 		}
 	}
 
-	virtual void Render(ID2D1RenderTarget* dc) const override final
+	void render (ID2D1DeviceContext* dc) const final
 	{
 		dc->Clear(GetD2DSystemColor(COLOR_WINDOW));
-
-		auto clientSize = GetClientSizeDips();
 
 		if ((_bridge == nullptr) || _lines.empty())
 		{
@@ -87,17 +88,17 @@ private:
 			_textFormat->SetTextAlignment (DWRITE_TEXT_ALIGNMENT_CENTER);
 			com_ptr<IDWriteTextLayout> tl;
 			auto text = (_bridge == nullptr) ? TextNoBridge : TextNoEntries;
-			auto hr = GetDWriteFactory()->CreateTextLayout (text, (UINT32) wcslen(text), _textFormat, clientSize.width, 10000, &tl); assert(SUCCEEDED(hr));
+			auto hr = dwrite_factory()->CreateTextLayout (text, (UINT32) wcslen(text), _textFormat, client_width(), 10000, &tl); assert(SUCCEEDED(hr));
 			_textFormat->SetTextAlignment(oldta);
 			DWRITE_TEXT_METRICS metrics;
 			tl->GetMetrics (&metrics);
-			dc->DrawTextLayout ({ clientSize.width / 2 - metrics.width / 2 - metrics.left, clientSize.height / 2 }, tl, _windowTextBrush);
+			dc->DrawTextLayout ({ client_width() / 2 - metrics.width / 2 - metrics.left, client_height() / 2 }, tl, _windowTextBrush);
 		}
 		else
 		{
 			float y = 0;
 			float lineHeight = 0;
-			for (int lineIndex = _topLineIndex; (lineIndex < _animationCurrentLineCount) && (y < clientSize.height); lineIndex++)
+			for (int lineIndex = _topLineIndex; (lineIndex < _animationCurrentLineCount) && (y < client_height()); lineIndex++)
 			{
 				wstring line (_lines[lineIndex]->text.begin(), _lines[lineIndex]->text.end());
 
@@ -105,7 +106,7 @@ private:
 					line.resize (line.length() - 2);
 
 				com_ptr<IDWriteTextLayout> tl;
-				auto hr = GetDWriteFactory()->CreateTextLayout (line.c_str(), (UINT32) line.length(), _textFormat, 10000, 10000, &tl); assert(SUCCEEDED(hr));
+				auto hr = dwrite_factory()->CreateTextLayout (line.c_str(), (UINT32) line.length(), _textFormat, 10000, 10000, &tl); assert(SUCCEEDED(hr));
 
 				if (lineHeight == 0)
 				{
@@ -117,7 +118,7 @@ private:
 				dc->DrawTextLayout ({ 0, y }, tl, _windowTextBrush, D2D1_DRAW_TEXT_OPTIONS_NO_SNAP);
 				y += lineHeight;
 
-				if (y >= clientSize.height)
+				if (y >= client_height())
 					break;
 			}
 		}
@@ -150,12 +151,12 @@ private:
 				si.nMin = 0;
 				si.nMax = (int) _lines.size() - 1;
 				si.nPage = _numberOfLinesFitting;
-				SetScrollInfo (GetHWnd(), SB_VERT, &si, TRUE);
+				SetScrollInfo (hwnd(), SB_VERT, &si, TRUE);
 
 				_animationCurrentLineCount = (int) _lines.size();
 				_animationEndLineCount     = (int) _lines.size();
 
-				InvalidateRect(GetHWnd(), nullptr, FALSE);
+				InvalidateRect(hwnd(), nullptr, FALSE);
 			}
 			else
 			{
@@ -166,12 +167,12 @@ private:
 
 				if (_timerId != 0)
 				{
-					KillTimer (GetHWnd(), _timerId);
+					KillTimer (hwnd(), _timerId);
 					_timerId = 0;
 				}
 
 				UINT animationFrameLengthMilliseconds = AnimationDurationMilliseconds / AnimationScrollFramesMax;
-				_timerId = SetTimer (GetHWnd(), 1, animationFrameLengthMilliseconds, NULL);
+				_timerId = SetTimer (hwnd(), 1, animationFrameLengthMilliseconds, NULL);
 			}
 		}
 	}
@@ -186,7 +187,7 @@ private:
 					EndAnimation();
 
 				_lines.clear();
-				_bridge->GetLogLineGeneratedEvent().RemoveHandler (OnLogLineGeneratedStatic, this);
+				_bridge->GetLogLineGeneratedEvent().remove_handler (OnLogLineGeneratedStatic, this);
 				_bridge = nullptr;
 			}
 
@@ -203,7 +204,7 @@ private:
 					}
 				}
 
-				_bridge->GetLogLineGeneratedEvent().AddHandler (OnLogLineGeneratedStatic, this);
+				_bridge->GetLogLineGeneratedEvent().add_handler (OnLogLineGeneratedStatic, this);
 			}
 
 			_topLineIndex = max (0, (int) _lines.size() - _numberOfLinesFitting);
@@ -216,17 +217,17 @@ private:
 			si.nMax = (int) _lines.size() - 1;
 			si.nPage = _numberOfLinesFitting;
 			si.nPos = _topLineIndex;
-			SetScrollInfo (GetHWnd(), SB_VERT, &si, TRUE);
+			SetScrollInfo (hwnd(), SB_VERT, &si, TRUE);
 
-			InvalidateRect (GetHWnd(), nullptr, FALSE);
+			InvalidateRect (hwnd(), nullptr, FALSE);
 		}
 	}
 
-	virtual optional<LRESULT> WindowProc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) override final
+	optional<LRESULT> window_proc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) final
 	{
 		if (msg == WM_SIZE)
 		{
-			base::WindowProc (hwnd, msg, wParam, lParam); // Pass it to the base class first, which stores the client size.
+			base::window_proc (hwnd, msg, wParam, lParam); // Pass it to the base class first, which stores the client size.
 			ProcessWmSize (wParam, lParam);
 			return 0;
 		}
@@ -249,7 +250,7 @@ private:
 			return 0;
 		}
 
-		return base::WindowProc (hwnd, msg, wParam, lParam);
+		return base::window_proc (hwnd, msg, wParam, lParam);
 	}
 
 	void ProcessAnimationTimer()
@@ -265,7 +266,7 @@ private:
 		else
 			_topLineIndex = _animationCurrentLineCount - _numberOfLinesFitting;
 
-		InvalidateRect (GetHWnd(), nullptr, FALSE);
+		InvalidateRect (hwnd(), nullptr, FALSE);
 
 		// Need to set SIF_DISABLENOSCROLL due to what seems like a Windows bug:
 		// GetScrollInfo returns garbage if called right after SetScrollInfo, if SetScrollInfo made the scroll bar change from invisible to visible,
@@ -275,11 +276,11 @@ private:
 		si.nMax = _animationCurrentLineCount - 1;
 		si.nPage = _numberOfLinesFitting;
 		si.nPos = _topLineIndex;
-		SetScrollInfo (GetHWnd(), SB_VERT, &si, TRUE);
+		SetScrollInfo (hwnd(), SB_VERT, &si, TRUE);
 
 		if (_timerId != 0)
 		{
-			KillTimer (GetHWnd(), _timerId);
+			KillTimer (hwnd(), _timerId);
 			_timerId = 0;
 		}
 
@@ -287,7 +288,7 @@ private:
 		if (_animationScrollFramesRemaining > 0)
 		{
 			UINT animationFrameLengthMilliseconds = AnimationDurationMilliseconds / AnimationScrollFramesMax;
-			_timerId = SetTimer (GetHWnd(), (UINT_PTR) 1, animationFrameLengthMilliseconds, NULL); assert (_timerId != 0);
+			_timerId = SetTimer (hwnd(), (UINT_PTR) 1, animationFrameLengthMilliseconds, NULL); assert (_timerId != 0);
 		}
 	}
 
@@ -317,7 +318,7 @@ private:
 				_topLineIndex = 0;
 		}
 
-		int newNumberOfLinesFitting = CalcNumberOfLinesFitting (_textFormat, GetClientSizeDips().height, GetDWriteFactory());
+		int newNumberOfLinesFitting = CalcNumberOfLinesFitting (_textFormat, client_height(), dwrite_factory());
 		if (_numberOfLinesFitting != newNumberOfLinesFitting)
 		{
 			_numberOfLinesFitting = newNumberOfLinesFitting;
@@ -331,7 +332,7 @@ private:
 				else
 					_topLineIndex = 0;
 
-				InvalidateRect (GetHWnd(), nullptr, FALSE);
+				InvalidateRect (hwnd(), nullptr, FALSE);
 			}
 		}
 
@@ -345,7 +346,7 @@ private:
 		si.nMax = _animationCurrentLineCount - 1;
 		si.nPos = _topLineIndex;
 		si.nPage = _numberOfLinesFitting;
-		SetScrollInfo (GetHWnd(), SB_VERT, &si, TRUE);
+		SetScrollInfo (hwnd(), SB_VERT, &si, TRUE);
 	}
 
 	void EndAnimation()
@@ -355,12 +356,12 @@ private:
 		// Scroll animation is in progress. Finalize it.
 		assert (_animationEndLineCount > _animationCurrentLineCount);
 		assert (_timerId != 0);
-		BOOL bRes = KillTimer (GetHWnd(), _timerId); assert(bRes);
+		BOOL bRes = KillTimer (hwnd(), _timerId); assert(bRes);
 		_timerId = 0;
 
 		_animationCurrentLineCount = _animationEndLineCount;
 		_animationScrollFramesRemaining = 0;
-		InvalidateRect (GetHWnd(), nullptr, FALSE);
+		InvalidateRect (hwnd(), nullptr, FALSE);
 	}
 
 	void ProcessUserScroll (int newTopLineIndex)
@@ -368,8 +369,8 @@ private:
 		if (_topLineIndex != newTopLineIndex)
 		{
 			_topLineIndex = newTopLineIndex;
-			InvalidateRect (GetHWnd(), nullptr, FALSE);
-			SetScrollPos (GetHWnd(), SB_VERT, _topLineIndex, TRUE);
+			InvalidateRect (hwnd(), nullptr, FALSE);
+			SetScrollPos (hwnd(), SB_VERT, _topLineIndex, TRUE);
 		}
 	}
 
@@ -427,18 +428,12 @@ private:
 
 		ProcessUserScroll (newTopLineIndex);
 	}
-
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface (REFIID riid, void** ppvObject) override { return base::QueryInterface(riid, ppvObject); }
-	virtual ULONG STDMETHODCALLTYPE AddRef() override { return base::AddRef(); }
-	virtual ULONG STDMETHODCALLTYPE Release() override { return base::Release(); }
-
-	virtual HWND GetHWnd() const override { return base::GetHWnd(); }
 };
 
 template<typename... Args>
-static com_ptr<ILogArea> Create (Args... args)
+static std::unique_ptr<ILogArea> Create (Args... args)
 {
-	return com_ptr<ILogArea> (new LogArea(std::forward<Args>(args)...), false);
+	return std::make_unique<LogArea>(std::forward<Args>(args)...);
 }
 
 extern const LogAreaFactory logAreaFactory = &Create;
