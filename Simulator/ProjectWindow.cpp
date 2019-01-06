@@ -719,8 +719,7 @@ public:
 		}
 
 		SaveWindowLocation();
-		assert(false);
-		//::DestroyWindow (hwnd());
+		::DestroyWindow (hwnd());
 		return S_OK;
 	}
 

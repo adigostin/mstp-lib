@@ -821,15 +821,6 @@ const bool_property Bridge::StpEnabled {
 	static_cast<bool_property::setter_t>(&Bridge::SetStpEnabled),
 	true };
 
-const NVP stp_version_nvps[] {
-	{ "LegacySTP", STP_VERSION_LEGACY_STP },
-	{ "RSTP", STP_VERSION_RSTP },
-	{ "MSTP", STP_VERSION_MSTP },
-	{ 0, 0 }
-};
-
-const char stp_version_type_name[] = "stp_version";
-
 const stp_version_property Bridge::StpVersion {
 	"STP Version",
 	static_cast<stp_version_property::getter_t>(&Bridge::GetStpVersion),

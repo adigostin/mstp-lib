@@ -10,8 +10,12 @@ struct BridgeLogLine
 	int treeIndex;
 };
 
-extern const edge::NVP stp_version_nvps[];
-extern const char stp_version_type_name[];
+static constexpr edge::NVP stp_version_nvps[] =  {
+	{ "LegacySTP", STP_VERSION_LEGACY_STP },
+	{ "RSTP", STP_VERSION_RSTP },
+	{ "MSTP", STP_VERSION_MSTP },
+};
+static constexpr char stp_version_type_name[] = "stp_version";
 using stp_version_property = edge::enum_property<STP_VERSION, stp_version_type_name, stp_version_nvps>;
 
 class Bridge : public renderable_object

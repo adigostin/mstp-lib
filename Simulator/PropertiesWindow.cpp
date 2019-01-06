@@ -70,32 +70,34 @@ public:
 			return;
 		}
 
-		assert(false);
-		/*
-		wstringstream ss;
-		ss << L"VLAN " << _projectWindow->GetSelectedVlanNumber() << L" Specific Properties";
+		stringstream ss;
+		ss << "VLAN " << _projectWindow->GetSelectedVlanNumber() << " Specific Properties";
 		auto vlanPropsHeading = ss.str();
 
-		if (all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [](Object* o) { return o->Is<Bridge>(); }))
+		if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<Bridge>(); }))
 		{
-			_pg->AddProperties(_selection->GetObjects().data(), _selection->GetObjects().size(), L"Bridge Properties");
+			_pg->set_title ("Bridge Properties");
+			_pg->select_objects (objs.data(), objs.size());
 
-			std::vector<BridgeTree*> bridgeTrees;
-			for (Object* o : _selection->GetObjects())
+			std::vector<object*> bridge_trees;
+			for (object* o : objs)
 			{
 				auto b = static_cast<Bridge*>(o);
 				auto treeIndex = STP_GetTreeIndexFromVlanNumber(b->GetStpBridge(), _projectWindow->GetSelectedVlanNumber());
-				bridgeTrees.push_back (b->GetTrees().at(treeIndex).get());
+				bridge_trees.push_back (b->GetTrees().at(treeIndex).get());
 			}
 
-			_pg->AddProperties ((Object**) &bridgeTrees[0], bridgeTrees.size(), vlanPropsHeading.c_str());
+			_pg_tree->set_title (vlanPropsHeading);
+			_pg_tree->select_objects (bridge_trees.data(), bridge_trees.size());
 		}
-		else if (all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [](Object* o) { return o->Is<Port>(); }))
+		else if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<Port>(); }))
 		{
-			_pg->AddProperties(_selection->GetObjects().data(), _selection->GetObjects().size(), L"Port Properties");
+			assert(false);
+			/*
+			_pg->AddProperties(objs.data(), objs.size(), L"Port Properties");
 
 			std::vector<PortTree*> portTrees;
-			for (Object* o : _selection->GetObjects())
+			for (Object* o : objs)
 			{
 				auto p = static_cast<Port*>(o);
 				auto treeIndex = STP_GetTreeIndexFromVlanNumber(p->GetBridge()->GetStpBridge(), _projectWindow->GetSelectedVlanNumber());
@@ -103,14 +105,15 @@ public:
 			}
 
 			_pg->AddProperties ((Object**) &portTrees[0], portTrees.size(), vlanPropsHeading.c_str());
+			*/
 		}
-		else if (all_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [](Object* o) { return o->Is<Wire>(); }))
+		else if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<Wire>(); }))
 		{
-			_pg->AddProperties(_selection->GetObjects().data(), _selection->GetObjects().size(), L"Wire Properties");
+			assert(false);
+			//_pg->AddProperties(objs.data(), objs.size(), L"Wire Properties");
 		}
 		else
 			assert(false); // not implemented
-		*/
 	}
 
 	static void OnProjectChanged (void* callbackArg, IProject* project)
