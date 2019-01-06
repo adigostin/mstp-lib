@@ -722,10 +722,10 @@ std::string Bridge::GetMstConfigIdDigest() const
 	const unsigned char* digest = STP_GetMstConfigId(_stpBridge)->ConfigurationDigest;
 	stringstream ss;
 	ss << uppercase << setfill('0') << hex
-		<< setw(2) << digest[0]  << setw(2) << digest[1]  << setw(2) << digest[2]  << setw(2) << digest[3]
-		<< setw(2) << digest[4]  << setw(2) << digest[5]  << setw(2) << digest[6]  << setw(2) << digest[7]
-		<< setw(2) << digest[8]  << setw(2) << digest[9]  << setw(2) << digest[10] << setw(2) << digest[11]
-		<< setw(2) << digest[12] << setw(2) << digest[13] << setw(2) << digest[14] << setw(2) << digest[15];
+		<< setw(2) << (int) digest[0]  << setw(2) << (int) digest[1]  << setw(2) << (int) digest[2]  << setw(2) << (int) digest[3]
+		<< setw(2) << (int) digest[4]  << setw(2) << (int) digest[5]  << setw(2) << (int) digest[6]  << setw(2) << (int) digest[7]
+		<< setw(2) << (int) digest[8]  << setw(2) << (int) digest[9]  << setw(2) << (int) digest[10] << setw(2) << (int) digest[11]
+		<< setw(2) << (int) digest[12] << setw(2) << (int) digest[13] << setw(2) << (int) digest[14] << setw(2) << (int) digest[15];
 	return ss.str();
 }
 
