@@ -219,7 +219,7 @@
   <ItemGroup>
     <ClInclude Include="Bridge.h" />
     <ClInclude Include="BridgeTree.h" />
-    <ClInclude Include="EditStates\edit_state.h" />
+    <ClInclude Include="edit_states\edit_state.h" />
     <ClInclude Include="renderable_object.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Port.h" />
@@ -233,12 +233,12 @@
     <ClCompile Include="Bridge.cpp" />
     <ClCompile Include="BridgeTree.cpp" />
     <ClCompile Include="EditArea.cpp" />
-    <ClCompile Include="EditStates\BeginningDragES.cpp" />
-    <ClCompile Include="EditStates\CreateBridgeES.cpp" />
-    <ClCompile Include="EditStates\CreateWireES.cpp" />
-    <ClCompile Include="EditStates\MoveBridgesES.cpp" />
-    <ClCompile Include="EditStates\MovePortES.cpp" />
-    <ClCompile Include="EditStates\MoveWirePointES.cpp" />
+    <ClCompile Include="edit_states\BeginningDragES.cpp" />
+    <ClCompile Include="edit_states\CreateBridgeES.cpp" />
+    <ClCompile Include="edit_states\CreateWireES.cpp" />
+    <ClCompile Include="edit_states\MoveBridgesES.cpp" />
+    <ClCompile Include="edit_states\MovePortES.cpp" />
+    <ClCompile Include="edit_states\MoveWirePointES.cpp" />
     <ClCompile Include="log_window.cpp" />
     <ClCompile Include="MSTConfigIdDialog.cpp" />
     <ClCompile Include="pch.cpp">

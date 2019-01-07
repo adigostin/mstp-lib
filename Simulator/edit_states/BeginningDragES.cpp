@@ -1,6 +1,6 @@
 
 #include "pch.h"
-#include "EditState.h"
+#include "edit_state.h"
 
 using namespace std;
 

@@ -2,7 +2,7 @@
 #include "pch.h"
 #include "Simulator.h"
 #include "Resource.h"
-#include "EditStates/EditState.h"
+#include "edit_states/edit_state.h"
 #include "Bridge.h"
 #include "Port.h"
 #include "Wire.h"

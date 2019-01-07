@@ -1,6 +1,6 @@
 
 #include "pch.h"
-#include "EditState.h"
+#include "edit_state.h"
 #include "Wire.h"
 #include "Port.h"
 

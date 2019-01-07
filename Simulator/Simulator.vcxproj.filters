@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="EditStates">
+    <Filter Include="edit_states">
       <UniqueIdentifier>{44c75b95-8381-4205-bb9c-ff949707452e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -11,8 +11,8 @@
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Wire.h" />
     <ClInclude Include="Bridge.h" />
-    <ClInclude Include="EditStates\edit_state.h">
-      <Filter>EditStates</Filter>
+    <ClInclude Include="edit_states\edit_state.h">
+      <Filter>edit_states</Filter>
     </ClInclude>
     <ClInclude Include="Port.h" />
     <ClInclude Include="Simulator.h" />
@@ -29,28 +29,28 @@
     <ClCompile Include="Simulator.cpp" />
     <ClCompile Include="Wire.cpp" />
     <ClCompile Include="Bridge.cpp" />
-    <ClCompile Include="EditStates\CreateBridgeES.cpp">
-      <Filter>EditStates</Filter>
+    <ClCompile Include="edit_states\CreateBridgeES.cpp">
+      <Filter>edit_states</Filter>
     </ClCompile>
-    <ClCompile Include="EditStates\MoveBridgesES.cpp">
-      <Filter>EditStates</Filter>
+    <ClCompile Include="edit_states\MoveBridgesES.cpp">
+      <Filter>edit_states</Filter>
     </ClCompile>
     <ClCompile Include="log_window.cpp" />
     <ClCompile Include="Port.cpp" />
-    <ClCompile Include="EditStates\MoveWirePointES.cpp">
-      <Filter>EditStates</Filter>
+    <ClCompile Include="edit_states\MoveWirePointES.cpp">
+      <Filter>edit_states</Filter>
     </ClCompile>
-    <ClCompile Include="EditStates\CreateWireES.cpp">
-      <Filter>EditStates</Filter>
+    <ClCompile Include="edit_states\CreateWireES.cpp">
+      <Filter>edit_states</Filter>
     </ClCompile>
     <ClCompile Include="VlanWindow.cpp" />
     <ClCompile Include="MSTConfigIdDialog.cpp" />
     <ClCompile Include="Test.c" />
-    <ClCompile Include="EditStates\MovePortES.cpp">
-      <Filter>EditStates</Filter>
+    <ClCompile Include="edit_states\MovePortES.cpp">
+      <Filter>edit_states</Filter>
     </ClCompile>
-    <ClCompile Include="EditStates\BeginningDragES.cpp">
-      <Filter>EditStates</Filter>
+    <ClCompile Include="edit_states\BeginningDragES.cpp">
+      <Filter>edit_states</Filter>
     </ClCompile>
     <ClCompile Include="BridgeTree.cpp" />
     <ClCompile Include="PropertiesWindow.cpp" />
