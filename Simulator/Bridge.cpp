@@ -272,7 +272,7 @@ void Bridge::SetLocation(float x, float y)
 	}
 }
 
-void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned int vlanNumber, const D2D1_COLOR_F& configIdColor) const
+void Bridge::Render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsigned int vlanNumber, const D2D1_COLOR_F& configIdColor) const
 {
 	auto treeIndex = STP_GetTreeIndexFromVlanNumber (_stpBridge, vlanNumber);
 
@@ -318,7 +318,7 @@ void Bridge::Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned 
 		port->Render (dc, dos, vlanNumber);
 }
 
-void Bridge::RenderSelection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const
+void Bridge::RenderSelection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const
 {
 	auto oldaa = rt->GetAntialiasMode();
 	rt->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);

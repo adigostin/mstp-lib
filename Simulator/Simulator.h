@@ -84,7 +84,7 @@ struct MouseLocation
 
 struct __declspec(novtable) IEditArea : virtual edge::win32_window_i
 {
-	virtual const DrawingObjects& GetDrawingObjects() const = 0;
+	virtual const struct drawing_resources& drawing_resources() const = 0;
 	virtual void EnterState (std::unique_ptr<EditState>&& state) = 0;
 	virtual Port* GetCPAt (D2D1_POINT_2F dLocation, float tolerance) const = 0;
 	virtual void RenderSnapRect (ID2D1RenderTarget* rt, D2D1_POINT_2F wLocation) const = 0;

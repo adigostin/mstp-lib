@@ -36,9 +36,9 @@ public:
 	edge::com_ptr<IXMLDOMElement> Serialize (IProject* project, IXMLDOMDocument* doc) const;
 	static std::unique_ptr<Wire> Deserialize (IProject* project, IXMLDOMElement* element);
 
-	void Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, bool forwarding, bool hasLoop) const;
+	void Render (ID2D1RenderTarget* rt, const drawing_resources& dos, bool forwarding, bool hasLoop) const;
 
-	virtual void RenderSelection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const override final;
+	virtual void RenderSelection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const override final;
 	virtual HTResult HitTest (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
 
 private:

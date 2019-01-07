@@ -38,7 +38,7 @@ class EditArea : public zoomable_window, public IEditArea
 	IProject*       const _project;
 	ISelection*     const _selection;
 	com_ptr<IDWriteTextFormat> _legendFont;
-	DrawingObjects _drawingObjects;
+	struct drawing_resources _drawing_resources;
 	unique_ptr<EditState> _state;
 	HTResult _htResult = { nullptr, 0 };
 
@@ -57,23 +57,14 @@ public:
 		, _project(project)
 		, _selection(selection)
 	{
+		HRESULT hr;
+
 		auto dc = base::d2d_dc();
-		_drawingObjects._dWriteFactory = dWriteFactory;
-		auto hr = dc->CreateSolidColorBrush (ColorF (ColorF::PaleGreen), &_drawingObjects._poweredFillBrush); assert(SUCCEEDED(hr));
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray), &_drawingObjects._unpoweredBrush); assert(SUCCEEDED(hr));
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray), &_drawingObjects._brushDiscardingPort); assert(SUCCEEDED(hr));
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gold), &_drawingObjects._brushLearningPort); assert(SUCCEEDED(hr));
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Green), &_drawingObjects._brushForwarding); assert(SUCCEEDED(hr));
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray), &_drawingObjects._brushNoForwardingWire); assert(SUCCEEDED(hr));
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Red), &_drawingObjects._brushLoop); assert(SUCCEEDED(hr));
-		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Blue), &_drawingObjects._brushTempWire); assert(SUCCEEDED(hr));
-		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOWTEXT), &_drawingObjects._brushWindowText); assert(SUCCEEDED(hr));
-		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOW), &_drawingObjects._brushWindow); assert(SUCCEEDED(hr));
-		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_HIGHLIGHT), &_drawingObjects._brushHighlight); assert(SUCCEEDED(hr));
+		_drawing_resources._dWriteFactory = dWriteFactory;
 		hr = dwrite_factory()->CreateTextFormat (L"Segoe UI", NULL, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
-			DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_drawingObjects._regularTextFormat); assert(SUCCEEDED(hr));
+			DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_drawing_resources._regularTextFormat); assert(SUCCEEDED(hr));
 		hr = dwrite_factory()->CreateTextFormat (L"Tahoma", NULL, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
-			DWRITE_FONT_STRETCH_NORMAL, 9.5f, L"en-US", &_drawingObjects._smallTextFormat); assert(SUCCEEDED(hr));
+			DWRITE_FONT_STRETCH_NORMAL, 9.5f, L"en-US", &_drawing_resources._smallTextFormat); assert(SUCCEEDED(hr));
 		dwrite_factory()->CreateTextFormat (L"Tahoma", nullptr,  DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
 			DWRITE_FONT_STRETCH_CONDENSED, 11, L"en-US", &_legendFont); assert(SUCCEEDED(hr));
 
@@ -82,18 +73,18 @@ public:
 
 		D2D1_STROKE_STYLE_PROPERTIES ssprops = {};
 		ssprops.dashStyle = D2D1_DASH_STYLE_DASH;
-		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawingObjects._strokeStyleSelectionRect); assert(SUCCEEDED(hr));
+		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawing_resources._strokeStyleSelectionRect); assert(SUCCEEDED(hr));
 
 		ssprops = { };
 		ssprops.dashStyle = D2D1_DASH_STYLE_DASH;
 		ssprops.startCap = D2D1_CAP_STYLE_ROUND;
 		ssprops.endCap = D2D1_CAP_STYLE_ROUND;
-		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawingObjects._strokeStyleNoForwardingWire); assert(SUCCEEDED(hr));
+		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawing_resources._strokeStyleNoForwardingWire); assert(SUCCEEDED(hr));
 
 		ssprops = { };
 		ssprops.startCap = D2D1_CAP_STYLE_ROUND;
 		ssprops.endCap = D2D1_CAP_STYLE_ROUND;
-		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawingObjects._strokeStyleForwardingWire); assert(SUCCEEDED(hr));
+		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawing_resources._strokeStyleForwardingWire); assert(SUCCEEDED(hr));
 
 		_selection->GetChangedEvent().add_handler (&OnSelectionChanged, this);
 		_project->GetBridgeRemovingEvent().add_handler (&OnBridgeRemoving, this);
@@ -206,7 +197,7 @@ public:
 		dc->CreateSolidColorBrush (GetD2DSystemColor(COLOR_INFOBK), &brush);
 		brush->SetOpacity (0.8f);
 		dc->FillRectangle (D2D1_RECT_F { lineX, y, client_width(), client_height() }, brush);
-		dc->DrawLine ({ lineX, y }, { lineX, client_height() }, _drawingObjects._brushWindowText, lineWidth);
+		dc->DrawLine ({ lineX, y }, { lineX, client_height() }, _drawing_resources._brushWindowText, lineWidth);
 		dc->SetAntialiasMode (oldaa);
 
 		Matrix3x2F oldTransform;
@@ -218,17 +209,17 @@ public:
 
 			auto oldaa = dc->GetAntialiasMode();
 			dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-			dc->DrawLine (Point2F (lineX, y), Point2F (client_width(), y), _drawingObjects._brushWindowText, lineWidth);
+			dc->DrawLine (Point2F (lineX, y), Point2F (client_width(), y), _drawing_resources._brushWindowText, lineWidth);
 			dc->SetAntialiasMode(oldaa);
 
-			dc->DrawTextLayout (Point2F (textX, y + 1), layouts[i], _drawingObjects._brushWindowText);
+			dc->DrawTextLayout (Point2F (textX, y + 1), layouts[i], _drawing_resources._brushWindowText);
 
 			// Rotate 270 degrees and then translate.
 			Matrix3x2F trans (0.0f, -1.0f, 1.0f, 0.0f, bitmapX, y + rowHeight / 2);
 			trans.SetProduct (oldTransform, trans);
 			dc->SetTransform (&trans);
 
-			Port::RenderExteriorStpPort (dc, _drawingObjects, info.role, info.learning, info.forwarding, info.operEdge);
+			Port::RenderExteriorStpPort (dc, _drawing_resources, info.role, info.learning, info.forwarding, info.operEdge);
 
 			dc->SetTransform (&oldTransform);
 
@@ -279,11 +270,11 @@ public:
 		dc->CreateSolidColorBrush (GetD2DSystemColor(COLOR_INFOBK), &brush);
 		brush->SetOpacity (0.8f);
 		dc->FillRectangle ({ 0, y, lineX, client_height() }, brush);
-		dc->DrawLine ({ 0, y }, { lineX, y }, _drawingObjects._brushWindowText, lineWidth);
-		dc->DrawLine ({ lineX, y }, { lineX, client_height() }, _drawingObjects._brushWindowText, lineWidth);
+		dc->DrawLine ({ 0, y }, { lineX, y }, _drawing_resources._brushWindowText, lineWidth);
+		dc->DrawLine ({ lineX, y }, { lineX, client_height() }, _drawing_resources._brushWindowText, lineWidth);
 		dc->SetAntialiasMode(oldaa);
 
-		dc->DrawTextLayout ({ LeftRightPadding, y + UpDownPadding }, title.layout, _drawingObjects._brushWindowText);
+		dc->DrawTextLayout ({ LeftRightPadding, y + UpDownPadding }, title.layout, _drawing_resources._brushWindowText);
 		y += (title.metrics.height + 2 * UpDownPadding);
 
 		for (auto& p : lines)
@@ -293,7 +284,7 @@ public:
 			D2D1_RECT_F rect = { LeftRightPadding, y + UpDownPadding, LeftRightPadding + coloredRectWidth, y + UpDownPadding + lineHeight };
 			dc->FillRectangle (&rect, brush);
 			D2D1_POINT_2F pt = { LeftRightPadding + coloredRectWidth + LeftRightPadding, y + UpDownPadding };
-			dc->DrawTextLayout (pt, p.first.layout, _drawingObjects._brushWindowText);
+			dc->DrawTextLayout (pt, p.first.layout, _drawing_resources._brushWindowText);
 			y += (lineHeight + 2 * UpDownPadding);
 		}
 	}
@@ -305,7 +296,7 @@ public:
 
 		auto cpd = pointw_to_pointd(wLocation);
 		auto rect = RectF (cpd.x - SnapDistance, cpd.y - SnapDistance, cpd.x + SnapDistance, cpd.y + SnapDistance);
-		rt->DrawRectangle (rect, _drawingObjects._brushHighlight, 2);
+		rt->DrawRectangle (rect, _drawing_resources._brushHighlight, 2);
 
 		rt->SetAntialiasMode(oldaa);
 	}
@@ -319,9 +310,9 @@ public:
 	{
 		float leftRightPadding = 3;
 		float topBottomPadding = 1.5f;
-		auto textFormat = smallFont ? _drawingObjects._smallTextFormat.get() : _drawingObjects._regularTextFormat.get();
+		auto textFormat = smallFont ? _drawing_resources._smallTextFormat.get() : _drawing_resources._regularTextFormat.get();
 		com_ptr<IDWriteTextLayout> tl;
-		auto hr = _drawingObjects._dWriteFactory->CreateTextLayout(text, (UINT32) wcslen(text), textFormat, 10000, 10000, &tl); assert(SUCCEEDED(hr));
+		auto hr = _drawing_resources._dWriteFactory->CreateTextLayout(text, (UINT32) wcslen(text), textFormat, 10000, 10000, &tl); assert(SUCCEEDED(hr));
 		DWRITE_TEXT_METRICS metrics;
 		hr = tl->GetMetrics(&metrics); assert(SUCCEEDED(hr));
 
@@ -377,7 +368,7 @@ public:
 				}
 			}
 
-			bridge->Render (dc, _drawingObjects, _pw->selected_vlan_number(), color);
+			bridge->Render (dc, _drawing_resources, _pw->selected_vlan_number(), color);
 		}
 
 		dc->SetTransform(oldtr);
@@ -393,7 +384,7 @@ public:
 		{
 			bool hasLoop;
 			bool forwarding = _project->IsWireForwarding(w.get(), _pw->selected_vlan_number(), &hasLoop);
-			w->Render (dc, _drawingObjects, forwarding, hasLoop);
+			w->Render (dc, _drawing_resources, forwarding, hasLoop);
 		}
 
 		dc->SetTransform(oldtr);
@@ -438,6 +429,41 @@ public:
 		}
 	}
 
+	void create_render_resources (ID2D1DeviceContext* dc) final
+	{
+		base::create_render_resources(dc);
+
+		HRESULT hr;
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::PaleGreen), &_drawing_resources._poweredFillBrush     ); assert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray),      &_drawing_resources._unpoweredBrush       ); assert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray),      &_drawing_resources._brushDiscardingPort  ); assert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gold),      &_drawing_resources._brushLearningPort    ); assert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Green),     &_drawing_resources._brushForwarding      ); assert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray),      &_drawing_resources._brushNoForwardingWire); assert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Red),       &_drawing_resources._brushLoop            ); assert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Blue),      &_drawing_resources._brushTempWire        ); assert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOWTEXT), &_drawing_resources._brushWindowText); assert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOW    ), &_drawing_resources._brushWindow    ); assert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_HIGHLIGHT ), &_drawing_resources._brushHighlight ); assert(SUCCEEDED(hr));
+	}
+
+	void release_render_resources (ID2D1DeviceContext* dc) final
+	{
+		_drawing_resources._poweredFillBrush      = nullptr;
+		_drawing_resources._unpoweredBrush        = nullptr;
+		_drawing_resources._brushDiscardingPort   = nullptr;
+		_drawing_resources._brushLearningPort     = nullptr;
+		_drawing_resources._brushForwarding       = nullptr;
+		_drawing_resources._brushNoForwardingWire = nullptr;
+		_drawing_resources._brushLoop             = nullptr;
+		_drawing_resources._brushTempWire         = nullptr;
+		_drawing_resources._brushWindowText       = nullptr;
+		_drawing_resources._brushWindow           = nullptr;
+		_drawing_resources._brushHighlight        = nullptr;
+
+		base::release_render_resources(dc);
+	}
+
 	void render(ID2D1DeviceContext* rt) const final
 	{
 		std::set<STP_MST_CONFIG_ID> configIds;
@@ -459,7 +485,7 @@ public:
 		for (object* o : _selection->GetObjects())
 		{
 			if (auto ro = dynamic_cast<renderable_object*>(o))
-				ro->RenderSelection(this, rt, _drawingObjects);
+				ro->RenderSelection(this, rt, _drawing_resources);
 		}
 
 		if (!configIds.empty())
@@ -943,7 +969,7 @@ public:
 		return 0;
 	}
 
-	virtual const DrawingObjects& GetDrawingObjects() const override final { return _drawingObjects; }
+	virtual const struct drawing_resources& drawing_resources() const override final { return _drawing_resources; }
 
 	virtual D2D1::Matrix3x2F GetZoomTransform() const override final { return base::GetZoomTransform(); }
 

@@ -18,8 +18,6 @@ class log_window : public d2d_window, public log_window_i
 
 	ISelection* const _selection;
 	com_ptr<IDWriteTextFormat> _textFormat;
-	com_ptr<ID2D1SolidColorBrush> _windowBrush;
-	com_ptr<ID2D1SolidColorBrush> _windowTextBrush;
 	Bridge* _bridge = nullptr;
 	int _selectedPort = -1;
 	int _selectedTree = -1;
@@ -43,8 +41,6 @@ public:
 
 		_numberOfLinesFitting = CalcNumberOfLinesFitting (_textFormat, client_height(), dWriteFactory);
 
-		d2d_dc()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOW), &_windowBrush);
-		d2d_dc()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOWTEXT), &_windowTextBrush);
 		_selection->GetChangedEvent().add_handler (&OnSelectionChanged, this);
 	}
 
@@ -79,6 +75,9 @@ public:
 	{
 		dc->Clear(GetD2DSystemColor(COLOR_WINDOW));
 
+		com_ptr<ID2D1SolidColorBrush> text_brush;
+		d2d_dc()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOWTEXT), &text_brush);
+
 		if ((_bridge == nullptr) || _lines.empty())
 		{
 			static constexpr wchar_t TextNoBridge[] = L"The STP activity log is shown here.\r\nSelect a bridge to see its log.";
@@ -92,7 +91,7 @@ public:
 			_textFormat->SetTextAlignment(oldta);
 			DWRITE_TEXT_METRICS metrics;
 			tl->GetMetrics (&metrics);
-			dc->DrawTextLayout ({ client_width() / 2 - metrics.width / 2 - metrics.left, client_height() / 2 }, tl, _windowTextBrush);
+			dc->DrawTextLayout ({ client_width() / 2 - metrics.width / 2 - metrics.left, client_height() / 2 }, tl, text_brush);
 		}
 		else
 		{
@@ -115,7 +114,7 @@ public:
 					lineHeight = metrics.height;
 				}
 
-				dc->DrawTextLayout ({ 0, y }, tl, _windowTextBrush, D2D1_DRAW_TEXT_OPTIONS_NO_SNAP);
+				dc->DrawTextLayout ({ 0, y }, tl, text_brush, D2D1_DRAW_TEXT_OPTIONS_NO_SNAP);
 				y += lineHeight;
 
 				if (y >= client_height())

@@ -90,7 +90,7 @@ public:
 			D2D1_MATRIX_3X2_F oldtr;
 			rt->GetTransform(&oldtr);
 			rt->SetTransform(zoom_tr);
-			_bridge->Render (rt, _pw->GetEditArea()->GetDrawingObjects(), _pw->selected_vlan_number(), ColorF(ColorF::LightGreen));
+			_bridge->Render (rt, _editArea->drawing_resources(), _pw->selected_vlan_number(), ColorF(ColorF::LightGreen));
 			rt->SetTransform(&oldtr);
 
 			auto x = _bridge->GetLeft() + _bridge->GetWidth() / 2;

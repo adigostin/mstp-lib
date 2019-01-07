@@ -79,14 +79,14 @@ Matrix3x2F Port::GetPortTransform() const
 }
 
 // static
-void Port::RenderExteriorNonStpPort (ID2D1RenderTarget* dc, const DrawingObjects& dos, bool macOperational)
+void Port::RenderExteriorNonStpPort (ID2D1RenderTarget* dc, const drawing_resources& dos, bool macOperational)
 {
 	auto& brush = macOperational ? dos._brushForwarding : dos._brushDiscardingPort;
 	dc->DrawLine (Point2F (0, 0), Point2F (0, ExteriorHeight), brush, 2);
 }
 
 // static
-void Port::RenderExteriorStpPort (ID2D1RenderTarget* dc, const DrawingObjects& dos, STP_PORT_ROLE role, bool learning, bool forwarding, bool operEdge)
+void Port::RenderExteriorStpPort (ID2D1RenderTarget* dc, const drawing_resources& dos, STP_PORT_ROLE role, bool learning, bool forwarding, bool operEdge)
 {
 	static constexpr float circleDiameter = min (ExteriorHeight / 2, ExteriorWidth);
 
@@ -222,7 +222,7 @@ void Port::RenderExteriorStpPort (ID2D1RenderTarget* dc, const DrawingObjects& d
 	dc->SetAntialiasMode(oldaa);
 }
 
-void Port::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, unsigned int vlanNumber) const
+void Port::Render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned int vlanNumber) const
 {
 	D2D1_MATRIX_3X2_F oldtr;
 	rt->GetTransform(&oldtr);
@@ -279,7 +279,7 @@ D2D1_RECT_F Port::GetInnerOuterRect() const
 	return { min(tl.x, br.x), min (tl.y, br.y), max(tl.x, br.x), max(tl.y, br.y) };
 }
 
-void Port::RenderSelection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const
+void Port::RenderSelection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const
 {
 	auto ir = GetInnerOuterRect();
 

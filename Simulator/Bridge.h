@@ -86,9 +86,9 @@ public:
 	const std::vector<std::unique_ptr<BridgeTree>>& trees() const { return _trees; }
 	const std::vector<std::unique_ptr<Port>>& GetPorts() const { return _ports; }
 
-	void Render (ID2D1RenderTarget* dc, const DrawingObjects& dos, unsigned int vlanNumber, const D2D1_COLOR_F& configIdColor) const;
+	void Render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsigned int vlanNumber, const D2D1_COLOR_F& configIdColor) const;
 
-	virtual void RenderSelection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const override final;
+	virtual void RenderSelection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const override final;
 	virtual HTResult HitTest (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
 
 	STP_BRIDGE* stp_bridge() const { return _stpBridge; }

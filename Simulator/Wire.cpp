@@ -42,7 +42,7 @@ D2D1_POINT_2F Wire::GetPointCoords (size_t pointIndex) const
 		return get<ConnectedWireEnd>(_points[pointIndex])->GetCPLocation();
 }
 
-void Wire::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, bool forwarding, bool hasLoop) const
+void Wire::Render (ID2D1RenderTarget* rt, const drawing_resources& dos, bool forwarding, bool hasLoop) const
 {
 	float width = Thickness;
 	ID2D1Brush* brush;
@@ -61,7 +61,7 @@ void Wire::Render (ID2D1RenderTarget* rt, const DrawingObjects& dos, bool forwar
 	rt->DrawLine (GetPointCoords(0), GetPointCoords(1), brush, width, ss);
 }
 
-void Wire::RenderSelection (const zoomable_i* zoomable, ID2D1RenderTarget* rt, const DrawingObjects& dos) const
+void Wire::RenderSelection (const zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const
 {
 	auto fd = zoomable->pointw_to_pointd(GetPointCoords(0));
 	auto td = zoomable->pointw_to_pointd(GetPointCoords(1));
