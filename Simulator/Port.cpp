@@ -514,7 +514,6 @@ const edge::property* const Port::_properties[] =
 	&DetectedPortPathCost,
 	&AdminExternalPortPathCost,
 	&ExternalPortPathCost,
-	nullptr
 };
 
 const edge::type_t Port::_type = { "port", &base::_type, _properties };

@@ -108,8 +108,11 @@ public:
 		}
 		else if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<Wire>(); }))
 		{
-			assert(false);
-			//_pg->AddProperties(objs.data(), objs.size(), L"Wire Properties");
+			_pg->set_title ("Wire Properties");
+			_pg->select_objects (objs.data(), objs.size());
+
+			_pg_tree->set_title (pg_tree_title);
+			_pg_tree->select_objects (nullptr, 0);
 		}
 		else
 			assert(false); // not implemented
