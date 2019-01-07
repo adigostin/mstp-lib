@@ -6,9 +6,9 @@
 
 using namespace std;
 
-class MoveBridgeES : public EditState
+class MoveBridgeES : public edit_state
 {
-	using base = EditState;
+	using base = edit_state;
 
 	D2D1_POINT_2F _firstBridgeInitialLocation;
 	D2D1_SIZE_F _offsetFirstBridge;
@@ -56,7 +56,7 @@ public:
 				_infos[i].b->SetLocation (_firstBridgeInitialLocation + _infos[i].offsetFromFirst);
 
 			_completed = true;
-			::InvalidateRect (_editArea->hwnd(), nullptr, FALSE);
+			::InvalidateRect (_ea->hwnd(), nullptr, FALSE);
 			return 0;
 		}
 
@@ -72,4 +72,4 @@ public:
 	virtual bool Completed() const override final { return _completed; }
 };
 
-unique_ptr<EditState> CreateStateMoveBridges (const EditStateDeps& deps) { return unique_ptr<EditState>(new MoveBridgeES(deps)); }
+unique_ptr<edit_state> CreateStateMoveBridges (const EditStateDeps& deps) { return unique_ptr<edit_state>(new MoveBridgeES(deps)); }

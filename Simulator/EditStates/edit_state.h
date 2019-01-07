@@ -4,25 +4,25 @@
 struct EditStateDeps
 {
 	IProjectWindow* pw;
-	IEditArea*      editArea;
+	IEditArea*      ea;
 	IProject*       project;
 	ISelection*     selection;
 };
 
-class EditState abstract
+class edit_state abstract
 {
 protected:
 	IProjectWindow* const _pw;
-	IEditArea* const _editArea;
-	IProject* const _project;
-	ISelection* const _selection;
+	IEditArea*      const _ea;
+	IProject*       const _project;
+	ISelection*     const _selection;
 
 public:
-	EditState (const EditStateDeps& deps)
-		: _pw(deps.pw), _editArea(deps.editArea), _selection(deps.selection), _project(deps.project)
+	edit_state (const EditStateDeps& deps)
+		: _pw(deps.pw), _ea(deps.ea), _selection(deps.selection), _project(deps.project)
 	{ }
 
-	virtual ~EditState() { }
+	virtual ~edit_state() { }
 	virtual void OnMouseDown (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) { }
 	virtual void OnMouseMove (const MouseLocation& location) { }
 	virtual void OnMouseUp   (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) { }
@@ -33,16 +33,16 @@ public:
 	virtual HCURSOR GetCursor() const { return LoadCursor(nullptr, IDC_ARROW); }
 };
 
-std::unique_ptr<EditState> CreateStateMoveBridges (const EditStateDeps& deps);
-std::unique_ptr<EditState> CreateStateMovePort (const EditStateDeps& deps);
-std::unique_ptr<EditState> CreateStateCreateBridge (const EditStateDeps& deps);
-std::unique_ptr<EditState> CreateStateCreateWire (const EditStateDeps& deps);
-std::unique_ptr<EditState> CreateStateMoveWirePoint (const EditStateDeps& deps, Wire* wire, size_t pointIndex);
-std::unique_ptr<EditState> CreateStateBeginningDrag (const EditStateDeps& deps,
+std::unique_ptr<edit_state> CreateStateMoveBridges (const EditStateDeps& deps);
+std::unique_ptr<edit_state> CreateStateMovePort (const EditStateDeps& deps);
+std::unique_ptr<edit_state> CreateStateCreateBridge (const EditStateDeps& deps);
+std::unique_ptr<edit_state> CreateStateCreateWire (const EditStateDeps& deps);
+std::unique_ptr<edit_state> CreateStateMoveWirePoint (const EditStateDeps& deps, Wire* wire, size_t pointIndex);
+std::unique_ptr<edit_state> CreateStateBeginningDrag (const EditStateDeps& deps,
 													 renderable_object* clickedObject,
 													 MouseButton button,
 													 UINT modifierKeysDown,
 													 const MouseLocation& location,
 													 HCURSOR cursor,
-													 std::unique_ptr<EditState>&& stateMoveThreshold,
-													 std::unique_ptr<EditState>&& stateButtonUp);
+													 std::unique_ptr<edit_state>&& stateMoveThreshold,
+													 std::unique_ptr<edit_state>&& stateButtonUp);

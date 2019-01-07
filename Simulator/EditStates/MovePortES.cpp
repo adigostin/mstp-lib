@@ -6,9 +6,9 @@
 
 using namespace std;
 
-class MovePortES : public EditState
+class MovePortES : public edit_state
 {
-	typedef EditState base;
+	typedef edit_state base;
 	Port* _port;
 	Side _initialSide;
 	float _initialOffset;
@@ -52,4 +52,4 @@ public:
 	virtual bool Completed() const override final { return _completed; }
 };
 
-unique_ptr<EditState> CreateStateMovePort (const EditStateDeps& deps) { return unique_ptr<EditState>(new MovePortES(deps)); }
+unique_ptr<edit_state> CreateStateMovePort (const EditStateDeps& deps) { return unique_ptr<edit_state>(new MovePortES(deps)); }

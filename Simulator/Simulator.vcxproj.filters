@@ -11,7 +11,7 @@
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Wire.h" />
     <ClInclude Include="Bridge.h" />
-    <ClInclude Include="EditStates\EditState.h">
+    <ClInclude Include="EditStates\edit_state.h">
       <Filter>EditStates</Filter>
     </ClInclude>
     <ClInclude Include="Port.h" />

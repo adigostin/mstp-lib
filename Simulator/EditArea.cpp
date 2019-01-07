@@ -39,7 +39,7 @@ class EditArea : public zoomable_window, public IEditArea
 	ISelection*     const _selection;
 	com_ptr<IDWriteTextFormat> _legendFont;
 	struct drawing_resources _drawing_resources;
-	unique_ptr<EditState> _state;
+	unique_ptr<edit_state> _state;
 	HTResult _htResult = { nullptr, 0 };
 
 public:
@@ -128,8 +128,8 @@ public:
 
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
 	{
-		auto editArea = static_cast<EditArea*>(callbackArg);
-		::InvalidateRect (editArea->hwnd(), nullptr, FALSE);
+		auto ea = static_cast<EditArea*>(callbackArg);
+		::InvalidateRect (ea->hwnd(), nullptr, FALSE);
 	}
 
 	struct LegendInfoEntry
@@ -819,8 +819,8 @@ public:
 		}
 		else
 		{
-			unique_ptr<EditState> stateMoveThreshold;
-			unique_ptr<EditState> stateButtonUp;
+			unique_ptr<edit_state> stateMoveThreshold;
+			unique_ptr<edit_state> stateButtonUp;
 
 			if (dynamic_cast<Bridge*>(ht.object) != nullptr)
 			{
@@ -884,7 +884,7 @@ public:
 		return 0;
 	}
 
-	virtual void EnterState (std::unique_ptr<EditState>&& state) override final
+	virtual void EnterState (std::unique_ptr<edit_state>&& state) override final
 	{
 		_state = move(state);
 		_htResult = { nullptr };

@@ -219,7 +219,7 @@
   <ItemGroup>
     <ClInclude Include="Bridge.h" />
     <ClInclude Include="BridgeTree.h" />
-    <ClInclude Include="EditStates\EditState.h" />
+    <ClInclude Include="EditStates\edit_state.h" />
     <ClInclude Include="renderable_object.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Port.h" />

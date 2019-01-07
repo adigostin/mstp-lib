@@ -6,9 +6,9 @@
 
 using namespace std;
 
-class MoveWirePointES : public EditState
+class MoveWirePointES : public edit_state
 {
-	typedef EditState base;
+	typedef edit_state base;
 
 	Wire* const _wire;
 	size_t const _pointIndex;
@@ -101,7 +101,7 @@ public:
 	virtual HCURSOR GetCursor() const override final { return LoadCursor(nullptr, IDC_CROSS); }
 };
 
-unique_ptr<EditState> CreateStateMoveWirePoint (const EditStateDeps& deps, Wire* wire, size_t pointIndex)
+unique_ptr<edit_state> CreateStateMoveWirePoint (const EditStateDeps& deps, Wire* wire, size_t pointIndex)
 {
-	return unique_ptr<EditState>(new MoveWirePointES(deps, wire, pointIndex));
+	return unique_ptr<edit_state>(new MoveWirePointES(deps, wire, pointIndex));
 }

@@ -4,17 +4,17 @@
 
 using namespace std;
 
-class BeginningDragES : public EditState
+class BeginningDragES : public edit_state
 {
-	using base = EditState;
+	using base = edit_state;
 
 	renderable_object* const _clickedObject;
 	MouseButton       const _button;
 	UINT              const _modifierKeysDown;
 	MouseLocation     const _location;
 	HCURSOR           const _cursor;
-	unique_ptr<EditState> _stateMoveThreshold;
-	unique_ptr<EditState> _stateButtonUp;
+	unique_ptr<edit_state> _stateMoveThreshold;
+	unique_ptr<edit_state> _stateButtonUp;
 	bool _completed = false;
 
 public:
@@ -24,8 +24,8 @@ public:
 					 UINT modifierKeysDown,
 					 const MouseLocation& location,
 					 HCURSOR cursor,
-					 unique_ptr<EditState>&& stateMoveThreshold,
-					 unique_ptr<EditState>&& stateButtonUp)
+					 unique_ptr<edit_state>&& stateMoveThreshold,
+					 unique_ptr<edit_state>&& stateButtonUp)
 		: base(deps)
 		, _clickedObject(clickedObject)
 		, _button(button)
@@ -62,7 +62,7 @@ public:
 				assert (!_stateMoveThreshold->Completed());
 				_stateMoveThreshold->OnMouseMove (location);
 				if (!_stateMoveThreshold->Completed())
-					_editArea->EnterState(move(_stateMoveThreshold));
+					_ea->EnterState(move(_stateMoveThreshold));
 			}
 		}
 	}
@@ -87,7 +87,7 @@ public:
 
 				_stateButtonUp->OnMouseUp (button, modifierKeysDown, location);
 				if (!_stateButtonUp->Completed())
-					_editArea->EnterState(move(_stateButtonUp));
+					_ea->EnterState(move(_stateButtonUp));
 			}
 		}
 	}
@@ -104,14 +104,14 @@ public:
 	}
 };
 
-std::unique_ptr<EditState> CreateStateBeginningDrag (const EditStateDeps& deps,
+std::unique_ptr<edit_state> CreateStateBeginningDrag (const EditStateDeps& deps,
 													 renderable_object* clickedObject,
 													 MouseButton button,
 													 UINT modifierKeysDown,
 													 const MouseLocation& location,
 													 HCURSOR cursor,
-													 std::unique_ptr<EditState>&& stateMoveThreshold,
-													 std::unique_ptr<EditState>&& stateButtonUp)
+													 std::unique_ptr<edit_state>&& stateMoveThreshold,
+													 std::unique_ptr<edit_state>&& stateButtonUp)
 {
-	return unique_ptr<EditState>(new BeginningDragES(deps, clickedObject, button, modifierKeysDown, location, cursor, move(stateMoveThreshold), move(stateButtonUp)));
+	return unique_ptr<edit_state>(new BeginningDragES(deps, clickedObject, button, modifierKeysDown, location, cursor, move(stateMoveThreshold), move(stateButtonUp)));
 }
