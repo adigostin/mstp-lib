@@ -282,7 +282,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 		auto project = projectFactory();
 		project_window_create_params params = 
 		{
-			&app, project, selectionFactory, editAreaFactory, true, true, 1, SW_SHOW, d3d_dc, dwrite_factory
+			&app, project, selectionFactory, edit_area_factory, true, true, 1, SW_SHOW, d3d_dc, dwrite_factory
 		};
 
 		auto projectWindow = projectWindowFactory (params);

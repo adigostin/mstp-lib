@@ -49,7 +49,7 @@ class ProjectWindow : public window, public virtual IProjectWindow
 	com_ptr<IDWriteFactory>       const _dwrite_factory;
 	std::shared_ptr<IProject>   const _project;
 	std::unique_ptr<ISelection> const _selection;
-	std::unique_ptr<IEditArea>          _editWindow;
+	std::unique_ptr<edit_area_i>          _editWindow;
 	std::unique_ptr<IPropertiesWindow>  _propertiesWindow;
 	std::unique_ptr<log_window_i>       _log_window;
 	std::unique_ptr<IVlanWindow>        _vlanWindow;
@@ -101,7 +101,7 @@ public:
 		_vlanWindow = vlanWindowFactory (_app, this, _project, _selection.get(), hwnd(), { GetVlanWindowLeft(), 0 });
 		SetMainMenuItemCheck (ID_VIEW_VLANS, true);
 
-		_editWindow = editAreaFactory (create_params.app, this, _project.get(), _selection.get(), hwnd(), edit_window_rect(), create_params.d3d_dc, create_params.dwrite_factory);
+		_editWindow = edit_area_factory (create_params.app, this, _project.get(), _selection.get(), hwnd(), edit_window_rect(), create_params.d3d_dc, create_params.dwrite_factory);
 
 		_project->GetChangedFlagChangedEvent().add_handler (&OnProjectChangedFlagChanged, this);
 		_app->GetProjectWindowAddedEvent().add_handler (&OnProjectWindowAdded, this);
@@ -501,7 +501,7 @@ public:
 			auto project = projectFactory();
 			project_window_create_params params = 
 			{
-				_app, project, selectionFactory, editAreaFactory, true, true, 1, SW_SHOW, _d3d_dc, _dwrite_factory
+				_app, project, selectionFactory, edit_area_factory, true, true, 1, SW_SHOW, _d3d_dc, _dwrite_factory
 			};
 			
 			auto pw = projectWindowFactory(params);
@@ -578,7 +578,7 @@ public:
 		if (projectToLoadTo != _project)
 		{
 			assert(false);
-			//auto newWindow = projectWindowFactory(_app, projectToLoadTo, selectionFactory, editAreaFactory, true, true, SW_SHOW, 1);
+			//auto newWindow = projectWindowFactory(_app, projectToLoadTo, selectionFactory, edit_area_factory, true, true, SW_SHOW, 1);
 			//_app->AddProjectWindow(newWindow);
 		}
 		*/
@@ -796,7 +796,7 @@ public:
 
 	virtual IProject* GetProject() const override final { return _project.get(); }
 
-	virtual IEditArea* GetEditArea() const override final { return _editWindow.get(); }
+	virtual edit_area_i* GetEditArea() const override final { return _editWindow.get(); }
 
 	static vector<wstring> GetRecentFileList()
 	{

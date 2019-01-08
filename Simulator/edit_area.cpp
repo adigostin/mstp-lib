@@ -27,7 +27,7 @@ static const D2D1_COLOR_F RegionColors[] =
 
 #pragma warning (disable: 4250)
 
-class EditArea : public zoomable_window, public IEditArea
+class edit_area : public zoomable_window, public edit_area_i
 {
 	typedef zoomable_window base;
 
@@ -43,7 +43,7 @@ class EditArea : public zoomable_window, public IEditArea
 	HTResult _htResult = { nullptr, 0 };
 
 public:
-	EditArea (ISimulatorApp* app,
+	edit_area (ISimulatorApp* app,
 			  IProjectWindow* pw,
 			  IProject* project,
 			  ISelection* selection,
@@ -93,7 +93,7 @@ public:
 		_pw->GetSelectedVlanNumerChangedEvent().add_handler (&OnSelectedVlanChanged, this);
 	}
 
-	virtual ~EditArea()
+	virtual ~edit_area()
 	{
 		_pw->GetSelectedVlanNumerChangedEvent().remove_handler (&OnSelectedVlanChanged, this);
 		_project->GetInvalidateEvent().remove_handler (&OnProjectInvalidate, this);
@@ -104,31 +104,31 @@ public:
 
 	static void OnSelectedVlanChanged (void* callbackArg, IProjectWindow* pw, unsigned int vlanNumber)
 	{
-		auto area = static_cast<EditArea*>(callbackArg);
+		auto area = static_cast<edit_area*>(callbackArg);
 		::InvalidateRect (area->hwnd(), nullptr, FALSE);
 	}
 
 	static void OnBridgeRemoving (void* callbackArg, IProject* project, size_t index, Bridge* b)
 	{
-		auto area = static_cast<EditArea*>(callbackArg);
+		auto area = static_cast<edit_area*>(callbackArg);
 		area->_htResult = { nullptr, 0 };
 	}
 
 	static void OnWireRemoving (void* callbackArg, IProject* project, size_t index, Wire* w)
 	{
-		auto area = static_cast<EditArea*>(callbackArg);
+		auto area = static_cast<edit_area*>(callbackArg);
 		area->_htResult = { nullptr, 0 };
 	}
 
 	static void OnProjectInvalidate (void* callbackArg, IProject*)
 	{
-		auto area = static_cast<EditArea*>(callbackArg);
+		auto area = static_cast<edit_area*>(callbackArg);
 		::InvalidateRect (area->hwnd(), nullptr, FALSE);
 	}
 
 	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
 	{
-		auto ea = static_cast<EditArea*>(callbackArg);
+		auto ea = static_cast<edit_area*>(callbackArg);
 		::InvalidateRect (ea->hwnd(), nullptr, FALSE);
 	}
 
@@ -980,9 +980,9 @@ public:
 };
 
 template<typename... Args>
-static std::unique_ptr<IEditArea> Create (Args... args)
+static std::unique_ptr<edit_area_i> Create (Args... args)
 {
-	return std::make_unique<EditArea>(std::forward<Args>(args)...);
+	return std::make_unique<edit_area>(std::forward<Args>(args)...);
 }
 
-extern const EditAreaFactory editAreaFactory = &Create;
+extern const edit_area_factory_t edit_area_factory = &Create;

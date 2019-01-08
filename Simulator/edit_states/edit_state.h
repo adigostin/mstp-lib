@@ -4,7 +4,7 @@
 struct EditStateDeps
 {
 	IProjectWindow* pw;
-	IEditArea*      ea;
+	edit_area_i*    ea;
 	IProject*       project;
 	ISelection*     selection;
 };
@@ -13,7 +13,7 @@ class edit_state abstract
 {
 protected:
 	IProjectWindow* const _pw;
-	IEditArea*      const _ea;
+	edit_area_i*    const _ea;
 	IProject*       const _project;
 	ISelection*     const _selection;
 

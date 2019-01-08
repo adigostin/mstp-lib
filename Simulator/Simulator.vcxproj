@@ -232,7 +232,7 @@
   <ItemGroup>
     <ClCompile Include="Bridge.cpp" />
     <ClCompile Include="BridgeTree.cpp" />
-    <ClCompile Include="EditArea.cpp" />
+    <ClCompile Include="edit_area.cpp" />
     <ClCompile Include="edit_states\BeginningDragES.cpp" />
     <ClCompile Include="edit_states\CreateBridgeES.cpp" />
     <ClCompile Include="edit_states\CreateWireES.cpp" />

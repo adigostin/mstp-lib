@@ -82,7 +82,7 @@ struct MouseLocation
 	D2D1_POINT_2F w;
 };
 
-struct __declspec(novtable) IEditArea : virtual edge::win32_window_i
+struct __declspec(novtable) edit_area_i : virtual edge::win32_window_i
 {
 	virtual const struct drawing_resources& drawing_resources() const = 0;
 	virtual void EnterState (std::unique_ptr<edit_state>&& state) = 0;
@@ -96,15 +96,15 @@ struct __declspec(novtable) IEditArea : virtual edge::win32_window_i
 							 bool smallFont = false) const = 0;
 	virtual D2D1::Matrix3x2F GetZoomTransform() const = 0;
 };
-using EditAreaFactory = std::unique_ptr<IEditArea>(*const)(ISimulatorApp* app,
-														   IProjectWindow* pw,
-														   IProject* project,
-														   ISelection* selection,
-														   HWND hWndParent,
-														   const RECT& rect,
-														   ID3D11DeviceContext1* d3d_dc,
-														   IDWriteFactory* dWriteFactory);
-extern const EditAreaFactory editAreaFactory;
+using edit_area_factory_t = std::unique_ptr<edit_area_i>(*const)(ISimulatorApp* app,
+																 IProjectWindow* pw,
+																 IProject* project,
+																 ISelection* selection,
+																 HWND hWndParent,
+																 const RECT& rect,
+																 ID3D11DeviceContext1* d3d_dc,
+																 IDWriteFactory* dWriteFactory);
+extern const edit_area_factory_t edit_area_factory;
 
 // ============================================================================
 
@@ -113,7 +113,7 @@ struct __declspec(novtable) IProjectWindow : public virtual edge::win32_window_i
 	struct SelectedVlanNumerChangedEvent : public edge::event<SelectedVlanNumerChangedEvent, IProjectWindow*, unsigned int> { };
 
 	virtual IProject* GetProject() const = 0;
-	virtual IEditArea* GetEditArea() const = 0;
+	virtual edit_area_i* GetEditArea() const = 0;
 	virtual void SelectVlan (unsigned int vlanNumber) = 0;
 	virtual unsigned int selected_vlan_number() const = 0;
 	virtual SelectedVlanNumerChangedEvent::subscriber GetSelectedVlanNumerChangedEvent() = 0;
@@ -124,7 +124,7 @@ struct project_window_create_params
 	ISimulatorApp*                   app;
 	const std::shared_ptr<IProject>& project;
 	SelectionFactory                 selectionFactory;
-	EditAreaFactory                  editAreaFactory;
+	edit_area_factory_t                  edit_area_factory;
 	bool     showPropertiesWindow;
 	bool     showLogWindow;
 	uint16_t selectedVlan;

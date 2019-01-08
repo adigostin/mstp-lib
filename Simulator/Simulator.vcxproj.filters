@@ -24,7 +24,7 @@
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="Project.cpp" />
-    <ClCompile Include="EditArea.cpp" />
+    <ClCompile Include="edit_area.cpp" />
     <ClCompile Include="Selection.cpp" />
     <ClCompile Include="Simulator.cpp" />
     <ClCompile Include="Wire.cpp" />

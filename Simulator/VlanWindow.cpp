@@ -215,7 +215,7 @@ public:
 		{
 			assert(false);
 			//project_window_create_params create_params = 
-			//	{ _app, _project, selectionFactory, editAreaFactory, false, false, vlanNumber, SW_SHOW, _d3d_dc, _dwrite_factory };
+			//	{ _app, _project, selectionFactory, edit_area_factory, false, false, vlanNumber, SW_SHOW, _d3d_dc, _dwrite_factory };
 			//auto pw = projectWindowFactory (create_params);
 			//_app->AddProjectWindow(move(pw));
 		}
