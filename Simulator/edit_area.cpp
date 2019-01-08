@@ -68,24 +68,6 @@ public:
 		dwrite_factory()->CreateTextFormat (L"Tahoma", nullptr,  DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
 			DWRITE_FONT_STRETCH_CONDENSED, 11, L"en-US", &_legendFont); assert(SUCCEEDED(hr));
 
-		com_ptr<ID2D1Factory> factory;
-		dc->GetFactory(&factory);
-
-		D2D1_STROKE_STYLE_PROPERTIES ssprops = {};
-		ssprops.dashStyle = D2D1_DASH_STYLE_DASH;
-		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawing_resources._strokeStyleSelectionRect); assert(SUCCEEDED(hr));
-
-		ssprops = { };
-		ssprops.dashStyle = D2D1_DASH_STYLE_DASH;
-		ssprops.startCap = D2D1_CAP_STYLE_ROUND;
-		ssprops.endCap = D2D1_CAP_STYLE_ROUND;
-		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawing_resources._strokeStyleNoForwardingWire); assert(SUCCEEDED(hr));
-
-		ssprops = { };
-		ssprops.startCap = D2D1_CAP_STYLE_ROUND;
-		ssprops.endCap = D2D1_CAP_STYLE_ROUND;
-		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawing_resources._strokeStyleForwardingWire); assert(SUCCEEDED(hr));
-
 		_selection->GetChangedEvent().add_handler (&OnSelectionChanged, this);
 		_project->GetBridgeRemovingEvent().add_handler (&OnBridgeRemoving, this);
 		_project->GetWireRemovingEvent().add_handler (&OnWireRemoving, this);
@@ -445,10 +427,32 @@ public:
 		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOWTEXT), &_drawing_resources._brushWindowText); assert(SUCCEEDED(hr));
 		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOW    ), &_drawing_resources._brushWindow    ); assert(SUCCEEDED(hr));
 		hr = dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_HIGHLIGHT ), &_drawing_resources._brushHighlight ); assert(SUCCEEDED(hr));
+
+		com_ptr<ID2D1Factory> factory;
+		dc->GetFactory(&factory);
+
+		D2D1_STROKE_STYLE_PROPERTIES ssprops = {};
+		ssprops.dashStyle = D2D1_DASH_STYLE_DASH;
+		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawing_resources._strokeStyleSelectionRect); assert(SUCCEEDED(hr));
+
+		ssprops = { };
+		ssprops.dashStyle = D2D1_DASH_STYLE_DASH;
+		ssprops.startCap = D2D1_CAP_STYLE_ROUND;
+		ssprops.endCap = D2D1_CAP_STYLE_ROUND;
+		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawing_resources._strokeStyleNoForwardingWire); assert(SUCCEEDED(hr));
+
+		ssprops = { };
+		ssprops.startCap = D2D1_CAP_STYLE_ROUND;
+		ssprops.endCap = D2D1_CAP_STYLE_ROUND;
+		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawing_resources._strokeStyleForwardingWire); assert(SUCCEEDED(hr));
 	}
 
 	void release_render_resources (ID2D1DeviceContext* dc) final
 	{
+		_drawing_resources._strokeStyleForwardingWire = nullptr;
+		_drawing_resources._strokeStyleNoForwardingWire = nullptr;
+		_drawing_resources._strokeStyleSelectionRect = nullptr;
+
 		_drawing_resources._poweredFillBrush      = nullptr;
 		_drawing_resources._unpoweredBrush        = nullptr;
 		_drawing_resources._brushDiscardingPort   = nullptr;
