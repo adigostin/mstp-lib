@@ -373,6 +373,7 @@ public:
 			_editWindow->SetRect (edit_window_rect());
 			::UpdateWindow (_propertiesWindow->hwnd());
 			::UpdateWindow (_editWindow->hwnd());
+			::UpdateWindow (_vlanWindow->hwnd());
 		}
 		else if (_windowBeingResized == ToolWindow::Log)
 		{
@@ -381,6 +382,7 @@ public:
 			_editWindow->SetRect (edit_window_rect());
 			::UpdateWindow (_log_window->hwnd());
 			::UpdateWindow (_editWindow->hwnd());
+			::UpdateWindow (_vlanWindow->hwnd());
 		}
 	}
 
