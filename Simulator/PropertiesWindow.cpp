@@ -36,8 +36,8 @@ public:
 		, _project_window(projectWindow)
 		, _project(project)
 		, _selection(selection)
-		, _pg(property_grid_factory(app->GetHInstance(), client_rect_pixels(), hwnd(), d3d_dc, dwrite_factory))
-		, _pg_tree(property_grid_factory(app->GetHInstance(), client_rect_pixels(), hwnd(), d3d_dc, dwrite_factory))
+		, _pg(property_grid_factory(app->GetHInstance(), pg_rect(), hwnd(), d3d_dc, dwrite_factory))
+		, _pg_tree(property_grid_factory(app->GetHInstance(), pg_tree_rect(), hwnd(), d3d_dc, dwrite_factory))
 	{
 		this->SetSelectionToPGs();
 
@@ -136,6 +136,20 @@ public:
 		window->SetSelectionToPGs();
 	}
 
+	RECT pg_rect() const
+	{
+		RECT rect = client_rect_pixels();
+		rect.bottom /= 2;
+		return rect;
+	}
+
+	RECT pg_tree_rect() const
+	{
+		RECT rect = client_rect_pixels();
+		rect.top = rect.bottom / 2;
+		return rect;
+	}
+
 	optional<LRESULT> window_proc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) final
 	{
 		auto resultBaseClass = base::window_proc (hwnd, msg, wParam, lParam);
@@ -144,8 +158,10 @@ public:
 		{
 			if (_pg != nullptr)
 			{
-				auto rect = this->client_rect_pixels();
+				auto rect = pg_rect();
 				BOOL bRes = ::MoveWindow (_pg->hwnd(), rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE); assert(bRes);
+				rect = pg_tree_rect();
+				bRes = ::MoveWindow (_pg_tree->hwnd(), rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE); assert(bRes);
 			}
 
 			return 0;

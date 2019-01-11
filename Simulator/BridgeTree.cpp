@@ -75,9 +75,9 @@ std::string BridgeTree::GetRootBridgeId() const
 	auto rpv = GetRootPV();
 	stringstream ss;
 	ss << uppercase << setfill('0') << hex
-		<< setw(2) << rpv[0] << setw(2) << rpv[1] << "."
-		<< setw(2) << rpv[2] << setw(2) << rpv[3] << setw(2) << rpv[4]
-		<< setw(2) << rpv[5] << setw(2) << rpv[6] << setw(2) << rpv[7];
+		<< setw(2) << (int)rpv[0] << setw(2) << (int)rpv[1] << "."
+		<< setw(2) << (int)rpv[2] << setw(2) << (int)rpv[3] << setw(2) << (int)rpv[4]
+		<< setw(2) << (int)rpv[5] << setw(2) << (int)rpv[6] << setw(2) << (int)rpv[7];
 	return ss.str();
 }
 
