@@ -88,8 +88,6 @@ std::unique_ptr<Bridge> IProject::RemoveBridge (Bridge* b)
 class SimulatorApp : public event_manager, public ISimulatorApp
 {
 	HINSTANCE const _hInstance;
-	com_ptr<IDWriteFactory> _dWriteFactory;
-
 	wstring _regKeyPath;
 	vector<std::unique_ptr<IProjectWindow>> _projectWindows;
 
@@ -100,9 +98,6 @@ public:
 		wstringstream ss;
 		ss << L"SOFTWARE\\" << CompanyName << L"\\" << ::AppName << L"\\" << ::AppVersionString;
 		_regKeyPath = ss.str();
-
-		auto hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof (IDWriteFactory), reinterpret_cast<IUnknown**>(&_dWriteFactory));
-		assert(SUCCEEDED(hr));
 	}
 
 	virtual HINSTANCE GetHInstance() const override final { return _hInstance; }
