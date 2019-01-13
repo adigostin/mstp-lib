@@ -33,7 +33,7 @@ class edit_area : public zoomable_window, public edit_area_i
 
 	using HTResult = renderable_object::HTResult;
 
-	ISimulatorApp*  const _app;
+	simulator_app_i*  const _app;
 	IProjectWindow* const _pw;
 	IProject*       const _project;
 	ISelection*     const _selection;
@@ -43,7 +43,7 @@ class edit_area : public zoomable_window, public edit_area_i
 	HTResult _htResult = { nullptr, 0 };
 
 public:
-	edit_area (ISimulatorApp* app,
+	edit_area (simulator_app_i* app,
 			  IProjectWindow* pw,
 			  IProject* project,
 			  ISelection* selection,

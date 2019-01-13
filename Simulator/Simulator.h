@@ -4,7 +4,7 @@
 #include "renderable_object.h"
 #include "stp.h"
 
-struct ISimulatorApp;
+struct simulator_app_i;
 struct IProject;
 struct IProjectWindow;
 struct ISelection;
@@ -96,7 +96,7 @@ struct __declspec(novtable) edit_area_i : virtual edge::win32_window_i
 							 bool smallFont = false) const = 0;
 	virtual D2D1::Matrix3x2F GetZoomTransform() const = 0;
 };
-using edit_area_factory_t = std::unique_ptr<edit_area_i>(*const)(ISimulatorApp* app,
+using edit_area_factory_t = std::unique_ptr<edit_area_i>(*const)(simulator_app_i* app,
 																 IProjectWindow* pw,
 																 IProject* project,
 																 ISelection* selection,
@@ -121,7 +121,7 @@ struct __declspec(novtable) IProjectWindow : public virtual edge::win32_window_i
 
 struct project_window_create_params
 {
-	ISimulatorApp*                   app;
+	simulator_app_i*                   app;
 	const std::shared_ptr<IProject>& project;
 	SelectionFactory                 selectionFactory;
 	edit_area_factory_t                  edit_area_factory;
@@ -201,7 +201,7 @@ struct __declspec(novtable) IPropertiesWindow : virtual edge::win32_window_i
 {
 	virtual ~IPropertiesWindow() { }
 };
-using PropertiesWindowFactory = std::unique_ptr<IPropertiesWindow>(*const)(ISimulatorApp* app,
+using PropertiesWindowFactory = std::unique_ptr<IPropertiesWindow>(*const)(simulator_app_i* app,
 																		   IProjectWindow* projectWindow,
 																		   IProject* project,
 																		   ISelection* selection,
@@ -216,7 +216,7 @@ extern const PropertiesWindowFactory propertiesWindowFactory;
 struct __declspec(novtable) IVlanWindow : virtual edge::win32_window_i
 {
 };
-using VlanWindowFactory = std::unique_ptr<IVlanWindow>(*const)(ISimulatorApp* app,
+using VlanWindowFactory = std::unique_ptr<IVlanWindow>(*const)(simulator_app_i* app,
 												 IProjectWindow* pw,
 												 const std::shared_ptr<IProject>& project,
 												 ISelection* selection,
@@ -226,21 +226,21 @@ extern const VlanWindowFactory vlanWindowFactory;
 
 // ============================================================================
 
-struct ISimulatorApp
+struct simulator_app_i
 {
-	struct ProjectWindowAddedEvent : public edge::event<ProjectWindowAddedEvent, IProjectWindow*> { };
-	struct ProjectWindowRemovingEvent : public edge::event<ProjectWindowRemovingEvent, IProjectWindow*> { };
-	struct ProjectWindowRemovedEvent : public edge::event<ProjectWindowRemovedEvent, IProjectWindow*> { };
+	struct project_window_added_e    : edge::event<project_window_added_e, IProjectWindow*> { };
+	struct project_window_removing_e : edge::event<project_window_removing_e, IProjectWindow*> { };
+	struct project_window_removed_e  : edge::event<project_window_removed_e, IProjectWindow*> { };
 
 	virtual HINSTANCE GetHInstance() const = 0;
 	virtual const wchar_t* GetRegKeyPath() const = 0;
-	virtual void AddProjectWindow (std::unique_ptr<IProjectWindow>&& pw) = 0;
-	virtual const std::vector<std::unique_ptr<IProjectWindow>>& GetProjectWindows() const = 0;
+	virtual void add_project_window (std::unique_ptr<IProjectWindow>&& pw) = 0;
+	virtual const std::vector<std::unique_ptr<IProjectWindow>>& project_windows() const = 0;
 	virtual const wchar_t* GetAppName() const = 0;
 	virtual const wchar_t* GetAppVersionString() const = 0;
-	virtual ProjectWindowAddedEvent::subscriber GetProjectWindowAddedEvent() = 0;
-	virtual ProjectWindowRemovingEvent::subscriber GetProjectWindowRemovingEvent() = 0;
-	virtual ProjectWindowRemovedEvent::subscriber GetProjectWindowRemovedEvent() = 0;
+	virtual project_window_added_e::subscriber project_window_added() = 0;
+	virtual project_window_removing_e::subscriber project_window_removing() = 0;
+	virtual project_window_removed_e::subscriber project_window_removed() = 0;
 };
 
 // ============================================================================

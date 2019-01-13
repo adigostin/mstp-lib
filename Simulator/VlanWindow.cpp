@@ -7,14 +7,14 @@
 
 class VlanWindow : public virtual IVlanWindow
 {
-	ISimulatorApp*  const _app;
+	simulator_app_i*  const _app;
 	IProjectWindow* const _pw;
 	std::shared_ptr<IProject> const _project;
 	ISelection*    const _selection;
 	HWND _hwnd = nullptr;
 
 public:
-	VlanWindow (ISimulatorApp* app,
+	VlanWindow (simulator_app_i* app,
 				IProjectWindow* pw,
 				const std::shared_ptr<IProject>& project,
 				ISelection* selection,
@@ -203,7 +203,7 @@ public:
 	{
 		auto index = ComboBox_GetCurSel(hwnd);
 		auto vlanNumber = (unsigned int) (index + 1);
-		auto& pws = _app->GetProjectWindows();
+		auto& pws = _app->project_windows();
 		auto it = find_if (pws.begin(), pws.end(), [this, vlanNumber](auto& pw)
 			{ return (pw->GetProject() == _pw->GetProject()) && (pw->selected_vlan_number() == vlanNumber); });
 		if (it != pws.end())
@@ -217,7 +217,7 @@ public:
 			//project_window_create_params create_params = 
 			//	{ _app, _project, selectionFactory, edit_area_factory, false, false, vlanNumber, SW_SHOW, _d3d_dc, _dwrite_factory };
 			//auto pw = projectWindowFactory (create_params);
-			//_app->AddProjectWindow(move(pw));
+			//_app->add_project_window(move(pw));
 		}
 
 		ComboBox_SetCurSel (hwnd, -1);

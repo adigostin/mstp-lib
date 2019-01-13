@@ -24,7 +24,7 @@ class PropertiesWindow : public window, public virtual IPropertiesWindow
 	unique_ptr<property_grid_i> _pg_tree;
 
 public:
-	PropertiesWindow (ISimulatorApp* app,
+	PropertiesWindow (simulator_app_i* app,
 					  IProjectWindow* projectWindow,
 					  IProject* project,
 					  ISelection* selection,

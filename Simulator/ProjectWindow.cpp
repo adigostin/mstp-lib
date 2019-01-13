@@ -44,7 +44,7 @@ class ProjectWindow : public window, public virtual IProjectWindow
 {
 	using base = window;
 
-	ISimulatorApp* const _app;
+	simulator_app_i* const _app;
 	com_ptr<ID3D11DeviceContext1> const _d3d_dc;
 	com_ptr<IDWriteFactory>       const _dwrite_factory;
 	std::shared_ptr<IProject>   const _project;
@@ -104,16 +104,16 @@ public:
 		_editWindow = edit_area_factory (create_params.app, this, _project.get(), _selection.get(), hwnd(), edit_window_rect(), create_params.d3d_dc, create_params.dwrite_factory);
 
 		_project->GetChangedFlagChangedEvent().add_handler (&OnProjectChangedFlagChanged, this);
-		_app->GetProjectWindowAddedEvent().add_handler (&OnProjectWindowAdded, this);
-		_app->GetProjectWindowRemovedEvent().add_handler (&OnProjectWindowRemoved, this);
+		_app->project_window_added().add_handler (&OnProjectWindowAdded, this);
+		_app->project_window_removed().add_handler (&OnProjectWindowRemoved, this);
 		_project->GetLoadedEvent().add_handler (&OnProjectLoaded, this);
 	}
 
 	~ProjectWindow()
 	{
 		_project->GetLoadedEvent().remove_handler (&OnProjectLoaded, this);
-		_app->GetProjectWindowRemovedEvent().remove_handler (&OnProjectWindowRemoved, this);
-		_app->GetProjectWindowAddedEvent().remove_handler (&OnProjectWindowAdded, this);
+		_app->project_window_removed().remove_handler (&OnProjectWindowRemoved, this);
+		_app->project_window_added().remove_handler (&OnProjectWindowAdded, this);
 		_project->GetChangedFlagChangedEvent().remove_handler (&OnProjectChangedFlagChanged, this);
 	}
 
@@ -227,7 +227,7 @@ public:
 		if (_project->GetChangedFlag())
 			windowTitle << L"*";
 
-		auto& pws = _app->GetProjectWindows();
+		auto& pws = _app->project_windows();
 		if (any_of (pws.begin(), pws.end(), [this](const std::unique_ptr<IProjectWindow>& pw) { return (pw.get() != this) && (pw->GetProject() == _project.get()); }))
 			windowTitle << L" - VLAN " << _selectedVlanNumber;
 
@@ -505,7 +505,7 @@ public:
 			};
 			
 			auto pw = projectWindowFactory(params);
-			_app->AddProjectWindow(std::move(pw));
+			_app->add_project_window(std::move(pw));
 			return 0;
 		}
 
@@ -549,7 +549,7 @@ public:
 
 	void Open (const wchar_t* openPath)
 	{
-		for (auto& pw : _app->GetProjectWindows())
+		for (auto& pw : _app->project_windows())
 		{
 			if (_wcsicmp (pw->GetProject()->GetFilePath().c_str(), openPath) == 0)
 			{
@@ -579,7 +579,7 @@ public:
 		{
 			assert(false);
 			//auto newWindow = projectWindowFactory(_app, projectToLoadTo, selectionFactory, edit_area_factory, true, true, SW_SHOW, 1);
-			//_app->AddProjectWindow(newWindow);
+			//_app->add_project_window(newWindow);
 		}
 		*/
 	}
@@ -694,7 +694,7 @@ public:
 
 	HRESULT TryClose()
 	{
-		auto count = count_if (_app->GetProjectWindows().begin(), _app->GetProjectWindows().end(),
+		auto count = count_if (_app->project_windows().begin(), _app->project_windows().end(),
 							   [this] (const std::unique_ptr<IProjectWindow>& pw) { return pw->GetProject() == _project.get(); });
 		if (count == 1)
 		{

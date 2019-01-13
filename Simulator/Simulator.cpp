@@ -85,7 +85,7 @@ std::unique_ptr<Bridge> IProject::RemoveBridge (Bridge* b)
 }
 #pragma endregion
 
-class SimulatorApp : public event_manager, public ISimulatorApp
+class SimulatorApp : public event_manager, public simulator_app_i
 {
 	HINSTANCE const _hInstance;
 	wstring _regKeyPath;
@@ -102,11 +102,11 @@ public:
 
 	virtual HINSTANCE GetHInstance() const override final { return _hInstance; }
 
-	virtual void AddProjectWindow (std::unique_ptr<IProjectWindow>&& pw) override final
+	virtual void add_project_window (std::unique_ptr<IProjectWindow>&& pw) override final
 	{
 		pw->destroying().add_handler(&OnProjectWindowDestroying, this);
 		_projectWindows.push_back(std::move(pw));
-		this->event_invoker<ProjectWindowAddedEvent>()(_projectWindows.back().get());
+		this->event_invoker<project_window_added_e>()(_projectWindows.back().get());
 	}
 
 	static void OnProjectWindowDestroying (void* callbackArg, edge::win32_window_i* w)
@@ -118,15 +118,15 @@ public:
 
 		auto it = find_if (app->_projectWindows.begin(), app->_projectWindows.end(), [pw](auto& p) { return p.get() == pw; });
 		assert (it != app->_projectWindows.end());
-		app->event_invoker<ProjectWindowRemovingEvent>()(pw);
+		app->event_invoker<project_window_removing_e>()(pw);
 		auto pwLastRef = std::move(*it);
 		app->_projectWindows.erase(it);
-		app->event_invoker<ProjectWindowRemovedEvent>()(pwLastRef.get());
+		app->event_invoker<project_window_removed_e>()(pwLastRef.get());
 		if (app->_projectWindows.empty())
 			PostQuitMessage(0);
 	}
 
-	virtual const std::vector<std::unique_ptr<IProjectWindow>>& GetProjectWindows() const override final { return _projectWindows; }
+	virtual const std::vector<std::unique_ptr<IProjectWindow>>& project_windows() const override final { return _projectWindows; }
 
 	virtual const wchar_t* GetRegKeyPath() const override final { return _regKeyPath.c_str(); }
 
@@ -134,11 +134,11 @@ public:
 
 	virtual const wchar_t* GetAppVersionString() const override final { return AppVersionString; }
 
-	virtual ProjectWindowAddedEvent::subscriber GetProjectWindowAddedEvent() override final { return ProjectWindowAddedEvent::subscriber(this); }
+	virtual project_window_added_e::subscriber project_window_added() override final { return project_window_added_e::subscriber(this); }
 
-	virtual ProjectWindowRemovingEvent::subscriber GetProjectWindowRemovingEvent() override final { return ProjectWindowRemovingEvent::subscriber(this); }
+	virtual project_window_removing_e::subscriber project_window_removing() override final { return project_window_removing_e::subscriber(this); }
 
-	virtual ProjectWindowRemovedEvent::subscriber GetProjectWindowRemovedEvent() override final { return ProjectWindowRemovedEvent::subscriber(this); }
+	virtual project_window_removed_e::subscriber project_window_removed() override final { return project_window_removed_e::subscriber(this); }
 
 	WPARAM RunMessageLoop()
 	{
@@ -281,7 +281,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 		};
 
 		auto projectWindow = projectWindowFactory (params);
-		app.AddProjectWindow(move(projectWindow));
+		app.add_project_window(move(projectWindow));
 
 		processExitValue = (int)app.RunMessageLoop();
 	}
