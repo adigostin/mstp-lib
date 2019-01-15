@@ -225,7 +225,7 @@
     <ClInclude Include="Port.h" />
     <ClInclude Include="PortTree.h" />
     <ClInclude Include="Resource.h" />
-    <ClInclude Include="Simulator.h" />
+    <ClInclude Include="simulator.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Wire.h" />
   </ItemGroup>
@@ -264,14 +264,14 @@
     </ClCompile>
     <ClCompile Include="VlanWindow.cpp" />
     <ClCompile Include="Selection.cpp" />
-    <ClCompile Include="Simulator.cpp" />
+    <ClCompile Include="simulator.cpp" />
     <ClCompile Include="Wire.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="Simulator.rc" />
+    <ResourceCompile Include="simulator.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="Simulator.ico" />
+    <Image Include="simulator.ico" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\edge\edge.vcxproj">

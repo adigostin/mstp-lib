@@ -15,7 +15,7 @@
       <Filter>edit_states</Filter>
     </ClInclude>
     <ClInclude Include="Port.h" />
-    <ClInclude Include="Simulator.h" />
+    <ClInclude Include="simulator.h" />
     <ClInclude Include="BridgeTree.h" />
     <ClInclude Include="PortTree.h" />
     <ClInclude Include="renderable_object.h" />
@@ -26,7 +26,7 @@
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="edit_area.cpp" />
     <ClCompile Include="Selection.cpp" />
-    <ClCompile Include="Simulator.cpp" />
+    <ClCompile Include="simulator.cpp" />
     <ClCompile Include="Wire.cpp" />
     <ClCompile Include="Bridge.cpp" />
     <ClCompile Include="edit_states\CreateBridgeES.cpp">
@@ -57,9 +57,9 @@
     <ClCompile Include="PortTree.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="Simulator.rc" />
+    <ResourceCompile Include="simulator.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="Simulator.ico" />
+    <Image Include="simulator.ico" />
   </ItemGroup>
 </Project>
