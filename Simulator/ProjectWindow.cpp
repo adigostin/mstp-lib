@@ -247,6 +247,13 @@ public:
 	{
 		auto base_class_result = base::window_proc (hwnd, msg, wParam, lParam);
 
+		if (msg == WM_DPICHANGED)
+		{
+			auto r = (RECT*) lParam;
+			::SetWindowPos (hwnd, nullptr, r->left, r->top, r->right - r->left, r->bottom - r->top, SWP_NOZORDER | SWP_NOACTIVATE);
+			return 0;
+		}
+
 		if (msg == WM_CLOSE)
 		{
 			TryClose();

@@ -91,7 +91,7 @@ public:
 		return nullopt;
 	}
 
-	virtual void Render (ID2D1RenderTarget* rt) override final
+	virtual void Render (ID2D1DeviceContext* rt) override final
 	{
 		auto& point = _wire->GetPoints()[_pointIndex];
 		if (holds_alternative<ConnectedWireEnd>(point))

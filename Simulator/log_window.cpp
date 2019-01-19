@@ -75,6 +75,8 @@ public:
 	{
 		dc->Clear(GetD2DSystemColor(COLOR_WINDOW));
 
+		dc->SetTransform(dpi_transform());
+
 		com_ptr<ID2D1SolidColorBrush> text_brush;
 		d2d_dc()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOWTEXT), &text_brush);
 

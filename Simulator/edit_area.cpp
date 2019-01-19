@@ -182,8 +182,8 @@ public:
 		dc->DrawLine ({ lineX, y }, { lineX, client_height() }, _drawing_resources._brushWindowText, lineWidth);
 		dc->SetAntialiasMode (oldaa);
 
-		Matrix3x2F oldTransform;
-		dc->GetTransform (&oldTransform);
+		Matrix3x2F oldtr;
+		dc->GetTransform (&oldtr);
 
 		for (size_t i = 0; i < _countof(LegendInfo); i++)
 		{
@@ -197,13 +197,10 @@ public:
 			dc->DrawTextLayout (Point2F (textX, y + 1), layouts[i], _drawing_resources._brushWindowText);
 
 			// Rotate 270 degrees and then translate.
-			Matrix3x2F trans (0.0f, -1.0f, 1.0f, 0.0f, bitmapX, y + rowHeight / 2);
-			trans.SetProduct (oldTransform, trans);
-			dc->SetTransform (&trans);
-
+			Matrix3x2F tr (0, -1, 1, 0, bitmapX, y + rowHeight / 2);
+			dc->SetTransform (tr * oldtr);
 			Port::RenderExteriorStpPort (dc, _drawing_resources, info.role, info.learning, info.forwarding, info.operEdge);
-
-			dc->SetTransform (&oldTransform);
+			dc->SetTransform (&oldtr);
 
 			y += rowHeight;
 		}
@@ -333,9 +330,9 @@ public:
 
 	void RenderBridges (ID2D1RenderTarget* dc, const std::set<STP_MST_CONFIG_ID>& configIds) const
 	{
-		D2D1_MATRIX_3X2_F oldtr;
+		Matrix3x2F oldtr;
 		dc->GetTransform(&oldtr);
-		dc->SetTransform(GetZoomTransform());
+		dc->SetTransform (GetZoomTransform() * oldtr);
 
 		for (const unique_ptr<Bridge>& bridge : _project->GetBridges())
 		{
@@ -358,9 +355,9 @@ public:
 
 	void RenderWires (ID2D1RenderTarget* dc) const
 	{
-		D2D1_MATRIX_3X2_F oldtr;
+		Matrix3x2F oldtr;
 		dc->GetTransform(&oldtr);
-		dc->SetTransform(GetZoomTransform());
+		dc->SetTransform (GetZoomTransform() * oldtr);
 
 		for (const unique_ptr<Wire>& w : _project->GetWires())
 		{
@@ -468,7 +465,7 @@ public:
 		base::release_render_resources(dc);
 	}
 
-	void render(ID2D1DeviceContext* rt) const final
+	void render(ID2D1DeviceContext* dc) const final
 	{
 		std::set<STP_MST_CONFIG_ID> configIds;
 		for (auto& bridge : _project->GetBridges())
@@ -478,37 +475,39 @@ public:
 				configIds.insert (*STP_GetMstConfigId(stpb));
 		}
 
-		rt->Clear(GetD2DSystemColor(COLOR_WINDOW));
+		dc->Clear(GetD2DSystemColor(COLOR_WINDOW));
 
-		RenderLegend(rt);
+		dc->SetTransform(dpi_transform());
 
-		RenderBridges (rt, configIds);
+		RenderLegend(dc);
 
-		RenderWires (rt);
+		RenderBridges (dc, configIds);
+
+		RenderWires (dc);
 
 		for (object* o : _selection->GetObjects())
 		{
 			if (auto ro = dynamic_cast<renderable_object*>(o))
-				ro->RenderSelection(this, rt, _drawing_resources);
+				ro->RenderSelection(this, dc, _drawing_resources);
 		}
 
 		if (!configIds.empty())
-			RenderConfigIdList (rt, configIds);
+			RenderConfigIdList (dc, configIds);
 
 		if (_htResult.object != nullptr)
-			RenderHover(rt);
+			RenderHover(dc);
 
-		RenderHint (rt, { client_width() / 2, client_height() },
+		RenderHint (dc, { client_width() / 2, client_height() },
 					L"Rotate mouse wheel for zooming, press wheel and drag for panning.",
 					DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_FAR, true);
 
 		if (_project->IsSimulationPaused())
-			RenderHint (rt, { client_width() / 2, 10 },
+			RenderHint (dc, { client_width() / 2, 10 },
 						L"Simulation is paused. Right-click to resume.",
 						DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, true);
 
 		if (_state != nullptr)
-			_state->Render(rt);
+			_state->Render(dc);
 	}
 
 	static UINT GetModifierKeys()

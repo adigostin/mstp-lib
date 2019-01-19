@@ -115,7 +115,7 @@ public:
 		return nullopt;
 	}
 
-	virtual void Render (ID2D1RenderTarget* rt) override final
+	virtual void Render (ID2D1DeviceContext* rt) override final
 	{
 		base::Render(rt);
 		if ((_wire != nullptr) && holds_alternative<ConnectedWireEnd>(_wire->GetP1()))

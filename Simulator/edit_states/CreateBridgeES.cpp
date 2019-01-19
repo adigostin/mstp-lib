@@ -82,21 +82,22 @@ public:
 		return nullopt;
 	}
 
-	virtual void Render (ID2D1RenderTarget* rt) override final
+	virtual void Render (ID2D1DeviceContext* dc) override final
 	{
 		if (_bridge != nullptr)
 		{
-			auto zoom_tr = _ea->GetZoomTransform();
-			D2D1_MATRIX_3X2_F oldtr;
-			rt->GetTransform(&oldtr);
-			rt->SetTransform(zoom_tr);
-			_bridge->Render (rt, _ea->drawing_resources(), _pw->selected_vlan_number(), ColorF(ColorF::LightGreen));
-			rt->SetTransform(&oldtr);
+			Matrix3x2F oldtr;
+			dc->GetTransform(&oldtr);
+			dc->SetTransform (_ea->GetZoomTransform() * oldtr);
+
+			_bridge->Render (dc, _ea->drawing_resources(), _pw->selected_vlan_number(), ColorF(ColorF::LightGreen));
+
+			dc->SetTransform(&oldtr);
 
 			auto x = _bridge->GetLeft() + _bridge->GetWidth() / 2;
 			auto y = _bridge->GetBottom() + Port::ExteriorHeight * 1.1f;
-			auto centerD = zoom_tr.TransformPoint({ x, y });
-			_ea->RenderHint (rt, centerD, L"Press + or - to change the number of ports.",
+			auto centerD = _ea->GetZoomTransform().TransformPoint({ x, y });
+			_ea->RenderHint (dc, centerD, L"Press + or - to change the number of ports.",
 								   DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, true);
 		}
 	}

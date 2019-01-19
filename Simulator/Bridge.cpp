@@ -1073,5 +1073,7 @@ void Bridge::StpCallback_OnPortRoleChanged (const STP_BRIDGE* bridge, unsigned i
 
 void Bridge::StpCallback_OnConfigChanged (const STP_BRIDGE* bridge, unsigned int timestamp)
 {
+	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
+	b->event_invoker<invalidate_e>()(b);
 }
 #pragma endregion
