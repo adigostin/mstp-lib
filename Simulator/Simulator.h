@@ -89,7 +89,7 @@ struct __declspec(novtable) edit_area_i : virtual edge::win32_window_i
 	virtual void EnterState (std::unique_ptr<edit_state>&& state) = 0;
 	virtual Port* GetCPAt (D2D1_POINT_2F dLocation, float tolerance) const = 0;
 	virtual void RenderSnapRect (ID2D1RenderTarget* rt, D2D1_POINT_2F wLocation) const = 0;
-	virtual void RenderHint (ID2D1RenderTarget* rt,
+	virtual void render_hint (ID2D1RenderTarget* rt,
 							 D2D1_POINT_2F dLocation,
 							 const wchar_t* text,
 							 DWRITE_TEXT_ALIGNMENT ha,

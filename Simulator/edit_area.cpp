@@ -143,7 +143,7 @@ public:
 		{ L"Undefined",              STP_PORT_ROLE_UNKNOWN,    false, false, false },
 	};
 
-	void RenderLegend (ID2D1RenderTarget* dc) const
+	void render_legend (ID2D1RenderTarget* dc) const
 	{
 		float maxLineWidth = 0;
 		float maxLineHeight = 0;
@@ -206,7 +206,7 @@ public:
 		}
 	}
 
-	void RenderConfigIdList (ID2D1RenderTarget* dc, const std::set<STP_MST_CONFIG_ID>& configIds) const
+	void render_config_id_list (ID2D1RenderTarget* dc, const std::set<STP_MST_CONFIG_ID>& configIds) const
 	{
 		size_t colorIndex = 0;
 
@@ -280,7 +280,7 @@ public:
 		rt->SetAntialiasMode(oldaa);
 	}
 
-	virtual void RenderHint (ID2D1RenderTarget* rt,
+	virtual void render_hint (ID2D1RenderTarget* rt,
 							 D2D1_POINT_2F dLocation,
 							 const wchar_t* text,
 							 DWRITE_TEXT_ALIGNMENT ha,
@@ -328,7 +328,7 @@ public:
 		rt->DrawTextLayout ({ rr.rect.left + leftRightPadding, rr.rect.top + topBottomPadding }, tl, brush);
 	}
 
-	void RenderBridges (ID2D1RenderTarget* dc, const std::set<STP_MST_CONFIG_ID>& configIds) const
+	void render_bridges (ID2D1RenderTarget* dc, const std::set<STP_MST_CONFIG_ID>& configIds) const
 	{
 		Matrix3x2F oldtr;
 		dc->GetTransform(&oldtr);
@@ -353,7 +353,7 @@ public:
 		dc->SetTransform(oldtr);
 	}
 
-	void RenderWires (ID2D1RenderTarget* dc) const
+	void render_wires (ID2D1RenderTarget* dc) const
 	{
 		Matrix3x2F oldtr;
 		dc->GetTransform(&oldtr);
@@ -370,11 +370,11 @@ public:
 
 		if (_project->GetBridges().empty())
 		{
-			RenderHint (dc, { client_width() / 2, client_height() / 2 }, L"No bridges created. Right-click to create some.", DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, false);
+			render_hint (dc, { client_width() / 2, client_height() / 2 }, L"No bridges created. Right-click to create some.", DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, false);
 		}
 		else if (_project->GetBridges().size() == 1)
 		{
-			RenderHint (dc, { client_width() / 2, client_height() / 2 }, L"Right-click to add more bridges.", DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, false);
+			render_hint (dc, { client_width() / 2, client_height() / 2 }, L"Right-click to add more bridges.", DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, false);
 		}
 		else
 		{
@@ -389,12 +389,12 @@ public:
 				auto text = L"No port connected. You can connect\r\nports by drawing wires with the mouse.";
 				auto wl = D2D1_POINT_2F { b->GetLeft() + b->GetWidth() / 2, b->GetBottom() + Port::ExteriorHeight * 1.5f };
 				auto dl = pointw_to_pointd(wl);
-				RenderHint (dc, { dl.x, dl.y }, text, DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, false);
+				render_hint (dc, { dl.x, dl.y }, text, DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, false);
 			}
 		}
 	}
 
-	void RenderHover (ID2D1RenderTarget* dc) const
+	void render_hover (ID2D1RenderTarget* dc) const
 	{
 		if (dynamic_cast<Port*>(_htResult.object) != nullptr)
 		{
@@ -479,11 +479,11 @@ public:
 
 		dc->SetTransform(dpi_transform());
 
-		RenderLegend(dc);
+		render_legend(dc);
 
-		RenderBridges (dc, configIds);
+		render_bridges (dc, configIds);
 
-		RenderWires (dc);
+		render_wires (dc);
 
 		for (object* o : _selection->GetObjects())
 		{
@@ -492,22 +492,22 @@ public:
 		}
 
 		if (!configIds.empty())
-			RenderConfigIdList (dc, configIds);
+			render_config_id_list (dc, configIds);
 
 		if (_htResult.object != nullptr)
-			RenderHover(dc);
+			render_hover(dc);
 
-		RenderHint (dc, { client_width() / 2, client_height() },
+		render_hint (dc, { client_width() / 2, client_height() },
 					L"Rotate mouse wheel for zooming, press wheel and drag for panning.",
 					DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_FAR, true);
 
 		if (_project->IsSimulationPaused())
-			RenderHint (dc, { client_width() / 2, 10 },
+			render_hint (dc, { client_width() / 2, 10 },
 						L"Simulation is paused. Right-click to resume.",
 						DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, true);
 
 		if (_state != nullptr)
-			_state->Render(dc);
+			_state->render(dc);
 	}
 
 	static UINT GetModifierKeys()

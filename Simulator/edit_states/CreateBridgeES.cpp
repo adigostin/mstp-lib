@@ -82,7 +82,7 @@ public:
 		return nullopt;
 	}
 
-	virtual void Render (ID2D1DeviceContext* dc) override final
+	virtual void render (ID2D1DeviceContext* dc) override final
 	{
 		if (_bridge != nullptr)
 		{
@@ -97,7 +97,7 @@ public:
 			auto x = _bridge->GetLeft() + _bridge->GetWidth() / 2;
 			auto y = _bridge->GetBottom() + Port::ExteriorHeight * 1.1f;
 			auto centerD = _ea->GetZoomTransform().TransformPoint({ x, y });
-			_ea->RenderHint (dc, centerD, L"Press + or - to change the number of ports.",
+			_ea->render_hint (dc, centerD, L"Press + or - to change the number of ports.",
 								   DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, true);
 		}
 	}

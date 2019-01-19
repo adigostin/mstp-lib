@@ -28,7 +28,7 @@ public:
 	virtual void OnMouseUp   (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) { }
 	virtual std::optional<LRESULT> OnKeyDown (UINT virtualKey, UINT modifierKeys) { return std::nullopt; }
 	virtual std::optional<LRESULT> OnKeyUp   (UINT virtualKey, UINT modifierKeys) { return std::nullopt; }
-	virtual void Render (ID2D1DeviceContext* dc) { }
+	virtual void render (ID2D1DeviceContext* dc) { }
 	virtual bool Completed() const = 0;
 	virtual HCURSOR GetCursor() const { return LoadCursor(nullptr, IDC_ARROW); }
 };

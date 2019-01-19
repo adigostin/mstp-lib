@@ -115,9 +115,9 @@ public:
 		return nullopt;
 	}
 
-	virtual void Render (ID2D1DeviceContext* rt) override final
+	virtual void render (ID2D1DeviceContext* rt) override final
 	{
-		base::Render(rt);
+		base::render(rt);
 		if ((_wire != nullptr) && holds_alternative<ConnectedWireEnd>(_wire->GetP1()))
 			_ea->RenderSnapRect (rt, get<ConnectedWireEnd>(_wire->GetP1())->GetCPLocation());
 	}
