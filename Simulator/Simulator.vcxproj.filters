@@ -62,7 +62,4 @@
   <ItemGroup>
     <Image Include="simulator.ico" />
   </ItemGroup>
-  <ItemGroup>
-    <Manifest Include="app.manifest" />
-  </ItemGroup>
 </Project>

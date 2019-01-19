@@ -231,7 +231,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 	int tmp = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
 	_CrtSetDbgFlag(tmp | _CRTDBG_LEAK_CHECK_DF);
 
-	// We set DPI awareness programatically because Windows 10 won't run an executable whose manifest contains both <dpiAwareness> and <dpiAware>
+	// We set DPI awareness programatically because Windows 10 won't run an executable whose manifest contains both <dpiAwareness> and <dpiAware>.
 	// (Windows 10 looks only for first, Windows 7 looks only for the second, and we want to run on both.)
 	if (auto proc_addr = GetProcAddress (GetModuleHandleA("User32.dll"), "SetProcessDpiAwarenessContext"))
 	{
