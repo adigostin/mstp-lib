@@ -3,6 +3,7 @@
 #include "win32/win32_lib.h"
 #include "renderable_object.h"
 #include "stp.h"
+#include "Bridge.h"
 
 struct simulator_app_i;
 struct IProject;
@@ -174,7 +175,7 @@ struct __declspec(novtable) IProject
 	virtual WireRemovingEvent::subscriber GetWireRemovingEvent() = 0;
 	virtual invalidate_e::subscriber GetInvalidateEvent() = 0;
 	virtual LoadedEvent::subscriber GetLoadedEvent() = 0;
-	virtual STP_BRIDGE_ADDRESS AllocMacAddressRange (size_t count) = 0;
+	virtual mac_address AllocMacAddressRange (size_t count) = 0;
 	virtual const std::wstring& GetFilePath() const = 0;
 	virtual HRESULT Save (const wchar_t* filePath) = 0;
 	virtual void Load (const wchar_t* filePath) = 0;

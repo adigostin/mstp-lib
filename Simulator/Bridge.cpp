@@ -16,6 +16,53 @@ static constexpr UINT WM_PACKET_RECEIVED   = WM_APP + 3;
 
 static constexpr uint8_t BpduDestAddress[6] = { 1, 0x80, 0xC2, 0, 0, 0 };
 
+std::string mac_address_to_string (mac_address address)
+{
+	stringstream ss;
+	ss << uppercase << setfill('0') << hex
+		<< setw(2) << (int) address[0] << setw(2) << (int) address[1] << setw(2) << (int) address[2]
+		<< setw(2) << (int) address[3] << setw(2) << (int) address[4] << setw(2) << (int) address[5];
+	return ss.str();
+}
+
+template<typename char_type> bool mac_address_from_string (std::basic_string_view<char_type> str, mac_address& to)
+{
+//	static constexpr char FormatErrorMessage[] = u8"Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX or XXXXXXXXXXXX (6 hex bytes).";
+
+	int offsetMultiplier;
+	if (str.size() == 12)
+	{
+		offsetMultiplier = 2;
+	}
+	else if (str.size() == 17)
+	{
+		if ((str[2] != ':') || (str[5] != ':') || (str[8] != ':') || (str[11] != ':') || (str[14] != ':'))
+			return false;
+
+		offsetMultiplier = 3;
+	}
+	else
+		return false;
+
+	for (size_t i = 0; i < 6; i++)
+	{
+		wchar_t ch0 = str[i * offsetMultiplier];
+		wchar_t ch1 = str[i * offsetMultiplier + 1];
+
+		if (!iswxdigit(ch0) || !iswxdigit(ch1))
+			return false;
+
+		auto hn = (ch0 <= '9') ? (ch0 - '0') : ((ch0 >= 'a') ? (ch0 - 'a' + 10) : (ch0 - 'A' + 10));
+		auto ln = (ch1 <= '9') ? (ch1 - '0') : ((ch1 >= 'a') ? (ch1 - 'a' + 10) : (ch1 - 'A' + 10));
+		to[i] = (hn << 4) | ln;
+	}
+
+	return true;
+}
+
+template bool mac_address_from_string (std::basic_string_view<char> from, mac_address& to);
+template bool mac_address_from_string (std::basic_string_view<wchar_t> from, mac_address& to);
+
 #pragma region Bridge::HelperWindow
 Bridge::HelperWindow::HelperWindow()
 {
@@ -68,7 +115,7 @@ LRESULT CALLBACK Bridge::HelperWindow::SubclassProc (HWND hWnd, UINT uMsg, WPARA
 }
 #pragma endregion
 
-Bridge::Bridge (unsigned int portCount, unsigned int mstiCount, const unsigned char macAddress[6])
+Bridge::Bridge (unsigned int portCount, unsigned int mstiCount, mac_address macAddress)
 {
 	for (unsigned int i = 0; i < 1 + mstiCount; i++)
 		_trees.push_back (make_unique<BridgeTree>(this, i));
@@ -90,7 +137,7 @@ Bridge::Bridge (unsigned int portCount, unsigned int mstiCount, const unsigned c
 	DWORD period = 950 + (std::random_device()() % 100);
 	BOOL bRes = ::CreateTimerQueueTimer (&_oneSecondTimerHandle, nullptr, OneSecondTimerCallback, this, period, period, 0); assert(bRes);
 
-	_stpBridge = STP_CreateBridge (portCount, mstiCount, MaxVlanNumber, &StpCallbacks, macAddress, 256);
+	_stpBridge = STP_CreateBridge (portCount, mstiCount, MaxVlanNumber, &StpCallbacks, macAddress.data(), 256);
 	STP_EnableLogging (_stpBridge, true);
 	STP_SetApplicationContext (_stpBridge, this);
 
@@ -288,7 +335,7 @@ void Bridge::Render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsign
 		if ((treeIndex == 0) ? isCistRoot : isRegionalRoot)
 			bridgeOutlineWidth *= 2;
 
-		text << uppercase << setfill('0') << setw(4) << hex << STP_GetBridgePriority(_stpBridge, treeIndex) << '.' << GetBridgeAddressAsString() << endl;
+		text << uppercase << setfill('0') << setw(4) << hex << STP_GetBridgePriority(_stpBridge, treeIndex) << '.' << mac_address_to_string(bridge_address()) << endl;
 		text << "STP enabled (" << STP_GetVersionString(stpVersion) << ")" << endl;
 		text << (isCistRoot ? "CIST Root Bridge\r\n" : "");
 		if (stpVersion >= STP_VERSION_MSTP)
@@ -299,7 +346,7 @@ void Bridge::Render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsign
 	}
 	else
 	{
-		text << uppercase << setfill('0') << hex << GetBridgeAddressAsString() << endl << "STP disabled\r\n(right-click to enable)";
+		text << uppercase << setfill('0') << hex << mac_address_to_string(bridge_address()) << endl << "STP disabled\r\n(right-click to enable)";
 	}
 
 	// Draw bridge outline.
@@ -348,33 +395,9 @@ renderable_object::HTResult Bridge::HitTest (const edge::zoomable_i* zoomable, D
 	return {};
 }
 
-std::string Bridge::GetBridgeAddressAsString() const
-{
-	auto address = STP_GetBridgeAddress(_stpBridge);
-	return ConvertBridgeAddressToString (address->bytes);
-}
-/*
-std::wstring Bridge::GetBridgeAddressAsWString() const
-{
-	auto address = STP_GetBridgeAddress(_stpBridge);
-	return ConvertBridgeAddressToWString(address->bytes);
-}
-*/
-void Bridge::SetBridgeAddressFromString (std::string_view address)
-{
-	assert(false); // not implemented
-}
-/*
-void Bridge::SetBridgeAddressFromWString (std::wstring str)
-{
-	auto newAddress = ConvertStringToBridgeAddress(str.c_str());
-	STP_SetBridgeAddress (_stpBridge, newAddress.bytes, GetMessageTime());
-	PropertyChangedEvent::InvokeHandlers (this, this, &Address);
-}
-*/
 std::array<uint8_t, 6> Bridge::GetPortAddress (size_t portIndex) const
 {
-	std::array<uint8_t, 6> pa = GetBridgeAddress();
+	std::array<uint8_t, 6> pa = bridge_address();
 	pa[5]++;
 	if (pa[5] == 0)
 	{
@@ -390,11 +413,22 @@ std::array<uint8_t, 6> Bridge::GetPortAddress (size_t portIndex) const
 	return pa;
 }
 
-std::array<uint8_t, 6> Bridge::GetBridgeAddress() const
+mac_address Bridge::bridge_address() const
 {
-	std::array<uint8_t, 6> address;
+	mac_address address;
+	auto x = sizeof(address);
 	memcpy (address.data(), STP_GetBridgeAddress(_stpBridge)->bytes, 6);
 	return address;
+}
+
+void Bridge::set_bridge_address (mac_address address)
+{
+	if (memcmp(STP_GetBridgeAddress(_stpBridge)->bytes, address.data(), 6) != 0)
+	{
+		this->on_property_changing(&Address);
+		STP_SetBridgeAddress(_stpBridge, address.data(), GetMessageTime());
+		this->on_property_changed(&Address);
+	}
 }
 
 static const _bstr_t BridgeString = "Bridge";
@@ -428,7 +462,7 @@ com_ptr<IXMLDOMElement> Bridge::Serialize (size_t bridgeIndex, IXMLDOMDocument3*
 	auto hr = doc->createElement (BridgeString, &bridgeElement); assert(SUCCEEDED(hr));
 
 	bridgeElement->setAttribute (BridgeIndexString,   _variant_t(bridgeIndex));
-	bridgeElement->setAttribute (AddressString,       _variant_t(GetBridgeAddressAsString().c_str()));
+	bridgeElement->setAttribute (AddressString,       _variant_t(mac_address_to_string(bridge_address()).c_str()));
 	bridgeElement->setAttribute (StpEnabledString,    _variant_t(STP_IsBridgeStarted(_stpBridge)));
 	bridgeElement->setAttribute (StpVersionString,    _variant_t(STP_GetVersionString(STP_GetStpVersion(_stpBridge))));
 	bridgeElement->setAttribute (PortCountString,     _variant_t(_ports.size()));
@@ -504,9 +538,10 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 
 	unsigned int portCount = wcstoul(getAttribute(PortCountString).bstrVal, nullptr, 10);
 	unsigned int mstiCount = wcstoul(getAttribute(MstiCountString).bstrVal, nullptr, 10);
-	auto bridgeAddress = ConvertStringToBridgeAddress(getAttribute(AddressString).bstrVal);
+	mac_address bridgeAddress;
+	mac_address_from_string<wchar_t>(getAttribute(AddressString).bstrVal, bridgeAddress);
 
-	auto bridge = unique_ptr<Bridge>(new Bridge(portCount, mstiCount, bridgeAddress.bytes));
+	auto bridge = unique_ptr<Bridge>(new Bridge(portCount, mstiCount, bridgeAddress));
 
 	bridge->_x = wcstof(getAttribute(XString).bstrVal, nullptr);
 	bridge->_y = wcstof(getAttribute(YString).bstrVal, nullptr);
@@ -809,10 +844,10 @@ uint32_t Bridge::GetForwardDelay() const
 
 #pragma region properties
 
-const temp_string_property Bridge::Address {
+const mac_address_property Bridge::Address {
 	"Bridge Address",
-	static_cast<temp_string_property::getter_t>(&Bridge::GetBridgeAddressAsString),
-	static_cast<temp_string_property::setter_t>(&Bridge::SetBridgeAddressFromString),
+	static_cast<mac_address_property::getter_t>(&bridge_address),
+	static_cast<mac_address_property::setter_t>(&set_bridge_address),
 	std::nullopt };
 
 const bool_property Bridge::StpEnabled {
@@ -1040,58 +1075,3 @@ void Bridge::StpCallback_OnConfigChanged (const STP_BRIDGE* bridge, unsigned int
 {
 }
 #pragma endregion
-
-STP_BRIDGE_ADDRESS ConvertStringToBridgeAddress (const wchar_t* str)
-{
-	static constexpr char FormatErrorMessage[] = u8"Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX or XXXXXXXXXXXX (6 hex bytes).";
-
-	int offsetMultiplier;
-	if (wcslen(str) == 12)
-	{
-		offsetMultiplier = 2;
-	}
-	else if (wcslen(str) == 17)
-	{
-		if ((str[2] != ':') || (str[5] != ':') || (str[8] != ':') || (str[11] != ':') || (str[14] != ':'))
-			throw invalid_argument(FormatErrorMessage);
-
-		offsetMultiplier = 3;
-	}
-	else
-		throw invalid_argument(FormatErrorMessage);
-
-	STP_BRIDGE_ADDRESS newAddress;
-	for (size_t i = 0; i < 6; i++)
-	{
-		wchar_t ch0 = str[i * offsetMultiplier];
-		wchar_t ch1 = str[i * offsetMultiplier + 1];
-
-		if (!iswxdigit(ch0) || !iswxdigit(ch1))
-			throw invalid_argument(FormatErrorMessage);
-
-		auto hn = (ch0 <= '9') ? (ch0 - '0') : ((ch0 >= 'a') ? (ch0 - 'a' + 10) : (ch0 - 'A' + 10));
-		auto ln = (ch1 <= '9') ? (ch1 - '0') : ((ch1 >= 'a') ? (ch1 - 'a' + 10) : (ch1 - 'A' + 10));
-		newAddress.bytes[i] = (hn << 4) | ln;
-	}
-
-	return newAddress;
-}
-
-std::string ConvertBridgeAddressToString (const unsigned char address[6])
-{
-	stringstream ss;
-	ss << uppercase << setfill('0') << hex
-		<< setw(2) << (int) address[0] << setw(2) << (int) address[1] << setw(2) << (int) address[2]
-		<< setw(2) << (int) address[3] << setw(2) << (int) address[4] << setw(2) << (int) address[5];
-	return ss.str();
-}
-/*
-std::wstring ConvertBridgeAddressToWString (const unsigned char address[6])
-{
-	wstringstream ss;
-	ss << uppercase << setfill(L'0') << hex
-		<< setw(2) << address[0] << setw(2) << address[1] << setw(2) << address[2]
-		<< setw(2) << address[3] << setw(2) << address[4] << setw(2) << address[5];
-	return ss.str();
-}
-*/

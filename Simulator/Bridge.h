@@ -14,9 +14,16 @@ static constexpr edge::NVP stp_version_nvps[] =  {
 	{ "LegacySTP", STP_VERSION_LEGACY_STP },
 	{ "RSTP", STP_VERSION_RSTP },
 	{ "MSTP", STP_VERSION_MSTP },
+	{ nullptr, 0 }
 };
 static constexpr char stp_version_type_name[] = "stp_version";
 using stp_version_property = edge::enum_property<STP_VERSION, stp_version_type_name, stp_version_nvps>;
+
+using mac_address = std::array<uint8_t, 6>;
+std::string mac_address_to_string (mac_address from);
+template<typename char_type> bool mac_address_from_string (std::basic_string_view<char_type> from, mac_address& to);
+static constexpr char mac_address_type_name[] = "mac_address";
+using mac_address_property = edge::typed_property<mac_address, mac_address, mac_address, mac_address_type_name, mac_address_to_string, mac_address_from_string>;
 
 class Bridge : public renderable_object
 {
@@ -60,7 +67,7 @@ class Bridge : public renderable_object
 	unsigned int         _txTimestamp;
 
 public:
-	Bridge (unsigned int portCount, unsigned int mstiCount, const unsigned char macAddress[6]);
+	Bridge (unsigned int portCount, unsigned int mstiCount, mac_address macAddress);
 	virtual ~Bridge();
 
 	static constexpr int HTCodeInner = 1;
@@ -107,7 +114,8 @@ public:
 	bool IsPowered() const { return _powered; }
 	const std::vector<std::unique_ptr<BridgeLogLine>>& GetLogLines() const { return _logLines; }
 	std::array<uint8_t, 6> GetPortAddress (size_t portIndex) const;
-	std::array<uint8_t, 6> GetBridgeAddress() const;
+	mac_address bridge_address() const;
+	void set_bridge_address (mac_address address);
 
 	edge::com_ptr<IXMLDOMElement> Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) const;
 	static std::unique_ptr<Bridge> Deserialize (IXMLDOMElement* element);
@@ -138,11 +146,6 @@ public:
 	void SetBridgeForwardDelay (uint32_t forwardDelay);
 	uint32_t GetForwardDelay() const;
 
-	std::string GetBridgeAddressAsString() const;
-	//std::wstring GetBridgeAddressAsWString() const;
-	void SetBridgeAddressFromString (std::string_view address);
-	//void SetBridgeAddressFromWString (std::wstring address);
-
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
 	static void OnWmOneSecondTimer (WPARAM wParam, LPARAM lParam);
@@ -166,7 +169,7 @@ private:
 	static void  StpCallback_OnConfigChanged          (const STP_BRIDGE* bridge, unsigned int timestamp);
 	
 public:
-	static const edge::temp_string_property Address;
+	static const mac_address_property       Address;
 	static const edge::bool_property        StpEnabled;
 	static const stp_version_property       StpVersion;
 	static const edge::uint32_property      PortCount;
@@ -185,7 +188,3 @@ public:
 	static const edge::type_t _type;
 	const edge::type_t* type() const override { return &_type; }
 };
-
-STP_BRIDGE_ADDRESS ConvertStringToBridgeAddress (const wchar_t* str);
-std::string ConvertBridgeAddressToString (const unsigned char address[6]);
-//std::wstring ConvertBridgeAddressToWString (const unsigned char address[6]);

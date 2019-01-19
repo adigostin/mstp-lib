@@ -16,7 +16,7 @@ class Project : public event_manager, public IProject
 	wstring _path;
 	vector<unique_ptr<Bridge>> _bridges;
 	vector<unique_ptr<Wire>> _wires;
-	STP_BRIDGE_ADDRESS _nextMacAddress = { 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x80 };
+	mac_address _next_mac_address = { 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x80 };
 	bool _simulationPaused = false;
 	bool _changedFlag = false;
 
@@ -176,17 +176,17 @@ public:
 		return true;
 	}
 
-	virtual STP_BRIDGE_ADDRESS AllocMacAddressRange (size_t count) override final
+	virtual mac_address AllocMacAddressRange (size_t count) override final
 	{
 		if (count >= 128)
 			throw range_error("count must be lower than 128.");
 
-		auto result = _nextMacAddress;
-		_nextMacAddress.bytes[5] += (uint8_t)count;
-		if (_nextMacAddress.bytes[5] < count)
+		auto result = _next_mac_address;
+		_next_mac_address[5] += (uint8_t)count;
+		if (_next_mac_address[5] < count)
 		{
-			_nextMacAddress.bytes[4]++;
-			if (_nextMacAddress.bytes[4] == 0)
+			_next_mac_address[4]++;
+			if (_next_mac_address[4] == 0)
 				assert(false); // not implemented
 		}
 
@@ -204,7 +204,7 @@ public:
 
 		com_ptr<IXMLDOMElement> projectElement;
 		hr = doc->createElement (_bstr_t("Project"), &projectElement); assert(SUCCEEDED(hr));
-		projectElement->setAttribute (NextMacAddressString, _variant_t(ConvertBridgeAddressToString(_nextMacAddress.bytes).c_str()));
+		projectElement->setAttribute (NextMacAddressString, _variant_t(mac_address_to_string(_next_mac_address).c_str()));
 		hr = doc->appendChild (projectElement, nullptr); assert(SUCCEEDED(hr));
 
 		com_ptr<IXMLDOMElement> bridgesElement;
@@ -324,7 +324,7 @@ public:
 		_variant_t value;
 		hr = projectElement->getAttribute (NextMacAddressString, &value);
 		if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
-			_nextMacAddress = ConvertStringToBridgeAddress (static_cast<_bstr_t>(value));
+			mac_address_from_string<wchar_t>(value.bstrVal, _next_mac_address);
 
 		{
 			com_ptr<IXMLDOMNodeList> bridgeNodes;
