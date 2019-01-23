@@ -53,7 +53,7 @@
       <Filter>edit_states</Filter>
     </ClCompile>
     <ClCompile Include="BridgeTree.cpp" />
-    <ClCompile Include="PropertiesWindow.cpp" />
+    <ClCompile Include="properties_window.cpp" />
     <ClCompile Include="PortTree.cpp" />
   </ItemGroup>
   <ItemGroup>

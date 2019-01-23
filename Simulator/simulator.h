@@ -198,11 +198,11 @@ extern const ProjectFactory projectFactory;
 
 // ============================================================================
 
-struct __declspec(novtable) IPropertiesWindow : virtual edge::win32_window_i
+struct __declspec(novtable) properties_window_i : virtual edge::win32_window_i
 {
-	virtual ~IPropertiesWindow() { }
+	virtual ~properties_window_i() { }
 };
-using PropertiesWindowFactory = std::unique_ptr<IPropertiesWindow>(*const)(simulator_app_i* app,
+using properties_window_factory_t = std::unique_ptr<properties_window_i>(*const)(simulator_app_i* app,
 																		   IProjectWindow* projectWindow,
 																		   IProject* project,
 																		   ISelection* selection,
@@ -210,7 +210,7 @@ using PropertiesWindowFactory = std::unique_ptr<IPropertiesWindow>(*const)(simul
 																		   HWND hWndParent,
 																		   ID3D11DeviceContext1* d3d_dc,
 																		   IDWriteFactory* dwrite_factory);
-extern const PropertiesWindowFactory propertiesWindowFactory;
+extern const properties_window_factory_t properties_window_factory;
 
 // ============================================================================
 

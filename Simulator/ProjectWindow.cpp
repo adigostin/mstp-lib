@@ -50,7 +50,7 @@ class ProjectWindow : public window, public virtual IProjectWindow
 	std::shared_ptr<IProject>   const _project;
 	std::unique_ptr<ISelection> const _selection;
 	std::unique_ptr<edit_area_i>          _editWindow;
-	std::unique_ptr<IPropertiesWindow>  _propertiesWindow;
+	std::unique_ptr<properties_window_i>  _propertiesWindow;
 	std::unique_ptr<log_window_i>       _log_window;
 	std::unique_ptr<IVlanWindow>        _vlanWindow;
 	SIZE _clientSize;
@@ -122,7 +122,7 @@ public:
 		LONG w = (PropertiesWindowDefaultWidthDips * _dpiX + 96 / 2) / 96;
 		TryReadRegDword (RegValueNamePropertiesWindowWidth, (DWORD*) &w);
 		w = RestrictToolWindowWidth(w);
-		_propertiesWindow = propertiesWindowFactory (_app, this, _project.get(), _selection.get(), { 0, 0, w, _clientSize.cy }, hwnd(), _d3d_dc, _dwrite_factory);
+		_propertiesWindow = properties_window_factory (_app, this, _project.get(), _selection.get(), { 0, 0, w, _clientSize.cy }, hwnd(), _d3d_dc, _dwrite_factory);
 		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
 	}
 

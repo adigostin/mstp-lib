@@ -251,7 +251,7 @@ public:
 				if (cancel)
 					break;
 		
-				y += item_height + _line_thickness;
+				y = horz_line_y + _line_thickness;
 
 				if (auto ei = dynamic_cast<expandable_item*>(item.get()); (ei != nullptr) && ei->expanded())
 					enum_items_inner (ei->children(), y, indent + 1, cancel);
@@ -382,7 +382,17 @@ public:
 		}
 	}
 
-	void set_title (std::string_view title) final
+	virtual preferred_height_changed_e::subscriber preferred_height_changed() override { return preferred_height_changed_e::subscriber(this); }
+
+	virtual LONG preferred_height_pixels() const override
+	{
+		float bottom = 0;
+		enum_items([&bottom, this](pgitem* item, const item_layout& layout, bool& cancel) { bottom = layout.value_rect.bottom + _line_thickness; } );
+		auto size_pixels = pointd_to_pointp ({ 0, bottom }, +1);
+		return size_pixels.y;
+	}
+
+	void set_title (std::string_view title) override
 	{
 		if (title.empty())
 			_title_layout.layout = nullptr;
