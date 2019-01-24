@@ -31,7 +31,7 @@ class edge::property_grid : d2d_window, public virtual property_grid_i
 	com_ptr<IDWriteTextFormat> _wingdings;
 	com_ptr<IDWriteTextFormat> _titleTextFormat;
 	std::unique_ptr<text_editor_i> _text_editor;
-	float _nameColumnSize = 0.5f;
+	float _name_column_factor = 0.5f;
 	float _pixel_width;
 	float _line_thickness;
 	std::unique_ptr<root_item> _root_item;
@@ -243,8 +243,8 @@ public:
 				horz_line_y = ceilf (horz_line_y / _pixel_width) * _pixel_width;
 
 				ii.location = { 0, y };
-				ii.name_rect = { 0, y, ncw - _line_thickness / 2, horz_line_y };
-				ii.value_rect = { ncw + _line_thickness / 2, y, client_width(), horz_line_y };
+				ii.name_rect = { 0, y, ncw, horz_line_y };
+				ii.value_rect = { ncw + _line_thickness, y, client_width(), horz_line_y };
 
 				callback(item.get(), ii, cancel);
 				if (cancel)
@@ -265,7 +265,8 @@ public:
 	void create_text_layouts()
 	{
 		auto ncw = name_column_width();
-		auto value_width = std::max (0.0f, value_column_width() - 2 * text_lr_padding);
+		auto vcw = std::max (75.0f, client_width() - ncw);
+		auto value_width = vcw - _line_thickness - 2 * text_lr_padding;
 
 		std::function<void(const std::vector<std::unique_ptr<pgitem>>& items, size_t indent)> create_inner;
 
@@ -359,21 +360,16 @@ public:
 
 		if (bottom > title_height())
 		{
-			float ncw = name_column_width();
-			dc->DrawLine ({ ncw, title_height() }, { ncw, bottom }, rc.disabled_fore_brush, _line_thickness);
+			float x = name_column_width() + _line_thickness / 2;
+			dc->DrawLine ({ x, title_height() }, { x, bottom }, rc.disabled_fore_brush, _line_thickness);
 		}
 	}
 
 	float name_column_width() const
 	{
-		float w = client_width() * _nameColumnSize;
+		float w = client_width() * _name_column_factor;
 		w = roundf (w / _pixel_width) * _pixel_width;
 		return std::max (75.0f, w);
-	}
-
-	float value_column_width() const
-	{
-		return std::max (75.0f, client_width() - name_column_width());
 	}
 
 	void discard_editor()
