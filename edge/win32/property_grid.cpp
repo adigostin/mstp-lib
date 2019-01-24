@@ -366,14 +366,14 @@ public:
 
 	float name_column_width() const
 	{
-		float w = std::max (100.0f, client_width()) * _nameColumnSize;
+		float w = client_width() * _nameColumnSize;
 		w = roundf (w / _pixel_width) * _pixel_width;
-		return w;
+		return std::max (75.0f, w);
 	}
 
 	float value_column_width() const
 	{
-		return this->client_width() - name_column_width();
+		return std::max (75.0f, client_width() - name_column_width());
 	}
 
 	void discard_editor()
@@ -391,6 +391,8 @@ public:
 	{
 		float bottom = 0;
 		enum_items([&bottom, this](pgitem* item, const item_layout& layout, bool& cancel) { bottom = layout.value_rect.bottom + _line_thickness; } );
+		// Due to multiple additions we might get here something like 321.0001. Let's round it.
+		bottom = round(bottom);
 		auto size_pixels = pointd_to_pointp ({ 0, bottom }, +1);
 		return size_pixels.y;
 	}
