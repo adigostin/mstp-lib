@@ -28,7 +28,6 @@ namespace edge
 		// TODO: make these internal to property_grid.cpp / property_grid_items.cpp
 		virtual IDWriteFactory* dwrite_factory() const = 0;
 		virtual IDWriteTextFormat* text_format() const = 0;
-		virtual float value_text_width() const = 0;
 		virtual void perform_layout() = 0;
 		virtual void invalidate() = 0;
 	};

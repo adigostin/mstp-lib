@@ -334,10 +334,9 @@ public:
 			::GetWindowRect(hwnd, &_restoreBounds);
 
 		if (wParam != SIZE_MINIMIZED)
-		{
 			_clientSize = newClientSize;
-			ResizeChildWindows();
-		}
+
+		ResizeChildWindows();
 	}
 
 	void ResizeChildWindows()

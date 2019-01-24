@@ -72,15 +72,6 @@ public:
 
 	virtual IDWriteTextFormat* text_format() const override final { return _textFormat; }
 
-	virtual float value_text_width() const override final
-	{
-		float ncw = name_column_width();
-		float left = ncw + _line_thickness / 2;
-		float right = client_width();
-		float w = right - left - 2 * text_lr_padding;
-		return w > 0 ? w : 0;
-	}
-
 	virtual void perform_layout() override final
 	{
 		assert(false); // not implemented
@@ -96,12 +87,6 @@ public:
 	{
 		auto resultBaseClass = base::window_proc (hwnd, msg, wParam, lParam);
 
-		if (msg == 0x02E3) // WM_DPICHANGED_AFTERPARENT
-		{
-			recalc_pixel_width_and_line_thickness();
-			return 0;
-		}
-
 		if (msg == WM_GETDLGCODE)
 		{
 			if (_text_editor)
@@ -113,8 +98,22 @@ public:
 		if (msg == WM_SIZE)
 		{
 			if (_root_item)
+			{
 				create_text_layouts();
+				this->event_invoker<preferred_height_changed_e>()();
+			}
 
+			return 0;
+		}
+
+		if (msg == 0x02E3) // WM_DPICHANGED_AFTERPARENT
+		{
+			recalc_pixel_width_and_line_thickness();
+			if (_root_item)
+			{
+				create_text_layouts();
+				this->event_invoker<preferred_height_changed_e>()();
+			}
 			return 0;
 		}
 
@@ -263,7 +262,7 @@ public:
 		enum_items_inner (_root_item->children(), y, 0, cancel);
 	}
 
-	void create_text_layouts() const
+	void create_text_layouts()
 	{
 		auto ncw = name_column_width();
 		auto value_width = std::max (0.0f, value_column_width() - 2 * text_lr_padding);
@@ -284,6 +283,8 @@ public:
 		};
 
 		create_inner (_root_item->children(), 0);
+
+		invalidate();
 	}
 
 	float title_height() const
@@ -335,7 +336,6 @@ public:
 		dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOWTEXT), &rc.selected_fore_brush);
 		dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_GRAYTEXT), &rc.disabled_fore_brush);
 
-		float ncw = name_column_width();
 		float bottom = 0;
 		enum_items ([&](pgitem* item, const item_layout& layout, bool& cancel)
 		{
@@ -358,7 +358,10 @@ public:
 		});
 
 		if (bottom > title_height())
+		{
+			float ncw = name_column_width();
 			dc->DrawLine ({ ncw, title_height() }, { ncw, bottom }, rc.disabled_fore_brush, _line_thickness);
+		}
 	}
 
 	float name_column_width() const

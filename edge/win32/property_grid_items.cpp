@@ -108,7 +108,7 @@ void value_pgitem::recreate_value_text_layout()
 {
 	auto grid = root()->_grid;
 	auto old_height = _value.metrics.height;
-	_value = text_layout::create (grid->dwrite_factory(), grid->text_format(), convert_to_string(), grid->value_text_width());
+	_value = text_layout::create (grid->dwrite_factory(), grid->text_format(), convert_to_string(), _value.metrics.layoutWidth);
 	if (_value.metrics.height != old_height)
 		grid->perform_layout();
 	else

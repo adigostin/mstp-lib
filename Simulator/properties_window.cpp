@@ -170,8 +170,12 @@ public:
 		if (msg == WM_SIZE)
 		{
 			if (_pg1 != nullptr)
+			{
+				// Resize the widths first to let the PGs recalc their preferred heights
+				::MoveWindow (_pg1->hwnd(), 0, 0, client_width_pixels(), _pg1->GetHeight(), FALSE);
+				::MoveWindow (_pg2->hwnd(), 0, _pg2->GetY(), client_width_pixels(), _pg2->GetHeight(), FALSE);
 				move_pgs();
-
+			}
 			return 0;
 		}
 
