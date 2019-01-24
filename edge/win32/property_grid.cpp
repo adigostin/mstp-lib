@@ -387,9 +387,7 @@ public:
 	{
 		float bottom = 0;
 		enum_items([&bottom, this](pgitem* item, const item_layout& layout, bool& cancel) { bottom = layout.value_rect.bottom + _line_thickness; } );
-		// Due to multiple additions we might get here something like 321.0001. Let's round it.
-		bottom = round(bottom);
-		auto size_pixels = pointd_to_pointp ({ 0, bottom }, +1);
+		auto size_pixels = pointd_to_pointp ({ 0, bottom }, 0);
 		return size_pixels.y;
 	}
 
