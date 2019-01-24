@@ -114,8 +114,6 @@ public:
 	bool IsPowered() const { return _powered; }
 	const std::vector<std::unique_ptr<BridgeLogLine>>& GetLogLines() const { return _logLines; }
 	std::array<uint8_t, 6> GetPortAddress (size_t portIndex) const;
-	mac_address bridge_address() const;
-	void set_bridge_address (mac_address address);
 
 	edge::com_ptr<IXMLDOMElement> Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) const;
 	static std::unique_ptr<Bridge> Deserialize (IXMLDOMElement* element);
@@ -124,8 +122,10 @@ public:
 	void ResumeSimulation();
 
 	// Property getters and setters.
-	bool GetStpEnabled() const { return (bool) STP_IsBridgeStarted(_stpBridge); }
-	void SetStpEnabled (bool enable);
+	mac_address bridge_address() const;
+	void set_bridge_address (mac_address address);
+	bool stp_enabled() const { return (bool) STP_IsBridgeStarted(_stpBridge); }
+	void set_stp_enabled(bool enable);
 	STP_VERSION GetStpVersion() const { return STP_GetStpVersion(_stpBridge); }
 	void SetStpVersion(STP_VERSION version);
 	unsigned int GetPortCount() const { return STP_GetPortCount(_stpBridge); }
@@ -169,8 +169,8 @@ private:
 	static void  StpCallback_OnConfigChanged          (const STP_BRIDGE* bridge, unsigned int timestamp);
 	
 public:
-	static const mac_address_property       Address;
-	static const edge::bool_property        StpEnabled;
+	static const mac_address_property       bridge_address_p;
+	static const edge::bool_property        stp_enabled_p;
 	static const stp_version_property       StpVersion;
 	static const edge::uint32_property      PortCount;
 	static const edge::uint32_property      MstiCount;

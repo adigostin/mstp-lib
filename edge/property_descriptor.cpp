@@ -24,9 +24,25 @@ namespace edge
 		assert(false); return false;
 	}
 
+	std::string bool_to_string (bool from)
+	{
+		return from ? "true" : "false";
+	}
+
 	bool bool_from_string (std::string_view from, bool& to)
 	{
-		assert(false); return false;
+		if (from == "true")
+		{
+			to = true;
+			return true;
+		}
+		else if (from == "false")
+		{
+			to = false;
+			return true;
+		}
+		else
+			return false;
 	}
 
 	bool uint32_from_string (std::string_view from, uint32_t& to)

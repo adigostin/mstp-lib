@@ -184,7 +184,7 @@ namespace edge
 
 	// ===========================================
 
-	inline std::string bool_to_string (bool from) { return std::to_string(from); }
+	std::string bool_to_string (bool from);
 	bool bool_from_string (std::string_view from, bool& to);
 	static constexpr char bool_type_name[] = "bool";
 	using bool_property = typed_property<bool, bool, bool, bool_type_name, bool_to_string, bool_from_string>;

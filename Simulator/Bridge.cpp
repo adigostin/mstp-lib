@@ -425,9 +425,9 @@ void Bridge::set_bridge_address (mac_address address)
 {
 	if (memcmp(STP_GetBridgeAddress(_stpBridge)->bytes, address.data(), 6) != 0)
 	{
-		this->on_property_changing(&Address);
+		this->on_property_changing(&bridge_address_p);
 		STP_SetBridgeAddress(_stpBridge, address.data(), GetMessageTime());
-		this->on_property_changed(&Address);
+		this->on_property_changed(&bridge_address_p);
 	}
 }
 
@@ -771,19 +771,19 @@ void Bridge::SetMstConfigTable (const STP_CONFIG_TABLE_ENTRY* entries, size_t en
 	this->on_property_changed (&MstConfigIdDigest);
 }
 
-void Bridge::SetStpEnabled (bool value)
+void Bridge::set_stp_enabled (bool value)
 {
 	if (value && !STP_IsBridgeStarted(_stpBridge))
 	{
-		this->on_property_changing(&StpEnabled);
+		this->on_property_changing(&stp_enabled_p);
 		STP_StartBridge (_stpBridge, GetMessageTime());
-		this->on_property_changed(&StpEnabled);
+		this->on_property_changed(&stp_enabled_p);
 	}
 	else if (!value && STP_IsBridgeStarted(_stpBridge))
 	{
-		this->on_property_changing(&StpEnabled);
+		this->on_property_changing(&stp_enabled_p);
 		STP_StopBridge (_stpBridge, GetMessageTime());
-		this->on_property_changed(&StpEnabled);
+		this->on_property_changed(&stp_enabled_p);
 	}
 }
 
@@ -844,16 +844,16 @@ uint32_t Bridge::GetForwardDelay() const
 
 #pragma region properties
 
-const mac_address_property Bridge::Address {
+const mac_address_property Bridge::bridge_address_p {
 	"Bridge Address",
 	static_cast<mac_address_property::getter_t>(&bridge_address),
 	static_cast<mac_address_property::setter_t>(&set_bridge_address),
 	std::nullopt };
 
-const bool_property Bridge::StpEnabled {
+const bool_property Bridge::stp_enabled_p {
 	"STP Enabled",
-	static_cast<bool_property::getter_t>(&Bridge::GetStpEnabled),
-	static_cast<bool_property::setter_t>(&Bridge::SetStpEnabled),
+	static_cast<bool_property::getter_t>(&stp_enabled),
+	static_cast<bool_property::setter_t>(&set_stp_enabled),
 	true };
 
 const stp_version_property Bridge::StpVersion {
@@ -932,8 +932,8 @@ const edge::uint32_property Bridge::ForwardDelay {
 
 const edge::property* const Bridge::_properties[] = {
 	//&CommonPropGroup,
-	&Address,
-	&StpEnabled,
+	&bridge_address_p,
+	&stp_enabled_p,
 	&StpVersion,
 	&PortCount,
 	&MstiCount,
