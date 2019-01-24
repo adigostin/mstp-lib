@@ -41,7 +41,7 @@ public:
 			_project->InsertBridge(insertIndex, move(_bridge));
 			STP_StartBridge (_project->GetBridges().back()->stp_bridge(), GetMessageTime());
 			_project->SetChangedFlag(true);
-			_selection->Select(b);
+			_selection->select(b);
 		}
 
 		_completed = true;

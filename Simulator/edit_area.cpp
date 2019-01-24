@@ -36,7 +36,7 @@ class edit_area : public zoomable_window, public edit_area_i
 	simulator_app_i*  const _app;
 	IProjectWindow* const _pw;
 	IProject*       const _project;
-	ISelection*     const _selection;
+	selection_i*     const _selection;
 	com_ptr<IDWriteTextFormat> _legendFont;
 	struct drawing_resources _drawing_resources;
 	unique_ptr<edit_state> _state;
@@ -46,7 +46,7 @@ public:
 	edit_area (simulator_app_i* app,
 			  IProjectWindow* pw,
 			  IProject* project,
-			  ISelection* selection,
+			  selection_i* selection,
 			  HWND hWndParent,
 			  const RECT& rect,
 			  ID3D11DeviceContext1* d3d_dc,
@@ -68,7 +68,7 @@ public:
 		dwrite_factory()->CreateTextFormat (L"Tahoma", nullptr,  DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
 			DWRITE_FONT_STRETCH_CONDENSED, 11, L"en-US", &_legendFont); assert(SUCCEEDED(hr));
 
-		_selection->GetChangedEvent().add_handler (&OnSelectionChanged, this);
+		_selection->changed().add_handler (&OnSelectionChanged, this);
 		_project->GetBridgeRemovingEvent().add_handler (&OnBridgeRemoving, this);
 		_project->GetWireRemovingEvent().add_handler (&OnWireRemoving, this);
 		_project->GetInvalidateEvent().add_handler (&OnProjectInvalidate, this);
@@ -81,7 +81,7 @@ public:
 		_project->GetInvalidateEvent().remove_handler (&OnProjectInvalidate, this);
 		_project->GetWireRemovingEvent().remove_handler (&OnWireRemoving, this);
 		_project->GetBridgeRemovingEvent().remove_handler (&OnBridgeRemoving, this);
-		_selection->GetChangedEvent().remove_handler (&OnSelectionChanged, this);
+		_selection->changed().remove_handler (&OnSelectionChanged, this);
 	}
 
 	static void OnSelectedVlanChanged (void* callbackArg, IProjectWindow* pw, unsigned int vlanNumber)
@@ -108,7 +108,7 @@ public:
 		::InvalidateRect (area->hwnd(), nullptr, FALSE);
 	}
 
-	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
+	static void OnSelectionChanged (void* callbackArg, selection_i* selection)
 	{
 		auto ea = static_cast<edit_area*>(callbackArg);
 		::InvalidateRect (ea->hwnd(), nullptr, FALSE);
@@ -485,7 +485,7 @@ public:
 
 		render_wires (dc);
 
-		for (object* o : _selection->GetObjects())
+		for (object* o : _selection->objects())
 		{
 			if (auto ro = dynamic_cast<renderable_object*>(o))
 				ro->RenderSelection(this, dc, _drawing_resources);
@@ -588,7 +588,7 @@ public:
 			else if ((wParam == ID_BRIDGE_ENABLE_STP) || (wParam == ID_BRIDGE_DISABLE_STP))
 			{
 				bool enable = (wParam == ID_BRIDGE_ENABLE_STP);
-				for (object* o : _selection->GetObjects())
+				for (object* o : _selection->objects())
 				{
 					auto b = dynamic_cast<Bridge*>(o);
 					if (b != nullptr)
@@ -661,13 +661,13 @@ public:
 
 	void DeleteSelection()
 	{
-		if (any_of(_selection->GetObjects().begin(), _selection->GetObjects().end(), [](object* o) { return o->is<Port>(); }))
+		if (any_of(_selection->objects().begin(), _selection->objects().end(), [](object* o) { return o->is<Port>(); }))
 		{
 			TaskDialog (hwnd(), nullptr, _app->GetAppName(), nullptr, L"Ports cannot be deleted.", 0, nullptr, nullptr);
 			return;
 		}
 
-		if (any_of (_selection->GetObjects().begin(), _selection->GetObjects().end(), [](object* o) { return o->is<Port>(); }))
+		if (any_of (_selection->objects().begin(), _selection->objects().end(), [](object* o) { return o->is<Port>(); }))
 		{
 			TaskDialog (_pw->hwnd(), nullptr, _app->GetAppName(), L"Can't Delete Ports", L"The Simulator does not yet support deleting ports.", 0, TD_INFORMATION_ICON, nullptr);
 			return;
@@ -677,7 +677,7 @@ public:
 		std::set<Wire*> wiresToRemove;
 		std::unordered_map<Wire*, std::vector<size_t>> pointsToDisconnect;
 
-		for (object* o : _selection->GetObjects())
+		for (object* o : _selection->objects())
 		{
 			if (auto w = dynamic_cast<Wire*>(o); w != nullptr)
 				wiresToRemove.insert(w);
@@ -796,22 +796,22 @@ public:
 
 		auto ht = HitTestObjects (mouseLocation.d, SnapDistance);
 		if (ht.object == nullptr)
-			_selection->Clear();
+			_selection->clear();
 		else
 		{
 			if (modifierKeysDown & MK_CONTROL)
 			{
-				if (_selection->Contains(ht.object))
-					_selection->Remove(ht.object);
-				else if (!_selection->GetObjects().empty() && (typeid(*_selection->GetObjects()[0]) == typeid(*ht.object)))
-					_selection->Add(ht.object);
+				if (_selection->contains(ht.object))
+					_selection->remove(ht.object);
+				else if (!_selection->objects().empty() && (typeid(*_selection->objects()[0]) == typeid(*ht.object)))
+					_selection->add(ht.object);
 				else
-					_selection->Select(ht.object);
+					_selection->select(ht.object);
 			}
 			else
 			{
-				if (!_selection->Contains(ht.object))
-					_selection->Select(ht.object);
+				if (!_selection->contains(ht.object))
+					_selection->select(ht.object);
 			}
 		}
 
@@ -836,7 +836,7 @@ public:
 
 				if (ht.code == Port::HTCodeInnerOuter)
 				{
-					if ((button == MouseButton::Left) && (_selection->GetObjects().size() == 1) && (dynamic_cast<Port*>(_selection->GetObjects()[0]) != nullptr))
+					if ((button == MouseButton::Left) && (_selection->objects().size() == 1) && (dynamic_cast<Port*>(_selection->objects()[0]) != nullptr))
 						stateMoveThreshold = CreateStateMovePort (MakeEditStateDeps());
 				}
 				else if (ht.code == Port::HTCodeCP)
@@ -955,15 +955,15 @@ public:
 		//GetElementsAt(_project->GetInnerRootElement(), { dipLocation.x, dipLocation.y }, _elementsAtContextMenuLocation);
 
 		HMENU hMenu = nullptr;
-		if (_selection->GetObjects().empty())
+		if (_selection->objects().empty())
 		{
 			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_EMPTY_SPACE));
 			::EnableMenuItem (hMenu, ID_PAUSE_SIMULATION, _project->IsSimulationPaused() ? MF_DISABLED : MF_ENABLED);
 			::EnableMenuItem (hMenu, ID_RESUME_SIMULATION, _project->IsSimulationPaused() ? MF_ENABLED : MF_DISABLED);
 		}
-		else if (dynamic_cast<Bridge*>(_selection->GetObjects().front()) != nullptr)
+		else if (dynamic_cast<Bridge*>(_selection->objects().front()) != nullptr)
 			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_BRIDGE));
-		else if (dynamic_cast<Port*>(_selection->GetObjects().front()) != nullptr)
+		else if (dynamic_cast<Port*>(_selection->objects().front()) != nullptr)
 			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_PORT));
 
 		if (hMenu != nullptr)

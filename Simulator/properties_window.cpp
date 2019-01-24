@@ -17,7 +17,7 @@ class properties_window : public window, public virtual properties_window_i
 {
 	using base = window;
 
-	ISelection*     const _selection;
+	selection_i*     const _selection;
 	IProjectWindow* const _project_window;
 	IProject*       const _project;
 	unique_ptr<property_grid_i> _pg1;
@@ -27,7 +27,7 @@ public:
 	properties_window (simulator_app_i* app,
 					  IProjectWindow* projectWindow,
 					  IProject* project,
-					  ISelection* selection,
+					  selection_i* selection,
 					  const RECT& rect,
 					  HWND hWndParent,
 					  ID3D11DeviceContext1* d3d_dc,
@@ -42,7 +42,7 @@ public:
 		this->set_selection_to_pgs();
 
 		_project_window->GetSelectedVlanNumerChangedEvent().add_handler (&on_selected_vlan_changed, this);
-		_selection->GetChangedEvent().add_handler (&on_selection_changed, this);
+		_selection->changed().add_handler (&on_selection_changed, this);
 		_project->GetChangedEvent().add_handler (&on_project_changed, this);
 		_pg1->preferred_height_changed().add_handler (&on_pg12_preferred_height_changed, this);
 		_pg2->preferred_height_changed().add_handler (&on_pg12_preferred_height_changed, this);
@@ -53,7 +53,7 @@ public:
 		_pg2->preferred_height_changed().remove_handler (&on_pg12_preferred_height_changed, this);
 		_pg1->preferred_height_changed().remove_handler (&on_pg12_preferred_height_changed, this);
 		_project->GetChangedEvent().remove_handler (&on_project_changed, this);
-		_selection->GetChangedEvent().remove_handler (&on_selection_changed, this);
+		_selection->changed().remove_handler (&on_selection_changed, this);
 		_project_window->GetSelectedVlanNumerChangedEvent().remove_handler (&on_selected_vlan_changed, this);
 	}
 
@@ -69,7 +69,7 @@ public:
 
 	void set_selection_to_pgs()
 	{
-		const auto& objs = _selection->GetObjects();
+		const auto& objs = _selection->objects();
 
 		if (objs.empty())
 		{
@@ -134,7 +134,7 @@ public:
 		window->set_selection_to_pgs();
 	}
 
-	static void on_selection_changed (void* callbackArg, ISelection* selection)
+	static void on_selection_changed (void* callbackArg, selection_i* selection)
 	{
 		auto window = static_cast<properties_window*>(callbackArg);
 		window->set_selection_to_pgs();

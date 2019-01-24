@@ -10,14 +10,14 @@ class VlanWindow : public virtual IVlanWindow
 	simulator_app_i*  const _app;
 	IProjectWindow* const _pw;
 	std::shared_ptr<IProject> const _project;
-	ISelection*    const _selection;
+	selection_i*    const _selection;
 	HWND _hwnd = nullptr;
 
 public:
 	VlanWindow (simulator_app_i* app,
 				IProjectWindow* pw,
 				const std::shared_ptr<IProject>& project,
-				ISelection* selection,
+				selection_i* selection,
 				HWND hWndParent,
 				POINT location)
 		: _app(app)
@@ -34,12 +34,12 @@ public:
 		::GetWindowRect(_hwnd, &rc);
 		::MoveWindow (_hwnd, location.x, location.y, rc.right - rc.left, rc.bottom - rc.top, TRUE);
 
-		_selection->GetAddedToSelectionEvent().add_handler (&OnAddedToSelection, this);
-		_selection->GetRemovingFromSelectionEvent().add_handler (&OnRemovingFromSelection, this);
-		_selection->GetChangedEvent().add_handler (&OnSelectionChanged, this);
+		_selection->added().add_handler (&OnAddedToSelection, this);
+		_selection->removing().add_handler (&OnRemovingFromSelection, this);
+		_selection->changed().add_handler (&OnSelectionChanged, this);
 		_pw->GetSelectedVlanNumerChangedEvent().add_handler (&OnSelectedVlanChanged, this);
 
-		for (auto o : _selection->GetObjects())
+		for (auto o : _selection->objects())
 		{
 			if (auto b = dynamic_cast<Bridge*>(o); b != nullptr)
 				b->property_changed().add_handler (&OnBridgePropertyChanged, this);
@@ -48,16 +48,16 @@ public:
 
 	~VlanWindow()
 	{
-		for (auto o : _selection->GetObjects())
+		for (auto o : _selection->objects())
 		{
 			if (auto b = dynamic_cast<Bridge*>(o); b != nullptr)
 				b->property_changed().remove_handler (&OnBridgePropertyChanged, this);
 		}
 
 		_pw->GetSelectedVlanNumerChangedEvent().remove_handler (&OnSelectedVlanChanged, this);
-		_selection->GetChangedEvent().remove_handler (&OnSelectionChanged, this);
-		_selection->GetRemovingFromSelectionEvent().remove_handler (&OnRemovingFromSelection, this);
-		_selection->GetAddedToSelectionEvent().remove_handler (&OnAddedToSelection, this);
+		_selection->changed().remove_handler (&OnSelectionChanged, this);
+		_selection->removing().remove_handler (&OnRemovingFromSelection, this);
+		_selection->added().remove_handler (&OnAddedToSelection, this);
 
 		if (_hwnd != nullptr)
 			::DestroyWindow(_hwnd);
@@ -153,7 +153,7 @@ public:
 			if ((HIWORD(wParam) == BN_CLICKED) && (LOWORD(wParam) == IDC_BUTTON_EDIT_MST_CONFIG_TABLE))
 			{
 				assert(false);
-				//auto dialog = mstConfigIdDialogFactory(_selection->GetObjects());
+				//auto dialog = mstConfigIdDialogFactory(_selection->objects());
 				//dialog->ShowModal(_pw->GetHWnd());
 				return { TRUE, 0 };
 			}
@@ -164,14 +164,14 @@ public:
 		return { FALSE, 0 };
 	}
 
-	static void OnAddedToSelection (void* callbackArg, ISelection* selection, edge::object* obj)
+	static void OnAddedToSelection (void* callbackArg, selection_i* selection, edge::object* obj)
 	{
 		auto b = dynamic_cast<Bridge*>(obj);
 		if (b != nullptr)
 			b->property_changed().add_handler (&OnBridgePropertyChanged, callbackArg);
 	}
 
-	static void OnRemovingFromSelection (void* callbackArg, ISelection* selection, edge::object* obj)
+	static void OnRemovingFromSelection (void* callbackArg, selection_i* selection, edge::object* obj)
 	{
 		auto b = dynamic_cast<Bridge*>(obj);
 		if (b != nullptr)
@@ -183,7 +183,7 @@ public:
 		static_cast<VlanWindow*>(callbackArg)->LoadSelectedTreeEdit();
 	}
 
-	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
+	static void OnSelectionChanged (void* callbackArg, selection_i* selection)
 	{
 		static_cast<VlanWindow*>(callbackArg)->LoadSelectedTreeEdit();
 	}
@@ -215,7 +215,7 @@ public:
 		{
 			assert(false);
 			//project_window_create_params create_params = 
-			//	{ _app, _project, selectionFactory, edit_area_factory, false, false, vlanNumber, SW_SHOW, _d3d_dc, _dwrite_factory };
+			//	{ _app, _project, selection_factory, edit_area_factory, false, false, vlanNumber, SW_SHOW, _d3d_dc, _dwrite_factory };
 			//auto pw = projectWindowFactory (create_params);
 			//_app->add_project_window(move(pw));
 		}
@@ -232,7 +232,7 @@ public:
 	{
 		auto edit = GetDlgItem (_hwnd, IDC_EDIT_SELECTED_TREE); assert (edit != nullptr);
 		auto tableButton = GetDlgItem (_hwnd, IDC_BUTTON_EDIT_MST_CONFIG_TABLE); assert (tableButton != nullptr);
-		auto& objects = _selection->GetObjects();
+		auto& objects = _selection->objects();
 
 		if (objects.empty())
 		{

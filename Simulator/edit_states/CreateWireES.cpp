@@ -91,7 +91,7 @@ public:
 			if (holds_alternative<ConnectedWireEnd>(_wire->GetP1()))
 			{
 				_project->SetChangedFlag(true);
-				_selection->Select(_wire);
+				_selection->select(_wire);
 				_subState = Done;
 			}
 		}

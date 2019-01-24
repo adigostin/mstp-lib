@@ -6,7 +6,7 @@ struct EditStateDeps
 	IProjectWindow* pw;
 	edit_area_i*    ea;
 	IProject*       project;
-	ISelection*     selection;
+	selection_i*     selection;
 };
 
 class edit_state abstract
@@ -15,7 +15,7 @@ protected:
 	IProjectWindow* const _pw;
 	edit_area_i*    const _ea;
 	IProject*       const _project;
-	ISelection*     const _selection;
+	selection_i*     const _selection;
 
 public:
 	edit_state (const EditStateDeps& deps)

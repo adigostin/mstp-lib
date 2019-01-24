@@ -8,7 +8,7 @@
 struct simulator_app_i;
 struct IProject;
 struct IProjectWindow;
-struct ISelection;
+struct selection_i;
 struct log_window_i;
 class Bridge;
 class Port;
@@ -31,29 +31,29 @@ enum class MouseButton
 
 // ============================================================================
 
-struct __declspec(novtable) ISelection
+struct __declspec(novtable) selection_i
 {
-	virtual ~ISelection() { }
+	virtual ~selection_i() { }
 
-	virtual const std::vector<edge::object*>& GetObjects() const = 0;
-	virtual void Select (edge::object* o) = 0;
-	virtual void Clear() = 0;
-	virtual void Add (edge::object* o) = 0;
-	virtual void Remove (edge::object* o) = 0;
+	virtual const std::vector<edge::object*>& objects() const = 0;
+	virtual void select (edge::object* o) = 0;
+	virtual void clear() = 0;
+	virtual void add (edge::object* o) = 0;
+	virtual void remove (edge::object* o) = 0;
 
-	bool Contains (edge::object* o) const { return std::find (GetObjects().begin(), GetObjects().end(), o) != GetObjects().end(); }
+	bool contains (edge::object* o) const { return std::find (objects().begin(), objects().end(), o) != objects().end(); }
 
-	struct AddedToSelectionEvent : public edge::event<AddedToSelectionEvent, ISelection*, edge::object*> { };
-	virtual AddedToSelectionEvent::subscriber GetAddedToSelectionEvent() = 0;
+	struct added_e : public edge::event<added_e, selection_i*, edge::object*> { };
+	virtual added_e::subscriber added() = 0;
 
-	struct RemovingFromSelectionEvent : public edge::event<RemovingFromSelectionEvent, ISelection*, edge::object*> { };
-	virtual RemovingFromSelectionEvent::subscriber GetRemovingFromSelectionEvent() = 0;
+	struct removing_e : public edge::event<removing_e, selection_i*, edge::object*> { };
+	virtual removing_e::subscriber removing() = 0;
 
-	struct ChangedEvent : public edge::event<ChangedEvent, ISelection*> { };
-	virtual ChangedEvent::subscriber GetChangedEvent() = 0;
+	struct changed_e : public edge::event<changed_e, selection_i*> { };
+	virtual changed_e::subscriber changed() = 0;
 };
-using SelectionFactory = std::unique_ptr<ISelection>(*const)(IProject* project);
-extern const SelectionFactory selectionFactory;
+using selection_factory_t = std::unique_ptr<selection_i>(*const)(IProject* project);
+extern const selection_factory_t selection_factory;
 
 // ============================================================================
 
@@ -61,7 +61,7 @@ struct __declspec(novtable) log_window_i abstract : virtual edge::win32_window_i
 {
 	virtual ~log_window_i() { }
 };
-using log_window_factory_t = std::unique_ptr<log_window_i>(*const)(HINSTANCE hInstance, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dWriteFactory, ISelection* selection);
+using log_window_factory_t = std::unique_ptr<log_window_i>(*const)(HINSTANCE hInstance, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dWriteFactory, selection_i* selection);
 extern const log_window_factory_t log_window_factory;
 
 // ============================================================================
@@ -100,7 +100,7 @@ struct __declspec(novtable) edit_area_i : virtual edge::win32_window_i
 using edit_area_factory_t = std::unique_ptr<edit_area_i>(*const)(simulator_app_i* app,
 																 IProjectWindow* pw,
 																 IProject* project,
-																 ISelection* selection,
+																 selection_i* selection,
 																 HWND hWndParent,
 																 const RECT& rect,
 																 ID3D11DeviceContext1* d3d_dc,
@@ -124,7 +124,7 @@ struct project_window_create_params
 {
 	simulator_app_i*                   app;
 	const std::shared_ptr<IProject>& project;
-	SelectionFactory                 selectionFactory;
+	selection_factory_t                 selection_factory;
 	edit_area_factory_t                  edit_area_factory;
 	bool     showPropertiesWindow;
 	bool     showLogWindow;
@@ -161,7 +161,7 @@ struct __declspec(novtable) IProject
 	struct invalidate_e : public edge::event<invalidate_e, IProject*> { };
 	struct LoadedEvent : public edge::event<LoadedEvent, IProject*> { };
 	struct ChangedFlagChangedEvent : public edge::event<ChangedFlagChangedEvent, IProject*> { };
-	struct ChangedEvent : public edge::event<ChangedEvent, IProject*> { };
+	struct changed_e : public edge::event<changed_e, IProject*> { };
 
 	virtual const std::vector<std::unique_ptr<Bridge>>& GetBridges() const = 0;
 	virtual void InsertBridge (size_t index, std::unique_ptr<Bridge>&& bridge) = 0;
@@ -186,7 +186,7 @@ struct __declspec(novtable) IProject
 	virtual bool GetChangedFlag() const = 0;
 	virtual void SetChangedFlag (bool projectChangedFlag) = 0;
 	virtual ChangedFlagChangedEvent::subscriber GetChangedFlagChangedEvent() = 0;
-	virtual ChangedEvent::subscriber GetChangedEvent() = 0;
+	virtual changed_e::subscriber GetChangedEvent() = 0;
 
 	std::pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const;
 	Port* FindConnectedPort (Port* txPort) const;
@@ -205,7 +205,7 @@ struct __declspec(novtable) properties_window_i : virtual edge::win32_window_i
 using properties_window_factory_t = std::unique_ptr<properties_window_i>(*const)(simulator_app_i* app,
 																		   IProjectWindow* projectWindow,
 																		   IProject* project,
-																		   ISelection* selection,
+																		   selection_i* selection,
 																		   const RECT& rect,
 																		   HWND hWndParent,
 																		   ID3D11DeviceContext1* d3d_dc,
@@ -220,7 +220,7 @@ struct __declspec(novtable) IVlanWindow : virtual edge::win32_window_i
 using VlanWindowFactory = std::unique_ptr<IVlanWindow>(*const)(simulator_app_i* app,
 												 IProjectWindow* pw,
 												 const std::shared_ptr<IProject>& project,
-												 ISelection* selection,
+												 selection_i* selection,
 												 HWND hWndParent,
 												 POINT location);
 extern const VlanWindowFactory vlanWindowFactory;

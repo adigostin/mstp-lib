@@ -27,10 +27,10 @@ public:
 
 	virtual void OnMouseDown (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
-		auto firstBridge = static_cast<Bridge*>(_selection->GetObjects()[0]); assert (firstBridge != nullptr);
+		auto firstBridge = static_cast<Bridge*>(_selection->objects()[0]); assert (firstBridge != nullptr);
 		_firstBridgeInitialLocation = firstBridge->GetLocation();
 
-		for (auto o : _selection->GetObjects())
+		for (auto o : _selection->objects())
 		{
 			auto b = dynamic_cast<Bridge*>(o); assert (b != nullptr);
 			_infos.push_back ({ b, b->GetLocation() - firstBridge->GetLocation() });

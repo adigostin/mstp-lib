@@ -16,7 +16,7 @@ class log_window : public d2d_window, public log_window_i
 {
 	using base = d2d_window;
 
-	ISelection* const _selection;
+	selection_i* const _selection;
 	com_ptr<IDWriteTextFormat> _textFormat;
 	Bridge* _bridge = nullptr;
 	int _selectedPort = -1;
@@ -32,7 +32,7 @@ class log_window : public d2d_window, public log_window_i
 	static constexpr UINT AnimationScrollFramesMax = 10;
 
 public:
-	log_window (HINSTANCE hInstance, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dWriteFactory, ISelection* selection)
+	log_window (HINSTANCE hInstance, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dWriteFactory, selection_i* selection)
 		: base (hInstance, WS_EX_CLIENTEDGE, WS_VISIBLE | WS_CHILD | WS_HSCROLL | WS_VSCROLL, rect, hWndParent, 0, d3d_dc, dWriteFactory)
 		, _selection(selection)
 	{
@@ -41,28 +41,28 @@ public:
 
 		_numberOfLinesFitting = CalcNumberOfLinesFitting (_textFormat, client_height(), dWriteFactory);
 
-		_selection->GetChangedEvent().add_handler (&OnSelectionChanged, this);
+		_selection->changed().add_handler (&OnSelectionChanged, this);
 	}
 
 	~log_window()
 	{
-		_selection->GetChangedEvent().remove_handler(&OnSelectionChanged, this);
+		_selection->changed().remove_handler(&OnSelectionChanged, this);
 		if (_bridge != nullptr)
 			_bridge->GetLogLineGeneratedEvent().remove_handler(OnLogLineGeneratedStatic, this);
 	}
 
-	static void OnSelectionChanged (void* callbackArg, ISelection* selection)
+	static void OnSelectionChanged (void* callbackArg, selection_i* selection)
 	{
 		auto logArea = static_cast<log_window*>(callbackArg);
 
-		if (selection->GetObjects().size() != 1)
+		if (selection->objects().size() != 1)
 			logArea->SelectBridge(nullptr);
 		else
 		{
-			auto b = dynamic_cast<Bridge*>(selection->GetObjects().front());
+			auto b = dynamic_cast<Bridge*>(selection->objects().front());
 			if (b == nullptr)
 			{
-				auto port = dynamic_cast<Port*>(selection->GetObjects().front());
+				auto port = dynamic_cast<Port*>(selection->objects().front());
 				if (port != nullptr)
 					b = port->bridge();
 			}

@@ -73,7 +73,7 @@ public:
 			return;
 
 		if ((button == MouseButton::Left) && ((modifierKeysDown & MK_CONTROL) == 0) && (_clickedObject != nullptr))
-			_selection->Select(_clickedObject);
+			_selection->select(_clickedObject);
 
 		_completed = true;
 

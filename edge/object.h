@@ -99,17 +99,12 @@ namespace edge
 		property_changing_e::subscriber property_changing() { return property_changing_e::subscriber(this); }
 		property_changed_e::subscriber property_changed() { return property_changed_e::subscriber(this); }
 
-		uint32_t tag() const { return 0; }
-		void set_tag (uint32_t tag);
-
 	protected:
 		virtual void on_property_changing (const property* property);
 		virtual void on_property_changed (const property* property);
 
 	public:
-		static const uint32_property _tag_property;
-		static constexpr const property* const _properties[] = { &_tag_property };
-		static constexpr type_t _type = { "object", nullptr, _properties };
+		static constexpr type_t _type = { "object", nullptr, { } };
 		virtual const type_t* type() const { return &_type; }
 	};
 }

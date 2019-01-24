@@ -28,6 +28,4 @@ namespace edge
 	{
 		this->event_invoker<property_changed_e>()(this, property);
 	}
-
-	const uint32_property object::_tag_property = { "Tag", &tag, nullptr, 0 };
 }
