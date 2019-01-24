@@ -239,6 +239,7 @@
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="properties_window.cpp" />
+    <ClCompile Include="selection.cpp" />
     <ClCompile Include="Test.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
@@ -250,7 +251,6 @@
       <DisableLanguageExtensions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DisableLanguageExtensions>
     </ClCompile>
     <ClCompile Include="VlanWindow.cpp" />
-    <ClCompile Include="Selection.cpp" />
     <ClCompile Include="simulator.cpp" />
     <ClCompile Include="Wire.cpp" />
   </ItemGroup>

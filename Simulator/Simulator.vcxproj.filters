@@ -25,7 +25,6 @@
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="edit_area.cpp" />
-    <ClCompile Include="Selection.cpp" />
     <ClCompile Include="simulator.cpp" />
     <ClCompile Include="Wire.cpp" />
     <ClCompile Include="Bridge.cpp" />
@@ -55,6 +54,7 @@
     <ClCompile Include="BridgeTree.cpp" />
     <ClCompile Include="properties_window.cpp" />
     <ClCompile Include="PortTree.cpp" />
+    <ClCompile Include="selection.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="simulator.rc" />
