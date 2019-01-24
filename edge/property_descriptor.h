@@ -119,20 +119,18 @@ namespace edge
 		}
 	};
 
-	extern const char* GetEnumName (const NVP* nvps, int value);
-
-	template<typename char_type>
-	bool TryGetEnumValue (const NVP* nvps, std::basic_string_view<char_type> name, int* value_out);
-
-	template bool TryGetEnumValue (const NVP* nvps, std::string_view name, int* value_out);
-	template bool TryGetEnumValue (const NVP* nvps, std::wstring_view name, int* value_out);
-
 	template<typename enum_t, const NVP* nvps>
 	struct enum_converters
 	{
 		static std::string enum_to_string (enum_t from)
 		{
-			return GetEnumName (nvps, (int) from);
+			for (auto nvp = nvps; nvp->first != nullptr; nvp++)
+			{
+				if (nvp->second == (int)from)
+					return nvp->first;
+			}
+
+			return "(unknown)";
 		}
 
 	private:

@@ -377,7 +377,7 @@ com_ptr<IXMLDOMElement> Port::Serialize (IXMLDOMDocument3* doc) const
 {
 	com_ptr<IXMLDOMElement> portElement;
 	auto hr = doc->createElement (PortString, &portElement); assert(SUCCEEDED(hr));
-	portElement->setAttribute (SideString, _variant_t (GetEnumName (SideNVPs, (int) _side)));
+	portElement->setAttribute (SideString, _variant_t (enum_converters<Side, SideNVPs>::enum_to_string(_side).c_str()));
 	portElement->setAttribute (OffsetString, _variant_t (_offset));
 	portElement->setAttribute (AutoEdgeString, _variant_t (GetAutoEdge() ? L"True" : L"False"));
 	portElement->setAttribute (AdminEdgeString, _variant_t (GetAdminEdge() ? L"True" : L"False"));

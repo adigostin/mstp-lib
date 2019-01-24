@@ -3,27 +3,6 @@
 
 namespace edge
 {
-	const char* GetEnumName (const NVP* nvps, int value)
-	{
-		for (auto nvp = nvps; nvp->first != nullptr; nvp++)
-		{
-			if (nvp->second == value)
-				return nvp->first;
-		}
-
-		return nullptr;
-	}
-
-	bool TryGetEnumValue (const NVP* nvps, std::string_view name, int* value_out)
-	{
-		assert(false); return false;
-	}
-
-	bool TryGetEnumValue (const NVP* nvps, std::wstring_view name, int* value_out)
-	{
-		assert(false); return false;
-	}
-
 	std::string bool_to_string (bool from)
 	{
 		return from ? "true" : "false";
