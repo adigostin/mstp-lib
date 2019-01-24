@@ -161,7 +161,7 @@ struct __declspec(novtable) IProject
 	struct invalidate_e : public edge::event<invalidate_e, IProject*> { };
 	struct LoadedEvent : public edge::event<LoadedEvent, IProject*> { };
 	struct ChangedFlagChangedEvent : public edge::event<ChangedFlagChangedEvent, IProject*> { };
-	struct changed_e : public edge::event<changed_e, IProject*> { };
+	struct ChangedEvent : public edge::event<ChangedEvent, IProject*> { };
 
 	virtual const std::vector<std::unique_ptr<Bridge>>& GetBridges() const = 0;
 	virtual void InsertBridge (size_t index, std::unique_ptr<Bridge>&& bridge) = 0;
@@ -186,7 +186,7 @@ struct __declspec(novtable) IProject
 	virtual bool GetChangedFlag() const = 0;
 	virtual void SetChangedFlag (bool projectChangedFlag) = 0;
 	virtual ChangedFlagChangedEvent::subscriber GetChangedFlagChangedEvent() = 0;
-	virtual changed_e::subscriber GetChangedEvent() = 0;
+	virtual ChangedEvent::subscriber GetChangedEvent() = 0;
 
 	std::pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const;
 	Port* FindConnectedPort (Port* txPort) const;
