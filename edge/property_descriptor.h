@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <optional>
+#include <memory>
 #include "assert.h"
 
 namespace edge
@@ -71,6 +72,7 @@ namespace edge
 	
 		virtual std::string get_to_string (const object* obj) const = 0;
 		virtual bool try_set_from_string (object* obj, std::string_view str) const = 0;
+		virtual const NVP* nvps() const = 0;
 	};
 
 	// ========================================================================
@@ -81,7 +83,8 @@ namespace edge
 		typename return_t,
 		const char* type_name_,
 		std::string (*to_string)(param_t value),
-		bool (*from_string)(std::string_view str, value_t& out)
+		bool (*from_string)(std::string_view str, value_t& out),
+		const NVP* nvps_ = nullptr
 	>
 	struct typed_property : value_property
 	{
@@ -116,6 +119,11 @@ namespace edge
 			if (ok)
 				(obj->*_setter)(value);
 			return ok;
+		}
+
+		virtual const NVP* nvps() const override final
+		{
+			return nvps_;
 		}
 	};
 
@@ -176,9 +184,9 @@ namespace edge
 	template<
 		typename enum_t,
 		const char* type_name,
-		const NVP* nvps
+		const NVP* nvps_
 	>
-	using enum_property = typed_property<enum_t, enum_t, enum_t, type_name, enum_converters<enum_t, nvps>::enum_to_string, enum_converters<enum_t, nvps>::enum_from_string>;
+	using enum_property = typed_property<enum_t, enum_t, enum_t, type_name, enum_converters<enum_t, nvps_>::enum_to_string, enum_converters<enum_t, nvps_>::enum_from_string, nvps_>;
 
 	// ===========================================
 
