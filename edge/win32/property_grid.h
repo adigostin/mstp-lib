@@ -2,6 +2,7 @@
 #pragma once
 #include "../object.h"
 #include "window.h"
+#include "text_editor.h"
 
 namespace edge
 {
@@ -30,6 +31,9 @@ namespace edge
 		virtual IDWriteTextFormat* text_format() const = 0;
 		virtual void perform_layout() = 0;
 		virtual void invalidate() = 0;
+		virtual text_editor_i* show_text_editor (const D2D1_RECT_F& rect, std::string_view str) = 0;
+		virtual int show_enum_editor (D2D1_POINT_2F dip, const NVP* nvps) = 0;
+		virtual bool try_change_property (const std::vector<object*>& objects, const value_property* prop, std::string_view new_value_str) = 0;
 	};
 
 	using property_grid_factory_t = std::unique_ptr<property_grid_i>(HINSTANCE hInstance, const RECT& rect, HWND hWndParent, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory);

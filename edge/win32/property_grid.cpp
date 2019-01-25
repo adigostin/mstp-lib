@@ -4,7 +4,6 @@
 #include "property_grid_items.h"
 #include "utility_functions.h"
 #include "d2d_window.h"
-#include "text_editor.h"
 
 using namespace edge;
 
@@ -99,6 +98,7 @@ public:
 		{
 			if (_root_item)
 			{
+				discard_editor();
 				create_text_layouts();
 				this->event_invoker<preferred_height_changed_e>()();
 			}
@@ -111,6 +111,7 @@ public:
 			recalc_pixel_width_and_line_thickness();
 			if (_root_item)
 			{
+				discard_editor();
 				create_text_layouts();
 				this->event_invoker<preferred_height_changed_e>()();
 			}
@@ -417,8 +418,19 @@ public:
 		return property_changed_e::subscriber(this);
 	}
 
-	int ShowEditor (POINT ptScreen, const NVP* nameValuePairs)
+	virtual text_editor_i* show_text_editor (const D2D1_RECT_F& rect, std::string_view str) override final
 	{
+		discard_editor();
+		_text_editor = text_editor_factory (this, dwrite_factory(), _textFormat, 0xFFC0C0C0, 0xFF000000, rect, str);
+		return _text_editor.get();
+	}
+
+	virtual int show_enum_editor (D2D1_POINT_2F dip, const NVP* nameValuePairs) override final
+	{
+		discard_editor();
+		POINT ptScreen = pointd_to_pointp(dip, 0);
+		::ClientToScreen (hwnd(), &ptScreen);
+		
 		HINSTANCE hInstance = (HINSTANCE) GetWindowLongPtr (hwnd(), GWLP_HINSTANCE);
 
 		static constexpr wchar_t ClassName[] = L"GIGI-{655C4EA9-2A80-46D7-A7FB-D510A32DC6C6}";
@@ -459,7 +471,14 @@ public:
 		LONG maxTextHeight = 0;
 
 		NONCLIENTMETRICS ncMetrics = { sizeof(NONCLIENTMETRICS) };
-		SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncMetrics, 0);
+		auto proc_addr = GetProcAddress(GetModuleHandleA("user32.dll"), "SystemParametersInfoForDpi");
+		if (proc_addr != nullptr)
+		{
+			auto proc = reinterpret_cast<BOOL(WINAPI*)(UINT, UINT, PVOID, UINT, UINT)>(proc_addr);
+			proc(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncMetrics, 0, dpi());
+		}
+		else
+			SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncMetrics, 0);
 		HFONT_unique_ptr font (CreateFontIndirect (&ncMetrics.lfMenuFont));
 
 		auto hdc = ::GetDC(hwnd);
@@ -473,37 +492,35 @@ public:
 			maxTextHeight = std::max (maxTextHeight, rc.bottom);
 		}
 		::SelectObject (hdc, oldFont);
-		int dpiX = GetDeviceCaps (hdc, LOGPIXELSX);
-		int dpiY = GetDeviceCaps (hdc, LOGPIXELSY);
 		::ReleaseDC (hwnd, hdc);
 
-		int lrpadding = 7 * dpiX / 96;
-		int udpadding = ((count <= 5) ? 5 : 0) * dpiY / 96;
-		LONG buttonWidth = std::max (100l * dpiX / 96, maxTextWidth + 2 * lrpadding) + 2 * GetSystemMetrics(SM_CXEDGE);
+		int lrpadding = 7 * dpi() / 96;
+		int udpadding = ((count <= 5) ? 5 : 0) * dpi() / 96;
+		LONG buttonWidth = std::max (100l * (LONG)dpi() / 96, maxTextWidth + 2 * lrpadding) + 2 * GetSystemMetrics(SM_CXEDGE);
 		LONG buttonHeight = maxTextHeight + 2 * udpadding + 2 * GetSystemMetrics(SM_CYEDGE);
 
-		int margin = 4 * dpiX / 96;
-		int spacing = 2 * dpiX / 96;
+		int margin = 4 * dpi() / 96;
+		int spacing = 2 * dpi() / 96;
 		int y = margin;
-		for (auto nvp = nameValuePairs; nvp->first != nullptr;)
+		for (size_t nvp_index = 0; nameValuePairs[nvp_index].first != nullptr;)
 		{
-			auto button = CreateWindowExA (0, "Button", nvp->first, WS_CHILD | WS_VISIBLE | BS_NOTIFY | BS_FLAT, margin, y, buttonWidth, buttonHeight, hwnd, (HMENU) (INT_PTR) nvp->second, hInstance, nullptr);
+			constexpr DWORD dwStyle = WS_CHILD | WS_VISIBLE | BS_NOTIFY | BS_FLAT;
+			auto button = CreateWindowExA (0, "Button", nameValuePairs[nvp_index].first, dwStyle, margin, y, buttonWidth, buttonHeight, hwnd, (HMENU) nvp_index, hInstance, nullptr);
 			::SendMessage (button, WM_SETFONT, (WPARAM) font.get(), FALSE);
-
-			nvp++;
-			y += buttonHeight + ((nvp->first != nullptr) ? spacing : margin);
+			nvp_index++;
+			y += buttonHeight + (nameValuePairs[nvp_index].first ? spacing : margin);
 		}
 		RECT wr = { 0, 0, margin + buttonWidth + margin, y };
 		::AdjustWindowRectEx (&wr, (DWORD) GetWindowLongPtr(hwnd, GWL_STYLE), FALSE, (DWORD) GetWindowLongPtr(hwnd, GWL_EXSTYLE));
 		::SetWindowPos (hwnd, nullptr, ptScreen.x, ptScreen.y, wr.right - wr.left, wr.bottom - wr.top, SWP_NOACTIVATE | SWP_SHOWWINDOW);
 
-		int result = -1;
+		int selected_nvp_index = -1;
 		MSG msg;
 		while (GetMessage(&msg, 0, 0, 0))
 		{
 			if ((msg.hwnd == hwnd) && (msg.message == WM_CLOSE_POPUP))
 			{
-				result = (int) msg.wParam;
+				selected_nvp_index = (int) msg.wParam;
 				break;
 			}
 
@@ -529,7 +546,7 @@ public:
 		}
 
 		::DestroyWindow (hwnd);
-		return result;
+		return selected_nvp_index;
 	}
 
 	std::pair<pgitem*, item_layout> item_at (D2D1_POINT_2F dip) const
@@ -565,20 +582,8 @@ public:
 			invalidate();
 		}
 
-		if (auto clicked_value_item = dynamic_cast<value_pgitem*>(clicked_item.first);
-			(clicked_value_item != nullptr) && (dip.x >= name_column_width()) && clicked_value_item->_prop->has_setter())
-		{
-			auto editor_rect = clicked_item.second.value_rect;
-			editor_rect.left += text_lr_padding;
-			editor_rect.right -= text_lr_padding;
-			auto str = clicked_value_item->convert_to_string();
-			_text_editor = text_editor_factory(this, dwrite_factory(), _textFormat, 0xFFC0C0C0, 0xFF000000, editor_rect, str.c_str());
-			_text_editor->process_mouse_button_down (button, modifier_keys, pixel, dip);
-			return;
-		}
-
 		if (clicked_item.first != nullptr)
-			clicked_item.first->process_mouse_button_down (button, modifier_keys, dip - clicked_item.second.location);
+			clicked_item.first->process_mouse_button_down (button, modifier_keys, pixel, dip, clicked_item.second);
 	}
 
 	void process_mouse_button_up (mouse_button button, UINT modifier_keys, POINT pixel, D2D1_POINT_2F dip)
@@ -588,7 +593,7 @@ public:
 
 		auto clicked_item = item_at(dip);
 		if (clicked_item.first != nullptr)
-			clicked_item.first->process_mouse_button_down (button, modifier_keys, dip - clicked_item.second.location);
+			clicked_item.first->process_mouse_button_up (button, modifier_keys, pixel, dip, clicked_item.second);
 		/*
 		if (dip.x < name_column_width())
 			return;
@@ -713,37 +718,43 @@ public:
 			return;
 
 		auto prop_item = dynamic_cast<value_pgitem*>(_selected_item); assert(prop_item);
-		auto& objects = prop_item->parent()->objects();
-		std::vector<std::string> old_values;
-		old_values.reserve(objects.size());
-		for (auto o : objects)
-			old_values.push_back (prop_item->_prop->get_to_string(o));
-
-		auto u8str = _text_editor->u8str();
-		auto wstr = _text_editor->wstr();
-
-		for (size_t i = 0; i < objects.size(); i++)
+		bool changed = try_change_property (prop_item->parent()->objects(), prop_item->_prop, _text_editor->u8str().c_str());
+		if (!changed)
 		{
-			bool set_ok = prop_item->_prop->try_set_from_string(objects[i], u8str);
-			if (!set_ok)
-			{
-				for (size_t j = 0; j < i; j++)
-					prop_item->_prop->try_set_from_string(objects[j], old_values[j]);
-
-				std::wstringstream ss;
-				ss << wstr << " is not a valid value for the " << prop_item->_prop->_name << " property.";
-				::MessageBox (hwnd(), ss.str().c_str(), L"aaa", 0);
-				::SetFocus (hwnd());
-				_text_editor->select_all();
-				return;
-			}
+			std::wstringstream ss;
+			ss << _text_editor->wstr() << " is not a valid value for the " << prop_item->_prop->_name << " property.";
+			::MessageBox (hwnd(), ss.str().c_str(), L"aaa", 0);
+			::SetFocus (hwnd());
+			_text_editor->select_all();
+			return;
 		}
-
-		property_changed_args args = { objects, std::move(old_values), std::move(u8str) };
-		this->event_invoker<property_changed_e>()(std::move(args));
 
 		base::invalidate (_text_editor->rect());
 		_text_editor = nullptr;
+	}
+
+	virtual bool try_change_property (const std::vector<object*>& objects, const value_property* prop, std::string_view new_value_str) override final
+	{
+		std::vector<std::string> old_values;
+		old_values.reserve(objects.size());
+		for (auto o : objects)
+			old_values.push_back (prop->get_to_string(o));
+
+		for (size_t i = 0; i < objects.size(); i++)
+		{
+			bool set_ok = prop->try_set_from_string(objects[i], new_value_str);
+			if (!set_ok)
+			{
+				for (size_t j = 0; j < i; j++)
+					prop->try_set_from_string(objects[j], old_values[j]);
+
+				return false;
+			}
+		}
+
+		property_changed_args args = { objects, std::move(old_values), std::string(new_value_str) };
+		this->event_invoker<property_changed_e>()(std::move(args));
+		return true;
 	}
 
 	handled process_virtual_key_down (UINT key, UINT modifier_keys)

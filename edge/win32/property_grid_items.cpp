@@ -141,14 +141,65 @@ float value_pgitem::text_height() const
 
 HCURSOR value_pgitem::cursor (D2D1_SIZE_F offset) const
 {
-	bool canEdit = (_prop->_customEditor != nullptr) || _prop->has_setter();
-	return ::LoadCursor (nullptr, canEdit ? IDC_IBEAM : IDC_ARROW);
+	if (!_prop->has_setter())
+		return ::LoadCursor(nullptr, IDC_ARROW);
+
+	if (auto bool_property = dynamic_cast<const edge::bool_property*>(_prop))
+		return ::LoadCursor(nullptr, IDC_HAND);
+
+	if (_prop->nvps() != nullptr)
+		return ::LoadCursor(nullptr, IDC_HAND);
+
+	return ::LoadCursor (nullptr, IDC_IBEAM);
 }
 
 std::string value_pgitem::convert_to_string() const
 {
-	assert (parent()->objects().size() == 1);
+	assert (parent()->objects().size() == 1); // multiple selection not yet implemented here
 	auto obj = parent()->objects()[0];
 	return _prop->get_to_string(obj);
+}
+
+static const NVP bool_nvps[] = 
+{
+	{ "false", 0 },
+	{ "true", 1 },
+	{ nullptr, -1 },
+};
+
+void value_pgitem::process_mouse_button_down (mouse_button button, UINT modifiers, POINT pt, D2D1_POINT_2F dip, const item_layout& layout)
+{
+	if (!point_in_rect(layout.value_rect, dip))
+		return;
+
+	if (!_prop->has_setter())
+		return;
+
+	if (_prop->nvps() || dynamic_cast<const edge::bool_property*>(_prop))
+	{
+		auto nvps = _prop->nvps() ? _prop->nvps() : bool_nvps;
+		int selected_nvp_index = root()->_grid->show_enum_editor(dip, nvps);
+		if (selected_nvp_index >= 0)
+		{
+			auto new_value_str = nvps[selected_nvp_index].first;
+			auto changed = [new_value_str, prop=_prop](object* o) { return prop->get_to_string(o) != new_value_str; };
+			auto& objects = parent()->objects();
+			if (std::any_of(objects.begin(), objects.end(), changed))
+				root()->_grid->try_change_property (objects, _prop, new_value_str);
+		}
+	}
+	else
+	{
+		auto editor_rect = layout.value_rect;
+		editor_rect.left += text_lr_padding;
+		editor_rect.right -= text_lr_padding;
+		auto str = convert_to_string();
+		auto editor = root()->_grid->show_text_editor (editor_rect, str);
+		editor->process_mouse_button_down (button, modifiers, pt, dip);
+	}
+}
+
+void value_pgitem::process_mouse_button_up (mouse_button button, UINT modifiers, POINT pt, D2D1_POINT_2F dip, const item_layout& layout)
+{
 }
 #pragma endregion

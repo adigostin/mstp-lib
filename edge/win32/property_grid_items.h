@@ -55,8 +55,8 @@ namespace edge
 		virtual float text_height() const = 0;
 		virtual HCURSOR cursor (D2D1_SIZE_F offset) const { return nullptr; }
 
-		virtual void process_mouse_button_down (mouse_button button, UINT modifiers, D2D1_SIZE_F offset) { }
-		virtual void process_mouse_button_up   (mouse_button button, UINT modifiers, D2D1_SIZE_F offset) { }
+		virtual void process_mouse_button_down (mouse_button button, UINT modifiers, POINT pt, D2D1_POINT_2F dip, const item_layout& layout) { }
+		virtual void process_mouse_button_up   (mouse_button button, UINT modifiers, POINT pt, D2D1_POINT_2F dip, const item_layout& layout) { }
 	};
 
 	class expandable_item : public pgitem
@@ -141,6 +141,8 @@ namespace edge
 		virtual void render_value (const render_context& rc, const item_layout& l, bool selected, bool focused) const override;
 		virtual float text_height() const override;
 		virtual HCURSOR cursor (D2D1_SIZE_F offset) const override final;
+		virtual void process_mouse_button_down (mouse_button button, UINT modifiers, POINT pt, D2D1_POINT_2F dip, const item_layout& layout) override;
+		virtual void process_mouse_button_up   (mouse_button button, UINT modifiers, POINT pt, D2D1_POINT_2F dip, const item_layout& layout) override;
 
 		text_layout _name;
 		text_layout _value;
