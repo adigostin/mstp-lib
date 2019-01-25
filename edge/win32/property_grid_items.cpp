@@ -98,17 +98,37 @@ value_pgitem::value_pgitem (object_item* parent, const value_property* prop)
 	: base(parent), _prop(prop)
 { }
 
+bool value_pgitem::multiple_values() const
+{
+	auto& objs = parent()->objects();
+	for (size_t i = 1; i < objs.size(); i++)
+	{
+		if (!_prop->equal(objs[0], objs[i]))
+			return true;
+	}
+
+	return false;
+}
+
+void value_pgitem::create_value_layout_internal (IDWriteFactory* factory, IDWriteTextFormat* format, float width)
+{
+	if (multiple_values())
+		_value = text_layout::create (factory, format, "(multiple values)", width);
+	else
+		_value = text_layout::create (factory, format, _prop->get_to_string(parent()->objects().front()), width);
+}
+
 void value_pgitem::create_text_layouts (IDWriteFactory* factory, IDWriteTextFormat* format, float name_width, float value_width)
 {
 	_name = text_layout::create (factory, format, _prop->_name, name_width);
-	_value = text_layout::create (factory, format, convert_to_string(), value_width);
+	create_value_layout_internal (factory, format, value_width);
 }
 
 void value_pgitem::recreate_value_text_layout()
 {
 	auto grid = root()->_grid;
 	auto old_height = _value.metrics.height;
-	_value = text_layout::create (grid->dwrite_factory(), grid->text_format(), convert_to_string(), _value.metrics.layoutWidth);
+	create_value_layout_internal (grid->dwrite_factory(), grid->text_format(), _value.metrics.layoutWidth);
 	if (_value.metrics.height != old_height)
 		grid->perform_layout();
 	else
@@ -153,13 +173,6 @@ HCURSOR value_pgitem::cursor (D2D1_SIZE_F offset) const
 	return ::LoadCursor (nullptr, IDC_IBEAM);
 }
 
-std::string value_pgitem::convert_to_string() const
-{
-	assert (parent()->objects().size() == 1); // multiple selection not yet implemented here
-	auto obj = parent()->objects()[0];
-	return _prop->get_to_string(obj);
-}
-
 static const NVP bool_nvps[] = 
 {
 	{ "false", 0 },
@@ -193,8 +206,7 @@ void value_pgitem::process_mouse_button_down (mouse_button button, UINT modifier
 		auto editor_rect = layout.value_rect;
 		editor_rect.left += text_lr_padding;
 		editor_rect.right -= text_lr_padding;
-		auto str = convert_to_string();
-		auto editor = root()->_grid->show_text_editor (editor_rect, str);
+		auto editor = root()->_grid->show_text_editor (editor_rect, multiple_values() ? "" : _prop->get_to_string(parent()->objects().front()));
 		editor->process_mouse_button_down (button, modifiers, pt, dip);
 	}
 }

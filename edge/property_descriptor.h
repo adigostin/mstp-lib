@@ -73,6 +73,7 @@ namespace edge
 		virtual std::string get_to_string (const object* obj) const = 0;
 		virtual bool try_set_from_string (object* obj, std::string_view str) const = 0;
 		virtual const NVP* nvps() const = 0;
+		virtual bool equal (object* obj1, object* obj2) const = 0;
 	};
 
 	// ========================================================================
@@ -124,6 +125,11 @@ namespace edge
 		virtual const NVP* nvps() const override final
 		{
 			return nvps_;
+		}
+
+		virtual bool equal (object* obj1, object* obj2) const override final
+		{
+			return (obj1->*_getter)() == (obj2->*_getter)();
 		}
 	};
 

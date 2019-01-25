@@ -132,8 +132,6 @@ namespace edge
 
 		object_item* parent() const { return static_cast<object_item*>(base::parent()); }
 
-		virtual std::string convert_to_string() const;
-
 		virtual void recreate_value_text_layout() override final;
 	private:
 		virtual void create_text_layouts (IDWriteFactory* factory, IDWriteTextFormat* format, float name_width, float value_width) override final;
@@ -143,6 +141,9 @@ namespace edge
 		virtual HCURSOR cursor (D2D1_SIZE_F offset) const override final;
 		virtual void process_mouse_button_down (mouse_button button, UINT modifiers, POINT pt, D2D1_POINT_2F dip, const item_layout& layout) override;
 		virtual void process_mouse_button_up   (mouse_button button, UINT modifiers, POINT pt, D2D1_POINT_2F dip, const item_layout& layout) override;
+
+		void create_value_layout_internal (IDWriteFactory* factory, IDWriteTextFormat* format, float width);
+		bool multiple_values() const;
 
 		text_layout _name;
 		text_layout _value;
