@@ -75,6 +75,8 @@ namespace edge
 		void invalidate (const D2D1_RECT_F& rect);
 		void invalidate();
 
+		uint32_t dpi() const { return _dpi; }
+
 	protected:
 		virtual std::optional<LRESULT> window_proc (HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
 		virtual void create_render_resources (ID2D1DeviceContext* dc) { }
