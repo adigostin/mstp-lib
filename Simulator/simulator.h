@@ -16,7 +16,9 @@ class Wire;
 
 static constexpr unsigned char DefaultConfigTableDigest[16] = { 0xAC, 0x36, 0x17, 0x7F, 0x50, 0x28, 0x3C, 0xD4, 0xB8, 0x38, 0x21, 0xD8, 0xAB, 0x26, 0xDE, 0x62 };
 
-static constexpr unsigned int MaxVlanNumber = 16; // 4094 must be maximum
+// Maximum VLAN number supported by the simulator (too large a number would complicate the UI).
+// The maximum VLAN number allowed by specs is 4094.
+static constexpr uint32_t max_vlan_number = 16;
 
 static constexpr wchar_t FileExtensionWithoutDot[] = L"stp";
 static constexpr wchar_t FileExtensionWithDot[] = L".stp";
@@ -111,13 +113,13 @@ extern const edit_area_factory_t edit_area_factory;
 
 struct __declspec(novtable) IProjectWindow : public virtual edge::win32_window_i
 {
-	struct SelectedVlanNumerChangedEvent : public edge::event<SelectedVlanNumerChangedEvent, IProjectWindow*, unsigned int> { };
+	struct selected_vlan_number_changed_e : public edge::event<selected_vlan_number_changed_e, IProjectWindow*, uint32_t> { };
 
 	virtual IProject* GetProject() const = 0;
 	virtual edit_area_i* GetEditArea() const = 0;
-	virtual void SelectVlan (unsigned int vlanNumber) = 0;
-	virtual unsigned int selected_vlan_number() const = 0;
-	virtual SelectedVlanNumerChangedEvent::subscriber GetSelectedVlanNumerChangedEvent() = 0;
+	virtual void select_vlan (uint32_t vlanNumber) = 0;
+	virtual uint32_t selected_vlan_number() const = 0;
+	virtual selected_vlan_number_changed_e::subscriber selected_vlan_number_changed() = 0;
 };
 
 struct project_window_create_params
@@ -128,7 +130,7 @@ struct project_window_create_params
 	edit_area_factory_t                  edit_area_factory;
 	bool     showPropertiesWindow;
 	bool     showLogWindow;
-	uint16_t selectedVlan;
+	uint32_t selectedVlan;
 	int      nCmdShow;
 	ID3D11DeviceContext1* d3d_dc;
 	IDWriteFactory*       dwrite_factory;
@@ -179,7 +181,7 @@ struct __declspec(novtable) IProject
 	virtual const std::wstring& GetFilePath() const = 0;
 	virtual HRESULT Save (const wchar_t* filePath) = 0;
 	virtual void Load (const wchar_t* filePath) = 0;
-	virtual bool IsWireForwarding (Wire* wire, unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const = 0;
+	virtual bool IsWireForwarding (Wire* wire, uint32_t vlanNumber, _Out_opt_ bool* hasLoop) const = 0;
 	virtual void PauseSimulation() = 0;
 	virtual void ResumeSimulation() = 0;
 	virtual bool IsSimulationPaused() const = 0;
@@ -214,16 +216,19 @@ extern const properties_window_factory_t properties_window_factory;
 
 // ============================================================================
 
-struct __declspec(novtable) IVlanWindow : virtual edge::win32_window_i
+struct __declspec(novtable) vlan_window_i : virtual edge::win32_window_i
 {
 };
-using VlanWindowFactory = std::unique_ptr<IVlanWindow>(*const)(simulator_app_i* app,
-												 IProjectWindow* pw,
-												 const std::shared_ptr<IProject>& project,
-												 selection_i* selection,
-												 HWND hWndParent,
-												 POINT location);
-extern const VlanWindowFactory vlanWindowFactory;
+using vlan_window_factory_t = std::unique_ptr<vlan_window_i>(*const)(
+	simulator_app_i* app,
+	IProjectWindow* pw,
+	const std::shared_ptr<IProject>& project,
+	selection_i* selection,
+	HWND hWndParent,
+	POINT location,
+	ID3D11DeviceContext1* d3d_dc,
+	IDWriteFactory* dwrite_factory);
+extern const vlan_window_factory_t vlan_window_factory;
 
 // ============================================================================
 

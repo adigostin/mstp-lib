@@ -41,7 +41,7 @@ public:
 	{
 		this->set_selection_to_pgs();
 
-		_project_window->GetSelectedVlanNumerChangedEvent().add_handler (&on_selected_vlan_changed, this);
+		_project_window->selected_vlan_number_changed().add_handler (&on_selected_vlan_changed, this);
 		_selection->changed().add_handler (&on_selection_changed, this);
 		_project->GetChangedEvent().add_handler (&on_project_changed, this);
 		_pg1->preferred_height_changed().add_handler (&on_pg12_preferred_height_changed, this);
@@ -54,7 +54,7 @@ public:
 		_pg1->preferred_height_changed().remove_handler (&on_pg12_preferred_height_changed, this);
 		_project->GetChangedEvent().remove_handler (&on_project_changed, this);
 		_selection->changed().remove_handler (&on_selection_changed, this);
-		_project_window->GetSelectedVlanNumerChangedEvent().remove_handler (&on_selected_vlan_changed, this);
+		_project_window->selected_vlan_number_changed().remove_handler (&on_selected_vlan_changed, this);
 	}
 
 	RECT pg1_def_rect() const { return { 0, 0, client_width_pixels(), client_height_pixels() / 2 }; }

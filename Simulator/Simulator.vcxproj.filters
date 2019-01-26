@@ -42,7 +42,6 @@
     <ClCompile Include="edit_states\CreateWireES.cpp">
       <Filter>edit_states</Filter>
     </ClCompile>
-    <ClCompile Include="VlanWindow.cpp" />
     <ClCompile Include="MSTConfigIdDialog.cpp" />
     <ClCompile Include="Test.c" />
     <ClCompile Include="edit_states\MovePortES.cpp">
@@ -55,6 +54,7 @@
     <ClCompile Include="properties_window.cpp" />
     <ClCompile Include="PortTree.cpp" />
     <ClCompile Include="selection.cpp" />
+    <ClCompile Include="vlan_window.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="simulator.rc" />

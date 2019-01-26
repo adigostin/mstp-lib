@@ -137,7 +137,7 @@ Bridge::Bridge (unsigned int portCount, unsigned int mstiCount, mac_address macA
 	DWORD period = 950 + (std::random_device()() % 100);
 	BOOL bRes = ::CreateTimerQueueTimer (&_oneSecondTimerHandle, nullptr, OneSecondTimerCallback, this, period, period, 0); assert(bRes);
 
-	_stpBridge = STP_CreateBridge (portCount, mstiCount, MaxVlanNumber, &StpCallbacks, macAddress.data(), 256);
+	_stpBridge = STP_CreateBridge (portCount, mstiCount, max_vlan_number, &StpCallbacks, macAddress.data(), 256);
 	STP_EnableLogging (_stpBridge, true);
 	STP_SetApplicationContext (_stpBridge, this);
 

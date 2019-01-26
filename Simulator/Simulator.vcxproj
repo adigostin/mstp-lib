@@ -250,7 +250,7 @@
       <DisableLanguageExtensions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</DisableLanguageExtensions>
       <DisableLanguageExtensions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DisableLanguageExtensions>
     </ClCompile>
-    <ClCompile Include="VlanWindow.cpp" />
+    <ClCompile Include="vlan_window.cpp" />
     <ClCompile Include="simulator.cpp" />
     <ClCompile Include="Wire.cpp" />
   </ItemGroup>

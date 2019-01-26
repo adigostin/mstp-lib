@@ -5,25 +5,31 @@
 #include "Bridge.h"
 #include "Port.h"
 
-class VlanWindow : public virtual IVlanWindow
+class vlan_window : public virtual vlan_window_i
 {
 	simulator_app_i*  const _app;
 	IProjectWindow* const _pw;
 	std::shared_ptr<IProject> const _project;
 	selection_i*    const _selection;
+	ID3D11DeviceContext1* const _d3d_dc;
+	IDWriteFactory* const _dwrite_factory;
 	HWND _hwnd = nullptr;
 
 public:
-	VlanWindow (simulator_app_i* app,
+	vlan_window (simulator_app_i* app,
 				IProjectWindow* pw,
 				const std::shared_ptr<IProject>& project,
 				selection_i* selection,
 				HWND hWndParent,
-				POINT location)
+				POINT location,
+				ID3D11DeviceContext1* d3d_dc,
+				IDWriteFactory* dwrite_factory)
 		: _app(app)
 		, _pw(pw)
 		, _project(project)
 		, _selection(selection)
+		, _d3d_dc(d3d_dc)
+		, _dwrite_factory(dwrite_factory)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &DialogProcStatic, &hInstance); assert(bRes);
@@ -37,7 +43,7 @@ public:
 		_selection->added().add_handler (&OnAddedToSelection, this);
 		_selection->removing().add_handler (&OnRemovingFromSelection, this);
 		_selection->changed().add_handler (&OnSelectionChanged, this);
-		_pw->GetSelectedVlanNumerChangedEvent().add_handler (&OnSelectedVlanChanged, this);
+		_pw->selected_vlan_number_changed().add_handler (&on_selected_vlan_changed, this);
 
 		for (auto o : _selection->objects())
 		{
@@ -46,7 +52,7 @@ public:
 		}
 	}
 
-	~VlanWindow()
+	~vlan_window()
 	{
 		for (auto o : _selection->objects())
 		{
@@ -54,7 +60,7 @@ public:
 				b->property_changed().remove_handler (&OnBridgePropertyChanged, this);
 		}
 
-		_pw->GetSelectedVlanNumerChangedEvent().remove_handler (&OnSelectedVlanChanged, this);
+		_pw->selected_vlan_number_changed().remove_handler (&on_selected_vlan_changed, this);
 		_selection->changed().remove_handler (&OnSelectionChanged, this);
 		_selection->removing().remove_handler (&OnRemovingFromSelection, this);
 		_selection->added().remove_handler (&OnAddedToSelection, this);
@@ -72,17 +78,17 @@ public:
 
 	static INT_PTR CALLBACK DialogProcStatic (HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
-		VlanWindow* window;
+		vlan_window* window;
 		if (uMsg == WM_INITDIALOG)
 		{
-			window = reinterpret_cast<VlanWindow*>(lParam);
+			window = reinterpret_cast<vlan_window*>(lParam);
 			//window->AddRef();
 			window->_hwnd = hwnd;
 			assert (GetWindowLongPtr(hwnd, GWLP_USERDATA) == 0);
 			SetWindowLongPtr (hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(window));
 		}
 		else
-			window = reinterpret_cast<VlanWindow*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+			window = reinterpret_cast<vlan_window*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
 
 		if (window == nullptr)
 		{
@@ -109,7 +115,7 @@ public:
 		{
 			auto comboSelectedVlan  = GetDlgItem (_hwnd, IDC_COMBO_SELECTED_VLAN);
 			auto comboNewWindowVlan = GetDlgItem (_hwnd, IDC_COMBO_NEW_WINDOW_VLAN);
-			for (size_t i = 1; i <= MaxVlanNumber; i++)
+			for (size_t i = 1; i <= max_vlan_number; i++)
 			{
 				auto str = std::to_wstring(i);
 				ComboBox_AddString(comboSelectedVlan, str.c_str());
@@ -180,23 +186,23 @@ public:
 
 	static void OnBridgePropertyChanged (void* callbackArg, edge::object* o, const edge::property* property)
 	{
-		static_cast<VlanWindow*>(callbackArg)->LoadSelectedTreeEdit();
+		static_cast<vlan_window*>(callbackArg)->LoadSelectedTreeEdit();
 	}
 
 	static void OnSelectionChanged (void* callbackArg, selection_i* selection)
 	{
-		static_cast<VlanWindow*>(callbackArg)->LoadSelectedTreeEdit();
+		static_cast<vlan_window*>(callbackArg)->LoadSelectedTreeEdit();
 	}
 
-	static void OnSelectedVlanChanged (void* callbackArg, IProjectWindow* pw, unsigned int vlanNumber)
+	static void on_selected_vlan_changed (void* callbackArg, IProjectWindow* pw, unsigned int vlanNumber)
 	{
-		static_cast<VlanWindow*>(callbackArg)->LoadSelectedTreeEdit();
+		static_cast<vlan_window*>(callbackArg)->LoadSelectedTreeEdit();
 	}
 
 	void ProcessVlanSelChange (HWND hwnd)
 	{
 		int index = ComboBox_GetCurSel(hwnd);
-		_pw->SelectVlan(index + 1);
+		_pw->select_vlan(index + 1);
 	}
 
 	void ProcessNewWindowVlanSelChange (HWND hwnd)
@@ -213,11 +219,10 @@ public:
 		}
 		else
 		{
-			assert(false);
-			//project_window_create_params create_params = 
-			//	{ _app, _project, selection_factory, edit_area_factory, false, false, vlanNumber, SW_SHOW, _d3d_dc, _dwrite_factory };
-			//auto pw = projectWindowFactory (create_params);
-			//_app->add_project_window(move(pw));
+			project_window_create_params create_params = 
+				{ _app, _project, selection_factory, edit_area_factory, false, false, vlanNumber, SW_SHOW, _d3d_dc, _dwrite_factory };
+			auto pw = projectWindowFactory (create_params);
+			_app->add_project_window(move(pw));
 		}
 
 		ComboBox_SetCurSel (hwnd, -1);
@@ -271,9 +276,9 @@ public:
 };
 
 template<typename... Args>
-static std::unique_ptr<IVlanWindow> Create (Args... args)
+static std::unique_ptr<vlan_window_i> create (Args... args)
 {
-	return std::make_unique<VlanWindow> (std::forward<Args>(args)...);
+	return std::make_unique<vlan_window> (std::forward<Args>(args)...);
 }
 
-const VlanWindowFactory vlanWindowFactory = &Create;
+const vlan_window_factory_t vlan_window_factory = &create;

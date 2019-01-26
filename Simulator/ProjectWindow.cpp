@@ -52,10 +52,10 @@ class ProjectWindow : public window, public virtual IProjectWindow
 	std::unique_ptr<edit_area_i>          _editWindow;
 	std::unique_ptr<properties_window_i>  _propertiesWindow;
 	std::unique_ptr<log_window_i>       _log_window;
-	std::unique_ptr<IVlanWindow>        _vlanWindow;
+	std::unique_ptr<vlan_window_i>        _vlanWindow;
 	SIZE _clientSize;
 	RECT _restoreBounds;
-	unsigned int _selectedVlanNumber = 1;
+	uint32_t _selectedVlanNumber = 1;
 	int _dpiX;
 	int _dpiY;
 	LONG _splitterWidthPixels;
@@ -98,7 +98,7 @@ public:
 		if (create_params.showLogWindow)
 			CreateLogWindow();
 
-		_vlanWindow = vlanWindowFactory (_app, this, _project, _selection.get(), hwnd(), { GetVlanWindowLeft(), 0 });
+		_vlanWindow = vlan_window_factory (_app, this, _project, _selection.get(), hwnd(), { GetVlanWindowLeft(), 0 }, _d3d_dc, _dwrite_factory);
 		SetMainMenuItemCheck (ID_VIEW_VLANS, true);
 
 		_editWindow = edit_area_factory (create_params.app, this, _project.get(), _selection.get(), hwnd(), edit_window_rect(), create_params.d3d_dc, create_params.dwrite_factory);
@@ -782,23 +782,23 @@ public:
 		}
 	}
 
-	virtual void SelectVlan (unsigned int vlanNumber) override final
+	virtual void select_vlan (uint32_t vlanNumber) override final
 	{
-		if ((vlanNumber == 0) || (vlanNumber > 4095))
+		if ((vlanNumber == 0) || (vlanNumber > 4094))
 			throw invalid_argument (u8"Invalid VLAN number.");
 
 		if (_selectedVlanNumber != vlanNumber)
 		{
 			_selectedVlanNumber = vlanNumber;
-			event_invoker<SelectedVlanNumerChangedEvent>()(this, vlanNumber);
+			event_invoker<selected_vlan_number_changed_e>()(this, vlanNumber);
 			::InvalidateRect (hwnd(), nullptr, FALSE);
 			SetWindowTitle();
 		}
 	};
 
-	virtual unsigned int selected_vlan_number() const override final { return _selectedVlanNumber; }
+	virtual uint32_t selected_vlan_number() const override final { return _selectedVlanNumber; }
 
-	virtual SelectedVlanNumerChangedEvent::subscriber GetSelectedVlanNumerChangedEvent() override final { return SelectedVlanNumerChangedEvent::subscriber(this); }
+	virtual selected_vlan_number_changed_e::subscriber selected_vlan_number_changed() override final { return selected_vlan_number_changed_e::subscriber(this); }
 
 	virtual IProject* GetProject() const override final { return _project.get(); }
 

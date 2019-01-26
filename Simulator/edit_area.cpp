@@ -72,22 +72,22 @@ public:
 		_project->GetBridgeRemovingEvent().add_handler (&OnBridgeRemoving, this);
 		_project->GetWireRemovingEvent().add_handler (&OnWireRemoving, this);
 		_project->GetInvalidateEvent().add_handler (&OnProjectInvalidate, this);
-		_pw->GetSelectedVlanNumerChangedEvent().add_handler (&OnSelectedVlanChanged, this);
+		_pw->selected_vlan_number_changed().add_handler (&on_selected_vlan_changed, this);
 	}
 
 	virtual ~edit_area()
 	{
-		_pw->GetSelectedVlanNumerChangedEvent().remove_handler (&OnSelectedVlanChanged, this);
+		_pw->selected_vlan_number_changed().remove_handler (&on_selected_vlan_changed, this);
 		_project->GetInvalidateEvent().remove_handler (&OnProjectInvalidate, this);
 		_project->GetWireRemovingEvent().remove_handler (&OnWireRemoving, this);
 		_project->GetBridgeRemovingEvent().remove_handler (&OnBridgeRemoving, this);
 		_selection->changed().remove_handler (&OnSelectionChanged, this);
 	}
 
-	static void OnSelectedVlanChanged (void* callbackArg, IProjectWindow* pw, unsigned int vlanNumber)
+	static void on_selected_vlan_changed (void* callbackArg, IProjectWindow* pw, unsigned int vlanNumber)
 	{
 		auto area = static_cast<edit_area*>(callbackArg);
-		::InvalidateRect (area->hwnd(), nullptr, FALSE);
+		area->invalidate();
 	}
 
 	static void OnBridgeRemoving (void* callbackArg, IProject* project, size_t index, Bridge* b)

@@ -180,7 +180,7 @@ public:
 		unsigned int entryCount;
 		auto entries = STP_GetMstConfigTable (bridge->stp_bridge(), &entryCount);
 
-		for (unsigned int vlanNumber = 0; vlanNumber <= MaxVlanNumber; vlanNumber++)
+		for (unsigned int vlanNumber = 0; vlanNumber <= max_vlan_number; vlanNumber++)
 		{
 			lvi.iItem = vlanNumber;
 
@@ -200,7 +200,7 @@ public:
 	void LoadDefaultConfig()
 	{
 		vector<STP_CONFIG_TABLE_ENTRY> entries;
-		entries.resize(1 + MaxVlanNumber);
+		entries.resize(1 + max_vlan_number);
 
 		for (auto b : _bridges)
 			b->SetMstConfigTable (entries.data(), (unsigned int) entries.size());
@@ -217,12 +217,12 @@ public:
 			auto treeCount = 1 + STP_GetMstiCount(b->stp_bridge());
 
 			vector<STP_CONFIG_TABLE_ENTRY> entries;
-			entries.resize(1 + MaxVlanNumber);
+			entries.resize(1 + max_vlan_number);
 
 			entries[0] = { 0, 0 }; // VLAN0 does not exist.
 
 			unsigned char treeIndex = 1;
-			for (unsigned int vid = 1; vid <= MaxVlanNumber; vid++)
+			for (unsigned int vid = 1; vid <= max_vlan_number; vid++)
 			{
 				entries[vid].unused = 0;
 				entries[vid].treeIndex = (vid - 1) % treeCount;
