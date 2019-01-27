@@ -95,7 +95,6 @@ public:
 				discard_editor();
 				for (auto& ri : _root_items)
 					create_text_layouts(ri.get());
-//				this->event_invoker<preferred_height_changed_e>()();
 			}
 
 			return 0;
@@ -109,7 +108,6 @@ public:
 				discard_editor();
 				for (auto& ri : _root_items)
 					create_text_layouts(ri.get());
-//				this->event_invoker<preferred_height_changed_e>()();
 			}
 			return 0;
 		}

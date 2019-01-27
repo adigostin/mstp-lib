@@ -73,8 +73,6 @@ public:
 
 		if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<Bridge>(); }))
 		{
-			//_pg1->set_title ("Bridge Properties");
-			//_pg1->select_objects (objs.data(), objs.size());
 			_pg1->clear();
 			_pg1->add_section ("Bridge Properties", objs.data(), objs.size());
 
@@ -86,14 +84,10 @@ public:
 				bridge_trees.push_back (b->trees().at(tree_index).get());
 			}
 
-			//_pg2->set_title (pg_tree_title);
-			//_pg2->select_objects (bridge_trees.data(), bridge_trees.size());
 			_pg1->add_section (pg_tree_title.c_str(), bridge_trees.data(), bridge_trees.size());
 		}
 		else if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<Port>(); }))
 		{
-			//_pg1->set_title ("Port Properties");
-			//_pg1->select_objects (objs.data(), objs.size());
 			_pg1->clear();
 			_pg1->add_section("Port Properties", objs.data(), objs.size());
 
@@ -105,19 +99,12 @@ public:
 				port_trees.push_back (p->trees().at(tree_index).get());
 			}
 
-			//_pg2->set_title (pg_tree_title);
-			//_pg2->select_objects (port_trees.data(), port_trees.size());
 			_pg1->add_section (pg_tree_title.c_str(), port_trees.data(), port_trees.size());
 		}
 		else if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<Wire>(); }))
 		{
-			//_pg1->set_title ("Wire Properties");
-			//_pg1->select_objects (objs.data(), objs.size());
 			_pg1->clear();
 			_pg1->add_section("Wire Properties", objs.data(), objs.size());
-
-			//_pg2->set_title (pg_tree_title);
-			//_pg2->select_objects (nullptr, 0);
 			_pg1->add_section(pg_tree_title.c_str(), nullptr, 0);
 		}
 		else
