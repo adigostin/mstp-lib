@@ -9,12 +9,8 @@ namespace edge
 	struct __declspec(novtable) property_grid_i : public virtual win32_window_i
 	{
 		virtual ~property_grid_i() { }
-		virtual void set_title (std::string_view title) = 0;
-		virtual void select_objects (object* const* objects, size_t size) = 0;
-
-		struct preferred_height_changed_e : event<preferred_height_changed_e> { };
-		virtual preferred_height_changed_e::subscriber preferred_height_changed() = 0;
-		virtual LONG preferred_height_pixels() const = 0;
+		virtual void clear() = 0;
+		virtual void add_section (const char* heading, object* const* objects, size_t size) = 0;
 
 		struct property_changed_args
 		{

@@ -7,6 +7,10 @@
 using namespace edge;
 using namespace D2D1;
 
+static constexpr float text_lr_padding = 3;
+static constexpr float title_lr_padding = 4;
+static constexpr float title_ud_padding = 2;
+
 root_item* pgitem::root()
 {
 	return _parent->root();
@@ -93,6 +97,40 @@ std::vector<std::unique_ptr<pgitem>> object_item::create_children()
 	return items;
 }
 #pragma endregion
+
+#pragma region root_item
+root_item::root_item (property_grid_i* grid, const char* heading, object* const* objects, size_t size)
+	: base(nullptr, objects, size), _grid(grid), _heading(heading)
+{
+	expand();
+}
+
+void root_item::create_text_layouts (IDWriteFactory* factory, IDWriteTextFormat* format, const item_layout_horz& l, float line_thickness)
+{
+	// TODO: padding
+	com_ptr<IDWriteTextFormat> tf;
+	auto hr = factory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL,
+	                                     DWRITE_FONT_STRETCH_NORMAL, font_size, L"en-US", &tf);
+	float layout_width = std::max (0.0f, l.x_right -l.x_left - 2 * title_lr_padding);
+	_text_layout = text_layout::create (factory, tf, _heading, layout_width);
+}
+
+void root_item::render (const render_context& rc, const item_layout& l, float line_thickness, bool selected, bool focused) const
+{
+	com_ptr<ID2D1SolidColorBrush> brush;
+	rc.dc->CreateSolidColorBrush (GetD2DSystemColor(COLOR_ACTIVECAPTION), &brush);
+	D2D1_RECT_F rect = { l.x_left, l.y_top, l.x_right, l.y_bottom };
+	rc.dc->FillRectangle (&rect, brush);
+	brush->SetColor (GetD2DSystemColor(COLOR_CAPTIONTEXT));
+	rc.dc->DrawTextLayout ({ l.x_left + title_lr_padding, l.y_top + title_ud_padding }, _text_layout.layout, brush);
+}
+
+float root_item::content_height() const
+{
+	return _text_layout.metrics.height + 2 * title_ud_padding;
+}
+#pragma endregion
+
 #pragma region value_pgitem
 value_pgitem::value_pgitem (object_item* parent, const value_property* prop)
 	: base(parent), _prop(prop)
@@ -118,10 +156,11 @@ void value_pgitem::create_value_layout_internal (IDWriteFactory* factory, IDWrit
 		_value = text_layout::create (factory, format, _prop->get_to_string(parent()->objects().front()), width);
 }
 
-void value_pgitem::create_text_layouts (IDWriteFactory* factory, IDWriteTextFormat* format, float name_width, float value_width)
+void value_pgitem::create_text_layouts (IDWriteFactory* factory, IDWriteTextFormat* format, const item_layout_horz& l, float line_thickness)
 {
-	_name = text_layout::create (factory, format, _prop->_name, name_width);
-	create_value_layout_internal (factory, format, value_width);
+	_name = text_layout::create (factory, format, _prop->_name, l.x_value - l.x_name - line_thickness - 2 * text_lr_padding);
+	float value_layout_width = std::max (0.0f, l.x_right - l.x_value - line_thickness - 2 * text_lr_padding);
+	create_value_layout_internal (factory, format, value_layout_width);
 }
 
 void value_pgitem::recreate_value_text_layout()
@@ -135,31 +174,32 @@ void value_pgitem::recreate_value_text_layout()
 		grid->invalidate();
 }
 
-void value_pgitem::render_name  (const render_context& rc, const item_layout& l, bool selected, bool focused) const
+void value_pgitem::render (const render_context& rc, const item_layout& l, float line_thickness, bool selected, bool focused) const
 {
 	if (selected)
-		rc.dc->FillRectangle (l.name_rect, focused ? rc.selected_back_brush_focused.get() : rc.selected_back_brush_not_focused.get());
+	{
+		D2D1_RECT_F rect = { l.x_left, l.y_top, l.x_right, l.y_bottom };
+		rc.dc->FillRectangle (&rect, focused ? rc.selected_back_brush_focused.get() : rc.selected_back_brush_not_focused.get());
+	}
 
+	float name_line_x = l.x_name + line_thickness / 2;
+	rc.dc->DrawLine ({ name_line_x, l.y_top }, { name_line_x, l.y_bottom }, rc.disabled_fore_brush, line_thickness);
 	auto fore = selected ? rc.selected_fore_brush.get() : rc.fore_brush.get();
-	rc.dc->DrawTextLayout ({ l.name_rect.left + text_lr_padding, l.name_rect.top }, _name.layout, fore);
+	rc.dc->DrawTextLayout ({ l.x_name + line_thickness + text_lr_padding, l.y_top }, _name.layout, fore);
+
+	float linex = l.x_value + line_thickness / 2;
+	rc.dc->DrawLine ({ linex, l.y_top }, { linex, l.y_bottom }, rc.disabled_fore_brush, line_thickness);
+	bool canEdit = /*(_prop->_customEditor != nullptr) || */_prop->has_setter();
+	fore = !canEdit ? rc.disabled_fore_brush.get() : (selected ? rc.selected_fore_brush.get() : rc.fore_brush.get());
+	rc.dc->DrawTextLayout ({ l.x_value + line_thickness + text_lr_padding, l.y_top }, _value.layout, fore);
 }
 
-void value_pgitem::render_value (const render_context& rc, const item_layout& l, bool selected, bool focused) const
-{
-	if (selected)
-		rc.dc->FillRectangle (l.value_rect, focused ? rc.selected_back_brush_focused.get() : rc.selected_back_brush_not_focused.get());
-
-	bool canEdit = (_prop->_customEditor != nullptr) || _prop->has_setter();
-	auto fore = !canEdit ? rc.disabled_fore_brush.get() : (selected ? rc.selected_fore_brush.get() : rc.fore_brush.get());
-	rc.dc->DrawTextLayout ({ l.value_rect.left + text_lr_padding, l.value_rect.top }, _value.layout, fore);
-}
-
-float value_pgitem::text_height() const
+float value_pgitem::content_height() const
 {
 	return std::max (_name.metrics.height, _value.metrics.height);
 }
 
-HCURSOR value_pgitem::cursor (D2D1_SIZE_F offset) const
+HCURSOR value_pgitem::cursor() const
 {
 	if (!_prop->has_setter())
 		return ::LoadCursor(nullptr, IDC_ARROW);
@@ -173,8 +213,7 @@ HCURSOR value_pgitem::cursor (D2D1_SIZE_F offset) const
 	return ::LoadCursor (nullptr, IDC_IBEAM);
 }
 
-static const NVP bool_nvps[] = 
-{
+static const NVP bool_nvps[] = {
 	{ "false", 0 },
 	{ "true", 1 },
 	{ nullptr, -1 },
@@ -182,7 +221,7 @@ static const NVP bool_nvps[] =
 
 void value_pgitem::process_mouse_button_down (mouse_button button, UINT modifiers, POINT pt, D2D1_POINT_2F dip, const item_layout& layout)
 {
-	if (!point_in_rect(layout.value_rect, dip))
+	if (dip.x < layout.x_value)
 		return;
 
 	if (!_prop->has_setter())
@@ -203,9 +242,7 @@ void value_pgitem::process_mouse_button_down (mouse_button button, UINT modifier
 	}
 	else
 	{
-		auto editor_rect = layout.value_rect;
-		editor_rect.left += text_lr_padding;
-		editor_rect.right -= text_lr_padding;
+		D2D1_RECT_F editor_rect = { layout.x_value + text_lr_padding, layout.y_top, layout.x_right - text_lr_padding, layout.y_bottom };
 		auto editor = root()->_grid->show_text_editor (editor_rect, multiple_values() ? "" : _prop->get_to_string(parent()->objects().front()));
 		editor->process_mouse_button_down (button, modifiers, pt, dip);
 	}
