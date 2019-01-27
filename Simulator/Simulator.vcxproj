@@ -238,7 +238,6 @@
     <ClCompile Include="PortTree.cpp" />
     <ClCompile Include="Project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
-    <ClCompile Include="properties_window.cpp" />
     <ClCompile Include="selection.cpp" />
     <ClCompile Include="Test.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>

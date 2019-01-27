@@ -51,7 +51,6 @@
       <Filter>edit_states</Filter>
     </ClCompile>
     <ClCompile Include="BridgeTree.cpp" />
-    <ClCompile Include="properties_window.cpp" />
     <ClCompile Include="PortTree.cpp" />
     <ClCompile Include="selection.cpp" />
     <ClCompile Include="vlan_window.cpp" />

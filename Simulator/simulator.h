@@ -124,11 +124,11 @@ struct __declspec(novtable) IProjectWindow : public virtual edge::win32_window_i
 
 struct project_window_create_params
 {
-	simulator_app_i*                   app;
+	simulator_app_i*                 app;
 	const std::shared_ptr<IProject>& project;
-	selection_factory_t                 selection_factory;
-	edit_area_factory_t                  edit_area_factory;
-	bool     showPropertiesWindow;
+	selection_factory_t              selection_factory;
+	edit_area_factory_t              edit_area_factory;
+	bool     show_property_grid;
 	bool     showLogWindow;
 	uint32_t selectedVlan;
 	int      nCmdShow;
@@ -197,22 +197,6 @@ struct __declspec(novtable) IProject
 };
 using ProjectFactory = std::shared_ptr<IProject>(*const)();
 extern const ProjectFactory projectFactory;
-
-// ============================================================================
-
-struct __declspec(novtable) properties_window_i : virtual edge::win32_window_i
-{
-	virtual ~properties_window_i() { }
-};
-using properties_window_factory_t = std::unique_ptr<properties_window_i>(*const)(simulator_app_i* app,
-																		   IProjectWindow* projectWindow,
-																		   IProject* project,
-																		   selection_i* selection,
-																		   const RECT& rect,
-																		   HWND hWndParent,
-																		   ID3D11DeviceContext1* d3d_dc,
-																		   IDWriteFactory* dwrite_factory);
-extern const properties_window_factory_t properties_window_factory;
 
 // ============================================================================
 
