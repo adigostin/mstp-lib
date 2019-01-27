@@ -14,23 +14,12 @@ Port::Port (Bridge* bridge, unsigned int portIndex, Side side, float offset)
 	for (unsigned int treeIndex = 0; treeIndex < (unsigned int) bridge->trees().size(); treeIndex++)
 	{
 		auto tree = unique_ptr<PortTree>(new PortTree(this, treeIndex));
-		tree->property_changed().add_handler (&OnTreePropertyChanged, this);
 		_trees.push_back (move(tree));
 	}
 }
 
 Port::~Port()
 {
-	for (auto& tree : _trees)
-		tree->property_changed().remove_handler (&OnTreePropertyChanged, this);
-}
-
-//static
-void Port::OnTreePropertyChanged (void* callbackArg, edge::object* o, const edge::property* property)
-{
-	auto port = static_cast<Port*>(callbackArg);
-	assert(false);
-	//PropertyChangedEvent::InvokeHandlers (port, o, property);
 }
 
 D2D1_POINT_2F Port::GetCPLocation() const

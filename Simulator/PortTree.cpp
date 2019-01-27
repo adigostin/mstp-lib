@@ -16,7 +16,7 @@ HRESULT PortTree::Serialize (IXMLDOMDocument3* doc, com_ptr<IXMLDOMElement>& ele
 	com_ptr<IXMLDOMElement> portTreeElement;
 	auto hr = doc->createElement (PortTreeString, &portTreeElement); assert(SUCCEEDED(hr));
 	portTreeElement->setAttribute (TreeIndexString, _variant_t(_treeIndex));
-	portTreeElement->setAttribute (PortPriorityString, _variant_t(GetPriority()));
+	portTreeElement->setAttribute (PortPriorityString, _variant_t(priority()));
 	elementOut = std::move(portTreeElement);
 	return S_OK;
 }
@@ -28,26 +28,23 @@ HRESULT PortTree::Deserialize (IXMLDOMElement* portTreeElement)
 	if (FAILED(hr))
 		return hr;
 	if (value.vt == VT_BSTR)
-		SetPriority (wcstol (value.bstrVal, nullptr, 10));
+		set_priority(wcstol (value.bstrVal, nullptr, 10));
 
 	return S_OK;
 }
 
-uint32_t PortTree::GetPriority() const
+uint32_t PortTree::priority() const
 {
 	return STP_GetPortPriority (_port->bridge()->stp_bridge(), _port->GetPortIndex(), _treeIndex);
 }
 
-void PortTree::SetPriority (uint32_t priority)
+void PortTree::set_priority (uint32_t priority)
 {
-	if (STP_GetPortPriority (_port->bridge()->stp_bridge(), _port->GetPortIndex(), _treeIndex) != priority)
+	if (this->priority() != priority)
 	{
-		assert(false);
-		/*
-		this->on_property_changing(&Priority);
+		this->on_property_changing(&priority_p);
 		STP_SetPortPriority (_port->bridge()->stp_bridge(), _port->GetPortIndex(), _treeIndex, (unsigned char) priority, GetMessageTime());
-		this->on_property_changed(&Priority);
-		*/
+		this->on_property_changed(&priority_p);
 	}
 }
 
@@ -72,17 +69,17 @@ const edge::NVP port_priority_nvps[] {
 
 const char port_priority_type_name[] = "PortPriority";
 
-const port_priority_property PortTree::Priority
+const port_priority_property PortTree::priority_p
 (
 	"PortPriority",
-	static_cast<port_priority_property::getter_t>(&GetPriority),
-	static_cast<port_priority_property::setter_t>(&SetPriority),
+	static_cast<port_priority_property::getter_t>(&priority),
+	static_cast<port_priority_property::setter_t>(&set_priority),
 	0x80
 );
 
 const edge::property* const PortTree::_properties[] =
 {
-	&Priority,
+	&priority_p,
 };
 
 const edge::type_t PortTree::_type = { "PortTree", &base::_type, _properties };

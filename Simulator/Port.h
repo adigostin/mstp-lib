@@ -36,7 +36,6 @@ class Port : public renderable_object
 
 	static constexpr unsigned int MissedLinkPulseCounterMax = 5;
 	unsigned int _missedLinkPulseCounter = MissedLinkPulseCounterMax; // _missedLinkPulseCounter equal to MissedLinkPulseCounterMax means macOperational=false
-	static void OnTreePropertyChanged (void* callbackArg, edge::object* o, const edge::property* property);
 
 public:
 	Port (Bridge* bridge, unsigned int portIndex, Side side, float offset);
