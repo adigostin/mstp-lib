@@ -10,9 +10,8 @@ using namespace edge;
 static constexpr UINT WM_CLOSE_POPUP = WM_APP + 1;
 static constexpr UINT WM_WORK        = WM_APP + 2;
 
-static constexpr D2D1_RECT_F title_text_padding = { 4, 1, 4, 1 };
 static constexpr float indent_width = 15;
-static constexpr float font_size = 12;
+static constexpr float line_thickness_not_aligned = 0.6f;
 
 namespace edge
 {
@@ -28,14 +27,12 @@ class edge::property_grid : d2d_window, public virtual property_grid_i
 	com_ptr<IDWriteTextFormat> _textFormat;
 	com_ptr<IDWriteTextFormat> _boldTextFormat;
 	com_ptr<IDWriteTextFormat> _wingdings;
-	com_ptr<IDWriteTextFormat> _titleTextFormat;
 	std::unique_ptr<text_editor_i> _text_editor;
 	float _name_column_factor = 0.5f;
 	float _pixel_width;
 	float _line_thickness;
-	std::unique_ptr<root_item> _root_item;
+	std::vector<std::unique_ptr<root_item>> _root_items;
 	pgitem* _selected_item = nullptr;
-	text_layout _title_layout;
 
 	std::queue<std::function<void()>> _workQueue;
 
@@ -54,16 +51,13 @@ public:
 		hr = dWriteFactory->CreateTextFormat (L"Wingdings", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
 											  DWRITE_FONT_STRETCH_NORMAL, font_size, L"en-US", &_wingdings); assert(SUCCEEDED(hr));
 
-		hr = dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL,
-											  DWRITE_FONT_STRETCH_NORMAL, font_size, L"en-US", &_titleTextFormat); assert(SUCCEEDED(hr));
-
 		recalc_pixel_width_and_line_thickness();
 	}
 
 	void recalc_pixel_width_and_line_thickness()
 	{
 		_pixel_width = GetDipSizeFromPixelSize ({ 1, 0 }).width;
-		_line_thickness = roundf(1.0f / _pixel_width) * _pixel_width;
+		_line_thickness = roundf(line_thickness_not_aligned / _pixel_width) * _pixel_width;
 	}
 
 
@@ -96,11 +90,12 @@ public:
 
 		if (msg == WM_SIZE)
 		{
-			if (_root_item)
+			if (!_root_items.empty())
 			{
 				discard_editor();
-				create_text_layouts();
-				this->event_invoker<preferred_height_changed_e>()();
+				for (auto& ri : _root_items)
+					create_text_layouts(ri.get());
+//				this->event_invoker<preferred_height_changed_e>()();
 			}
 
 			return 0;
@@ -109,11 +104,12 @@ public:
 		if (msg == 0x02E3) // WM_DPICHANGED_AFTERPARENT
 		{
 			recalc_pixel_width_and_line_thickness();
-			if (_root_item)
+			if (!_root_items.empty())
 			{
 				discard_editor();
-				create_text_layouts();
-				this->event_invoker<preferred_height_changed_e>()();
+				for (auto& ri : _root_items)
+					create_text_layouts(ri.get());
+//				this->event_invoker<preferred_height_changed_e>()();
 			}
 			return 0;
 		}
@@ -217,9 +213,8 @@ public:
 		auto item = item_at(dip);
 		if (item.first != nullptr)
 		{
-			auto offset = dip - item.second.location;
-			if (offset.width >= name_column_width())
-				cursor = item.first->cursor (offset);
+			if (dip.x >= item.second.x_value)
+				cursor = item.first->cursor();
 		}
 
 		if (cursor == nullptr)
@@ -230,75 +225,77 @@ public:
 
 	void enum_items (const std::function<void(pgitem*, const item_layout&, bool& cancel)>& callback) const
 	{
-		std::function<void(const std::vector<std::unique_ptr<pgitem>>& items, float& y, size_t indent, bool& cancel)> enum_items_inner;
+		std::function<void(pgitem* item, float& y, size_t indent, bool& cancel)> enum_items_inner;
 
-		enum_items_inner = [this, &enum_items_inner, &callback](const std::vector<std::unique_ptr<pgitem>>& items, float y, size_t indent, bool& cancel)
+		enum_items_inner = [this, &enum_items_inner, &callback, vcx=value_column_x()](pgitem* item, float& y, size_t indent, bool& cancel)
 		{
-			float ncw = name_column_width();
-			for (auto& item : items)
+			auto item_height = item->content_height();
+
+			auto horz_line_y = y + item_height;
+			horz_line_y = ceilf (horz_line_y / _pixel_width) * _pixel_width;
+
+			item_layout il;
+			il.y_top = y;
+			il.y_bottom = horz_line_y;
+			il.x_left = 0;
+			il.x_name = indent * indent_width;
+			il.x_value = vcx;
+			il.x_right = client_width();
+
+			callback(item, il, cancel);
+			if (cancel)
+				return;
+
+			y = horz_line_y + _line_thickness;
+
+			if (auto ei = dynamic_cast<expandable_item*>(item); ei && ei->expanded())
 			{
-				auto item_height = item->text_height();
-				item_layout ii;
-			
-				auto horz_line_y = y + item_height;
-				horz_line_y = ceilf (horz_line_y / _pixel_width) * _pixel_width;
-
-				ii.location = { 0, y };
-				ii.name_rect = { 0, y, ncw, horz_line_y };
-				ii.value_rect = { ncw + _line_thickness, y, client_width(), horz_line_y };
-
-				callback(item.get(), ii, cancel);
-				if (cancel)
-					break;
-		
-				y = horz_line_y + _line_thickness;
-
-				if (auto ei = dynamic_cast<expandable_item*>(item.get()); (ei != nullptr) && ei->expanded())
-					enum_items_inner (ei->children(), y, indent + 1, cancel);
+				for (auto& child : ei->children())
+				{
+					enum_items_inner (child.get(), y, indent + 1, cancel);
+					if (cancel)
+						break;
+				}
 			}
 		};
 
-		float y = title_height();
+		float y = 0;
 		bool cancel = false;
-		enum_items_inner (_root_item->children(), y, 0, cancel);
+		for (auto& root_item : _root_items)
+		{
+			enum_items_inner (root_item.get(), y, 0, cancel);
+			if (cancel)
+				break;
+		}
 	}
 
-	void create_text_layouts()
+	void create_text_layouts (root_item* ri)
 	{
-		auto ncw = name_column_width();
-		auto vcw = std::max (75.0f, client_width() - ncw);
-		auto value_width = vcw - _line_thickness - 2 * text_lr_padding;
+		auto vcx = value_column_x();
+		auto vcw = std::max (75.0f, client_width() - vcx);
 
-		std::function<void(const std::vector<std::unique_ptr<pgitem>>& items, size_t indent)> create_inner;
+		std::function<void(pgitem* item, size_t indent)> create_inner;
 
-		create_inner = [&create_inner, this, ncw, value_width] (const std::vector<std::unique_ptr<pgitem>>& items, size_t indent)
+		create_inner = [&create_inner, this, vcx, vcw] (pgitem* item, size_t indent)
 		{
-			auto name_width = std::max(0.0f, ncw - indent * indent_width - 2 * text_lr_padding);
+			item_layout_horz il;
+			il.x_left = 0;
+			il.x_name = indent * indent_width;
+			il.x_value = vcx;
+			il.x_right = client_width();
 
-			for (auto& item : items)
+			item->create_text_layouts (dwrite_factory(), _textFormat, il, _line_thickness);
+
+			if (auto ei = dynamic_cast<expandable_item*>(item); ei && ei->expanded())
 			{
-				item->create_text_layouts (dwrite_factory(), _textFormat, name_width, value_width);
-
-				if (auto ei = dynamic_cast<expandable_item*>(item.get()); (ei != nullptr) && ei->expanded())
-					create_inner (ei->children(), indent + 1);
+				for (auto& child : ei->children())
+					create_inner (child.get(), indent + 1);
 			}
 		};
 
-		create_inner (_root_item->children(), 0);
+		create_inner (ri, 0);
 
 		invalidate();
-	}
-
-	float title_height() const
-	{
-		float h = 0;
-		if (_title_layout.layout != nullptr)
-		{
-			h = title_text_padding.top + _title_layout.metrics.height + title_text_padding.bottom;
-			h = ceilf (h / _pixel_width) * _pixel_width;
-		}
-
-		return h;
 	}
 
 	virtual void render (ID2D1DeviceContext* dc) const override
@@ -308,9 +305,9 @@ public:
 		auto tr = dpi_transform();
 		dc->SetTransform ({ (float)tr._11, (float)tr._12, (float)tr._21, (float)tr._22, (float)tr._31, (float)tr._32 });
 
-		if (!_root_item)
+		if (_root_items.empty())
 		{
-			auto tl = text_layout::create (dwrite_factory(), _textFormat, "(no selection)", -1);
+			auto tl = text_layout::create (dwrite_factory(), _textFormat, "(no selection)");
 			D2D1_POINT_2F p = { client_width() / 2 - tl.metrics.width / 2, client_height() / 2 - tl.metrics.height / 2};
 			com_ptr<ID2D1SolidColorBrush> brush;
 			dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOWTEXT), &brush);
@@ -319,15 +316,6 @@ public:
 		}
 
 		bool focused = GetFocus() == hwnd();
-
-		if (_title_layout.layout != nullptr)
-		{
-			com_ptr<ID2D1SolidColorBrush> brush;
-			dc->CreateSolidColorBrush (GetD2DSystemColor(COLOR_ACTIVECAPTION), &brush);
-			dc->FillRectangle ({ 0, 0, client_width(), title_height() }, brush);
-			brush->SetColor (GetD2DSystemColor(COLOR_CAPTIONTEXT));
-			dc->DrawTextLayout ({ title_text_padding.left, title_text_padding.top }, _title_layout.layout, brush);
-		}
 
 		render_context rc;
 		rc.dc = dc;
@@ -338,35 +326,24 @@ public:
 		dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOWTEXT), &rc.selected_fore_brush);
 		dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_GRAYTEXT), &rc.disabled_fore_brush);
 
-		float bottom = 0;
-		enum_items ([&](pgitem* item, const item_layout& layout, bool& cancel)
+		enum_items ([&, this](pgitem* item, const item_layout& layout, bool& cancel)
 		{
 			bool selected = (item == _selected_item);
-			item->render_name (rc, layout, selected, focused);
+			item->render (rc, layout, _line_thickness, selected, focused);
 
 			if (selected && _text_editor)
 				_text_editor->render(dc);
-			else
-				item->render_value (rc, layout, selected, focused);
 
-			bottom = layout.name_rect.bottom + _line_thickness;
-
-			if (layout.name_rect.bottom >= client_height())
+			if (layout.y_bottom + _line_thickness >= client_height())
 				cancel = true;
 
-			D2D1_POINT_2F p0 = { 0, layout.name_rect.bottom + _line_thickness / 2 };
-			D2D1_POINT_2F p1 = { client_width(), layout.name_rect.bottom + _line_thickness / 2 };
+			D2D1_POINT_2F p0 = { 0, layout.y_bottom + _line_thickness / 2 };
+			D2D1_POINT_2F p1 = { client_width(), layout.y_bottom + _line_thickness / 2 };
 			dc->DrawLine (p0, p1, rc.disabled_fore_brush, _line_thickness);
 		});
-
-		if (bottom > title_height())
-		{
-			float x = name_column_width() + _line_thickness / 2;
-			dc->DrawLine ({ x, title_height() }, { x, bottom }, rc.disabled_fore_brush, _line_thickness);
-		}
 	}
 
-	float name_column_width() const
+	float value_column_x() const
 	{
 		float w = client_width() * _name_column_factor;
 		w = roundf (w / _pixel_width) * _pixel_width;
@@ -381,36 +358,20 @@ public:
 			_text_editor = nullptr;
 		}
 	}
-
-	virtual preferred_height_changed_e::subscriber preferred_height_changed() override { return preferred_height_changed_e::subscriber(this); }
-
-	virtual LONG preferred_height_pixels() const override
-	{
-		float bottom = 0;
-		enum_items([&bottom, this](pgitem* item, const item_layout& layout, bool& cancel) { bottom = layout.value_rect.bottom + _line_thickness; } );
-		auto size_pixels = pointd_to_pointp ({ 0, bottom }, 0);
-		return size_pixels.y;
-	}
-
-	void set_title (std::string_view title) override
-	{
-		if (title.empty())
-			_title_layout.layout = nullptr;
-		else
-		{
-			auto max_width = client_width() - title_text_padding.left - title_text_padding.right;
-			_title_layout = text_layout::create(base::dwrite_factory(), _titleTextFormat, title, max_width);
-		}
-		invalidate();
-	}
-
-	void select_objects (object* const* objects, size_t size) final
+	
+	virtual void clear() override
 	{
 		discard_editor();
 		_selected_item = nullptr;
-		_root_item.reset (new root_item(this, objects, size));
-		create_text_layouts();
-		::InvalidateRect (hwnd(), NULL, FALSE);
+		_root_items.clear();
+		invalidate();
+	}
+
+	virtual void add_section (const char* heading, object* const* objects, size_t size) override
+	{
+		_root_items.push_back (std::make_unique<root_item>(this, heading, objects, size));
+		create_text_layouts(_root_items.back().get());
+		invalidate();
 	}
 
 	property_changed_e::subscriber property_changed() override
@@ -555,7 +516,7 @@ public:
 
 		enum_items ([&](pgitem* item, const item_layout& layout, bool& cancel)
 		{
-			if (dip.y < layout.name_rect.bottom)
+			if (dip.y < layout.y_bottom)
 			{
 				result.first = item;
 				result.second = layout;
@@ -575,10 +536,11 @@ public:
 
 		auto clicked_item = item_at(dip);
 
-		if (_selected_item != clicked_item.first)
+		auto new_selected_item = clicked_item.first->selectable() ? clicked_item.first : nullptr;
+		if (_selected_item != new_selected_item)
 		{
 			discard_editor();
-			_selected_item = clicked_item.first;
+			_selected_item = new_selected_item;
 			invalidate();
 		}
 
@@ -595,7 +557,7 @@ public:
 		if (clicked_item.first != nullptr)
 			clicked_item.first->process_mouse_button_up (button, modifier_keys, pixel, dip, clicked_item.second);
 		/*
-		if (dip.x < name_column_width())
+		if (dip.x < value_column_x())
 			return;
 
 			if (pi->_pd->_customEditor != nullptr)
