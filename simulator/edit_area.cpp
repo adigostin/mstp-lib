@@ -69,8 +69,8 @@ public:
 			DWRITE_FONT_STRETCH_CONDENSED, 11, L"en-US", &_legendFont); assert(SUCCEEDED(hr));
 
 		_selection->changed().add_handler (&OnSelectionChanged, this);
-		_project->GetBridgeRemovingEvent().add_handler (&OnBridgeRemoving, this);
-		_project->GetWireRemovingEvent().add_handler (&OnWireRemoving, this);
+		_project->bridge_removing().add_handler (&OnBridgeRemoving, this);
+		_project->wire_removing().add_handler (&OnWireRemoving, this);
 		_project->GetInvalidateEvent().add_handler (&OnProjectInvalidate, this);
 		_pw->selected_vlan_number_changed().add_handler (&on_selected_vlan_changed, this);
 	}
@@ -79,8 +79,8 @@ public:
 	{
 		_pw->selected_vlan_number_changed().remove_handler (&on_selected_vlan_changed, this);
 		_project->GetInvalidateEvent().remove_handler (&OnProjectInvalidate, this);
-		_project->GetWireRemovingEvent().remove_handler (&OnWireRemoving, this);
-		_project->GetBridgeRemovingEvent().remove_handler (&OnBridgeRemoving, this);
+		_project->wire_removing().remove_handler (&OnWireRemoving, this);
+		_project->bridge_removing().remove_handler (&OnBridgeRemoving, this);
 		_selection->changed().remove_handler (&OnSelectionChanged, this);
 	}
 
@@ -334,7 +334,7 @@ public:
 		dc->GetTransform(&oldtr);
 		dc->SetTransform (GetZoomTransform() * oldtr);
 
-		for (const unique_ptr<Bridge>& bridge : _project->GetBridges())
+		for (const unique_ptr<Bridge>& bridge : _project->bridges())
 		{
 			D2D1_COLOR_F color = ColorF(ColorF::LightGreen);
 			if (STP_GetStpVersion(bridge->stp_bridge()) >= STP_VERSION_MSTP)
@@ -359,7 +359,7 @@ public:
 		dc->GetTransform(&oldtr);
 		dc->SetTransform (GetZoomTransform() * oldtr);
 
-		for (const unique_ptr<Wire>& w : _project->GetWires())
+		for (const unique_ptr<Wire>& w : _project->wires())
 		{
 			bool hasLoop;
 			bool forwarding = _project->IsWireForwarding(w.get(), _pw->selected_vlan_number(), &hasLoop);
@@ -368,24 +368,24 @@ public:
 
 		dc->SetTransform(oldtr);
 
-		if (_project->GetBridges().empty())
+		if (_project->bridges().empty())
 		{
 			render_hint (dc, { client_width() / 2, client_height() / 2 }, L"No bridges created. Right-click to create some.", DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, false);
 		}
-		else if (_project->GetBridges().size() == 1)
+		else if (_project->bridges().size() == 1)
 		{
 			render_hint (dc, { client_width() / 2, client_height() / 2 }, L"Right-click to add more bridges.", DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, false);
 		}
 		else
 		{
 			bool anyPortConnected = false;
-			for (auto& b : _project->GetBridges())
+			for (auto& b : _project->bridges())
 				anyPortConnected |= any_of (b->GetPorts().begin(), b->GetPorts().end(),
 											[this](const unique_ptr<Port>& p) { return _project->GetWireConnectedToPort(p.get()).first != nullptr; });
 
 			if (!anyPortConnected)
 			{
-				Bridge* b = _project->GetBridges().front().get();
+				Bridge* b = _project->bridges().front().get();
 				auto text = L"No port connected. You can connect\r\nports by drawing wires with the mouse.";
 				auto wl = D2D1_POINT_2F { b->GetLeft() + b->GetWidth() / 2, b->GetBottom() + Port::ExteriorHeight * 1.5f };
 				auto dl = pointw_to_pointd(wl);
@@ -468,7 +468,7 @@ public:
 	void render(ID2D1DeviceContext* dc) const final
 	{
 		std::set<STP_MST_CONFIG_ID> configIds;
-		for (auto& bridge : _project->GetBridges())
+		for (auto& bridge : _project->bridges())
 		{
 			auto stpb = bridge->stp_bridge();
 			if (STP_GetStpVersion(stpb) >= STP_VERSION_MSTP)
@@ -621,7 +621,7 @@ public:
 
 	virtual Port* GetCPAt (D2D1_POINT_2F dLocation, float tolerance) const override final
 	{
-		auto& bridges = _project->GetBridges();
+		auto& bridges = _project->bridges();
 		for (auto it = bridges.rbegin(); it != bridges.rend(); it++)
 		{
 			auto ht = it->get()->HitTest(this, dLocation, tolerance);
@@ -640,7 +640,7 @@ public:
 
 	HTResult HitTestObjects (D2D1_POINT_2F dLocation, float tolerance) const
 	{
-		auto& wires = _project->GetWires();
+		auto& wires = _project->wires();
 		for (auto it = wires.rbegin(); it != wires.rend(); it++)
 		{
 			auto ht = it->get()->HitTest (this, dLocation, tolerance);
@@ -648,7 +648,7 @@ public:
 				return ht;
 		}
 
-		auto& bridges = _project->GetBridges();
+		auto& bridges = _project->bridges();
 		for (auto it = bridges.rbegin(); it != bridges.rend(); it++)
 		{
 			auto ht = it->get()->HitTest(this, dLocation, tolerance);
@@ -687,7 +687,7 @@ public:
 				assert(false);
 		}
 
-		for (auto& w : _project->GetWires())
+		for (auto& w : _project->wires())
 		{
 			if (wiresToRemove.find(w.get()) != wiresToRemove.end())
 				continue;
@@ -730,10 +730,10 @@ public:
 					p.first->SetPoint(pi, p.first->GetPointCoords(pi));
 
 			for (auto w : wiresToRemove)
-				_project->RemoveWire(w);
+				_project->remove_wire(w);
 
 			for (auto b : bridgesToRemove)
-				_project->RemoveBridge(b);
+				_project->remove_bridge(b);
 
 			_project->SetChangedFlag(true);
 		}

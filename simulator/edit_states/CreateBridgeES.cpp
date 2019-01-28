@@ -37,9 +37,9 @@ public:
 		if (_bridge != nullptr)
 		{
 			Bridge* b = _bridge.get();
-			size_t insertIndex = _project->GetBridges().size();
-			_project->InsertBridge(insertIndex, move(_bridge));
-			STP_StartBridge (_project->GetBridges().back()->stp_bridge(), GetMessageTime());
+			size_t insertIndex = _project->bridges().size();
+			_project->insert_bridge(insertIndex, move(_bridge));
+			STP_StartBridge (_project->bridges().back()->stp_bridge(), GetMessageTime());
 			_project->SetChangedFlag(true);
 			_selection->select(b);
 		}

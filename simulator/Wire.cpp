@@ -148,7 +148,7 @@ com_ptr<IXMLDOMElement> Wire::SerializeEnd (project_i* project, IXMLDOMDocument*
 	{
 		hr = doc->createElement (ConnectedEndString, &element); assert(SUCCEEDED(hr));
 		auto port = get<ConnectedWireEnd>(end);
-		auto& bridges = project->GetBridges();
+		auto& bridges = project->bridges();
 		auto it = find_if (bridges.begin(), bridges.end(), [port](auto& up) { return up.get() == port->bridge(); });
 		auto bridgeIndex = it - bridges.begin();
 		hr = element->setAttribute (BridgeIndexString, _variant_t(to_string(bridgeIndex).c_str())); assert(SUCCEEDED(hr));
@@ -182,7 +182,7 @@ WireEnd Wire::DeserializeEnd (project_i* project, IXMLDOMElement* element)
 		size_t bridgeIndex = wcstoul (value.bstrVal, nullptr, 10);
 		hr = element->getAttribute (PortIndexString, &value); assert (SUCCEEDED(hr) && (value.vt == VT_BSTR));
 		size_t portIndex = wcstoul (value.bstrVal, nullptr, 10);
-		return ConnectedWireEnd { project->GetBridges()[bridgeIndex]->GetPorts()[portIndex].get() };
+		return ConnectedWireEnd { project->bridges()[bridgeIndex]->GetPorts()[portIndex].get() };
 	}
 	else if (wcscmp (name, LooseEndString) == 0)
 	{

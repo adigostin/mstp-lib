@@ -158,16 +158,16 @@ struct __declspec(novtable) project_i
 	struct ChangedFlagChangedEvent : public edge::event<ChangedFlagChangedEvent, project_i*> { };
 	struct ChangedEvent : public edge::event<ChangedEvent, project_i*> { };
 
-	virtual const std::vector<std::unique_ptr<Bridge>>& GetBridges() const = 0;
-	virtual void InsertBridge (size_t index, std::unique_ptr<Bridge>&& bridge) = 0;
-	virtual std::unique_ptr<Bridge> RemoveBridge (size_t index) = 0;
-	virtual bridge_inserted_e::subscriber GetBridgeInsertedEvent() = 0;
-	virtual bridge_removing_e::subscriber GetBridgeRemovingEvent() = 0;
-	virtual const std::vector<std::unique_ptr<Wire>>& GetWires() const = 0;
-	virtual void InsertWire (size_t index, std::unique_ptr<Wire>&& wire) = 0;
-	virtual std::unique_ptr<Wire> RemoveWire (size_t index) = 0;
-	virtual wire_inserted_e::subscriber GetWireInsertedEvent() = 0;
-	virtual wire_removing_e::subscriber GetWireRemovingEvent() = 0;
+	virtual const std::vector<std::unique_ptr<Bridge>>& bridges() const = 0;
+	virtual void insert_bridge (size_t index, std::unique_ptr<Bridge>&& bridge) = 0;
+	virtual std::unique_ptr<Bridge> remove_bridge (size_t index) = 0;
+	virtual bridge_inserted_e::subscriber bridge_inserted() = 0;
+	virtual bridge_removing_e::subscriber bridge_removing() = 0;
+	virtual const std::vector<std::unique_ptr<Wire>>& wires() const = 0;
+	virtual void insert_wire (size_t index, std::unique_ptr<Wire>&& wire) = 0;
+	virtual std::unique_ptr<Wire> remove_wire (size_t index) = 0;
+	virtual wire_inserted_e::subscriber wire_inserted() = 0;
+	virtual wire_removing_e::subscriber wire_removing() = 0;
 	virtual invalidate_e::subscriber GetInvalidateEvent() = 0;
 	virtual LoadedEvent::subscriber GetLoadedEvent() = 0;
 	virtual mac_address AllocMacAddressRange (size_t count) = 0;
@@ -185,11 +185,11 @@ struct __declspec(novtable) project_i
 
 	std::pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const;
 	Port* FindConnectedPort (Port* txPort) const;
-	std::unique_ptr<Wire> RemoveWire (Wire* w);
-	std::unique_ptr<Bridge> RemoveBridge (Bridge* b);
+	std::unique_ptr<Wire> remove_wire (Wire* w);
+	std::unique_ptr<Bridge> remove_bridge (Bridge* b);
 };
-using ProjectFactory = std::shared_ptr<project_i>(*const)();
-extern const ProjectFactory projectFactory;
+using project_factory_t = std::shared_ptr<project_i>(*const)();
+extern const project_factory_t project_factory;
 
 // ============================================================================
 

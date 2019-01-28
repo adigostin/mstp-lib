@@ -21,9 +21,9 @@ class Project : public event_manager, public project_i
 	bool _changedFlag = false;
 
 public:
-	virtual const vector<unique_ptr<Bridge>>& GetBridges() const override final { return _bridges; }
+	virtual const vector<unique_ptr<Bridge>>& bridges() const override final { return _bridges; }
 
-	virtual void InsertBridge (size_t index, unique_ptr<Bridge>&& bridge) override final
+	virtual void insert_bridge (size_t index, unique_ptr<Bridge>&& bridge) override final
 	{
 		if (index > _bridges.size())
 			throw invalid_argument("index");
@@ -37,7 +37,7 @@ public:
 		this->event_invoker<invalidate_e>()(this);
 	}
 
-	virtual unique_ptr<Bridge> RemoveBridge(size_t index) override final
+	virtual unique_ptr<Bridge> remove_bridge(size_t index) override final
 	{
 		if (index >= _bridges.size())
 			throw invalid_argument("index");
@@ -61,9 +61,9 @@ public:
 		return result;
 	}
 
-	virtual const vector<unique_ptr<Wire>>& GetWires() const override final { return _wires; }
+	virtual const vector<unique_ptr<Wire>>& wires() const override final { return _wires; }
 
-	virtual void InsertWire (size_t index, unique_ptr<Wire>&& wire) override final
+	virtual void insert_wire (size_t index, unique_ptr<Wire>&& wire) override final
 	{
 		if (index > _wires.size())
 			throw invalid_argument("index");
@@ -75,7 +75,7 @@ public:
 		this->event_invoker<invalidate_e>()(this);
 	}
 
-	virtual unique_ptr<Wire> RemoveWire (size_t index) override final
+	virtual unique_ptr<Wire> remove_wire (size_t index) override final
 	{
 		if (index >= _wires.size())
 			throw invalid_argument("index");
@@ -115,11 +115,11 @@ public:
 		project->event_invoker<invalidate_e>()(project);
 	}
 
-	virtual bridge_inserted_e::subscriber GetBridgeInsertedEvent() override final { return bridge_inserted_e::subscriber(this); }
-	virtual bridge_removing_e::subscriber GetBridgeRemovingEvent() override final { return bridge_removing_e::subscriber(this); }
+	virtual bridge_inserted_e::subscriber bridge_inserted() override final { return bridge_inserted_e::subscriber(this); }
+	virtual bridge_removing_e::subscriber bridge_removing() override final { return bridge_removing_e::subscriber(this); }
 
-	virtual wire_inserted_e::subscriber GetWireInsertedEvent() override final { return wire_inserted_e::subscriber(this); }
-	virtual wire_removing_e::subscriber GetWireRemovingEvent() override final { return wire_removing_e::subscriber(this); }
+	virtual wire_inserted_e::subscriber wire_inserted() override final { return wire_inserted_e::subscriber(this); }
+	virtual wire_removing_e::subscriber wire_removing() override final { return wire_removing_e::subscriber(this); }
 
 	virtual invalidate_e::subscriber GetInvalidateEvent() override final { return invalidate_e::subscriber(this); }
 	virtual LoadedEvent::subscriber GetLoadedEvent() override final { return LoadedEvent::subscriber(this); }
@@ -338,7 +338,7 @@ public:
 				com_ptr<IXMLDOMElement> bridgeElement;
 				hr = bridgeNode->QueryInterface(&bridgeElement); assert(SUCCEEDED(hr));
 				auto bridge = Bridge::Deserialize(bridgeElement);
-				this->InsertBridge(_bridges.size(), move(bridge));
+				this->insert_bridge(_bridges.size(), move(bridge));
 			}
 		}
 
@@ -354,7 +354,7 @@ public:
 				com_ptr<IXMLDOMElement> wireElement;
 				hr = wireNode->QueryInterface(&wireElement); assert(SUCCEEDED(hr));
 				auto wire = Wire::Deserialize (this, wireElement);
-				this->InsertWire(_wires.size(), move(wire));
+				this->insert_wire(_wires.size(), move(wire));
 			}
 		}
 
@@ -402,4 +402,4 @@ public:
 	virtual ChangedEvent::subscriber GetChangedEvent() override final { return ChangedEvent::subscriber(this); }
 };
 
-extern const ProjectFactory projectFactory = []() -> std::shared_ptr<project_i> { return std::make_shared<Project>(); };
+extern const project_factory_t project_factory = []() -> std::shared_ptr<project_i> { return std::make_shared<Project>(); };

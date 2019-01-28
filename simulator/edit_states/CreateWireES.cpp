@@ -46,7 +46,7 @@ public:
 				newWire->SetP1 (fromPort->GetCPLocation());
 				newWire->SetDebugName ((string("Wire") + to_string(nextWireIndex++)).c_str());
 				_wire = newWire.get();
-				_project->InsertWire(_project->GetWires().size(), move(newWire));
+				_project->insert_wire(_project->wires().size(), move(newWire));
 				_subState  = WaitingFirstUp;
 			}
 		}
@@ -103,7 +103,7 @@ public:
 		{
 			if (_wire != nullptr)
 			{
-				_project->RemoveWire(_project->GetWires().size() - 1);
+				_project->remove_wire(_project->wires().size() - 1);
 				_wire = nullptr;
 			}
 

@@ -526,7 +526,7 @@ public:
 
 		if (((HIWORD(wParam) == 0) || (HIWORD(wParam) == 1)) && (LOWORD(wParam) == ID_FILE_NEW))
 		{
-			auto project = projectFactory();
+			auto project = project_factory();
 			project_window_create_params params = 
 			{
 				_app, project, selection_factory, edit_area_factory, true, true, 1, SW_SHOW, _d3d_dc, _dwrite_factory
@@ -587,7 +587,7 @@ public:
 			}
 		}
 
-		std::shared_ptr<project_i> projectToLoadTo = (_project->GetBridges().empty() && _project->GetWires().empty()) ? _project : projectFactory();
+		std::shared_ptr<project_i> projectToLoadTo = (_project->bridges().empty() && _project->wires().empty()) ? _project : project_factory();
 
 		assert(false);
 		/*

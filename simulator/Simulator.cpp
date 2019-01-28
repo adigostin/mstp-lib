@@ -28,7 +28,7 @@ static const wchar_t AppVersionString[] = L"2.1";
 #pragma region project_i
 pair<Wire*, size_t> project_i::GetWireConnectedToPort (const Port* port) const
 {
-	for (auto& w : GetWires())
+	for (auto& w : wires())
 	{
 		if (holds_alternative<ConnectedWireEnd>(w->GetP0()) && (get<ConnectedWireEnd>(w->GetP0()) == port))
 			return { w.get(), 0 };
@@ -41,7 +41,7 @@ pair<Wire*, size_t> project_i::GetWireConnectedToPort (const Port* port) const
 
 Port* project_i::FindConnectedPort (Port* txPort) const
 {
-	for (auto& w : GetWires())
+	for (auto& w : wires())
 	{
 		for (size_t i = 0; i < 2; i++)
 		{
@@ -60,25 +60,25 @@ Port* project_i::FindConnectedPort (Port* txPort) const
 	return nullptr;
 }
 
-std::unique_ptr<Wire> project_i::RemoveWire (Wire* w)
+std::unique_ptr<Wire> project_i::remove_wire (Wire* w)
 {
-	auto& wires = this->GetWires();
+	auto& wires = this->wires();
 	for (size_t wi = 0; wi < wires.size(); wi++)
 	{
 		if (wires[wi].get() == w)
-			return this->RemoveWire(wi);
+			return this->remove_wire(wi);
 	}
 
 	assert(false); return nullptr;
 }
 
-std::unique_ptr<Bridge> project_i::RemoveBridge (Bridge* b)
+std::unique_ptr<Bridge> project_i::remove_bridge (Bridge* b)
 {
-	auto& bridges = this->GetBridges();
+	auto& bridges = this->bridges();
 	for (size_t bi = 0; bi < bridges.size(); bi++)
 	{
 		if (bridges[bi].get() == b)
-			return this->RemoveBridge(bi);
+			return this->remove_bridge(bi);
 	}
 
 	assert(false); return nullptr;
@@ -284,7 +284,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 	{
 		SimulatorApp app (hInstance);
 
-		auto project = projectFactory();
+		auto project = project_factory();
 		project_window_create_params params = 
 		{
 			&app, project, selection_factory, edit_area_factory, true, true, 1, SW_SHOW, d3d_dc, dwrite_factory

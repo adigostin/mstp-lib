@@ -19,14 +19,14 @@ public:
 	selection (project_i* project)
 		: _project(project)
 	{
-		_project->GetWireRemovingEvent().add_handler (&on_wire_removing_from_project, this);
-		_project->GetBridgeRemovingEvent().add_handler (&on_bridge_removing_from_project, this);
+		_project->wire_removing().add_handler (&on_wire_removing_from_project, this);
+		_project->bridge_removing().add_handler (&on_bridge_removing_from_project, this);
 	}
 
 	~selection()
 	{
-		_project->GetBridgeRemovingEvent().remove_handler (&on_bridge_removing_from_project, this);
-		_project->GetWireRemovingEvent().remove_handler (&on_wire_removing_from_project, this);
+		_project->bridge_removing().remove_handler (&on_bridge_removing_from_project, this);
+		_project->wire_removing().remove_handler (&on_wire_removing_from_project, this);
 	}
 
 	static void on_bridge_removing_from_project (void* callbackArg, project_i* project, size_t index, Bridge* b)
