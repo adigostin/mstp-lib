@@ -39,8 +39,8 @@ class edge::property_grid : d2d_window, public virtual property_grid_i
 	// ========================================================================
 
 public:
-	property_grid (HINSTANCE hInstance, const RECT& rect, HWND hWndParent, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory)
-		: base (hInstance, 0, WS_CHILD | WS_VISIBLE, rect, hWndParent, 0, deviceContext, dWriteFactory)
+	property_grid (HINSTANCE hInstance, DWORD exStyle, const RECT& rect, HWND hWndParent, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory)
+		: base (hInstance, exStyle, WS_CHILD | WS_VISIBLE, rect, hWndParent, 0, deviceContext, dWriteFactory)
 	{
 		auto hr = dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
 												   DWRITE_FONT_STRETCH_NORMAL, font_size, L"en-US", &_textFormat); assert(SUCCEEDED(hr));

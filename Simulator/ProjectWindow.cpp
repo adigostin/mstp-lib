@@ -139,7 +139,7 @@ public:
 
 	void create_property_grid()
 	{
-		_pg = property_grid_factory (_app->GetHInstance(), pg_restricted_rect(), hwnd(), _d3d_dc, _dwrite_factory);
+		_pg = property_grid_factory (_app->GetHInstance(), WS_EX_CLIENTEDGE, pg_restricted_rect(), hwnd(), _d3d_dc, _dwrite_factory);
 		set_selection_to_pg();
 		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
 	}
