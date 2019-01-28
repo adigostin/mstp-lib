@@ -11,12 +11,12 @@ using namespace edge;
 
 class selection : public event_manager, public selection_i
 {
-	IProject* const _project;
+	project_i* const _project;
 	ULONG _refCount = 1;
 	vector<object*> _objects;
 
 public:
-	selection (IProject* project)
+	selection (project_i* project)
 		: _project(project)
 	{
 		_project->GetWireRemovingEvent().add_handler (&on_wire_removing_from_project, this);
@@ -29,7 +29,7 @@ public:
 		_project->GetWireRemovingEvent().remove_handler (&on_wire_removing_from_project, this);
 	}
 
-	static void on_bridge_removing_from_project (void* callbackArg, IProject* project, size_t index, Bridge* b)
+	static void on_bridge_removing_from_project (void* callbackArg, project_i* project, size_t index, Bridge* b)
 	{
 		auto s = static_cast<selection*>(callbackArg);
 		for (size_t i = 0; i < s->_objects.size(); )
@@ -44,7 +44,7 @@ public:
 		s->event_invoker<changed_e>()(s);
 	}
 
-	static void on_wire_removing_from_project (void* callbackArg, IProject* project, size_t index, Wire* w)
+	static void on_wire_removing_from_project (void* callbackArg, project_i* project, size_t index, Wire* w)
 	{
 		auto s = static_cast<selection*>(callbackArg);
 		for (size_t i = 0; i < s->_objects.size(); )

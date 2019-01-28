@@ -43,7 +43,7 @@ class ProjectWindow : public window, public virtual IProjectWindow
 	simulator_app_i* const _app;
 	com_ptr<ID3D11DeviceContext1> const _d3d_dc;
 	com_ptr<IDWriteFactory>       const _dwrite_factory;
-	std::shared_ptr<IProject>     const _project;
+	std::shared_ptr<project_i>     const _project;
 	std::unique_ptr<selection_i>  const _selection;
 	std::unique_ptr<edit_area_i>        _editWindow;
 	std::unique_ptr<property_grid_i>    _pg;
@@ -170,7 +170,7 @@ public:
 		SetMainMenuItemCheck (ID_VIEW_STPLOG, false);
 	}
 
-	static void OnProjectLoaded (void* callbackArg, IProject* project)
+	static void OnProjectLoaded (void* callbackArg, project_i* project)
 	{
 		auto pw = static_cast<ProjectWindow*>(callbackArg);
 		pw->SetWindowTitle();
@@ -190,7 +190,7 @@ public:
 			thispw->SetWindowTitle();
 	}
 
-	static void OnProjectChangedFlagChanged (void* callbackArg, IProject* project)
+	static void OnProjectChangedFlagChanged (void* callbackArg, project_i* project)
 	{
 		auto pw = static_cast<ProjectWindow*>(callbackArg);
 		pw->SetWindowTitle();
@@ -587,7 +587,7 @@ public:
 			}
 		}
 
-		std::shared_ptr<IProject> projectToLoadTo = (_project->GetBridges().empty() && _project->GetWires().empty()) ? _project : projectFactory();
+		std::shared_ptr<project_i> projectToLoadTo = (_project->GetBridges().empty() && _project->GetWires().empty()) ? _project : projectFactory();
 
 		assert(false);
 		/*
@@ -854,7 +854,7 @@ public:
 
 	virtual selected_vlan_number_changed_e::subscriber selected_vlan_number_changed() override final { return selected_vlan_number_changed_e::subscriber(this); }
 
-	virtual IProject* GetProject() const override final { return _project.get(); }
+	virtual project_i* GetProject() const override final { return _project.get(); }
 
 	virtual edit_area_i* GetEditArea() const override final { return _editWindow.get(); }
 

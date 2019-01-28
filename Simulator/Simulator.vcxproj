@@ -236,7 +236,7 @@
     </ClCompile>
     <ClCompile Include="Port.cpp" />
     <ClCompile Include="PortTree.cpp" />
-    <ClCompile Include="Project.cpp" />
+    <ClCompile Include="project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="selection.cpp" />
     <ClCompile Include="Test.c">

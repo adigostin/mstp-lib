@@ -4,7 +4,7 @@
 #include "win32/utility_functions.h"
 
 class Port;
-struct IProject;
+struct project_i;
 
 using ConnectedWireEnd = Port*;
 using LooseWireEnd = D2D1_POINT_2F;
@@ -33,8 +33,8 @@ public:
 
 	D2D1_POINT_2F GetPointCoords (size_t pointIndex) const;
 
-	edge::com_ptr<IXMLDOMElement> Serialize (IProject* project, IXMLDOMDocument* doc) const;
-	static std::unique_ptr<Wire> Deserialize (IProject* project, IXMLDOMElement* element);
+	edge::com_ptr<IXMLDOMElement> Serialize (project_i* project, IXMLDOMDocument* doc) const;
+	static std::unique_ptr<Wire> Deserialize (project_i* project, IXMLDOMElement* element);
 
 	void Render (ID2D1RenderTarget* rt, const drawing_resources& dos, bool forwarding, bool hasLoop) const;
 
@@ -42,6 +42,6 @@ public:
 	virtual HTResult HitTest (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
 
 private:
-	static edge::com_ptr<IXMLDOMElement> SerializeEnd (IProject* project, IXMLDOMDocument* doc, const WireEnd& end);
-	static WireEnd DeserializeEnd (IProject* project, IXMLDOMElement* element);
+	static edge::com_ptr<IXMLDOMElement> SerializeEnd (project_i* project, IXMLDOMDocument* doc, const WireEnd& end);
+	static WireEnd DeserializeEnd (project_i* project, IXMLDOMElement* element);
 };

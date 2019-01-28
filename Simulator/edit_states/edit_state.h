@@ -5,8 +5,8 @@ struct EditStateDeps
 {
 	IProjectWindow* pw;
 	edit_area_i*    ea;
-	IProject*       project;
-	selection_i*     selection;
+	project_i*      project;
+	selection_i*    selection;
 };
 
 class edit_state abstract
@@ -14,8 +14,8 @@ class edit_state abstract
 protected:
 	IProjectWindow* const _pw;
 	edit_area_i*    const _ea;
-	IProject*       const _project;
-	selection_i*     const _selection;
+	project_i*      const _project;
+	selection_i*    const _selection;
 
 public:
 	edit_state (const EditStateDeps& deps)

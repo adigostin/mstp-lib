@@ -33,9 +33,9 @@ class edit_area : public zoomable_window, public edit_area_i
 
 	using HTResult = renderable_object::HTResult;
 
-	simulator_app_i*  const _app;
-	IProjectWindow* const _pw;
-	IProject*       const _project;
+	simulator_app_i* const _app;
+	IProjectWindow*  const _pw;
+	project_i*       const _project;
 	selection_i*     const _selection;
 	com_ptr<IDWriteTextFormat> _legendFont;
 	struct drawing_resources _drawing_resources;
@@ -45,7 +45,7 @@ class edit_area : public zoomable_window, public edit_area_i
 public:
 	edit_area (simulator_app_i* app,
 			  IProjectWindow* pw,
-			  IProject* project,
+			  project_i* project,
 			  selection_i* selection,
 			  HWND hWndParent,
 			  const RECT& rect,
@@ -90,19 +90,19 @@ public:
 		area->invalidate();
 	}
 
-	static void OnBridgeRemoving (void* callbackArg, IProject* project, size_t index, Bridge* b)
+	static void OnBridgeRemoving (void* callbackArg, project_i* project, size_t index, Bridge* b)
 	{
 		auto area = static_cast<edit_area*>(callbackArg);
 		area->_htResult = { nullptr, 0 };
 	}
 
-	static void OnWireRemoving (void* callbackArg, IProject* project, size_t index, Wire* w)
+	static void OnWireRemoving (void* callbackArg, project_i* project, size_t index, Wire* w)
 	{
 		auto area = static_cast<edit_area*>(callbackArg);
 		area->_htResult = { nullptr, 0 };
 	}
 
-	static void OnProjectInvalidate (void* callbackArg, IProject*)
+	static void OnProjectInvalidate (void* callbackArg, project_i*)
 	{
 		auto area = static_cast<edit_area*>(callbackArg);
 		::InvalidateRect (area->hwnd(), nullptr, FALSE);

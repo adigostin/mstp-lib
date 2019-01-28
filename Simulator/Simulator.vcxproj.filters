@@ -23,7 +23,7 @@
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
-    <ClCompile Include="Project.cpp" />
+    <ClCompile Include="project.cpp" />
     <ClCompile Include="edit_area.cpp" />
     <ClCompile Include="simulator.cpp" />
     <ClCompile Include="Wire.cpp" />

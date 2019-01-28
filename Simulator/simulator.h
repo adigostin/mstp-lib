@@ -6,7 +6,7 @@
 #include "Bridge.h"
 
 struct simulator_app_i;
-struct IProject;
+struct project_i;
 struct IProjectWindow;
 struct selection_i;
 struct log_window_i;
@@ -54,7 +54,7 @@ struct __declspec(novtable) selection_i
 	struct changed_e : public edge::event<changed_e, selection_i*> { };
 	virtual changed_e::subscriber changed() = 0;
 };
-using selection_factory_t = std::unique_ptr<selection_i>(*const)(IProject* project);
+using selection_factory_t = std::unique_ptr<selection_i>(*const)(project_i* project);
 extern const selection_factory_t selection_factory;
 
 // ============================================================================
@@ -101,7 +101,7 @@ struct __declspec(novtable) edit_area_i : virtual edge::win32_window_i
 };
 using edit_area_factory_t = std::unique_ptr<edit_area_i>(*const)(simulator_app_i* app,
 																 IProjectWindow* pw,
-																 IProject* project,
+																 project_i* project,
 																 selection_i* selection,
 																 HWND hWndParent,
 																 const RECT& rect,
@@ -115,7 +115,7 @@ struct __declspec(novtable) IProjectWindow : public virtual edge::win32_window_i
 {
 	struct selected_vlan_number_changed_e : public edge::event<selected_vlan_number_changed_e, IProjectWindow*, uint32_t> { };
 
-	virtual IProject* GetProject() const = 0;
+	virtual project_i* GetProject() const = 0;
 	virtual edit_area_i* GetEditArea() const = 0;
 	virtual void select_vlan (uint32_t vlanNumber) = 0;
 	virtual uint32_t selected_vlan_number() const = 0;
@@ -125,7 +125,7 @@ struct __declspec(novtable) IProjectWindow : public virtual edge::win32_window_i
 struct project_window_create_params
 {
 	simulator_app_i*                 app;
-	const std::shared_ptr<IProject>& project;
+	const std::shared_ptr<project_i>& project;
 	selection_factory_t              selection_factory;
 	edit_area_factory_t              edit_area_factory;
 	bool     show_property_grid;
@@ -141,40 +141,33 @@ extern const ProjectWindowFactory projectWindowFactory;
 
 // ============================================================================
 
-struct BridgeInsertedEvent : public edge::event<BridgeInsertedEvent, IProject*, size_t, Bridge*> { };
-struct BridgeRemovingEvent : public edge::event<BridgeRemovingEvent, IProject*, size_t, Bridge*> { };
+struct bridge_inserted_e : public edge::event<bridge_inserted_e, project_i*, size_t, Bridge*> { };
+struct bridge_removing_e : public edge::event<bridge_removing_e, project_i*, size_t, Bridge*> { };
 
-struct WireInsertedEvent : public edge::event<WireInsertedEvent, IProject*, size_t, Wire*> { };
-struct WireRemovingEvent : public edge::event<WireRemovingEvent, IProject*, size_t, Wire*> { };
+struct wire_inserted_e : public edge::event<wire_inserted_e, project_i*, size_t, Wire*> { };
+struct wire_removing_e : public edge::event<wire_removing_e, project_i*, size_t, Wire*> { };
 
-enum class SaveProjectOption { SaveUnconditionally, SaveIfChangedAskUserFirst };
+enum class save_project_option { save_unconditionally, save_if_changed_ask_user_first };
 
-struct __declspec(novtable) IProject
+struct __declspec(novtable) project_i
 {
-	virtual ~IProject() { }
+	virtual ~project_i() { }
 
-	struct ConvertedWirePoint
-	{
-		Wire* wire;
-		size_t pointIndex;
-		Port* port;
-	};
-
-	struct invalidate_e : public edge::event<invalidate_e, IProject*> { };
-	struct LoadedEvent : public edge::event<LoadedEvent, IProject*> { };
-	struct ChangedFlagChangedEvent : public edge::event<ChangedFlagChangedEvent, IProject*> { };
-	struct ChangedEvent : public edge::event<ChangedEvent, IProject*> { };
+	struct invalidate_e : public edge::event<invalidate_e, project_i*> { };
+	struct LoadedEvent : public edge::event<LoadedEvent, project_i*> { };
+	struct ChangedFlagChangedEvent : public edge::event<ChangedFlagChangedEvent, project_i*> { };
+	struct ChangedEvent : public edge::event<ChangedEvent, project_i*> { };
 
 	virtual const std::vector<std::unique_ptr<Bridge>>& GetBridges() const = 0;
 	virtual void InsertBridge (size_t index, std::unique_ptr<Bridge>&& bridge) = 0;
 	virtual std::unique_ptr<Bridge> RemoveBridge (size_t index) = 0;
-	virtual BridgeInsertedEvent::subscriber GetBridgeInsertedEvent() = 0;
-	virtual BridgeRemovingEvent::subscriber GetBridgeRemovingEvent() = 0;
+	virtual bridge_inserted_e::subscriber GetBridgeInsertedEvent() = 0;
+	virtual bridge_removing_e::subscriber GetBridgeRemovingEvent() = 0;
 	virtual const std::vector<std::unique_ptr<Wire>>& GetWires() const = 0;
 	virtual void InsertWire (size_t index, std::unique_ptr<Wire>&& wire) = 0;
 	virtual std::unique_ptr<Wire> RemoveWire (size_t index) = 0;
-	virtual WireInsertedEvent::subscriber GetWireInsertedEvent() = 0;
-	virtual WireRemovingEvent::subscriber GetWireRemovingEvent() = 0;
+	virtual wire_inserted_e::subscriber GetWireInsertedEvent() = 0;
+	virtual wire_removing_e::subscriber GetWireRemovingEvent() = 0;
 	virtual invalidate_e::subscriber GetInvalidateEvent() = 0;
 	virtual LoadedEvent::subscriber GetLoadedEvent() = 0;
 	virtual mac_address AllocMacAddressRange (size_t count) = 0;
@@ -195,7 +188,7 @@ struct __declspec(novtable) IProject
 	std::unique_ptr<Wire> RemoveWire (Wire* w);
 	std::unique_ptr<Bridge> RemoveBridge (Bridge* b);
 };
-using ProjectFactory = std::shared_ptr<IProject>(*const)();
+using ProjectFactory = std::shared_ptr<project_i>(*const)();
 extern const ProjectFactory projectFactory;
 
 // ============================================================================
@@ -206,7 +199,7 @@ struct __declspec(novtable) vlan_window_i : virtual edge::win32_window_i
 using vlan_window_factory_t = std::unique_ptr<vlan_window_i>(*const)(
 	simulator_app_i* app,
 	IProjectWindow* pw,
-	const std::shared_ptr<IProject>& project,
+	const std::shared_ptr<project_i>& project,
 	selection_i* selection,
 	HWND hWndParent,
 	POINT location,

@@ -25,8 +25,8 @@ static const wchar_t CompanyName[] = L"Adi Gostin";
 static const wchar_t AppName[] = L"STP Simulator";
 static const wchar_t AppVersionString[] = L"2.1";
 
-#pragma region IProject
-pair<Wire*, size_t> IProject::GetWireConnectedToPort (const Port* port) const
+#pragma region project_i
+pair<Wire*, size_t> project_i::GetWireConnectedToPort (const Port* port) const
 {
 	for (auto& w : GetWires())
 	{
@@ -39,7 +39,7 @@ pair<Wire*, size_t> IProject::GetWireConnectedToPort (const Port* port) const
 	return { };
 }
 
-Port* IProject::FindConnectedPort (Port* txPort) const
+Port* project_i::FindConnectedPort (Port* txPort) const
 {
 	for (auto& w : GetWires())
 	{
@@ -60,7 +60,7 @@ Port* IProject::FindConnectedPort (Port* txPort) const
 	return nullptr;
 }
 
-std::unique_ptr<Wire> IProject::RemoveWire (Wire* w)
+std::unique_ptr<Wire> project_i::RemoveWire (Wire* w)
 {
 	auto& wires = this->GetWires();
 	for (size_t wi = 0; wi < wires.size(); wi++)
@@ -72,7 +72,7 @@ std::unique_ptr<Wire> IProject::RemoveWire (Wire* w)
 	assert(false); return nullptr;
 }
 
-std::unique_ptr<Bridge> IProject::RemoveBridge (Bridge* b)
+std::unique_ptr<Bridge> project_i::RemoveBridge (Bridge* b)
 {
 	auto& bridges = this->GetBridges();
 	for (size_t bi = 0; bi < bridges.size(); bi++)

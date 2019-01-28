@@ -30,7 +30,7 @@ public:
 	~MSTConfigIdDialog()
 	{ }
 
-	static void OnBridgeRemoving (void* callbackArg, IProject* project, size_t index, Bridge* bridge)
+	static void OnBridgeRemoving (void* callbackArg, project_i* project, size_t index, Bridge* bridge)
 	{
 		auto dialog = static_cast<MSTConfigIdDialog*>(callbackArg);
 		if (find (dialog->_bridges.begin(), dialog->_bridges.end(), bridge) != dialog->_bridges.end())

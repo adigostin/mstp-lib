@@ -10,7 +10,7 @@ using namespace edge;
 
 static const _bstr_t NextMacAddressString = "NextMacAddress";
 
-class Project : public event_manager, public IProject
+class Project : public event_manager, public project_i
 {
 	ULONG _refCount = 1;
 	wstring _path;
@@ -33,7 +33,7 @@ public:
 		b->GetInvalidateEvent().add_handler (&OnObjectInvalidate, this);
 		b->GetPacketTransmitEvent().add_handler (&OnPacketTransmit, this);
 		b->GetLinkPulseEvent().add_handler (&OnLinkPulse, this);
-		this->event_invoker<BridgeInsertedEvent>()(this, index, b);
+		this->event_invoker<bridge_inserted_e>()(this, index, b);
 		this->event_invoker<invalidate_e>()(this);
 	}
 
@@ -51,7 +51,7 @@ public:
 		}))
 			throw invalid_argument("cannot remove a connected bridge");
 
-		this->event_invoker<BridgeRemovingEvent>()(this, index, b);
+		this->event_invoker<bridge_removing_e>()(this, index, b);
 		_bridges[index]->GetLinkPulseEvent().remove_handler (&OnLinkPulse, this);
 		_bridges[index]->GetPacketTransmitEvent().remove_handler (&OnPacketTransmit, this);
 		_bridges[index]->GetInvalidateEvent().remove_handler (&OnObjectInvalidate, this);
@@ -71,7 +71,7 @@ public:
 		Wire* w = wire.get();
 		auto it = _wires.insert (_wires.begin() + index, move(wire));
 		w->GetInvalidateEvent().add_handler (&OnObjectInvalidate, this);
-		this->event_invoker<WireInsertedEvent>()(this, index, w);
+		this->event_invoker<wire_inserted_e>()(this, index, w);
 		this->event_invoker<invalidate_e>()(this);
 	}
 
@@ -80,7 +80,7 @@ public:
 		if (index >= _wires.size())
 			throw invalid_argument("index");
 
-		this->event_invoker<WireRemovingEvent>()(this, index, _wires[index].get());
+		this->event_invoker<wire_removing_e>()(this, index, _wires[index].get());
 		_wires[index]->GetInvalidateEvent().remove_handler (&OnObjectInvalidate, this);
 		auto result = move(_wires[index]);
 		_wires.erase(_wires.begin() + index);
@@ -115,11 +115,11 @@ public:
 		project->event_invoker<invalidate_e>()(project);
 	}
 
-	virtual BridgeInsertedEvent::subscriber GetBridgeInsertedEvent() override final { return BridgeInsertedEvent::subscriber(this); }
-	virtual BridgeRemovingEvent::subscriber GetBridgeRemovingEvent() override final { return BridgeRemovingEvent::subscriber(this); }
+	virtual bridge_inserted_e::subscriber GetBridgeInsertedEvent() override final { return bridge_inserted_e::subscriber(this); }
+	virtual bridge_removing_e::subscriber GetBridgeRemovingEvent() override final { return bridge_removing_e::subscriber(this); }
 
-	virtual WireInsertedEvent::subscriber GetWireInsertedEvent() override final { return WireInsertedEvent::subscriber(this); }
-	virtual WireRemovingEvent::subscriber GetWireRemovingEvent() override final { return WireRemovingEvent::subscriber(this); }
+	virtual wire_inserted_e::subscriber GetWireInsertedEvent() override final { return wire_inserted_e::subscriber(this); }
+	virtual wire_removing_e::subscriber GetWireRemovingEvent() override final { return wire_removing_e::subscriber(this); }
 
 	virtual invalidate_e::subscriber GetInvalidateEvent() override final { return invalidate_e::subscriber(this); }
 	virtual LoadedEvent::subscriber GetLoadedEvent() override final { return LoadedEvent::subscriber(this); }
@@ -402,4 +402,4 @@ public:
 	virtual ChangedEvent::subscriber GetChangedEvent() override final { return ChangedEvent::subscriber(this); }
 };
 
-extern const ProjectFactory projectFactory = []() -> std::shared_ptr<IProject> { return std::make_shared<Project>(); };
+extern const ProjectFactory projectFactory = []() -> std::shared_ptr<project_i> { return std::make_shared<Project>(); };

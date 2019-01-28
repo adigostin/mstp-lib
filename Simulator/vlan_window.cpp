@@ -9,7 +9,7 @@ class vlan_window : public virtual vlan_window_i
 {
 	simulator_app_i*  const _app;
 	IProjectWindow* const _pw;
-	std::shared_ptr<IProject> const _project;
+	std::shared_ptr<project_i> const _project;
 	selection_i*    const _selection;
 	ID3D11DeviceContext1* const _d3d_dc;
 	IDWriteFactory* const _dwrite_factory;
@@ -18,7 +18,7 @@ class vlan_window : public virtual vlan_window_i
 public:
 	vlan_window (simulator_app_i* app,
 				IProjectWindow* pw,
-				const std::shared_ptr<IProject>& project,
+				const std::shared_ptr<project_i>& project,
 				selection_i* selection,
 				HWND hWndParent,
 				POINT location,

@@ -105,7 +105,7 @@ renderable_object::HTResult Wire::HitTest (const zoomable_i* zoomable, D2D1_POIN
 
 static const _bstr_t WireElementName = "Wire";
 
-com_ptr<IXMLDOMElement> Wire::Serialize (IProject* project, IXMLDOMDocument* doc) const
+com_ptr<IXMLDOMElement> Wire::Serialize (project_i* project, IXMLDOMDocument* doc) const
 {
 	com_ptr<IXMLDOMElement> wireElement;
 	HRESULT hr = doc->createElement (WireElementName, &wireElement); assert(SUCCEEDED(hr));
@@ -117,7 +117,7 @@ com_ptr<IXMLDOMElement> Wire::Serialize (IProject* project, IXMLDOMDocument* doc
 }
 
 // static
-unique_ptr<Wire> Wire::Deserialize (IProject* project, IXMLDOMElement* wireElement)
+unique_ptr<Wire> Wire::Deserialize (project_i* project, IXMLDOMElement* wireElement)
 {
 	com_ptr<IXMLDOMNode> firstChild;
 	auto hr = wireElement->get_firstChild(&firstChild); assert(SUCCEEDED(hr));
@@ -139,7 +139,7 @@ static const _bstr_t XString            = "X";
 static const _bstr_t YString            = "Y";
 
 //static
-com_ptr<IXMLDOMElement> Wire::SerializeEnd (IProject* project, IXMLDOMDocument* doc, const WireEnd& end)
+com_ptr<IXMLDOMElement> Wire::SerializeEnd (project_i* project, IXMLDOMDocument* doc, const WireEnd& end)
 {
 	HRESULT hr;
 	com_ptr<IXMLDOMElement> element;
@@ -168,7 +168,7 @@ com_ptr<IXMLDOMElement> Wire::SerializeEnd (IProject* project, IXMLDOMDocument* 
 }
 
 //static
-WireEnd Wire::DeserializeEnd (IProject* project, IXMLDOMElement* element)
+WireEnd Wire::DeserializeEnd (project_i* project, IXMLDOMElement* element)
 {
 	HRESULT hr;
 
