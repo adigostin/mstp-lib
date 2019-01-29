@@ -97,8 +97,6 @@ namespace edge
 
 		pgitem* find_child (const property* prop) const;
 
-		//static std::vector<std::unique_ptr<pgitem>> create_children (object_item* parent, gsl::span<object*> selected_objects);
-
 	private:
 		static void on_property_changing (void* arg, object* obj, const property* prop);
 		static void on_property_changed (void* arg, object* obj, const property* prop);
