@@ -22,6 +22,6 @@ namespace edge
 		virtual handled process_character_key (uint32_t ch) = 0;
 	};
 
-	using text_editor_factory_t = std::unique_ptr<text_editor_i>(d2d_window* control, IDWriteFactory* dwrite_factory, IDWriteTextFormat* format, uint32_t fill_argb, uint32_t text_argb, const D2D1_RECT_F& rect, std::string_view text);
+	using text_editor_factory_t = std::unique_ptr<text_editor_i>(d2d_window* control, IDWriteFactory* dwrite_factory, IDWriteTextFormat* format, uint32_t fill_argb, uint32_t text_argb, const D2D1_RECT_F& rect, float lr_padding, std::string_view text);
 	extern text_editor_factory_t* const text_editor_factory;
 }

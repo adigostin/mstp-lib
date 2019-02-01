@@ -377,10 +377,12 @@ public:
 		return property_changed_e::subscriber(this);
 	}
 
-	virtual text_editor_i* show_text_editor (const D2D1_RECT_F& rect, std::string_view str) override final
+	virtual text_editor_i* show_text_editor (const D2D1_RECT_F& rect, float lr_padding, std::string_view str) override final
 	{
 		discard_editor();
-		_text_editor = text_editor_factory (this, dwrite_factory(), _textFormat, 0xFFC0C0C0, 0xFF000000, rect, str);
+		uint32_t fill_argb = 0xFF00'0000u | GetSysColor(COLOR_WINDOW);
+		uint32_t text_argb = 0xFF00'0000u | GetSysColor(COLOR_WINDOWTEXT);
+		_text_editor = text_editor_factory (this, dwrite_factory(), _textFormat, fill_argb, text_argb, rect, lr_padding, str);
 		return _text_editor.get();
 	}
 
@@ -716,6 +718,8 @@ public:
 		this->event_invoker<property_changed_e>()(std::move(args));
 		return true;
 	}
+
+	virtual float line_thickness() const override final { return _line_thickness; }
 
 	handled process_virtual_key_down (UINT key, UINT modifier_keys)
 	{

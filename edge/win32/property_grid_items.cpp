@@ -242,8 +242,9 @@ void value_pgitem::process_mouse_button_down (mouse_button button, UINT modifier
 	}
 	else
 	{
-		D2D1_RECT_F editor_rect = { layout.x_value + text_lr_padding, layout.y_top, layout.x_right - text_lr_padding, layout.y_bottom };
-		auto editor = root()->_grid->show_text_editor (editor_rect, multiple_values() ? "" : _prop->get_to_string(parent()->objects().front()));
+		auto lt = root()->_grid->line_thickness();
+		D2D1_RECT_F editor_rect = { layout.x_value + lt, layout.y_top, layout.x_right, layout.y_bottom };
+		auto editor = root()->_grid->show_text_editor (editor_rect, text_lr_padding, multiple_values() ? "" : _prop->get_to_string(parent()->objects().front()));
 		editor->process_mouse_button_down (button, modifiers, pt, dip);
 	}
 }

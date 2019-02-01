@@ -10,6 +10,7 @@ namespace edge
 		com_ptr<IDWriteTextFormat> const _format;
 		uint32_t const _fill_argb;
 		uint32_t const _text_argb;
+		float const _lr_padding;
 		com_ptr<ID2D1Brush> _text_brush;
 		D2D1_RECT_F _editorBounds;
 		std::wstring _text;
@@ -19,14 +20,16 @@ namespace edge
 		d2d_window* const _control;
 
 	public:
-		text_editor (d2d_window* control, IDWriteFactory* dwrite_factory, IDWriteTextFormat* format, uint32_t fill_argb, uint32_t text_argb, const D2D1_RECT_F& rect, std::string_view text)
+		text_editor (d2d_window* control, IDWriteFactory* dwrite_factory, IDWriteTextFormat* format, uint32_t fill_argb, uint32_t text_argb, const D2D1_RECT_F& rect, float lr_padding, std::string_view text)
 			: _control(control)
 			, _dwrite_factory(dwrite_factory)
 			, _format(format)
 			, _fill_argb(fill_argb)
 			, _text_argb(text_argb)
 			, _editorBounds(rect)
+			, _lr_padding(lr_padding)
 		{
+			assert (rect.right - rect.left >= lr_padding);
 			auto buffer_size_chars = MultiByteToWideChar (CP_UTF8, 0, text.data(), (int)text.size(), nullptr, 0);
 			_text.resize (buffer_size_chars + 1);
 			MultiByteToWideChar (CP_UTF8, 0, text.data(), (int)text.size(), _text.data(), buffer_size_chars);
@@ -485,7 +488,7 @@ namespace edge
 
 		D2D1_POINT_2F GetTextOffset() const
 		{
-			return { _editorBounds.left, _editorBounds.top };
+			return { _editorBounds.left + _lr_padding, _editorBounds.top };
 			/*
 			float x, y;
 			switch (_horzAlignment)
@@ -513,6 +516,7 @@ namespace edge
 		{
 			com_ptr<ID2D1SolidColorBrush> fill_brush;
 			dc->CreateSolidColorBrush (D2D1::ColorF(_fill_argb & 0xFFFFFF, (_fill_argb >> 24) / 255.0f), &fill_brush);
+			dc->FillRectangle (_editorBounds, fill_brush);
 
 			auto textOffset = GetTextOffset();
 
