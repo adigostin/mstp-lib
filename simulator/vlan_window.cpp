@@ -5,7 +5,7 @@
 #include "Bridge.h"
 #include "Port.h"
 
-class vlan_window : public virtual vlan_window_i
+class vlan_window : public virtual vlan_window_i, public edge::property_editor_parent_i
 {
 	simulator_app_i*  const _app;
 	IProjectWindow* const _pw;
@@ -158,9 +158,22 @@ public:
 
 			if ((HIWORD(wParam) == BN_CLICKED) && (LOWORD(wParam) == IDC_BUTTON_EDIT_MST_CONFIG_TABLE))
 			{
-				assert(false);
-				//auto dialog = mstConfigIdDialogFactory(_selection->objects());
-				//dialog->ShowModal(_pw->GetHWnd());
+				if (std::all_of (_selection->objects().begin(), _selection->objects().end(), [](edge::object* o) { return o->is<Bridge>(); }))
+				{
+					auto editor = config_id_editor_factory(_selection->objects());
+					editor->show(this);
+				}
+				else if (std::all_of (_selection->objects().begin(), _selection->objects().end(), [](edge::object* o) { return o->is<Port>(); }))
+				{
+					std::vector<edge::object*> objects;
+					std::transform (_selection->objects().begin(), _selection->objects().end(), std::back_inserter(objects),
+									[](edge::object* o) { return (edge::object*) static_cast<Port*>(o)->bridge(); });
+					auto editor = config_id_editor_factory(objects);
+					editor->show(this);
+				}
+				else
+					MessageBoxA (_hwnd, "Select some bridges or ports first.", _app->app_name(), 0);
+
 				return { TRUE, 0 };
 			}
 
@@ -239,39 +252,43 @@ public:
 		auto tableButton = GetDlgItem (_hwnd, IDC_BUTTON_EDIT_MST_CONFIG_TABLE); assert (tableButton != nullptr);
 		auto& objects = _selection->objects();
 
-		if (objects.empty())
+		if (objects.empty() || std::any_of (objects.begin(), objects.end(), [](edge::object* o) { return !o->is<Bridge>() && !o->is<Port>(); }))
 		{
-			::SetWindowText (edit, L"(no selection)");
+			::SetWindowText (edit, L"(no bridge selected)");
 			::EnableWindow (edit, FALSE);
 			::EnableWindow (tableButton, FALSE);
 			return;
 		}
 
-		if (objects.size() > 1)
-		{
-			::SetWindowText (edit, L"(multiple selection)");
-			::EnableWindow (edit, FALSE);
-			::EnableWindow (tableButton, FALSE);
-			return;
-		}
+		::EnableWindow (edit, TRUE);
+		::EnableWindow (tableButton, TRUE);
 
-		if (objects[0]->is<Bridge>() || objects[0]->is<Port>())
+		std::unordered_set<Bridge*> bridges;
+		for (auto o : _selection->objects())
 		{
-			auto obj = objects[0];
-			auto bridge = obj->is<Bridge>() ? dynamic_cast<Bridge*>(obj) : dynamic_cast<Port*>(obj)->bridge();
-			auto treeIndex = STP_GetTreeIndexFromVlanNumber (bridge->stp_bridge(), _pw->selected_vlan_number());
-			if (treeIndex == 0)
-				::SetWindowText (edit, L"CIST (0)");
+			if (auto b = dynamic_cast<Bridge*>(o))
+				bridges.insert(b);
+			else if (auto p = dynamic_cast<Port*>(o))
+				bridges.insert(p->bridge());
 			else
-				::SetWindowText (edit, (std::wstring(L"MSTI ") + std::to_wstring(treeIndex)).c_str());
-			::EnableWindow (edit, TRUE);
-			::EnableWindow (tableButton, TRUE);
+				assert(false);
+		}
+
+		auto tree = STP_GetTreeIndexFromVlanNumber ((*bridges.begin())->stp_bridge(), _pw->selected_vlan_number());
+		bool all_same_tree = all_of (bridges.begin(), bridges.end(), [tree, vlan=_pw->selected_vlan_number()](Bridge* b)
+			{ return STP_GetTreeIndexFromVlanNumber(b->stp_bridge(), vlan) == tree; });
+		if (!all_same_tree)
+		{
+			::SetWindowTextA (edit, "(multiple selection)");
 			return;
 		}
 
-		::SetWindowText (edit, L"(no selection)");
-		::EnableWindow (edit, FALSE);
-		::EnableWindow (tableButton, FALSE);
+		Bridge* bridge = *bridges.begin();
+		auto treeIndex = STP_GetTreeIndexFromVlanNumber (bridge->stp_bridge(), _pw->selected_vlan_number());
+		if (treeIndex == 0)
+			::SetWindowTextA (edit, "CIST (0)");
+		else
+			::SetWindowTextA (edit, (std::string("MSTI ") + std::to_string(treeIndex)).c_str());
 	}
 };
 

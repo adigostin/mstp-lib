@@ -65,12 +65,6 @@ public:
 
 	virtual IDWriteTextFormat* text_format() const override final { return _textFormat; }
 
-	virtual void perform_layout() override final
-	{
-		assert(false); // not implemented
-		this->invalidate();
-	}
-
 	virtual void invalidate() override final
 	{
 		base::invalidate();
@@ -556,116 +550,6 @@ public:
 		auto clicked_item = item_at(dip);
 		if (clicked_item.first != nullptr)
 			clicked_item.first->process_mouse_button_up (button, modifier_keys, pixel, dip, clicked_item.second);
-		/*
-		if (dip.x < value_column_x())
-			return;
-
-			if (pi->_pd->_customEditor != nullptr)
-			{
-				_customEditor = pi->_pd->_customEditor (pi->_selected_objects);
-				_customEditor->ShowModal(hwnd());
-				_customEditor = nullptr;
-			}
-			else if (pi->_pd->has_setter())
-			{
-				::ClientToScreen (hwnd(), &pt);
-
-				bool changed = false;
-
-				// TODO: move this code to virtual functions
-				if (auto boolPD = dynamic_cast<const typed_property<bool>*>(pi->_pd))
-				{
-					static constexpr NVP nvps[] = { { "False", 0 }, { "True", 1 }, { 0, 0 } };
-					int newValueInt = ShowEditor (pt, nvps);
-					if (newValueInt != -1)
-					{
-						bool newValue = (bool) newValueInt;
-
-						for (auto so : pi->_selected_objects)
-						{
-							if ((so->*(boolPD->_getter))() != newValue)
-							{
-								(so->*(boolPD->_setter)) (newValue);
-								changed = true;
-							}
-						}
-					}
-				}
-				else if (auto enumPD = dynamic_cast<const EnumProperty*>(pi->_pd); enumPD != nullptr)
-				{
-					int newValue = ShowEditor (pt, enumPD->_nameValuePairs);
-					if (newValue != -1)
-					{
-						for (auto so : pi->_selected_objects)
-						{
-							if ((so->*(enumPD->_getter))() != newValue)
-							{
-								(so->*(enumPD->_setter)) (newValue);
-								changed = true;
-							}
-						}
-					}
-				}
-				else if (auto stringPD = dynamic_cast<const typed_property<string>*>(pi->_pd))
-				{
-					auto value = pi->GetValueText();
-					ShowStringEditor (pi->_pd, item, pt, value.c_str(), [pi, stringPD, &changed](const string& newStr)
-					{
-						for (object* so : pi->_selected_objects)
-						{
-							if ((so->*(stringPD->_getter))() != newStr)
-							{
-								(so->*(stringPD->_setter)) (newStr);
-								changed = true;
-							}
-						}
-					});
-				}
-				else if (auto u16pd = dynamic_cast<const typed_property<uint16_t>*>(pi->_pd))
-				{
-					auto value = pi->GetValueText();
-					ShowStringEditor (pi->_pd, item, pt, value.c_str(), [pi, u16pd, &changed](const string& newStr)
-					{
-						uint16_t newVal = (uint16_t) std::stoul(newStr);
-
-						for (object* so : pi->_selected_objects)
-						{
-							if ((so->*(u16pd->_getter))() != newVal)
-							{
-								(so->*(u16pd->_setter)) (newVal);
-								changed = true;
-							}
-						}
-					});
-				}
-				else
-				if (auto u32pd = dynamic_cast<const uint32_property*>(pi->_pd))
-				{
-					auto value = pi->GetValueText();
-					ShowStringEditor (pi->_pd, item, pt, value.c_str(), [pi, u32pd, &changed](const string& newStr)
-					{
-						uint32_t newVal = (uint32_t) std::stoul(newStr);
-
-						for (object* so : pi->_selected_objects)
-						{
-							if ((so->*(u32pd->_getter))() != newVal)
-							{
-								(so->*(u32pd->_setter)) (newVal);
-								changed = true;
-							}
-						}
-					});
-				}
-				else
-					MessageBoxA (hwnd(), pi->_pd->_name, "aaaa", 0);
-
-				if (changed)
-					this->event_invoker<PropertyChangedByUserEvent>()(pi->_pd);
-			}
-		}
-		else
-			assert(false); // not implemented
-			*/
 	}
 
 	void process_mouse_move (UINT modifier_keys, POINT pixel, D2D1_POINT_2F dip)

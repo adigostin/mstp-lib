@@ -6,7 +6,7 @@
 
 namespace edge
 {
-	struct __declspec(novtable) property_grid_i : public virtual win32_window_i
+	struct __declspec(novtable) property_grid_i : public virtual win32_window_i, public property_editor_parent_i
 	{
 		virtual ~property_grid_i() { }
 		virtual void clear() = 0;
@@ -25,7 +25,6 @@ namespace edge
 		// TODO: make these internal to property_grid.cpp / property_grid_items.cpp
 		virtual IDWriteFactory* dwrite_factory() const = 0;
 		virtual IDWriteTextFormat* text_format() const = 0;
-		virtual void perform_layout() = 0;
 		virtual void invalidate() = 0;
 		virtual text_editor_i* show_text_editor (const D2D1_RECT_F& rect, float lr_padding, std::string_view str) = 0;
 		virtual int show_enum_editor (D2D1_POINT_2F dip, const NVP* nvps) = 0;

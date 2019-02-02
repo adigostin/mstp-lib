@@ -539,7 +539,7 @@ public:
 
 		if (wParam == ID_FILE_SAVEAS)
 		{
-			MessageBox (hwnd(), L"Not yet implemented.", _app->GetAppName(), 0);
+			MessageBoxA (hwnd(), "Not yet implemented.", _app->app_name(), 0);
 			return 0;
 		}
 
@@ -565,10 +565,8 @@ public:
 
 		if (wParam == ID_HELP_ABOUT)
 		{
-			wstring text (_app->GetAppName());
-			text += L" v";
-			text += _app->GetAppVersionString();
-			MessageBox (hwnd(), text.c_str(), _app->GetAppName(), 0);
+			auto text = std::string(_app->app_name()) + " v" + _app->app_version_string();
+			MessageBoxA (hwnd(), text.c_str(), _app->app_name(), 0);
 			return 0;
 		}
 
@@ -627,7 +625,10 @@ public:
 		hr = _project->Save (savePath.c_str());
 		if (FAILED(hr))
 		{
-			TaskDialog (hwnd(), nullptr, _app->GetAppName(), L"Could Not Save", _com_error(hr).ErrorMessage(), 0, nullptr, nullptr);
+			auto werror = std::wstring (_com_error(hr).ErrorMessage());
+			auto text = std::string("Could Not Save\r\n");
+			text.append (werror.begin(), werror.end());
+			MessageBoxA (hwnd(), text.c_str(), _app->app_name(), 0);
 			return hr;
 		}
 
@@ -644,9 +645,10 @@ public:
 			{ IDCANCEL, L"Cancel" },
 		};
 
+		auto app_name = std::wstring (_app->app_name(), strchr(_app->app_name(), 0));
 		TASKDIALOGCONFIG tdc = { sizeof (tdc) };
 		tdc.hwndParent = hwnd();
-		tdc.pszWindowTitle = _app->GetAppName();
+		tdc.pszWindowTitle = app_name.c_str();
 		tdc.pszMainIcon = TD_WARNING_ICON;
 		tdc.pszMainInstruction = L"File was changed";
 		tdc.pszContent = askText;

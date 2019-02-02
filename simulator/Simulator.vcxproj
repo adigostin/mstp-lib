@@ -227,7 +227,7 @@
     <ClCompile Include="edit_states\MovePortES.cpp" />
     <ClCompile Include="edit_states\MoveWirePointES.cpp" />
     <ClCompile Include="log_window.cpp" />
-    <ClCompile Include="MSTConfigIdDialog.cpp" />
+    <ClCompile Include="mst_config_id_editor.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -239,6 +239,7 @@
     <ClCompile Include="project.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="selection.cpp" />
+    <ClCompile Include="simulator.cpp" />
     <ClCompile Include="Test.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
@@ -250,7 +251,6 @@
       <DisableLanguageExtensions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DisableLanguageExtensions>
     </ClCompile>
     <ClCompile Include="vlan_window.cpp" />
-    <ClCompile Include="simulator.cpp" />
     <ClCompile Include="Wire.cpp" />
   </ItemGroup>
   <ItemGroup>

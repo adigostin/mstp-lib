@@ -663,13 +663,7 @@ public:
 	{
 		if (any_of(_selection->objects().begin(), _selection->objects().end(), [](object* o) { return o->is<Port>(); }))
 		{
-			TaskDialog (hwnd(), nullptr, _app->GetAppName(), nullptr, L"Ports cannot be deleted.", 0, nullptr, nullptr);
-			return;
-		}
-
-		if (any_of (_selection->objects().begin(), _selection->objects().end(), [](object* o) { return o->is<Port>(); }))
-		{
-			TaskDialog (_pw->hwnd(), nullptr, _app->GetAppName(), L"Can't Delete Ports", L"The Simulator does not yet support deleting ports.", 0, TD_INFORMATION_ICON, nullptr);
+			MessageBoxA (hwnd(), "Ports cannot be deleted.", _app->app_name(), 0);
 			return;
 		}
 

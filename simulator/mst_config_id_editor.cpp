@@ -9,35 +9,37 @@
 using namespace std;
 using namespace edge;
 
-class MSTConfigIdDialog : public IPropertyEditor
+class mst_config_id_editor : public property_editor_i
 {
-	vector<Bridge*> _bridges;
+	std::unordered_set<Bridge*> _bridges;
 	HWND _hwnd = nullptr;
 
 public:
-	MSTConfigIdDialog (const std::vector<object*>& objects)
+	mst_config_id_editor (const std::vector<object*>& objects)
 	{
 		assert (!objects.empty());
 		for (auto o : objects)
 		{
-			auto bridge = dynamic_cast<Bridge*>(o);
-			if (bridge == nullptr)
-				throw invalid_argument("");
-			_bridges.push_back(bridge);
+			if (o->is<Bridge>())
+				_bridges.insert (static_cast<Bridge*>(o));
+			else if (o->is<Port>())
+				_bridges.insert (static_cast<Port*>(o)->bridge());
+			else
+				assert(false);
 		}
 	}
 
-	~MSTConfigIdDialog()
+	~mst_config_id_editor()
 	{ }
 
 	static void OnBridgeRemoving (void* callbackArg, project_i* project, size_t index, Bridge* bridge)
 	{
-		auto dialog = static_cast<MSTConfigIdDialog*>(callbackArg);
+		auto dialog = static_cast<mst_config_id_editor*>(callbackArg);
 		if (find (dialog->_bridges.begin(), dialog->_bridges.end(), bridge) != dialog->_bridges.end())
 			::EndDialog (dialog->_hwnd, IDCANCEL);
 	}
 
-	bool show (property_editor_parent_i* parent) final
+	virtual bool show (property_editor_parent_i* parent) override
 	{
 		auto parent_window = dynamic_cast<win32_window_i*>(parent);
 		assert (parent_window != nullptr);
@@ -45,7 +47,7 @@ public:
 		return (dr == IDOK);
 	}
 
-	virtual void Cancel() override final
+	virtual void cancel() override
 	{
 		::EndDialog (_hwnd, IDCANCEL);
 		return;
@@ -53,16 +55,16 @@ public:
 
 	static INT_PTR CALLBACK DialogProcStatic (HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
-		MSTConfigIdDialog* window;
+		mst_config_id_editor* window;
 		if (uMsg == WM_INITDIALOG)
 		{
-			window = reinterpret_cast<MSTConfigIdDialog*>(lParam);
+			window = reinterpret_cast<mst_config_id_editor*>(lParam);
 			window->_hwnd = hwnd;
 			assert (GetWindowLongPtr(hwnd, GWLP_USERDATA) == 0);
 			SetWindowLongPtr (hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(window));
 		}
 		else
-			window = reinterpret_cast<MSTConfigIdDialog*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+			window = reinterpret_cast<mst_config_id_editor*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
 
 		if (window == nullptr)
 		{
@@ -138,20 +140,21 @@ public:
 		ListView_SetExtendedListViewStyle (list, LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
 		//ListView_SetBkColor (list, GetSysColor(COLOR_3DFACE));
 
-		auto& configId = *STP_GetMstConfigId(_bridges[0]->stp_bridge());
-		bool allSameConfig = all_of(_bridges.begin(), _bridges.end(), [&](Bridge* b) { return *STP_GetMstConfigId(b->stp_bridge()) == configId; });
+		const unsigned char* digest = STP_GetMstConfigId((*_bridges.begin())->stp_bridge())->ConfigurationDigest;
+		bool allSameDigest = all_of(_bridges.begin(), _bridges.end(), [&](Bridge* b)
+			{ return memcmp (digest, STP_GetMstConfigId(b->stp_bridge())->ConfigurationDigest, 16) == 0; });
 
 		LVCOLUMN lvc = { 0 };
 		lvc.mask = LVCF_TEXT | LVCF_WIDTH;
 		lvc.pszText = L"VLAN";
-		lvc.cx = (allSameConfig ? 80 : 120) * dpi / 96;
+		lvc.cx = (allSameDigest ? 80 : 120) * dpi / 96;
 		ListView_InsertColumn (list, 0, &lvc);
 		lvc.pszText = L"Tree";
-		lvc.cx = (allSameConfig ? 80 : 40) * dpi / 96;
+		lvc.cx = (allSameDigest ? 80 : 40) * dpi / 96;
 		ListView_InsertColumn (list, 1, &lvc);
 
-		if (allSameConfig)
-			LoadTable (list, _bridges[0]);
+		if (allSameDigest)
+			LoadTable (list, *_bridges.begin());
 		else
 		{
 			LVITEM lvi = { 0 };
@@ -207,7 +210,7 @@ public:
 
 		HWND list = GetDlgItem (_hwnd, IDC_LIST_CONFIG_TABLE);
 		ListView_DeleteAllItems(list);
-		LoadTable (list, _bridges[0]);
+		LoadTable (list, *_bridges.begin());
 	}
 
 	void LoadTestConfig1()
@@ -233,14 +236,12 @@ public:
 
 		HWND list = GetDlgItem (_hwnd, IDC_LIST_CONFIG_TABLE);
 		ListView_DeleteAllItems(list);
-		LoadTable (list, _bridges[0]);
+		LoadTable (list, *_bridges.begin());
 	}
 };
 
-template<typename... Args>
-static unique_ptr<IPropertyEditor> Create (Args... args)
+std::unique_ptr<property_editor_i> config_id_editor_factory (const std::vector<object*>& objects)
 {
-	return unique_ptr<IPropertyEditor>(new MSTConfigIdDialog (std::forward<Args>(args)...));
+	return std::make_unique<mst_config_id_editor>(objects);
 }
 
-const PropertyEditorFactory mstConfigIdDialogFactory = &Create;

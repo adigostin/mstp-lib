@@ -25,6 +25,9 @@ template<typename char_type> bool mac_address_from_string (std::basic_string_vie
 static constexpr char mac_address_type_name[] = "mac_address";
 using mac_address_property = edge::typed_property<mac_address, mac_address, mac_address, mac_address_type_name, mac_address_to_string, mac_address_from_string>;
 
+extern edge::property_editor_factory_t config_id_editor_factory;
+using config_id_digest_property = edge::typed_property<std::string, std::string_view, std::string, edge::temp_string_type_name, edge::temp_string_to_string, nullptr, nullptr, config_id_editor_factory>;
+
 class Bridge : public renderable_object
 {
 	using base = renderable_object;
@@ -176,7 +179,7 @@ public:
 	static const edge::uint32_property      MstiCount;
 	static const edge::temp_string_property MstConfigIdName;
 	static const edge::uint32_property      MstConfigIdRevLevel;
-	static const edge::temp_string_property MstConfigIdDigest;
+	static const config_id_digest_property  MstConfigIdDigest;
 	static const edge::uint32_property      BridgeHelloTime;
 	static const edge::uint32_property      HelloTime;
 	static const edge::uint32_property      BridgeMaxAge;

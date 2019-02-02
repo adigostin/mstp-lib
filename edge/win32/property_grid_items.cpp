@@ -166,12 +166,8 @@ void value_pgitem::create_text_layouts (IDWriteFactory* factory, IDWriteTextForm
 void value_pgitem::recreate_value_text_layout()
 {
 	auto grid = root()->_grid;
-	auto old_height = _value.metrics.height;
 	create_value_layout_internal (grid->dwrite_factory(), grid->text_format(), _value.metrics.layoutWidth);
-	if (_value.metrics.height != old_height)
-		grid->perform_layout();
-	else
-		grid->invalidate();
+	grid->invalidate();
 }
 
 void value_pgitem::render (const render_context& rc, const item_layout& l, float line_thickness, bool selected, bool focused) const
@@ -201,13 +197,13 @@ float value_pgitem::content_height() const
 
 HCURSOR value_pgitem::cursor() const
 {
-	if (!_prop->has_setter())
+	if (!_prop->has_setter() && !_prop->custom_editor())
 		return ::LoadCursor(nullptr, IDC_ARROW);
 
 	if (auto bool_property = dynamic_cast<const edge::bool_property*>(_prop))
 		return ::LoadCursor(nullptr, IDC_HAND);
 
-	if (_prop->nvps() != nullptr)
+	if (_prop->nvps() || _prop->custom_editor())
 		return ::LoadCursor(nullptr, IDC_HAND);
 
 	return ::LoadCursor (nullptr, IDC_IBEAM);
@@ -223,6 +219,13 @@ void value_pgitem::process_mouse_button_down (mouse_button button, UINT modifier
 {
 	if (dip.x < layout.x_value)
 		return;
+
+	if (_prop->custom_editor())
+	{
+		auto editor = _prop->custom_editor()(parent()->objects());
+		editor->show(root()->_grid);
+		return;
+	}
 
 	if (!_prop->has_setter())
 		return;

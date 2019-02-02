@@ -21,9 +21,9 @@ using namespace std;
 using namespace D2D1;
 using namespace edge;
 
-static const wchar_t CompanyName[] = L"Adi Gostin";
-static const wchar_t AppName[] = L"STP Simulator";
-static const wchar_t AppVersionString[] = L"2.1";
+static const char company_name[] = "Adi Gostin";
+static const char app_name[] = "STP Simulator";
+static const char app_version_string[] = "2.2";
 
 #pragma region project_i
 pair<Wire*, size_t> project_i::GetWireConnectedToPort (const Port* port) const
@@ -96,7 +96,7 @@ public:
 		: _hInstance(hInstance)
 	{
 		wstringstream ss;
-		ss << L"SOFTWARE\\" << CompanyName << L"\\" << ::AppName << L"\\" << ::AppVersionString;
+		ss << L"SOFTWARE\\" << company_name << L"\\" << ::app_name << L"\\" << ::app_version_string;
 		_regKeyPath = ss.str();
 	}
 
@@ -130,9 +130,9 @@ public:
 
 	virtual const wchar_t* GetRegKeyPath() const override final { return _regKeyPath.c_str(); }
 
-	virtual const wchar_t* GetAppName() const override final { return AppName; }
+	virtual const char* app_name() const override final { return ::app_name; }
 
-	virtual const wchar_t* GetAppVersionString() const override final { return AppVersionString; }
+	virtual const char* app_version_string() const override final { return ::app_version_string; }
 
 	virtual project_window_added_e::subscriber project_window_added() override final { return project_window_added_e::subscriber(this); }
 

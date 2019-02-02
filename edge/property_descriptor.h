@@ -17,28 +17,28 @@ namespace edge
 		virtual ~property_editor_parent_i() { }
 	};
 
-	struct IPropertyEditor
+	struct property_editor_i
 	{
-		virtual ~IPropertyEditor() { }
+		virtual ~property_editor_i() { }
 		virtual bool show (property_editor_parent_i* parent) = 0; // return IDOK, IDCANCEL, -1 (some error), 0 (hWndParent invalid or closed)
-		virtual void Cancel() = 0;
+		virtual void cancel() = 0;
 	};
 
-	using PropertyEditorFactory = std::unique_ptr<IPropertyEditor>(*const)(const std::vector<object*>& objects);
+	using property_editor_factory_t = std::unique_ptr<property_editor_i>(const std::vector<object*>& objects);
 
 	struct property abstract
 	{
-		const char*           const _name;
-		PropertyEditorFactory const _customEditor; // TODO: make it a template parameter
+		const char* const _name;
 
-		constexpr property (const char* name, PropertyEditorFactory customEditor = nullptr)
-			: _name(name), _customEditor(customEditor)
+		constexpr property (const char* name)
+			: _name(name)
 		{ }
 		property (const property&) = delete;
 		property& operator= (const property&) = delete;
 
 		virtual const char* type_name() const = 0;
 		virtual bool has_setter() const = 0;
+		virtual property_editor_factory_t* custom_editor() const = 0;
 	};
 
 	using NVP = std::pair<const char*, int>;
@@ -64,11 +64,7 @@ namespace edge
 
 	struct value_property : property
 	{
-		using base = property;
-
-		constexpr value_property (const char* name, PropertyEditorFactory customEditor)
-			: base(name, customEditor)
-		{ }
+		using property::property;
 	
 		virtual std::string get_to_string (const object* obj) const = 0;
 		virtual bool try_set_from_string (object* obj, std::string_view str) const = 0;
@@ -85,7 +81,8 @@ namespace edge
 		const char* type_name_,
 		std::string (*to_string)(param_t value),
 		bool (*from_string)(std::string_view str, value_t& out),
-		const NVP* nvps_ = nullptr
+		const NVP* nvps_ = nullptr,
+		property_editor_factory_t* custom_editor_ = nullptr
 	>
 	struct typed_property : value_property
 	{
@@ -98,13 +95,15 @@ namespace edge
 		setter_t const _setter;
 		std::optional<value_t> const _default_value;
 
-		constexpr typed_property (const char* name, getter_t getter, setter_t setter, std::optional<value_t> default_value, PropertyEditorFactory customEditor = nullptr)
-			: base(name, customEditor/*, {}*/), _getter(getter), _setter(setter), _default_value(default_value)
+		constexpr typed_property (const char* name, getter_t getter, setter_t setter, std::optional<value_t> default_value)
+			: base(name), _getter(getter), _setter(setter), _default_value(default_value)
 		{ }
 
 		virtual const char* type_name() const override final { return type_name_; }
 
 		virtual bool has_setter() const override final { return _setter != nullptr; }
+
+		virtual property_editor_factory_t* custom_editor() const override { return custom_editor_; }
 
 	public:
 		std::string get_to_string (const object* obj) const final

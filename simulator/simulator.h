@@ -219,13 +219,11 @@ struct simulator_app_i
 	virtual const wchar_t* GetRegKeyPath() const = 0;
 	virtual void add_project_window (std::unique_ptr<IProjectWindow>&& pw) = 0;
 	virtual const std::vector<std::unique_ptr<IProjectWindow>>& project_windows() const = 0;
-	virtual const wchar_t* GetAppName() const = 0;
-	virtual const wchar_t* GetAppVersionString() const = 0;
+	virtual const char* app_name() const = 0;
+	virtual const char* app_version_string() const = 0;
 	virtual project_window_added_e::subscriber project_window_added() = 0;
 	virtual project_window_removing_e::subscriber project_window_removing() = 0;
 	virtual project_window_removed_e::subscriber project_window_removed() = 0;
 };
 
 // ============================================================================
-
-extern const edge::PropertyEditorFactory mstConfigIdDialogFactory;

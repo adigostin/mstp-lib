@@ -887,12 +887,11 @@ const edge::uint32_property Bridge::MstConfigIdRevLevel {
 	0
 };
 
-const edge::temp_string_property Bridge::MstConfigIdDigest {
+const config_id_digest_property Bridge::MstConfigIdDigest (
 	"Digest",
 	static_cast<temp_string_property::getter_t>(&Bridge::GetMstConfigIdDigest),
 	nullptr,
-	std::nullopt, 
-	mstConfigIdDialogFactory };
+	std::nullopt);
 
 const edge::uint32_property Bridge::BridgeHelloTime {
 	"BridgeHelloTime",

@@ -42,7 +42,7 @@
     <ClCompile Include="edit_states\CreateWireES.cpp">
       <Filter>edit_states</Filter>
     </ClCompile>
-    <ClCompile Include="MSTConfigIdDialog.cpp" />
+    <ClCompile Include="mst_config_id_editor.cpp" />
     <ClCompile Include="Test.c" />
     <ClCompile Include="edit_states\MovePortES.cpp">
       <Filter>edit_states</Filter>
