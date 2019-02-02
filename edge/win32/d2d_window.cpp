@@ -130,7 +130,7 @@ namespace edge
 
 		if (uMsg == WM_PAINT)
 		{
-			ProcessWmPaint();
+			process_wm_paint();
 			return 0;
 		}
 
@@ -149,7 +149,7 @@ namespace edge
 		return std::nullopt;
 	}
 
-	void d2d_window::ProcessWmPaint()
+	void d2d_window::process_wm_paint()
 	{
 		HRESULT hr;
 

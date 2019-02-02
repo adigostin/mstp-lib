@@ -87,7 +87,7 @@ namespace edge
 		void create_and_show_win32_caret();
 		void CreateD2DDeviceContext();
 		void ReleaseD2DDeviceContext();
-		void ProcessWmPaint();
+		void process_wm_paint();
 		void process_wm_set_focus();
 		void process_wm_kill_focus();
 	};
