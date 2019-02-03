@@ -12,7 +12,7 @@ struct selection_i;
 struct log_window_i;
 class Bridge;
 class Port;
-class Wire;
+class wire;
 
 static constexpr unsigned char DefaultConfigTableDigest[16] = { 0xAC, 0x36, 0x17, 0x7F, 0x50, 0x28, 0x3C, 0xD4, 0xB8, 0x38, 0x21, 0xD8, 0xAB, 0x26, 0xDE, 0x62 };
 
@@ -135,8 +135,8 @@ extern const ProjectWindowFactory projectWindowFactory;
 struct bridge_inserted_e : public edge::event<bridge_inserted_e, project_i*, size_t, Bridge*> { };
 struct bridge_removing_e : public edge::event<bridge_removing_e, project_i*, size_t, Bridge*> { };
 
-struct wire_inserted_e : public edge::event<wire_inserted_e, project_i*, size_t, Wire*> { };
-struct wire_removing_e : public edge::event<wire_removing_e, project_i*, size_t, Wire*> { };
+struct wire_inserted_e : public edge::event<wire_inserted_e, project_i*, size_t, wire*> { };
+struct wire_removing_e : public edge::event<wire_removing_e, project_i*, size_t, wire*> { };
 
 enum class save_project_option { save_unconditionally, save_if_changed_ask_user_first };
 
@@ -154,9 +154,9 @@ struct __declspec(novtable) project_i
 	virtual std::unique_ptr<Bridge> remove_bridge (size_t index) = 0;
 	virtual bridge_inserted_e::subscriber bridge_inserted() = 0;
 	virtual bridge_removing_e::subscriber bridge_removing() = 0;
-	virtual const std::vector<std::unique_ptr<Wire>>& wires() const = 0;
-	virtual void insert_wire (size_t index, std::unique_ptr<Wire>&& wire) = 0;
-	virtual std::unique_ptr<Wire> remove_wire (size_t index) = 0;
+	virtual const std::vector<std::unique_ptr<wire>>& wires() const = 0;
+	virtual void insert_wire (size_t index, std::unique_ptr<wire>&& wire) = 0;
+	virtual std::unique_ptr<wire> remove_wire (size_t index) = 0;
 	virtual wire_inserted_e::subscriber wire_inserted() = 0;
 	virtual wire_removing_e::subscriber wire_removing() = 0;
 	virtual invalidate_e::subscriber GetInvalidateEvent() = 0;
@@ -165,7 +165,7 @@ struct __declspec(novtable) project_i
 	virtual const std::wstring& GetFilePath() const = 0;
 	virtual HRESULT Save (const wchar_t* filePath) = 0;
 	virtual void Load (const wchar_t* filePath) = 0;
-	virtual bool IsWireForwarding (Wire* wire, uint32_t vlanNumber, _Out_opt_ bool* hasLoop) const = 0;
+	virtual bool IsWireForwarding (wire* wire, uint32_t vlanNumber, _Out_opt_ bool* hasLoop) const = 0;
 	virtual void PauseSimulation() = 0;
 	virtual void ResumeSimulation() = 0;
 	virtual bool IsSimulationPaused() const = 0;
@@ -174,9 +174,9 @@ struct __declspec(novtable) project_i
 	virtual ChangedFlagChangedEvent::subscriber GetChangedFlagChangedEvent() = 0;
 	virtual ChangedEvent::subscriber GetChangedEvent() = 0;
 
-	std::pair<Wire*, size_t> GetWireConnectedToPort (const Port* port) const;
+	std::pair<wire*, size_t> GetWireConnectedToPort (const Port* port) const;
 	Port* FindConnectedPort (Port* txPort) const;
-	std::unique_ptr<Wire> remove_wire (Wire* w);
+	std::unique_ptr<wire> remove_wire (wire* w);
 	std::unique_ptr<Bridge> remove_bridge (Bridge* b);
 };
 using project_factory_t = std::shared_ptr<project_i>(*const)();

@@ -1,31 +1,32 @@
 
 #include "pch.h"
-#include "Wire.h"
+#include "wire.h"
 #include "Bridge.h"
 #include "Port.h"
 #include "win32/utility_functions.h"
 #include "simulator.h"
 
-using namespace std;
 using namespace edge;
 
-Wire::Wire (WireEnd firstEnd, WireEnd secondEnd)
+static constexpr float thickness = 2;
+
+wire::wire (wire_end firstEnd, wire_end secondEnd)
 	: _points({ firstEnd, secondEnd })
 { }
 
 // Workaround for what seems like a library bug: std::variant's operators == and != not working.
-static bool Same (const WireEnd& a, const WireEnd& b)
+static bool Same (const wire_end& a, const wire_end& b)
 {
 	if (a.index() != b.index())
 		return false;
 
-	if (holds_alternative<LooseWireEnd>(a))
-		return get<LooseWireEnd>(a) == get<LooseWireEnd>(b);
+	if (std::holds_alternative<loose_wire_end>(a))
+		return std::get<loose_wire_end>(a) == std::get<loose_wire_end>(b);
 	else
-		return get<ConnectedWireEnd>(a) == get<ConnectedWireEnd>(b);
+		return std::get<connected_wire_end>(a) == std::get<connected_wire_end>(b);
 }
 
-void Wire::SetPoint (size_t pointIndex, const WireEnd& point)
+void wire::SetPoint (size_t pointIndex, const wire_end& point)
 {
 	if (!Same(_points[pointIndex], point))
 	{
@@ -34,17 +35,17 @@ void Wire::SetPoint (size_t pointIndex, const WireEnd& point)
 	}
 }
 
-D2D1_POINT_2F Wire::GetPointCoords (size_t pointIndex) const
+D2D1_POINT_2F wire::GetPointCoords (size_t pointIndex) const
 {
-	if (holds_alternative<LooseWireEnd>(_points[pointIndex]))
-		return get<LooseWireEnd>(_points[pointIndex]);
+	if (std::holds_alternative<loose_wire_end>(_points[pointIndex]))
+		return std::get<loose_wire_end>(_points[pointIndex]);
 	else
-		return get<ConnectedWireEnd>(_points[pointIndex])->GetCPLocation();
+		return std::get<connected_wire_end>(_points[pointIndex])->GetCPLocation();
 }
 
-void Wire::Render (ID2D1RenderTarget* rt, const drawing_resources& dos, bool forwarding, bool hasLoop) const
+void wire::Render (ID2D1RenderTarget* rt, const drawing_resources& dos, bool forwarding, bool hasLoop) const
 {
-	float width = Thickness;
+	float width = thickness;
 	ID2D1Brush* brush;
 
 	if (!forwarding)
@@ -61,7 +62,7 @@ void Wire::Render (ID2D1RenderTarget* rt, const drawing_resources& dos, bool for
 	rt->DrawLine (GetPointCoords(0), GetPointCoords(1), brush, width, ss);
 }
 
-void Wire::RenderSelection (const zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const
+void wire::RenderSelection (const zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const
 {
 	auto fd = zoomable->pointw_to_pointd(GetPointCoords(0));
 	auto td = zoomable->pointw_to_pointd(GetPointCoords(1));
@@ -71,7 +72,7 @@ void Wire::RenderSelection (const zoomable_i* zoomable, ID2D1RenderTarget* rt, c
 	float s = sin(angle);
 	float c = cos(angle);
 
-	array<D2D1_POINT_2F, 4> vertices =
+	D2D1_POINT_2F vertices[4] =
 	{
 		D2D1_POINT_2F { fd.x + s * halfw, fd.y - c * halfw },
 		D2D1_POINT_2F { fd.x - s * halfw, fd.y + c * halfw },
@@ -85,7 +86,7 @@ void Wire::RenderSelection (const zoomable_i* zoomable, ID2D1RenderTarget* rt, c
 	rt->DrawLine (vertices[3], vertices[0], dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
 }
 
-renderable_object::HTResult Wire::HitTest (const zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance)
+renderable_object::HTResult wire::HitTest (const zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance)
 {
 	for (size_t i = 0; i < _points.size(); i++)
 	{
@@ -97,7 +98,7 @@ renderable_object::HTResult Wire::HitTest (const zoomable_i* zoomable, D2D1_POIN
 			return { this, (int) i };
 	}
 
-	if (HitTestLine (zoomable, dLocation, tolerance, GetPointCoords(0), GetPointCoords(1), Thickness))
+	if (HitTestLine (zoomable, dLocation, tolerance, GetPointCoords(0), GetPointCoords(1), thickness))
 		return { this, -1 };
 
 	return { };
@@ -105,7 +106,7 @@ renderable_object::HTResult Wire::HitTest (const zoomable_i* zoomable, D2D1_POIN
 
 static const _bstr_t WireElementName = "Wire";
 
-com_ptr<IXMLDOMElement> Wire::Serialize (project_i* project, IXMLDOMDocument* doc) const
+com_ptr<IXMLDOMElement> wire::Serialize (project_i* project, IXMLDOMDocument* doc) const
 {
 	com_ptr<IXMLDOMElement> wireElement;
 	HRESULT hr = doc->createElement (WireElementName, &wireElement); assert(SUCCEEDED(hr));
@@ -117,7 +118,7 @@ com_ptr<IXMLDOMElement> Wire::Serialize (project_i* project, IXMLDOMDocument* do
 }
 
 // static
-unique_ptr<Wire> Wire::Deserialize (project_i* project, IXMLDOMElement* wireElement)
+std::unique_ptr<wire> wire::Deserialize (project_i* project, IXMLDOMElement* wireElement)
 {
 	com_ptr<IXMLDOMNode> firstChild;
 	auto hr = wireElement->get_firstChild(&firstChild); assert(SUCCEEDED(hr));
@@ -127,8 +128,8 @@ unique_ptr<Wire> Wire::Deserialize (project_i* project, IXMLDOMElement* wireElem
 	hr = firstChild->get_nextSibling(&secondChild); assert(SUCCEEDED(hr));
 	auto secondEnd = DeserializeEnd (project, (com_ptr<IXMLDOMElement>) secondChild);
 
-	auto wire = make_unique<Wire>(firstEnd, secondEnd);
-	return wire;
+	auto w = std::make_unique<wire>(firstEnd, secondEnd);
+	return w;
 }
 
 static const _bstr_t ConnectedEndString = "ConnectedEnd";
@@ -139,24 +140,24 @@ static const _bstr_t XString            = "X";
 static const _bstr_t YString            = "Y";
 
 //static
-com_ptr<IXMLDOMElement> Wire::SerializeEnd (project_i* project, IXMLDOMDocument* doc, const WireEnd& end)
+com_ptr<IXMLDOMElement> wire::SerializeEnd (project_i* project, IXMLDOMDocument* doc, const wire_end& end)
 {
 	HRESULT hr;
 	com_ptr<IXMLDOMElement> element;
 
-	if (holds_alternative<ConnectedWireEnd>(end))
+	if (std::holds_alternative<connected_wire_end>(end))
 	{
 		hr = doc->createElement (ConnectedEndString, &element); assert(SUCCEEDED(hr));
-		auto port = get<ConnectedWireEnd>(end);
+		auto port = std::get<connected_wire_end>(end);
 		auto& bridges = project->bridges();
 		auto it = find_if (bridges.begin(), bridges.end(), [port](auto& up) { return up.get() == port->bridge(); });
 		auto bridgeIndex = it - bridges.begin();
-		hr = element->setAttribute (BridgeIndexString, _variant_t(to_string(bridgeIndex).c_str())); assert(SUCCEEDED(hr));
-		hr = element->setAttribute (PortIndexString, _variant_t(to_string(port->GetPortIndex()).c_str())); assert(SUCCEEDED(hr));
+		hr = element->setAttribute (BridgeIndexString, _variant_t(std::to_string(bridgeIndex).c_str())); assert(SUCCEEDED(hr));
+		hr = element->setAttribute (PortIndexString, _variant_t(std::to_string(port->GetPortIndex()).c_str())); assert(SUCCEEDED(hr));
 	}
-	else if (holds_alternative<LooseWireEnd>(end))
+	else if (std::holds_alternative<loose_wire_end>(end))
 	{
-		auto& location = get<LooseWireEnd>(end);
+		auto& location = std::get<loose_wire_end>(end);
 		hr = doc->createElement (LooseEndString, &element); assert(SUCCEEDED(hr));
 		hr = element->setAttribute (XString, _variant_t(location.x)); assert(SUCCEEDED(hr));
 		hr = element->setAttribute (YString, _variant_t(location.y)); assert(SUCCEEDED(hr));
@@ -168,7 +169,7 @@ com_ptr<IXMLDOMElement> Wire::SerializeEnd (project_i* project, IXMLDOMDocument*
 }
 
 //static
-WireEnd Wire::DeserializeEnd (project_i* project, IXMLDOMElement* element)
+wire_end wire::DeserializeEnd (project_i* project, IXMLDOMElement* element)
 {
 	HRESULT hr;
 
@@ -182,7 +183,7 @@ WireEnd Wire::DeserializeEnd (project_i* project, IXMLDOMElement* element)
 		size_t bridgeIndex = wcstoul (value.bstrVal, nullptr, 10);
 		hr = element->getAttribute (PortIndexString, &value); assert (SUCCEEDED(hr) && (value.vt == VT_BSTR));
 		size_t portIndex = wcstoul (value.bstrVal, nullptr, 10);
-		return ConnectedWireEnd { project->bridges()[bridgeIndex]->GetPorts()[portIndex].get() };
+		return connected_wire_end { project->bridges()[bridgeIndex]->GetPorts()[portIndex].get() };
 	}
 	else if (wcscmp (name, LooseEndString) == 0)
 	{
@@ -191,7 +192,7 @@ WireEnd Wire::DeserializeEnd (project_i* project, IXMLDOMElement* element)
 		float x = wcstof (value.bstrVal, nullptr);
 		hr = element->getAttribute (YString, &value); assert (SUCCEEDED(hr) && (value.vt == VT_BSTR));
 		float y = wcstof (value.bstrVal, nullptr);
-		return LooseWireEnd { x, y };
+		return loose_wire_end { x, y };
 	}
 	else
 	{

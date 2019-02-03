@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "Bridge.h"
 #include "Port.h"
-#include "Wire.h"
+#include "wire.h"
 #include "stp_md5.h"
 #include "simulator.h"
 #include "win32/d2d_window.h"
@@ -292,7 +292,7 @@ void Bridge::ProcessReceivedPackets()
 					// If it already went through this port, we have a loop that would hang our UI.
 					if (find (rp.txPortPath.begin(), rp.txPortPath.end(), txPortAddress) != rp.txPortPath.end())
 					{
-						// We don't do anything here; we have code in Wire.cpp that shows loops to the user - as thick red wires.
+						// We don't do anything here; we have code in wire.cpp that shows loops to the user - as thick red wires.
 					}
 					else
 					{

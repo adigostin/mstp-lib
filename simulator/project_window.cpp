@@ -3,7 +3,7 @@
 #include "resource.h"
 #include "Bridge.h"
 #include "Port.h"
-#include "Wire.h"
+#include "wire.h"
 #include "win32/property_grid.h"
 
 using namespace std;
@@ -982,7 +982,7 @@ public:
 
 			_pg->add_section (pg_tree_title.c_str(), port_trees.data(), port_trees.size());
 		}
-		else if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<Wire>(); }))
+		else if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<wire>(); }))
 		{
 			_pg->clear();
 			_pg->add_section("Wire Properties", objs.data(), objs.size());

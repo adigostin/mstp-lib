@@ -2,14 +2,14 @@
 #include "pch.h"
 #include "edit_state.h"
 #include "Bridge.h"
-#include "Wire.h"
+#include "wire.h"
 #include "Port.h"
 
 class create_wire_es : public edit_state
 {
 	using base = edit_state;
 
-	Wire* _wire = nullptr;
+	wire* _wire = nullptr;
 
 	enum substate
 	{
@@ -35,7 +35,7 @@ public:
 			auto fromPort = _ea->GetCPAt(location.d, SnapDistance);
 			if (fromPort != nullptr)
 			{
-				auto newWire = std::make_unique<Wire>();
+				auto newWire = std::make_unique<wire>();
 				newWire->SetP0 (fromPort);
 				newWire->SetP1 (fromPort->GetCPLocation());
 				_wire = newWire.get();
@@ -53,7 +53,7 @@ public:
 		auto port = _ea->GetCPAt (location.d, SnapDistance);
 		if (port != nullptr)
 		{
-			if (port != std::get<ConnectedWireEnd>(_wire->GetP0()))
+			if (port != std::get<connected_wire_end>(_wire->GetP0()))
 			{
 				auto alreadyConnectedWire = _project->GetWireConnectedToPort(port);
 				if (alreadyConnectedWire.first == nullptr)
@@ -72,7 +72,7 @@ public:
 	{
 		if (_substate == waiting_second_up)
 		{
-			if (std::holds_alternative<ConnectedWireEnd>(_wire->GetP1()))
+			if (std::holds_alternative<connected_wire_end>(_wire->GetP1()))
 			{
 				_project->SetChangedFlag(true);
 				_selection->select(_wire);
@@ -102,8 +102,8 @@ public:
 	virtual void render (ID2D1DeviceContext* rt) override final
 	{
 		base::render(rt);
-		if ((_wire != nullptr) && std::holds_alternative<ConnectedWireEnd>(_wire->GetP1()))
-			_ea->RenderSnapRect (rt, std::get<ConnectedWireEnd>(_wire->GetP1())->GetCPLocation());
+		if ((_wire != nullptr) && std::holds_alternative<connected_wire_end>(_wire->GetP1()))
+			_ea->RenderSnapRect (rt, std::get<connected_wire_end>(_wire->GetP1())->GetCPLocation());
 	}
 
 	virtual bool completed() const override final

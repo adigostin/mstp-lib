@@ -2,7 +2,7 @@
 #include "pch.h"
 #include "simulator.h"
 #include "Bridge.h"
-#include "Wire.h"
+#include "wire.h"
 #include "resource.h"
 
 #pragma comment (lib, "d2d1.lib")
@@ -26,13 +26,13 @@ static const char app_name[] = "STP Simulator";
 static const char app_version_string[] = "2.2";
 
 #pragma region project_i
-pair<Wire*, size_t> project_i::GetWireConnectedToPort (const Port* port) const
+pair<wire*, size_t> project_i::GetWireConnectedToPort (const Port* port) const
 {
 	for (auto& w : wires())
 	{
-		if (holds_alternative<ConnectedWireEnd>(w->GetP0()) && (get<ConnectedWireEnd>(w->GetP0()) == port))
+		if (holds_alternative<connected_wire_end>(w->GetP0()) && (get<connected_wire_end>(w->GetP0()) == port))
 			return { w.get(), 0 };
-		else if (holds_alternative<ConnectedWireEnd>(w->GetP1()) && (get<ConnectedWireEnd>(w->GetP1()) == port))
+		else if (holds_alternative<connected_wire_end>(w->GetP1()) && (get<connected_wire_end>(w->GetP1()) == port))
 			return { w.get(), 1 };
 	}
 
@@ -46,11 +46,11 @@ Port* project_i::FindConnectedPort (Port* txPort) const
 		for (size_t i = 0; i < 2; i++)
 		{
 			auto& thisEnd = w->GetPoints()[i];
-			if (holds_alternative<ConnectedWireEnd>(thisEnd) && (get<ConnectedWireEnd>(thisEnd) == txPort))
+			if (holds_alternative<connected_wire_end>(thisEnd) && (get<connected_wire_end>(thisEnd) == txPort))
 			{
 				auto& otherEnd = w->GetPoints()[1 - i];
-				if (holds_alternative<ConnectedWireEnd>(otherEnd))
-					return get<ConnectedWireEnd>(otherEnd);
+				if (holds_alternative<connected_wire_end>(otherEnd))
+					return get<connected_wire_end>(otherEnd);
 				else
 					return nullptr;
 			}
@@ -60,7 +60,7 @@ Port* project_i::FindConnectedPort (Port* txPort) const
 	return nullptr;
 }
 
-std::unique_ptr<Wire> project_i::remove_wire (Wire* w)
+std::unique_ptr<wire> project_i::remove_wire (wire* w)
 {
 	auto& wires = this->wires();
 	for (size_t wi = 0; wi < wires.size(); wi++)

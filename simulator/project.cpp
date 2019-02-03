@@ -1,7 +1,7 @@
 
 #include "pch.h"
 #include "simulator.h"
-#include "Wire.h"
+#include "wire.h"
 #include "Bridge.h"
 #include "Port.h"
 
@@ -15,7 +15,7 @@ class Project : public event_manager, public project_i
 	ULONG _refCount = 1;
 	wstring _path;
 	vector<unique_ptr<Bridge>> _bridges;
-	vector<unique_ptr<Wire>> _wires;
+	vector<unique_ptr<wire>> _wires;
 	mac_address _next_mac_address = { 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x80 };
 	bool _simulationPaused = false;
 	bool _changedFlag = false;
@@ -44,9 +44,9 @@ public:
 
 		Bridge* b = _bridges[index].get();
 
-		if (any_of (_wires.begin(), _wires.end(), [b](const unique_ptr<Wire>& w) {
-			return any_of (w->GetPoints().begin(), w->GetPoints().end(), [b] (WireEnd p) {
-				return std::holds_alternative<ConnectedWireEnd>(p) && (std::get<ConnectedWireEnd>(p)->bridge() == b);
+		if (any_of (_wires.begin(), _wires.end(), [b](const unique_ptr<wire>& w) {
+			return any_of (w->GetPoints().begin(), w->GetPoints().end(), [b] (wire_end p) {
+				return std::holds_alternative<connected_wire_end>(p) && (std::get<connected_wire_end>(p)->bridge() == b);
 			});
 		}))
 			throw invalid_argument("cannot remove a connected bridge");
@@ -61,21 +61,20 @@ public:
 		return result;
 	}
 
-	virtual const vector<unique_ptr<Wire>>& wires() const override final { return _wires; }
+	virtual const vector<unique_ptr<wire>>& wires() const override final { return _wires; }
 
-	virtual void insert_wire (size_t index, unique_ptr<Wire>&& wire) override final
+	virtual void insert_wire (size_t index, unique_ptr<wire>&& wire) override final
 	{
 		if (index > _wires.size())
 			throw invalid_argument("index");
 
-		Wire* w = wire.get();
 		auto it = _wires.insert (_wires.begin() + index, move(wire));
-		w->GetInvalidateEvent().add_handler (&OnObjectInvalidate, this);
-		this->event_invoker<wire_inserted_e>()(this, index, w);
+		_wires[index]->GetInvalidateEvent().add_handler (&OnObjectInvalidate, this);
+		this->event_invoker<wire_inserted_e>()(this, index, _wires[index].get());
 		this->event_invoker<invalidate_e>()(this);
 	}
 
-	virtual unique_ptr<Wire> remove_wire (size_t index) override final
+	virtual unique_ptr<wire> remove_wire (size_t index) override final
 	{
 		if (index >= _wires.size())
 			throw invalid_argument("index");
@@ -124,13 +123,13 @@ public:
 	virtual invalidate_e::subscriber GetInvalidateEvent() override final { return invalidate_e::subscriber(this); }
 	virtual LoadedEvent::subscriber GetLoadedEvent() override final { return LoadedEvent::subscriber(this); }
 
-	virtual bool IsWireForwarding (Wire* wire, unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const override final
+	virtual bool IsWireForwarding (wire* wire, unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const override final
 	{
-		if (!holds_alternative<ConnectedWireEnd>(wire->GetP0()) || !holds_alternative<ConnectedWireEnd>(wire->GetP1()))
+		if (!holds_alternative<connected_wire_end>(wire->GetP0()) || !holds_alternative<connected_wire_end>(wire->GetP1()))
 			return false;
 
-		auto portA = get<ConnectedWireEnd>(wire->GetP0());
-		auto portB = get<ConnectedWireEnd>(wire->GetP1());
+		auto portA = get<connected_wire_end>(wire->GetP0());
+		auto portB = get<connected_wire_end>(wire->GetP1());
 		bool portAFw = portA->IsForwarding(vlanNumber);
 		bool portBFw = portB->IsForwarding(vlanNumber);
 		if (!portAFw || !portBFw)
@@ -353,7 +352,7 @@ public:
 				hr = wireNodes->get_item(i, &wireNode); assert(SUCCEEDED(hr));
 				com_ptr<IXMLDOMElement> wireElement;
 				hr = wireNode->QueryInterface(&wireElement); assert(SUCCEEDED(hr));
-				auto wire = Wire::Deserialize (this, wireElement);
+				auto wire = wire::Deserialize (this, wireElement);
 				this->insert_wire(_wires.size(), move(wire));
 			}
 		}

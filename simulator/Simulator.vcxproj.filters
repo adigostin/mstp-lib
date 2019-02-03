@@ -9,7 +9,7 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="Wire.h" />
+    <ClInclude Include="wire.h" />
     <ClInclude Include="Bridge.h" />
     <ClInclude Include="edit_states\edit_state.h">
       <Filter>edit_states</Filter>
@@ -26,7 +26,7 @@
     <ClCompile Include="project.cpp" />
     <ClCompile Include="edit_area.cpp" />
     <ClCompile Include="simulator.cpp" />
-    <ClCompile Include="Wire.cpp" />
+    <ClCompile Include="wire.cpp" />
     <ClCompile Include="Bridge.cpp" />
     <ClCompile Include="edit_states\beginning_drag_es.cpp">
       <Filter>edit_states</Filter>

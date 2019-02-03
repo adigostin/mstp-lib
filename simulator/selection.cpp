@@ -2,7 +2,7 @@
 #include "pch.h"
 #include "simulator.h"
 #include "Bridge.h"
-#include "Wire.h"
+#include "wire.h"
 #include "Port.h"
 #include "events.h"
 
@@ -44,7 +44,7 @@ public:
 		s->event_invoker<changed_e>()(s);
 	}
 
-	static void on_wire_removing_from_project (void* callbackArg, project_i* project, size_t index, Wire* w)
+	static void on_wire_removing_from_project (void* callbackArg, project_i* project, size_t index, wire* w)
 	{
 		auto s = static_cast<selection*>(callbackArg);
 		for (size_t i = 0; i < s->_objects.size(); )

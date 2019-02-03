@@ -1,7 +1,7 @@
 
 #include "pch.h"
 #include "edit_state.h"
-#include "Wire.h"
+#include "wire.h"
 #include "Port.h"
 
 using namespace std;
@@ -10,9 +10,9 @@ class MoveWirePointES : public edit_state
 {
 	typedef edit_state base;
 
-	Wire* const _wire;
+	wire* const _wire;
 	size_t const _pointIndex;
-	WireEnd const _initialPoint;
+	wire_end const _initialPoint;
 	POINT _first_down_location;
 
 	enum substate
@@ -27,7 +27,7 @@ class MoveWirePointES : public edit_state
 	substate _substate = waiting_first_down;
 
 public:
-	MoveWirePointES (const edit_state_deps& deps, Wire* wire, size_t pointIndex)
+	MoveWirePointES (const edit_state_deps& deps, wire* wire, size_t pointIndex)
 		: base(deps), _wire(wire), _pointIndex(pointIndex), _initialPoint(wire->GetPoints()[pointIndex])
 	{ }
 
@@ -94,14 +94,14 @@ public:
 	virtual void render (ID2D1DeviceContext* rt) override final
 	{
 		auto& point = _wire->GetPoints()[_pointIndex];
-		if (holds_alternative<ConnectedWireEnd>(point))
-			_ea->RenderSnapRect (rt, get<ConnectedWireEnd>(point)->GetCPLocation());
+		if (holds_alternative<connected_wire_end>(point))
+			_ea->RenderSnapRect (rt, get<connected_wire_end>(point)->GetCPLocation());
 	}
 
 	virtual HCURSOR cursor() const override final { return LoadCursor(nullptr, IDC_CROSS); }
 };
 
-unique_ptr<edit_state> CreateStateMoveWirePoint (const edit_state_deps& deps, Wire* wire, size_t pointIndex)
+unique_ptr<edit_state> CreateStateMoveWirePoint (const edit_state_deps& deps, wire* wire, size_t pointIndex)
 {
 	return unique_ptr<edit_state>(new MoveWirePointES(deps, wire, pointIndex));
 }

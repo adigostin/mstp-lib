@@ -5,7 +5,7 @@
 #include "edit_states/edit_state.h"
 #include "Bridge.h"
 #include "Port.h"
-#include "Wire.h"
+#include "wire.h"
 #include "win32/zoomable_window.h"
 #include "win32/utility_functions.h"
 
@@ -96,7 +96,7 @@ public:
 		area->_htResult = { nullptr, 0 };
 	}
 
-	static void OnWireRemoving (void* callbackArg, project_i* project, size_t index, Wire* w)
+	static void OnWireRemoving (void* callbackArg, project_i* project, size_t index, wire* w)
 	{
 		auto area = static_cast<edit_area*>(callbackArg);
 		area->_htResult = { nullptr, 0 };
@@ -359,7 +359,7 @@ public:
 		dc->GetTransform(&oldtr);
 		dc->SetTransform (GetZoomTransform() * oldtr);
 
-		for (const unique_ptr<Wire>& w : _project->wires())
+		for (const unique_ptr<wire>& w : _project->wires())
 		{
 			bool hasLoop;
 			bool forwarding = _project->IsWireForwarding(w.get(), _pw->selected_vlan_number(), &hasLoop);
@@ -401,10 +401,10 @@ public:
 			if (_htResult.code == Port::HTCodeCP)
 				RenderSnapRect (dc, static_cast<Port*>(_htResult.object)->GetCPLocation());
 		}
-		else if (dynamic_cast<Wire*>(_htResult.object) != nullptr)
+		else if (dynamic_cast<wire*>(_htResult.object) != nullptr)
 		{
 			if (_htResult.code >= 0)
-				RenderSnapRect (dc, static_cast<Wire*>(_htResult.object)->GetPointCoords(_htResult.code));
+				RenderSnapRect (dc, static_cast<wire*>(_htResult.object)->GetPointCoords(_htResult.code));
 		}
 	}
 
@@ -668,12 +668,12 @@ public:
 		}
 
 		std::set<Bridge*> bridgesToRemove;
-		std::set<Wire*> wiresToRemove;
-		std::unordered_map<Wire*, std::vector<size_t>> pointsToDisconnect;
+		std::set<wire*> wiresToRemove;
+		std::unordered_map<wire*, std::vector<size_t>> pointsToDisconnect;
 
 		for (object* o : _selection->objects())
 		{
-			if (auto w = dynamic_cast<Wire*>(o); w != nullptr)
+			if (auto w = dynamic_cast<wire*>(o); w != nullptr)
 				wiresToRemove.insert(w);
 			else if (auto b = dynamic_cast<Bridge*>(o); b != nullptr)
 				bridgesToRemove.insert(b);
@@ -688,10 +688,10 @@ public:
 
 			for (size_t pi = 0; pi < w->GetPoints().size(); pi++)
 			{
-				if (!std::holds_alternative<ConnectedWireEnd>(w->GetPoints()[pi]))
+				if (!std::holds_alternative<connected_wire_end>(w->GetPoints()[pi]))
 					continue;
 
-				auto port = std::get<ConnectedWireEnd>(w->GetPoints()[pi]);
+				auto port = std::get<connected_wire_end>(w->GetPoints()[pi]);
 				if (bridgesToRemove.find(port->bridge()) == bridgesToRemove.end())
 					continue;
 
@@ -702,10 +702,10 @@ public:
 
 		for (auto it = pointsToDisconnect.begin(); it != pointsToDisconnect.end(); )
 		{
-			Wire* wire = it->first;
+			wire* wire = it->first;
 			bool anyPointRemainsConnected = any_of (wire->GetPoints().begin(), wire->GetPoints().end(),
-				[&bridgesToRemove](auto& pt) { return std::holds_alternative<ConnectedWireEnd>(pt)
-				&& (bridgesToRemove.count(std::get<ConnectedWireEnd>(pt)->bridge()) == 0); });
+				[&bridgesToRemove](auto& pt) { return std::holds_alternative<connected_wire_end>(pt)
+				&& (bridgesToRemove.count(std::get<connected_wire_end>(pt)->bridge()) == 0); });
 			
 			auto it1 = it;
 			it++;
@@ -852,13 +852,13 @@ public:
 					}
 				}
 			}
-			else if (dynamic_cast<Wire*>(ht.object) != nullptr)
+			else if (dynamic_cast<wire*>(ht.object) != nullptr)
 			{
-				auto wire = static_cast<Wire*>(ht.object);
+				auto w = static_cast<wire*>(ht.object);
 				if (ht.code >= 0)
 				{
-					stateMoveThreshold = CreateStateMoveWirePoint(make_edit_state_deps(), wire, ht.code);
-					stateButtonUp = CreateStateMoveWirePoint (make_edit_state_deps(), wire, ht.code);
+					stateMoveThreshold = CreateStateMoveWirePoint(make_edit_state_deps(), w, ht.code);
+					stateButtonUp = CreateStateMoveWirePoint (make_edit_state_deps(), w, ht.code);
 				}
 			}
 
@@ -915,7 +915,7 @@ public:
 				if (ht.code == Port::HTCodeCP)
 					idc = IDC_CROSS;
 			}
-			else if (dynamic_cast<Wire*>(ht.object) != nullptr)
+			else if (dynamic_cast<wire*>(ht.object) != nullptr)
 			{
 				if (ht.code >= 0)
 					// wire point
