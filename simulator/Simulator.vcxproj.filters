@@ -43,7 +43,7 @@
       <Filter>edit_states</Filter>
     </ClCompile>
     <ClCompile Include="mst_config_id_editor.cpp" />
-    <ClCompile Include="Test.c" />
+    <ClCompile Include="test.c" />
     <ClCompile Include="edit_states\move_port_es.cpp">
       <Filter>edit_states</Filter>
     </ClCompile>
