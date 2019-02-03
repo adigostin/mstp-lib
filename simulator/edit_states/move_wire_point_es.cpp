@@ -27,15 +27,15 @@ class MoveWirePointES : public edit_state
 	substate _substate = waiting_first_down;
 
 public:
-	MoveWirePointES (const EditStateDeps& deps, Wire* wire, size_t pointIndex)
+	MoveWirePointES (const edit_state_deps& deps, Wire* wire, size_t pointIndex)
 		: base(deps), _wire(wire), _pointIndex(pointIndex), _initialPoint(wire->GetPoints()[pointIndex])
 	{ }
 
-	virtual bool Completed() const override final { return _substate == down; }
+	virtual bool completed() const override final { return _substate == down; }
 
-	virtual void OnMouseDown (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_down (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
-		base::OnMouseDown (button, modifierKeysDown, location);
+		base::process_mouse_button_down (button, modifierKeysDown, location);
 
 		if (button != MouseButton::Left)
 			return;
@@ -47,9 +47,9 @@ public:
 		}
 	}
 
-	virtual void OnMouseMove (const MouseLocation& location) override
+	virtual void process_mouse_move (const MouseLocation& location) override
 	{
-		base::OnMouseMove(location);
+		base::process_mouse_move(location);
 
 		auto port = _pw->GetEditArea()->GetCPAt (location.d, SnapDistance);
 		if (port != nullptr)
@@ -70,7 +70,7 @@ public:
 		}
 	}
 
-	virtual void OnMouseUp (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_up (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		if (_substate == waiting_second_up)
 		{
@@ -79,7 +79,7 @@ public:
 		}
 	}
 
-	virtual std::optional<LRESULT> OnKeyDown (UINT virtualKey, UINT modifierKeys) override final
+	virtual std::optional<LRESULT> process_key_or_syskey_down (UINT virtualKey, UINT modifierKeys) override final
 	{
 		if (virtualKey == VK_ESCAPE)
 		{
@@ -98,10 +98,10 @@ public:
 			_pw->GetEditArea()->RenderSnapRect (rt, get<ConnectedWireEnd>(point)->GetCPLocation());
 	}
 
-	virtual HCURSOR GetCursor() const override final { return LoadCursor(nullptr, IDC_CROSS); }
+	virtual HCURSOR cursor() const override final { return LoadCursor(nullptr, IDC_CROSS); }
 };
 
-unique_ptr<edit_state> CreateStateMoveWirePoint (const EditStateDeps& deps, Wire* wire, size_t pointIndex)
+unique_ptr<edit_state> CreateStateMoveWirePoint (const edit_state_deps& deps, Wire* wire, size_t pointIndex)
 {
 	return unique_ptr<edit_state>(new MoveWirePointES(deps, wire, pointIndex));
 }

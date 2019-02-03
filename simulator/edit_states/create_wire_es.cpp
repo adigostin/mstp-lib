@@ -25,7 +25,7 @@ class create_wire_es : public edit_state
 public:
 	using base::base;
 
-	virtual void OnMouseDown (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_down (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		if (button != MouseButton::Left)
 			return;
@@ -45,7 +45,7 @@ public:
 		}
 	}
 
-	virtual void OnMouseMove (const MouseLocation& location) override final
+	virtual void process_mouse_move (const MouseLocation& location) override final
 	{
 		if (_substate == waiting_first_down)
 			return;
@@ -68,7 +68,7 @@ public:
 			_substate = waiting_second_up;
 	}
 
-	virtual void OnMouseUp (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_up (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		if (_substate == waiting_second_up)
 		{
@@ -81,7 +81,7 @@ public:
 		}
 	}
 
-	virtual std::optional<LRESULT> OnKeyDown (UINT virtualKey, UINT modifierKeys) override final
+	virtual std::optional<LRESULT> process_key_or_syskey_down (UINT virtualKey, UINT modifierKeys) override final
 	{
 		if (virtualKey == VK_ESCAPE)
 		{
@@ -106,12 +106,12 @@ public:
 			_ea->RenderSnapRect (rt, std::get<ConnectedWireEnd>(_wire->GetP1())->GetCPLocation());
 	}
 
-	virtual bool Completed() const override final
+	virtual bool completed() const override final
 	{
 		return _substate == down;
 	}
 
-	virtual HCURSOR GetCursor() const override final { return LoadCursor(nullptr, IDC_CROSS); }
+	virtual HCURSOR cursor() const override final { return LoadCursor(nullptr, IDC_CROSS); }
 };
 
-std::unique_ptr<edit_state> create_state_create_wire (const EditStateDeps& deps)  { return std::unique_ptr<edit_state>(new create_wire_es(deps)); }
+std::unique_ptr<edit_state> create_state_create_wire (const edit_state_deps& deps)  { return std::unique_ptr<edit_state>(new create_wire_es(deps)); }

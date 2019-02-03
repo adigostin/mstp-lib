@@ -18,7 +18,7 @@ class BeginningDragES : public edit_state
 	bool _completed = false;
 
 public:
-	BeginningDragES (const EditStateDeps& deps,
+	BeginningDragES (const edit_state_deps& deps,
 					 renderable_object* clickedObject,
 					 MouseButton button,
 					 UINT modifierKeysDown,
@@ -36,19 +36,19 @@ public:
 		, _stateButtonUp(move(stateButtonUp))
 	{ }
 
-	virtual bool Completed() const override final { return _completed; }
+	virtual bool completed() const override final { return _completed; }
 
-	virtual HCURSOR GetCursor() const { return _cursor; }
+	virtual HCURSOR cursor() const { return _cursor; }
 
-	// User began dragging with a mouse button, now he pressed a second button. Nothing to do here.
-	//virtual void OnMouseDown (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
-	//{
-	//	base::OnMouseDown (button, modifierKeysDown, location);
-	//}
-
-	virtual void OnMouseMove (const MouseLocation& location) override final
+	virtual void process_mouse_button_down (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
-		base::OnMouseMove(location);
+		// User began dragging with a mouse button, now he pressed a second button. Nothing to do here.
+		base::process_mouse_button_down (button, modifierKeysDown, location);
+	}
+
+	virtual void process_mouse_move (const MouseLocation& location) override final
+	{
+		base::process_mouse_move(location);
 
 		RECT rc = { _location.pt.x, _location.pt.y, _location.pt.x, _location.pt.y };
 		InflateRect (&rc, GetSystemMetrics(SM_CXDRAG), GetSystemMetrics(SM_CYDRAG));
@@ -58,16 +58,16 @@ public:
 
 			if (_stateMoveThreshold != nullptr)
 			{
-				_stateMoveThreshold->OnMouseDown (_button, _modifierKeysDown, _location);
-				assert (!_stateMoveThreshold->Completed());
-				_stateMoveThreshold->OnMouseMove (location);
-				if (!_stateMoveThreshold->Completed())
+				_stateMoveThreshold->process_mouse_button_down (_button, _modifierKeysDown, _location);
+				assert (!_stateMoveThreshold->completed());
+				_stateMoveThreshold->process_mouse_move (location);
+				if (!_stateMoveThreshold->completed())
 					_ea->EnterState(move(_stateMoveThreshold));
 			}
 		}
 	}
 
-	virtual void OnMouseUp (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_up (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		if (button != _button)
 			return;
@@ -79,20 +79,20 @@ public:
 
 		if (_stateButtonUp != nullptr)
 		{
-			_stateButtonUp->OnMouseDown (_button, _modifierKeysDown, _location);
-			if (!_stateButtonUp->Completed())
+			_stateButtonUp->process_mouse_button_down (_button, _modifierKeysDown, _location);
+			if (!_stateButtonUp->completed())
 			{
 				if ((location.pt.x != _location.pt.x) || (location.pt.y != _location.pt.y))
-					_stateButtonUp->OnMouseMove (_location);
+					_stateButtonUp->process_mouse_move (_location);
 
-				_stateButtonUp->OnMouseUp (button, modifierKeysDown, location);
-				if (!_stateButtonUp->Completed())
+				_stateButtonUp->process_mouse_button_up (button, modifierKeysDown, location);
+				if (!_stateButtonUp->completed())
 					_ea->EnterState(move(_stateButtonUp));
 			}
 		}
 	}
 
-	virtual std::optional<LRESULT> OnKeyDown (UINT virtualKey, UINT modifierKeys) override final
+	virtual std::optional<LRESULT> process_key_or_syskey_down (UINT virtualKey, UINT modifierKeys) override final
 	{
 		if (virtualKey == VK_ESCAPE)
 		{
@@ -104,7 +104,7 @@ public:
 	}
 };
 
-std::unique_ptr<edit_state> CreateStateBeginningDrag (const EditStateDeps& deps,
+std::unique_ptr<edit_state> CreateStateBeginningDrag (const edit_state_deps& deps,
 													 renderable_object* clickedObject,
 													 MouseButton button,
 													 UINT modifierKeysDown,

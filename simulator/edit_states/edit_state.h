@@ -1,7 +1,7 @@
 #pragma once
 #include "..\simulator.h"
 
-struct EditStateDeps
+struct edit_state_deps
 {
 	IProjectWindow* pw;
 	edit_area_i*    ea;
@@ -18,27 +18,27 @@ protected:
 	selection_i*    const _selection;
 
 public:
-	edit_state (const EditStateDeps& deps)
+	edit_state (const edit_state_deps& deps)
 		: _pw(deps.pw), _ea(deps.ea), _selection(deps.selection), _project(deps.project)
 	{ }
 
 	virtual ~edit_state() { }
-	virtual void OnMouseDown (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) { }
-	virtual void OnMouseMove (const MouseLocation& location) { }
-	virtual void OnMouseUp   (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) { }
-	virtual std::optional<LRESULT> OnKeyDown (UINT virtualKey, UINT modifierKeys) { return std::nullopt; }
-	virtual std::optional<LRESULT> OnKeyUp   (UINT virtualKey, UINT modifierKeys) { return std::nullopt; }
+	virtual void process_mouse_button_down (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) { }
+	virtual void process_mouse_button_up   (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) { }
+	virtual void process_mouse_move (const MouseLocation& location) { }
+	virtual std::optional<LRESULT> process_key_or_syskey_down (UINT virtualKey, UINT modifierKeys) { return std::nullopt; }
+	virtual std::optional<LRESULT> process_key_or_syskey_up   (UINT virtualKey, UINT modifierKeys) { return std::nullopt; }
 	virtual void render (ID2D1DeviceContext* dc) { }
-	virtual bool Completed() const = 0;
-	virtual HCURSOR GetCursor() const { return LoadCursor(nullptr, IDC_ARROW); }
+	virtual bool completed() const = 0;
+	virtual HCURSOR cursor() const { return LoadCursor(nullptr, IDC_ARROW); }
 };
 
-std::unique_ptr<edit_state> CreateStateMoveBridges (const EditStateDeps& deps);
-std::unique_ptr<edit_state> CreateStateMovePort (const EditStateDeps& deps);
-std::unique_ptr<edit_state> CreateStateCreateBridge (const EditStateDeps& deps);
-std::unique_ptr<edit_state> create_state_create_wire (const EditStateDeps& deps);
-std::unique_ptr<edit_state> CreateStateMoveWirePoint (const EditStateDeps& deps, Wire* wire, size_t pointIndex);
-std::unique_ptr<edit_state> CreateStateBeginningDrag (const EditStateDeps& deps,
+std::unique_ptr<edit_state> CreateStateMoveBridges (const edit_state_deps& deps);
+std::unique_ptr<edit_state> CreateStateMovePort (const edit_state_deps& deps);
+std::unique_ptr<edit_state> CreateStateCreateBridge (const edit_state_deps& deps);
+std::unique_ptr<edit_state> create_state_create_wire (const edit_state_deps& deps);
+std::unique_ptr<edit_state> CreateStateMoveWirePoint (const edit_state_deps& deps, Wire* wire, size_t pointIndex);
+std::unique_ptr<edit_state> CreateStateBeginningDrag (const edit_state_deps& deps,
 													 renderable_object* clickedObject,
 													 MouseButton button,
 													 UINT modifierKeysDown,

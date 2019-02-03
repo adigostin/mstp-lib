@@ -25,7 +25,7 @@ class MoveBridgeES : public edit_state
 public:
 	using base::base;
 
-	virtual void OnMouseDown (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_down (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		auto firstBridge = static_cast<Bridge*>(_selection->objects()[0]); assert (firstBridge != nullptr);
 		_firstBridgeInitialLocation = firstBridge->GetLocation();
@@ -39,7 +39,7 @@ public:
 		_offsetFirstBridge = location.w - firstBridge->GetLocation();
 	}
 
-	virtual void OnMouseMove (const MouseLocation& location) override final
+	virtual void process_mouse_move (const MouseLocation& location) override final
 	{
 		auto firstBridgeLocation = location.w - _offsetFirstBridge;
 		_infos[0].b->SetLocation(firstBridgeLocation);
@@ -47,7 +47,7 @@ public:
 			_infos[i].b->SetLocation (firstBridgeLocation + _infos[i].offsetFromFirst);
 	}
 
-	virtual std::optional<LRESULT> OnKeyDown (UINT virtualKey, UINT modifierKeys) override final
+	virtual std::optional<LRESULT> process_key_or_syskey_down (UINT virtualKey, UINT modifierKeys) override final
 	{
 		if (virtualKey == VK_ESCAPE)
 		{
@@ -63,13 +63,13 @@ public:
 		return nullopt;
 	}
 
-	virtual void OnMouseUp (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_up (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		_project->SetChangedFlag(true);
 		_completed = true;
 	}
 
-	virtual bool Completed() const override final { return _completed; }
+	virtual bool completed() const override final { return _completed; }
 };
 
-unique_ptr<edit_state> CreateStateMoveBridges (const EditStateDeps& deps) { return unique_ptr<edit_state>(new MoveBridgeES(deps)); }
+unique_ptr<edit_state> CreateStateMoveBridges (const edit_state_deps& deps) { return unique_ptr<edit_state>(new MoveBridgeES(deps)); }

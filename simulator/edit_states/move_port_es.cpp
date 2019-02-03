@@ -17,7 +17,7 @@ class MovePortES : public edit_state
 public:
 	using base::base;
 
-	virtual void OnMouseDown (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_down (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		assert (_selection->objects().size() == 1);
 		_port = dynamic_cast<Port*>(_selection->objects().front());
@@ -26,12 +26,12 @@ public:
 		_initialOffset = _port->GetOffset();
 	}
 
-	virtual void OnMouseMove (const MouseLocation& location) override final
+	virtual void process_mouse_move (const MouseLocation& location) override final
 	{
 		_port->bridge()->SetCoordsForInteriorPort (_port, location.w);
 	}
 
-	virtual std::optional<LRESULT> OnKeyDown (UINT virtualKey, UINT modifierKeys) override final
+	virtual std::optional<LRESULT> process_key_or_syskey_down (UINT virtualKey, UINT modifierKeys) override final
 	{
 		if (virtualKey == VK_ESCAPE)
 		{
@@ -43,13 +43,13 @@ public:
 		return nullopt;
 	}
 
-	virtual void OnMouseUp (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_up (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		_project->SetChangedFlag(true);
 		_completed = true;
 	}
 
-	virtual bool Completed() const override final { return _completed; }
+	virtual bool completed() const override final { return _completed; }
 };
 
-unique_ptr<edit_state> CreateStateMovePort (const EditStateDeps& deps) { return unique_ptr<edit_state>(new MovePortES(deps)); }
+unique_ptr<edit_state> CreateStateMovePort (const edit_state_deps& deps) { return unique_ptr<edit_state>(new MovePortES(deps)); }

@@ -17,7 +17,7 @@ class CreateBridgeES : public edit_state
 public:
 	using base::base;
 
-	virtual void OnMouseMove (const MouseLocation& location) override final
+	virtual void process_mouse_move (const MouseLocation& location) override final
 	{
 		if (_bridge == nullptr)
 		{
@@ -32,7 +32,7 @@ public:
 		::InvalidateRect (_ea->hwnd(), nullptr, FALSE);
 	}
 
-	virtual void OnMouseUp (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_up (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		if (_bridge != nullptr)
 		{
@@ -56,7 +56,7 @@ public:
 		::InvalidateRect (_ea->hwnd(), nullptr, FALSE);
 	}
 
-	virtual std::optional<LRESULT> OnKeyDown (UINT virtualKey, UINT modifierKeys) override final
+	virtual std::optional<LRESULT> process_key_or_syskey_down (UINT virtualKey, UINT modifierKeys) override final
 	{
 		if (virtualKey == VK_ESCAPE)
 		{
@@ -102,7 +102,7 @@ public:
 		}
 	}
 
-	virtual bool Completed() const override final { return _completed; }
+	virtual bool completed() const override final { return _completed; }
 };
 
-unique_ptr<edit_state> CreateStateCreateBridge (const EditStateDeps& deps) { return unique_ptr<edit_state>(new CreateBridgeES(deps)); }
+unique_ptr<edit_state> CreateStateCreateBridge (const edit_state_deps& deps) { return unique_ptr<edit_state>(new CreateBridgeES(deps)); }

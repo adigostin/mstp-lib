@@ -737,8 +737,8 @@ public:
 	{
 		if (_state != nullptr)
 		{
-			auto res = _state->OnKeyDown (virtualKey, modifierKeys);
-			if (_state->Completed())
+			auto res = _state->process_key_or_syskey_down (virtualKey, modifierKeys);
+			if (_state->completed())
 			{
 				_state = nullptr;
 				::SetCursor (LoadCursor (nullptr, IDC_ARROW));
@@ -759,7 +759,16 @@ public:
 	std::optional<LRESULT> ProcessKeyOrSysKeyUp (UINT virtualKey, UINT modifierKeys)
 	{
 		if (_state != nullptr)
-			return _state->OnKeyUp (virtualKey, modifierKeys);
+		{
+			auto res = _state->process_key_or_syskey_up (virtualKey, modifierKeys);
+			if (_state->completed())
+			{
+				_state = nullptr;
+				SetCursor (LoadCursor (nullptr, IDC_ARROW));
+			}
+			
+			return res;
+		}
 
 		return nullopt;
 	}
@@ -778,8 +787,8 @@ public:
 
 		if (_state != nullptr)
 		{
-			_state->OnMouseDown (button, modifierKeysDown, mouseLocation);
-			if (_state->Completed())
+			_state->process_mouse_button_down (button, modifierKeysDown, mouseLocation);
+			if (_state->completed())
 			{
 				_state = nullptr;
 				::SetCursor (LoadCursor (nullptr, IDC_ARROW));
@@ -867,8 +876,8 @@ public:
 
 		if (_state != nullptr)
 		{
-			_state->OnMouseUp (button, modifierKeysDown, { pt, dLocation, wLocation });
-			if (_state->Completed())
+			_state->process_mouse_button_up (button, modifierKeysDown, { pt, dLocation, wLocation });
+			if (_state->completed())
 			{
 				_state = nullptr;
 				::SetCursor (LoadCursor (nullptr, IDC_ARROW));
@@ -894,7 +903,7 @@ public:
 
 		if (_state != nullptr)
 		{
-			::SetCursor (_state->GetCursor());
+			::SetCursor (_state->cursor());
 		}
 		else
 		{
@@ -933,8 +942,8 @@ public:
 
 		if (_state != nullptr)
 		{
-			_state->OnMouseMove ({ pt, dLocation, wLocation });
-			if (_state->Completed())
+			_state->process_mouse_move ({ pt, dLocation, wLocation });
+			if (_state->completed())
 			{
 				_state = nullptr;
 				::SetCursor (LoadCursor (nullptr, IDC_ARROW));
@@ -970,9 +979,9 @@ public:
 
 	virtual D2D1::Matrix3x2F GetZoomTransform() const override final { return base::GetZoomTransform(); }
 
-	EditStateDeps MakeEditStateDeps()
+	edit_state_deps MakeEditStateDeps()
 	{
-		return EditStateDeps { _pw, this, _project, _selection };
+		return edit_state_deps { _pw, this, _project, _selection };
 	}
 };
 
