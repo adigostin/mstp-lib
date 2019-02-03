@@ -124,7 +124,7 @@ Bridge::Bridge (unsigned int portCount, unsigned int mstiCount, mac_address macA
 	for (unsigned int portIndex = 0; portIndex < portCount; portIndex++)
 	{
 		offset += (Port::PortToPortSpacing / 2 + Port::InteriorWidth / 2);
-		auto port = unique_ptr<Port>(new Port(this, portIndex, Side::Bottom, offset));
+		auto port = unique_ptr<Port>(new Port(this, portIndex, side::bottom, offset));
 		_ports.push_back (move(port));
 		offset += (Port::InteriorWidth / 2 + Port::PortToPortSpacing / 2);
 	}
@@ -652,7 +652,7 @@ void Bridge::SetCoordsForInteriorPort (Port* _port, D2D1_POINT_2F proposedLocati
 	// top side
 	if ((mouseX > mouseY * wh) && (_width - mouseX) > mouseY * wh)
 	{
-		_port->_side = Side::Top;
+		_port->_side = side::top;
 
 		if (mouseX < Port::InteriorWidth / 2)
 			_port->_offset = Port::InteriorWidth / 2;
@@ -665,7 +665,7 @@ void Bridge::SetCoordsForInteriorPort (Port* _port, D2D1_POINT_2F proposedLocati
 	// bottom side
 	else if ((mouseX <= mouseY * wh) && (_width - mouseX) <= mouseY * wh)
 	{
-		_port->_side = Side::Bottom;
+		_port->_side = side::bottom;
 
 		if (mouseX < Port::InteriorWidth / 2 + 1)
 			_port->_offset = Port::InteriorWidth / 2 + 1;
@@ -678,7 +678,7 @@ void Bridge::SetCoordsForInteriorPort (Port* _port, D2D1_POINT_2F proposedLocati
 	// left side
 	if ((mouseX <= mouseY * wh) && (_width - mouseX) > mouseY * wh)
 	{
-		_port->_side = Side::Left;
+		_port->_side = side::left;
 
 		if (mouseY < Port::InteriorWidth / 2)
 			_port->_offset = Port::InteriorWidth / 2;
@@ -691,7 +691,7 @@ void Bridge::SetCoordsForInteriorPort (Port* _port, D2D1_POINT_2F proposedLocati
 	// right side
 	if ((mouseX > mouseY * wh) && (_width - mouseX) <= mouseY * wh)
 	{
-		_port->_side = Side::Right;
+		_port->_side = side::right;
 
 		if (mouseY < Port::InteriorWidth / 2)
 			_port->_offset = Port::InteriorWidth / 2;

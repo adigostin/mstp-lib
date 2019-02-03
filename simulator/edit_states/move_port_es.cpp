@@ -4,20 +4,18 @@
 #include "Bridge.h"
 #include "Port.h"
 
-using namespace std;
-
-class MovePortES : public edit_state
+class move_port_es : public edit_state
 {
 	typedef edit_state base;
 	Port* _port;
-	Side _initialSide;
+	side _initialSide;
 	float _initialOffset;
 	bool _completed = false;
 
 public:
 	using base::base;
 
-	virtual void process_mouse_button_down (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		assert (_selection->objects().size() == 1);
 		_port = dynamic_cast<Port*>(_selection->objects().front());
@@ -40,10 +38,10 @@ public:
 			return 0;
 		}
 
-		return nullopt;
+		return std::nullopt;
 	}
 
-	virtual void process_mouse_button_up (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_up (edge::mouse_button button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		_project->SetChangedFlag(true);
 		_completed = true;
@@ -52,4 +50,4 @@ public:
 	virtual bool completed() const override final { return _completed; }
 };
 
-unique_ptr<edit_state> CreateStateMovePort (const edit_state_deps& deps) { return unique_ptr<edit_state>(new MovePortES(deps)); }
+std::unique_ptr<edit_state> create_state_move_port (const edit_state_deps& deps) { return std::make_unique<move_port_es>(deps); }

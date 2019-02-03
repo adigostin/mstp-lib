@@ -530,14 +530,14 @@ public:
 	{
 		if ((uMsg == WM_LBUTTONDOWN) || (uMsg == WM_RBUTTONDOWN))
 		{
-			auto button = (uMsg == WM_LBUTTONDOWN) ? MouseButton::Left : MouseButton::Right;
+			auto button = (uMsg == WM_LBUTTONDOWN) ? mouse_button::left : mouse_button::right;
 			UINT modifierKeysDown = (UINT) wParam;
 			auto result = ProcessMouseButtonDown (button, modifierKeysDown, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
 			return result ? result.value() : base::window_proc (hwnd, uMsg, wParam, lParam);
 		}
 		else if ((uMsg == WM_LBUTTONUP) || (uMsg == WM_RBUTTONUP))
 		{
-			auto button = (uMsg == WM_LBUTTONUP) ? MouseButton::Left : MouseButton::Right;
+			auto button = (uMsg == WM_LBUTTONUP) ? mouse_button::left : mouse_button::right;
 			UINT modifierKeysDown = (UINT) wParam;
 			auto result = ProcessMouseButtonUp (button, modifierKeysDown, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
 			return result ? result.value() : base::window_proc (hwnd, uMsg, wParam, lParam);
@@ -583,7 +583,7 @@ public:
 		{
 			if (wParam == ID_NEW_BRIDGE)
 			{
-				EnterState (CreateStateCreateBridge(MakeEditStateDeps()));
+				EnterState (create_state_create_bridge(make_edit_state_deps()));
 			}
 			else if ((wParam == ID_BRIDGE_ENABLE_STP) || (wParam == ID_BRIDGE_DISABLE_STP))
 			{
@@ -773,7 +773,7 @@ public:
 		return nullopt;
 	}
 
-	std::optional<LRESULT> ProcessMouseButtonDown (MouseButton button, UINT modifierKeysDown, POINT pt)
+	std::optional<LRESULT> ProcessMouseButtonDown (mouse_button button, UINT modifierKeysDown, POINT pt)
 	{
 		::SetFocus(hwnd());
 		if (::GetFocus() != hwnd())
@@ -830,8 +830,8 @@ public:
 
 			if (dynamic_cast<Bridge*>(ht.object) != nullptr)
 			{
-				if (button == MouseButton::Left)
-					stateMoveThreshold = CreateStateMoveBridges (MakeEditStateDeps());
+				if (button == mouse_button::left)
+					stateMoveThreshold = create_state_move_bridges (make_edit_state_deps());
 			}
 			else if (dynamic_cast<Port*>(ht.object) != nullptr)
 			{
@@ -839,16 +839,16 @@ public:
 
 				if (ht.code == Port::HTCodeInnerOuter)
 				{
-					if ((button == MouseButton::Left) && (_selection->objects().size() == 1) && (dynamic_cast<Port*>(_selection->objects()[0]) != nullptr))
-						stateMoveThreshold = CreateStateMovePort (MakeEditStateDeps());
+					if ((button == mouse_button::left) && (_selection->objects().size() == 1) && (dynamic_cast<Port*>(_selection->objects()[0]) != nullptr))
+						stateMoveThreshold = create_state_move_port (make_edit_state_deps());
 				}
 				else if (ht.code == Port::HTCodeCP)
 				{
 					auto alreadyConnectedWire = _project->GetWireConnectedToPort(port);
 					if (alreadyConnectedWire.first == nullptr)
 					{
-						stateMoveThreshold = create_state_create_wire(MakeEditStateDeps());
-						stateButtonUp = create_state_create_wire(MakeEditStateDeps());
+						stateMoveThreshold = create_state_create_wire(make_edit_state_deps());
+						stateButtonUp = create_state_create_wire(make_edit_state_deps());
 					}
 				}
 			}
@@ -857,19 +857,19 @@ public:
 				auto wire = static_cast<Wire*>(ht.object);
 				if (ht.code >= 0)
 				{
-					stateMoveThreshold = CreateStateMoveWirePoint(MakeEditStateDeps(), wire, ht.code);
-					stateButtonUp = CreateStateMoveWirePoint (MakeEditStateDeps(), wire, ht.code);
+					stateMoveThreshold = CreateStateMoveWirePoint(make_edit_state_deps(), wire, ht.code);
+					stateButtonUp = CreateStateMoveWirePoint (make_edit_state_deps(), wire, ht.code);
 				}
 			}
 
-			auto state = CreateStateBeginningDrag(MakeEditStateDeps(), ht.object, button, modifierKeysDown, mouseLocation, ::GetCursor(), move(stateMoveThreshold), move(stateButtonUp));
+			auto state = CreateStateBeginningDrag(make_edit_state_deps(), ht.object, button, modifierKeysDown, mouseLocation, ::GetCursor(), move(stateMoveThreshold), move(stateButtonUp));
 			EnterState(move(state));
 		}
 
 		return 0;
 	}
 
-	std::optional<LRESULT> ProcessMouseButtonUp (MouseButton button, UINT modifierKeysDown, POINT pt)
+	std::optional<LRESULT> ProcessMouseButtonUp (mouse_button button, UINT modifierKeysDown, POINT pt)
 	{
 		auto dLocation = pointp_to_pointd(pt);
 		auto wLocation = pointd_to_pointw(dLocation);
@@ -884,7 +884,7 @@ public:
 			};
 		}
 
-		if (button == MouseButton::Right)
+		if (button == mouse_button::right)
 			return nullopt; // return "not handled", to cause our called to pass the message to DefWindowProc, which will generate WM_CONTEXTMENU
 
 		return 0;
@@ -979,7 +979,7 @@ public:
 
 	virtual D2D1::Matrix3x2F GetZoomTransform() const override final { return base::GetZoomTransform(); }
 
-	edit_state_deps MakeEditStateDeps()
+	edit_state_deps make_edit_state_deps()
 	{
 		return edit_state_deps { _pw, this, _project, _selection };
 	}

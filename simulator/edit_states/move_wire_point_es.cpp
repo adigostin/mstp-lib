@@ -33,11 +33,11 @@ public:
 
 	virtual bool completed() const override final { return _substate == down; }
 
-	virtual void process_mouse_button_down (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		base::process_mouse_button_down (button, modifierKeysDown, location);
 
-		if (button != MouseButton::Left)
+		if (button != edge::mouse_button::left)
 			return;
 
 		if (_substate == waiting_first_down)
@@ -70,7 +70,7 @@ public:
 		}
 	}
 
-	virtual void process_mouse_button_up (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_up (edge::mouse_button button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		if (_substate == waiting_second_up)
 		{
@@ -95,7 +95,7 @@ public:
 	{
 		auto& point = _wire->GetPoints()[_pointIndex];
 		if (holds_alternative<ConnectedWireEnd>(point))
-			_pw->edit_window()->RenderSnapRect (rt, get<ConnectedWireEnd>(point)->GetCPLocation());
+			_ea->RenderSnapRect (rt, get<ConnectedWireEnd>(point)->GetCPLocation());
 	}
 
 	virtual HCURSOR cursor() const override final { return LoadCursor(nullptr, IDC_CROSS); }

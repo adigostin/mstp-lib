@@ -858,8 +858,6 @@ public:
 
 	virtual project_i* project() const override final { return _project.get(); }
 
-	virtual edit_area_i* edit_window() const override final { return _edit_window.get(); }
-
 	static vector<wstring> GetRecentFileList()
 	{
 		// We ignore errors in this particular function.

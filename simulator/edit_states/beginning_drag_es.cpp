@@ -9,10 +9,10 @@ class BeginningDragES : public edit_state
 	using base = edit_state;
 
 	renderable_object* const _clickedObject;
-	MouseButton       const _button;
-	UINT              const _modifierKeysDown;
-	MouseLocation     const _location;
-	HCURSOR           const _cursor;
+	edge::mouse_button const _button;
+	UINT               const _modifierKeysDown;
+	MouseLocation      const _location;
+	HCURSOR            const _cursor;
 	unique_ptr<edit_state> _stateMoveThreshold;
 	unique_ptr<edit_state> _stateButtonUp;
 	bool _completed = false;
@@ -20,7 +20,7 @@ class BeginningDragES : public edit_state
 public:
 	BeginningDragES (const edit_state_deps& deps,
 					 renderable_object* clickedObject,
-					 MouseButton button,
+					 edge::mouse_button button,
 					 UINT modifierKeysDown,
 					 const MouseLocation& location,
 					 HCURSOR cursor,
@@ -40,7 +40,7 @@ public:
 
 	virtual HCURSOR cursor() const { return _cursor; }
 
-	virtual void process_mouse_button_down (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		// User began dragging with a mouse button, now he pressed a second button. Nothing to do here.
 		base::process_mouse_button_down (button, modifierKeysDown, location);
@@ -67,12 +67,12 @@ public:
 		}
 	}
 
-	virtual void process_mouse_button_up (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_up (edge::mouse_button button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		if (button != _button)
 			return;
 
-		if ((button == MouseButton::Left) && ((modifierKeysDown & MK_CONTROL) == 0) && (_clickedObject != nullptr))
+		if ((button == edge::mouse_button::left) && ((modifierKeysDown & MK_CONTROL) == 0) && (_clickedObject != nullptr))
 			_selection->select(_clickedObject);
 
 		_completed = true;
@@ -106,7 +106,7 @@ public:
 
 std::unique_ptr<edit_state> CreateStateBeginningDrag (const edit_state_deps& deps,
 													 renderable_object* clickedObject,
-													 MouseButton button,
+													 edge::mouse_button button,
 													 UINT modifierKeysDown,
 													 const MouseLocation& location,
 													 HCURSOR cursor,

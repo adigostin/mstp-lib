@@ -4,15 +4,11 @@
 #include "Bridge.h"
 #include "win32/utility_functions.h"
 
-using namespace std;
-using namespace D2D1;
-using namespace edge;
-
-class CreateBridgeES : public edit_state
+class create_bridge_es : public edit_state
 {
 	typedef edit_state base;
 	bool _completed = false;
-	unique_ptr<Bridge> _bridge;
+	std::unique_ptr<Bridge> _bridge;
 
 public:
 	using base::base;
@@ -32,7 +28,7 @@ public:
 		::InvalidateRect (_ea->hwnd(), nullptr, FALSE);
 	}
 
-	virtual void process_mouse_button_up (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_up (edge::mouse_button button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		if (_bridge != nullptr)
 		{
@@ -47,7 +43,7 @@ public:
 		_completed = true;
 	}
 
-	void RecreateBridge (unsigned int numberOfPorts)
+	void recreate_bridge (unsigned int numberOfPorts)
 	{
 		auto centerX = _bridge->GetLeft() + _bridge->GetWidth() / 2;
 		auto centerY = _bridge->GetTop() + _bridge->GetHeight() / 2;
@@ -68,29 +64,29 @@ public:
 		if ((virtualKey == VK_SUBTRACT) || (virtualKey == VK_OEM_MINUS))
 		{
 			if (_bridge->GetPortCount() > 2)
-				RecreateBridge (_bridge->GetPortCount() - 1);
+				recreate_bridge (_bridge->GetPortCount() - 1);
 			return 0;
 		}
 
 		if ((virtualKey == VK_ADD) || (virtualKey == VK_OEM_PLUS))
 		{
 			if (_bridge->GetPortCount() < 4095)
-				RecreateBridge (_bridge->GetPortCount() + 1);
+				recreate_bridge (_bridge->GetPortCount() + 1);
 			return 0;
 		}
 
-		return nullopt;
+		return std::nullopt;
 	}
 
 	virtual void render (ID2D1DeviceContext* dc) override final
 	{
 		if (_bridge != nullptr)
 		{
-			Matrix3x2F oldtr;
+			D2D1::Matrix3x2F oldtr;
 			dc->GetTransform(&oldtr);
 			dc->SetTransform (_ea->GetZoomTransform() * oldtr);
 
-			_bridge->Render (dc, _ea->drawing_resources(), _pw->selected_vlan_number(), ColorF(ColorF::LightGreen));
+			_bridge->Render (dc, _ea->drawing_resources(), _pw->selected_vlan_number(), D2D1::ColorF(D2D1::ColorF::LightGreen));
 
 			dc->SetTransform(&oldtr);
 
@@ -105,4 +101,4 @@ public:
 	virtual bool completed() const override final { return _completed; }
 };
 
-unique_ptr<edit_state> CreateStateCreateBridge (const edit_state_deps& deps) { return unique_ptr<edit_state>(new CreateBridgeES(deps)); }
+std::unique_ptr<edit_state> create_state_create_bridge (const edit_state_deps& deps) { return std::make_unique<create_bridge_es>(deps); }

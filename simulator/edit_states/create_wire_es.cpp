@@ -25,9 +25,9 @@ class create_wire_es : public edit_state
 public:
 	using base::base;
 
-	virtual void process_mouse_button_down (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
-		if (button != MouseButton::Left)
+		if (button != edge::mouse_button::left)
 			return;
 
 		if (_substate == waiting_first_down)
@@ -68,7 +68,7 @@ public:
 			_substate = waiting_second_up;
 	}
 
-	virtual void process_mouse_button_up (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_up (edge::mouse_button button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
 		if (_substate == waiting_second_up)
 		{

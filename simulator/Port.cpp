@@ -8,7 +8,7 @@ using namespace std;
 using namespace D2D1;
 using namespace edge;
 
-Port::Port (Bridge* bridge, unsigned int portIndex, Side side, float offset)
+Port::Port (Bridge* bridge, unsigned int portIndex, side side, float offset)
 	: _bridge(bridge), _portIndex(portIndex), _side(side), _offset(offset)
 {
 	for (unsigned int treeIndex = 0; treeIndex < (unsigned int) bridge->trees().size(); treeIndex++)
@@ -26,41 +26,38 @@ D2D1_POINT_2F Port::GetCPLocation() const
 {
 	auto bounds = _bridge->GetBounds();
 
-	if (_side == Side::Left)
+	if (_side == side::left)
 		return Point2F (bounds.left - ExteriorHeight, bounds.top + _offset);
 
-	if (_side == Side::Right)
+	if (_side == side::right)
 		return Point2F (bounds.right + ExteriorHeight, bounds.top + _offset);
 
-	if (_side == Side::Top)
+	if (_side == side::top)
 		return Point2F (bounds.left + _offset, bounds.top - ExteriorHeight);
 
-	if (_side == Side::Bottom)
-		return Point2F (bounds.left + _offset, bounds.bottom + ExteriorHeight);
-
-	assert(false); // not implemented
-	return { 0, 0 };
+	// _side == side::bottom
+	return Point2F (bounds.left + _offset, bounds.bottom + ExteriorHeight);
 }
 
 Matrix3x2F Port::GetPortTransform() const
 {
-	if (_side == Side::Left)
+	if (_side == side::left)
 	{
 		//portTransform = Matrix3x2F::Rotation (90, Point2F (0, 0)) * Matrix3x2F::Translation (bridgeRect.left, bridgeRect.top + port->GetOffset ());
 		// The above calculation is correct but slow. Let's assign the matrix members directly.
 		return { 0, 1, -1, 0, _bridge->GetLeft(), _bridge->GetTop() + _offset};
 	}
-	else if (_side == Side::Right)
+	else if (_side == side::right)
 	{
 		//portTransform = Matrix3x2F::Rotation (270, Point2F (0, 0)) * Matrix3x2F::Translation (bridgeRect.right, bridgeRect.top + port->GetOffset ());
 		return { 0, -1, 1, 0, _bridge->GetRight(), _bridge->GetTop() + _offset };
 	}
-	else if (_side == Side::Top)
+	else if (_side == side::top)
 	{
 		//portTransform = Matrix3x2F::Rotation (180, Point2F (0, 0)) * Matrix3x2F::Translation (bridgeRect.left + port->GetOffset (), bridgeRect.top);
 		return { -1, 0, 0, -1, _bridge->GetLeft() + _offset, _bridge->GetTop() };
 	}
-	else //if (_side == Side::Bottom)
+	else //if (_side == side::bottom)
 	{
 		//portTransform = Matrix3x2F::Translation (bridgeRect.left + port->GetOffset (), bridgeRect.bottom);
 		return { 1, 0, 0, 1, _bridge->GetLeft() + _offset, _bridge->GetBottom() };
@@ -320,7 +317,7 @@ bool Port::IsForwarding (unsigned int vlanNumber) const
 	return STP_GetPortForwarding (stpb, (unsigned int) _portIndex, treeIndex);
 }
 
-void Port::SetSideAndOffset (Side side, float offset)
+void Port::SetSideAndOffset (side side, float offset)
 {
 	if ((_side != side) || (_offset != offset))
 	{
@@ -366,7 +363,7 @@ com_ptr<IXMLDOMElement> Port::Serialize (IXMLDOMDocument3* doc) const
 {
 	com_ptr<IXMLDOMElement> portElement;
 	auto hr = doc->createElement (PortString, &portElement); assert(SUCCEEDED(hr));
-	portElement->setAttribute (SideString, _variant_t (enum_converters<Side, SideNVPs>::enum_to_string(_side).c_str()));
+	portElement->setAttribute (SideString, _variant_t (enum_converters<side, SideNVPs>::enum_to_string(_side).c_str()));
 	portElement->setAttribute (OffsetString, _variant_t (_offset));
 	portElement->setAttribute (AutoEdgeString, _variant_t (GetAutoEdge() ? L"True" : L"False"));
 	portElement->setAttribute (AdminEdgeString, _variant_t (GetAdminEdge() ? L"True" : L"False"));
@@ -392,7 +389,7 @@ HRESULT Port::Deserialize (IXMLDOMElement* portElement)
 		return hr;
 	if (value.vt == VT_BSTR)
 	{
-		bool ok = enum_converters<Side, SideNVPs>::enum_from_string(wstring_view(value.bstrVal), _side);
+		bool ok = enum_converters<side, SideNVPs>::enum_from_string(wstring_view(value.bstrVal), _side);
 		assert(ok);
 	}
 

@@ -11,14 +11,14 @@ struct PacketInfo
 	std::vector<std::array<uint8_t, 6>> txPortPath;
 };
 
-enum class Side { Left, Top, Right, Bottom };
+enum class side { left, top, right, bottom };
 
 static constexpr edge::NVP SideNVPs[] =
 {
-	{ "Left",   (int) Side::Left },
-	{ "Top",    (int) Side::Top },
-	{ "Right",  (int) Side::Right },
-	{ "Bottom", (int) Side::Bottom },
+	{ "Left",   (int) side::left },
+	{ "Top",    (int) side::top },
+	{ "Right",  (int) side::right },
+	{ "Bottom", (int) side::bottom },
 	{ 0, 0 },
 };
 
@@ -30,7 +30,7 @@ class Port : public renderable_object
 
 	Bridge* const _bridge;
 	unsigned int const _portIndex;
-	Side _side;
+	side _side;
 	float _offset;
 	std::vector<std::unique_ptr<PortTree>> _trees;
 
@@ -38,7 +38,7 @@ class Port : public renderable_object
 	unsigned int _missedLinkPulseCounter = MissedLinkPulseCounterMax; // _missedLinkPulseCounter equal to MissedLinkPulseCounterMax means macOperational=false
 
 public:
-	Port (Bridge* bridge, unsigned int portIndex, Side side, float offset);
+	Port (Bridge* bridge, unsigned int portIndex, side side, float offset);
 	~Port();
 
 	edge::com_ptr<IXMLDOMElement> Serialize (IXMLDOMDocument3* doc) const;
@@ -56,14 +56,14 @@ public:
 
 	Bridge* bridge() const { return _bridge; }
 	unsigned int GetPortIndex() const { return _portIndex; }
-	Side GetSide() const { return _side; }
+	side GetSide() const { return _side; }
 	float GetOffset() const { return _offset; }
 	D2D1_POINT_2F GetCPLocation() const;
 	bool GetMacOperational() const;
 	D2D1::Matrix3x2F GetPortTransform() const;
 	D2D1_RECT_F GetInnerOuterRect() const;
 	bool IsForwarding (unsigned int vlanNumber) const;
-	void SetSideAndOffset (Side side, float offset);
+	void SetSideAndOffset (side side, float offset);
 	const std::vector<std::unique_ptr<PortTree>>& trees() const { return _trees; }
 
 	static void RenderExteriorNonStpPort (ID2D1RenderTarget* dc, const drawing_resources& dos, bool macOperational);
