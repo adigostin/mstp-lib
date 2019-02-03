@@ -13,7 +13,6 @@ using WireEnd = std::variant<LooseWireEnd, ConnectedWireEnd>;
 class Wire : public renderable_object
 {
 	std::array<WireEnd, 2> _points;
-	std::string _debugName;
 
 public:
 	static constexpr float Thickness = 2;
@@ -28,8 +27,6 @@ public:
 	void SetP0 (const WireEnd& p0) { SetPoint(0, p0); }
 	const WireEnd& GetP1() const { return _points[1]; }
 	void SetP1 (const WireEnd& p1) { SetPoint(1, p1); }
-
-	void SetDebugName (const char* debugName) { _debugName = debugName; }
 
 	D2D1_POINT_2F GetPointCoords (size_t pointIndex) const;
 

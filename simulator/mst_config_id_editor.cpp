@@ -1,6 +1,6 @@
 
 #include "pch.h"
-#include "Simulator.h"
+#include "simulator.h"
 #include "Resource.h"
 #include "Bridge.h"
 #include "win32/utility_functions.h"

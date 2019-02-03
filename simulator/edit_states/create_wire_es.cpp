@@ -5,27 +5,22 @@
 #include "Wire.h"
 #include "Port.h"
 
-using namespace std;
-
-static size_t nextWireIndex = 1;
-
-class CreateWireES : public edit_state
+class create_wire_es : public edit_state
 {
 	using base = edit_state;
 
 	Wire* _wire = nullptr;
-	POINT _firstDownLocation;
 
-	enum SubState
+	enum substate
 	{
-		WaitingFirstDown,
-		WaitingFirstUp,
-		WaitingSecondDown,
-		WaitingSecondUp,
-		Done,
+		waiting_first_down,
+		waiting_first_up,
+		waiting_second_down,
+		waiting_second_up,
+		down,
 	};
 
-	SubState _subState = WaitingFirstDown;
+	substate _substate = waiting_first_down;
 
 public:
 	using base::base;
@@ -35,36 +30,30 @@ public:
 		if (button != MouseButton::Left)
 			return;
 
-		if (_subState == WaitingFirstDown)
+		if (_substate == waiting_first_down)
 		{
 			auto fromPort = _ea->GetCPAt(location.d, SnapDistance);
 			if (fromPort != nullptr)
 			{
-				_firstDownLocation = location.pt;
-				auto newWire = make_unique<Wire>();
+				auto newWire = std::make_unique<Wire>();
 				newWire->SetP0 (fromPort);
 				newWire->SetP1 (fromPort->GetCPLocation());
-				newWire->SetDebugName ((string("Wire") + to_string(nextWireIndex++)).c_str());
 				_wire = newWire.get();
 				_project->insert_wire(_project->wires().size(), move(newWire));
-				_subState  = WaitingFirstUp;
+				_substate  = waiting_first_up;
 			}
-		}
-		else if (_subState == WaitingSecondDown)
-		{
-			assert(false); // not implemented
 		}
 	}
 
 	virtual void OnMouseMove (const MouseLocation& location) override final
 	{
-		if (_subState == WaitingFirstDown)
+		if (_substate == waiting_first_down)
 			return;
 
 		auto port = _ea->GetCPAt (location.d, SnapDistance);
 		if (port != nullptr)
 		{
-			if (port != get<ConnectedWireEnd>(_wire->GetP0()))
+			if (port != std::get<ConnectedWireEnd>(_wire->GetP0()))
 			{
 				auto alreadyConnectedWire = _project->GetWireConnectedToPort(port);
 				if (alreadyConnectedWire.first == nullptr)
@@ -75,24 +64,19 @@ public:
 			_wire->SetP1(location.w);
 		::InvalidateRect (_ea->hwnd(), nullptr, FALSE);
 
-		if (_subState == WaitingFirstUp)
-		{
-			RECT rc = { _firstDownLocation.x, _firstDownLocation.y, _firstDownLocation.x, _firstDownLocation.y };
-			InflateRect (&rc, GetSystemMetrics(SM_CXDRAG), GetSystemMetrics(SM_CYDRAG));
-			if (!PtInRect(&rc, location.pt))
-				_subState = WaitingSecondUp;
-		}
+		if (_substate == waiting_first_up)
+			_substate = waiting_second_up;
 	}
 
 	virtual void OnMouseUp (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
-		if (_subState == WaitingSecondUp)
+		if (_substate == waiting_second_up)
 		{
-			if (holds_alternative<ConnectedWireEnd>(_wire->GetP1()))
+			if (std::holds_alternative<ConnectedWireEnd>(_wire->GetP1()))
 			{
 				_project->SetChangedFlag(true);
 				_selection->select(_wire);
-				_subState = Done;
+				_substate = down;
 			}
 		}
 	}
@@ -107,27 +91,27 @@ public:
 				_wire = nullptr;
 			}
 
-			_subState = Done;
+			_substate = down;
 			::InvalidateRect (_ea->hwnd(), nullptr, FALSE);
 			return 0;
 		}
 
-		return nullopt;
+		return std::nullopt;
 	}
 
 	virtual void render (ID2D1DeviceContext* rt) override final
 	{
 		base::render(rt);
-		if ((_wire != nullptr) && holds_alternative<ConnectedWireEnd>(_wire->GetP1()))
-			_ea->RenderSnapRect (rt, get<ConnectedWireEnd>(_wire->GetP1())->GetCPLocation());
+		if ((_wire != nullptr) && std::holds_alternative<ConnectedWireEnd>(_wire->GetP1()))
+			_ea->RenderSnapRect (rt, std::get<ConnectedWireEnd>(_wire->GetP1())->GetCPLocation());
 	}
 
 	virtual bool Completed() const override final
 	{
-		return _subState == Done;
+		return _substate == down;
 	}
 
 	virtual HCURSOR GetCursor() const override final { return LoadCursor(nullptr, IDC_CROSS); }
 };
 
-std::unique_ptr<edit_state> CreateStateCreateWire (const EditStateDeps& deps)  { return unique_ptr<edit_state>(new CreateWireES(deps)); }
+std::unique_ptr<edit_state> create_state_create_wire (const EditStateDeps& deps)  { return std::unique_ptr<edit_state>(new create_wire_es(deps)); }

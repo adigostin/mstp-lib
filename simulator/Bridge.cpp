@@ -3,7 +3,7 @@
 #include "Port.h"
 #include "Wire.h"
 #include "stp_md5.h"
-#include "Simulator.h"
+#include "simulator.h"
 #include "win32/d2d_window.h"
 
 using namespace std;

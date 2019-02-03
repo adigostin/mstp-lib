@@ -13,25 +13,25 @@ class MoveWirePointES : public edit_state
 	Wire* const _wire;
 	size_t const _pointIndex;
 	WireEnd const _initialPoint;
-	POINT _firstDownLocation;
+	POINT _first_down_location;
 
-	enum SubState
+	enum substate
 	{
-		WaitingFirstDown,
-		WaitingFirstUp,
-		WaitingSecondDown,
-		WaitingSecondUp,
-		Done,
+		waiting_first_down,
+		waiting_first_up,
+		waiting_second_down,
+		waiting_second_up,
+		down,
 	};
 
-	SubState _subState = WaitingFirstDown;
+	substate _substate = waiting_first_down;
 
 public:
 	MoveWirePointES (const EditStateDeps& deps, Wire* wire, size_t pointIndex)
 		: base(deps), _wire(wire), _pointIndex(pointIndex), _initialPoint(wire->GetPoints()[pointIndex])
 	{ }
 
-	virtual bool Completed() const override final { return _subState == Done; }
+	virtual bool Completed() const override final { return _substate == down; }
 
 	virtual void OnMouseDown (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
@@ -40,10 +40,10 @@ public:
 		if (button != MouseButton::Left)
 			return;
 
-		if (_subState == WaitingFirstDown)
+		if (_substate == waiting_first_down)
 		{
-			_firstDownLocation = location.pt;
-			_subState  = WaitingFirstUp;
+			_first_down_location = location.pt;
+			_substate  = waiting_first_up;
 		}
 	}
 
@@ -61,21 +61,21 @@ public:
 		else
 			_wire->SetPoint(_pointIndex, location.w);
 
-		if (_subState == WaitingFirstUp)
+		if (_substate == waiting_first_up)
 		{
-			RECT rc = { _firstDownLocation.x, _firstDownLocation.y, _firstDownLocation.x, _firstDownLocation.y };
+			RECT rc = { _first_down_location.x, _first_down_location.y, _first_down_location.x, _first_down_location.y };
 			InflateRect (&rc, GetSystemMetrics(SM_CXDRAG), GetSystemMetrics(SM_CYDRAG));
 			if (!PtInRect(&rc, location.pt))
-				_subState = WaitingSecondUp;
+				_substate = waiting_second_up;
 		}
 	}
 
 	virtual void OnMouseUp (MouseButton button, UINT modifierKeysDown, const MouseLocation& location) override final
 	{
-		if (_subState == WaitingSecondUp)
+		if (_substate == waiting_second_up)
 		{
 			_project->SetChangedFlag(true);
-			_subState = Done;
+			_substate = down;
 		}
 	}
 
@@ -84,7 +84,7 @@ public:
 		if (virtualKey == VK_ESCAPE)
 		{
 			_wire->SetPoint(_pointIndex, _initialPoint);
-			_subState = Done;
+			_substate = down;
 			return 0;
 		}
 

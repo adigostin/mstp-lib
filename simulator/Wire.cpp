@@ -4,7 +4,7 @@
 #include "Bridge.h"
 #include "Port.h"
 #include "win32/utility_functions.h"
-#include "Simulator.h"
+#include "simulator.h"
 
 using namespace std;
 using namespace edge;

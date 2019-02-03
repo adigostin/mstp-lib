@@ -1,6 +1,6 @@
 
 #include "pch.h"
-#include "Simulator.h"
+#include "simulator.h"
 #include "Wire.h"
 #include "Bridge.h"
 #include "Port.h"

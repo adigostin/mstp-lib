@@ -28,26 +28,26 @@
     <ClCompile Include="simulator.cpp" />
     <ClCompile Include="Wire.cpp" />
     <ClCompile Include="Bridge.cpp" />
-    <ClCompile Include="edit_states\CreateBridgeES.cpp">
+    <ClCompile Include="edit_states\beginning_drag_es.cpp">
       <Filter>edit_states</Filter>
     </ClCompile>
-    <ClCompile Include="edit_states\MoveBridgesES.cpp">
+    <ClCompile Include="edit_states\create_bridge_es.cpp">
       <Filter>edit_states</Filter>
     </ClCompile>
     <ClCompile Include="log_window.cpp" />
     <ClCompile Include="Port.cpp" />
-    <ClCompile Include="edit_states\MoveWirePointES.cpp">
+    <ClCompile Include="edit_states\create_wire_es.cpp">
       <Filter>edit_states</Filter>
     </ClCompile>
-    <ClCompile Include="edit_states\CreateWireES.cpp">
+    <ClCompile Include="edit_states\move_bridges_es.cpp">
       <Filter>edit_states</Filter>
     </ClCompile>
     <ClCompile Include="mst_config_id_editor.cpp" />
     <ClCompile Include="Test.c" />
-    <ClCompile Include="edit_states\MovePortES.cpp">
+    <ClCompile Include="edit_states\move_port_es.cpp">
       <Filter>edit_states</Filter>
     </ClCompile>
-    <ClCompile Include="edit_states\BeginningDragES.cpp">
+    <ClCompile Include="edit_states\move_wire_point_es.cpp">
       <Filter>edit_states</Filter>
     </ClCompile>
     <ClCompile Include="BridgeTree.cpp" />

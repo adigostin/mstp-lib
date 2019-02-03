@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "Simulator.h"
+#include "simulator.h"
 #include "Resource.h"
 #include "Bridge.h"
 #include "Port.h"

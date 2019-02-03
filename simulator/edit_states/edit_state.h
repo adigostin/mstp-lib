@@ -1,5 +1,5 @@
 #pragma once
-#include "..\Simulator.h"
+#include "..\simulator.h"
 
 struct EditStateDeps
 {
@@ -36,7 +36,7 @@ public:
 std::unique_ptr<edit_state> CreateStateMoveBridges (const EditStateDeps& deps);
 std::unique_ptr<edit_state> CreateStateMovePort (const EditStateDeps& deps);
 std::unique_ptr<edit_state> CreateStateCreateBridge (const EditStateDeps& deps);
-std::unique_ptr<edit_state> CreateStateCreateWire (const EditStateDeps& deps);
+std::unique_ptr<edit_state> create_state_create_wire (const EditStateDeps& deps);
 std::unique_ptr<edit_state> CreateStateMoveWirePoint (const EditStateDeps& deps, Wire* wire, size_t pointIndex);
 std::unique_ptr<edit_state> CreateStateBeginningDrag (const EditStateDeps& deps,
 													 renderable_object* clickedObject,

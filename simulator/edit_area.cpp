@@ -1,6 +1,6 @@
 
 #include "pch.h"
-#include "Simulator.h"
+#include "simulator.h"
 #include "Resource.h"
 #include "edit_states/edit_state.h"
 #include "Bridge.h"
@@ -838,8 +838,8 @@ public:
 					auto alreadyConnectedWire = _project->GetWireConnectedToPort(port);
 					if (alreadyConnectedWire.first == nullptr)
 					{
-						stateMoveThreshold = CreateStateCreateWire(MakeEditStateDeps());
-						stateButtonUp = CreateStateCreateWire(MakeEditStateDeps());
+						stateMoveThreshold = create_state_create_wire(MakeEditStateDeps());
+						stateButtonUp = create_state_create_wire(MakeEditStateDeps());
 					}
 				}
 			}
