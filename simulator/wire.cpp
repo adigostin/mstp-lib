@@ -155,15 +155,13 @@ com_ptr<IXMLDOMElement> wire::SerializeEnd (project_i* project, IXMLDOMDocument*
 		hr = element->setAttribute (BridgeIndexString, _variant_t(std::to_string(bridgeIndex).c_str())); assert(SUCCEEDED(hr));
 		hr = element->setAttribute (PortIndexString, _variant_t(std::to_string(port->GetPortIndex()).c_str())); assert(SUCCEEDED(hr));
 	}
-	else if (std::holds_alternative<loose_wire_end>(end))
+	else //if (std::holds_alternative<loose_wire_end>(end))
 	{
 		auto& location = std::get<loose_wire_end>(end);
 		hr = doc->createElement (LooseEndString, &element); assert(SUCCEEDED(hr));
 		hr = element->setAttribute (XString, _variant_t(location.x)); assert(SUCCEEDED(hr));
 		hr = element->setAttribute (YString, _variant_t(location.y)); assert(SUCCEEDED(hr));
 	}
-	else
-		assert(false); // not implemented
 
 	return element;
 }

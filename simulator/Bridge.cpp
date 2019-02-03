@@ -843,7 +843,6 @@ uint32_t Bridge::GetForwardDelay() const
 }
 
 #pragma region properties
-
 const mac_address_property Bridge::bridge_address_p {
 	"Bridge Address",
 	static_cast<mac_address_property::getter_t>(&bridge_address),
@@ -949,6 +948,7 @@ const edge::property* const Bridge::_properties[] = {
 };
 
 const edge::type_t Bridge::_type = { "Bridge", &base::_type, _properties };
+#pragma endregion
 
 #pragma region STP Callbacks
 const STP_CALLBACKS Bridge::StpCallbacks =
