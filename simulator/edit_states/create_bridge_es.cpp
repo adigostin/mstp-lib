@@ -24,7 +24,7 @@ public:
 			unsigned int portCount = 4;
 			unsigned int mstiCount = 4;
 			size_t macAddressesToReserve = std::max ((size_t) 1 + portCount, (size_t) 16);
-			auto macAddress = _pw->GetProject()->AllocMacAddressRange(macAddressesToReserve);
+			auto macAddress = _project->AllocMacAddressRange(macAddressesToReserve);
 			_bridge.reset (new Bridge (portCount, mstiCount, macAddress));
 		}
 

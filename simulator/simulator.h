@@ -7,7 +7,7 @@
 
 struct simulator_app_i;
 struct project_i;
-struct IProjectWindow;
+struct project_window_i;
 struct selection_i;
 struct log_window_i;
 class Bridge;
@@ -100,7 +100,7 @@ struct __declspec(novtable) edit_area_i : virtual edge::win32_window_i
 	virtual D2D1::Matrix3x2F GetZoomTransform() const = 0;
 };
 using edit_area_factory_t = std::unique_ptr<edit_area_i>(*const)(simulator_app_i* app,
-																 IProjectWindow* pw,
+																 project_window_i* pw,
 																 project_i* project,
 																 selection_i* selection,
 																 HWND hWndParent,
@@ -111,12 +111,12 @@ extern const edit_area_factory_t edit_area_factory;
 
 // ============================================================================
 
-struct __declspec(novtable) IProjectWindow : public virtual edge::win32_window_i
+struct __declspec(novtable) project_window_i : public virtual edge::win32_window_i
 {
-	struct selected_vlan_number_changed_e : public edge::event<selected_vlan_number_changed_e, IProjectWindow*, uint32_t> { };
+	struct selected_vlan_number_changed_e : public edge::event<selected_vlan_number_changed_e, project_window_i*, uint32_t> { };
 
-	virtual project_i* GetProject() const = 0;
-	virtual edit_area_i* GetEditArea() const = 0;
+	virtual project_i* project() const = 0;
+	virtual edit_area_i* edit_window() const = 0;
 	virtual void select_vlan (uint32_t vlanNumber) = 0;
 	virtual uint32_t selected_vlan_number() const = 0;
 	virtual selected_vlan_number_changed_e::subscriber selected_vlan_number_changed() = 0;
@@ -136,7 +136,7 @@ struct project_window_create_params
 	IDWriteFactory*       dwrite_factory;
 };
 
-using ProjectWindowFactory = std::unique_ptr<IProjectWindow>(*const)(const project_window_create_params& create_params);
+using ProjectWindowFactory = std::unique_ptr<project_window_i>(*const)(const project_window_create_params& create_params);
 extern const ProjectWindowFactory projectWindowFactory;
 
 // ============================================================================
@@ -198,7 +198,7 @@ struct __declspec(novtable) vlan_window_i : virtual edge::win32_window_i
 };
 using vlan_window_factory_t = std::unique_ptr<vlan_window_i>(*const)(
 	simulator_app_i* app,
-	IProjectWindow* pw,
+	project_window_i* pw,
 	const std::shared_ptr<project_i>& project,
 	selection_i* selection,
 	HWND hWndParent,
@@ -211,14 +211,14 @@ extern const vlan_window_factory_t vlan_window_factory;
 
 struct simulator_app_i
 {
-	struct project_window_added_e    : edge::event<project_window_added_e, IProjectWindow*> { };
-	struct project_window_removing_e : edge::event<project_window_removing_e, IProjectWindow*> { };
-	struct project_window_removed_e  : edge::event<project_window_removed_e, IProjectWindow*> { };
+	struct project_window_added_e    : edge::event<project_window_added_e, project_window_i*> { };
+	struct project_window_removing_e : edge::event<project_window_removing_e, project_window_i*> { };
+	struct project_window_removed_e  : edge::event<project_window_removed_e, project_window_i*> { };
 
 	virtual HINSTANCE GetHInstance() const = 0;
 	virtual const wchar_t* GetRegKeyPath() const = 0;
-	virtual void add_project_window (std::unique_ptr<IProjectWindow>&& pw) = 0;
-	virtual const std::vector<std::unique_ptr<IProjectWindow>>& project_windows() const = 0;
+	virtual void add_project_window (std::unique_ptr<project_window_i>&& pw) = 0;
+	virtual const std::vector<std::unique_ptr<project_window_i>>& project_windows() const = 0;
 	virtual const char* app_name() const = 0;
 	virtual const char* app_version_string() const = 0;
 	virtual project_window_added_e::subscriber project_window_added() = 0;

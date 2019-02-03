@@ -51,7 +51,7 @@ public:
 	{
 		base::process_mouse_move(location);
 
-		auto port = _pw->GetEditArea()->GetCPAt (location.d, SnapDistance);
+		auto port = _ea->GetCPAt (location.d, SnapDistance);
 		if (port != nullptr)
 		{
 			auto alreadyConnectedWire = _project->GetWireConnectedToPort(port);
@@ -95,7 +95,7 @@ public:
 	{
 		auto& point = _wire->GetPoints()[_pointIndex];
 		if (holds_alternative<ConnectedWireEnd>(point))
-			_pw->GetEditArea()->RenderSnapRect (rt, get<ConnectedWireEnd>(point)->GetCPLocation());
+			_pw->edit_window()->RenderSnapRect (rt, get<ConnectedWireEnd>(point)->GetCPLocation());
 	}
 
 	virtual HCURSOR cursor() const override final { return LoadCursor(nullptr, IDC_CROSS); }

@@ -3,7 +3,7 @@
 
 struct edit_state_deps
 {
-	IProjectWindow* pw;
+	project_window_i* pw;
 	edit_area_i*    ea;
 	project_i*      project;
 	selection_i*    selection;
@@ -12,7 +12,7 @@ struct edit_state_deps
 class edit_state abstract
 {
 protected:
-	IProjectWindow* const _pw;
+	project_window_i* const _pw;
 	edit_area_i*    const _ea;
 	project_i*      const _project;
 	selection_i*    const _selection;

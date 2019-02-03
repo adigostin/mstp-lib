@@ -33,10 +33,10 @@ class edit_area : public zoomable_window, public edit_area_i
 
 	using HTResult = renderable_object::HTResult;
 
-	simulator_app_i* const _app;
-	IProjectWindow*  const _pw;
-	project_i*       const _project;
-	selection_i*     const _selection;
+	simulator_app_i*  const _app;
+	project_window_i* const _pw;
+	project_i*        const _project;
+	selection_i*      const _selection;
 	com_ptr<IDWriteTextFormat> _legendFont;
 	struct drawing_resources _drawing_resources;
 	unique_ptr<edit_state> _state;
@@ -44,7 +44,7 @@ class edit_area : public zoomable_window, public edit_area_i
 
 public:
 	edit_area (simulator_app_i* app,
-			  IProjectWindow* pw,
+			  project_window_i* pw,
 			  project_i* project,
 			  selection_i* selection,
 			  HWND hWndParent,
@@ -84,7 +84,7 @@ public:
 		_selection->changed().remove_handler (&OnSelectionChanged, this);
 	}
 
-	static void on_selected_vlan_changed (void* callbackArg, IProjectWindow* pw, unsigned int vlanNumber)
+	static void on_selected_vlan_changed (void* callbackArg, project_window_i* pw, unsigned int vlanNumber)
 	{
 		auto area = static_cast<edit_area*>(callbackArg);
 		area->invalidate();

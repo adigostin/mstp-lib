@@ -8,7 +8,7 @@
 class vlan_window : public virtual vlan_window_i, public edge::property_editor_parent_i
 {
 	simulator_app_i*  const _app;
-	IProjectWindow* const _pw;
+	project_window_i* const _pw;
 	std::shared_ptr<project_i> const _project;
 	selection_i*    const _selection;
 	ID3D11DeviceContext1* const _d3d_dc;
@@ -17,7 +17,7 @@ class vlan_window : public virtual vlan_window_i, public edge::property_editor_p
 
 public:
 	vlan_window (simulator_app_i* app,
-				IProjectWindow* pw,
+				project_window_i* pw,
 				const std::shared_ptr<project_i>& project,
 				selection_i* selection,
 				HWND hWndParent,
@@ -207,7 +207,7 @@ public:
 		static_cast<vlan_window*>(callbackArg)->LoadSelectedTreeEdit();
 	}
 
-	static void on_selected_vlan_changed (void* callbackArg, IProjectWindow* pw, unsigned int vlanNumber)
+	static void on_selected_vlan_changed (void* callbackArg, project_window_i* pw, unsigned int vlanNumber)
 	{
 		static_cast<vlan_window*>(callbackArg)->LoadSelectedTreeEdit();
 	}
@@ -224,7 +224,7 @@ public:
 		auto vlanNumber = (unsigned int) (index + 1);
 		auto& pws = _app->project_windows();
 		auto it = find_if (pws.begin(), pws.end(), [this, vlanNumber](auto& pw)
-			{ return (pw->GetProject() == _pw->GetProject()) && (pw->selected_vlan_number() == vlanNumber); });
+			{ return (pw->project() == _pw->project()) && (pw->selected_vlan_number() == vlanNumber); });
 		if (it != pws.end())
 		{
 			::BringWindowToTop (it->get()->hwnd());

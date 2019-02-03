@@ -89,7 +89,7 @@ class SimulatorApp : public event_manager, public simulator_app_i
 {
 	HINSTANCE const _hInstance;
 	wstring _regKeyPath;
-	vector<std::unique_ptr<IProjectWindow>> _projectWindows;
+	vector<std::unique_ptr<project_window_i>> _projectWindows;
 
 public:
 	SimulatorApp (HINSTANCE hInstance)
@@ -102,7 +102,7 @@ public:
 
 	virtual HINSTANCE GetHInstance() const override final { return _hInstance; }
 
-	virtual void add_project_window (std::unique_ptr<IProjectWindow>&& pw) override final
+	virtual void add_project_window (std::unique_ptr<project_window_i>&& pw) override final
 	{
 		pw->destroying().add_handler(&OnProjectWindowDestroying, this);
 		_projectWindows.push_back(std::move(pw));
@@ -111,7 +111,7 @@ public:
 
 	static void OnProjectWindowDestroying (void* callbackArg, edge::win32_window_i* w)
 	{
-		auto pw = dynamic_cast<IProjectWindow*>(w);
+		auto pw = dynamic_cast<project_window_i*>(w);
 		auto app = static_cast<SimulatorApp*>(callbackArg);
 
 		pw->destroying().remove_handler (&OnProjectWindowDestroying, app);
@@ -126,7 +126,7 @@ public:
 			PostQuitMessage(0);
 	}
 
-	virtual const std::vector<std::unique_ptr<IProjectWindow>>& project_windows() const override final { return _projectWindows; }
+	virtual const std::vector<std::unique_ptr<project_window_i>>& project_windows() const override final { return _projectWindows; }
 
 	virtual const wchar_t* GetRegKeyPath() const override final { return _regKeyPath.c_str(); }
 
