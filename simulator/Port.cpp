@@ -455,6 +455,7 @@ unsigned int Port::GetExternalPortPathCost() const
 const bool_property Port::AutoEdge
 (
 	"AutoEdge",
+	nullptr,
 	static_cast<bool_property::getter_t>(&GetAutoEdge),
 	static_cast<bool_property::setter_t>(&SetAutoEdge),
 	true
@@ -463,6 +464,7 @@ const bool_property Port::AutoEdge
 const bool_property Port::AdminEdge
 (
 	"AdminEdge",
+	nullptr,
 	static_cast<bool_property::getter_t>(&GetAdminEdge),
 	static_cast<bool_property::setter_t>(&SetAdminEdge),
 	false
@@ -470,25 +472,29 @@ const bool_property Port::AdminEdge
 
 const bool_property Port::MacOperational (
 	"MAC_Operational",
+	nullptr,
 	static_cast<bool_property::getter_t>(&GetMacOperational),
 	nullptr,
 	false);
 
 const uint32_property Port::DetectedPortPathCost (
 	"DetectedPortPathCost",
+	nullptr,
 	static_cast<uint32_property::getter_t>(&GetDetectedPortPathCost),
 	nullptr,
 	0);
 
 const uint32_property Port::AdminExternalPortPathCost (
 	"AdminExternalPortPathCost",
+	nullptr,
 	static_cast<uint32_property::getter_t>(&GetAdminExternalPortPathCost),
 	static_cast<uint32_property::setter_t>(&SetAdminExternalPortPathCost),
 	0);
 
 const uint32_property Port::ExternalPortPathCost (
 	"ExternalPortPathCost",
-	static_cast<uint32_property::getter_t>(&GetExternalPortPathCost),
+	nullptr,
+  	static_cast<uint32_property::getter_t>(&GetExternalPortPathCost),
 	nullptr,
 	0);
 

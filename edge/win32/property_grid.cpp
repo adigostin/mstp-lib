@@ -12,6 +12,8 @@ static constexpr UINT WM_WORK        = WM_APP + 2;
 
 static constexpr float indent_width = 15;
 static constexpr float line_thickness_not_aligned = 0.6f;
+static constexpr float separator_height = 4;
+static constexpr float description_min_height = 20;
 
 namespace edge
 {
@@ -31,8 +33,10 @@ class edge::property_grid : d2d_window, public virtual property_grid_i
 	float _name_column_factor = 0.5f;
 	float _pixel_width;
 	float _line_thickness;
+	float _description_height = 120;
 	std::vector<std::unique_ptr<root_item>> _root_items;
 	pgitem* _selected_item = nullptr;
+	std::optional<float> _description_resize_offset;
 
 	std::queue<std::function<void()>> _workQueue;
 
@@ -169,6 +173,12 @@ public:
 
 		if (msg == WM_SETCURSOR)
 		{
+			if (_description_resize_offset)
+			{
+				SetCursor (LoadCursor(nullptr, IDC_SIZENS));
+				return TRUE;
+			}
+
 			if (((HWND) wParam == hwnd) && (LOWORD (lParam) == HTCLIENT))
 			{
 				// Let's check the result because GetCursorPos fails when the input desktop is not the current desktop
@@ -201,6 +211,12 @@ public:
 	void process_wm_setcursor (POINT pt, D2D1_POINT_2F dip)
 	{
 		HCURSOR cursor = nullptr;
+
+		if ((_description_height > separator_height) && point_in_rect(description_separator_rect(), dip))
+		{
+			SetCursor(LoadCursor(nullptr, IDC_SIZENS));
+			return;
+		}
 
 		auto item = item_at(dip);
 		if (item.first != nullptr)
@@ -333,6 +349,45 @@ public:
 			D2D1_POINT_2F p1 = { client_width(), layout.y_bottom + _line_thickness / 2 };
 			dc->DrawLine (p0, p1, rc.disabled_fore_brush, _line_thickness);
 		});
+
+		if (_description_height > separator_height)
+		{
+			auto separator_color = interpolate(GetD2DSystemColor(COLOR_WINDOW), GetD2DSystemColor (COLOR_WINDOWTEXT), 80);
+			com_ptr<ID2D1SolidColorBrush> brush;
+			dc->CreateSolidColorBrush (separator_color, &brush);
+			dc->FillRectangle(description_separator_rect(), brush);
+			if (auto value_item = dynamic_cast<value_pgitem*>(_selected_item))
+			{
+				auto desc_rect = description_rect();
+				float lr_padding = 3;
+				std::stringstream ss;
+				ss << value_item->_prop->_name << " (" << value_item->_prop->type_name() << ")";
+				auto title_layout = text_layout::create(dwrite_factory(), _boldTextFormat, ss.str(), client_width() - 2 * lr_padding);
+				dc->DrawTextLayout({ desc_rect.left + lr_padding, desc_rect.top }, title_layout.layout, rc.fore_brush);
+
+				if (value_item->_prop->_description)
+				{
+					auto desc_layout = text_layout::create(dwrite_factory(), _textFormat, value_item->_prop->_description, client_width() - 2 * lr_padding);
+					dc->DrawTextLayout({ desc_rect.left + lr_padding, desc_rect.top + title_layout.metrics.height * 1.3f }, desc_layout.layout, rc.fore_brush);
+				}
+			}
+		}
+	}
+
+	D2D1_RECT_F description_rect() const
+	{
+		assert(_description_height > separator_height);
+		D2D1_RECT_F rect = { 0, client_height() - _description_height + separator_height, client_width(), client_height() };
+		rect = align_to_pixel (rect, dpi());
+		return rect;
+	}
+
+	D2D1_RECT_F description_separator_rect() const
+	{
+		assert(_description_height > separator_height);
+		D2D1_RECT_F separator = { 0, client_height() - _description_height, client_width(), client_height() - _description_height + separator_height };
+		separator = align_to_pixel (separator, dpi());
+		return separator;
 	}
 
 	float value_column_x() const
@@ -366,10 +421,15 @@ public:
 		invalidate();
 	}
 
-	property_changed_e::subscriber property_changed() override
+	virtual void set_description_height (float height) override
 	{
-		return property_changed_e::subscriber(this);
+		_description_height = height;
+		invalidate();
 	}
+
+	virtual property_changed_e::subscriber property_changed() override { return property_changed_e::subscriber(this); }
+
+	virtual description_height_changed_e::subscriber description_height_changed() override { return description_height_changed_e::subscriber(this); }
 
 	virtual text_editor_i* show_text_editor (const D2D1_RECT_F& rect, float lr_padding, std::string_view str) override final
 	{
@@ -525,12 +585,20 @@ public:
 	{
 		::SetFocus (hwnd());
 
+		auto ds_rect = description_separator_rect();
+		if (point_in_rect(ds_rect, dip))
+		{
+			discard_editor();
+			_description_resize_offset = dip.y - ds_rect.top;
+			return;
+		}
+
 		if (_text_editor && point_in_rect(_text_editor->rect(), dip))
 			return _text_editor->process_mouse_button_down(button, modifier_keys, pixel, dip);
 
 		auto clicked_item = item_at(dip);
 
-		auto new_selected_item = clicked_item.first->selectable() ? clicked_item.first : nullptr;
+		auto new_selected_item = (clicked_item.first && clicked_item.first->selectable()) ? clicked_item.first : nullptr;
 		if (_selected_item != new_selected_item)
 		{
 			discard_editor();
@@ -544,6 +612,13 @@ public:
 
 	void process_mouse_button_up (mouse_button button, UINT modifier_keys, POINT pixel, D2D1_POINT_2F dip)
 	{
+		if (_description_resize_offset)
+		{
+			_description_resize_offset.reset();
+			event_invoker<description_height_changed_e>()(_description_height);
+			return;
+		}
+
 		if (_text_editor && point_in_rect(_text_editor->rect(), dip))
 			return _text_editor->process_mouse_button_up (button, modifier_keys, pixel, dip);
 
@@ -554,6 +629,14 @@ public:
 
 	void process_mouse_move (UINT modifier_keys, POINT pixel, D2D1_POINT_2F dip)
 	{
+		if (_description_resize_offset)
+		{
+			_description_height = client_height() - dip.y + _description_resize_offset.value();
+			_description_height = std::max (description_min_height, _description_height);
+			invalidate();
+			return;
+		}
+
 		if (_text_editor && point_in_rect(_text_editor->rect(), dip))
 			return _text_editor->process_mouse_move (modifier_keys, pixel, dip);
 	}

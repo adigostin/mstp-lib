@@ -72,6 +72,8 @@ const char port_priority_type_name[] = "PortPriority";
 const port_priority_property PortTree::priority_p
 (
 	"PortPriority",
+	"The value of the priority field which is contained in the first (in network byte order) octet of the (2 octet long) Port ID. "
+		"The other octet of the Port ID is given by the value of dot1dStpPort.",
 	static_cast<port_priority_property::getter_t>(&priority),
 	static_cast<port_priority_property::setter_t>(&set_priority),
 	0x80

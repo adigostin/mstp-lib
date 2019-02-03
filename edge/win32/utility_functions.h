@@ -31,4 +31,6 @@ namespace edge
 	std::string get_window_text (HWND hwnd);
 	std::array<D2D1_POINT_2F, 4> corners (const D2D1_RECT_F& rect);
 	D2D1_RECT_F polygon_bounds (const std::array<D2D1_POINT_2F, 4>& points);
+	D2D1_COLOR_F interpolate (const D2D1_COLOR_F& first, const D2D1_COLOR_F& second, uint32_t percent_first);
+	D2D1_RECT_F align_to_pixel (const D2D1_RECT_F& rect, uint32_t dpi);
 }

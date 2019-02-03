@@ -11,6 +11,7 @@ namespace edge
 		virtual ~property_grid_i() { }
 		virtual void clear() = 0;
 		virtual void add_section (const char* heading, object* const* objects, size_t size) = 0;
+		virtual void set_description_height (float height) = 0;
 
 		struct property_changed_args
 		{
@@ -21,6 +22,9 @@ namespace edge
 
 		struct property_changed_e : event<property_changed_e, property_changed_args&&> { };
 		virtual property_changed_e::subscriber property_changed() = 0;
+
+		struct description_height_changed_e : event<description_height_changed_e, float> { };
+		virtual description_height_changed_e::subscriber description_height_changed() = 0;
 
 		// TODO: make these internal to property_grid.cpp / property_grid_items.cpp
 		virtual IDWriteFactory* dwrite_factory() const = 0;

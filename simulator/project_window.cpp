@@ -17,6 +17,7 @@ static constexpr wchar_t RegValueNameWindowRight[] = L"WindowRight";
 static constexpr wchar_t RegValueNameWindowBottom[] = L"WindowBottom";
 static constexpr wchar_t RegValueNamePropertiesWindowWidth[] = L"PropertiesWindowWidth";
 static constexpr wchar_t RegValueNameLogWindowWidth[] = L"LogWindowWidth";
+static constexpr wchar_t RegValueNamePGDescHeight[] = L"PropertyGridDescriptionHeight";
 
 static COMDLG_FILTERSPEC const ProjectFileDialogFileTypes[] =
 {
@@ -121,6 +122,8 @@ public:
 		_app->project_window_removed().remove_handler (&OnProjectWindowRemoved, this);
 		_app->project_window_added().remove_handler (&OnProjectWindowAdded, this);
 		_project->GetChangedFlagChangedEvent().remove_handler (&OnProjectChangedFlagChanged, this);
+		if (_pg)
+			destroy_property_grid();
 	}
 
 	LONG splitter_width_pixels() const
@@ -140,14 +143,25 @@ public:
 	void create_property_grid()
 	{
 		_pg = property_grid_factory (_app->GetHInstance(), WS_EX_CLIENTEDGE, pg_restricted_rect(), hwnd(), _d3d_dc, _dwrite_factory);
+		float desc_height;
+		if (TryReadRegFloat(RegValueNamePGDescHeight, desc_height))
+			_pg->set_description_height(desc_height);
 		set_selection_to_pg();
 		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
+		_pg->description_height_changed().add_handler(&on_pg_desc_height_changed, this);
 	}
 
 	void destroy_property_grid()
 	{
+		_pg->description_height_changed().remove_handler(&on_pg_desc_height_changed, this);
 		_pg = nullptr;
 		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, false);
+	}
+
+	static void on_pg_desc_height_changed (void* arg, float height)
+	{
+		auto pw = static_cast<project_window*>(arg);
+		pw->WriteRegFloat(RegValueNamePGDescHeight, height);
 	}
 
 	RECT log_restricted_rect() const

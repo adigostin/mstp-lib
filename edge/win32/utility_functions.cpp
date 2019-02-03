@@ -138,4 +138,25 @@ namespace edge
 
 		return r;
 	}
+
+	D2D1_COLOR_F interpolate (const D2D1_COLOR_F& first, const D2D1_COLOR_F& second, uint32_t percent_first)
+	{
+		assert (percent_first <= 100);
+		float r = (first.r * percent_first + second.r * (100 - percent_first)) / 100;
+		float g = (first.g * percent_first + second.g * (100 - percent_first)) / 100;
+		float b = (first.b * percent_first + second.b * (100 - percent_first)) / 100;
+		float a = (first.a * percent_first + second.a * (100 - percent_first)) / 100;
+		return { r, g, b, a };
+	}
+
+	D2D1_RECT_F align_to_pixel (const D2D1_RECT_F& rect, uint32_t dpi)
+	{
+		float pixel_width = 96.0f / dpi;
+		D2D1_RECT_F result;
+		result.left   = round(rect.left   / pixel_width) * pixel_width;
+		result.top    = round(rect.top    / pixel_width) * pixel_width;
+		result.right  = round(rect.right  / pixel_width) * pixel_width;
+		result.bottom = round(rect.bottom / pixel_width) * pixel_width;
+		return result;
+	}
 }
