@@ -1,7 +1,7 @@
 
 #include "pch.h"
 #include "simulator.h"
-#include "Resource.h"
+#include "resource.h"
 #include "edit_states/edit_state.h"
 #include "Bridge.h"
 #include "Port.h"

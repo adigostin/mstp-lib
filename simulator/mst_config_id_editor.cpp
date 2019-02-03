@@ -1,7 +1,7 @@
 
 #include "pch.h"
 #include "simulator.h"
-#include "Resource.h"
+#include "resource.h"
 #include "Bridge.h"
 #include "win32/utility_functions.h"
 #include "property_descriptor.h"

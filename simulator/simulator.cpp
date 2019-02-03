@@ -3,7 +3,7 @@
 #include "simulator.h"
 #include "Bridge.h"
 #include "Wire.h"
-#include "Resource.h"
+#include "resource.h"
 
 #pragma comment (lib, "d2d1.lib")
 #pragma comment (lib, "dwrite.lib")

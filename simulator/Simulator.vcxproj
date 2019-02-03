@@ -211,7 +211,7 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="Port.h" />
     <ClInclude Include="PortTree.h" />
-    <ClInclude Include="Resource.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="simulator.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Wire.h" />
