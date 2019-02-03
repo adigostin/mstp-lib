@@ -368,7 +368,7 @@ public:
 				if (value_item->_prop->_description)
 				{
 					auto desc_layout = text_layout::create(dwrite_factory(), _textFormat, value_item->_prop->_description, client_width() - 2 * lr_padding);
-					dc->DrawTextLayout({ desc_rect.left + lr_padding, desc_rect.top + title_layout.metrics.height * 1.3f }, desc_layout.layout, rc.fore_brush);
+					dc->DrawTextLayout({ desc_rect.left + lr_padding, desc_rect.top + title_layout.metrics.height }, desc_layout.layout, rc.fore_brush);
 				}
 			}
 		}
@@ -585,12 +585,18 @@ public:
 	{
 		::SetFocus (hwnd());
 
-		auto ds_rect = description_separator_rect();
-		if (point_in_rect(ds_rect, dip))
+		if (_description_height > separator_height)
 		{
-			discard_editor();
-			_description_resize_offset = dip.y - ds_rect.top;
-			return;
+			auto ds_rect = description_separator_rect();
+			if (point_in_rect(ds_rect, dip))
+			{
+				discard_editor();
+				_description_resize_offset = dip.y - ds_rect.top;
+				return;
+			}
+
+			if (dip.y >= ds_rect.bottom)
+				return;
 		}
 
 		if (_text_editor && point_in_rect(_text_editor->rect(), dip))

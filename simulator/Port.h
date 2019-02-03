@@ -77,11 +77,11 @@ public:
 	bool HitTestInnerOuter (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) const;
 	bool HitTestCP (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) const;
 
-	bool GetAutoEdge() const;
-	void SetAutoEdge (bool autoEdge);
+	bool auto_edge() const;
+	void set_auto_edge (bool autoEdge);
 
-	bool GetAdminEdge() const;
-	void SetAdminEdge (bool adminEdge);
+	bool admin_edge() const;
+	void set_admin_edge (bool adminEdge);
 
 	unsigned int GetDetectedPortPathCost() const;
 	unsigned int GetAdminExternalPortPathCost() const;
@@ -89,8 +89,8 @@ public:
 	unsigned int GetExternalPortPathCost() const;
 
 private:
-	static const edge::bool_property AutoEdge;
-	static const edge::bool_property AdminEdge;
+	static const edge::bool_property auto_edge_property;
+	static const edge::bool_property admin_edge_property;
 	static const edge::bool_property MacOperational;
 	static const edge::uint32_property DetectedPortPathCost;
 	static const edge::uint32_property AdminExternalPortPathCost;

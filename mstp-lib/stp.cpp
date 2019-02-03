@@ -615,26 +615,28 @@ static unsigned int GetInstanceCountForAllStateMachines (STP_BRIDGE* bridge)
 
 // ============================================================================
 
-void STP_SetPortAdminEdge (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int newAdminEdge, unsigned int timestamp)
+void STP_SetPortAdminEdgeFromSnmpTruthValue (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int adminEdge, unsigned int timestamp)
 {
-	bridge->ports [portIndex]->AdminEdge = newAdminEdge;
+	assert (adminEdge == 1 || adminEdge == 2);
+	bridge->ports [portIndex]->AdminEdge = (adminEdge == 1);
 }
 
-unsigned int STP_GetPortAdminEdge (const STP_BRIDGE* bridge, unsigned int portIndex)
+unsigned int STP_GetPortAdminEdgeToSnmpTruthValue (const STP_BRIDGE* bridge, unsigned int portIndex)
 {
-	return bridge->ports [portIndex]->AdminEdge;
+	return bridge->ports [portIndex]->AdminEdge ? 1 : 2;
 }
 
 // ============================================================================
 
-void STP_SetPortAutoEdge (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int newAutoEdge, unsigned int timestamp)
+void STP_SetPortAutoEdgeFromSnmpTruthValue (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int autoEdge, unsigned int timestamp)
 {
-	bridge->ports [portIndex]->AutoEdge = newAutoEdge;
+	assert (autoEdge == 1 || autoEdge == 2);
+	bridge->ports [portIndex]->AutoEdge = (autoEdge == 1);
 }
 
-unsigned int STP_GetPortAutoEdge (const STP_BRIDGE* bridge, unsigned int portIndex)
+unsigned int STP_GetPortAutoEdgeToSnmpTruthValue (const STP_BRIDGE* bridge, unsigned int portIndex)
 {
-	return bridge->ports [portIndex]->AutoEdge;
+	return bridge->ports [portIndex]->AutoEdge ? 1 : 2;
 }
 
 // ============================================================================

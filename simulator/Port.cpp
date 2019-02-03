@@ -332,24 +332,26 @@ bool Port::GetMacOperational() const
 	return _missedLinkPulseCounter < MissedLinkPulseCounterMax;
 }
 
-bool Port::GetAutoEdge() const
+bool Port::auto_edge() const
 {
-	return (bool) STP_GetPortAutoEdge (_bridge->stp_bridge(), (unsigned int) _portIndex);
+	return STP_GetPortAutoEdgeToSnmpTruthValue (_bridge->stp_bridge(), _portIndex) == 1;
 }
 
-void Port::SetAutoEdge (bool autoEdge)
+void Port::set_auto_edge (bool autoEdge)
 {
-	STP_SetPortAutoEdge (_bridge->stp_bridge(), (unsigned int) _portIndex, autoEdge, (unsigned int) GetMessageTime());
+	unsigned int snmp_truth_value = autoEdge ? 1 : 2;
+	STP_SetPortAutoEdgeFromSnmpTruthValue (_bridge->stp_bridge(), _portIndex, snmp_truth_value, (unsigned int) GetMessageTime());
 }
 
-bool Port::GetAdminEdge() const
+bool Port::admin_edge() const
 {
-	return (bool) STP_GetPortAdminEdge (_bridge->stp_bridge(), (unsigned int) _portIndex);
+	return STP_GetPortAdminEdgeToSnmpTruthValue (_bridge->stp_bridge(), _portIndex) == 1;
 }
 
-void Port::SetAdminEdge (bool adminEdge)
+void Port::set_admin_edge (bool adminEdge)
 {
-	STP_SetPortAdminEdge (_bridge->stp_bridge(), (unsigned int) _portIndex, adminEdge, (unsigned int) GetMessageTime());
+	unsigned int snmp_truth_value = adminEdge ? 1 : 2;
+	STP_SetPortAdminEdgeFromSnmpTruthValue (_bridge->stp_bridge(), _portIndex, snmp_truth_value, (unsigned int) GetMessageTime());
 }
 
 static const _bstr_t PortString = "Port";
@@ -365,8 +367,8 @@ com_ptr<IXMLDOMElement> Port::Serialize (IXMLDOMDocument3* doc) const
 	auto hr = doc->createElement (PortString, &portElement); assert(SUCCEEDED(hr));
 	portElement->setAttribute (SideString, _variant_t (enum_converters<side, SideNVPs>::enum_to_string(_side).c_str()));
 	portElement->setAttribute (OffsetString, _variant_t (_offset));
-	portElement->setAttribute (AutoEdgeString, _variant_t (GetAutoEdge() ? L"True" : L"False"));
-	portElement->setAttribute (AdminEdgeString, _variant_t (GetAdminEdge() ? L"True" : L"False"));
+	portElement->setAttribute (AutoEdgeString, _variant_t (auto_edge() ? L"True" : L"False"));
+	portElement->setAttribute (AdminEdgeString, _variant_t (admin_edge() ? L"True" : L"False"));
 
 	com_ptr<IXMLDOMElement> portTreesElement;
 	hr = doc->createElement (PortTreesString, &portTreesElement); assert(SUCCEEDED(hr));
@@ -403,13 +405,13 @@ HRESULT Port::Deserialize (IXMLDOMElement* portElement)
 	if (FAILED(hr))
 		return hr;
 	if (value.vt == VT_BSTR)
-		SetAutoEdge (_wcsicmp (value.bstrVal, L"True") == 0);
+		set_auto_edge (_wcsicmp (value.bstrVal, L"True") == 0);
 
 	hr = portElement->getAttribute (AdminEdgeString, &value);
 	if (FAILED(hr))
 		return hr;
 	if (value.vt == VT_BSTR)
-		SetAdminEdge (_wcsicmp (value.bstrVal, L"True") == 0);
+		set_admin_edge (_wcsicmp (value.bstrVal, L"True") == 0);
 
 	com_ptr<IXMLDOMNode> portTreesNode;
 	hr = portElement->selectSingleNode(PortTreesString, &portTreesNode);
@@ -452,21 +454,30 @@ unsigned int Port::GetExternalPortPathCost() const
 	return STP_GetPortPathCost (_bridge->stp_bridge(), _portIndex, treeIndex);
 }
 
-const bool_property Port::AutoEdge
+const bool_property Port::auto_edge_property
 (
 	"AutoEdge",
-	nullptr,
-	static_cast<bool_property::getter_t>(&GetAutoEdge),
-	static_cast<bool_property::setter_t>(&SetAutoEdge),
+	"The administrative value of the Auto Edge Port parameter. "
+		"A value of true(1) indicates if the Bridge detection state machine (BDM, 13.31) "
+		"is to detect other Bridges attached to the LAN, and set ieee8021SpanningTreeRstpPortOperEdgePort automatically. "
+		"The default value is true(1) This is optional and provided only by implementations that support the automatic "
+		"identification of edge ports. The value of this object MUST be retained across reinitializations of the management system.",
+	static_cast<bool_property::getter_t>(&auto_edge),
+	static_cast<bool_property::setter_t>(&set_auto_edge),
 	true
 );
 
-const bool_property Port::AdminEdge
+const bool_property Port::admin_edge_property
 (
 	"AdminEdge",
-	nullptr,
-	static_cast<bool_property::getter_t>(&GetAdminEdge),
-	static_cast<bool_property::setter_t>(&SetAdminEdge),
+	"The administrative value of the Edge Port parameter. "
+		"A value of true(1) indicates that this port should be assumed as an edge-port, and a value of false(2) indicates "
+		"that this port should be assumed as a non-edge-port. Setting this object will also cause the corresponding instance "
+		"of dot1dStpPortOperEdgePort to change to the same value. Note that even when this object's value is true, "
+		"the value of the corresponding instance of dot1dStpPortOperEdgePort can be false if a BPDU has been received. "
+		"The value of this object MUST be retained across reinitializations of the management system",
+	static_cast<bool_property::getter_t>(&admin_edge),
+	static_cast<bool_property::setter_t>(&set_admin_edge),
 	false
 );
 
@@ -500,8 +511,8 @@ const uint32_property Port::ExternalPortPathCost (
 
 const edge::property* const Port::_properties[] =
 {
-	&AutoEdge,
-	&AdminEdge,
+	&auto_edge_property,
+	&admin_edge_property,
 	&MacOperational,
 	&DetectedPortPathCost,
 	&AdminExternalPortPathCost,

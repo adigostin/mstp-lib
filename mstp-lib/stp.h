@@ -149,14 +149,12 @@ unsigned char STP_GetPortPriority (const struct STP_BRIDGE* bridge, unsigned int
 unsigned short STP_GetPortIdentifier (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
 
 // ieee8021SpanningTreeRstpPortAdminEdgePort / dot1dStpPortAdminEdgePort / ieee8021MstpCistPortAdminEdgePort
-// Note that this library uses 0 for False and 1 for True; you'll need some glue code to interface with SNMP, which uses true=1 and false=2.
-void STP_SetPortAdminEdge (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int adminEdge, unsigned int timestamp);
-unsigned int STP_GetPortAdminEdge (const struct STP_BRIDGE* bridge, unsigned int portIndex);
+void STP_SetPortAdminEdgeFromSnmpTruthValue (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int adminEdge, unsigned int timestamp);
+unsigned int STP_GetPortAdminEdgeToSnmpTruthValue (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
 // ieee8021SpanningTreeRstpPortAutoEdgePort / ieee8021MstpCistPortAutoEdgePort
-// Note that this library uses 0 for False and 1 for True; you'll need some glue code to interface with SNMP, which uses true=1 and false=2.
-void STP_SetPortAutoEdge (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int autoEdge, unsigned int timestamp);
-unsigned int STP_GetPortAutoEdge (const struct STP_BRIDGE* bridge, unsigned int portIndex);
+void STP_SetPortAutoEdgeFromSnmpTruthValue (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int autoEdge, unsigned int timestamp);
+unsigned int STP_GetPortAutoEdgeToSnmpTruthValue (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
 // ieee8021BridgeBasePortAdminPointToPoint / dot1dStpPortAdminPointToPoint
 void STP_SetPortAdminPointToPointMAC (struct STP_BRIDGE* bridge, unsigned int portIndex, enum STP_ADMIN_P2P adminPointToPointMAC, unsigned int timestamp);
