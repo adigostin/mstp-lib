@@ -53,12 +53,15 @@ void object_item::on_property_changed (void* arg, object* obj, const property* p
 {
 	auto oi = static_cast<object_item*>(arg);
 	auto root_item = oi->root();
-	for (auto& child_item : oi->children())
+	for (auto& gi : oi->children())
 	{
-		if (auto value_item = dynamic_cast<value_pgitem*>(child_item.get()); value_item->_prop == prop)
+		for (auto& child_item : static_cast<group_item*>(gi.get())->children())
 		{
-			value_item->recreate_value_text_layout();
-			break;
+			if (auto value_item = dynamic_cast<value_pgitem*>(child_item.get()); value_item->_prop == prop)
+			{
+				value_item->recreate_value_text_layout();
+				break;
+			}
 		}
 	}
 }
@@ -76,25 +79,74 @@ pgitem* object_item::find_child (const property* prop) const
 
 std::vector<std::unique_ptr<pgitem>> object_item::create_children()
 {
+	if (_objects.empty())
+		return { };
+
+	auto type = _objects[0]->type();
+	if (!std::all_of (_objects.begin(), _objects.end(), [type](object* o) { return o->type() == type; }))
+		return { };
+
+	struct group_name_comparer
+	{
+		bool operator() (const char* name1, const char* name2) const { return strcmp(name1, name2) < 0; }
+	};
+
+	std::set<const char*, group_name_comparer> group_names;
+
+	for (auto prop : type->make_property_list())
+		group_names.insert(prop->_group);
+
+	std::vector<std::unique_ptr<pgitem>> items;
+	std::transform (group_names.begin(), group_names.end(), std::back_inserter(items), [this](const char* n) { return std::make_unique<group_item>(this, n); });
+	return items;
+}
+#pragma endregion
+
+#pragma region group_item
+group_item::group_item (object_item* parent, const char* group_name)
+	: base(parent), _group_name(group_name)
+{
+	expand();
+}
+
+std::vector<std::unique_ptr<pgitem>> group_item::create_children()
+{
 	std::vector<std::unique_ptr<pgitem>> items;
 
-	if (!_objects.empty())
+	auto type = parent()->objects().front()->type();
+
+	for (auto prop : type->make_property_list())
 	{
-		auto type = _objects[0]->type();
-
-		if (std::all_of (_objects.begin(), _objects.end(), [type](object* o) { return o->type() == type; }))
+		if (auto value_prop = dynamic_cast<const value_property*>(prop))
 		{
-			for (auto prop : type->make_property_list())
-			{
-				if (auto value_prop = dynamic_cast<const value_property*>(prop))
-					items.push_back (std::make_unique<value_pgitem>(this, value_prop));
-				else
-					assert(false);// not implemented
-			}
+			if (strcmp (value_prop->_group, _group_name) == 0)
+				items.push_back (std::make_unique<value_pgitem>(this, value_prop));
 		}
+		else
+			assert(false);// not implemented
 	}
-
+	
 	return items;
+}
+
+void group_item::create_text_layouts (IDWriteFactory* factory, IDWriteTextFormat* format, const item_layout_horz& l, float line_thickness)
+{
+	com_ptr<IDWriteTextFormat> tf;
+	auto hr = factory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL,
+										 DWRITE_FONT_STRETCH_NORMAL, font_size, L"en-US", &tf);
+	float layout_width = std::max (0.0f, l.x_right -l.x_name - 2 * title_lr_padding);
+	_layout = text_layout::create (factory, tf, _group_name, layout_width);
+}
+
+void group_item::render (const render_context& rc, const item_layout& l, float line_thickness, bool selected, bool focused) const
+{
+	rc.dc->FillRectangle ({ l.x_left, l.y_top, l.x_right, l.y_bottom }, rc.back_brush);
+	rc.dc->DrawTextLayout ({ l.x_name + text_lr_padding, l.y_top }, _layout.layout, rc.fore_brush);
+}
+
+float group_item::content_height() const
+{
+	return _layout.metrics.height;
 }
 #pragma endregion
 
@@ -132,13 +184,13 @@ float root_item::content_height() const
 #pragma endregion
 
 #pragma region value_pgitem
-value_pgitem::value_pgitem (object_item* parent, const value_property* prop)
+value_pgitem::value_pgitem (group_item* parent, const value_property* prop)
 	: base(parent), _prop(prop)
 { }
 
 bool value_pgitem::multiple_values() const
 {
-	auto& objs = parent()->objects();
+	auto& objs = parent()->parent()->objects();
 	for (size_t i = 1; i < objs.size(); i++)
 	{
 		if (!_prop->equal(objs[0], objs[i]))
@@ -153,7 +205,7 @@ void value_pgitem::create_value_layout_internal (IDWriteFactory* factory, IDWrit
 	if (multiple_values())
 		_value = text_layout::create (factory, format, "(multiple values)", width);
 	else
-		_value = text_layout::create (factory, format, _prop->get_to_string(parent()->objects().front()), width);
+		_value = text_layout::create (factory, format, _prop->get_to_string(parent()->parent()->objects().front()), width);
 }
 
 void value_pgitem::create_text_layouts (IDWriteFactory* factory, IDWriteTextFormat* format, const item_layout_horz& l, float line_thickness)
@@ -222,7 +274,7 @@ void value_pgitem::process_mouse_button_down (mouse_button button, UINT modifier
 
 	if (_prop->custom_editor())
 	{
-		auto editor = _prop->custom_editor()(parent()->objects());
+		auto editor = _prop->custom_editor()(parent()->parent()->objects());
 		editor->show(root()->_grid);
 		return;
 	}
@@ -238,7 +290,7 @@ void value_pgitem::process_mouse_button_down (mouse_button button, UINT modifier
 		{
 			auto new_value_str = nvps[selected_nvp_index].first;
 			auto changed = [new_value_str, prop=_prop](object* o) { return prop->get_to_string(o) != new_value_str; };
-			auto& objects = parent()->objects();
+			auto& objects = parent()->parent()->objects();
 			if (std::any_of(objects.begin(), objects.end(), changed))
 				root()->_grid->try_change_property (objects, _prop, new_value_str);
 		}
@@ -247,7 +299,7 @@ void value_pgitem::process_mouse_button_down (mouse_button button, UINT modifier
 	{
 		auto lt = root()->_grid->line_thickness();
 		D2D1_RECT_F editor_rect = { layout.x_value + lt, layout.y_top, layout.x_right, layout.y_bottom };
-		auto editor = root()->_grid->show_text_editor (editor_rect, text_lr_padding, multiple_values() ? "" : _prop->get_to_string(parent()->objects().front()));
+		auto editor = root()->_grid->show_text_editor (editor_rect, text_lr_padding, multiple_values() ? "" : _prop->get_to_string(parent()->parent()->objects().front()));
 		editor->process_mouse_button_down (button, modifiers, pt, dip);
 	}
 }

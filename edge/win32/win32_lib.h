@@ -37,27 +37,6 @@ namespace edge
 			BOOL bRes = ::MoveWindow (hwnd(), rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE);
 			assert(bRes);
 		}
-
-		void SetX (LONG x)
-		{
-			auto rect = GetRect();
-			rect.right = x + rect.right - rect.left;
-			rect.left = x;
-			SetRect (rect);
-		}
-
-		void SetY (LONG y);
-		void SetLocation (POINT pt);
-
-		void SetWidth (LONG width)
-		{
-			auto rect = GetRect();
-			rect.right = rect.left + width;
-			SetRect(rect);
-		}
-
-		void SetHeight (LONG height);
-		void SetSize (SIZE size);
 	};
 
 	struct zoomable_i abstract

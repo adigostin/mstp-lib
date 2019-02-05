@@ -845,6 +845,7 @@ uint32_t Bridge::GetForwardDelay() const
 #pragma region properties
 const mac_address_property Bridge::bridge_address_p {
 	"Bridge Address",
+	edge::misc_group_name,
 	nullptr,
 	static_cast<mac_address_property::getter_t>(&bridge_address),
 	static_cast<mac_address_property::setter_t>(&set_bridge_address),
@@ -852,6 +853,7 @@ const mac_address_property Bridge::bridge_address_p {
 
 const bool_property Bridge::stp_enabled_p {
 	"STP Enabled",
+	edge::misc_group_name,
 	nullptr,
 	static_cast<bool_property::getter_t>(&stp_enabled),
 	static_cast<bool_property::setter_t>(&set_stp_enabled),
@@ -859,6 +861,7 @@ const bool_property Bridge::stp_enabled_p {
 
 const stp_version_property Bridge::StpVersion {
 	"STP Version",
+	edge::misc_group_name,
 	nullptr,
 	static_cast<stp_version_property::getter_t>(&Bridge::GetStpVersion),
 	static_cast<stp_version_property::setter_t>(&Bridge::SetStpVersion),
@@ -866,6 +869,7 @@ const stp_version_property Bridge::StpVersion {
 
 const uint32_property Bridge::PortCount {
 	"Port Count",
+	edge::misc_group_name,
 	nullptr,
 	static_cast<uint32_property::getter_t>(&Bridge::GetPortCount),
 	nullptr,
@@ -873,13 +877,17 @@ const uint32_property Bridge::PortCount {
 
 const edge::uint32_property Bridge::MstiCount {
 	"MSTI Count",
+	edge::misc_group_name,
 	nullptr,
 	static_cast<uint32_property::getter_t>(&Bridge::GetMstiCount),
 	nullptr,
 	std::nullopt };
 
+static constexpr char mst_group_name[] = "MST Config Id";
+
 const edge::temp_string_property Bridge::MstConfigIdName {
 	"Name",
+	mst_group_name,
 	nullptr,
 	static_cast<temp_string_property::getter_t>(&Bridge::GetMstConfigIdName),
 	static_cast<temp_string_property::setter_t>(&Bridge::SetMstConfigIdName),
@@ -887,6 +895,7 @@ const edge::temp_string_property Bridge::MstConfigIdName {
 
 const edge::uint32_property Bridge::MstConfigIdRevLevel {
 	"Revision Level",
+	mst_group_name,
 	nullptr,
 	static_cast<uint32_property::getter_t>(&Bridge::GetMstConfigIdRevLevel),
 	static_cast<uint32_property::setter_t>(&Bridge::SetMstConfigIdRevLevel),
@@ -895,6 +904,7 @@ const edge::uint32_property Bridge::MstConfigIdRevLevel {
 
 const config_id_digest_property Bridge::MstConfigIdDigest (
 	"Digest",
+	mst_group_name,
 	nullptr,
 	static_cast<temp_string_property::getter_t>(&Bridge::GetMstConfigIdDigest),
 	nullptr,
@@ -902,6 +912,7 @@ const config_id_digest_property Bridge::MstConfigIdDigest (
 
 const edge::uint32_property Bridge::BridgeHelloTime {
 	"BridgeHelloTime",
+	edge::misc_group_name,
 	nullptr,
 	static_cast<edge::uint32_property::getter_t>(&Bridge::GetBridgeHelloTime),
 	static_cast<edge::uint32_property::setter_t>(&Bridge::SetBridgeHelloTime),
@@ -909,6 +920,7 @@ const edge::uint32_property Bridge::BridgeHelloTime {
 
 const edge::uint32_property Bridge::HelloTime {
 	"HelloTime",
+	edge::misc_group_name,
 	nullptr,
 	static_cast<edge::uint32_property::getter_t>(&Bridge::GetHelloTime),
 	nullptr,
@@ -916,6 +928,7 @@ const edge::uint32_property Bridge::HelloTime {
 
 const edge::uint32_property Bridge::BridgeMaxAge {
 	"BridgeMaxAge",
+	edge::misc_group_name,
 	nullptr,
 	static_cast<edge::uint32_property::getter_t>(&Bridge::GetBridgeMaxAge),
 	static_cast<edge::uint32_property::setter_t>(&Bridge::SetBridgeMaxAge),
@@ -923,6 +936,7 @@ const edge::uint32_property Bridge::BridgeMaxAge {
 
 const edge::uint32_property Bridge::MaxAge {
 	"MaxAge",
+	edge::misc_group_name,
 	nullptr,
 	static_cast<edge::uint32_property::getter_t>(&Bridge::GetMaxAge),
 	nullptr,
@@ -930,6 +944,7 @@ const edge::uint32_property Bridge::MaxAge {
 
 const edge::uint32_property Bridge::BridgeForwardDelay {
 	"BridgeForwardDelay",
+	edge::misc_group_name,
 	nullptr,
 	static_cast<edge::uint32_property::getter_t>(&Bridge::GetBridgeForwardDelay),
 	static_cast<edge::uint32_property::setter_t>(&Bridge::SetBridgeForwardDelay),
@@ -937,13 +952,13 @@ const edge::uint32_property Bridge::BridgeForwardDelay {
 
 const edge::uint32_property Bridge::ForwardDelay {
 	"ForwardDelay",
+	edge::misc_group_name,
 	nullptr,
 	static_cast<edge::uint32_property::getter_t>(&Bridge::GetForwardDelay),
 	nullptr,
 	std::nullopt };
 
 const edge::property* const Bridge::_properties[] = {
-	//&CommonPropGroup,
 	&bridge_address_p,
 	&stp_enabled_p,
 	&StpVersion,

@@ -3,6 +3,8 @@
 
 namespace edge
 {
+	const char misc_group_name[] = "MISC";
+
 	std::string bool_to_string (bool from)
 	{
 		return from ? "true" : "false";

@@ -10,7 +10,7 @@ using namespace edge;
 static constexpr UINT WM_CLOSE_POPUP = WM_APP + 1;
 static constexpr UINT WM_WORK        = WM_APP + 2;
 
-static constexpr float indent_width = 15;
+static constexpr float indent_width = 10;
 static constexpr float line_thickness_not_aligned = 0.6f;
 static constexpr float separator_height = 4;
 static constexpr float description_min_height = 20;
@@ -653,7 +653,7 @@ public:
 			return;
 
 		auto prop_item = dynamic_cast<value_pgitem*>(_selected_item); assert(prop_item);
-		bool changed = try_change_property (prop_item->parent()->objects(), prop_item->_prop, _text_editor->u8str().c_str());
+		bool changed = try_change_property (prop_item->parent()->parent()->objects(), prop_item->_prop, _text_editor->u8str().c_str());
 		if (!changed)
 		{
 			std::wstringstream ss;

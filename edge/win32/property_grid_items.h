@@ -103,6 +103,27 @@ namespace edge
 		virtual std::vector<std::unique_ptr<pgitem>> create_children() override final;
 	};
 
+	class group_item : public expandable_item
+	{
+		using base = expandable_item;
+
+		text_layout _layout;
+
+	public:
+		const char* const _group_name;
+
+		group_item (object_item* parent, const char* group_name);
+
+		object_item* parent() const { return static_cast<object_item*>(base::parent()); }
+
+		virtual std::vector<std::unique_ptr<pgitem>> create_children() override;
+		virtual void create_text_layouts (IDWriteFactory* factory, IDWriteTextFormat* format, const item_layout_horz& l, float line_thickness) override;
+		virtual void recreate_value_text_layout() override { }
+		virtual void render (const render_context& rc, const item_layout& l, float line_thickness, bool selected, bool focused) const override;
+		virtual float content_height() const override;
+		virtual bool selectable() const override { return false; }
+	};
+
 	class root_item : public object_item
 	{
 		using base = object_item;
@@ -131,9 +152,9 @@ namespace edge
 	public:
 		const value_property* const _prop;
 
-		value_pgitem (object_item* parent, const value_property* prop);
+		value_pgitem (group_item* parent, const value_property* prop);
 
-		object_item* parent() const { return static_cast<object_item*>(base::parent()); }
+		group_item* parent() const { return static_cast<group_item*>(base::parent()); }
 
 		virtual void recreate_value_text_layout() override final;
 	private:

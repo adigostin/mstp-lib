@@ -177,6 +177,7 @@ const char bridge_priority_type_name[] = "bridge_priority";
 
 const bridge_priority_property BridgeTree::Priority (
 	"Bridge Priority",
+	edge::misc_group_name,
 	nullptr,
 	static_cast<bridge_priority_property::getter_t>(&GetPriority),
 	static_cast<bridge_priority_property::setter_t>(&SetPriority),
@@ -186,6 +187,7 @@ const bridge_priority_property BridgeTree::Priority (
 const temp_string_property BridgeTree::RootBridgeId
 (
 	"Root Bridge ID",
+	edge::misc_group_name,
 	nullptr,
 	static_cast<temp_string_property::getter_t>(&GetRootBridgeId),
 	nullptr,

@@ -457,6 +457,7 @@ unsigned int Port::GetExternalPortPathCost() const
 const bool_property Port::auto_edge_property
 (
 	"AutoEdge",
+	edge::misc_group_name,
 	"The administrative value of the Auto Edge Port parameter. "
 		"A value of true(1) indicates if the Bridge detection state machine (BDM, 13.31) "
 		"is to detect other Bridges attached to the LAN, and set ieee8021SpanningTreeRstpPortOperEdgePort automatically. "
@@ -470,6 +471,7 @@ const bool_property Port::auto_edge_property
 const bool_property Port::admin_edge_property
 (
 	"AdminEdge",
+	edge::misc_group_name,
 	"The administrative value of the Edge Port parameter. "
 		"A value of true(1) indicates that this port should be assumed as an edge-port, and a value of false(2) indicates "
 		"that this port should be assumed as a non-edge-port. Setting this object will also cause the corresponding instance "
@@ -483,6 +485,7 @@ const bool_property Port::admin_edge_property
 
 const bool_property Port::MacOperational (
 	"MAC_Operational",
+	edge::misc_group_name,
 	nullptr,
 	static_cast<bool_property::getter_t>(&GetMacOperational),
 	nullptr,
@@ -490,6 +493,7 @@ const bool_property Port::MacOperational (
 
 const uint32_property Port::DetectedPortPathCost (
 	"DetectedPortPathCost",
+	edge::misc_group_name,
 	nullptr,
 	static_cast<uint32_property::getter_t>(&GetDetectedPortPathCost),
 	nullptr,
@@ -497,6 +501,7 @@ const uint32_property Port::DetectedPortPathCost (
 
 const uint32_property Port::AdminExternalPortPathCost (
 	"AdminExternalPortPathCost",
+	edge::misc_group_name,
 	nullptr,
 	static_cast<uint32_property::getter_t>(&GetAdminExternalPortPathCost),
 	static_cast<uint32_property::setter_t>(&SetAdminExternalPortPathCost),
@@ -504,6 +509,7 @@ const uint32_property Port::AdminExternalPortPathCost (
 
 const uint32_property Port::ExternalPortPathCost (
 	"ExternalPortPathCost",
+	edge::misc_group_name,
 	nullptr,
   	static_cast<uint32_property::getter_t>(&GetExternalPortPathCost),
 	nullptr,

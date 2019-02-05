@@ -26,13 +26,16 @@ namespace edge
 
 	using property_editor_factory_t = std::unique_ptr<property_editor_i>(const std::vector<object*>& objects);
 
+	extern const char misc_group_name[];
+
 	struct property abstract
 	{
 		const char* const _name;
+		const char* const _group = misc_group_name;
 		const char* const _description;
 
-		constexpr property (const char* name, const char* description)
-			: _name(name), _description(description)
+		constexpr property (const char* name, const char* group, const char* description)
+			: _name(name), _group(group), _description(description)
 		{ }
 		property (const property&) = delete;
 		property& operator= (const property&) = delete;
@@ -96,8 +99,8 @@ namespace edge
 		setter_t const _setter;
 		std::optional<value_t> const _default_value;
 
-		constexpr typed_property (const char* name, const char* description, getter_t getter, setter_t setter, std::optional<value_t> default_value)
-			: base(name, description), _getter(getter), _setter(setter), _default_value(default_value)
+		constexpr typed_property (const char* name, const char* group, const char* description, getter_t getter, setter_t setter, std::optional<value_t> default_value)
+			: base(name, group, description), _getter(getter), _setter(setter), _default_value(default_value)
 		{ }
 
 		virtual const char* type_name() const override final { return type_name_; }
