@@ -19,13 +19,13 @@ enum STP_FLUSH_FDB_TYPE
 
 enum STP_PORT_ROLE
 {
-	STP_PORT_ROLE_UNKNOWN	= 0,
-	STP_PORT_ROLE_DISABLED	= 5,
-	STP_PORT_ROLE_ROOT		= 6,
-	STP_PORT_ROLE_DESIGNATED= 7,
-	STP_PORT_ROLE_ALTERNATE = 8,
-	STP_PORT_ROLE_BACKUP    = 9,
-	STP_PORT_ROLE_MASTER	= 10,
+	STP_PORT_ROLE_UNKNOWN    = 0,
+	STP_PORT_ROLE_DISABLED   = 5,
+	STP_PORT_ROLE_ROOT       = 6,
+	STP_PORT_ROLE_DESIGNATED = 7,
+	STP_PORT_ROLE_ALTERNATE  = 8,
+	STP_PORT_ROLE_BACKUP     = 9,
+	STP_PORT_ROLE_MASTER     = 10,
 };
 
 typedef void  (*STP_CALLBACK_ENABLE_LEARNING)				(const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp);
