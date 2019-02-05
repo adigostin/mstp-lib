@@ -45,7 +45,7 @@ public:
 		Bridge* b = _bridges[index].get();
 
 		if (any_of (_wires.begin(), _wires.end(), [b](const unique_ptr<wire>& w) {
-			return any_of (w->GetPoints().begin(), w->GetPoints().end(), [b] (wire_end p) {
+			return any_of (w->points().begin(), w->points().end(), [b] (wire_end p) {
 				return std::holds_alternative<connected_wire_end>(p) && (std::get<connected_wire_end>(p)->bridge() == b);
 			});
 		}))
@@ -125,11 +125,11 @@ public:
 
 	virtual bool IsWireForwarding (wire* wire, unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const override final
 	{
-		if (!holds_alternative<connected_wire_end>(wire->GetP0()) || !holds_alternative<connected_wire_end>(wire->GetP1()))
+		if (!holds_alternative<connected_wire_end>(wire->p0()) || !holds_alternative<connected_wire_end>(wire->p1()))
 			return false;
 
-		auto portA = get<connected_wire_end>(wire->GetP0());
-		auto portB = get<connected_wire_end>(wire->GetP1());
+		auto portA = get<connected_wire_end>(wire->p0());
+		auto portB = get<connected_wire_end>(wire->p1());
 		bool portAFw = portA->IsForwarding(vlanNumber);
 		bool portBFw = portB->IsForwarding(vlanNumber);
 		if (!portAFw || !portBFw)

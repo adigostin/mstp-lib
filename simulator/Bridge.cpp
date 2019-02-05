@@ -365,7 +365,7 @@ void Bridge::Render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsign
 		port->Render (dc, dos, vlanNumber);
 }
 
-void Bridge::RenderSelection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const
+void Bridge::render_selection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const
 {
 	auto oldaa = rt->GetAntialiasMode();
 	rt->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
@@ -377,11 +377,11 @@ void Bridge::RenderSelection (const edge::zoomable_i* zoomable, ID2D1RenderTarge
 	rt->SetAntialiasMode(oldaa);
 }
 
-renderable_object::HTResult Bridge::HitTest (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance)
+renderable_object::HTResult Bridge::hit_test (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance)
 {
 	for (auto& p : _ports)
 	{
-		auto ht = p->HitTest (zoomable, dLocation, tolerance);
+		auto ht = p->hit_test (zoomable, dLocation, tolerance);
 		if (ht.object != nullptr)
 			return ht;
 	}

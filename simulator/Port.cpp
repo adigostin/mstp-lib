@@ -265,7 +265,7 @@ D2D1_RECT_F Port::GetInnerOuterRect() const
 	return { min(tl.x, br.x), min (tl.y, br.y), max(tl.x, br.x), max(tl.y, br.y) };
 }
 
-void Port::RenderSelection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const
+void Port::render_selection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const
 {
 	auto ir = GetInnerOuterRect();
 
@@ -296,7 +296,7 @@ bool Port::HitTestInnerOuter (const edge::zoomable_i* zoomable, D2D1_POINT_2F dL
 	return (dLocation.x >= lt.x) && (dLocation.y >= lt.y) && (dLocation.x < rb.x) && (dLocation.y < rb.y);
 }
 
-renderable_object::HTResult Port::HitTest (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance)
+renderable_object::HTResult Port::hit_test (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance)
 {
 	if (HitTestCP (zoomable, dLocation, tolerance))
 		return { this, HTCodeCP };

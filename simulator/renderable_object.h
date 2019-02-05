@@ -39,6 +39,6 @@ public:
 	struct invalidate_e : public edge::event<invalidate_e, renderable_object*> { };
 	invalidate_e::subscriber GetInvalidateEvent() { return invalidate_e::subscriber(this); }
 
-	virtual void RenderSelection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const = 0;
-	virtual HTResult HitTest (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) = 0;
+	virtual void render_selection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const = 0;
+	virtual HTResult hit_test (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) = 0;
 };

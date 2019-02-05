@@ -36,8 +36,8 @@ public:
 			if (fromPort != nullptr)
 			{
 				auto newWire = std::make_unique<wire>();
-				newWire->SetP0 (fromPort);
-				newWire->SetP1 (fromPort->GetCPLocation());
+				newWire->set_p0 (fromPort);
+				newWire->set_p1 (fromPort->GetCPLocation());
 				_wire = newWire.get();
 				_project->insert_wire(_project->wires().size(), move(newWire));
 				_substate  = waiting_first_up;
@@ -53,15 +53,15 @@ public:
 		auto port = _ea->GetCPAt (location.d, SnapDistance);
 		if (port != nullptr)
 		{
-			if (port != std::get<connected_wire_end>(_wire->GetP0()))
+			if (port != std::get<connected_wire_end>(_wire->p0()))
 			{
 				auto alreadyConnectedWire = _project->GetWireConnectedToPort(port);
 				if (alreadyConnectedWire.first == nullptr)
-					_wire->SetP1(port);
+					_wire->set_p1(port);
 			}
 		}
 		else
-			_wire->SetP1(location.w);
+			_wire->set_p1(location.w);
 		::InvalidateRect (_ea->hwnd(), nullptr, FALSE);
 
 		if (_substate == waiting_first_up)
@@ -72,7 +72,7 @@ public:
 	{
 		if (_substate == waiting_second_up)
 		{
-			if (std::holds_alternative<connected_wire_end>(_wire->GetP1()))
+			if (std::holds_alternative<connected_wire_end>(_wire->p1()))
 			{
 				_project->SetChangedFlag(true);
 				_selection->select(_wire);
@@ -102,8 +102,8 @@ public:
 	virtual void render (ID2D1DeviceContext* rt) override final
 	{
 		base::render(rt);
-		if ((_wire != nullptr) && std::holds_alternative<connected_wire_end>(_wire->GetP1()))
-			_ea->RenderSnapRect (rt, std::get<connected_wire_end>(_wire->GetP1())->GetCPLocation());
+		if ((_wire != nullptr) && std::holds_alternative<connected_wire_end>(_wire->p1()))
+			_ea->RenderSnapRect (rt, std::get<connected_wire_end>(_wire->p1())->GetCPLocation());
 	}
 
 	virtual bool completed() const override final

@@ -6,8 +6,6 @@
 #include "win32/utility_functions.h"
 #include "simulator.h"
 
-using namespace edge;
-
 static constexpr float thickness = 2;
 
 wire::wire (wire_end firstEnd, wire_end secondEnd)
@@ -26,7 +24,7 @@ static bool Same (const wire_end& a, const wire_end& b)
 		return std::get<connected_wire_end>(a) == std::get<connected_wire_end>(b);
 }
 
-void wire::SetPoint (size_t pointIndex, const wire_end& point)
+void wire::set_point (size_t pointIndex, const wire_end& point)
 {
 	if (!Same(_points[pointIndex], point))
 	{
@@ -35,7 +33,7 @@ void wire::SetPoint (size_t pointIndex, const wire_end& point)
 	}
 }
 
-D2D1_POINT_2F wire::GetPointCoords (size_t pointIndex) const
+D2D1_POINT_2F wire::point_coords (size_t pointIndex) const
 {
 	if (std::holds_alternative<loose_wire_end>(_points[pointIndex]))
 		return std::get<loose_wire_end>(_points[pointIndex]);
@@ -43,7 +41,7 @@ D2D1_POINT_2F wire::GetPointCoords (size_t pointIndex) const
 		return std::get<connected_wire_end>(_points[pointIndex])->GetCPLocation();
 }
 
-void wire::Render (ID2D1RenderTarget* rt, const drawing_resources& dos, bool forwarding, bool hasLoop) const
+void wire::render (ID2D1RenderTarget* rt, const drawing_resources& dos, bool forwarding, bool hasLoop) const
 {
 	float width = thickness;
 	ID2D1Brush* brush;
@@ -59,13 +57,13 @@ void wire::Render (ID2D1RenderTarget* rt, const drawing_resources& dos, bool for
 	}
 
 	auto& ss = forwarding ? dos._strokeStyleForwardingWire : dos._strokeStyleNoForwardingWire;
-	rt->DrawLine (GetPointCoords(0), GetPointCoords(1), brush, width, ss);
+	rt->DrawLine (point_coords(0), point_coords(1), brush, width, ss);
 }
 
-void wire::RenderSelection (const zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const
+void wire::render_selection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const
 {
-	auto fd = zoomable->pointw_to_pointd(GetPointCoords(0));
-	auto td = zoomable->pointw_to_pointd(GetPointCoords(1));
+	auto fd = zoomable->pointw_to_pointd(point_coords(0));
+	auto td = zoomable->pointw_to_pointd(point_coords(1));
 
 	float halfw = 10;
 	float angle = atan2(td.y - fd.y, td.x - fd.x);
@@ -86,19 +84,19 @@ void wire::RenderSelection (const zoomable_i* zoomable, ID2D1RenderTarget* rt, c
 	rt->DrawLine (vertices[3], vertices[0], dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
 }
 
-renderable_object::HTResult wire::HitTest (const zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance)
+renderable_object::HTResult wire::hit_test (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance)
 {
 	for (size_t i = 0; i < _points.size(); i++)
 	{
-		auto pointWLocation = this->GetPointCoords(i);
+		auto pointWLocation = this->point_coords(i);
 		auto pointDLocation = zoomable->pointw_to_pointd(pointWLocation);
 		D2D1_RECT_F rect = { pointDLocation.x, pointDLocation.y, pointDLocation.x, pointDLocation.y };
-		InflateRect(&rect, tolerance);
-		if (point_in_rect (rect, dLocation))
+		edge::InflateRect(&rect, tolerance);
+		if (edge::point_in_rect (rect, dLocation))
 			return { this, (int) i };
 	}
 
-	if (HitTestLine (zoomable, dLocation, tolerance, GetPointCoords(0), GetPointCoords(1), thickness))
+	if (HitTestLine (zoomable, dLocation, tolerance, point_coords(0), point_coords(1), thickness))
 		return { this, -1 };
 
 	return { };
@@ -106,13 +104,13 @@ renderable_object::HTResult wire::HitTest (const zoomable_i* zoomable, D2D1_POIN
 
 static const _bstr_t WireElementName = "Wire";
 
-com_ptr<IXMLDOMElement> wire::Serialize (project_i* project, IXMLDOMDocument* doc) const
+edge::com_ptr<IXMLDOMElement> wire::Serialize (project_i* project, IXMLDOMDocument* doc) const
 {
-	com_ptr<IXMLDOMElement> wireElement;
+	edge::com_ptr<IXMLDOMElement> wireElement;
 	HRESULT hr = doc->createElement (WireElementName, &wireElement); assert(SUCCEEDED(hr));
 
-	hr = wireElement->appendChild(SerializeEnd(project, doc, _points[0]), nullptr); assert(SUCCEEDED(hr));
-	hr = wireElement->appendChild(SerializeEnd(project, doc, _points[1]), nullptr); assert(SUCCEEDED(hr));
+	hr = wireElement->appendChild(serialize_point(project, doc, _points[0]), nullptr); assert(SUCCEEDED(hr));
+	hr = wireElement->appendChild(serialize_point(project, doc, _points[1]), nullptr); assert(SUCCEEDED(hr));
 
 	return wireElement;
 }
@@ -120,13 +118,13 @@ com_ptr<IXMLDOMElement> wire::Serialize (project_i* project, IXMLDOMDocument* do
 // static
 std::unique_ptr<wire> wire::Deserialize (project_i* project, IXMLDOMElement* wireElement)
 {
-	com_ptr<IXMLDOMNode> firstChild;
+	edge::com_ptr<IXMLDOMNode> firstChild;
 	auto hr = wireElement->get_firstChild(&firstChild); assert(SUCCEEDED(hr));
-	auto firstEnd = DeserializeEnd (project, (com_ptr<IXMLDOMElement>) firstChild);
+	auto firstEnd = deserialize_point (project, (edge::com_ptr<IXMLDOMElement>) firstChild);
 
-	com_ptr<IXMLDOMNode> secondChild;
+	edge::com_ptr<IXMLDOMNode> secondChild;
 	hr = firstChild->get_nextSibling(&secondChild); assert(SUCCEEDED(hr));
-	auto secondEnd = DeserializeEnd (project, (com_ptr<IXMLDOMElement>) secondChild);
+	auto secondEnd = deserialize_point (project, (edge::com_ptr<IXMLDOMElement>) secondChild);
 
 	auto w = std::make_unique<wire>(firstEnd, secondEnd);
 	return w;
@@ -140,10 +138,10 @@ static const _bstr_t XString            = "X";
 static const _bstr_t YString            = "Y";
 
 //static
-com_ptr<IXMLDOMElement> wire::SerializeEnd (project_i* project, IXMLDOMDocument* doc, const wire_end& end)
+edge::com_ptr<IXMLDOMElement> wire::serialize_point (project_i* project, IXMLDOMDocument* doc, const wire_end& end)
 {
 	HRESULT hr;
-	com_ptr<IXMLDOMElement> element;
+	edge::com_ptr<IXMLDOMElement> element;
 
 	if (std::holds_alternative<connected_wire_end>(end))
 	{
@@ -167,7 +165,7 @@ com_ptr<IXMLDOMElement> wire::SerializeEnd (project_i* project, IXMLDOMDocument*
 }
 
 //static
-wire_end wire::DeserializeEnd (project_i* project, IXMLDOMElement* element)
+wire_end wire::deserialize_point (project_i* project, IXMLDOMElement* element)
 {
 	HRESULT hr;
 

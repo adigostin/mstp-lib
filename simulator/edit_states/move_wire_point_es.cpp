@@ -28,7 +28,7 @@ class MoveWirePointES : public edit_state
 
 public:
 	MoveWirePointES (const edit_state_deps& deps, wire* wire, size_t pointIndex)
-		: base(deps), _wire(wire), _pointIndex(pointIndex), _initialPoint(wire->GetPoints()[pointIndex])
+		: base(deps), _wire(wire), _pointIndex(pointIndex), _initialPoint(wire->points()[pointIndex])
 	{ }
 
 	virtual bool completed() const override final { return _substate == down; }
@@ -56,10 +56,10 @@ public:
 		{
 			auto alreadyConnectedWire = _project->GetWireConnectedToPort(port);
 			if (alreadyConnectedWire.first == nullptr)
-				_wire->SetPoint(_pointIndex, port);
+				_wire->set_point(_pointIndex, port);
 		}
 		else
-			_wire->SetPoint(_pointIndex, location.w);
+			_wire->set_point(_pointIndex, location.w);
 
 		if (_substate == waiting_first_up)
 		{
@@ -83,7 +83,7 @@ public:
 	{
 		if (virtualKey == VK_ESCAPE)
 		{
-			_wire->SetPoint(_pointIndex, _initialPoint);
+			_wire->set_point(_pointIndex, _initialPoint);
 			_substate = down;
 			return 0;
 		}
@@ -93,7 +93,7 @@ public:
 
 	virtual void render (ID2D1DeviceContext* rt) override final
 	{
-		auto& point = _wire->GetPoints()[_pointIndex];
+		auto& point = _wire->points()[_pointIndex];
 		if (holds_alternative<connected_wire_end>(point))
 			_ea->RenderSnapRect (rt, get<connected_wire_end>(point)->GetCPLocation());
 	}

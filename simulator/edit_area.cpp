@@ -363,7 +363,7 @@ public:
 		{
 			bool hasLoop;
 			bool forwarding = _project->IsWireForwarding(w.get(), _pw->selected_vlan_number(), &hasLoop);
-			w->Render (dc, _drawing_resources, forwarding, hasLoop);
+			w->render (dc, _drawing_resources, forwarding, hasLoop);
 		}
 
 		dc->SetTransform(oldtr);
@@ -404,7 +404,7 @@ public:
 		else if (dynamic_cast<wire*>(_htResult.object) != nullptr)
 		{
 			if (_htResult.code >= 0)
-				RenderSnapRect (dc, static_cast<wire*>(_htResult.object)->GetPointCoords(_htResult.code));
+				RenderSnapRect (dc, static_cast<wire*>(_htResult.object)->point_coords(_htResult.code));
 		}
 	}
 
@@ -488,7 +488,7 @@ public:
 		for (object* o : _selection->objects())
 		{
 			if (auto ro = dynamic_cast<renderable_object*>(o))
-				ro->RenderSelection(this, dc, _drawing_resources);
+				ro->render_selection(this, dc, _drawing_resources);
 		}
 
 		if (!configIds.empty())
@@ -624,7 +624,7 @@ public:
 		auto& bridges = _project->bridges();
 		for (auto it = bridges.rbegin(); it != bridges.rend(); it++)
 		{
-			auto ht = it->get()->HitTest(this, dLocation, tolerance);
+			auto ht = it->get()->hit_test(this, dLocation, tolerance);
 			if (ht.object != nullptr)
 			{
 				auto port = dynamic_cast<Port*>(ht.object);
@@ -643,7 +643,7 @@ public:
 		auto& wires = _project->wires();
 		for (auto it = wires.rbegin(); it != wires.rend(); it++)
 		{
-			auto ht = it->get()->HitTest (this, dLocation, tolerance);
+			auto ht = it->get()->hit_test (this, dLocation, tolerance);
 			if (ht.object != nullptr)
 				return ht;
 		}
@@ -651,7 +651,7 @@ public:
 		auto& bridges = _project->bridges();
 		for (auto it = bridges.rbegin(); it != bridges.rend(); it++)
 		{
-			auto ht = it->get()->HitTest(this, dLocation, tolerance);
+			auto ht = it->get()->hit_test(this, dLocation, tolerance);
 			if (ht.object != nullptr)
 				return ht;
 		}
@@ -686,12 +686,12 @@ public:
 			if (wiresToRemove.find(w.get()) != wiresToRemove.end())
 				continue;
 
-			for (size_t pi = 0; pi < w->GetPoints().size(); pi++)
+			for (size_t pi = 0; pi < w->points().size(); pi++)
 			{
-				if (!std::holds_alternative<connected_wire_end>(w->GetPoints()[pi]))
+				if (!std::holds_alternative<connected_wire_end>(w->points()[pi]))
 					continue;
 
-				auto port = std::get<connected_wire_end>(w->GetPoints()[pi]);
+				auto port = std::get<connected_wire_end>(w->points()[pi]);
 				if (bridgesToRemove.find(port->bridge()) == bridgesToRemove.end())
 					continue;
 
@@ -703,7 +703,7 @@ public:
 		for (auto it = pointsToDisconnect.begin(); it != pointsToDisconnect.end(); )
 		{
 			wire* wire = it->first;
-			bool anyPointRemainsConnected = any_of (wire->GetPoints().begin(), wire->GetPoints().end(),
+			bool anyPointRemainsConnected = any_of (wire->points().begin(), wire->points().end(),
 				[&bridgesToRemove](auto& pt) { return std::holds_alternative<connected_wire_end>(pt)
 				&& (bridgesToRemove.count(std::get<connected_wire_end>(pt)->bridge()) == 0); });
 			
@@ -721,7 +721,7 @@ public:
 		{
 			for (auto& p : pointsToDisconnect)
 				for (auto pi : p.second)
-					p.first->SetPoint(pi, p.first->GetPointCoords(pi));
+					p.first->set_point(pi, p.first->point_coords(pi));
 
 			for (auto w : wiresToRemove)
 				_project->remove_wire(w);

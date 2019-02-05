@@ -30,9 +30,9 @@ pair<wire*, size_t> project_i::GetWireConnectedToPort (const Port* port) const
 {
 	for (auto& w : wires())
 	{
-		if (holds_alternative<connected_wire_end>(w->GetP0()) && (get<connected_wire_end>(w->GetP0()) == port))
+		if (holds_alternative<connected_wire_end>(w->p0()) && (get<connected_wire_end>(w->p0()) == port))
 			return { w.get(), 0 };
-		else if (holds_alternative<connected_wire_end>(w->GetP1()) && (get<connected_wire_end>(w->GetP1()) == port))
+		else if (holds_alternative<connected_wire_end>(w->p1()) && (get<connected_wire_end>(w->p1()) == port))
 			return { w.get(), 1 };
 	}
 
@@ -45,10 +45,10 @@ Port* project_i::FindConnectedPort (Port* txPort) const
 	{
 		for (size_t i = 0; i < 2; i++)
 		{
-			auto& thisEnd = w->GetPoints()[i];
+			auto& thisEnd = w->points()[i];
 			if (holds_alternative<connected_wire_end>(thisEnd) && (get<connected_wire_end>(thisEnd) == txPort))
 			{
-				auto& otherEnd = w->GetPoints()[1 - i];
+				auto& otherEnd = w->points()[1 - i];
 				if (holds_alternative<connected_wire_end>(otherEnd))
 					return get<connected_wire_end>(otherEnd);
 				else
