@@ -334,7 +334,7 @@ bool Port::GetMacOperational() const
 
 bool Port::auto_edge() const
 {
-	return STP_GetPortAutoEdgeToSnmpTruthValue (_bridge->stp_bridge(), _portIndex) == 1;
+	return STP_GetPortAutoEdgeAsSnmpTruthValue (_bridge->stp_bridge(), _portIndex) == 1;
 }
 
 void Port::set_auto_edge (bool autoEdge)
@@ -345,7 +345,7 @@ void Port::set_auto_edge (bool autoEdge)
 
 bool Port::admin_edge() const
 {
-	return STP_GetPortAdminEdgeToSnmpTruthValue (_bridge->stp_bridge(), _portIndex) == 1;
+	return STP_GetPortAdminEdgeAsSnmpTruthValue (_bridge->stp_bridge(), _portIndex) == 1;
 }
 
 void Port::set_admin_edge (bool adminEdge)
@@ -454,64 +454,64 @@ unsigned int Port::GetExternalPortPathCost() const
 	return STP_GetPortPathCost (_bridge->stp_bridge(), _portIndex, treeIndex);
 }
 
-const bool_property Port::auto_edge_property
+const bool_p Port::auto_edge_property
 (
 	"AutoEdge",
-	edge::misc_group_name,
+	nullptr,
 	"The administrative value of the Auto Edge Port parameter. "
 		"A value of true(1) indicates if the Bridge detection state machine (BDM, 13.31) "
 		"is to detect other Bridges attached to the LAN, and set ieee8021SpanningTreeRstpPortOperEdgePort automatically. "
 		"The default value is true(1) This is optional and provided only by implementations that support the automatic "
 		"identification of edge ports. The value of this object MUST be retained across reinitializations of the management system.",
-	static_cast<bool_property::getter_t>(&auto_edge),
-	static_cast<bool_property::setter_t>(&set_auto_edge),
+	static_cast<bool_p::getter_t>(&auto_edge),
+	static_cast<bool_p::setter_t>(&set_auto_edge),
 	true
 );
 
-const bool_property Port::admin_edge_property
+const bool_p Port::admin_edge_property
 (
 	"AdminEdge",
-	edge::misc_group_name,
+	nullptr,
 	"The administrative value of the Edge Port parameter. "
 		"A value of true(1) indicates that this port should be assumed as an edge-port, and a value of false(2) indicates "
 		"that this port should be assumed as a non-edge-port. Setting this object will also cause the corresponding instance "
 		"of dot1dStpPortOperEdgePort to change to the same value. Note that even when this object's value is true, "
 		"the value of the corresponding instance of dot1dStpPortOperEdgePort can be false if a BPDU has been received. "
 		"The value of this object MUST be retained across reinitializations of the management system",
-	static_cast<bool_property::getter_t>(&admin_edge),
-	static_cast<bool_property::setter_t>(&set_admin_edge),
+	static_cast<bool_p::getter_t>(&admin_edge),
+	static_cast<bool_p::setter_t>(&set_admin_edge),
 	false
 );
 
-const bool_property Port::MacOperational (
+const bool_p Port::MacOperational (
 	"MAC_Operational",
-	edge::misc_group_name,
 	nullptr,
-	static_cast<bool_property::getter_t>(&GetMacOperational),
+	nullptr,
+	static_cast<bool_p::getter_t>(&GetMacOperational),
 	nullptr,
 	false);
 
-const uint32_property Port::DetectedPortPathCost (
+const uint32_p Port::DetectedPortPathCost (
 	"DetectedPortPathCost",
-	edge::misc_group_name,
 	nullptr,
-	static_cast<uint32_property::getter_t>(&GetDetectedPortPathCost),
+	nullptr,
+	static_cast<uint32_p::getter_t>(&GetDetectedPortPathCost),
 	nullptr,
 	0);
 
-const uint32_property Port::AdminExternalPortPathCost (
+const uint32_p Port::AdminExternalPortPathCost (
 	"AdminExternalPortPathCost",
-	edge::misc_group_name,
 	nullptr,
-	static_cast<uint32_property::getter_t>(&GetAdminExternalPortPathCost),
-	static_cast<uint32_property::setter_t>(&SetAdminExternalPortPathCost),
+	nullptr,
+	static_cast<uint32_p::getter_t>(&GetAdminExternalPortPathCost),
+	static_cast<uint32_p::setter_t>(&SetAdminExternalPortPathCost),
 	0);
 
-const uint32_property Port::ExternalPortPathCost (
+const uint32_p Port::ExternalPortPathCost (
 	"ExternalPortPathCost",
-	edge::misc_group_name,
 	nullptr,
-  	static_cast<uint32_property::getter_t>(&GetExternalPortPathCost),
+	nullptr,
+  	static_cast<uint32_p::getter_t>(&GetExternalPortPathCost),
 	nullptr,
 	0);
 

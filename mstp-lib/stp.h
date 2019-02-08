@@ -150,11 +150,11 @@ unsigned short STP_GetPortIdentifier (const struct STP_BRIDGE* bridge, unsigned 
 
 // ieee8021SpanningTreeRstpPortAdminEdgePort / dot1dStpPortAdminEdgePort / ieee8021MstpCistPortAdminEdgePort
 void STP_SetPortAdminEdgeFromSnmpTruthValue (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int adminEdge, unsigned int timestamp);
-unsigned int STP_GetPortAdminEdgeToSnmpTruthValue (const struct STP_BRIDGE* bridge, unsigned int portIndex);
+unsigned int STP_GetPortAdminEdgeAsSnmpTruthValue (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
 // ieee8021SpanningTreeRstpPortAutoEdgePort / ieee8021MstpCistPortAutoEdgePort
 void STP_SetPortAutoEdgeFromSnmpTruthValue (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int autoEdge, unsigned int timestamp);
-unsigned int STP_GetPortAutoEdgeToSnmpTruthValue (const struct STP_BRIDGE* bridge, unsigned int portIndex);
+unsigned int STP_GetPortAutoEdgeAsSnmpTruthValue (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
 // ieee8021BridgeBasePortAdminPointToPoint / dot1dStpPortAdminPointToPoint
 void STP_SetPortAdminPointToPointMAC (struct STP_BRIDGE* bridge, unsigned int portIndex, enum STP_ADMIN_P2P adminPointToPointMAC, unsigned int timestamp);

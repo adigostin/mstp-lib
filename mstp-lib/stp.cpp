@@ -621,7 +621,7 @@ void STP_SetPortAdminEdgeFromSnmpTruthValue (STP_BRIDGE* bridge, unsigned int po
 	bridge->ports [portIndex]->AdminEdge = (adminEdge == 1);
 }
 
-unsigned int STP_GetPortAdminEdgeToSnmpTruthValue (const STP_BRIDGE* bridge, unsigned int portIndex)
+unsigned int STP_GetPortAdminEdgeAsSnmpTruthValue (const STP_BRIDGE* bridge, unsigned int portIndex)
 {
 	return bridge->ports [portIndex]->AdminEdge ? 1 : 2;
 }
@@ -634,7 +634,7 @@ void STP_SetPortAutoEdgeFromSnmpTruthValue (struct STP_BRIDGE* bridge, unsigned 
 	bridge->ports [portIndex]->AutoEdge = (autoEdge == 1);
 }
 
-unsigned int STP_GetPortAutoEdgeToSnmpTruthValue (const STP_BRIDGE* bridge, unsigned int portIndex)
+unsigned int STP_GetPortAutoEdgeAsSnmpTruthValue (const STP_BRIDGE* bridge, unsigned int portIndex)
 {
 	return bridge->ports [portIndex]->AutoEdge ? 1 : 2;
 }

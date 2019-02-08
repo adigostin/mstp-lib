@@ -17,16 +17,16 @@ static constexpr edge::NVP stp_version_nvps[] =  {
 	{ nullptr, 0 }
 };
 static constexpr char stp_version_type_name[] = "stp_version";
-using stp_version_property = edge::enum_property<STP_VERSION, stp_version_type_name, stp_version_nvps>;
+using stp_version_p = edge::enum_property<STP_VERSION, stp_version_type_name, stp_version_nvps>;
 
 using mac_address = std::array<uint8_t, 6>;
 std::string mac_address_to_string (mac_address from);
 template<typename char_type> bool mac_address_from_string (std::basic_string_view<char_type> from, mac_address& to);
 static constexpr char mac_address_type_name[] = "mac_address";
-using mac_address_property = edge::typed_property<mac_address, mac_address, mac_address, mac_address_type_name, mac_address_to_string, mac_address_from_string>;
+using mac_address_p = edge::typed_property<mac_address, mac_address, mac_address, mac_address_type_name, mac_address_to_string, mac_address_from_string>;
 
 extern edge::property_editor_factory_t config_id_editor_factory;
-using config_id_digest_property = edge::typed_property<std::string, std::string_view, std::string, edge::temp_string_type_name, edge::temp_string_to_string, nullptr, nullptr, config_id_editor_factory>;
+using config_id_digest_p = edge::typed_property<std::string, std::string_view, std::string, edge::temp_string_type_name, edge::temp_string_to_string, nullptr, nullptr, config_id_editor_factory>;
 
 class Bridge : public renderable_object
 {
@@ -172,20 +172,20 @@ private:
 	static void  StpCallback_OnConfigChanged          (const STP_BRIDGE* bridge, unsigned int timestamp);
 	
 public:
-	static const mac_address_property       bridge_address_p;
-	static const edge::bool_property        stp_enabled_p;
-	static const stp_version_property       StpVersion;
-	static const edge::uint32_property      PortCount;
-	static const edge::uint32_property      MstiCount;
-	static const edge::temp_string_property MstConfigIdName;
-	static const edge::uint32_property      MstConfigIdRevLevel;
-	static const config_id_digest_property  MstConfigIdDigest;
-	static const edge::uint32_property      BridgeHelloTime;
-	static const edge::uint32_property      HelloTime;
-	static const edge::uint32_property      BridgeMaxAge;
-	static const edge::uint32_property      MaxAge;
-	static const edge::uint32_property      BridgeForwardDelay;
-	static const edge::uint32_property      ForwardDelay;
+	static const mac_address_p       bridge_address_property;
+	static const edge::bool_p        stp_enabled_property;
+	static const stp_version_p       stp_version_property;
+	static const edge::uint32_p      PortCount;
+	static const edge::uint32_p      MstiCount;
+	static const edge::temp_string_p MstConfigIdName;
+	static const edge::uint32_p      MstConfigIdRevLevel;
+	static const config_id_digest_p  MstConfigIdDigest;
+	static const edge::uint32_p      BridgeHelloTime;
+	static const edge::uint32_p      HelloTime;
+	static const edge::uint32_p      BridgeMaxAge;
+	static const edge::uint32_p      MaxAge;
+	static const edge::uint32_p      BridgeForwardDelay;
+	static const edge::uint32_p      ForwardDelay;
 
 	static const edge::property* const _properties[];
 	static const edge::type_t _type;

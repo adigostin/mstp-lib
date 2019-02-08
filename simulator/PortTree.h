@@ -6,7 +6,7 @@ class Port;
 
 extern const edge::NVP port_priority_nvps[];
 extern const char port_priority_type_name[];
-using port_priority_property = edge::enum_property<uint32_t, port_priority_type_name, port_priority_nvps>;
+using port_priority_p = edge::enum_property<uint32_t, port_priority_type_name, port_priority_nvps>;
 
 class PortTree : public edge::object
 {
@@ -26,7 +26,12 @@ public:
 	uint32_t priority() const;
 	void set_priority (uint32_t priority);
 
-	static const port_priority_property priority_p;
+	bool learning() const;
+	bool forwarding() const;
+
+	static const port_priority_p priority_property;
+	static const edge::bool_p learning_property;
+	static const edge::bool_p forwarding_property;
 	static const edge::property* const _properties[];
 	static const edge::type_t _type;
 	const edge::type_t* type() const override { return &_type; }

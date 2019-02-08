@@ -110,9 +110,9 @@ namespace edge
 		text_layout _layout;
 
 	public:
-		const char* const _group_name;
+		const property_group* const _group;
 
-		group_item (object_item* parent, const char* group_name);
+		group_item (object_item* parent, const property_group* group);
 
 		object_item* parent() const { return static_cast<object_item*>(base::parent()); }
 

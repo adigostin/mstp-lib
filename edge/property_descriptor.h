@@ -26,16 +26,22 @@ namespace edge
 
 	using property_editor_factory_t = std::unique_ptr<property_editor_i>(const std::vector<object*>& objects);
 
-	extern const char misc_group_name[];
+	struct property_group
+	{
+		int32_t prio;
+		const char* name;
+	};
+
+	extern const property_group misc_group;
 
 	struct property abstract
 	{
 		const char* const _name;
-		const char* const _group = misc_group_name;
+		const property_group* const _group;
 		const char* const _description;
 
-		constexpr property (const char* name, const char* group, const char* description)
-			: _name(name), _group(group), _description(description)
+		constexpr property (const char* name, const property_group* group, const char* description)
+			: _name(name), _group((group != nullptr) ? group : &misc_group), _description(description)
 		{ }
 		property (const property&) = delete;
 		property& operator= (const property&) = delete;
@@ -99,7 +105,7 @@ namespace edge
 		setter_t const _setter;
 		std::optional<value_t> const _default_value;
 
-		constexpr typed_property (const char* name, const char* group, const char* description, getter_t getter, setter_t setter, std::optional<value_t> default_value)
+		constexpr typed_property (const char* name, const property_group* group, const char* description, getter_t getter, setter_t setter, std::optional<value_t> default_value)
 			: base(name, group, description), _getter(getter), _setter(setter), _default_value(default_value)
 		{ }
 
@@ -202,12 +208,12 @@ namespace edge
 	std::string bool_to_string (bool from);
 	bool bool_from_string (std::string_view from, bool& to);
 	static constexpr char bool_type_name[] = "bool";
-	using bool_property = typed_property<bool, bool, bool, bool_type_name, bool_to_string, bool_from_string>;
+	using bool_p = typed_property<bool, bool, bool, bool_type_name, bool_to_string, bool_from_string>;
 
 	inline std::string uint32_to_string (uint32_t from) { return std::to_string(from); }
 	bool uint32_from_string (std::string_view from, uint32_t& to);
 	static constexpr char uint32_type_name[] = "uint32";
-	using uint32_property = typed_property<uint32_t, uint32_t, uint32_t, uint32_type_name, uint32_to_string, uint32_from_string>;
+	using uint32_p = typed_property<uint32_t, uint32_t, uint32_t, uint32_type_name, uint32_to_string, uint32_from_string>;
 
 	inline std::string int32_to_string (int32_t from) { return std::to_string(from); }
 	bool int32_from_string (std::string_view from, int32_t& to);
@@ -222,7 +228,7 @@ namespace edge
 	inline std::string temp_string_to_string (std::string_view from) { return std::string(from); }
 	inline bool temp_string_from_string (std::string_view from, std::string& to) { to = from; return true; }
 	static constexpr char temp_string_type_name[] = "temp_string";
-	using temp_string_property = typed_property<std::string, std::string_view, std::string, temp_string_type_name, temp_string_to_string, temp_string_from_string>;
+	using temp_string_p = typed_property<std::string, std::string_view, std::string, temp_string_type_name, temp_string_to_string, temp_string_from_string>;
 
 	inline std::string backed_string_to_string (std::string_view from) { return std::string(from); }
 	inline bool backed_string_from_string (std::string_view from, std::string& to) { to = from; return true; }

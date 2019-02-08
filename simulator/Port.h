@@ -89,12 +89,12 @@ public:
 	unsigned int GetExternalPortPathCost() const;
 
 private:
-	static const edge::bool_property auto_edge_property;
-	static const edge::bool_property admin_edge_property;
-	static const edge::bool_property MacOperational;
-	static const edge::uint32_property DetectedPortPathCost;
-	static const edge::uint32_property AdminExternalPortPathCost;
-	static const edge::uint32_property ExternalPortPathCost;
+	static const edge::bool_p auto_edge_property;
+	static const edge::bool_p admin_edge_property;
+	static const edge::bool_p MacOperational;
+	static const edge::uint32_p DetectedPortPathCost;
+	static const edge::uint32_p AdminExternalPortPathCost;
+	static const edge::uint32_p ExternalPortPathCost;
 	static const edge::property* const Port::_properties[];
 	static const edge::type_t _type;
 

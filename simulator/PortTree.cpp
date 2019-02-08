@@ -42,10 +42,20 @@ void PortTree::set_priority (uint32_t priority)
 {
 	if (this->priority() != priority)
 	{
-		this->on_property_changing(&priority_p);
+		this->on_property_changing(&priority_property);
 		STP_SetPortPriority (_port->bridge()->stp_bridge(), _port->GetPortIndex(), _treeIndex, (unsigned char) priority, GetMessageTime());
-		this->on_property_changed(&priority_p);
+		this->on_property_changed(&priority_property);
 	}
+}
+
+bool PortTree::learning() const
+{
+	return STP_GetPortLearning(_port->bridge()->stp_bridge(), _port->GetPortIndex(), _treeIndex);
+}
+
+bool PortTree::forwarding() const
+{
+	return STP_GetPortForwarding(_port->bridge()->stp_bridge(), _port->GetPortIndex(), _treeIndex);
 }
 
 const edge::NVP port_priority_nvps[] {
@@ -69,20 +79,33 @@ const edge::NVP port_priority_nvps[] {
 
 const char port_priority_type_name[] = "PortPriority";
 
-const port_priority_property PortTree::priority_p
+const port_priority_p PortTree::priority_property
 (
 	"PortPriority",
-	edge::misc_group_name,
+	nullptr,
 	"The value of the priority field which is contained in the first (in network byte order) octet of the (2 octet long) Port ID. "
 		"The other octet of the Port ID is given by the value of dot1dStpPort.",
-	static_cast<port_priority_property::getter_t>(&priority),
-	static_cast<port_priority_property::setter_t>(&set_priority),
+	static_cast<port_priority_p::getter_t>(&priority),
+	static_cast<port_priority_p::setter_t>(&set_priority),
 	0x80
 );
 
-const edge::property* const PortTree::_properties[] =
-{
-	&priority_p,
-};
+const edge::bool_p PortTree::learning_property (
+	"learning",
+	nullptr,
+	"",
+	static_cast<edge::bool_p::getter_t>(&learning),
+	nullptr,
+	std::nullopt);
+
+const edge::bool_p PortTree::forwarding_property (
+	"forwarding",
+	nullptr,
+	"",
+	static_cast<edge::bool_p::getter_t>(&forwarding),
+	nullptr,
+	std::nullopt);
+
+const edge::property* const PortTree::_properties[] = { &priority_property, &learning_property, &forwarding_property };
 
 const edge::type_t PortTree::_type = { "PortTree", &base::_type, _properties };

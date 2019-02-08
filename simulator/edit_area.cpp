@@ -590,14 +590,8 @@ public:
 				bool enable = (wParam == ID_BRIDGE_ENABLE_STP);
 				for (object* o : _selection->objects())
 				{
-					auto b = dynamic_cast<Bridge*>(o);
-					if (b != nullptr)
-					{
-						if (enable && !STP_IsBridgeStarted(b->stp_bridge()))
-							STP_StartBridge(b->stp_bridge(), GetMessageTime());
-						else if (!enable && STP_IsBridgeStarted(b->stp_bridge()))
-							STP_StopBridge(b->stp_bridge(), GetMessageTime());
-					}
+					if (auto b = dynamic_cast<Bridge*>(o))
+						b->set_stp_enabled(enable);
 				}
 
 				_project->SetChangedFlag(true);

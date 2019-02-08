@@ -37,7 +37,7 @@ struct BridgeTree : edge::object
 	std::string GetReceivingPortId() const;
 
 	static const bridge_priority_property Priority;
-	static const edge::temp_string_property RootBridgeId;
+	static const edge::temp_string_p RootBridgeId;
 	static const edge::property* const _properties[];
 	static const edge::type_t _type;
 	const edge::type_t* type() const override { return &_type; }

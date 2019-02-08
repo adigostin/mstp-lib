@@ -3,7 +3,7 @@
 
 namespace edge
 {
-	const char misc_group_name[] = "MISC";
+	extern const property_group misc_group = { 0, "Misc" };
 
 	std::string bool_to_string (bool from)
 	{

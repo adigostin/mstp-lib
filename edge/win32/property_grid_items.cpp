@@ -86,25 +86,29 @@ std::vector<std::unique_ptr<pgitem>> object_item::create_children()
 	if (!std::all_of (_objects.begin(), _objects.end(), [type](object* o) { return o->type() == type; }))
 		return { };
 
-	struct group_name_comparer
+	struct group_comparer
 	{
-		bool operator() (const char* name1, const char* name2) const { return strcmp(name1, name2) < 0; }
+		bool operator() (const property_group* g1, const property_group* g2) const { return g1->prio < g2->prio; }
 	};
 
-	std::set<const char*, group_name_comparer> group_names;
+	std::set<const property_group*, group_comparer> groups;
 
 	for (auto prop : type->make_property_list())
-		group_names.insert(prop->_group);
+	{
+		if (groups.find(prop->_group) == groups.end())
+			groups.insert(prop->_group);
+	}
 
 	std::vector<std::unique_ptr<pgitem>> items;
-	std::transform (group_names.begin(), group_names.end(), std::back_inserter(items), [this](const char* n) { return std::make_unique<group_item>(this, n); });
+	std::transform (groups.begin(), groups.end(), std::back_inserter(items),
+					[this](const property_group* n) { return std::make_unique<group_item>(this, n); });
 	return items;
 }
 #pragma endregion
 
 #pragma region group_item
-group_item::group_item (object_item* parent, const char* group_name)
-	: base(parent), _group_name(group_name)
+group_item::group_item (object_item* parent, const property_group* group)
+	: base(parent), _group(group)
 {
 	expand();
 }
@@ -119,7 +123,7 @@ std::vector<std::unique_ptr<pgitem>> group_item::create_children()
 	{
 		if (auto value_prop = dynamic_cast<const value_property*>(prop))
 		{
-			if (strcmp (value_prop->_group, _group_name) == 0)
+			if (value_prop->_group == _group)
 				items.push_back (std::make_unique<value_pgitem>(this, value_prop));
 		}
 		else
@@ -135,7 +139,7 @@ void group_item::create_text_layouts (IDWriteFactory* factory, IDWriteTextFormat
 	auto hr = factory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL,
 										 DWRITE_FONT_STRETCH_NORMAL, font_size, L"en-US", &tf);
 	float layout_width = std::max (0.0f, l.x_right -l.x_name - 2 * title_lr_padding);
-	_layout = text_layout::create (factory, tf, _group_name, layout_width);
+	_layout = text_layout::create (factory, tf, _group->name, layout_width);
 }
 
 void group_item::render (const render_context& rc, const item_layout& l, float line_thickness, bool selected, bool focused) const
@@ -252,7 +256,7 @@ HCURSOR value_pgitem::cursor() const
 	if (!_prop->has_setter() && !_prop->custom_editor())
 		return ::LoadCursor(nullptr, IDC_ARROW);
 
-	if (auto bool_property = dynamic_cast<const edge::bool_property*>(_prop))
+	if (auto bool_p = dynamic_cast<const edge::bool_p*>(_prop))
 		return ::LoadCursor(nullptr, IDC_HAND);
 
 	if (_prop->nvps() || _prop->custom_editor())
@@ -282,7 +286,7 @@ void value_pgitem::process_mouse_button_down (mouse_button button, UINT modifier
 	if (!_prop->has_setter())
 		return;
 
-	if (_prop->nvps() || dynamic_cast<const edge::bool_property*>(_prop))
+	if (_prop->nvps() || dynamic_cast<const edge::bool_p*>(_prop))
 	{
 		auto nvps = _prop->nvps() ? _prop->nvps() : bool_nvps;
 		int selected_nvp_index = root()->_grid->show_enum_editor(dip, nvps);
