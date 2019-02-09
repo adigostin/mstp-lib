@@ -334,24 +334,22 @@ bool Port::GetMacOperational() const
 
 bool Port::auto_edge() const
 {
-	return STP_GetPortAutoEdgeAsSnmpTruthValue (_bridge->stp_bridge(), _portIndex) == 1;
+	return STP_GetPortAutoEdge (_bridge->stp_bridge(), _portIndex);
 }
 
 void Port::set_auto_edge (bool autoEdge)
 {
-	unsigned int snmp_truth_value = autoEdge ? 1 : 2;
-	STP_SetPortAutoEdgeFromSnmpTruthValue (_bridge->stp_bridge(), _portIndex, snmp_truth_value, (unsigned int) GetMessageTime());
+	STP_SetPortAutoEdge (_bridge->stp_bridge(), _portIndex, autoEdge, (unsigned int) GetMessageTime());
 }
 
 bool Port::admin_edge() const
 {
-	return STP_GetPortAdminEdgeAsSnmpTruthValue (_bridge->stp_bridge(), _portIndex) == 1;
+	return STP_GetPortAdminEdge (_bridge->stp_bridge(), _portIndex);
 }
 
 void Port::set_admin_edge (bool adminEdge)
 {
-	unsigned int snmp_truth_value = adminEdge ? 1 : 2;
-	STP_SetPortAdminEdgeFromSnmpTruthValue (_bridge->stp_bridge(), _portIndex, snmp_truth_value, (unsigned int) GetMessageTime());
+	STP_SetPortAdminEdge (_bridge->stp_bridge(), _portIndex, adminEdge, (unsigned int) GetMessageTime());
 }
 
 static const _bstr_t PortString = "Port";

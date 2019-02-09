@@ -1033,6 +1033,9 @@
   <file>
     <name>$PROJ_DIR$\main.cpp</name>
   </file>
+  <file>
+    <name>$PROJ_DIR$\test.c</name>
+  </file>
 </project>
 
 

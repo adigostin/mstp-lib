@@ -129,7 +129,7 @@ static switch_dev_addr get_dev_addr_from_stp_port (unsigned int stp_port_index)
 		case 2: return switch_dev_addr_port3; // EA3
 		case 3: return switch_dev_addr_port3; // EA4
 		case 4: return switch_dev_addr_port4; // SERDES-A
-		default: assert(false);
+		default: assert(false); return switch_dev_addr_port0;
 	}
 }
 
