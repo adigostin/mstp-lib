@@ -151,7 +151,44 @@ std::string BridgeTree::GetReceivingPortId() const
 	return ss.str();
 }
 
+uint32_t BridgeTree::hello_time() const
+{
+	unsigned short ht;
+	STP_GetRootTimes(_parent->stp_bridge(), _treeIndex, nullptr, &ht, nullptr, nullptr, nullptr);
+	return ht;
+}
+
+uint32_t BridgeTree::max_age() const
+{
+	unsigned short ma;
+	STP_GetRootTimes(_parent->stp_bridge(), _treeIndex, nullptr, nullptr, &ma, nullptr, nullptr);
+	return ma;
+}
+
+uint32_t BridgeTree::forward_delay() const
+{
+	unsigned short fd;
+	STP_GetRootTimes(_parent->stp_bridge(), _treeIndex, &fd, nullptr, nullptr, nullptr, nullptr);
+	return fd;
+}
+
+uint32_t BridgeTree::message_age() const
+{
+	unsigned short ma;
+	STP_GetRootTimes(_parent->stp_bridge(), _treeIndex, nullptr, nullptr, nullptr, &ma, nullptr);
+	return ma;
+}
+
+uint32_t BridgeTree::remaining_hops() const
+{
+	unsigned char rh;
+	STP_GetRootTimes(_parent->stp_bridge(), _treeIndex, nullptr, nullptr, nullptr, nullptr, &rh);
+	return rh;
+}
+
 // ============================================================================
+
+static const edge::property_group root_times_group = { 5, "Root Times" };
 
 const NVP bridge_priority_nvps[] =
 {
@@ -236,6 +273,47 @@ static const TypedProperty<wstring> ReceivingPortId
 	nullptr
 );
 */
+
+const edge::uint32_p BridgeTree::hello_time_property {
+	"HelloTime",
+	&root_times_group,
+	nullptr,
+	static_cast<edge::uint32_p::getter_t>(&BridgeTree::hello_time),
+	nullptr,
+	std::nullopt };
+
+const edge::uint32_p BridgeTree::max_age_property {
+	"MaxAge",
+	&root_times_group,
+	nullptr,
+	static_cast<edge::uint32_p::getter_t>(&BridgeTree::max_age),
+	nullptr,
+	std::nullopt };
+
+const edge::uint32_p BridgeTree::forward_delay_property {
+	"ForwardDelay",
+	&root_times_group,
+	nullptr,
+	static_cast<edge::uint32_p::getter_t>(&BridgeTree::forward_delay),
+	nullptr,
+	std::nullopt };
+
+const edge::uint32_p BridgeTree::message_age_property {
+	"MessageAge",
+	&root_times_group,
+	nullptr,
+	static_cast<edge::uint32_p::getter_t>(&BridgeTree::message_age),
+	nullptr,
+	std::nullopt };
+
+const edge::uint32_p BridgeTree::remaining_hops_property {
+	"remainingHops",
+	&root_times_group,
+	nullptr,
+	static_cast<edge::uint32_p::getter_t>(&remaining_hops),
+	nullptr,
+	std::nullopt };
+
 const edge::property* const BridgeTree::_properties[] =
 {
 	&Priority,
@@ -246,6 +324,12 @@ const edge::property* const BridgeTree::_properties[] =
 	&DesignatedBridgeId,
 	&DesignatedPortId,
 	&ReceivingPortId,
-*/};
+*/
+	&hello_time_property,
+	&max_age_property,
+	&forward_delay_property,
+	&message_age_property,
+	&remaining_hops_property
+};
 
 const edge::type_t BridgeTree::_type = { "BridgeTree", &base::_type, _properties };

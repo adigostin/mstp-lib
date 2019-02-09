@@ -141,13 +141,10 @@ public:
 	void SetMstConfigTable (const STP_CONFIG_TABLE_ENTRY* entries, size_t entryCount);
 	uint32_t GetBridgeHelloTime() const;
 	void SetBridgeHelloTime (uint32_t helloTime);
-	uint32_t GetHelloTime() const;
 	uint32_t GetBridgeMaxAge() const;
 	void SetBridgeMaxAge (uint32_t maxAge);
-	uint32_t GetMaxAge() const;
 	uint32_t GetBridgeForwardDelay() const;
 	void SetBridgeForwardDelay (uint32_t forwardDelay);
-	uint32_t GetForwardDelay() const;
 
 private:
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
@@ -181,11 +178,8 @@ public:
 	static const edge::uint32_p      MstConfigIdRevLevel;
 	static const config_id_digest_p  MstConfigIdDigest;
 	static const edge::uint32_p      BridgeHelloTime;
-	static const edge::uint32_p      HelloTime;
 	static const edge::uint32_p      BridgeMaxAge;
-	static const edge::uint32_p      MaxAge;
 	static const edge::uint32_p      BridgeForwardDelay;
-	static const edge::uint32_p      ForwardDelay;
 
 	static const edge::property* const _properties[];
 	static const edge::type_t _type;

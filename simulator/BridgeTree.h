@@ -23,7 +23,6 @@ struct BridgeTree : edge::object
 	HRESULT Serialize (IXMLDOMDocument3* doc, edge::com_ptr<IXMLDOMElement>& elementOut) const;
 	HRESULT Deserialize (IXMLDOMElement* bridgeTreeElement);
 
-	//std::wstring GetPriorityLabel () const;
 	uint32_t GetPriority() const;
 	void SetPriority (uint32_t priority);
 
@@ -36,8 +35,19 @@ struct BridgeTree : edge::object
 	std::string GetDesignatedPortId() const;
 	std::string GetReceivingPortId() const;
 
+	uint32_t hello_time() const;
+	uint32_t max_age() const;
+	uint32_t forward_delay() const;
+	uint32_t message_age() const;
+	uint32_t remaining_hops() const;
+
 	static const bridge_priority_property Priority;
 	static const edge::temp_string_p RootBridgeId;
+	static const edge::uint32_p hello_time_property;
+	static const edge::uint32_p max_age_property;
+	static const edge::uint32_p forward_delay_property;
+	static const edge::uint32_p message_age_property;
+	static const edge::uint32_p remaining_hops_property;
 	static const edge::property* const _properties[];
 	static const edge::type_t _type;
 	const edge::type_t* type() const override { return &_type; }
