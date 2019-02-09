@@ -81,6 +81,7 @@ namespace edge
 		virtual bool try_set_from_string (object* obj, std::string_view str) const = 0;
 		virtual const NVP* nvps() const = 0;
 		virtual bool equal (object* obj1, object* obj2) const = 0;
+		virtual bool changed_from_default(const object* obj) const = 0;
 	};
 
 	// ========================================================================
@@ -104,7 +105,7 @@ namespace edge
 		using static_getter_t = return_t(*)(const object*);
 		using static_setter_t = void(*)(object*, param_t);
 
-		using getter_t = std::variant<member_getter_t, static_getter_t, nullptr_t>;
+		using getter_t = std::variant<member_getter_t, static_getter_t>;
 		using setter_t = std::variant<member_setter_t, static_setter_t, nullptr_t>;
 
 		getter_t const _getter;
@@ -124,7 +125,6 @@ namespace edge
 	public:
 		std::string get_to_string (const object* obj) const final
 		{
-			assert (!std::holds_alternative<nullptr_t>(_getter));
 			auto value = std::holds_alternative<member_getter_t>(_getter) ? (obj->*std::get<member_getter_t>(_getter))() : std::get<static_getter_t>(_getter)(obj);
 			return to_string (value);
 		}
@@ -152,10 +152,18 @@ namespace edge
 
 		virtual bool equal (object* obj1, object* obj2) const override final
 		{
-			assert (!std::holds_alternative<nullptr_t>(_getter));
 			auto val1 = std::holds_alternative<member_getter_t>(_getter) ? (obj1->*std::get<member_getter_t>(_getter))() : std::get<static_getter_t>(_getter)(obj1);
 			auto val2 = std::holds_alternative<member_getter_t>(_getter) ? (obj2->*std::get<member_getter_t>(_getter))() : std::get<static_getter_t>(_getter)(obj2);
 			return val1 == val2;
+		}
+
+		virtual bool changed_from_default(const object* obj) const override
+		{
+			if (!_default_value.has_value())
+				return true;
+
+			auto val = std::holds_alternative<member_getter_t>(_getter) ? (obj->*std::get<member_getter_t>(_getter))() : std::get<static_getter_t>(_getter)(obj);
+			return val != _default_value.value();
 		}
 	};
 
