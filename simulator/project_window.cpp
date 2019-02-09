@@ -956,51 +956,70 @@ public:
 	{
 		const auto& objs = _selection->objects();
 
+		_pg->clear();
+
 		if (objs.empty())
-		{
-			_pg->clear();
 			return;
-		}
 
-		stringstream ss;
-		ss << "VLAN " << _selectedVlanNumber << " Specific Properties";
-		auto pg_tree_title = ss.str();
-
-		if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<Bridge>(); }))
+		if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<Bridge>(); })
+			|| all_of (objs.begin(), objs.end(), [](object* o) { return o->is<Port>(); }))
 		{
-			_pg->clear();
-			_pg->add_section ("Bridge Properties", objs.data(), objs.size());
+			const char* first_section_name;
+			std::function<std::pair<object*, unsigned int>(object* o)> tree_selector;
 
-			std::vector<object*> bridge_trees;
-			for (object* o : objs)
+			if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<Bridge>(); }))
 			{
-				auto b = static_cast<Bridge*>(o);
-				auto tree_index = STP_GetTreeIndexFromVlanNumber(b->stp_bridge(), _selectedVlanNumber);
-				bridge_trees.push_back (b->trees().at(tree_index).get());
+				first_section_name = "Bridge Properties";
+
+				tree_selector = [vlan=_selectedVlanNumber](object* o)
+				{
+					auto b = static_cast<Bridge*>(o);
+					auto tree_index = STP_GetTreeIndexFromVlanNumber(b->stp_bridge(), vlan);
+					auto tree_object = b->trees().at(tree_index).get();
+					return std::make_pair((object*)tree_object, tree_index);
+				};
+			}
+			else //if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<Port>(); }))
+			{
+				first_section_name = "Port Properties";
+
+				tree_selector = [vlan=_selectedVlanNumber](object* o)
+				{
+					auto p = static_cast<Port*>(o);
+					auto tree_index = STP_GetTreeIndexFromVlanNumber(p->bridge()->stp_bridge(), vlan);
+					auto tree_object = p->trees().at(tree_index).get();
+					return std::make_pair((object*)tree_object, tree_index);
+				};
 			}
 
-			_pg->add_section (pg_tree_title.c_str(), bridge_trees.data(), bridge_trees.size());
-		}
-		else if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<Port>(); }))
-		{
-			_pg->clear();
-			_pg->add_section("Port Properties", objs.data(), objs.size());
+			_pg->add_section (first_section_name, objs.data(), objs.size());
 
-			std::vector<object*> port_trees;
+			auto first_tree_index = tree_selector(objs.front()).second;
+			bool all_same_tree_index = true;
+
+			std::vector<object*> trees;
 			for (object* o : objs)
 			{
-				auto p = static_cast<Port*>(o);
-				auto tree_index = STP_GetTreeIndexFromVlanNumber(p->bridge()->stp_bridge(), _selectedVlanNumber);
-				port_trees.push_back (p->trees().at(tree_index).get());
+				auto tree_object_and_index = tree_selector(o);
+				trees.push_back(tree_object_and_index.first);
+				if (tree_object_and_index.second != first_tree_index)
+					all_same_tree_index = false;
 			}
 
-			_pg->add_section (pg_tree_title.c_str(), port_trees.data(), port_trees.size());
+			stringstream ss;
+			ss << "VLAN " << _selectedVlanNumber << " Properties";
+			if (all_same_tree_index && (first_tree_index == 0))
+				ss << " (CIST)";
+			else if (all_same_tree_index)
+				ss << " (MSTI " << first_tree_index << ")";
+			else
+				ss << " (multiple trees)";
+
+			_pg->add_section (ss.str().c_str(), trees.data(), trees.size());
 		}
 		else if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<wire>(); }))
 		{
-			_pg->clear();
 			_pg->add_section("Wire Properties", objs.data(), objs.size());
-			_pg->add_section(pg_tree_title.c_str(), nullptr, 0);
 		}
 		else
 			assert(false); // not implemented
