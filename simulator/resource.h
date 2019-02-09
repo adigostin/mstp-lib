@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by Simulator.rc
+// Used by simulator.rc
 //
 #define IDI_DESIGNER                    107
 #define IDD_DIALOG_VLAN                 108
@@ -19,6 +19,7 @@
 #define IDC_BUTTON_USE_DEFAULT_CONFIG_TABLE 1014
 #define IDC_BUTTON_USE_TEST1_CONFIG_TABLE 1017
 #define IDC_STATIC_HINT_NOT_MSTP        1021
+#define IDC_STATIC_EXTENT               1025
 #define ID_NEW_BRIDGE                   32772
 #define ID_PORT_AUTO_EDGE               32773
 #define ID_PORT_ADMIN_EDGE              32774
@@ -52,7 +53,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        136
 #define _APS_NEXT_COMMAND_VALUE         32816
-#define _APS_NEXT_CONTROL_VALUE         1025
+#define _APS_NEXT_CONTROL_VALUE         1026
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

@@ -76,6 +76,30 @@ public:
 
 	virtual HWND hwnd() const override final { return _hwnd; }
 
+	virtual SIZE preferred_size() const override final
+	{
+		RECT rect;
+		::GetWindowRect(GetDlgItem(_hwnd, IDC_STATIC_EXTENT), &rect);
+		if (auto proc_addr = GetProcAddress(GetModuleHandleA("User32.dll"), "AdjustWindowRectExForDpi"))
+		{
+			auto get_dpi_proc_addr = GetProcAddress(GetModuleHandleA("User32.dll"), "GetDpiForWindow");
+			auto get_dpi_proc = reinterpret_cast<UINT(WINAPI*)(HWND)>(get_dpi_proc_addr);
+			UINT dpi = get_dpi_proc(_hwnd);
+
+			auto proc = reinterpret_cast<BOOL(WINAPI*)(LPRECT, DWORD, BOOL, DWORD, UINT)>(proc_addr);
+			BOOL bRes = proc (&rect, GetWindowStyle(_hwnd), FALSE, GetWindowExStyle(_hwnd), dpi); assert(bRes);
+			return { rect.right - rect.left, rect.bottom - rect.top };
+		}
+		else
+		{
+			HDC tempDC = GetDC(hwnd());
+			UINT dpi = GetDeviceCaps (tempDC, LOGPIXELSX);
+			ReleaseDC (hwnd(), tempDC);
+			BOOL bRes = AdjustWindowRectEx (&rect, GetWindowStyle(_hwnd), FALSE, GetWindowExStyle(_hwnd)); assert(bRes);
+			return { rect.right - rect.left, rect.bottom - rect.top };
+		}
+	}
+
 	static INT_PTR CALLBACK DialogProcStatic (HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
 		vlan_window* window;

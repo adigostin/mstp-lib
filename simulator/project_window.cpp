@@ -385,7 +385,7 @@ public:
 			_log_window->SetRect (log_restricted_rect());
 
 		if (_vlanWindow != nullptr)
-			_vlanWindow->SetRect ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->GetHeight() });
+			_vlanWindow->SetRect ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->preferred_size().cy });
 
 		if (_edit_window != nullptr)
 			_edit_window->SetRect (edit_window_rect());

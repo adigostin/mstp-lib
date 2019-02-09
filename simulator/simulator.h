@@ -186,6 +186,7 @@ extern const project_factory_t project_factory;
 
 struct __declspec(novtable) vlan_window_i : virtual edge::win32_window_i
 {
+	virtual SIZE preferred_size() const = 0;
 };
 using vlan_window_factory_t = std::unique_ptr<vlan_window_i>(*const)(
 	simulator_app_i* app,
