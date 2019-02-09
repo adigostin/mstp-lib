@@ -6,6 +6,7 @@
 #include <vector>
 #include <optional>
 #include <memory>
+#include <variant>
 #include "assert.h"
 
 namespace edge
@@ -98,8 +99,13 @@ namespace edge
 	{
 		using base = value_property;
 
-		using getter_t = return_t (object::*)() const;
-		using setter_t = void (object::*)(param_t);
+		using member_getter_t = return_t (object::*)() const;
+		using member_setter_t = void (object::*)(param_t);
+		using static_getter_t = return_t(*)(const object*);
+		using static_setter_t = void(*)(object*, param_t);
+
+		using getter_t = std::variant<member_getter_t, static_getter_t, nullptr_t>;
+		using setter_t = std::variant<member_setter_t, static_setter_t, nullptr_t>;
 
 		getter_t const _getter;
 		setter_t const _setter;
@@ -111,14 +117,15 @@ namespace edge
 
 		virtual const char* type_name() const override final { return type_name_; }
 
-		virtual bool has_setter() const override final { return _setter != nullptr; }
+		virtual bool has_setter() const override final { return !std::holds_alternative<nullptr_t>(_setter); }
 
 		virtual property_editor_factory_t* custom_editor() const override { return custom_editor_; }
 
 	public:
 		std::string get_to_string (const object* obj) const final
 		{
-			auto value = (obj->*_getter)();
+			assert (!std::holds_alternative<nullptr_t>(_getter));
+			auto value = std::holds_alternative<member_getter_t>(_getter) ? (obj->*std::get<member_getter_t>(_getter))() : std::get<static_getter_t>(_getter)(obj);
 			return to_string (value);
 		}
 
@@ -127,7 +134,14 @@ namespace edge
 			value_t value;
 			bool ok = from_string(str_in, value);
 			if (ok)
-				(obj->*_setter)(value);
+			{
+				assert (!std::holds_alternative<nullptr_t>(_setter));
+				if (std::holds_alternative<member_setter_t>(_setter))
+					(obj->*std::get<member_setter_t>(_setter))(value);
+				else
+					std::get<static_setter_t>(_setter)(obj, value);
+			}
+
 			return ok;
 		}
 
@@ -138,7 +152,10 @@ namespace edge
 
 		virtual bool equal (object* obj1, object* obj2) const override final
 		{
-			return (obj1->*_getter)() == (obj2->*_getter)();
+			assert (!std::holds_alternative<nullptr_t>(_getter));
+			auto val1 = std::holds_alternative<member_getter_t>(_getter) ? (obj1->*std::get<member_getter_t>(_getter))() : std::get<static_getter_t>(_getter)(obj1);
+			auto val2 = std::holds_alternative<member_getter_t>(_getter) ? (obj2->*std::get<member_getter_t>(_getter))() : std::get<static_getter_t>(_getter)(obj2);
+			return val1 == val2;
 		}
 	};
 

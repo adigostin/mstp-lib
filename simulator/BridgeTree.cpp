@@ -200,8 +200,8 @@ const bridge_priority_p BridgeTree::bridge_priority_property (
 	"Bridge Priority",
 	nullptr,
 	nullptr,
-	static_cast<bridge_priority_p::getter_t>(&bridge_priority),
-	static_cast<bridge_priority_p::setter_t>(&set_bridge_priority),
+	static_cast<bridge_priority_p::member_getter_t>(&bridge_priority),
+	static_cast<bridge_priority_p::member_setter_t>(&set_bridge_priority),
 	0x8000
 );
 
@@ -210,7 +210,7 @@ const temp_string_p BridgeTree::root_bridge_id_property
 	"Root Bridge ID",
 	nullptr,
 	nullptr,
-	static_cast<temp_string_p::getter_t>(&root_bridge_id),
+	static_cast<temp_string_p::member_getter_t>(&root_bridge_id),
 	nullptr,
 	std::nullopt
 );
@@ -262,7 +262,7 @@ const edge::uint32_p BridgeTree::hello_time_property {
 	"HelloTime",
 	&root_times_group,
 	nullptr,
-	static_cast<edge::uint32_p::getter_t>(&BridgeTree::hello_time),
+	static_cast<edge::uint32_p::member_getter_t>(&BridgeTree::hello_time),
 	nullptr,
 	std::nullopt };
 
@@ -270,7 +270,7 @@ const edge::uint32_p BridgeTree::max_age_property {
 	"MaxAge",
 	&root_times_group,
 	nullptr,
-	static_cast<edge::uint32_p::getter_t>(&BridgeTree::max_age),
+	static_cast<edge::uint32_p::member_getter_t>(&BridgeTree::max_age),
 	nullptr,
 	std::nullopt };
 
@@ -278,7 +278,7 @@ const edge::uint32_p BridgeTree::forward_delay_property {
 	"ForwardDelay",
 	&root_times_group,
 	nullptr,
-	static_cast<edge::uint32_p::getter_t>(&BridgeTree::forward_delay),
+	static_cast<edge::uint32_p::member_getter_t>(&BridgeTree::forward_delay),
 	nullptr,
 	std::nullopt };
 
@@ -286,7 +286,7 @@ const edge::uint32_p BridgeTree::message_age_property {
 	"MessageAge",
 	&root_times_group,
 	nullptr,
-	static_cast<edge::uint32_p::getter_t>(&BridgeTree::message_age),
+	static_cast<edge::uint32_p::member_getter_t>(&BridgeTree::message_age),
 	nullptr,
 	std::nullopt };
 
@@ -294,7 +294,7 @@ const edge::uint32_p BridgeTree::remaining_hops_property {
 	"remainingHops",
 	&root_times_group,
 	nullptr,
-	static_cast<edge::uint32_p::getter_t>(&remaining_hops),
+	static_cast<edge::uint32_p::member_getter_t>(&remaining_hops),
 	nullptr,
 	std::nullopt };
 

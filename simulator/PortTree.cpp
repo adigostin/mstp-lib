@@ -85,8 +85,8 @@ const port_priority_p PortTree::priority_property
 	nullptr,
 	"The value of the priority field which is contained in the first (in network byte order) octet of the (2 octet long) Port ID. "
 		"The other octet of the Port ID is given by the value of dot1dStpPort.",
-	static_cast<port_priority_p::getter_t>(&priority),
-	static_cast<port_priority_p::setter_t>(&set_priority),
+	static_cast<port_priority_p::member_getter_t>(&priority),
+	static_cast<port_priority_p::member_setter_t>(&set_priority),
 	0x80
 );
 
@@ -94,7 +94,7 @@ const edge::bool_p PortTree::learning_property (
 	"learning",
 	nullptr,
 	"",
-	static_cast<edge::bool_p::getter_t>(&learning),
+	static_cast<edge::bool_p::member_getter_t>(&learning),
 	nullptr,
 	std::nullopt);
 
@@ -102,7 +102,7 @@ const edge::bool_p PortTree::forwarding_property (
 	"forwarding",
 	nullptr,
 	"",
-	static_cast<edge::bool_p::getter_t>(&forwarding),
+	static_cast<edge::bool_p::member_getter_t>(&forwarding),
 	nullptr,
 	std::nullopt);
 

@@ -461,8 +461,8 @@ const bool_p Port::auto_edge_property
 		"is to detect other Bridges attached to the LAN, and set ieee8021SpanningTreeRstpPortOperEdgePort automatically. "
 		"The default value is true(1) This is optional and provided only by implementations that support the automatic "
 		"identification of edge ports. The value of this object MUST be retained across reinitializations of the management system.",
-	static_cast<bool_p::getter_t>(&auto_edge),
-	static_cast<bool_p::setter_t>(&set_auto_edge),
+	static_cast<bool_p::member_getter_t>(&auto_edge),
+	static_cast<bool_p::member_setter_t>(&set_auto_edge),
 	true
 );
 
@@ -476,8 +476,8 @@ const bool_p Port::admin_edge_property
 		"of dot1dStpPortOperEdgePort to change to the same value. Note that even when this object's value is true, "
 		"the value of the corresponding instance of dot1dStpPortOperEdgePort can be false if a BPDU has been received. "
 		"The value of this object MUST be retained across reinitializations of the management system",
-	static_cast<bool_p::getter_t>(&admin_edge),
-	static_cast<bool_p::setter_t>(&set_admin_edge),
+	static_cast<bool_p::member_getter_t>(&admin_edge),
+	static_cast<bool_p::member_setter_t>(&set_admin_edge),
 	false
 );
 
@@ -485,7 +485,7 @@ const bool_p Port::MacOperational (
 	"MAC_Operational",
 	nullptr,
 	nullptr,
-	static_cast<bool_p::getter_t>(&GetMacOperational),
+	static_cast<bool_p::member_getter_t>(&GetMacOperational),
 	nullptr,
 	false);
 
@@ -493,7 +493,7 @@ const uint32_p Port::DetectedPortPathCost (
 	"DetectedPortPathCost",
 	nullptr,
 	nullptr,
-	static_cast<uint32_p::getter_t>(&GetDetectedPortPathCost),
+	static_cast<uint32_p::member_getter_t>(&GetDetectedPortPathCost),
 	nullptr,
 	0);
 
@@ -501,15 +501,15 @@ const uint32_p Port::AdminExternalPortPathCost (
 	"AdminExternalPortPathCost",
 	nullptr,
 	nullptr,
-	static_cast<uint32_p::getter_t>(&GetAdminExternalPortPathCost),
-	static_cast<uint32_p::setter_t>(&SetAdminExternalPortPathCost),
+	static_cast<uint32_p::member_getter_t>(&GetAdminExternalPortPathCost),
+	static_cast<uint32_p::member_setter_t>(&SetAdminExternalPortPathCost),
 	0);
 
 const uint32_p Port::ExternalPortPathCost (
 	"ExternalPortPathCost",
 	nullptr,
 	nullptr,
-  	static_cast<uint32_p::getter_t>(&GetExternalPortPathCost),
+  	static_cast<uint32_p::member_getter_t>(&GetExternalPortPathCost),
 	nullptr,
 	0);
 

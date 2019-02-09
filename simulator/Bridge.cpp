@@ -842,31 +842,31 @@ const mac_address_p Bridge::bridge_address_property {
 	"Bridge Address",
 	nullptr,
 	nullptr,
-	static_cast<mac_address_p::getter_t>(&bridge_address),
-	static_cast<mac_address_p::setter_t>(&set_bridge_address),
+	static_cast<mac_address_p::member_getter_t>(&bridge_address),
+	static_cast<mac_address_p::member_setter_t>(&set_bridge_address),
 	std::nullopt };
 
 const bool_p Bridge::stp_enabled_property {
 	"STP Enabled",
 	nullptr,
 	nullptr,
-	static_cast<bool_p::getter_t>(&stp_enabled),
-	static_cast<bool_p::setter_t>(&set_stp_enabled),
+	static_cast<bool_p::member_getter_t>(&stp_enabled),
+	static_cast<bool_p::member_setter_t>(&set_stp_enabled),
 	true };
 
 const stp_version_p Bridge::stp_version_property {
 	"STP Version",
 	nullptr,
 	nullptr,
-	static_cast<stp_version_p::getter_t>(&Bridge::GetStpVersion),
-	static_cast<stp_version_p::setter_t>(&Bridge::SetStpVersion),
+	static_cast<stp_version_p::member_getter_t>(&Bridge::GetStpVersion),
+	static_cast<stp_version_p::member_setter_t>(&Bridge::SetStpVersion),
 	STP_VERSION_RSTP };
 
 const uint32_p Bridge::PortCount {
 	"Port Count",
 	nullptr,
 	nullptr,
-	static_cast<uint32_p::getter_t>(&Bridge::GetPortCount),
+	static_cast<uint32_p::member_getter_t>(&Bridge::GetPortCount),
 	nullptr,
 	std::nullopt };
 
@@ -874,7 +874,7 @@ const edge::uint32_p Bridge::MstiCount {
 	"MSTI Count",
 	nullptr,
 	nullptr,
-	static_cast<uint32_p::getter_t>(&Bridge::GetMstiCount),
+	static_cast<uint32_p::member_getter_t>(&Bridge::GetMstiCount),
 	nullptr,
 	std::nullopt };
 
@@ -882,16 +882,16 @@ const edge::temp_string_p Bridge::MstConfigIdName {
 	"Name",
 	&mst_group,
 	nullptr,
-	static_cast<temp_string_p::getter_t>(&Bridge::GetMstConfigIdName),
-	static_cast<temp_string_p::setter_t>(&Bridge::SetMstConfigIdName),
+	static_cast<temp_string_p::member_getter_t>(&Bridge::GetMstConfigIdName),
+	static_cast<temp_string_p::member_setter_t>(&Bridge::SetMstConfigIdName),
 	std::nullopt };
 
 const edge::uint32_p Bridge::MstConfigIdRevLevel {
 	"Revision Level",
 	&mst_group,
 	nullptr,
-	static_cast<uint32_p::getter_t>(&Bridge::GetMstConfigIdRevLevel),
-	static_cast<uint32_p::setter_t>(&Bridge::SetMstConfigIdRevLevel),
+	static_cast<uint32_p::member_getter_t>(&Bridge::GetMstConfigIdRevLevel),
+	static_cast<uint32_p::member_setter_t>(&Bridge::SetMstConfigIdRevLevel),
 	0
 };
 
@@ -899,7 +899,7 @@ const config_id_digest_p Bridge::MstConfigIdDigest (
 	"Digest",
 	&mst_group,
 	nullptr,
-	static_cast<temp_string_p::getter_t>(&Bridge::GetMstConfigIdDigest),
+	static_cast<temp_string_p::member_getter_t>(&Bridge::GetMstConfigIdDigest),
 	nullptr,
 	std::nullopt);
 
@@ -907,24 +907,25 @@ const edge::uint32_p Bridge::BridgeHelloTime {
 	"BridgeHelloTime",
 	&bridge_times_group,
 	nullptr,
-	static_cast<edge::uint32_p::getter_t>(&Bridge::GetBridgeHelloTime),
-	static_cast<edge::uint32_p::setter_t>(&Bridge::SetBridgeHelloTime),
+	static_cast<edge::uint32_p::member_getter_t>(&Bridge::GetBridgeHelloTime),
+	static_cast<edge::uint32_p::member_setter_t>(&Bridge::SetBridgeHelloTime),
 	2 };
 
 const edge::uint32_p Bridge::BridgeMaxAge {
 	"BridgeMaxAge",
 	&bridge_times_group,
 	nullptr,
-	static_cast<edge::uint32_p::getter_t>(&Bridge::GetBridgeMaxAge),
-	static_cast<edge::uint32_p::setter_t>(&Bridge::SetBridgeMaxAge),
+	static_cast<edge::uint32_p::member_getter_t>(&Bridge::GetBridgeMaxAge),
+	static_cast<edge::uint32_p::member_setter_t>(&Bridge::SetBridgeMaxAge),
 	20 };
 
 const edge::uint32_p Bridge::BridgeForwardDelay {
 	"BridgeForwardDelay",
 	&bridge_times_group,
 	nullptr,
-	static_cast<edge::uint32_p::getter_t>(&Bridge::GetBridgeForwardDelay),
-	static_cast<edge::uint32_p::setter_t>(&Bridge::SetBridgeForwardDelay),
+	//static_cast<edge::uint32_p::member_getter_t>(&Bridge::GetBridgeForwardDelay),
+	[](const object* o) { return (uint32_t) STP_GetBridgeForwardDelay(static_cast<const Bridge*>(o)->stp_bridge()) / 100; },
+	static_cast<edge::uint32_p::member_setter_t>(&Bridge::SetBridgeForwardDelay),
 	15 };
 
 const edge::property* const Bridge::_properties[] = {
