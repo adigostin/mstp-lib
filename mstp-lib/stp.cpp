@@ -291,7 +291,7 @@ static unsigned int GetDefaultPortPathCost (unsigned int speedMegabitsPerSecond)
 		return 2;
 }
 
-void STP_OnPortEnabled (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int speedMegabitsPerSecond, unsigned int detectedPointToPointMAC, unsigned int timestamp)
+void STP_OnPortEnabled (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int speedMegabitsPerSecond, bool detectedPointToPointMAC, unsigned int timestamp)
 {
 	LOG (bridge, -1, -1, "{T}: Port {D} good\r\n", timestamp, 1 + portIndex);
 
@@ -450,21 +450,21 @@ void STP_OnBpduReceived (STP_BRIDGE* bridge, unsigned int portIndex, const unsig
 
 // ============================================================================
 
-unsigned int STP_IsBridgeStarted (const STP_BRIDGE* bridge)
+bool STP_IsBridgeStarted (const STP_BRIDGE* bridge)
 {
 	return bridge->started;
 }
 
 // ============================================================================
 
-void STP_EnableLogging (STP_BRIDGE* bridge, unsigned int enable)
+void STP_EnableLogging (STP_BRIDGE* bridge, bool enable)
 {
 	bridge->loggingEnabled = enable;
 }
 
 // ============================================================================
 
-unsigned int STP_IsLoggingEnabled (const STP_BRIDGE* bridge)
+bool STP_IsLoggingEnabled (const STP_BRIDGE* bridge)
 {
 	return bridge->loggingEnabled;
 }
@@ -1004,7 +1004,7 @@ void STP_SetStpVersion (STP_BRIDGE* bridge, enum STP_VERSION version, unsigned i
 	FLUSH_LOG (bridge);
 }
 
-unsigned int STP_GetPortEnabled (const STP_BRIDGE* bridge, unsigned int portIndex)
+bool STP_GetPortEnabled (const STP_BRIDGE* bridge, unsigned int portIndex)
 {
 	return bridge->ports [portIndex]->portEnabled;
 }
@@ -1015,25 +1015,25 @@ STP_PORT_ROLE STP_GetPortRole (const STP_BRIDGE* bridge, unsigned int portIndex,
 	return bridge->ports [portIndex]->trees [treeIndex]->role;
 }
 
-unsigned int STP_GetPortLearning (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
+bool STP_GetPortLearning (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
 {
 	assert (bridge->started);
 	return bridge->ports [portIndex]->trees [treeIndex]->learning;
 }
 
-unsigned int STP_GetPortForwarding (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
+bool STP_GetPortForwarding (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
 {
 	assert (bridge->started);
 	return bridge->ports [portIndex]->trees [treeIndex]->forwarding;
 }
 
-unsigned int STP_GetPortOperEdge (const STP_BRIDGE* bridge, unsigned int portIndex)
+bool STP_GetPortOperEdge (const STP_BRIDGE* bridge, unsigned int portIndex)
 {
 	assert (bridge->started);
 	return bridge->ports [portIndex]->operEdge;
 }
 
-unsigned int STP_GetPortOperPointToPointMAC (const STP_BRIDGE* bridge, unsigned int portIndex)
+bool STP_GetPortOperPointToPointMAC (const STP_BRIDGE* bridge, unsigned int portIndex)
 {
 	return bridge->ports [portIndex]->operPointToPointMAC;
 }
@@ -1172,14 +1172,14 @@ void STP_GetRootTimes (const STP_BRIDGE* bridge,
 
 // ============================================================================
 
-unsigned int STP_IsCistRoot (const STP_BRIDGE* bridge)
+bool STP_IsCistRoot (const STP_BRIDGE* bridge)
 {
 	assert (bridge->started);
 	BRIDGE_TREE* cist = bridge->trees[CIST_INDEX];
 	return cist->rootPriority.RootId == cist->GetBridgeIdentifier();
 }
 
-unsigned int STP_IsRegionalRoot (const STP_BRIDGE* bridge, unsigned int treeIndex)
+bool STP_IsRegionalRoot (const STP_BRIDGE* bridge, unsigned int treeIndex)
 {
 	assert (bridge->started);
 	assert ((treeIndex > 0) && (treeIndex < bridge->treeCount()));

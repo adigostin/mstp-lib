@@ -114,10 +114,10 @@ void STP_DestroyBridge (struct STP_BRIDGE* bridge);
 
 void STP_StartBridge (struct STP_BRIDGE* bridge, unsigned int timestamp);
 void STP_StopBridge (struct STP_BRIDGE* bridge, unsigned int timestamp);
-unsigned int STP_IsBridgeStarted (const struct STP_BRIDGE* bridge);
+bool STP_IsBridgeStarted (const struct STP_BRIDGE* bridge);
 
-void STP_EnableLogging (struct STP_BRIDGE* bridge, unsigned int enable);
-unsigned int STP_IsLoggingEnabled (const struct STP_BRIDGE* bridge);
+void STP_EnableLogging (struct STP_BRIDGE* bridge, bool enable);
+bool STP_IsLoggingEnabled (const struct STP_BRIDGE* bridge);
 
 unsigned int STP_GetPortCount (const struct STP_BRIDGE* bridge);
 unsigned int STP_GetMstiCount (const struct STP_BRIDGE* bridge);
@@ -134,7 +134,7 @@ void STP_SetBridgeAddress (struct STP_BRIDGE* bridge, const unsigned char* addre
 const struct STP_BRIDGE_ADDRESS* STP_GetBridgeAddress (const struct STP_BRIDGE* bridge);
 
 // Call these whenever one of the ports changes state. See 13.25.31 portEnabled in 802.1Q-2011 for details.
-void STP_OnPortEnabled (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int speedMegabitsPerSecond, unsigned int detectedPointToPointMAC, unsigned int timestamp);
+void STP_OnPortEnabled (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int speedMegabitsPerSecond, bool detectedPointToPointMAC, unsigned int timestamp);
 void STP_OnPortDisabled (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int timestamp);
 
 // Call this once a second.
@@ -162,15 +162,14 @@ bool STP_GetPortAutoEdge (const struct STP_BRIDGE* bridge, unsigned int portInde
 void STP_SetPortAdminPointToPointMAC (struct STP_BRIDGE* bridge, unsigned int portIndex, enum STP_ADMIN_P2P adminPointToPointMAC, unsigned int timestamp);
 enum STP_ADMIN_P2P STP_GetPortAdminPointToPointMAC (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
-unsigned int STP_GetPortEnabled             (const struct STP_BRIDGE* bridge, unsigned int portIndex);
-enum STP_PORT_ROLE STP_GetPortRole          (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
-unsigned int STP_GetPortLearning            (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
-unsigned int STP_GetPortForwarding          (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
-unsigned int STP_GetPortOperEdge            (const struct STP_BRIDGE* bridge, unsigned int portIndex);
+bool STP_GetPortEnabled             (const struct STP_BRIDGE* bridge, unsigned int portIndex);
+enum STP_PORT_ROLE STP_GetPortRole  (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
+bool STP_GetPortLearning            (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
+bool STP_GetPortForwarding          (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
+bool STP_GetPortOperEdge            (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
 // ieee8021BridgeBasePortOperPointToPoint / dot1dStpPortOperPointToPoint
-// Note that this library uses 0 for False and 1 for True; you'll need some glue code to interface with SNMP, which uses true=1 and false=2.
-unsigned int STP_GetPortOperPointToPointMAC (const struct STP_BRIDGE* bridge, unsigned int portIndex);
+bool STP_GetPortOperPointToPointMAC (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
 void STP_GetDefaultMstConfigName (const unsigned char bridgeAddress[6], char nameOut[18]);
 void STP_SetMstConfigName (struct STP_BRIDGE* bridge, const char* name, unsigned int timestamp);
@@ -202,8 +201,8 @@ void STP_GetRootTimes (const struct STP_BRIDGE* bridge,
 					   unsigned short* messageAgeOutOrNull,
 					   unsigned char* remainingHopsOutOrNull);
 
-unsigned int STP_IsCistRoot (const struct STP_BRIDGE* bridge);
-unsigned int STP_IsRegionalRoot (const struct STP_BRIDGE* bridge, unsigned int treeIndex);
+bool STP_IsCistRoot (const struct STP_BRIDGE* bridge);
+bool STP_IsRegionalRoot (const struct STP_BRIDGE* bridge, unsigned int treeIndex);
 
 unsigned int STP_GetDetectedPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
