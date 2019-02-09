@@ -2,7 +2,6 @@
 #include "Bridge.h"
 #include "Port.h"
 #include "wire.h"
-#include "stp_md5.h"
 #include "simulator.h"
 #include "win32/d2d_window.h"
 

@@ -19,34 +19,34 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_procedures.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_BridgeDetection.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_L2GPReceive.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortInformation.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortProtocolMigration.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortReceive.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortRoleSelection.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortRoleTransitions.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortStateTransition.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortTimers.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortTransmit.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_TopologyChange.cpp" />
-    <ClCompile Include="mstp-lib\stp.cpp" />
-    <ClCompile Include="mstp-lib\stp_base_types.cpp" />
-    <ClCompile Include="mstp-lib\stp_bpdu.cpp" />
-    <ClCompile Include="mstp-lib\stp_log.cpp" />
-    <ClCompile Include="mstp-lib\stp_md5.cpp" />
+    <ClInclude Include="mstp-lib\internal\stp_base_types.h" />
+    <ClInclude Include="mstp-lib\internal\stp_bpdu.h" />
+    <ClInclude Include="mstp-lib\internal\stp_bridge.h" />
+    <ClInclude Include="mstp-lib\internal\stp_log.h" />
+    <ClInclude Include="mstp-lib\internal\stp_md5.h" />
+    <ClInclude Include="mstp-lib\internal\stp_port.h" />
+    <ClInclude Include="mstp-lib\internal\stp_procedures.h" />
+    <ClInclude Include="mstp-lib\stp.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="mstp-lib\802.1Q-2011\802_1Q_2011_procedures.h" />
-    <ClInclude Include="mstp-lib\stp.h" />
-    <ClInclude Include="mstp-lib\stp_base_types.h" />
-    <ClInclude Include="mstp-lib\stp_bpdu.h" />
-    <ClInclude Include="mstp-lib\stp_bridge.h" />
-    <ClInclude Include="mstp-lib\stp_log.h" />
-    <ClInclude Include="mstp-lib\stp_md5.h" />
-    <ClInclude Include="mstp-lib\stp_port.h" />
+    <ClCompile Include="mstp-lib\internal\stp.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_base_types.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_bpdu.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_log.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_md5.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_procedures.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm_bridge_detection.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm_l2gp_receive.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm_port_information.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm_port_protocol_migration.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm_port_receive.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm_port_role_selection.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm_port_role_transitions.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm_port_state_transition.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm_port_timers.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm_port_transmit.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm_topology_change.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

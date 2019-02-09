@@ -7,7 +7,7 @@
 
 #include "stp_base_types.h"
 #include "stp_bpdu.h"
-#include "stp.h"
+#include "../stp.h"
 
 // All references are to 802.1Q-2011
 

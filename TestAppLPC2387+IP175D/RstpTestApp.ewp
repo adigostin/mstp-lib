@@ -949,85 +949,85 @@
   <group>
     <name>mstp-lib</name>
     <group>
-      <name>802.1Q-2011</name>
+      <name>internal</name>
       <file>
-        <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_procedures.cpp</name>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp.cpp</name>
       </file>
       <file>
-        <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_procedures.h</name>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_base_types.cpp</name>
       </file>
       <file>
-        <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM.cpp</name>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_base_types.h</name>
       </file>
       <file>
-        <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_BridgeDetection.cpp</name>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_bpdu.cpp</name>
       </file>
       <file>
-        <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_L2GPReceive.cpp</name>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_bpdu.h</name>
       </file>
       <file>
-        <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortInformation.cpp</name>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_bridge.h</name>
       </file>
       <file>
-        <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortProtocolMigration.cpp</name>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_log.cpp</name>
       </file>
       <file>
-        <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortReceive.cpp</name>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_log.h</name>
       </file>
       <file>
-        <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortRoleSelection.cpp</name>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_md5.cpp</name>
       </file>
       <file>
-        <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortRoleTransitions.cpp</name>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_md5.h</name>
       </file>
       <file>
-        <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortStateTransition.cpp</name>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_port.h</name>
       </file>
       <file>
-        <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortTimers.cpp</name>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_procedures.cpp</name>
       </file>
       <file>
-        <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortTransmit.cpp</name>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_procedures.h</name>
       </file>
       <file>
-        <name>$PROJ_DIR$\..\mstp-lib\802.1Q-2011\802_1Q_2011_SM_TopologyChange.cpp</name>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_sm.cpp</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_sm_bridge_detection.cpp</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_sm_l2gp_receive.cpp</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_sm_port_information.cpp</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_sm_port_protocol_migration.cpp</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_sm_port_receive.cpp</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_sm_port_role_selection.cpp</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_sm_port_role_transitions.cpp</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_sm_port_state_transition.cpp</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_sm_port_timers.cpp</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_sm_port_transmit.cpp</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_sm_topology_change.cpp</name>
       </file>
     </group>
     <file>
-      <name>$PROJ_DIR$\..\mstp-lib\stp.cpp</name>
-    </file>
-    <file>
       <name>$PROJ_DIR$\..\mstp-lib\stp.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\mstp-lib\stp_base_types.cpp</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\mstp-lib\stp_base_types.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\mstp-lib\stp_bpdu.cpp</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\mstp-lib\stp_bpdu.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\mstp-lib\stp_bridge.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\mstp-lib\stp_log.cpp</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\mstp-lib\stp_log.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\mstp-lib\stp_md5.cpp</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\mstp-lib\stp_md5.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\mstp-lib\stp_port.h</name>
     </file>
   </group>
   <file>

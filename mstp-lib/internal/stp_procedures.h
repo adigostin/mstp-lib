@@ -5,7 +5,7 @@
 #ifndef MSTP_LIB_802_1Q_2011_PROCEDURES_H
 #define MSTP_LIB_802_1Q_2011_PROCEDURES_H
 
-#include "../stp_base_types.h"
+#include "stp_base_types.h"
 
 // 13.27 State machine procedures
 

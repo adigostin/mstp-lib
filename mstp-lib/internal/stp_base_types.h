@@ -5,7 +5,7 @@
 #ifndef MSTP_LIB_BASE_TYPES_H
 #define MSTP_LIB_BASE_TYPES_H
 
-#include "stp.h"
+#include "../stp.h"
 #include <assert.h>
 
 // ============================================================================
