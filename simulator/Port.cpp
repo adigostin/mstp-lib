@@ -442,8 +442,9 @@ unsigned int Port::GetAdminExternalPortPathCost() const
 
 void Port::SetAdminExternalPortPathCost(unsigned int adminExternalPortPathCost)
 {
+	this->on_property_changing (&AdminExternalPortPathCost);
 	STP_SetAdminPortPathCost (_bridge->stp_bridge(), _portIndex, 0, adminExternalPortPathCost, GetMessageTime());
-	// TODO: invoke PropertyChangedEvent
+	this->on_property_changed (&AdminExternalPortPathCost);
 }
 
 unsigned int Port::GetExternalPortPathCost() const
