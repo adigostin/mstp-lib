@@ -290,7 +290,7 @@ public:
 			il.x_left = 0;
 			il.x_name = indent * indent_width;
 			il.x_value = vcx;
-			il.x_right = client_width();
+			il.x_right = std::max (client_width(), vcx + 75.0f);
 
 			item->create_text_layouts (dwrite_factory(), _textFormat, il, _line_thickness);
 
@@ -334,6 +334,8 @@ public:
 		dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOWTEXT), &rc.selected_fore_brush);
 		dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_GRAYTEXT), &rc.disabled_fore_brush);
 
+		float items_bottom = client_height() - ((_description_height > separator_height) ? _description_height : 0);
+		dc->PushAxisAlignedClip({ 0, 0, client_width(), items_bottom}, D2D1_ANTIALIAS_MODE_ALIASED);
 		enum_items ([&, this](pgitem* item, const item_layout& layout, bool& cancel)
 		{
 			bool selected = (item == _selected_item);
@@ -342,13 +344,14 @@ public:
 			if (selected && _text_editor)
 				_text_editor->render(dc);
 
-			if (layout.y_bottom + _line_thickness >= client_height())
+			if (layout.y_bottom + _line_thickness >= items_bottom)
 				cancel = true;
 
 			D2D1_POINT_2F p0 = { 0, layout.y_bottom + _line_thickness / 2 };
 			D2D1_POINT_2F p1 = { client_width(), layout.y_bottom + _line_thickness / 2 };
 			dc->DrawLine (p0, p1, rc.disabled_fore_brush, _line_thickness);
 		});
+		dc->PopAxisAlignedClip();
 
 		if (_description_height > separator_height)
 		{
