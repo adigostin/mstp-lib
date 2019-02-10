@@ -1137,6 +1137,7 @@ void STP_GetRootPriorityVector (const STP_BRIDGE* bridge, unsigned int treeIndex
 	priorityVectorOut [35] = rootPortId [1];
 }
 
+// Retrieves the rootTimes variable described in 13.26.1 in 802.1Q-2018.
 void STP_GetRootTimes (const STP_BRIDGE* bridge,
 					   unsigned int treeIndex,
 					   unsigned short* forwardDelayOutOrNull,
@@ -1145,10 +1146,6 @@ void STP_GetRootTimes (const STP_BRIDGE* bridge,
 					   unsigned short* messageAgeOutOrNull,
 					   unsigned char* remainingHopsOutOrNull)
 {
-	// This retrieves the rootTimes variable described in 13.24.9 in 802.1Q-2011.
-	// These values are meaningful only as long as the bridge is running, hence the following assert.
-	assert (bridge->started);
-
 	// A MSTI can be specified (as opposed to the CIST) only while running MSTP.
 	assert (treeIndex < bridge->treeCount());
 
