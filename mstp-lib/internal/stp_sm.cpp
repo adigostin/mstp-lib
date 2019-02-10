@@ -5,47 +5,47 @@
 #include "stp_bridge.h"
 
 const char*	PortTimers_802_1Q_2011_GetStateName (SM_STATE state);
-SM_STATE	PortTimers_802_1Q_2011_CheckConditions	(STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
+SM_STATE	PortTimers_802_1Q_2011_CheckConditions	(const STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
 void		PortTimers_802_1Q_2011_InitState		(STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state, unsigned int timestamp);
 
 const char*	PortProtocolMigration_802_1Q_2011_GetStateName (SM_STATE state);
-SM_STATE	PortProtocolMigration_802_1Q_2011_CheckConditions	(STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
+SM_STATE	PortProtocolMigration_802_1Q_2011_CheckConditions	(const STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
 void		PortProtocolMigration_802_1Q_2011_InitState			(STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state, unsigned int timestamp);
 
 const char*	PortReceive_802_1Q_2011_GetStateName (SM_STATE state);
-SM_STATE	PortReceive_802_1Q_2011_CheckConditions	(STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
+SM_STATE	PortReceive_802_1Q_2011_CheckConditions	(const STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
 void		PortReceive_802_1Q_2011_InitState		(STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state, unsigned int timestamp);
 
 const char*	BridgeDetection_802_1Q_2011_GetStateName (SM_STATE state);
-SM_STATE	BridgeDetection_802_1Q_2011_CheckConditions	(STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
+SM_STATE	BridgeDetection_802_1Q_2011_CheckConditions	(const STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
 void		BridgeDetection_802_1Q_2011_InitState		(STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state, unsigned int timestamp);
 
 const char*	PortInformation_802_1Q_2011_GetStateName (SM_STATE state);
-SM_STATE	PortInformation_802_1Q_2011_CheckConditions	(STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
+SM_STATE	PortInformation_802_1Q_2011_CheckConditions	(const STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
 void		PortInformation_802_1Q_2011_InitState		(STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state, unsigned int timestamp);
 
 const char*	PortRoleSelection_802_1Q_2011_GetStateName (SM_STATE state);
-SM_STATE	PortRoleSelection_802_1Q_2011_CheckConditions	(STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
+SM_STATE	PortRoleSelection_802_1Q_2011_CheckConditions	(const STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
 void		PortRoleSelection_802_1Q_2011_InitState			(STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state, unsigned int timestamp);
 
 const char*	PortRoleTransitions_802_1Q_2011_GetStateName (SM_STATE state);
-SM_STATE	PortRoleTransitions_802_1Q_2011_CheckConditions	(STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
+SM_STATE	PortRoleTransitions_802_1Q_2011_CheckConditions	(const STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
 void		PortRoleTransitions_802_1Q_2011_InitState		(STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state, unsigned int timestamp);
 
 const char*	PortStateTransition_802_1Q_2011_GetStateName (SM_STATE state);
-SM_STATE	PortStateTransition_802_1Q_2011_CheckConditions	(STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
+SM_STATE	PortStateTransition_802_1Q_2011_CheckConditions	(const STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
 void		PortStateTransition_802_1Q_2011_InitState		(STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state, unsigned int timestamp);
 
 const char*	PortTransmit_802_1Q_2011_GetStateName (SM_STATE state);
-SM_STATE	PortTransmit_802_1Q_2011_CheckConditions	(STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
+SM_STATE	PortTransmit_802_1Q_2011_CheckConditions	(const STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
 void		PortTransmit_802_1Q_2011_InitState			(STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state, unsigned int timestamp);
 
 const char*	TopologyChange_802_1Q_2011_GetStateName (SM_STATE state);
-SM_STATE	TopologyChange_802_1Q_2011_CheckConditions	(STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
+SM_STATE	TopologyChange_802_1Q_2011_CheckConditions	(const STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
 void		TopologyChange_802_1Q_2011_InitState		(STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state, unsigned int timestamp);
 
 const char* L2GP_Receive_802_1Q_2011_GetStateName (SM_STATE state);
-SM_STATE    L2GP_Receive_802_1Q_2011_CheckConditions (STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
+SM_STATE    L2GP_Receive_802_1Q_2011_CheckConditions (const STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
 void        L2GP_Receive_802_1Q_2011_InitState       (STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state, unsigned int timestamp);
 
 static const SM_INFO smInfo [] =

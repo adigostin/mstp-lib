@@ -1461,7 +1461,7 @@ void updtRolesDisabledTree (STP_BRIDGE* bridge, int givenTree)
 //       Root Port; or
 //    2) Designated Port and synced is TRUE for all ports for the given tree other than the given port; or
 //    3) Master Port and synced is TRUE for all ports for the given tree other than the given port.
-bool allSynced (STP_BRIDGE* bridge, int givenPort, int givenTree)
+bool allSynced (const STP_BRIDGE* bridge, int givenPort, int givenTree)
 {
 	// a) For all ports for the given tree, selected is TRUE, the port's role is the same as its selectedRole, and updtInfo is FALSE; and
 	for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
@@ -1530,7 +1530,7 @@ bool allSynced (STP_BRIDGE* bridge, int givenPort, int givenTree)
 // TRUE, if and only if, for the given port for all trees
 // a) selected is TRUE; and
 // b) updtInfo is FALSE.
-bool allTransmitReady (STP_BRIDGE* bridge, int givenPort)
+bool allTransmitReady (const STP_BRIDGE* bridge, int givenPort)
 {
 	for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount(); treeIndex++)
 	{
@@ -1549,17 +1549,16 @@ bool allTransmitReady (STP_BRIDGE* bridge, int givenPort)
 // ============================================================================
 // 13.26.c) - 13.26.3
 // TRUE only for CIST state machines; i.e., FALSE for MSTI state machine instances.
-bool cist (STP_BRIDGE* bridge, int givenTree)
+bool cist (const STP_BRIDGE* bridge, int givenTree)
 {
 	assert (givenTree != -1);
-
 	return givenTree == 0;
 }
 
 // ============================================================================
 // 13.26.d) - 13.26.4
 // TRUE if the CIST role for the given port is RootPort.
-bool cistRootPort (STP_BRIDGE* bridge, int givenPort)
+bool cistRootPort (const STP_BRIDGE* bridge, int givenPort)
 {
 	return (bridge->ports [givenPort]->trees [CIST_INDEX]->role == STP_PORT_ROLE_ROOT);
 }
@@ -1567,7 +1566,7 @@ bool cistRootPort (STP_BRIDGE* bridge, int givenPort)
 // ============================================================================
 // 13.26.e) - 13.26.5
 // TRUE if the CIST role for the given port is DesignatedPort.
-bool cistDesignatedPort	(STP_BRIDGE* bridge, int givenPort)
+bool cistDesignatedPort	(const STP_BRIDGE* bridge, int givenPort)
 {
 	return (bridge->ports [givenPort]->trees [CIST_INDEX]->role == STP_PORT_ROLE_DESIGNATED);
 }
@@ -1575,7 +1574,7 @@ bool cistDesignatedPort	(STP_BRIDGE* bridge, int givenPort)
 // ============================================================================
 // 13.26.f) - 13.26.6
 // Returns the value of MigrateTime if operPointToPointMAC is TRUE, and the value of MaxAge otherwise.
-unsigned short EdgeDelay (STP_BRIDGE* bridge, int givenPort)
+unsigned short EdgeDelay (const STP_BRIDGE* bridge, int givenPort)
 {
 	PORT* port = bridge->ports [givenPort];
 	return port->operPointToPointMAC ? bridge->MigrateTime : MaxAge (bridge, givenPort);
@@ -1584,7 +1583,7 @@ unsigned short EdgeDelay (STP_BRIDGE* bridge, int givenPort)
 // ============================================================================
 // 13.26.g) - 13.26.7
 // Returns the value of HelloTime if sendRSTP is TRUE, and the value of FwdDelay otherwise.
-unsigned short forwardDelay (STP_BRIDGE* bridge, int givenPort)
+unsigned short forwardDelay (const STP_BRIDGE* bridge, int givenPort)
 {
 	if (bridge->ports [givenPort]->sendRSTP)
 		return HelloTime (bridge, givenPort);
@@ -1595,7 +1594,7 @@ unsigned short forwardDelay (STP_BRIDGE* bridge, int givenPort)
 // ============================================================================
 // 13.26.h) - 13.26.8
 // The Forward Delay component of the CIST's designatedTimes parameter (13.25.8).
-unsigned short FwdDelay (STP_BRIDGE* bridge, int givenPort)
+unsigned short FwdDelay (const STP_BRIDGE* bridge, int givenPort)
 {
 	return bridge->ports [givenPort]->trees [CIST_INDEX]->designatedTimes.ForwardDelay;
 }
@@ -1604,7 +1603,7 @@ unsigned short FwdDelay (STP_BRIDGE* bridge, int givenPort)
 // 13.26.i) - 13.26.9
 // The Hello Time component of the CIST's portTimes parameter (13.25.34) with the recommended default
 // value given in Table 13-5.
-unsigned short HelloTime (STP_BRIDGE* bridge, int givenPort)
+unsigned short HelloTime (const STP_BRIDGE* bridge, int givenPort)
 {
 	return bridge->ports [givenPort]->trees [CIST_INDEX]->portTimes.HelloTime;
 }
@@ -1612,7 +1611,7 @@ unsigned short HelloTime (STP_BRIDGE* bridge, int givenPort)
 // ============================================================================
 // 13.26.j) - 13.26.11
 // The Max Age component of the CIST's designatedTimes parameter (13.25.8).
-unsigned short MaxAge (STP_BRIDGE* bridge, int givenPort)
+unsigned short MaxAge (const STP_BRIDGE* bridge, int givenPort)
 {
 	return bridge->ports [givenPort]->trees [CIST_INDEX]->designatedTimes.MaxAge;
 }
@@ -1622,7 +1621,7 @@ unsigned short MaxAge (STP_BRIDGE* bridge, int givenPort)
 // TRUE if the role for any MSTI for the given port is either:
 // a) DesignatedPort; or
 // b) RootPort, and the instance for the given MSTI and port of the tcWhile timer is not zero.
-bool mstiDesignatedOrTCpropagatingRootPort (STP_BRIDGE* bridge, int givenPort)
+bool mstiDesignatedOrTCpropagatingRootPort (const STP_BRIDGE* bridge, int givenPort)
 {
 	for (unsigned int mstiIndex = 0; mstiIndex < bridge->mstiCount; mstiIndex++)
 	{
@@ -1641,7 +1640,7 @@ bool mstiDesignatedOrTCpropagatingRootPort (STP_BRIDGE* bridge, int givenPort)
 // ============================================================================
 // 13.26.m) - 13.26.13
 // TRUE if the role for any MSTI for the given port is MasterPort.
-bool mstiMasterPort (STP_BRIDGE* bridge, int givenPort)
+bool mstiMasterPort (const STP_BRIDGE* bridge, int givenPort)
 {
 	for (unsigned int mstiIndex = 0; mstiIndex < bridge->mstiCount; mstiIndex++)
 	{
@@ -1655,7 +1654,7 @@ bool mstiMasterPort (STP_BRIDGE* bridge, int givenPort)
 // ============================================================================
 // 13.26.o) - 13.26.15
 // TRUE for a given port if rcvdMsg is TRUE for the CIST or any MSTI for that port.
-bool rcvdAnyMsg (STP_BRIDGE* bridge, int givenPort)
+bool rcvdAnyMsg (const STP_BRIDGE* bridge, int givenPort)
 {
 	assert (givenPort != -1);
 
@@ -1673,7 +1672,7 @@ bool rcvdAnyMsg (STP_BRIDGE* bridge, int givenPort)
 // ============================================================================
 // 13.26.p) - 13.26.16
 // TRUE for a given port if and only if rcvdMsg is TRUE for the CIST for that port.
-bool rcvdCistMsg (STP_BRIDGE* bridge, int givenPort)
+bool rcvdCistMsg (const STP_BRIDGE* bridge, int givenPort)
 {
 	return bridge->ports [givenPort]->trees [CIST_INDEX]->rcvdMsg;
 }
@@ -1682,7 +1681,7 @@ bool rcvdCistMsg (STP_BRIDGE* bridge, int givenPort)
 // 13.26.q) - 13.26.17
 // TRUE for a given port and MSTI if and only if rcvdMsg is FALSE for the CIST for that port and rcvdMsg is
 // TRUE for the MSTI for that port.
-bool rcvdMstiMsg (STP_BRIDGE* bridge, int givenPort, int givenTree)
+bool rcvdMstiMsg (const STP_BRIDGE* bridge, int givenPort, int givenTree)
 {
 	assert (givenTree != CIST_INDEX); // this must be invoked on MSTIs only
 
@@ -1693,7 +1692,7 @@ bool rcvdMstiMsg (STP_BRIDGE* bridge, int givenPort, int givenTree)
 // ============================================================================
 // 13.26.r) - 13.26.18
 // TRUE if the rrWhile timer is clear (zero) for all Ports for the given tree other than the given Port.
-bool reRooted (STP_BRIDGE* bridge, int givenPort, int givenTree)
+bool reRooted (const STP_BRIDGE* bridge, int givenPort, int givenTree)
 {
 	for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
 	{
@@ -1710,7 +1709,7 @@ bool reRooted (STP_BRIDGE* bridge, int givenPort, int givenTree)
 // ============================================================================
 // 13.26.s) - 13.26.19
 // TRUE if ForceProtocolVersion (13.6.2) is greater than or equal to 2.
-bool rstpVersion (STP_BRIDGE* bridge)
+bool rstpVersion (const STP_BRIDGE* bridge)
 {
 	return bridge->ForceProtocolVersion >= 2;
 }
@@ -1718,7 +1717,7 @@ bool rstpVersion (STP_BRIDGE* bridge)
 // ============================================================================
 // 13.26.t - 13.26.20
 // TRUE if Force Protocol Version (13.6.2) is less than 2.
-bool stpVersion (STP_BRIDGE* bridge)
+bool stpVersion (const STP_BRIDGE* bridge)
 {
 	return bridge->ForceProtocolVersion < 2;
 }
@@ -1726,7 +1725,7 @@ bool stpVersion (STP_BRIDGE* bridge)
 // ============================================================================
 // 13.26.u) - 13.26.21
 // TRUE for a given port if and only if updtInfo is TRUE for the CIST for that port.
-bool updtCistInfo (STP_BRIDGE* bridge, int givenPort)
+bool updtCistInfo (const STP_BRIDGE* bridge, int givenPort)
 {
 	return bridge->ports [givenPort]->trees [CIST_INDEX]->updtInfo;
 }
@@ -1739,7 +1738,7 @@ bool updtCistInfo (STP_BRIDGE* bridge, int givenPort)
 // NOTE-The dependency of rcvdMstiMsg and updtMstiInfo on CIST variables for the port reflects the fact that MSTIs
 // exist in a context of CST parameters. The state machines ensure that the CIST parameters from received BPDUs are
 // processed and updated prior to processing MSTI information.
-bool updtMstiInfo (STP_BRIDGE* bridge, int givenPort, int givenTree)
+bool updtMstiInfo (const STP_BRIDGE* bridge, int givenPort, int givenTree)
 {
 	assert (givenTree != CIST_INDEX); // this must be invoked on MSTIs only
 
@@ -1748,7 +1747,7 @@ bool updtMstiInfo (STP_BRIDGE* bridge, int givenPort, int givenTree)
 
 // ============================================================================
 // added by us
-bool rcvdXstMsg	(STP_BRIDGE* bridge, int givenPort, int givenTree)
+bool rcvdXstMsg	(const STP_BRIDGE* bridge, int givenPort, int givenTree)
 {
 	if (givenTree == CIST_INDEX)
 		return rcvdCistMsg (bridge, givenPort);
@@ -1758,7 +1757,7 @@ bool rcvdXstMsg	(STP_BRIDGE* bridge, int givenPort, int givenTree)
 
 // ============================================================================
 // added by us
-bool updtXstInfo (STP_BRIDGE* bridge, int givenPort, int givenTree)
+bool updtXstInfo (const STP_BRIDGE* bridge, int givenPort, int givenTree)
 {
 	return (givenTree == CIST_INDEX) ? updtCistInfo (bridge, givenPort) : updtMstiInfo (bridge, givenPort, givenTree);
 }

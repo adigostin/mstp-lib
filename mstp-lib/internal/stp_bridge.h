@@ -11,7 +11,7 @@
 #include "stp_port.h"
 
 typedef const char* (*SM_GET_STATE_NAME) (SM_STATE state);
-typedef SM_STATE (*SM_CHECK_CONDITIONS) (STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
+typedef SM_STATE (*SM_CHECK_CONDITIONS) (const STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
 typedef void (*SM_INIT_STATE) (STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state, unsigned int timestamp);
 
 struct SM_INFO
