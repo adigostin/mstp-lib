@@ -168,7 +168,6 @@ private:
 	static void  StpCallback_OnTopologyChange         (const STP_BRIDGE* bridge, unsigned int treeIndex, unsigned int timestamp);
 	static void  StpCallback_OnNotifiedTopologyChange (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp);
 	static void  StpCallback_OnPortRoleChanged        (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role, unsigned int timestamp);
-	static void  StpCallback_OnConfigChanged          (const STP_BRIDGE* bridge, unsigned int timestamp);
 	
 public:
 	static const mac_address_p       bridge_address_property;

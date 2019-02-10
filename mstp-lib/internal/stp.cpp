@@ -193,8 +193,6 @@ void STP_StartBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 	bridge->BEGIN = false;
 	RunStateMachines (bridge, timestamp);
 
-	bridge->callbacks.onConfigChanged (bridge, timestamp);
-
 	LOG (bridge, -1, -1, "Bridge started.\r\n");
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
 	FLUSH_LOG (bridge);
@@ -205,8 +203,6 @@ void STP_StartBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 void STP_StopBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 {
 	bridge->started = false;
-
-	bridge->callbacks.onConfigChanged (bridge, timestamp);
 
 	LOG (bridge, -1, -1, "{T}: Bridge stopped.\r\n", timestamp);
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
@@ -253,8 +249,6 @@ void STP_SetBridgeAddress (STP_BRIDGE* bridge, const unsigned char* address, uns
 				RunStateMachines (bridge, timestamp);
 			}
 		}
-
-		bridge->callbacks.onConfigChanged(bridge, timestamp);
 	}
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
@@ -748,8 +742,6 @@ void STP_SetBridgePriority (STP_BRIDGE* bridge, unsigned int treeIndex, unsigned
 		bid.SetPriority (bridgePriority, treeIndex);
 		bridge->trees [treeIndex]->SetBridgeIdentifier (bid);
 
-		bridge->callbacks.onConfigChanged (bridge, timestamp);
-
 		if (bridge->started && (treeIndex < bridge->treeCount()))
 			RecomputePrioritiesAndPortRoles (bridge, treeIndex, timestamp);
 	}
@@ -858,8 +850,6 @@ void STP_SetMstConfigName (STP_BRIDGE* bridge, const char* name, unsigned int ti
 		}
 	}
 
-	bridge->callbacks.onConfigChanged (bridge, timestamp);
-
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
 	FLUSH_LOG (bridge);
 }
@@ -889,8 +879,6 @@ void STP_SetMstConfigRevisionLevel (STP_BRIDGE* bridge, unsigned short revisionL
 			STP_Unindent(bridge);
 		}
 	}
-
-	bridge->callbacks.onConfigChanged (bridge, timestamp);
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
 	FLUSH_LOG (bridge);
@@ -945,8 +933,6 @@ void STP_SetMstConfigTable (struct STP_BRIDGE* bridge, const STP_CONFIG_TABLE_EN
 
 		if (bridge->started)
 			RestartStateMachines(bridge, timestamp);
-
-		bridge->callbacks.onConfigChanged (bridge, timestamp);
 	}
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
@@ -992,8 +978,6 @@ void STP_SetStpVersion (STP_BRIDGE* bridge, enum STP_VERSION version, unsigned i
 
 		if (bridge->started)
 			RestartStateMachines (bridge, timestamp);
-
-		bridge->callbacks.onConfigChanged(bridge, timestamp);
 	}
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
@@ -1252,8 +1236,6 @@ void STP_SetAdminPortPathCost (struct STP_BRIDGE* bridge, unsigned int portIndex
 
 			if (bridge->started)
 				RecomputePrioritiesAndPortRoles (bridge, CIST_INDEX, timestamp);
-
-			bridge->callbacks.onConfigChanged(bridge, timestamp);
 		}
 		else
 		{
@@ -1316,8 +1298,6 @@ extern "C" void STP_SetBridgeHelloTime (struct STP_BRIDGE* bridge, unsigned int 
 
 		if (bridge->started)
 			RecomputePrioritiesAndPortRoles (bridge, CIST_INDEX, timestamp);
-
-		bridge->callbacks.onConfigChanged(bridge, timestamp);
 	}
 }
 
@@ -1343,8 +1323,6 @@ extern "C" void STP_SetBridgeMaxAge (struct STP_BRIDGE* bridge, unsigned int max
 
 		if (bridge->started)
 			RecomputePrioritiesAndPortRoles (bridge, CIST_INDEX, timestamp);
-
-		bridge->callbacks.onConfigChanged(bridge, timestamp);
 	}
 }
 
@@ -1370,8 +1348,6 @@ extern "C" void STP_SetBridgeForwardDelay (struct STP_BRIDGE* bridge, unsigned i
 
 		if (bridge->started)
 			RecomputePrioritiesAndPortRoles (bridge, CIST_INDEX, timestamp);
-
-		bridge->callbacks.onConfigChanged(bridge, timestamp);
 	}
 }
 

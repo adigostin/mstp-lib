@@ -39,7 +39,6 @@ typedef void  (*STP_CALLBACK_DEBUG_STR_OUT)					(const struct STP_BRIDGE* bridge
 typedef void  (*STP_CALLBACK_ON_TOPOLOGY_CHANGE)			(const struct STP_BRIDGE* bridge, unsigned int treeIndex, unsigned int timestamp);
 typedef void  (*STP_CALLBACK_ON_NOTIFIED_TOPOLOGY_CHANGE)	(const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp);
 typedef void  (*STP_CALLBACK_PORT_ROLE_CHANGED)             (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_PORT_ROLE role, unsigned int timestamp);
-typedef void  (*STP_CALLBACK_CONFIG_CHANGED)                (const struct STP_BRIDGE* bridge, unsigned int timestamp);
 typedef void* (*STP_CALLBACK_ALLOC_AND_ZERO_MEMORY) (unsigned int size);
 typedef void  (*STP_CALLBACK_FREE_MEMORY) (void* p);
 
@@ -54,7 +53,6 @@ struct STP_CALLBACKS
 	STP_CALLBACK_ON_TOPOLOGY_CHANGE			 onTopologyChange;
 	STP_CALLBACK_ON_NOTIFIED_TOPOLOGY_CHANGE onNotifiedTopologyChange;
 	STP_CALLBACK_PORT_ROLE_CHANGED           onPortRoleChanged;
-	STP_CALLBACK_CONFIG_CHANGED              onConfigChanged;
 	STP_CALLBACK_ALLOC_AND_ZERO_MEMORY		 allocAndZeroMemory;
 	STP_CALLBACK_FREE_MEMORY				 freeMemory;
 };
