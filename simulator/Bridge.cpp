@@ -143,19 +143,13 @@ Bridge::Bridge (unsigned int portCount, unsigned int mstiCount, mac_address macA
 	_helperWindow.GetLinkPulseEvent().add_handler (&OnLinkPulseTick, this);
 
 	for (auto& port : _ports)
-	{
 		port->GetInvalidateEvent().add_handler(&OnPortInvalidate, this);
-		port->property_changed().add_handler(&OnPortPropertyChanged, this);
-	}
 }
 
 Bridge::~Bridge()
 {
 	for (auto& port : _ports)
-	{
-		port->property_changed().remove_handler(&OnPortPropertyChanged, this);
 		port->GetInvalidateEvent().remove_handler(&OnPortInvalidate, this);
-	}
 
 	_helperWindow.GetLinkPulseEvent().remove_handler (&OnLinkPulseTick, this);
 
@@ -163,14 +157,6 @@ Bridge::~Bridge()
 	::DeleteTimerQueueTimer (nullptr, _oneSecondTimerHandle, INVALID_HANDLE_VALUE);
 
 	STP_DestroyBridge (_stpBridge);
-}
-
-// static
-void Bridge::OnPortPropertyChanged (void* callbackArg, object* object, const property* property)
-{
-	auto bridge = static_cast<Bridge*>(callbackArg);
-	assert(false);
-	//PropertyChangedEvent::InvokeHandlers (bridge, object, property);
 }
 
 //static
