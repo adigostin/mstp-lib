@@ -2,11 +2,11 @@
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib 
 // Copyright (c) 2011-2019 Adi Gostin, distributed under Apache License v2.0.
 
+// This file implemented §13.33 from 802.1Q-2018.
+
 #include "stp_procedures.h"
 #include "stp_bridge.h"
 #include <assert.h>
-
-// See §13.31 in 802.1Q-2011
 
 enum
 {
@@ -31,6 +31,7 @@ const char* BridgeDetection_802_1Q_2011_GetStateName (SM_STATE state)
 
 // ============================================================================
 
+// Returns the new state, or 0 when no transition is to be made.
 SM_STATE BridgeDetection_802_1Q_2011_CheckConditions (STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state)
 {
 	assert (givenPort != -1);
@@ -68,12 +69,13 @@ SM_STATE BridgeDetection_802_1Q_2011_CheckConditions (STP_BRIDGE* bridge, int gi
 	
 	if (state == NOT_EDGE)
 	{
-		// I changed this condition slightly because it was looping endlessly between EDGE and NOT_EDGE.
-		// The condition specified in 802.1Q-2011 was:
+		// I changed this condition slightly because it was looping endlessly between EDGE and NOT_EDGE when disconnecting
+		// from the root bridge a port that was connected to a non-stp device and already forwarding and whose AutoEdge was true.
+		// The condition specified in 802.1Q-2018 was:
 		//
 		//	if ((!port->portEnabled && port->AdminEdge) ||
 		//		((port->edgeDelayWhile == 0) && port->AutoEdge && port->sendRSTP && port->trees [CIST_INDEX]->proposing))
-
+		//
 		if ((!port->portEnabled && port->AdminEdge) ||
 			(port->portEnabled && (port->edgeDelayWhile == 0) && port->AutoEdge && port->sendRSTP && port->trees [CIST_INDEX]->proposing))
 		{
@@ -90,11 +92,12 @@ SM_STATE BridgeDetection_802_1Q_2011_CheckConditions (STP_BRIDGE* bridge, int gi
 
 	if (state == EDGE)
 	{
-		// I changed this condition slightly because it was looping endlessly between EDGE and NOT_EDGE.
-		// The condition specified in 802.1Q-2011 was:
+		// I changed this condition slightly because it was looping endlessly between EDGE and NOT_EDGE when disconnecting
+		// from the root bridge a port that was connected to a non-stp device and already forwarding and whose AutoEdge was true.
+		// The condition specified in 802.1Q-2018 was:
 		//
-		// if (((!port->portEnabled || !port->AutoEdge) && !port->AdminEdge) || !port->operEdge)
-		
+		//if (((!port->portEnabled || !port->AutoEdge) && !port->AdminEdge) || !port->operEdge)
+		//
 		if (((!port->portEnabled || !port->AutoEdge) && !port->AdminEdge) || (port->portEnabled && !port->operEdge))
 		{
 			return NOT_EDGE;

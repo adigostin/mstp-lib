@@ -35,6 +35,7 @@ const char* L2GP_Receive_802_1Q_2011_GetStateName (SM_STATE state)
 
 // ============================================================================
 
+// Returns the new state, or 0 when no transition is to be made.
 SM_STATE L2GP_Receive_802_1Q_2011_CheckConditions (STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state)
 {
 	assert (givenPort != -1);
