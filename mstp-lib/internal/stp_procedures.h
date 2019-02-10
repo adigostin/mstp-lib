@@ -18,7 +18,7 @@ void enableForwarding	(STP_BRIDGE*, int givenPort, int givenTree, unsigned int t
 void enableLearning		(STP_BRIDGE*, int givenPort, int givenTree, unsigned int timestamp);	// 13.27.g) - 13.27.7
 bool fromSameRegion		(STP_BRIDGE*, int givenPort);					// 13.27.h) - 13.27.8
 void newTcDetected		(STP_BRIDGE*, int givenPort, int givenTree);	// 13.27.i) - 13.27.9
-void newTcWhile			(STP_BRIDGE*, int givenPort, int givenTree);	// 13.27.j) - 13.27.10
+void newTcWhile			(STP_BRIDGE*, int givenPort, int givenTree, unsigned int timestamp);	// 13.27.j) - 13.27.10
 void pseudoRcvMsgs		(STP_BRIDGE*, int givenPort);					// 13.27.k) - 13.27.11
 RCVD_INFO rcvInfo		(STP_BRIDGE*, int givenPort, int givenTree);	// 13.27.l) - 13.27.12
 void rcvMsgs			(STP_BRIDGE*, int givenPort);					// 13.27.m) - 13.27.13
@@ -68,7 +68,6 @@ bool rcvdXstMsg			(STP_BRIDGE*, int givenPort, int givenTree); // not in the sta
 bool updtXstInfo		(STP_BRIDGE*, int givenPort, int givenTree); // not in the standard
 
 // Not from the standard. See long comment in 802_1Q_2011_procedures.cpp, just above CallTcCallback().
-void CallTcCallback (STP_BRIDGE* bridge);
 void CallNotifiedTcCallback (STP_BRIDGE* bridge, unsigned int treeIndex, unsigned int timestamp);
 
 #endif

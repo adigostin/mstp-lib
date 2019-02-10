@@ -357,10 +357,6 @@ void STP_OnOneSecondTick (STP_BRIDGE* bridge, unsigned int timestamp)
 	{
 		LOG (bridge, -1, -1, "{T}: One second:\r\n", timestamp);
 
-		// Not from the standard. See long comment in 802_1Q_2011_procedures.cpp, just above CallTcCallback().
-		if (bridge->tcIgnore > 0)
-			bridge->tcIgnore--;
-
 		for (unsigned int givenPort = 0; givenPort < bridge->portCount; givenPort++)
 			bridge->ports [givenPort]->tick = true;
 

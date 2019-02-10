@@ -163,7 +163,7 @@ void newTcDetected (STP_BRIDGE* bridge, int givenPort, int givenTree)
 // newInfo or newInfoMsti.
 //
 // Otherwise the procedure takes no action.
-void newTcWhile (STP_BRIDGE* bridge, int givenPort, int givenTree)
+void newTcWhile (STP_BRIDGE* bridge, int givenPort, int givenTree, unsigned int timestamp)
 {
 	assert (givenPort != -1);
 	assert (givenTree != -1);
@@ -173,6 +173,12 @@ void newTcWhile (STP_BRIDGE* bridge, int givenPort, int givenTree)
 
 	if ((portTree->tcWhile == 0) && (port->sendRSTP == true))
 	{
+		// See in 802.1Q-2018:
+		//  - 12.8.1.1.3, b) and c);
+		//  - 12.8.1.2.3, c) and d).
+		if (bridge->callbacks.onTopologyChange)
+			bridge->callbacks.onTopologyChange (bridge, (unsigned int) givenPort, (unsigned int) givenTree, timestamp);
+
 		portTree->tcWhile = 1 + port->trees [CIST_INDEX]->portTimes.HelloTime;
 
 		if (givenTree == CIST_INDEX)
@@ -1749,50 +1755,6 @@ bool rcvdXstMsg	(STP_BRIDGE* bridge, int givenPort, int givenTree)
 bool updtXstInfo (STP_BRIDGE* bridge, int givenPort, int givenTree)
 {
 	return (givenTree == CIST_INDEX) ? updtCistInfo (bridge, givenPort) : updtMstiInfo (bridge, givenPort, givenTree);
-}
-
-// ============================================================================
-// Note AG:
-// There's no clear definition in the STP standard of what constitutes a "topology change".
-// Cisco does have a definition here: http://www.cisco.com/c/en/us/support/docs/lan-switching/spanning-tree-protocol/12013-17.html
-// Begin quote:
-//		The exact definition is:
-//			* When a port that was forwarding is going down (blocking for instance).
-//			* When a port transitions to forwarding and the bridge has a designated port. (This means that the bridge is not standalone.)"
-// End quote.
-//
-// However, actual Cisco bridges do not behave according to this definition (stated by their own manufacturer!)
-// For example, if two Cisco bridges are connected with two cables (so one is forwarding, one is non-forwarding),
-// repeatedly disconnecting and reconnecting the non-forwarding cable will not cause either Cisco bridge to report
-// a topology change, although the disconnected port on the root bridge goes through both scenarios given in the definition.
-//
-// I also noticed a inconsistency in things reported by a Cisco bridge in its web interface:
-// When it detects a topology change, the Cisco bridge:
-//  - _always_ increments the number under "Topology Changes Counts";
-//  - _only_sometimes_ resets the timer under "Last Topology Change".
-//
-// Since the whole "topology change" thing appears to be implementation-dependent,
-// I will choose to emulate the Cisco bridges, which have the most common-sense in their implementation:
-// They count as "topology change" the transitioning of a non-operEdge port to or from the Forwarding state,
-// and then they ignore further transitions for about 6 seconds. These 6 seconds appear to be a constant
-// (independent of HelloTime or other parameters).
-// I will pass these topology changes to the application via the "onTopologyChange" callback.
-//
-// Anyway, this is not a matter of reliability. Worst that could happen if I've gotten this wrong
-// is a slightly-off value reported to the end user as "topology change count".
-
-// ============================================================================
-
-// Function not from the the standard. It is meant to be called from the Topology Change state machine.
-void CallTcCallback (STP_BRIDGE* bridge)
-{
-	if (bridge->tcIgnore > 0)
-		// We just called the callback.
-		return;
-
-	bridge->callbacks.onTopologyChange (bridge);
-
-	bridge->tcIgnore = STP_BRIDGE::TcIgnoreMax; // This will be decremented in STP_OnOneSecondTick()
 }
 
 // ============================================================================

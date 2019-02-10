@@ -1057,8 +1057,10 @@ void Bridge::StpCallback_DebugStrOut (const STP_BRIDGE* bridge, int portIndex, i
 	}
 }
 
-void Bridge::StpCallback_OnTopologyChange (const STP_BRIDGE* bridgetimestamp)
+void Bridge::StpCallback_OnTopologyChange (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp)
 {
+	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
+	b->_ports[portIndex]->trees()[treeIndex]->on_topology_change(timestamp);
 }
 
 void Bridge::StpCallback_OnNotifiedTopologyChange (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp)

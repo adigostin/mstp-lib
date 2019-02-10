@@ -58,6 +58,13 @@ bool PortTree::forwarding() const
 	return STP_GetPortForwarding(_port->bridge()->stp_bridge(), _port->GetPortIndex(), _treeIndex);
 }
 
+void PortTree::on_topology_change (unsigned int timestamp)
+{
+	this->on_property_changing(&topology_change_count_property);
+	_topology_change_count++;
+	this->on_property_changed(&topology_change_count_property);
+}
+
 const edge::NVP port_priority_nvps[] {
 	{ "10 (16 dec)",  0x10 },
 	{ "20 (32 dec)",  0x20 },
@@ -106,6 +113,14 @@ const edge::bool_p PortTree::forwarding_property (
 	nullptr,
 	std::nullopt);
 
-const edge::property* const PortTree::_properties[] = { &priority_property, &learning_property, &forwarding_property };
+const edge::uint32_p PortTree::topology_change_count_property (
+	"Topology Change Count",
+	nullptr,
+	"",
+	static_cast<edge::uint32_p::member_getter_t>(&topology_change_count),
+	nullptr,
+	std::nullopt);
+
+const edge::property* const PortTree::_properties[] = { &priority_property, &learning_property, &forwarding_property, &topology_change_count_property };
 
 const edge::type_t PortTree::_type = { "PortTree", &base::_type, _properties };

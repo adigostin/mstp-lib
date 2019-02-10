@@ -2,12 +2,12 @@
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
 // Copyright (c) 2011-2019 Adi Gostin, distributed under Apache License v2.0.
 
+// This file implements §13.39 from 802.1Q-2018.
+
 #include "stp_procedures.h"
 #include "stp_bridge.h"
 #include "stp_log.h"
 #include <assert.h>
-
-// See 13.37 in 802.1Q-2011
 
 enum
 {
@@ -42,7 +42,7 @@ const char* TopologyChange_802_1Q_2011_GetStateName (SM_STATE state)
 
 // ============================================================================
 
-// When this function returns a valid state (non-zero), it means it has changed one or more variables, so all state machines must be run again.
+// Returns the new state, or 0 when no transition is to be made.
 SM_STATE TopologyChange_802_1Q_2011_CheckConditions (STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state)
 {
 	assert (givenPort != -1);
@@ -71,14 +71,7 @@ SM_STATE TopologyChange_802_1Q_2011_CheckConditions (STP_BRIDGE* bridge, int giv
 	if (state == ACTIVE)
 	{
 		if (((portTree->role != STP_PORT_ROLE_ROOT) && (portTree->role != STP_PORT_ROLE_DESIGNATED) && (portTree->role != STP_PORT_ROLE_MASTER)) || port->operEdge)
-		{
-			// Note AG: Added by me, see comment at the top of the function.
-			// Added here to avoid introducing a new state between ACTIVE and LEARNING,
-			// because a new state might confuse the application programmer.
-			CallTcCallback (bridge);
-
 			return LEARNING;
-		}
 
 		if (port->rcvdTcn)
 			return NOTIFIED_TCN;
@@ -189,10 +182,7 @@ void TopologyChange_802_1Q_2011_InitState (STP_BRIDGE* bridge, int givenPort, in
 	}
 	else if (state == DETECTED)
 	{
-		// Note AG: Added by me, see comment at the top of the function.
-		CallTcCallback (bridge);
-
-		newTcWhile (bridge, givenPort, givenTree);
+		newTcWhile (bridge, givenPort, givenTree, timestamp);
 		setTcPropTree (bridge, givenPort, givenTree);
 		newTcDetected (bridge, givenPort, givenTree);
 		if (givenTree == CIST_INDEX)
@@ -202,7 +192,7 @@ void TopologyChange_802_1Q_2011_InitState (STP_BRIDGE* bridge, int givenPort, in
 	}
 	else if (state == NOTIFIED_TCN)
 	{
-		newTcWhile (bridge, givenPort, givenTree);
+		newTcWhile (bridge, givenPort, givenTree, timestamp);
 	}
 	else if (state == NOTIFIED_TC)
 	{
@@ -218,7 +208,7 @@ void TopologyChange_802_1Q_2011_InitState (STP_BRIDGE* bridge, int givenPort, in
 	}
 	else if (state == PROPAGATING)
 	{
-		newTcWhile (bridge, givenPort, givenTree);
+		newTcWhile (bridge, givenPort, givenTree, timestamp);
 
 		//portTree->fdbFlush = true;
 		// See comments for the INACTIVE state above in this function.

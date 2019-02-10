@@ -149,10 +149,6 @@ struct STP_BRIDGE
 	static const unsigned short DefaultBridgeForwardDelay = 15;// 13.22.f in 802.1Q-2005 --- 17.14 in 802.1D-2004
 	static const unsigned short DefaultMaxHops = 20;			// 13.22.1 in 802.1Q-2005 --- 13.23.7 --- 13.37.3
 
-	// Not from the standard. See long comment in 802_1Q_2011_procedures.cpp, just above CallTcCallback().
-	static const unsigned short TcIgnoreMax = 6;
-	unsigned short tcIgnore;
-
 	void* applicationContext;
 
 	SM_STATE* states;

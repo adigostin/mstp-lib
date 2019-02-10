@@ -36,7 +36,7 @@ typedef void* (*STP_CALLBACK_TRANSMIT_GET_BUFFER)			(const struct STP_BRIDGE* br
 typedef void  (*STP_CALLBACK_TRANSMIT_RELEASE_BUFFER)		(const struct STP_BRIDGE* bridge, void* bufferReturnedByGetBuffer);
 typedef void  (*STP_CALLBACK_FLUSH_FDB)						(const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType);
 typedef void  (*STP_CALLBACK_DEBUG_STR_OUT)					(const struct STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, unsigned int flush);
-typedef void  (*STP_CALLBACK_ON_TOPOLOGY_CHANGE)			(const struct STP_BRIDGE* bridge);
+typedef void  (*STP_CALLBACK_ON_TOPOLOGY_CHANGE)			(const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp);
 typedef void  (*STP_CALLBACK_ON_NOTIFIED_TOPOLOGY_CHANGE)	(const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp);
 typedef void  (*STP_CALLBACK_PORT_ROLE_CHANGED)             (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_PORT_ROLE role, unsigned int timestamp);
 typedef void  (*STP_CALLBACK_CONFIG_CHANGED)                (const struct STP_BRIDGE* bridge, unsigned int timestamp);
