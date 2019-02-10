@@ -309,7 +309,7 @@ static void StpCallback_DebugStrOut (const struct STP_BRIDGE* bridge, int portIn
         fflush (stdout);
 }
 
-static void StpCallback_OnTopologyChange (const STP_BRIDGE* bridge)
+static void StpCallback_OnTopologyChange (const struct STP_BRIDGE* bridge, unsigned int treeIndex, unsigned int timestamp)
 {
 	// nothing to do
 }
@@ -327,11 +327,6 @@ static void StpCallback_OnNotifiedTopologyChange (const struct STP_BRIDGE* bridg
 	
 static void StpCallback_OnPortRoleChanged (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_PORT_ROLE role, unsigned int timestamp)
 {
-}
-
-static void StpCallback_OnConfigChanged (const struct STP_BRIDGE* bridge, unsigned int timestamp)
-{
-	// Nothing to do. Callback is meant for the Windows simulator.
 }
 
 static uint8_t stpHeap[1600]; // size determined empirically
@@ -363,7 +358,6 @@ static const STP_CALLBACKS stp_callbacks =
 	.onTopologyChange         = StpCallback_OnTopologyChange,
 	.onNotifiedTopologyChange = StpCallback_OnNotifiedTopologyChange,
 	.onPortRoleChanged        = StpCallback_OnPortRoleChanged,
-	.onConfigChanged          = StpCallback_OnConfigChanged,
 	.allocAndZeroMemory       = StpCallback_AllocAndZeroMemory,
 	.freeMemory               = StpCallback_FreeMemory,
 };

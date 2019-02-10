@@ -491,7 +491,7 @@ static void StpCallback_DebugStrOut (const struct STP_BRIDGE* bridge, int portIn
 }
 
 // See long comment at the end of 802_1Q_2011_procedures.cpp.
-static void StpCallback_OnTopologyChange (const struct STP_BRIDGE* bridge)
+static void StpCallback_OnTopologyChange (const struct STP_BRIDGE* bridge, unsigned int treeIndex, unsigned int timestamp)
 {
 	// do nothing in this demo app
 	//printf ("TC\r\n");
@@ -511,10 +511,6 @@ static void StpCallback_OnNotifiedTC (const struct STP_BRIDGE* bridge, unsigned 
 }
 
 void StpCallback_OnPortRoleChanged (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_PORT_ROLE role, unsigned int timestamp)
-{
-}
-
-void StpCallback_OnConfigChanged (const struct STP_BRIDGE* bridge, unsigned int timestamp)
 {
 }
 
@@ -542,7 +538,6 @@ static STP_CALLBACKS const Callbacks =
 	StpCallback_OnTopologyChange,
 	StpCallback_OnNotifiedTC,
 	StpCallback_OnPortRoleChanged,
-	StpCallback_OnConfigChanged,
 	StpCallback_AllocAndZeroMemory,
 	StpCallback_FreeMemory
 };
