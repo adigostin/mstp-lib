@@ -10,6 +10,21 @@ static const _bstr_t BridgeTreeString = "BridgeTree";
 static const _bstr_t TreeIndexString = "TreeIndex";
 static const _bstr_t BridgePriorityString = "BridgePriority";
 
+BridgeTree::BridgeTree (Bridge* parent, unsigned int treeIndex)
+	: _parent(parent), _treeIndex(treeIndex)
+{
+	::GetSystemTime(&_last_topology_change);
+	_topology_change_count = 0;
+}
+
+void BridgeTree::on_topology_change (unsigned int timestamp)
+{
+	this->on_property_changing(&topology_change_count_property);
+	::GetSystemTime(&_last_topology_change);
+	_topology_change_count++;
+	this->on_property_changed(&topology_change_count_property);
+}
+
 HRESULT BridgeTree::Serialize (IXMLDOMDocument3* doc, com_ptr<IXMLDOMElement>& elementOut) const
 {
 	com_ptr<IXMLDOMElement> bridgeTreeElement;
@@ -214,6 +229,14 @@ const temp_string_p BridgeTree::root_bridge_id_property
 	nullptr,
 	std::nullopt
 );
+
+const edge::uint32_p BridgeTree::topology_change_count_property (
+	"Topology Change Count",
+	nullptr,
+	"",
+	static_cast<edge::uint32_p::member_getter_t>(&topology_change_count),
+	nullptr,
+	std::nullopt);
 /*
 static const TypedProperty<wstring> ExternalRootPathCost
 (
@@ -302,6 +325,7 @@ const edge::property* const BridgeTree::_properties[] =
 {
 	&bridge_priority_property,
 	&root_bridge_id_property,
+	&topology_change_count_property,
 /*	&ExternalRootPathCost,
 	&RegionalRootBridgeId,
 	&InternalRootPathCost,

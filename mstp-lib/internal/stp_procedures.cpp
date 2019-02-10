@@ -177,7 +177,13 @@ void newTcWhile (STP_BRIDGE* bridge, int givenPort, int givenTree, unsigned int 
 		//  - 12.8.1.1.3, b) and c);
 		//  - 12.8.1.2.3, c) and d).
 		if (bridge->callbacks.onTopologyChange)
-			bridge->callbacks.onTopologyChange (bridge, (unsigned int) givenPort, (unsigned int) givenTree, timestamp);
+		{
+			bool allZero = true;
+			for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
+				allZero &= (bridge->ports[portIndex]->trees[givenTree]->tcWhile == 0);
+			if (allZero)
+				bridge->callbacks.onTopologyChange (bridge, (unsigned int) givenTree, timestamp);
+		}
 
 		portTree->tcWhile = 1 + port->trees [CIST_INDEX]->portTimes.HelloTime;
 

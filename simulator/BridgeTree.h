@@ -9,16 +9,22 @@ extern const edge::NVP bridge_priority_nvps[];
 extern const char bridge_priority_type_name[];
 using bridge_priority_p = edge::enum_property<uint32_t, bridge_priority_type_name, bridge_priority_nvps>;
 
-struct BridgeTree : edge::object
+class BridgeTree : edge::object
 {
 	using base = edge::object;
 
 	Bridge* const _parent;
 	unsigned int const _treeIndex;
 
-	BridgeTree (Bridge* parent, unsigned int treeIndex)
-		: _parent(parent), _treeIndex(treeIndex)
-	{ }
+	SYSTEMTIME _last_topology_change;
+	uint32_t _topology_change_count;
+
+	friend class Bridge;
+
+	void on_topology_change (unsigned int timestamp);
+
+public:
+	BridgeTree (Bridge* parent, unsigned int treeIndex);
 
 	HRESULT Serialize (IXMLDOMDocument3* doc, edge::com_ptr<IXMLDOMElement>& elementOut) const;
 	HRESULT Deserialize (IXMLDOMElement* bridgeTreeElement);
@@ -35,6 +41,8 @@ struct BridgeTree : edge::object
 	std::string GetDesignatedPortId() const;
 	std::string GetReceivingPortId() const;
 
+	uint32_t topology_change_count() const { return _topology_change_count; }
+
 	uint32_t hello_time() const;
 	uint32_t max_age() const;
 	uint32_t forward_delay() const;
@@ -43,6 +51,7 @@ struct BridgeTree : edge::object
 
 	static const bridge_priority_p   bridge_priority_property;
 	static const edge::temp_string_p root_bridge_id_property;
+	static const edge::uint32_p      topology_change_count_property;
 	static const edge::uint32_p      hello_time_property;
 	static const edge::uint32_p      max_age_property;
 	static const edge::uint32_p      forward_delay_property;
