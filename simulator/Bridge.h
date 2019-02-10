@@ -104,10 +104,12 @@ public:
 	STP_BRIDGE* stp_bridge() const { return _stpBridge; }
 
 	struct LogLineGenerated : public edge::event<LogLineGenerated, Bridge*, const BridgeLogLine*> { };
+	struct log_cleared_e : public edge::event<log_cleared_e, Bridge*> { };
 	struct LinkPulseEvent : public edge::event<LinkPulseEvent, Bridge*, size_t, unsigned int> { };
 	struct PacketTransmitEvent : public edge::event<PacketTransmitEvent, Bridge*, size_t, PacketInfo&&> { };
 
 	LogLineGenerated::subscriber GetLogLineGeneratedEvent() { return LogLineGenerated::subscriber(this); }
+	log_cleared_e::subscriber log_cleared() { return log_cleared_e::subscriber(this); }
 	LinkPulseEvent::subscriber GetLinkPulseEvent() { return LinkPulseEvent::subscriber(this); }
 	PacketTransmitEvent::subscriber GetPacketTransmitEvent() { return PacketTransmitEvent::subscriber(this); }
 
@@ -116,6 +118,7 @@ public:
 
 	bool IsPowered() const { return _powered; }
 	const std::vector<std::unique_ptr<BridgeLogLine>>& GetLogLines() const { return _logLines; }
+	void clear_log();
 	std::array<uint8_t, 6> GetPortAddress (size_t portIndex) const;
 
 	edge::com_ptr<IXMLDOMElement> Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) const;

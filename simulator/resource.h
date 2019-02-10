@@ -10,6 +10,7 @@
 #define IDR_MAIN_MENU                   133
 #define IDD_DIALOG_MST_CONFIG_ID        134
 #define IDR_ACCELERATOR1                135
+#define IDR_CONTEXT_MENU_LOG_WINDOW     136
 #define IDC_BUTTON_EDIT_MST_CONFIG_TABLE 1005
 #define IDC_COMBO_SELECTED_VLAN         1009
 #define IDC_EDIT_SELECTED_TREE          1010
@@ -44,6 +45,7 @@
 #define ID_FILE_RECENT                  32795
 #define ID_RECENT_FILE_FIRST            32796
 #define ID_RECENT_FILE_LAST             32815
+#define ID_CLEAR_ALL_LOGS               32816
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -51,8 +53,8 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        136
-#define _APS_NEXT_COMMAND_VALUE         32816
+#define _APS_NEXT_RESOURCE_VALUE        137
+#define _APS_NEXT_COMMAND_VALUE         32817
 #define _APS_NEXT_CONTROL_VALUE         1026
 #define _APS_NEXT_SYMED_VALUE           110
 #endif

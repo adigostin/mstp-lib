@@ -1,6 +1,7 @@
 
 #include "pch.h"
 #include "simulator.h"
+#include "resource.h"
 #include "win32/d2d_window.h"
 #include "win32/utility_functions.h"
 #include "Bridge.h"
@@ -17,6 +18,7 @@ class log_window : public d2d_window, public log_window_i
 	using base = d2d_window;
 
 	selection_i* const _selection;
+	std::shared_ptr<project_i> const _project;
 	com_ptr<IDWriteTextFormat> _textFormat;
 	Bridge* _bridge = nullptr;
 	int _selectedPort = -1;
@@ -32,9 +34,10 @@ class log_window : public d2d_window, public log_window_i
 	static constexpr UINT AnimationScrollFramesMax = 10;
 
 public:
-	log_window (HINSTANCE hInstance, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dWriteFactory, selection_i* selection)
+	log_window (HINSTANCE hInstance, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dWriteFactory, selection_i* selection, const std::shared_ptr<project_i>& project)
 		: base (hInstance, WS_EX_CLIENTEDGE, WS_VISIBLE | WS_CHILD | WS_HSCROLL | WS_VSCROLL, rect, hWndParent, 0, d3d_dc, dWriteFactory)
 		, _selection(selection)
+		, _project(project)
 	{
 		auto hr = dWriteFactory->CreateTextFormat (L"Consolas", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
 			DWRITE_FONT_STRETCH_NORMAL, 11, L"en-US", &_textFormat); assert(SUCCEEDED(hr));
@@ -178,6 +181,26 @@ public:
 		}
 	}
 
+	static void on_log_cleared(void* arg, Bridge* b)
+	{
+		auto lw = static_cast<log_window*>(arg);
+		if (lw->_animationScrollFramesRemaining > 0)
+			lw->EndAnimation();
+		lw->_lines.clear();
+		lw->_animationCurrentLineCount = lw->_animationEndLineCount = 0;
+		lw->_topLineIndex = 0;
+
+		SCROLLINFO si = { sizeof (si) };
+		si.fMask = SIF_RANGE | SIF_PAGE | SIF_POS | SIF_DISABLENOSCROLL;
+		si.nMin = 0;
+		si.nMax = 0;
+		si.nPos = 0;
+		si.nPage = lw->_numberOfLinesFitting;
+		SetScrollInfo (lw->hwnd(), SB_VERT, &si, TRUE);
+
+		lw->invalidate();
+	}
+
 	void SelectBridge (Bridge* b)
 	{
 		if (_bridge != b)
@@ -188,6 +211,7 @@ public:
 					EndAnimation();
 
 				_lines.clear();
+				_bridge->log_cleared().remove_handler (on_log_cleared, this);
 				_bridge->GetLogLineGeneratedEvent().remove_handler (OnLogLineGeneratedStatic, this);
 				_bridge = nullptr;
 			}
@@ -206,6 +230,7 @@ public:
 				}
 
 				_bridge->GetLogLineGeneratedEvent().add_handler (OnLogLineGeneratedStatic, this);
+				_bridge->log_cleared().add_handler (on_log_cleared, this);
 			}
 
 			_topLineIndex = max (0, (int) _lines.size() - _numberOfLinesFitting);
@@ -251,7 +276,31 @@ public:
 			return 0;
 		}
 
+		if (msg == WM_CONTEXTMENU)
+		{
+			ProcessWmContextMenu (hwnd, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
+			return 0;
+		}
+
+		if (msg == WM_COMMAND)
+		{
+			if (wParam == ID_CLEAR_ALL_LOGS)
+			{
+				for (auto& b : _project->bridges())
+					b->clear_log();
+			}
+
+			return 0;
+		}
+
+
 		return base::window_proc (hwnd, msg, wParam, lParam);
+	}
+
+	void ProcessWmContextMenu (HWND hwnd, POINT pt)
+	{
+		auto hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_LOG_WINDOW));
+		TrackPopupMenuEx (GetSubMenu(hMenu, 0), 0, pt.x, pt.y, hwnd, nullptr);
 	}
 
 	void ProcessAnimationTimer()

@@ -174,7 +174,7 @@ public:
 
 	void create_log_window()
 	{
-		_log_window = log_window_factory (_app->GetHInstance(), hwnd(), log_restricted_rect(), _d3d_dc, _dwrite_factory, _selection.get());
+		_log_window = log_window_factory (_app->GetHInstance(), hwnd(), log_restricted_rect(), _d3d_dc, _dwrite_factory, _selection.get(), _project);
 		SetMainMenuItemCheck (ID_VIEW_STPLOG, true);
 	}
 

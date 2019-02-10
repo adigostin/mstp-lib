@@ -714,6 +714,13 @@ void Bridge::ResumeSimulation()
 	ProcessReceivedPackets();
 }
 
+void Bridge::clear_log()
+{
+	_logLines.clear();
+	_currentLogLine.text.clear();
+	this->event_invoker<log_cleared_e>()(this);
+}
+
 std::string Bridge::GetMstConfigIdName() const
 {
 	auto configId = STP_GetMstConfigId(_stpBridge);

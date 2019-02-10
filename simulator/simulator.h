@@ -55,7 +55,7 @@ struct __declspec(novtable) log_window_i abstract : virtual edge::win32_window_i
 {
 	virtual ~log_window_i() { }
 };
-using log_window_factory_t = std::unique_ptr<log_window_i>(*const)(HINSTANCE hInstance, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dWriteFactory, selection_i* selection);
+using log_window_factory_t = std::unique_ptr<log_window_i>(*const)(HINSTANCE hInstance, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dWriteFactory, selection_i* selection, const std::shared_ptr<project_i>& project);
 extern const log_window_factory_t log_window_factory;
 
 // ============================================================================
