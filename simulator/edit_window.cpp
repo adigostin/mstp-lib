@@ -774,14 +774,14 @@ public:
 			// Some validation code (maybe in the Properties Window) must have failed and taken focus back.
 			return nullopt;
 
-		MouseLocation mouseLocation;
-		mouseLocation.pt = pt;
-		mouseLocation.d = pointp_to_pointd(pt);
-		mouseLocation.w = pointd_to_pointw(mouseLocation.d);
+		mouse_location ml;
+		ml.pt = pt;
+		ml.d = pointp_to_pointd(pt);
+		ml.w = pointd_to_pointw(ml.d);
 
 		if (_state != nullptr)
 		{
-			_state->process_mouse_button_down (button, modifierKeysDown, mouseLocation);
+			_state->process_mouse_button_down (button, modifierKeysDown, ml);
 			if (_state->completed())
 			{
 				_state = nullptr;
@@ -791,7 +791,7 @@ public:
 			return 0;
 		}
 
-		auto ht = HitTestObjects (mouseLocation.d, SnapDistance);
+		auto ht = HitTestObjects (ml.d, SnapDistance);
 		if (ht.object == nullptr)
 			_selection->clear();
 		else
@@ -856,7 +856,7 @@ public:
 				}
 			}
 
-			auto state = CreateStateBeginningDrag(make_edit_state_deps(), ht.object, button, modifierKeysDown, mouseLocation, ::GetCursor(), move(stateMoveThreshold), move(stateButtonUp));
+			auto state = CreateStateBeginningDrag(make_edit_state_deps(), ht.object, button, modifierKeysDown, ml, ::GetCursor(), move(stateMoveThreshold), move(stateButtonUp));
 			EnterState(move(state));
 		}
 

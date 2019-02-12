@@ -15,7 +15,7 @@ class move_port_es : public edit_state
 public:
 	using base::base;
 
-	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) override final
 	{
 		assert (_selection->objects().size() == 1);
 		_port = dynamic_cast<Port*>(_selection->objects().front());
@@ -24,7 +24,7 @@ public:
 		_initialOffset = _port->GetOffset();
 	}
 
-	virtual void process_mouse_move (const MouseLocation& location) override final
+	virtual void process_mouse_move (const mouse_location& location) override final
 	{
 		_port->bridge()->SetCoordsForInteriorPort (_port, location.w);
 	}
@@ -41,7 +41,7 @@ public:
 		return std::nullopt;
 	}
 
-	virtual void process_mouse_button_up (edge::mouse_button button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_up (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) override final
 	{
 		_project->SetChangedFlag(true);
 		_completed = true;

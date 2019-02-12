@@ -23,7 +23,7 @@ class move_bridges_es : public edit_state
 public:
 	using base::base;
 
-	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) override final
 	{
 		auto firstBridge = static_cast<Bridge*>(_selection->objects()[0]); assert (firstBridge != nullptr);
 		_first_bridge_initial_location = firstBridge->GetLocation();
@@ -37,7 +37,7 @@ public:
 		_offset_first_bridge = location.w - firstBridge->GetLocation();
 	}
 
-	virtual void process_mouse_move (const MouseLocation& location) override final
+	virtual void process_mouse_move (const mouse_location& location) override final
 	{
 		auto firstBridgeLocation = location.w - _offset_first_bridge;
 		_infos[0].b->SetLocation(firstBridgeLocation);
@@ -54,14 +54,14 @@ public:
 				_infos[i].b->SetLocation (_first_bridge_initial_location + _infos[i].offset_from_first);
 
 			_completed = true;
-			::InvalidateRect (_ea->hwnd(), nullptr, FALSE);
+			::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
 			return 0;
 		}
 
 		return std::nullopt;
 	}
 
-	virtual void process_mouse_button_up (edge::mouse_button button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_up (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) override final
 	{
 		_project->SetChangedFlag(true);
 		_completed = true;

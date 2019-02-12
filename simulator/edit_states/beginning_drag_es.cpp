@@ -11,7 +11,7 @@ class BeginningDragES : public edit_state
 	renderable_object* const _clickedObject;
 	edge::mouse_button const _button;
 	UINT               const _modifierKeysDown;
-	MouseLocation      const _location;
+	mouse_location     const _location;
 	HCURSOR            const _cursor;
 	unique_ptr<edit_state> _stateMoveThreshold;
 	unique_ptr<edit_state> _stateButtonUp;
@@ -22,7 +22,7 @@ public:
 					 renderable_object* clickedObject,
 					 edge::mouse_button button,
 					 UINT modifierKeysDown,
-					 const MouseLocation& location,
+					 const mouse_location& location,
 					 HCURSOR cursor,
 					 unique_ptr<edit_state>&& stateMoveThreshold,
 					 unique_ptr<edit_state>&& stateButtonUp)
@@ -40,13 +40,13 @@ public:
 
 	virtual HCURSOR cursor() const { return _cursor; }
 
-	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) override final
 	{
 		// User began dragging with a mouse button, now he pressed a second button. Nothing to do here.
 		base::process_mouse_button_down (button, modifierKeysDown, location);
 	}
 
-	virtual void process_mouse_move (const MouseLocation& location) override final
+	virtual void process_mouse_move (const mouse_location& location) override final
 	{
 		base::process_mouse_move(location);
 
@@ -62,12 +62,12 @@ public:
 				assert (!_stateMoveThreshold->completed());
 				_stateMoveThreshold->process_mouse_move (location);
 				if (!_stateMoveThreshold->completed())
-					_ea->EnterState(move(_stateMoveThreshold));
+					_ew->EnterState(move(_stateMoveThreshold));
 			}
 		}
 	}
 
-	virtual void process_mouse_button_up (edge::mouse_button button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_up (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) override final
 	{
 		if (button != _button)
 			return;
@@ -87,7 +87,7 @@ public:
 
 				_stateButtonUp->process_mouse_button_up (button, modifierKeysDown, location);
 				if (!_stateButtonUp->completed())
-					_ea->EnterState(move(_stateButtonUp));
+					_ew->EnterState(move(_stateButtonUp));
 			}
 		}
 	}
@@ -108,7 +108,7 @@ std::unique_ptr<edit_state> CreateStateBeginningDrag (const edit_state_deps& dep
 													 renderable_object* clickedObject,
 													 edge::mouse_button button,
 													 UINT modifierKeysDown,
-													 const MouseLocation& location,
+													 const mouse_location& location,
 													 HCURSOR cursor,
 													 std::unique_ptr<edit_state>&& stateMoveThreshold,
 													 std::unique_ptr<edit_state>&& stateButtonUp)

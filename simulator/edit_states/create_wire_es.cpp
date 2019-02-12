@@ -25,14 +25,14 @@ class create_wire_es : public edit_state
 public:
 	using base::base;
 
-	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) override final
 	{
 		if (button != edge::mouse_button::left)
 			return;
 
 		if (_substate == waiting_first_down)
 		{
-			auto fromPort = _ea->GetCPAt(location.d, SnapDistance);
+			auto fromPort = _ew->GetCPAt(location.d, SnapDistance);
 			if (fromPort != nullptr)
 			{
 				auto newWire = std::make_unique<wire>();
@@ -45,12 +45,12 @@ public:
 		}
 	}
 
-	virtual void process_mouse_move (const MouseLocation& location) override final
+	virtual void process_mouse_move (const mouse_location& location) override final
 	{
 		if (_substate == waiting_first_down)
 			return;
 
-		auto port = _ea->GetCPAt (location.d, SnapDistance);
+		auto port = _ew->GetCPAt (location.d, SnapDistance);
 		if (port != nullptr)
 		{
 			if (port != std::get<connected_wire_end>(_wire->p0()))
@@ -62,13 +62,13 @@ public:
 		}
 		else
 			_wire->set_p1(location.w);
-		::InvalidateRect (_ea->hwnd(), nullptr, FALSE);
+		::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
 
 		if (_substate == waiting_first_up)
 			_substate = waiting_second_up;
 	}
 
-	virtual void process_mouse_button_up (edge::mouse_button button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_up (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) override final
 	{
 		if (_substate == waiting_second_up)
 		{
@@ -92,7 +92,7 @@ public:
 			}
 
 			_substate = down;
-			::InvalidateRect (_ea->hwnd(), nullptr, FALSE);
+			::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
 			return 0;
 		}
 
@@ -103,7 +103,7 @@ public:
 	{
 		base::render(rt);
 		if ((_wire != nullptr) && std::holds_alternative<connected_wire_end>(_wire->p1()))
-			_ea->RenderSnapRect (rt, std::get<connected_wire_end>(_wire->p1())->GetCPLocation());
+			_ew->RenderSnapRect (rt, std::get<connected_wire_end>(_wire->p1())->GetCPLocation());
 	}
 
 	virtual bool completed() const override final

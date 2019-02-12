@@ -33,7 +33,7 @@ public:
 
 	virtual bool completed() const override final { return _substate == down; }
 
-	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) override final
 	{
 		base::process_mouse_button_down (button, modifierKeysDown, location);
 
@@ -47,11 +47,11 @@ public:
 		}
 	}
 
-	virtual void process_mouse_move (const MouseLocation& location) override
+	virtual void process_mouse_move (const mouse_location& location) override
 	{
 		base::process_mouse_move(location);
 
-		auto port = _ea->GetCPAt (location.d, SnapDistance);
+		auto port = _ew->GetCPAt (location.d, SnapDistance);
 		if (port != nullptr)
 		{
 			auto alreadyConnectedWire = _project->GetWireConnectedToPort(port);
@@ -70,7 +70,7 @@ public:
 		}
 	}
 
-	virtual void process_mouse_button_up (edge::mouse_button button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_up (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) override final
 	{
 		if (_substate == waiting_second_up)
 		{
@@ -95,7 +95,7 @@ public:
 	{
 		auto& point = _wire->points()[_pointIndex];
 		if (holds_alternative<connected_wire_end>(point))
-			_ea->RenderSnapRect (rt, get<connected_wire_end>(point)->GetCPLocation());
+			_ew->RenderSnapRect (rt, get<connected_wire_end>(point)->GetCPLocation());
 	}
 
 	virtual HCURSOR cursor() const override final { return LoadCursor(nullptr, IDC_CROSS); }

@@ -5,7 +5,7 @@
 struct edit_state_deps
 {
 	project_window_i* pw;
-	edit_window_i*    ea;
+	edit_window_i*    ew;
 	project_i*      project;
 	selection_i*    selection;
 };
@@ -14,19 +14,19 @@ class edit_state abstract
 {
 protected:
 	project_window_i* const _pw;
-	edit_window_i*    const _ea;
-	project_i*      const _project;
-	selection_i*    const _selection;
+	edit_window_i*    const _ew;
+	project_i*        const _project;
+	selection_i*      const _selection;
 
 public:
 	edit_state (const edit_state_deps& deps)
-		: _pw(deps.pw), _ea(deps.ea), _selection(deps.selection), _project(deps.project)
+		: _pw(deps.pw), _ew(deps.ew), _selection(deps.selection), _project(deps.project)
 	{ }
 
 	virtual ~edit_state() { }
-	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const MouseLocation& location) { }
-	virtual void process_mouse_button_up   (edge::mouse_button button, UINT modifierKeysDown, const MouseLocation& location) { }
-	virtual void process_mouse_move (const MouseLocation& location) { }
+	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) { }
+	virtual void process_mouse_button_up   (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) { }
+	virtual void process_mouse_move (const mouse_location& location) { }
 	virtual std::optional<LRESULT> process_key_or_syskey_down (UINT virtualKey, UINT modifierKeys) { return std::nullopt; }
 	virtual std::optional<LRESULT> process_key_or_syskey_up   (UINT virtualKey, UINT modifierKeys) { return std::nullopt; }
 	virtual void render (ID2D1DeviceContext* dc) { }
@@ -43,7 +43,7 @@ std::unique_ptr<edit_state> CreateStateBeginningDrag (const edit_state_deps& dep
 													 renderable_object* clickedObject,
 													 edge::mouse_button button,
 													 UINT modifierKeysDown,
-													 const MouseLocation& location,
+													 const mouse_location& location,
 													 HCURSOR cursor,
 													 std::unique_ptr<edit_state>&& stateMoveThreshold,
 													 std::unique_ptr<edit_state>&& stateButtonUp);

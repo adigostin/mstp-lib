@@ -13,7 +13,7 @@ class create_bridge_es : public edit_state
 public:
 	using base::base;
 
-	virtual void process_mouse_move (const MouseLocation& location) override final
+	virtual void process_mouse_move (const mouse_location& location) override final
 	{
 		if (_bridge == nullptr)
 		{
@@ -25,10 +25,10 @@ public:
 		}
 
 		_bridge->SetLocation (location.w.x - _bridge->GetWidth() / 2, location.w.y - _bridge->GetHeight() / 2);
-		::InvalidateRect (_ea->hwnd(), nullptr, FALSE);
+		::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
 	}
 
-	virtual void process_mouse_button_up (edge::mouse_button button, UINT modifierKeysDown, const MouseLocation& location) override final
+	virtual void process_mouse_button_up (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) override final
 	{
 		if (_bridge != nullptr)
 		{
@@ -49,7 +49,7 @@ public:
 		auto centerY = _bridge->GetTop() + _bridge->GetHeight() / 2;
 		_bridge.reset (new Bridge(numberOfPorts, _bridge->GetMstiCount(), _bridge->bridge_address()));
 		_bridge->SetLocation (centerX - _bridge->GetWidth() / 2, centerY - _bridge->GetHeight() / 2);
-		::InvalidateRect (_ea->hwnd(), nullptr, FALSE);
+		::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
 	}
 
 	virtual std::optional<LRESULT> process_key_or_syskey_down (UINT virtualKey, UINT modifierKeys) override final
@@ -57,7 +57,7 @@ public:
 		if (virtualKey == VK_ESCAPE)
 		{
 			_completed = true;
-			::InvalidateRect (_ea->hwnd(), nullptr, FALSE);
+			::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
 			return 0;
 		}
 
@@ -84,16 +84,16 @@ public:
 		{
 			D2D1::Matrix3x2F oldtr;
 			dc->GetTransform(&oldtr);
-			dc->SetTransform (_ea->GetZoomTransform() * oldtr);
+			dc->SetTransform (_ew->GetZoomTransform() * oldtr);
 
-			_bridge->Render (dc, _ea->drawing_resources(), _pw->selected_vlan_number(), D2D1::ColorF(D2D1::ColorF::LightGreen));
+			_bridge->Render (dc, _ew->drawing_resources(), _pw->selected_vlan_number(), D2D1::ColorF(D2D1::ColorF::LightGreen));
 
 			dc->SetTransform(&oldtr);
 
 			auto x = _bridge->GetLeft() + _bridge->GetWidth() / 2;
 			auto y = _bridge->GetBottom() + Port::ExteriorHeight * 1.1f;
-			auto centerD = _ea->GetZoomTransform().TransformPoint({ x, y });
-			_ea->render_hint (dc, centerD, L"Press + or - to change the number of ports.",
+			auto centerD = _ew->GetZoomTransform().TransformPoint({ x, y });
+			_ew->render_hint (dc, centerD, L"Press + or - to change the number of ports.",
 								   DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, true);
 		}
 	}

@@ -70,7 +70,7 @@ struct DialogProcResult
 	LRESULT messageResult;
 };
 
-struct MouseLocation
+struct mouse_location
 {
 	POINT pt;
 	D2D1_POINT_2F d;
