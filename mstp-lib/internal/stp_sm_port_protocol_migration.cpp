@@ -6,7 +6,7 @@
 #include "stp_bridge.h"
 #include <assert.h>
 
-// See §13.30 in 802.1Q-2011
+// This file implements §13.32 from 802.1Q-2018
 
 struct PortProtocolMigrationImpl : PortProtocolMigration
 {
@@ -50,13 +50,6 @@ struct PortProtocolMigrationImpl : PortProtocolMigration
 	
 		if (state == CHECKING_RSTP)
 		{
-			// Problem in the specs: These two exit conditions could both be true at the same time:
-			// 1. (mdelayWhile != MigrateTime) && !portEnabled
-			// 2. (mDelayWhile == 0)
-			// If we check condition 1 first, this would result in mDelayWhile being set to non-zero,
-			// so we'll never have the chance to check condition 2, so the state machine would never exit the CHECKING_RSTP state.
-			// This doesn't make sense, so let's first check condition 2.
-
 			if (port->mDelayWhile == 0)
 				return SENSING;
 		
@@ -79,7 +72,7 @@ struct PortProtocolMigrationImpl : PortProtocolMigration
 			if (port->sendRSTP && port->rcvdSTP)
 				return SELECTING_STP;
 		
-			if (!port->portEnabled || port->mcheck || ((rstpVersion (bridge) && !port->sendRSTP && port->rcvdRSTP)))
+			if (!port->portEnabled || port->mcheck || ((rstpVersion(bridge) && !port->sendRSTP && port->rcvdRSTP)))
 				return CHECKING_RSTP;
 		
 			return (State)0;
@@ -101,7 +94,7 @@ struct PortProtocolMigrationImpl : PortProtocolMigration
 		if (state == CHECKING_RSTP)
 		{
 			port->mcheck = false;
-			port->sendRSTP = rstpVersion (bridge);
+			port->sendRSTP = rstpVersion(bridge);
 			port->mDelayWhile = bridge->MigrateTime;
 		}
 		else if (state == SELECTING_STP)

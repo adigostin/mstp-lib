@@ -6,7 +6,7 @@
 #include "stp_bridge.h"
 #include <assert.h>
 
-// See §13.33 in 802.1Q-2011
+// This file implements §13.35 from 802.1Q-2018.
 
 struct PortInformationImpl : PortInformation
 {
@@ -140,9 +140,6 @@ struct PortInformationImpl : PortInformation
 
 		PORT* port = bridge->ports [givenPort];
 		PORT_TREE* portTree = port->trees [givenTree];
-
-		// ------------------------------------------------------------------------
-		// If we're here, it means the state has just been changed. Let's initialize the new state.
 
 		if (state == DISABLED)
 		{
