@@ -6,7 +6,7 @@
 #include "stp_bridge.h"
 #include <assert.h>
 
-// See §13.34 in 802.1Q-2011
+// This file implements §13.36 from 802.1Q-2018.
 
 struct PortRoleSelectionImpl : PortRoleSelection
 {

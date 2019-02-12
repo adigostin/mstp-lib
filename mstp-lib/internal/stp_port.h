@@ -126,6 +126,13 @@ struct PORT
 	// A single per port instance of the following variable(s) applies to all MSTIs:
 	bool	newInfoMsti;	// 13.25.ac) - 13.25.29
 
+	// If the ISIS-SPB is implemented, there is one instance per port of the following variable(s):
+	bool agreedMisorder;    // 13.27.af) - 13.27.10 in 802.1Q-2018
+	unsigned char agreedN;  // 13.27.ag) - 13.27.11 in 802.1Q-2018
+	unsigned char agreedND; // 13.27.ah) - 13.27.12 in 802.1Q-2018
+	unsigned char agreeN;   // 13.27.ai) - 13.27.16 in 802.1Q-2018
+	unsigned char agreeND;  // 13.27.aj) - 13.27.17 in 802.1Q-2018
+
 	// 13.23 State machine timers
 	// One instance of the following shall be implemented per port:
 	unsigned short mDelayWhile;		// a) - 13.23.1

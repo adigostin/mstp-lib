@@ -6,7 +6,7 @@
 #include "stp_bridge.h"
 #include <assert.h>
 
-// See §13.29 in 802.1Q-2011
+// This file implements §13.31 from 802.1Q-2018.
 
 struct PortReceiveImpl : PortReceive
 {
@@ -80,6 +80,7 @@ struct PortReceiveImpl : PortReceive
 		if (state == DISCARD)
 		{
 			port->rcvdBpdu = port->rcvdRSTP = port->rcvdSTP = false;
+			port->agreedMisorder = true; port->agreedN = port->agreedND = port->agreeND = 0; port->agreeN = 1;
 			clearAllRcvdMsgs (bridge, givenPort);
 			port->edgeDelayWhile = bridge->MigrateTime;
 		}
