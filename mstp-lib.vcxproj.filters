@@ -28,6 +28,9 @@
     <ClInclude Include="mstp-lib\internal\stp_procedures.h">
       <Filter>internal</Filter>
     </ClInclude>
+    <ClInclude Include="mstp-lib\internal\stp_sm.h">
+      <Filter>internal</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="mstp-lib\internal\stp.cpp">
@@ -46,9 +49,6 @@
       <Filter>internal</Filter>
     </ClCompile>
     <ClCompile Include="mstp-lib\internal\stp_procedures.cpp">
-      <Filter>internal</Filter>
-    </ClCompile>
-    <ClCompile Include="mstp-lib\internal\stp_sm.cpp">
       <Filter>internal</Filter>
     </ClCompile>
     <ClCompile Include="mstp-lib\internal\stp_sm_bridge_detection.cpp">

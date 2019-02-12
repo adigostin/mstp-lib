@@ -990,7 +990,7 @@
         <name>$PROJ_DIR$\..\mstp-lib\internal\stp_procedures.h</name>
       </file>
       <file>
-        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_sm.cpp</name>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_sm.h</name>
       </file>
       <file>
         <name>$PROJ_DIR$\..\mstp-lib\internal\stp_sm_bridge_detection.cpp</name>

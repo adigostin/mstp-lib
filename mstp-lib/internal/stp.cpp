@@ -9,7 +9,6 @@
 #include <string.h>
 
 static void RunStateMachines (STP_BRIDGE* bridge, unsigned int timestamp);
-static unsigned int GetInstanceCountForAllStateMachines (STP_BRIDGE* bridge);
 static void RecomputePrioritiesAndPortRoles (STP_BRIDGE* bridge, unsigned int treeIndex, unsigned int timestamp);
 static void ComputeMstConfigDigest (STP_BRIDGE* bridge);
 
@@ -57,7 +56,6 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	// See "13.6.2 Force Protocol Version" on page 332
 	bridge->ForceProtocolVersion = STP_VERSION_RSTP;
 
-	bridge->smInterface = &smInterface_802_1Q_2011;
 	bridge->callbacks = *callbacks;
 	bridge->portCount = portCount;
 	bridge->mstiCount = mstiCount;
@@ -69,13 +67,6 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	bridge->logBufferUsedSize = 0;
 	bridge->logCurrentPort = -1;
 	bridge->logCurrentTree = -1;
-
-	// ------------------------------------------------------------------------
-	// alloc space for state array
-
-	unsigned int stateMachineInstanceCount = GetInstanceCountForAllStateMachines(bridge);
-	bridge->states = (SM_STATE*) callbacks->allocAndZeroMemory (stateMachineInstanceCount * sizeof(SM_STATE));
-	assert (bridge->states != NULL);
 
 	// ------------------------------------------------------------------------
 
@@ -172,7 +163,6 @@ void STP_DestroyBridge (STP_BRIDGE* bridge)
 
 	bridge->callbacks.freeMemory (bridge->ports);
 	bridge->callbacks.freeMemory (bridge->trees);
-	bridge->callbacks.freeMemory (bridge->states);
 	bridge->callbacks.freeMemory (bridge->logBuffer);
 
 	bridge->callbacks.freeMemory (bridge);
@@ -461,12 +451,13 @@ bool STP_IsLoggingEnabled (const STP_BRIDGE* bridge)
 
 // ============================================================================
 
-static bool RunStateMachineInstance (STP_BRIDGE* bridge, const SM_INFO* smInfo, int givenPort, int givenTree, SM_STATE* statePtr, unsigned int timestamp)
+template<typename State>
+static bool RunStateMachineInstance (STP_BRIDGE* bridge, const SM_INFO<State>* smInfo, int givenPort, int givenTree, State* statePtr, unsigned int timestamp)
 {
 	volatile bool changed = false;
 
 rep:
-	SM_STATE newState = smInfo->checkConditions (bridge, givenPort, givenTree, *statePtr);
+	State newState = smInfo->checkConditions (bridge, givenPort, givenTree, *statePtr);
 	if (newState != 0)
 	{
 		if (givenPort == -1)
@@ -500,107 +491,59 @@ rep:
 
 // ============================================================================
 
-static bool RunStateMachineInstances (STP_BRIDGE* bridge, const SM_INFO* smInfo, SM_STATE** statePtr, unsigned int timestamp)
-{
-	volatile bool changed = false;
-
-	switch (smInfo->instanceType)
-	{
-		case SM_INFO::PER_BRIDGE:
-			changed |= RunStateMachineInstance (bridge, smInfo, -1, -1, *statePtr, timestamp);
-			(*statePtr)++;
-			break;
-
-		case SM_INFO::PER_BRIDGE_PER_TREE:
-			for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount(); treeIndex++)
-			{
-				changed |= RunStateMachineInstance (bridge, smInfo, -1, treeIndex, *statePtr, timestamp);
-				(*statePtr)++;
-			}
-			break;
-
-		case SM_INFO::PER_PORT:
-			for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
-			{
-				changed |= RunStateMachineInstance (bridge, smInfo, portIndex, -1, *statePtr, timestamp);
-				(*statePtr)++;
-			}
-			break;
-
-		case SM_INFO::PER_PORT_PER_TREE:
-			for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount(); treeIndex++)
-			{
-				for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
-				{
-					changed |= RunStateMachineInstance (bridge, smInfo, portIndex, treeIndex, *statePtr, timestamp);
-					(*statePtr)++;
-				}
-			}
-			break;
-	}
-
-	return changed;
-}
-
-// ============================================================================
-
 static void RunStateMachines (STP_BRIDGE* bridge, unsigned int timestamp)
 {
-	volatile bool changed;
+	bool changed;
 
 	do
 	{
-		SM_STATE* statePtr = bridge->states;
-
 		changed = false;
 
-		for (unsigned int i = 0; i < bridge->smInterface->smInfoCount; i++)
-			changed |= RunStateMachineInstances (bridge, &bridge->smInterface->smInfo [i], &statePtr, timestamp);
+		for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
+		{
+			PORT* port = bridge->ports[portIndex];
+			changed |= RunStateMachineInstance (bridge, &PortTimers::sm,            portIndex, -1, &port->portTimersState,            timestamp);
+			changed |= RunStateMachineInstance (bridge, &PortProtocolMigration::sm, portIndex, -1, &port->portProtocolMigrationState, timestamp);
+			changed |= RunStateMachineInstance (bridge, &PortReceive::sm,           portIndex, -1, &port->portReceiveState,           timestamp);
+			changed |= RunStateMachineInstance (bridge, &BridgeDetection::sm,       portIndex, -1, &port->bridgeDetectionState,       timestamp);
+			//changed |= RunStateMachineInstance (bridge, &L2GP::sm,                  portIndex, -1, &port->l2gpState,                  timestamp);
+
+			for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount(); treeIndex++)
+			{
+				PORT_TREE* tree = port->trees[treeIndex];
+				changed |= RunStateMachineInstance (bridge, &PortInformation::sm,     portIndex, treeIndex, &tree->portInformationState,     timestamp);
+				changed |= RunStateMachineInstance (bridge, &PortRoleTransitions::sm, portIndex, treeIndex, &tree->portRoleTransitionsState, timestamp);
+				changed |= RunStateMachineInstance (bridge, &PortStateTransition::sm, portIndex, treeIndex, &tree->portStateTransitionState, timestamp);
+				changed |= RunStateMachineInstance (bridge, &TopologyChange::sm,      portIndex, treeIndex, &tree->topologyChangeState,      timestamp);
+			}
+		}
+
+		for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount(); treeIndex++)
+		{
+			BRIDGE_TREE* tree = bridge->trees[treeIndex];
+			changed |= RunStateMachineInstance (bridge, &PortRoleSelection::sm, -1, treeIndex, &tree->portRoleSelectionState, timestamp);
+		}
 
 		// We execute the PortTransmit state machine only after all other state machines have finished executing,
 		// so as to avoid transmitting BPDUs containing results from intermediary calculations.
 		// I remember reading this in the standard somewhere.
-		if (changed == false)
-			changed |= RunStateMachineInstances (bridge, bridge->smInterface->transmitSmInfo, &statePtr, timestamp);
-
+		if (!changed)
+		{
+			for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
+			{
+				PORT* port = bridge->ports[portIndex];
+				changed |= RunStateMachineInstance (bridge, &PortTransmit::sm, portIndex, -1, &port->portTransmitState, timestamp);
+			}
+		}
 	} while (changed);
 }
 
 static void RestartStateMachines (STP_BRIDGE* bridge, unsigned int timestamp)
 {
-	assert (bridge->states);
-	memset (bridge->states, 0, GetInstanceCountForAllStateMachines(bridge) * sizeof(SM_STATE));
 	bridge->BEGIN = true;
 	RunStateMachines (bridge, timestamp);
 	bridge->BEGIN = false;
 	RunStateMachines (bridge, timestamp);
-}
-
-// ============================================================================
-
-static unsigned int GetInstanceCountForStateMachine (const SM_INFO* smInfo, unsigned int portCount, unsigned int treeCount)
-{
-	switch (smInfo->instanceType)
-	{
-		case SM_INFO::PER_BRIDGE:			return 1;
-		case SM_INFO::PER_PORT:				return portCount;
-		case SM_INFO::PER_BRIDGE_PER_TREE:	return treeCount;
-		case SM_INFO::PER_PORT_PER_TREE:	return treeCount * portCount;
-		default:
-			assert (false);
-			return 0;
-	}
-}
-
-static unsigned int GetInstanceCountForAllStateMachines (STP_BRIDGE* bridge)
-{
-	unsigned int count = 0;
-	for (unsigned int i = 0; i < bridge->smInterface->smInfoCount; i++)
-		count += GetInstanceCountForStateMachine (&bridge->smInterface->smInfo [i], bridge->portCount, (1 + bridge->mstiCount));
-
-	count += GetInstanceCountForStateMachine (bridge->smInterface->transmitSmInfo, bridge->portCount, (1 + bridge->mstiCount));
-
-	return count;
 }
 
 // ============================================================================
@@ -1242,7 +1185,7 @@ void STP_SetAdminPortPathCost (struct STP_BRIDGE* bridge, unsigned int portIndex
 			assert(false);
 		}
 	}
-	
+
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
 	FLUSH_LOG (bridge);
 }

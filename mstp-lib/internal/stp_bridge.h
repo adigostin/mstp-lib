@@ -10,41 +10,6 @@
 #include "stp_base_types.h"
 #include "stp_port.h"
 
-typedef const char* (*SM_GET_STATE_NAME) (SM_STATE state);
-typedef SM_STATE (*SM_CHECK_CONDITIONS) (const STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state);
-typedef void (*SM_INIT_STATE) (STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state, unsigned int timestamp);
-
-struct SM_INFO
-{
-	enum INSTANCE_TYPE
-	{
-		PER_BRIDGE,
-		PER_BRIDGE_PER_TREE,
-		PER_PORT,
-		PER_PORT_PER_TREE,
-	};
-
-	INSTANCE_TYPE instanceType;
-
-	const char* smName;
-
-	SM_GET_STATE_NAME getStateName;
-	SM_CHECK_CONDITIONS checkConditions;
-	SM_INIT_STATE initState;
-};
-
-struct SM_INTERFACE
-{
-	const SM_INFO* smInfo;
-	unsigned int smInfoCount;
-
-	const SM_INFO* transmitSmInfo;
-};
-
-extern const SM_INTERFACE smInterface_802_1Q_2011;
-
-// ============================================================================
-
 // 13.24
 struct BRIDGE_TREE
 {
@@ -101,6 +66,8 @@ public:
 	{
 		return this->BridgePriority;
 	}
+
+	PortRoleSelection::State portRoleSelectionState;
 };
 
 // ============================================================================
@@ -150,10 +117,6 @@ struct STP_BRIDGE
 	static const unsigned short DefaultMaxHops = 20;			// 13.22.1 in 802.1Q-2005 --- 13.23.7 --- 13.37.3
 
 	void* applicationContext;
-
-	SM_STATE* states;
-
-	const SM_INTERFACE* smInterface;
 
 	// This variable is supposed to be be accessed only while a received BPDU is being handled.
 	// When there's no received BPDU, we set it to the invalid value NULL, to cause a crash on access and signal the programming error early.

@@ -8,85 +8,87 @@
 
 // See §13.34 in 802.1Q-2011
 
-enum
+struct PortRoleSelectionImpl : PortRoleSelection
 {
-	UNDEFINED,
-	INIT_TREE,
-	ROLE_SELECTION,
-};
-
-// ============================================================================
-
-const char* PortRoleSelection_802_1Q_2011_GetStateName (SM_STATE state)
-{
-	switch (state)
+	static const char* GetStateName (State state)
 	{
-		case INIT_TREE:		return "INIT_TREE";
-		case ROLE_SELECTION:return "ROLE_SELECTION";
-		default:			return "(undefined)";
+		switch (state)
+		{
+			case INIT_TREE:		return "INIT_TREE";
+			case ROLE_SELECTION:return "ROLE_SELECTION";
+			default:			return "(undefined)";
+		}
 	}
-}
 
-// ============================================================================
+	// ============================================================================
 
-// Returns the new state, or 0 when no transition is to be made.
-SM_STATE PortRoleSelection_802_1Q_2011_CheckConditions (const STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state)
-{
-	assert (givenTree != -1);
-	assert (givenPort == -1);
-
-	// ------------------------------------------------------------------------
-	// Check global conditions.
-	
-	if (bridge->BEGIN)
+	// Returns the new state, or 0 when no transition is to be made.
+	static State CheckConditions (const STP_BRIDGE* bridge, int givenPort, int givenTree, State state)
 	{
+		assert (givenTree != -1);
+		assert (givenPort == -1);
+
+		// ------------------------------------------------------------------------
+		// Check global conditions.
+	
+		if (bridge->BEGIN)
+		{
+			if (state == INIT_TREE)
+			{
+				// The entry block for this state has been executed already.
+				return (State)0;
+			}
+		
+			return INIT_TREE;
+		}
+	
+		// ------------------------------------------------------------------------
+		// Check exit conditions from each state.
+	
+		if (state == INIT_TREE)
+			return ROLE_SELECTION;
+	
+		if (state == ROLE_SELECTION)
+		{
+			for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
+			{
+				if (bridge->ports [portIndex]->trees [givenTree]->reselect)
+					return ROLE_SELECTION;
+			}
+		
+			return (State)0;
+		}
+
+		assert (false);
+		return (State)0;
+	}
+
+	// ============================================================================
+
+	static void InitState (STP_BRIDGE* bridge, int givenPort, int givenTree, State state, unsigned int timestamp)
+	{
+		assert (givenTree != -1);
+		assert (givenPort == -1);
+
 		if (state == INIT_TREE)
 		{
-			// The entry block for this state has been executed already.
-			return 0;
+			updtRolesDisabledTree (bridge, givenTree);
 		}
-		
-		return INIT_TREE;
-	}
-	
-	// ------------------------------------------------------------------------
-	// Check exit conditions from each state.
-	
-	if (state == INIT_TREE)
-		return ROLE_SELECTION;
-	
-	if (state == ROLE_SELECTION)
-	{
-		for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
+		else if (state == ROLE_SELECTION)
 		{
-			if (bridge->ports [portIndex]->trees [givenTree]->reselect)
-				return ROLE_SELECTION;
+			clearReselectTree (bridge, givenTree);
+			updtRolesTree (bridge, givenTree);
+			setSelectedTree (bridge, givenTree);
 		}
-		
-		return 0;
+		else
+			assert (false);
 	}
+};
 
-	assert (false);
-	return 0;
-}
+const SM_INFO<PortRoleSelection::State> PortRoleSelection::sm = {
+	"PortRoleSelection",
+	&PortRoleSelectionImpl::GetStateName,
+	&PortRoleSelectionImpl::CheckConditions,
+	&PortRoleSelectionImpl::InitState
+};
 
-// ============================================================================
-
-void PortRoleSelection_802_1Q_2011_InitState (STP_BRIDGE* bridge, int givenPort, int givenTree, SM_STATE state, unsigned int timestamp)
-{
-	assert (givenTree != -1);
-	assert (givenPort == -1);
-
-	if (state == INIT_TREE)
-	{
-		updtRolesDisabledTree (bridge, givenTree);
-	}
-	else if (state == ROLE_SELECTION)
-	{
-		clearReselectTree (bridge, givenTree);
-		updtRolesTree (bridge, givenTree);
-		setSelectedTree (bridge, givenTree);
-	}
-	else
-		assert (false);
-}

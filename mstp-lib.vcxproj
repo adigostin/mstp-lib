@@ -26,6 +26,7 @@
     <ClInclude Include="mstp-lib\internal\stp_md5.h" />
     <ClInclude Include="mstp-lib\internal\stp_port.h" />
     <ClInclude Include="mstp-lib\internal\stp_procedures.h" />
+    <ClInclude Include="mstp-lib\internal\stp_sm.h" />
     <ClInclude Include="mstp-lib\stp.h" />
   </ItemGroup>
   <ItemGroup>
@@ -35,7 +36,6 @@
     <ClCompile Include="mstp-lib\internal\stp_log.cpp" />
     <ClCompile Include="mstp-lib\internal\stp_md5.cpp" />
     <ClCompile Include="mstp-lib\internal\stp_procedures.cpp" />
-    <ClCompile Include="mstp-lib\internal\stp_sm.cpp" />
     <ClCompile Include="mstp-lib\internal\stp_sm_bridge_detection.cpp" />
     <ClCompile Include="mstp-lib\internal\stp_sm_l2gp_receive.cpp" />
     <ClCompile Include="mstp-lib\internal\stp_sm_port_information.cpp" />

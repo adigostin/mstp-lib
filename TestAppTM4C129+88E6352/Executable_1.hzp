@@ -88,7 +88,6 @@
         <file file_name="../mstp-lib/internal/stp_port.h" />
         <file file_name="../mstp-lib/internal/stp_procedures.cpp" />
         <file file_name="../mstp-lib/internal/stp_procedures.h" />
-        <file file_name="../mstp-lib/internal/stp_sm.cpp" />
         <file file_name="../mstp-lib/internal/stp_sm_bridge_detection.cpp" />
         <file file_name="../mstp-lib/internal/stp_sm_l2gp_receive.cpp" />
         <file file_name="../mstp-lib/internal/stp_sm_port_information.cpp" />
@@ -100,6 +99,7 @@
         <file file_name="../mstp-lib/internal/stp_sm_port_timers.cpp" />
         <file file_name="../mstp-lib/internal/stp_sm_port_transmit.cpp" />
         <file file_name="../mstp-lib/internal/stp_sm_topology_change.cpp" />
+        <file file_name="../mstp-lib/internal/stp_sm.h" />
       </folder>
     </folder>
     <file file_name="smi.cpp" />

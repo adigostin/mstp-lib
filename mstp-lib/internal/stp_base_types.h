@@ -14,8 +14,6 @@
 
 struct STP_BRIDGE;
 
-typedef unsigned char SM_STATE;
-
 int Cmp (const void* _p1, const void* _p2, int size);
 
 // ============================================================================

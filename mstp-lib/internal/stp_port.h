@@ -7,6 +7,7 @@
 
 #include "stp_base_types.h"
 #include "stp_bpdu.h"
+#include "stp_sm.h"
 #include "../stp.h"
 
 // All references are to 802.1Q-2011
@@ -69,6 +70,11 @@ struct PORT_TREE
 	unsigned short tcWhile;			// h) - 13.23.9
 	unsigned short rcvdInfoWhile;	// i) - 13.23.6
 	unsigned short tcDetected;		// j) - 13.23.8
+
+	PortInformation::State     portInformationState;
+	PortRoleTransitions::State portRoleTransitionsState;
+	PortStateTransition::State portStateTransitionState;
+	TopologyChange::State      topologyChangeState;
 };
 
 // ============================================================================
@@ -144,6 +150,13 @@ struct PORT
 	//  - application calls STP_SetAdminP2P(AUTO) => the library must set operPointToPointMAC to XXX, which it reads from this variable.
 	// See also detectedExternalPortPathCost.
 	bool detectedPointToPointMAC;
+
+	PortTimers::State            portTimersState;
+	PortProtocolMigration::State portProtocolMigrationState;
+	PortReceive::State           portReceiveState;
+	BridgeDetection::State       bridgeDetectionState;
+	L2GPortReceive::State        l2gpState;
+	PortTransmit::State          portTransmitState;
 };
 
 #endif
