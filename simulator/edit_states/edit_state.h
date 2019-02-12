@@ -5,7 +5,7 @@
 struct edit_state_deps
 {
 	project_window_i* pw;
-	edit_area_i*    ea;
+	edit_window_i*    ea;
 	project_i*      project;
 	selection_i*    selection;
 };
@@ -14,7 +14,7 @@ class edit_state abstract
 {
 protected:
 	project_window_i* const _pw;
-	edit_area_i*    const _ea;
+	edit_window_i*    const _ea;
 	project_i*      const _project;
 	selection_i*    const _selection;
 

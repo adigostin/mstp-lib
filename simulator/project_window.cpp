@@ -46,7 +46,7 @@ class project_window : public window, public virtual project_window_i
 	com_ptr<IDWriteFactory>       const _dwrite_factory;
 	std::shared_ptr<project_i>    const _project;
 	std::unique_ptr<selection_i>  const _selection;
-	std::unique_ptr<edit_area_i>        _edit_window;
+	std::unique_ptr<edit_window_i>      _edit_window;
 	std::unique_ptr<property_grid_i>    _pg;
 	std::unique_ptr<log_window_i>       _log_window;
 	std::unique_ptr<vlan_window_i>      _vlanWindow;
@@ -103,7 +103,7 @@ public:
 		_vlanWindow = vlan_window_factory (_app, this, _project, _selection.get(), hwnd(), { GetVlanWindowLeft(), 0 }, _d3d_dc, _dwrite_factory);
 		SetMainMenuItemCheck (ID_VIEW_VLANS, true);
 
-		_edit_window = edit_area_factory (create_params.app, this, _project.get(), _selection.get(), hwnd(), edit_window_rect(), create_params.d3d_dc, create_params.dwrite_factory);
+		_edit_window = edit_window_factory (create_params.app, this, _project.get(), _selection.get(), hwnd(), edit_window_rect(), create_params.d3d_dc, create_params.dwrite_factory);
 
 		if (auto recentFiles = GetRecentFileList(); !recentFiles.empty())
 			AddRecentFileMenuItems(recentFiles);
@@ -543,7 +543,7 @@ public:
 			auto project = project_factory();
 			project_window_create_params params = 
 			{
-				_app, project, selection_factory, edit_area_factory, true, true, 1, SW_SHOW, _d3d_dc, _dwrite_factory
+				_app, project, selection_factory, edit_window_factory, true, true, 1, SW_SHOW, _d3d_dc, _dwrite_factory
 			};
 			
 			auto pw = projectWindowFactory(params);
@@ -618,7 +618,7 @@ public:
 		if (projectToLoadTo != _project)
 		{
 			assert(false);
-			//auto newWindow = projectWindowFactory(_app, projectToLoadTo, selection_factory, edit_area_factory, true, true, SW_SHOW, 1);
+			//auto newWindow = projectWindowFactory(_app, projectToLoadTo, selection_factory, edit_window_factory, true, true, SW_SHOW, 1);
 			//_app->add_project_window(newWindow);
 		}
 		*/

@@ -27,7 +27,7 @@ static const D2D1_COLOR_F RegionColors[] =
 
 #pragma warning (disable: 4250)
 
-class edit_area : public zoomable_window, public edit_area_i
+class edit_window : public zoomable_window, public edit_window_i
 {
 	typedef zoomable_window base;
 
@@ -43,7 +43,7 @@ class edit_area : public zoomable_window, public edit_area_i
 	HTResult _htResult = { nullptr, 0 };
 
 public:
-	edit_area (simulator_app_i* app,
+	edit_window (simulator_app_i* app,
 			  project_window_i* pw,
 			  project_i* project,
 			  selection_i* selection,
@@ -75,7 +75,7 @@ public:
 		_pw->selected_vlan_number_changed().add_handler (&on_selected_vlan_changed, this);
 	}
 
-	virtual ~edit_area()
+	virtual ~edit_window()
 	{
 		_pw->selected_vlan_number_changed().remove_handler (&on_selected_vlan_changed, this);
 		_project->GetInvalidateEvent().remove_handler (&OnProjectInvalidate, this);
@@ -86,31 +86,31 @@ public:
 
 	static void on_selected_vlan_changed (void* callbackArg, project_window_i* pw, unsigned int vlanNumber)
 	{
-		auto area = static_cast<edit_area*>(callbackArg);
-		area->invalidate();
+		auto window = static_cast<edit_window*>(callbackArg);
+		window->invalidate();
 	}
 
 	static void OnBridgeRemoving (void* callbackArg, project_i* project, size_t index, Bridge* b)
 	{
-		auto area = static_cast<edit_area*>(callbackArg);
-		area->_htResult = { nullptr, 0 };
+		auto window = static_cast<edit_window*>(callbackArg);
+		window->_htResult = { nullptr, 0 };
 	}
 
 	static void OnWireRemoving (void* callbackArg, project_i* project, size_t index, wire* w)
 	{
-		auto area = static_cast<edit_area*>(callbackArg);
-		area->_htResult = { nullptr, 0 };
+		auto window = static_cast<edit_window*>(callbackArg);
+		window->_htResult = { nullptr, 0 };
 	}
 
 	static void OnProjectInvalidate (void* callbackArg, project_i*)
 	{
-		auto area = static_cast<edit_area*>(callbackArg);
-		::InvalidateRect (area->hwnd(), nullptr, FALSE);
+		auto window = static_cast<edit_window*>(callbackArg);
+		::InvalidateRect (window->hwnd(), nullptr, FALSE);
 	}
 
 	static void OnSelectionChanged (void* callbackArg, selection_i* selection)
 	{
-		auto ea = static_cast<edit_area*>(callbackArg);
+		auto ea = static_cast<edit_window*>(callbackArg);
 		::InvalidateRect (ea->hwnd(), nullptr, FALSE);
 	}
 
@@ -980,9 +980,9 @@ public:
 };
 
 template<typename... Args>
-static std::unique_ptr<edit_area_i> Create (Args... args)
+static std::unique_ptr<edit_window_i> create (Args... args)
 {
-	return std::make_unique<edit_area>(std::forward<Args>(args)...);
+	return std::make_unique<edit_window>(std::forward<Args>(args)...);
 }
 
-extern const edit_area_factory_t edit_area_factory = &Create;
+extern const edit_window_factory_t edit_window_factory = &create;

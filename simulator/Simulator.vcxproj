@@ -219,7 +219,7 @@
   <ItemGroup>
     <ClCompile Include="Bridge.cpp" />
     <ClCompile Include="BridgeTree.cpp" />
-    <ClCompile Include="edit_area.cpp" />
+    <ClCompile Include="edit_window.cpp" />
     <ClCompile Include="edit_states\beginning_drag_es.cpp" />
     <ClCompile Include="edit_states\create_bridge_es.cpp" />
     <ClCompile Include="edit_states\create_wire_es.cpp" />

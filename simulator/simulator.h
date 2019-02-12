@@ -77,7 +77,7 @@ struct MouseLocation
 	D2D1_POINT_2F w;
 };
 
-struct __declspec(novtable) edit_area_i : virtual edge::win32_window_i
+struct __declspec(novtable) edit_window_i : virtual edge::win32_window_i
 {
 	virtual const struct drawing_resources& drawing_resources() const = 0;
 	virtual void EnterState (std::unique_ptr<edit_state>&& state) = 0;
@@ -91,7 +91,7 @@ struct __declspec(novtable) edit_area_i : virtual edge::win32_window_i
 							 bool smallFont = false) const = 0;
 	virtual D2D1::Matrix3x2F GetZoomTransform() const = 0;
 };
-using edit_area_factory_t = std::unique_ptr<edit_area_i>(*const)(simulator_app_i* app,
+using edit_window_factory_t = std::unique_ptr<edit_window_i>(*const)(simulator_app_i* app,
 																 project_window_i* pw,
 																 project_i* project,
 																 selection_i* selection,
@@ -99,7 +99,7 @@ using edit_area_factory_t = std::unique_ptr<edit_area_i>(*const)(simulator_app_i
 																 const RECT& rect,
 																 ID3D11DeviceContext1* d3d_dc,
 																 IDWriteFactory* dWriteFactory);
-extern const edit_area_factory_t edit_area_factory;
+extern const edit_window_factory_t edit_window_factory;
 
 // ============================================================================
 
@@ -118,7 +118,7 @@ struct project_window_create_params
 	simulator_app_i*                 app;
 	const std::shared_ptr<project_i>& project;
 	selection_factory_t              selection_factory;
-	edit_area_factory_t              edit_area_factory;
+	edit_window_factory_t              edit_window_factory;
 	bool     show_property_grid;
 	bool     showLogWindow;
 	uint32_t selectedVlan;

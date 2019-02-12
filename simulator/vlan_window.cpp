@@ -257,7 +257,7 @@ public:
 		else
 		{
 			project_window_create_params create_params = 
-				{ _app, _project, selection_factory, edit_area_factory, false, false, vlanNumber, SW_SHOW, _d3d_dc, _dwrite_factory };
+				{ _app, _project, selection_factory, edit_window_factory, false, false, vlanNumber, SW_SHOW, _d3d_dc, _dwrite_factory };
 			auto pw = projectWindowFactory (create_params);
 			_app->add_project_window(move(pw));
 		}
