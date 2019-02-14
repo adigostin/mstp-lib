@@ -81,7 +81,7 @@ void switch_write_phy_register (uint32_t mdio_addr, switch_dev_addr phy_dev_addr
 static void power_up_phy (uint32_t mdio_addr, switch_dev_addr phy_dev_addr)
 {
 	auto value = switch_read_phy_register (mdio_addr, phy_dev_addr, 0);
-	value = value & ~(1u << 11) | (1 << 15);
+	value = value & (~(1u << 11) | (1 << 15));
 	switch_write_phy_register (mdio_addr, phy_dev_addr, 0, value);
 
 	value = switch_read_phy_register (mdio_addr, phy_dev_addr, 16);

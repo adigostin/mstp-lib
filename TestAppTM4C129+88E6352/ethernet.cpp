@@ -112,7 +112,8 @@ void ethernet_init (const uint8_t *mac_address)
 	while ((SYSCTL->PREPHY & 1) == 0);
     // Reset the MAC regardless of whether the PHY connection changed or not.
 	EMAC0->DMABUSMOD |= 1;
-	while (EMAC0->DMABUSMOD & 1);
+	while (EMAC0->DMABUSMOD & 1)
+		;
 
     // Make sure that the DMA software reset is clear before continuing.
     while (EMAC0->DMABUSMOD & 1);
@@ -122,7 +123,7 @@ void ethernet_init (const uint8_t *mac_address)
 		| (1 << 1); // DMA Arbitration Scheme (Fixed Prio)
 
 	// The frequency of the System Clock is 100 to 150 MHz providing a MDIO clock of SYSCLK/62.
-	EMAC0->MIIADDR = EMAC0->MIIADDR & ~(15 << 2) | (1 << 2);
+	EMAC0->MIIADDR = EMAC0->MIIADDR & (~(15 << 2) | (1 << 2));
 
     // Disable all the MMC interrupts as these are enabled by default at reset.
 	EMAC0->MMCRXIM = 0xFFFFFFFF;

@@ -117,7 +117,7 @@ void clock_init ()
     SYSCTL->RSCLKCFG &= ~(0xF << 20);
 
 	//uint32_t frequency = _SysCtlFrequencyGet(ui32Osc) / 2;
-	frequency = 120'000'000;
+	frequency = 120000000;
 
 	tick_count = 0;
 

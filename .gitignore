@@ -243,5 +243,6 @@ ModelManifest.xml
 TestAppLPC2387+IP175D/settings/
 TestAppLPC2387+IP175D/_Debug
 *.dep
-/TestAppTM4C129+88E6352/Executable_1 THUMB Debug
+/TestAppTM4C129+88E6352/Executable_1 clang Debug
+/TestAppTM4C129+88E6352/Executable_1 gcc Debug
 *.hzs
