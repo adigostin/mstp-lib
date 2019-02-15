@@ -53,7 +53,7 @@ namespace PortProtocolMigration {
 
 namespace PortReceive {
 	enum State : unsigned char {
-		DISCARD,
+		DISCARD = 1,
 		RECEIVE,
 	};
 
@@ -62,7 +62,7 @@ namespace PortReceive {
 
 namespace BridgeDetection {
 	enum State : unsigned char {
-		NOT_EDGE,
+		NOT_EDGE = 1,
 		EDGE,
 		ISOLATED,
 	};
@@ -72,7 +72,7 @@ namespace BridgeDetection {
 
 namespace PortInformation {
 	enum State : unsigned char {
-		DISABLED,
+		DISABLED = 1,
 		AGED,
 		UPDATE,
 		SUPERIOR_DESIGNATED,
@@ -89,7 +89,7 @@ namespace PortInformation {
 
 namespace PortRoleSelection {
 	enum State : unsigned char {
-		INIT_TREE,
+		INIT_TREE = 1,
 		ROLE_SELECTION,
 	};
 
@@ -98,7 +98,7 @@ namespace PortRoleSelection {
 
 namespace PortRoleTransitions {
 	enum State : unsigned char {
-		INIT_PORT,
+		INIT_PORT = 1,
 		DISABLE_PORT,
 		DISABLED_PORT,
 
@@ -142,7 +142,7 @@ namespace PortRoleTransitions {
 
 namespace PortStateTransition {
 	enum State : unsigned char {
-		DISCARDING,
+		DISCARDING = 1,
 		LEARNING,
 		FORWARDING,
 	};
@@ -152,7 +152,7 @@ namespace PortStateTransition {
 
 namespace L2GPortReceive {
 	enum State : unsigned char {
-		INIT,
+		INIT = 1,
 		PSEUDO_RECEIVE,
 		DISCARD,
 		L2GP,
@@ -163,7 +163,7 @@ namespace L2GPortReceive {
 
 namespace PortTransmit {
 	enum State : unsigned char {
-		TRANSMIT_INIT,
+		TRANSMIT_INIT = 1,
 		TRANSMIT_PERIODIC,
 		TRANSMIT_CONFIG,
 		TRANSMIT_TCN,

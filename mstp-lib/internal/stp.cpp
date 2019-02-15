@@ -9,6 +9,7 @@
 #include <string.h>
 
 static void RunStateMachines (STP_BRIDGE* bridge, unsigned int timestamp);
+static void RestartStateMachines (STP_BRIDGE* bridge, unsigned int timestamp);
 static void RecomputePrioritiesAndPortRoles (STP_BRIDGE* bridge, unsigned int treeIndex, unsigned int timestamp);
 static void ComputeMstConfigDigest (STP_BRIDGE* bridge);
 
@@ -178,10 +179,7 @@ void STP_StartBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 
 	bridge->started = true;
 
-	bridge->BEGIN = true;
-	RunStateMachines (bridge, timestamp);
-	bridge->BEGIN = false;
-	RunStateMachines (bridge, timestamp);
+	RestartStateMachines(bridge, timestamp);
 
 	LOG (bridge, -1, -1, "Bridge started.\r\n");
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
