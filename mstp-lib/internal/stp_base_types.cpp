@@ -5,38 +5,14 @@
 #include "stp_base_types.h"
 #include "stp_log.h"
 
-// ============================================================================
-// Does the same as memcmp, but used because the IAR 6.x implementation of memcmp is buggy.
-int Cmp (const void* _p1, const void* _p2, int size)
-{
-    const unsigned char* p1 = (const unsigned char*) _p1;
-    const unsigned char* p2 = (const unsigned char*) _p2;
-
-    for (int i = 0; i < size; i++)
-    {
-        if (*p1 > *p2)
-            return 1;
-
-        if (*p1 < *p2)
-            return -1;
-
-        p1++;
-        p2++;
-    }
-
-    return 0;
-}
-
-// ============================================================================
-
 bool STP_BRIDGE_ADDRESS::operator== (const STP_BRIDGE_ADDRESS& rhs) const
 {
-	return Cmp (this->bytes, rhs.bytes, 6) == 0;
+	return memcmp (this->bytes, rhs.bytes, 6) == 0;
 }
 
 bool STP_BRIDGE_ADDRESS::operator != (const STP_BRIDGE_ADDRESS& rhs) const
 {
-	return Cmp (this->bytes, rhs.bytes, 6) != 0;
+	return memcmp (this->bytes, rhs.bytes, 6) != 0;
 }
 
 // ============================================================================

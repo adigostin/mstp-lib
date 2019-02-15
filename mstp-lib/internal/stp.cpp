@@ -1161,12 +1161,12 @@ void STP_MST_CONFIG_ID::Dump (STP_BRIDGE* bridge, int port, int tree) const
 
 bool STP_MST_CONFIG_ID::operator== (const STP_MST_CONFIG_ID& rhs) const
 {
-	return Cmp (this, &rhs, sizeof (*this)) == 0;
+	return memcmp (this, &rhs, sizeof (*this)) == 0;
 }
 
 bool STP_MST_CONFIG_ID::operator< (const STP_MST_CONFIG_ID& rhs) const
 {
-	return Cmp (this, &rhs, sizeof(*this)) < 0;
+	return memcmp (this, &rhs, sizeof(*this)) < 0;
 }
 
 // ============================================================================

@@ -7,8 +7,7 @@
 
 #include "../stp.h"
 #include <assert.h>
-
-// ============================================================================
+#include <string.h>
 
 enum PortIndex : unsigned char { };
 inline PortIndex operator++(PortIndex& x, int) { auto res = x; x = (PortIndex) (x + 1); return res; }
@@ -19,8 +18,6 @@ inline TreeIndex operator++(TreeIndex& x, int) { auto res = x; x = (TreeIndex) (
 static const TreeIndex CIST_INDEX = (TreeIndex)0;
 
 struct STP_BRIDGE;
-
-int Cmp (const void* _p1, const void* _p2, int size);
 
 // ============================================================================
 
@@ -192,32 +189,32 @@ struct PRIORITY_VECTOR
 
 	bool operator== (const PRIORITY_VECTOR& rhs) const
 	{
-		return Cmp (this, &rhs, sizeof (*this)) == 0;
+		return memcmp (this, &rhs, sizeof (*this)) == 0;
 	}
 
 	bool operator!= (const PRIORITY_VECTOR& rhs) const
 	{
-		return Cmp (this, &rhs, sizeof (*this)) != 0;
+		return memcmp (this, &rhs, sizeof (*this)) != 0;
 	}
 
 	bool IsBetterThan (const PRIORITY_VECTOR& rhs) const
 	{
-		return (Cmp (this, &rhs, sizeof (*this)) < 0);
+		return memcmp (this, &rhs, sizeof (*this)) < 0;
 	}
 
 	bool IsBetterThanOrSameAs (const PRIORITY_VECTOR& rhs) const
 	{
-		return (Cmp (this, &rhs, sizeof (*this)) <= 0);
+		return memcmp (this, &rhs, sizeof (*this)) <= 0;
 	}
 
 	bool IsWorseThan (const PRIORITY_VECTOR& rhs) const
 	{
-		return (Cmp (this, &rhs, sizeof (*this)) > 0);
+		return memcmp (this, &rhs, sizeof (*this)) > 0;
 	}
 
 	bool IsWorseThanOrSameAs (const PRIORITY_VECTOR& rhs) const
 	{
-		return (Cmp (this, &rhs, sizeof (*this)) >= 0);
+		return memcmp (this, &rhs, sizeof (*this)) >= 0;
 	}
 
 	bool IsNotBetterThan (const PRIORITY_VECTOR& rhs) const
