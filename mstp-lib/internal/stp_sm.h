@@ -177,6 +177,7 @@ namespace PortTransmit {
 		TRANSMIT_CONFIG,
 		TRANSMIT_TCN,
 		TRANSMIT_RSTP,
+		AGREE_SPT,
 		IDLE,
 	};
 

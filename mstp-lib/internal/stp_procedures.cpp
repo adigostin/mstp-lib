@@ -1398,6 +1398,14 @@ void updtRolesDisabledTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 }
 
 // ============================================================================
+// 13.28.a) - 13.28.1 in 802.1Q-2018
+// TRUE, if and only if, agree is TRUE for the given port for all SPTs.
+bool allSptAgree (const STP_BRIDGE* bridge)
+{
+	assert(false); return false; // not implemented
+}
+
+// ============================================================================
 // 13.26.a) - 13.26.1
 // The condition allSynced is TRUE for a given port, for a given tree, if and only if
 //

@@ -133,6 +133,14 @@ struct PORT
 	unsigned char agreeN;   // 13.27.ai) - 13.27.16 in 802.1Q-2018
 	unsigned char agreeND;  // 13.27.aj) - 13.27.17 in 802.1Q-2018
 
+	// If the ISIS-SPB is implemented, there is one instance per port of the following variable(s), with that single
+	// instance supporting all SPTs:
+	bool agreedDigest;      // 13.27.6  in 802.1Q-2018
+	bool agreedDigestValid; // 13.27.7  in 802.1Q-2018
+	bool agreeDigest;       // 13.27.8  in 802.1Q-2018
+	bool agreeDigestValid;  // 13.27.9  in 802.1Q-2018
+	bool agreedTopology;    // 13.27.14 in 802.1Q-2018
+
 	// 13.23 State machine timers
 	// One instance of the following shall be implemented per port:
 	unsigned short mDelayWhile;		// a) - 13.23.1

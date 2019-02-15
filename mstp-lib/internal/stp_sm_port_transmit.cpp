@@ -14,13 +14,14 @@ static const char* GetStateName (State state)
 {
 	switch (state)
 	{
-		case TRANSMIT_INIT:		return "TRANSMIT_INIT";
-		case TRANSMIT_PERIODIC:	return "TRANSMIT_PERIODIC";
-		case TRANSMIT_CONFIG:	return "TRANSMIT_CONFIG";
-		case TRANSMIT_TCN:		return "TRANSMIT_TCN";
-		case TRANSMIT_RSTP:		return "TRANSMIT_RSTP";
-		case IDLE:				return "IDLE";
-		default:				return "(undefined)";
+		case TRANSMIT_INIT:     return "TRANSMIT_INIT";
+		case TRANSMIT_PERIODIC: return "TRANSMIT_PERIODIC";
+		case TRANSMIT_CONFIG:   return "TRANSMIT_CONFIG";
+		case TRANSMIT_TCN:      return "TRANSMIT_TCN";
+		case TRANSMIT_RSTP:     return "TRANSMIT_RSTP";
+		case AGREE_SPT:         return "AGREE_SPT";
+		case IDLE:              return "IDLE";
+		default:                return "(undefined)";
 	}
 }
 
@@ -63,6 +64,9 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, Sta
 	if (state == TRANSMIT_RSTP)
 		return IDLE;
 	
+	if (state == AGREE_SPT)
+		return IDLE;
+
 	if (state == IDLE)
 	{
 		if (allTransmitReady (bridge, givenPort))
@@ -76,8 +80,11 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, Sta
 			if (!port->sendRSTP && port->newInfo && cistRootPort (bridge, givenPort) && (port->txCount < bridge->TxHoldCount) && (port->helloWhen != 0))
 				return TRANSMIT_TCN;
 			
-			if (port->sendRSTP && (port->newInfo || (port->newInfoMsti && !mstiMasterPort (bridge, givenPort))) && (port->txCount < bridge->TxHoldCount) && (port->helloWhen !=0))
+			if (port->sendRSTP && (port->newInfo || (port->newInfoMsti && !mstiMasterPort (bridge, givenPort))) && (port->txCount < bridge->TxHoldCount) && (port->helloWhen != 0))
 				return TRANSMIT_RSTP;
+
+			if (spt(bridge) && port->sendRSTP && allSptAgree(bridge) && !port->agreeDigestValid)
+				return AGREE_SPT;
 		}
 		
 		return (State)0;
@@ -100,7 +107,9 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, uns
 	}
 	else if (state == TRANSMIT_PERIODIC)
 	{
+		// Note AG: Not clear in the standard: tcWhile of which tree? I'll assume they meant "CIST's tcWhile", since the whole expression is about the CIST.
 		port->newInfo = port->newInfo || (cistDesignatedPort (bridge, givenPort) || (cistRootPort (bridge, givenPort) && (port->trees[CIST_INDEX]->tcWhile != 0)));
+
 		port->newInfoMsti = port->newInfoMsti || mstiDesignatedOrTCpropagatingRootPort (bridge, givenPort);
 	}
 	else if (state == TRANSMIT_CONFIG)
@@ -122,7 +131,11 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, uns
 		txRstp (bridge, givenPort, timestamp);
 		port->txCount += 1;
 		port->tcAck = false;
-	}		
+	}
+	else if (state == AGREE_SPT)
+	{
+		port->agreeDigestValid = true; port->newInfoMsti = true;
+	}
 	else if (state == IDLE)
 	{
 		port->helloWhen = HelloTime (bridge, givenPort);
