@@ -8,99 +8,92 @@
 
 // This file implements §13.31 from 802.1Q-2018.
 
-struct PortReceiveImpl : PortReceive
+using namespace PortReceive;
+
+static const char* GetStateName (State state)
 {
-	static const char* GetStateName (State state)
+	switch (state)
 	{
-		switch (state)
-		{
-			case DISCARD:	return "DISCARD";
-			case RECEIVE:	return "RECEIVE";
-			default:		return "(undefined)";
-		}
+		case DISCARD:	return "DISCARD";
+		case RECEIVE:	return "RECEIVE";
+		default:		return "(undefined)";
 	}
+}
 
-	// ============================================================================
+// ============================================================================
 
-	// Returns the new state, or 0 when no transition is to be made.
-	static State CheckConditions (const STP_BRIDGE* bridge, int givenPort, int givenTree, State state)
+// Returns the new state, or 0 when no transition is to be made.
+static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, State state)
+{
+	PORT* port = bridge->ports[givenPort];
+
+	// ------------------------------------------------------------------------
+	// Check global conditions.
+
+	if (bridge->BEGIN
+		|| ((port->rcvdBpdu || (port->edgeDelayWhile != bridge->MigrateTime)) && !port->portEnabled))
 	{
-		assert (givenPort != -1);
-		assert (givenTree == -1);
-
-		PORT* port = bridge->ports [givenPort];
-
-		// ------------------------------------------------------------------------
-		// Check global conditions.
-
-		if (bridge->BEGIN
-			|| ((port->rcvdBpdu || (port->edgeDelayWhile != bridge->MigrateTime)) && !port->portEnabled))
-		{
-			if (state == DISCARD)
-			{
-				// The entry block for this state has been executed already.
-				return (State)0;
-			}
-
-			return DISCARD;
-		}
-
-		// ------------------------------------------------------------------------
-		// Check exit conditions from each state.
-
 		if (state == DISCARD)
 		{
-			if (port->rcvdBpdu && port->portEnabled && port->enableBPDUrx)
-				return RECEIVE;
-
+			// The entry block for this state has been executed already.
 			return (State)0;
 		}
 
-		if (state == RECEIVE)
-		{
-			if (port->rcvdBpdu && port->portEnabled && port->enableBPDUrx && !rcvdAnyMsg (bridge, givenPort))
-				return RECEIVE;
+		return DISCARD;
+	}
 
-			return (State)0;
-		}
+	// ------------------------------------------------------------------------
+	// Check exit conditions from each state.
 
-		assert (false);
+	if (state == DISCARD)
+	{
+		if (port->rcvdBpdu && port->portEnabled && port->enableBPDUrx)
+			return RECEIVE;
+
 		return (State)0;
 	}
 
-	// ============================================================================
-
-	static void InitState (STP_BRIDGE* bridge, int givenPort, int givenTree, State state, unsigned int timestamp)
+	if (state == RECEIVE)
 	{
-		assert (givenPort != -1);
-		assert (givenTree == -1);
+		if (port->rcvdBpdu && port->portEnabled && port->enableBPDUrx && !rcvdAnyMsg (bridge, givenPort))
+			return RECEIVE;
 
-		PORT* port = bridge->ports [givenPort];
-
-		if (state == DISCARD)
-		{
-			port->rcvdBpdu = port->rcvdRSTP = port->rcvdSTP = false;
-			port->agreedMisorder = true; port->agreedN = port->agreedND = port->agreeND = 0; port->agreeN = 1;
-			clearAllRcvdMsgs (bridge, givenPort);
-			port->edgeDelayWhile = bridge->MigrateTime;
-		}
-		else if (state == RECEIVE)
-		{
-			updtBPDUVersion (bridge, givenPort);
-			port->rcvdInternal = fromSameRegion (bridge, givenPort);
-			rcvMsgs (bridge, givenPort);
-			port->operEdge = port->isolate = port->rcvdBpdu = false;
-			port->edgeDelayWhile = bridge->MigrateTime;
-		}
-		else
-			assert (false);
+		return (State)0;
 	}
-};
 
-const SM_INFO<PortReceive::State> PortReceive::sm = 
+	assert (false);
+	return (State)0;
+}
+
+// ============================================================================
+
+static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, unsigned int timestamp)
+{
+	PORT* port = bridge->ports[givenPort];
+
+	if (state == DISCARD)
+	{
+		port->rcvdBpdu = port->rcvdRSTP = port->rcvdSTP = false;
+		port->agreedMisorder = true; port->agreedN = port->agreedND = port->agreeND = 0; port->agreeN = 1;
+		clearAllRcvdMsgs (bridge, givenPort);
+		port->edgeDelayWhile = bridge->MigrateTime;
+	}
+	else if (state == RECEIVE)
+	{
+		updtBPDUVersion (bridge, givenPort);
+		port->rcvdInternal = fromSameRegion (bridge, givenPort);
+		rcvMsgs (bridge, givenPort);
+		port->operEdge = port->isolate = port->rcvdBpdu = false;
+		port->edgeDelayWhile = bridge->MigrateTime;
+	}
+	else
+		assert (false);
+}
+
+const PerPortStateMachine<PortReceive::State> PortReceive::sm = 
 {
 	"PortReceive",
-	&PortReceiveImpl::GetStateName,
-	&PortReceiveImpl::CheckConditions,
-	&PortReceiveImpl::InitState
+	&GetStateName,
+	&CheckConditions,
+	&InitState
 };

@@ -4,10 +4,9 @@
 
 #include "stp_base_types.h"
 #include "stp_log.h"
-#include <stddef.h>
 
 // ============================================================================
-// Does the same as memcmp, but used because the IAR implementation of memcmp has a bug.
+// Does the same as memcmp, but used because the IAR 6.x implementation of memcmp is buggy.
 int Cmp (const void* _p1, const void* _p2, int size)
 {
     const unsigned char* p1 = (const unsigned char*) _p1;
@@ -59,7 +58,7 @@ const char* GetPortRoleName (STP_PORT_ROLE role)
 	else
 	{
 		assert (false);
-		return NULL;
+		return nullptr;
 	}
 }
 

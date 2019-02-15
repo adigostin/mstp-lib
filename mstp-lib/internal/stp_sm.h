@@ -2,19 +2,23 @@
 #ifndef MSTP_LIB_STP_SM_H
 #define MSTP_LIB_STP_SM_H
 
-struct STP_BRIDGE;
+#include "stp_base_types.h"
 
-template<typename State>
-struct SM_INFO
+template<typename State, typename... PortTreeArgs>
+struct StateMachine
 {
 	const char* smName;
 	const char* (*getStateName) (State state);
-	State (*checkConditions) (const STP_BRIDGE* bridge, int givenPort, int givenTree, State state);
-	void (*initState) (STP_BRIDGE* bridge, int givenPort, int givenTree, State state, unsigned int timestamp);
+	State       (*checkConditions) (const STP_BRIDGE* bridge, PortTreeArgs... portTreeArgs, State state);
+	void        (*initState) (STP_BRIDGE* bridge, PortTreeArgs... portTreeArgs, State state, unsigned int timestamp);
 };
 
-struct TopologyChange {
-	enum State {
+template<typename State> using PerPortStateMachine        = StateMachine<State, PortIndex>;
+template<typename State> using PerTreeStateMachine        = StateMachine<State, TreeIndex>;
+template<typename State> using PerPortPerTreeStateMachine = StateMachine<State, PortIndex, TreeIndex>;
+
+namespace TopologyChange {
+	enum State : unsigned char {
 		ACTIVE = 1,
 		INACTIVE,
 		LEARNING,
@@ -25,51 +29,51 @@ struct TopologyChange {
 		ACKNOWLEDGED,
 	};
 
-	static const SM_INFO<State> sm;
+	extern const PerPortPerTreeStateMachine<State> sm;
 };
 
-struct PortTimers {
-	enum State {
+namespace PortTimers {
+	enum State : unsigned char {
 		ONE_SECOND = 1,
 		TICK,
 	};
 
-	static const SM_INFO<State> sm;
+	extern const PerPortStateMachine<State> sm;
 };
 
-struct PortProtocolMigration {
-	enum State {
+namespace PortProtocolMigration {
+	enum State : unsigned char {
 		CHECKING_RSTP = 1,
 		SELECTING_STP,
 		SENSING,
 	};
 
-	static const SM_INFO<State> sm;
+	extern const PerPortStateMachine<State> sm;
 };
 
-struct PortReceive {
-	enum State {
+namespace PortReceive {
+	enum State : unsigned char {
 		UNDEFINED,
 		DISCARD,
 		RECEIVE,
 	};
 
-	static const SM_INFO<State> sm;
+	extern const PerPortStateMachine<State> sm;
 };
 
-struct BridgeDetection {
-	enum State {
+namespace BridgeDetection {
+	enum State : unsigned char {
 		UNDEFINED,
 		NOT_EDGE,
 		EDGE,
 		ISOLATED,
 	};
 
-	static const SM_INFO<State> sm;
+	extern const PerPortStateMachine<State> sm;
 };
 
-struct PortInformation {
-	enum State {
+namespace PortInformation {
+	enum State : unsigned char {
 		UNDEFINED,
 		DISABLED,
 		AGED,
@@ -83,21 +87,21 @@ struct PortInformation {
 		RECEIVE,
 	};
 
-	static const SM_INFO<State> sm;
-};
+	extern const PerPortPerTreeStateMachine<State> sm;
+}
 
-struct PortRoleSelection {
-	enum State {
+namespace PortRoleSelection {
+	enum State : unsigned char {
 		UNDEFINED,
 		INIT_TREE,
 		ROLE_SELECTION,
 	};
 
-	static const SM_INFO<State> sm;
+	extern const PerTreeStateMachine<State> sm;
 };
 
-struct PortRoleTransitions {
-	enum State {
+namespace PortRoleTransitions {
+	enum State : unsigned char {
 		UNDEFINED,
 
 		INIT_PORT,
@@ -139,22 +143,22 @@ struct PortRoleTransitions {
 		ALTERNATE_PORT,
 	};
 
-	static const SM_INFO<State> sm;
+	extern const PerPortPerTreeStateMachine<State> sm;
 };
 
-struct PortStateTransition {
-	enum State {
+namespace PortStateTransition {
+	enum State : unsigned char {
 		UNDEFINED,
 		DISCARDING,
 		LEARNING,
 		FORWARDING,
 	};
 
-	static const SM_INFO<State> sm;
+	extern const PerPortPerTreeStateMachine<State> sm;
 };
 
-struct L2GPortReceive {
-	enum State {
+namespace L2GPortReceive {
+	enum State : unsigned char {
 		UNDEFINED,
 		INIT,
 		PSEUDO_RECEIVE,
@@ -162,11 +166,11 @@ struct L2GPortReceive {
 		L2GP,
 	};
 
-	static const SM_INFO<State> sm;
+	extern const PerPortStateMachine<State> sm;
 };
 
-struct PortTransmit {
-	enum State {
+namespace PortTransmit {
+	enum State : unsigned char {
 		UNDEFINED,
 		TRANSMIT_INIT,
 		TRANSMIT_PERIODIC,
@@ -176,7 +180,7 @@ struct PortTransmit {
 		IDLE,
 	};
 
-	static const SM_INFO<State> sm;
+	extern const PerPortStateMachine<State> sm;
 };
 
 #endif

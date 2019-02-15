@@ -31,7 +31,7 @@ private:
 		// Note: ExternalRootPathCost, InternalRootPathCost and DesignatedPortId are always zero
 		// in the BridgePriority field, so there's no need to assign them.
 
-		unsigned int treeIndex = BridgeIdentifier.GetPriority () & 0x0FFF;
+		TreeIndex treeIndex = (TreeIndex) (BridgeIdentifier.GetPriority() & 0x0FFF);
 		if (treeIndex == CIST_INDEX)
 		{
 			BridgePriority.RootId = BridgeIdentifier;

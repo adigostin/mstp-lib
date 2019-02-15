@@ -10,7 +10,13 @@
 
 // ============================================================================
 
-#define CIST_INDEX	0
+enum PortIndex : unsigned char { };
+inline PortIndex operator++(PortIndex& x, int) { auto res = x; x = (PortIndex) (x + 1); return res; }
+
+enum TreeIndex : unsigned char { };
+inline TreeIndex operator++(TreeIndex& x, int) { auto res = x; x = (TreeIndex) (x + 1); return res; }
+
+static const TreeIndex CIST_INDEX = (TreeIndex)0;
 
 struct STP_BRIDGE;
 

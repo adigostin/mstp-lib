@@ -8,87 +8,80 @@
 
 // This file implements §13.36 from 802.1Q-2018.
 
-struct PortRoleSelectionImpl : PortRoleSelection
+using namespace PortRoleSelection;
+
+static const char* GetStateName (State state)
 {
-	static const char* GetStateName (State state)
+	switch (state)
 	{
-		switch (state)
-		{
-			case INIT_TREE:		return "INIT_TREE";
-			case ROLE_SELECTION:return "ROLE_SELECTION";
-			default:			return "(undefined)";
-		}
+		case INIT_TREE:		return "INIT_TREE";
+		case ROLE_SELECTION:return "ROLE_SELECTION";
+		default:			return "(undefined)";
 	}
+}
 
-	// ============================================================================
+// ============================================================================
 
-	// Returns the new state, or 0 when no transition is to be made.
-	static State CheckConditions (const STP_BRIDGE* bridge, int givenPort, int givenTree, State state)
+// Returns the new state, or 0 when no transition is to be made.
+static State CheckConditions (const STP_BRIDGE* bridge, TreeIndex givenTree, State state)
+{
+	// ------------------------------------------------------------------------
+	// Check global conditions.
+	
+	if (bridge->BEGIN)
 	{
-		assert (givenTree != -1);
-		assert (givenPort == -1);
-
-		// ------------------------------------------------------------------------
-		// Check global conditions.
-	
-		if (bridge->BEGIN)
-		{
-			if (state == INIT_TREE)
-			{
-				// The entry block for this state has been executed already.
-				return (State)0;
-			}
-		
-			return INIT_TREE;
-		}
-	
-		// ------------------------------------------------------------------------
-		// Check exit conditions from each state.
-	
 		if (state == INIT_TREE)
-			return ROLE_SELECTION;
-	
-		if (state == ROLE_SELECTION)
 		{
-			for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
-			{
-				if (bridge->ports [portIndex]->trees [givenTree]->reselect)
-					return ROLE_SELECTION;
-			}
-		
+			// The entry block for this state has been executed already.
 			return (State)0;
 		}
-
-		assert (false);
+		
+		return INIT_TREE;
+	}
+	
+	// ------------------------------------------------------------------------
+	// Check exit conditions from each state.
+	
+	if (state == INIT_TREE)
+		return ROLE_SELECTION;
+	
+	if (state == ROLE_SELECTION)
+	{
+		for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
+		{
+			if (bridge->ports [portIndex]->trees [givenTree]->reselect)
+				return ROLE_SELECTION;
+		}
+		
 		return (State)0;
 	}
 
-	// ============================================================================
+	assert (false);
+	return (State)0;
+}
 
-	static void InitState (STP_BRIDGE* bridge, int givenPort, int givenTree, State state, unsigned int timestamp)
+// ============================================================================
+
+static void InitState (STP_BRIDGE* bridge, TreeIndex givenTree, State state, unsigned int timestamp)
+{
+	if (state == INIT_TREE)
 	{
-		assert (givenTree != -1);
-		assert (givenPort == -1);
-
-		if (state == INIT_TREE)
-		{
-			updtRolesDisabledTree (bridge, givenTree);
-		}
-		else if (state == ROLE_SELECTION)
-		{
-			clearReselectTree (bridge, givenTree);
-			updtRolesTree (bridge, givenTree);
-			setSelectedTree (bridge, givenTree);
-		}
-		else
-			assert (false);
+		updtRolesDisabledTree (bridge, givenTree);
 	}
-};
+	else if (state == ROLE_SELECTION)
+	{
+		clearReselectTree (bridge, givenTree);
+		updtRolesTree (bridge, givenTree);
+		setSelectedTree (bridge, givenTree);
+	}
+	else
+		assert (false);
+}
 
-const SM_INFO<PortRoleSelection::State> PortRoleSelection::sm = {
+const PerTreeStateMachine<State> PortRoleSelection::sm = {
 	"PortRoleSelection",
-	&PortRoleSelectionImpl::GetStateName,
-	&PortRoleSelectionImpl::CheckConditions,
-	&PortRoleSelectionImpl::InitState
+	&GetStateName,
+	&CheckConditions,
+	&InitState
 };
 

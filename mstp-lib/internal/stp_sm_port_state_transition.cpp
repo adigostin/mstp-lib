@@ -8,114 +8,107 @@
 
 // See §13.36 in 802.1Q-2011
 
-struct PortStateTransitionImpl : PortStateTransition
+using namespace PortStateTransition;
+
+static const char* GetStateName (State state)
 {
-	static const char* GetStateName (State state)
+	switch (state)
 	{
-		switch (state)
-		{
-			case DISCARDING:	return "DISCARDING";
-			case LEARNING:		return "LEARNING";
-			case FORWARDING:	return "FORWARDING";
-			default:			return "(undefined)";
-		}
+		case DISCARDING:	return "DISCARDING";
+		case LEARNING:		return "LEARNING";
+		case FORWARDING:	return "FORWARDING";
+		default:			return "(undefined)";
 	}
+}
 
-	// ============================================================================
+// ============================================================================
 
-	// Returns the new state, or 0 when no transition is to be made.
-	static State CheckConditions (const STP_BRIDGE* bridge, int givenPort, int givenTree, State state)
+// Returns the new state, or 0 when no transition is to be made.
+static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree, State state)
+{
+	PORT* port = bridge->ports [givenPort];
+	PORT_TREE* tree = port->trees [givenTree];
+
+	// ------------------------------------------------------------------------
+	// Check global conditions.
+
+	if (bridge->BEGIN)
 	{
-		assert (givenPort != -1);
-		assert (givenTree != -1);
-
-		PORT* port = bridge->ports [givenPort];
-		PORT_TREE* tree = port->trees [givenTree];
-
-		// ------------------------------------------------------------------------
-		// Check global conditions.
-
-		if (bridge->BEGIN)
-		{
-			if (state == DISCARDING)
-			{
-				// The entry block for this state has been executed already.
-				return (State)0;
-			}
-
-			return DISCARDING;
-		}
-
-		// ------------------------------------------------------------------------
-		// Check exit conditions from each state.
-
 		if (state == DISCARDING)
 		{
-			if (tree->learn)
-				return LEARNING;
-
+			// The entry block for this state has been executed already.
 			return (State)0;
 		}
 
-		if (state == LEARNING)
-		{
-			if (!tree->learn)
-				return DISCARDING;
+		return DISCARDING;
+	}
 
-			if (tree->forward)
-				return FORWARDING;
+	// ------------------------------------------------------------------------
+	// Check exit conditions from each state.
 
-			return (State)0;
-		}
+	if (state == DISCARDING)
+	{
+		if (tree->learn)
+			return LEARNING;
 
-		if (state == FORWARDING)
-		{
-			if (!tree->forward)
-				return DISCARDING;
-
-			return (State)0;
-		}
-
-		assert (false);
 		return (State)0;
 	}
 
-	// ============================================================================
-
-	static void InitState (STP_BRIDGE* bridge, int givenPort, int givenTree, State state, unsigned int timestamp)
+	if (state == LEARNING)
 	{
-		assert (givenPort != -1);
-		assert (givenTree != -1);
+		if (!tree->learn)
+			return DISCARDING;
 
-		PORT* port = bridge->ports [givenPort];
-		PORT_TREE* tree = port->trees [givenTree];
+		if (tree->forward)
+			return FORWARDING;
 
-		if (state == DISCARDING)
-		{
-			disableLearning (bridge, givenPort, givenTree, timestamp);
-			tree->learning = false;
-			disableForwarding (bridge, givenPort, givenTree, timestamp);
-			tree->forwarding = false;
-		}
-		else if (state == LEARNING)
-		{
-			enableLearning (bridge, givenPort, givenTree, timestamp);
-			tree->learning = true;
-		}
-		else if (state == FORWARDING)
-		{
-			enableForwarding (bridge, givenPort, givenTree, timestamp);
-			tree->forwarding = true;
-		}
-		else
-			assert (false);
+		return (State)0;
 	}
-};
 
-const SM_INFO<PortStateTransition::State> PortStateTransition::sm =
+	if (state == FORWARDING)
+	{
+		if (!tree->forward)
+			return DISCARDING;
+
+		return (State)0;
+	}
+
+	assert (false);
+	return (State)0;
+}
+
+// ============================================================================
+
+static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree, State state, unsigned int timestamp)
+{
+	PORT* port = bridge->ports[givenPort];
+	PORT_TREE* tree = port->trees [givenTree];
+
+	if (state == DISCARDING)
+	{
+		disableLearning (bridge, givenPort, givenTree, timestamp);
+		tree->learning = false;
+		disableForwarding (bridge, givenPort, givenTree, timestamp);
+		tree->forwarding = false;
+	}
+	else if (state == LEARNING)
+	{
+		enableLearning (bridge, givenPort, givenTree, timestamp);
+		tree->learning = true;
+	}
+	else if (state == FORWARDING)
+	{
+		enableForwarding (bridge, givenPort, givenTree, timestamp);
+		tree->forwarding = true;
+	}
+	else
+		assert (false);
+}
+
+const PerPortPerTreeStateMachine<PortStateTransition::State> PortStateTransition::sm =
 {
 	"PortStateTransition",
-	&PortStateTransitionImpl::GetStateName,
-	&PortStateTransitionImpl::CheckConditions,
-	&PortStateTransitionImpl::InitState
+	&GetStateName,
+	&CheckConditions,
+	&InitState
 };
