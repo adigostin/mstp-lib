@@ -6,7 +6,7 @@
 #include "stp_bridge.h"
 #include <assert.h>
 
-// See §13.35 in 802.1Q-2011
+// This file implements §13.37 from 802.1Q-2018.
 
 using namespace PortRoleTransitions;
 
@@ -202,16 +202,16 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, Tre
 			if (tree->rrWhile != FwdDelay (bridge, givenPort))
 				return ROOT_PORT;
 
-			if (tree->disputed)
+			if (tree->disputed || (spt(bridge) && !tree->agreed && (tree->learn || tree->forward)))
 				return ROOT_DISCARD;
 
 			if (tree->reRoot && tree->forward)
 				return REROOTED;
 
-			if (((tree->fdWhile == 0) || (reRooted (bridge, givenPort, givenTree) && (tree->rbWhile == 0) && rstpVersion (bridge))) && !tree->learn)
+			if (((tree->fdWhile == 0) || (reRooted(bridge, givenPort, givenTree) && (tree->rbWhile == 0) && rstpVersion(bridge))) && !tree->learn && (tree->agreed || !spt(bridge)))
 				return ROOT_LEARN;
 
-			if (((tree->fdWhile == 0) || (reRooted (bridge, givenPort, givenTree) && (tree->rbWhile == 0) && rstpVersion (bridge))) && tree->learn && !tree->forward)
+			if (((tree->fdWhile == 0) || (reRooted(bridge, givenPort, givenTree) && (tree->rbWhile == 0) && rstpVersion(bridge))) && tree->learn && !tree->forward && (tree->agreed || !spt(bridge)))
 				return ROOT_FORWARD;
 		}
 

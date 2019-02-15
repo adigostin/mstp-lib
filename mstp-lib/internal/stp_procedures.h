@@ -60,6 +60,7 @@ bool rcvdCistMsg		(const STP_BRIDGE*, PortIndex portIndex);		// 13.26.p) - 13.26
 bool rcvdMstiMsg		(const STP_BRIDGE*, PortIndex portIndex, TreeIndex treeIndex);	// 13.26.q) - 13.26.17
 bool reRooted			(const STP_BRIDGE*, PortIndex portIndex, TreeIndex treeIndex);	// 13.26.r) - 13.26.18
 bool rstpVersion		(const STP_BRIDGE*);						// 13.26.s) - 13.26.19
+bool spt                (const STP_BRIDGE*); // 13.28.v) - 13.28.22 in 802.1Q-2018
 bool stpVersion			(const STP_BRIDGE*);						// 13.26.t) - 13.26.20
 bool updtCistInfo		(const STP_BRIDGE*, PortIndex portIndex);		// 13.26.u) - 13.26.21
 bool updtMstiInfo		(const STP_BRIDGE*, PortIndex portIndex, TreeIndex treeIndex); // 13.26.v) - 13.26.22

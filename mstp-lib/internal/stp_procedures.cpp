@@ -1659,6 +1659,15 @@ bool rstpVersion (const STP_BRIDGE* bridge)
 }
 
 // ============================================================================
+// 13.28.v) - 13.28.22 in 802.1Q-2018
+// TRUE only for SPT state machines, in an SPT Bridge; i.e., FALSE for CIST and MSTI state machine instances.
+bool spt (const STP_BRIDGE* bridge)
+{
+	assert (bridge->ForceProtocolVersion <= STP_VERSION_MSTP);
+	return false;
+}
+
+// ============================================================================
 // 13.26.t - 13.26.20
 // TRUE if Force Protocol Version (13.6.2) is less than 2.
 bool stpVersion (const STP_BRIDGE* bridge)
