@@ -6,7 +6,7 @@
 #include "stp_bridge.h"
 #include <assert.h>
 
-// See §13.38 in 802.1Q-2011
+// This file implements §13.40 from 802.1Q-2018.
 
 using namespace L2GPortReceive;
 
@@ -14,12 +14,11 @@ static const char* GetStateName (State state)
 {
 	switch (state)
 	{
-		case UNDEFINED:			return "UNDEFINED";
-		case INIT:				return "INIT";
-		case PSEUDO_RECEIVE:	return "PSEUDO_RECEIVE";
-		case DISCARD:			return "DISCARD";
-		case L2GP:				return "L2GP";
-		default: assert (false); return nullptr;
+		case INIT:           return "INIT";
+		case PSEUDO_RECEIVE: return "PSEUDO_RECEIVE";
+		case DISCARD:        return "DISCARD";
+		case L2GP:           return "L2GP";
+		default:             return "(undefined)";
 	}
 }
 
