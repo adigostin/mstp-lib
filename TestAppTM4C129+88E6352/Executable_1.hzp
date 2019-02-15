@@ -91,7 +91,7 @@
         <file file_name="../mstp-lib/internal/stp_procedures.cpp" />
         <file file_name="../mstp-lib/internal/stp_procedures.h" />
         <file file_name="../mstp-lib/internal/stp_sm_bridge_detection.cpp" />
-        <file file_name="../mstp-lib/internal/stp_sm_l2gp_receive.cpp" />
+        <file file_name="../mstp-lib/internal/stp_sm_l2g_port_receive.cpp" />
         <file file_name="../mstp-lib/internal/stp_sm_port_information.cpp" />
         <file file_name="../mstp-lib/internal/stp_sm_port_protocol_migration.cpp" />
         <file file_name="../mstp-lib/internal/stp_sm_port_receive.cpp" />

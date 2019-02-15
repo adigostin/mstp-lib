@@ -37,7 +37,7 @@
     <ClCompile Include="mstp-lib\internal\stp_md5.cpp" />
     <ClCompile Include="mstp-lib\internal\stp_procedures.cpp" />
     <ClCompile Include="mstp-lib\internal\stp_sm_bridge_detection.cpp" />
-    <ClCompile Include="mstp-lib\internal\stp_sm_l2gp_receive.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm_l2g_port_receive.cpp" />
     <ClCompile Include="mstp-lib\internal\stp_sm_port_information.cpp" />
     <ClCompile Include="mstp-lib\internal\stp_sm_port_protocol_migration.cpp" />
     <ClCompile Include="mstp-lib\internal\stp_sm_port_receive.cpp" />

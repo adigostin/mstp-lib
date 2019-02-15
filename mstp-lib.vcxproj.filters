@@ -54,7 +54,7 @@
     <ClCompile Include="mstp-lib\internal\stp_sm_bridge_detection.cpp">
       <Filter>internal</Filter>
     </ClCompile>
-    <ClCompile Include="mstp-lib\internal\stp_sm_l2gp_receive.cpp">
+    <ClCompile Include="mstp-lib\internal\stp_sm_l2g_port_receive.cpp">
       <Filter>internal</Filter>
     </ClCompile>
     <ClCompile Include="mstp-lib\internal\stp_sm_port_information.cpp">

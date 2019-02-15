@@ -1089,7 +1089,7 @@
                 <name>$PROJ_DIR$\..\mstp-lib\internal\stp_sm_bridge_detection.cpp</name>
             </file>
             <file>
-                <name>$PROJ_DIR$\..\mstp-lib\internal\stp_sm_l2gp_receive.cpp</name>
+                <name>$PROJ_DIR$\..\mstp-lib\internal\stp_sm_l2g_port_receive.cpp</name>
             </file>
             <file>
                 <name>$PROJ_DIR$\..\mstp-lib\internal\stp_sm_port_information.cpp</name>
