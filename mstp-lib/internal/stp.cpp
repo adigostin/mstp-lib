@@ -82,12 +82,11 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	assert (bridge->trees [CIST_INDEX] != nullptr);
 	bridge->trees [CIST_INDEX]->SetBridgeIdentifier (0x8000, CIST_INDEX, bridgeAddress);
 	// 13.24.3 in 802.1Q-2011
-	// Defaults from Table 13-5 on page 356 in 802.1Q-2011
-	bridge->trees [CIST_INDEX]->BridgeTimes.HelloTime		= STP_BRIDGE::DefaultBridgeHelloTime;
-	bridge->trees [CIST_INDEX]->BridgeTimes.remainingHops	= STP_BRIDGE::DefaultMaxHops;
-	bridge->trees [CIST_INDEX]->BridgeTimes.ForwardDelay	= STP_BRIDGE::DefaultBridgeForwardDelay;
-	bridge->trees [CIST_INDEX]->BridgeTimes.MaxAge			= STP_BRIDGE::DefaultBridgeMaxAge;
-	bridge->trees [CIST_INDEX]->BridgeTimes.MessageAge		= 0;
+	// Defaults from Table 13-5 on page 510 in 802.1Q-2018
+	bridge->trees [CIST_INDEX]->BridgeTimes.HelloTime     = 2;
+	bridge->trees [CIST_INDEX]->BridgeTimes.remainingHops = 20;
+	bridge->trees [CIST_INDEX]->BridgeTimes.ForwardDelay  = 15;
+	bridge->trees [CIST_INDEX]->BridgeTimes.MaxAge        = 20;
 
 	// per-bridge MSTI vars
 	for (unsigned int treeIndex = 1; treeIndex < (1 + bridge->mstiCount); treeIndex++)
@@ -95,7 +94,7 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 		bridge->trees [treeIndex] = (BRIDGE_TREE*) callbacks->allocAndZeroMemory (sizeof (BRIDGE_TREE));
 		assert (bridge->trees [treeIndex] != nullptr);
 		bridge->trees [treeIndex]->SetBridgeIdentifier (0x8000, treeIndex, bridgeAddress);
-		bridge->trees [treeIndex]->BridgeTimes.remainingHops = STP_BRIDGE::DefaultMaxHops;
+		bridge->trees [treeIndex]->BridgeTimes.remainingHops = 20;
 	}
 
 	// per-port vars
@@ -215,28 +214,13 @@ void STP_SetBridgeAddress (STP_BRIDGE* bridge, const unsigned char* address, uns
 		for (unsigned int treeIndex = 0; treeIndex < (1 + bridge->mstiCount); treeIndex++)
 		{
 			// change the MAC address without changing the priority
-			BRIDGE_ID bid = bridge->trees [treeIndex]->GetBridgeIdentifier ();
+			BRIDGE_ID bid = bridge->trees[treeIndex]->GetBridgeIdentifier();
 			bid.SetAddress (address);
-			bridge->trees [treeIndex]->SetBridgeIdentifier (bid);
+			bridge->trees[treeIndex]->SetBridgeIdentifier(bid);
 		}
 
 		if (bridge->started)
-		{
-			if (bridge->ForceProtocolVersion < STP_VERSION_MSTP)
-			{
-				// STP or RSTP mode. I think there's no need to assert BEGIN, only to recompute priorities.
-				RecomputePrioritiesAndPortRoles (bridge, CIST_INDEX, timestamp);
-			}
-			else
-			{
-				// BEGIN used to be asserted when the MST Config Name was generated from the bridge address.
-				// Now that we don't generate a default name anymore, I don't know if it's still needed, but I'll leave it for now.
-				bridge->BEGIN = true;
-				RunStateMachines (bridge, timestamp);
-				bridge->BEGIN = false;
-				RunStateMachines (bridge, timestamp);
-			}
-		}
+			RecomputePrioritiesAndPortRoles (bridge, CIST_INDEX, timestamp);
 	}
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
@@ -638,13 +622,13 @@ STP_ADMIN_P2P STP_GetPortAdminPointToPointMAC (const STP_BRIDGE* bridge, unsigne
 
 static void RecomputePrioritiesAndPortRoles (STP_BRIDGE* bridge, unsigned int treeIndex, unsigned int timestamp)
 {
-	// From page 357 of 802.1Q-2011:
+	// From page 511 of 802.1Q-2018:
 	// BridgeIdentifier, BridgePriority, and BridgeTimes are not modified by the operation of the spanning tree
 	// protocols but are treated as constants by the state machines. If they are modified by management, spanning
-	// tree priority vectors and Port Role assignments for shall be recomputed, as specified by the operation of the
-	// Port Role Selection state machine (13.34) by clearing selected (13.25) and setting reselect (13.25) for all
-	// Bridge Ports for the relevant MSTI and for all trees if the CIST parameter is changed.
-
+	// tree priority vectors and Port Role assignments for all trees shall be recomputed, as specified by the
+	// operation of the Port Role Selection state machine (13.36) by clearing selected (13.27.67) and setting
+	// reselect (13.27.62) for all Bridge Ports for the relevant MSTI and for all trees if the CIST parameter is
+	// changed.
 	if (treeIndex == CIST_INDEX)
 	{
 		// Recompute all trees.
@@ -653,7 +637,7 @@ static void RecomputePrioritiesAndPortRoles (STP_BRIDGE* bridge, unsigned int tr
 		{
 			for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
 			{
-				PORT_TREE* portTree = bridge->ports [portIndex]->trees [treeIndex];
+				PORT_TREE* portTree = bridge->ports[portIndex]->trees[treeIndex];
 				portTree->selected = false;
 				portTree->reselect = true;
 			}
@@ -664,7 +648,7 @@ static void RecomputePrioritiesAndPortRoles (STP_BRIDGE* bridge, unsigned int tr
 		// recompute specified MSTI
 		for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
 		{
-			PORT_TREE* portTree = bridge->ports [portIndex]->trees [treeIndex];
+			PORT_TREE* portTree = bridge->ports[portIndex]->trees[treeIndex];
 			portTree->selected = false;
 			portTree->reselect = true;
 		}
@@ -689,24 +673,21 @@ static void RecomputePrioritiesAndPortRoles (STP_BRIDGE* bridge, unsigned int tr
 
 void STP_SetBridgePriority (STP_BRIDGE* bridge, unsigned int treeIndex, unsigned short bridgePriority, unsigned int timestamp)
 {
-	// See table 13-3 on page 348 of 802.1Q-2011
+	// See table 13-3 on page 501 of 802.1Q-2018.
 
 	assert ((bridgePriority & 0x0FFF) == 0);
 
 	assert (treeIndex <= bridge->mstiCount);
 
-	LOG (bridge, -1, -1, "{T}: Setting bridge priority: tree {TN} prio = {D}...\r\n",
-		 timestamp,
-		 treeIndex,
-		 bridgePriority);
+	LOG (bridge, -1, -1, "{T}: Setting bridge priority: tree {TN} prio = {D}...\r\n", timestamp, treeIndex, bridgePriority);
 
-	BRIDGE_ID bid = bridge->trees [treeIndex]->GetBridgeIdentifier ();
+	BRIDGE_ID bid = bridge->trees[treeIndex]->GetBridgeIdentifier();
 	if (bid.GetPriority() != bridgePriority)
 	{
 		LOG (bridge, -1, -1, "\r\n");
 
-		bid.SetPriority (bridgePriority, treeIndex);
-		bridge->trees [treeIndex]->SetBridgeIdentifier (bid);
+		bid.SetPriority(bridgePriority, treeIndex);
+		bridge->trees[treeIndex]->SetBridgeIdentifier(bid);
 
 		if (bridge->started && (treeIndex < bridge->treeCount()))
 			RecomputePrioritiesAndPortRoles (bridge, treeIndex, timestamp);
@@ -799,7 +780,7 @@ void STP_SetMstConfigName (STP_BRIDGE* bridge, const char* name, unsigned int ti
 	memset (bridge->MstConfigId.ConfigurationName, 0, 32);
 	memcpy (bridge->MstConfigId.ConfigurationName, name, strlen (name));
 
-	if (bridge->started && (bridge->ForceProtocolVersion >= STP_VERSION_MSTP))
+	if (bridge->started)
 		RestartStateMachines(bridge, timestamp);
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
@@ -815,7 +796,7 @@ void STP_SetMstConfigRevisionLevel (STP_BRIDGE* bridge, unsigned short revisionL
 	bridge->MstConfigId.RevisionLevelHigh = revisionLevel >> 8;
 	bridge->MstConfigId.RevisionLevelLow = revisionLevel & 0xff;
 
-	if (bridge->started && (bridge->ForceProtocolVersion >= STP_VERSION_MSTP))
+	if (bridge->started)
 		RestartStateMachines(bridge, timestamp);
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
@@ -869,7 +850,7 @@ void STP_SetMstConfigTable (struct STP_BRIDGE* bridge, const STP_CONFIG_TABLE_EN
 			 bridge->MstConfigId.ConfigurationDigest[0], bridge->MstConfigId.ConfigurationDigest[1],
 			 bridge->MstConfigId.ConfigurationDigest[14], bridge->MstConfigId.ConfigurationDigest[15]);
 
-		if (bridge->started && (bridge->ForceProtocolVersion >= STP_VERSION_MSTP))
+		if (bridge->started)
 			RestartStateMachines(bridge, timestamp);
 	}
 
@@ -1285,12 +1266,12 @@ extern "C" unsigned int STP_GetForwardDelay (const struct STP_BRIDGE* bridge)
 
 // ============================================================================
 
-extern "C" void STP_SetTxHoldCount (struct STP_BRIDGE* bridge, unsigned int txHoldCound, unsigned int timestamp)
+extern "C" void STP_SetTxHoldCount (struct STP_BRIDGE* bridge, unsigned int txHoldCount, unsigned int timestamp)
 {
-	assert (txHoldCound >= 1 && txHoldCound <= 10); // Table 13-5 in 802.1Q-2018.
-	if (bridge->TxHoldCount != txHoldCound)
+	assert (txHoldCount >= 1 && txHoldCount <= 10); // Table 13-5 in 802.1Q-2018.
+	if (bridge->TxHoldCount != txHoldCount)
 	{
-		bridge->TxHoldCount = txHoldCound;
+		bridge->TxHoldCount = txHoldCount;
 		for (unsigned int pi = 0; pi < bridge->portCount; pi++)
 			bridge->ports[pi]->txCount = 0;
 	}

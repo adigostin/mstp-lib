@@ -638,7 +638,7 @@ void recordTimes (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 		portTree->portTimes.MaxAge        = portTree->msgTimes.MaxAge;
 		portTree->portTimes.ForwardDelay  = portTree->msgTimes.ForwardDelay;
 		portTree->portTimes.remainingHops = portTree->msgTimes.remainingHops;
-		portTree->portTimes.HelloTime     = STP_BRIDGE::DefaultBridgeHelloTime;
+		portTree->portTimes.HelloTime     = 2;
 	}
 	else
 	{
