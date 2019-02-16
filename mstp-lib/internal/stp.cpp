@@ -24,21 +24,16 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 {
 	// Let's make a few checks on the data types, because we might be compiled with strange
 	// compiler options which will turn upside down all our assumptions about structure layouts.
-	// These really should use static_assert, but I'm not sure all compilers support static_assert.
-	// If you get one of these asserts, you should reset your compiler options to their defaults,
-	// at least those options related to structure layouts, at least for the files belonging to the STP library.
-	assert (sizeof (unsigned char) == 1);
-	assert (sizeof (unsigned short) == 2);
-	assert (sizeof (unsigned int) == 4);
-	assert (sizeof (INV_UINT2) == 2);
-	assert (sizeof (INV_UINT4) == 4);
-	assert (sizeof (STP_BRIDGE_ADDRESS) == 6);
-	assert (sizeof (BRIDGE_ID) == 8);
-	assert (sizeof (PORT_ID) == 2);
-	assert (sizeof (PRIORITY_VECTOR) == 34);
-	assert (sizeof (MSTP_BPDU) == 102);
-
-	assert (debugLogBufferSize >= 2); // one byte for the data, one for the null terminator of the string passed to the callback
+	static_assert (sizeof(unsigned char) == 1, "");
+	static_assert (sizeof(unsigned short) == 2, "");
+	static_assert (sizeof(unsigned int) == 4, "");
+	static_assert (sizeof(INV_UINT2) == 2, "");
+	static_assert (sizeof(INV_UINT4) == 4, "");
+	static_assert (sizeof(STP_BRIDGE_ADDRESS) == 6, "");
+	static_assert (sizeof(BRIDGE_ID) == 8, "");
+	static_assert (sizeof(PORT_ID) == 2, "");
+	static_assert (sizeof(PRIORITY_VECTOR) == 34, "");
+	static_assert (sizeof(MSTP_BPDU) == 102, "");
 
 	// Upper limit for number of MSTIs is defined in 802.1Q-2011, page 342, top paragraph:
 	//		"No more than 64 MSTI Configuration Messages shall be encoded in an MST
@@ -62,12 +57,15 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	bridge->mstiCount = mstiCount;
 	bridge->maxVlanNumber = maxVlanNumber;
 
+#if STP_USE_LOG
+	assert (debugLogBufferSize >= 2); // one byte for the data, one for the null terminator of the string passed to the callback
 	bridge->logBuffer = (char*) callbacks->allocAndZeroMemory (debugLogBufferSize);
 	assert (bridge->logBuffer != nullptr);
 	bridge->logBufferMaxSize = debugLogBufferSize;
 	bridge->logBufferUsedSize = 0;
 	bridge->logCurrentPort = -1;
 	bridge->logCurrentTree = -1;
+#endif
 
 	// ------------------------------------------------------------------------
 
@@ -163,8 +161,9 @@ void STP_DestroyBridge (STP_BRIDGE* bridge)
 
 	bridge->callbacks.freeMemory (bridge->ports);
 	bridge->callbacks.freeMemory (bridge->trees);
+#if STP_USE_LOG
 	bridge->callbacks.freeMemory (bridge->logBuffer);
-
+#endif
 	bridge->callbacks.freeMemory (bridge);
 }
 
@@ -352,26 +351,32 @@ void STP_OnBpduReceived (STP_BRIDGE* bridge, unsigned int portIndex, const unsig
 			switch (type)
 			{
 				case VALIDATED_BPDU_TYPE_STP_CONFIG:
-					LOG (bridge, portIndex, -1, "Config BPDU:\r\n");
-					LOG_INDENT (bridge);
-					DumpConfigBpdu (bridge, portIndex, -1, (const MSTP_BPDU*) bpdu);
-					LOG_UNINDENT (bridge);
+					#if STP_USE_LOG
+						LOG (bridge, portIndex, -1, "Config BPDU:\r\n");
+						LOG_INDENT (bridge);
+						DumpConfigBpdu (bridge, portIndex, -1, (const MSTP_BPDU*) bpdu);
+						LOG_UNINDENT (bridge);
+					#endif
 					passToStateMachines = true;
 					break;
 
 				case VALIDATED_BPDU_TYPE_RST:
-					LOG (bridge, portIndex, -1, "RSTP BPDU:\r\n");
-					LOG_INDENT (bridge);
-					DumpRstpBpdu (bridge, portIndex, -1, (const MSTP_BPDU*) bpdu);
-					LOG_UNINDENT (bridge);
+					#if STP_USE_LOG
+						LOG (bridge, portIndex, -1, "RSTP BPDU:\r\n");
+						LOG_INDENT (bridge);
+						DumpRstpBpdu (bridge, portIndex, -1, (const MSTP_BPDU*) bpdu);
+						LOG_UNINDENT (bridge);
+					#endif
 					passToStateMachines = true;
 					break;
 
 				case VALIDATED_BPDU_TYPE_MST:
-					LOG (bridge, portIndex, -1, "MSTP BPDU:\r\n");
-					LOG_INDENT (bridge);
-					DumpMstpBpdu (bridge, portIndex, -1, (const MSTP_BPDU*) bpdu);
-					LOG_UNINDENT (bridge);
+					#if STP_USE_LOG
+						LOG (bridge, portIndex, -1, "MSTP BPDU:\r\n");
+						LOG_INDENT (bridge);
+						DumpMstpBpdu (bridge, portIndex, -1, (const MSTP_BPDU*) bpdu);
+						LOG_UNINDENT (bridge);
+					#endif
 					passToStateMachines = true;
 					break;
 
@@ -421,18 +426,25 @@ bool STP_IsBridgeStarted (const STP_BRIDGE* bridge)
 
 void STP_EnableLogging (STP_BRIDGE* bridge, bool enable)
 {
-	bridge->loggingEnabled = enable;
+	#if STP_USE_LOG
+		bridge->loggingEnabled = enable;
+	#endif
 }
 
 // ============================================================================
 
 bool STP_IsLoggingEnabled (const STP_BRIDGE* bridge)
 {
-	return bridge->loggingEnabled;
+	#if STP_USE_LOG
+		return bridge->loggingEnabled;
+	#else
+		return false;
+	#endif
 }
 
 // ============================================================================
 
+#if STP_USE_LOG
 template<typename... PortTreeArgs>
 static void LogTransition (STP_BRIDGE* bridge, const char* smName, const char* newStateName, PortTreeArgs... args);
 
@@ -471,6 +483,7 @@ void LogTransition (STP_BRIDGE* bridge, const char* smName, const char* newState
 	}
 	LOG (bridge, pi, ti, "{S}: -> {S}\r\n", smName, newStateName);
 }
+#endif
 
 // ============================================================================
 
@@ -483,8 +496,10 @@ rep:
 	State newState = smInfo.checkConditions (bridge, portTreeArgs..., state);
 	if (newState != 0)
 	{
-		const char* newStateName = smInfo.getStateName(newState);
-		LogTransition (bridge, smInfo.smName, newStateName, portTreeArgs...);
+		#if STP_USE_LOG
+			const char* newStateName = smInfo.getStateName(newState);
+			LogTransition (bridge, smInfo.smName, newStateName, portTreeArgs...);
+		#endif
 
 		smInfo.initState (bridge, portTreeArgs..., newState, timestamp);
 

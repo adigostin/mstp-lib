@@ -7,8 +7,10 @@
 template<typename State, typename... PortTreeArgs>
 struct StateMachine
 {
+#if STP_USE_LOG
 	const char* smName;
 	const char* (*getStateName) (State state);
+#endif
 	State       (*checkConditions) (const STP_BRIDGE* bridge, PortTreeArgs... portTreeArgs, State state);
 	void        (*initState) (STP_BRIDGE* bridge, PortTreeArgs... portTreeArgs, State state, unsigned int timestamp);
 };

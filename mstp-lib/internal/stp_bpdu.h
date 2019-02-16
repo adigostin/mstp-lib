@@ -106,10 +106,10 @@ enum VALIDATED_BPDU_TYPE STP_GetValidatedBpduType (const unsigned char* _bpdu, u
 
 BPDU_PORT_ROLE GetBpduPortRole (STP_PORT_ROLE role);
 
+#if STP_USE_LOG
 void DumpMstpBpdu (STP_BRIDGE* bridge, int port, int tree, const MSTP_BPDU* bpdu);
 void DumpRstpBpdu (STP_BRIDGE* bridge, int port, int tree, const MSTP_BPDU* bpdu);
 void DumpConfigBpdu (STP_BRIDGE* bridge, int port, int tree, const MSTP_BPDU* bpdu);
-
-// ============================================================================
+#endif
 
 #endif

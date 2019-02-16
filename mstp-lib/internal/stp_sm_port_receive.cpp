@@ -10,6 +10,7 @@
 
 using namespace PortReceive;
 
+#if STP_USE_LOG
 static const char* GetStateName (State state)
 {
 	switch (state)
@@ -19,6 +20,7 @@ static const char* GetStateName (State state)
 		default:		return "(undefined)";
 	}
 }
+#endif
 
 // ============================================================================
 
@@ -90,10 +92,12 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, uns
 		assert (false);
 }
 
-const PerPortStateMachine<PortReceive::State> PortReceive::sm = 
+const PerPortStateMachine<PortReceive::State> PortReceive::sm =
 {
+#if STP_USE_LOG
 	"PortReceive",
 	&GetStateName,
+#endif
 	&CheckConditions,
 	&InitState
 };

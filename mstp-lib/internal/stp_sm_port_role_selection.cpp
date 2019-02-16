@@ -10,6 +10,7 @@
 
 using namespace PortRoleSelection;
 
+#if STP_USE_LOG
 static const char* GetStateName (State state)
 {
 	switch (state)
@@ -19,6 +20,7 @@ static const char* GetStateName (State state)
 		default:			return "(undefined)";
 	}
 }
+#endif
 
 // ============================================================================
 
@@ -78,9 +80,12 @@ static void InitState (STP_BRIDGE* bridge, TreeIndex givenTree, State state, uns
 		assert (false);
 }
 
-const PerTreeStateMachine<State> PortRoleSelection::sm = {
+const PerTreeStateMachine<State> PortRoleSelection::sm =
+{
+#if STP_USE_LOG
 	"PortRoleSelection",
 	&GetStateName,
+#endif
 	&CheckConditions,
 	&InitState
 };

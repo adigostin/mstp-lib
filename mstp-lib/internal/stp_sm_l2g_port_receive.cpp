@@ -10,6 +10,7 @@
 
 using namespace L2GPortReceive;
 
+#if STP_USE_LOG
 static const char* GetStateName (State state)
 {
 	switch (state)
@@ -21,6 +22,7 @@ static const char* GetStateName (State state)
 		default:             return "(undefined)";
 	}
 }
+#endif
 
 // ============================================================================
 
@@ -98,8 +100,10 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, uns
 
 const PerPortStateMachine<State> L2GPortReceive::sm = 
 {
+#if STP_USE_LOG
 	"L2GPortReceive",
 	&GetStateName,
+#endif
 	&CheckConditions,
 	&InitState
 };

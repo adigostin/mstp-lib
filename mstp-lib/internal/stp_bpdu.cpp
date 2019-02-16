@@ -107,6 +107,7 @@ enum VALIDATED_BPDU_TYPE STP_GetValidatedBpduType (const unsigned char* _bpdu, u
 
 // ============================================================================
 
+#if STP_USE_LOG
 void DumpMstpBpdu (STP_BRIDGE* bridge, int port, int tree, const MSTP_BPDU* bpdu)
 {
 	LOG (bridge, port, tree, "Flags: TC={D}, Proposal={D}, PortRole={S}, Learning={D}, Forwarding={D}, Agreement={D}\r\n",
@@ -203,6 +204,7 @@ void MSTI_CONFIG_MESSAGE::Dump (STP_BRIDGE* bridge, int port, int tree) const
 	LOG (bridge, port, tree, "PortPriority         : 0x{X2}\r\n", PortPriority);
 	LOG (bridge, port, tree, "RemainingHops        : {D}\r\n", RemainingHops);
 }
+#endif
 
 // ============================================================================
 // 14.6.a)

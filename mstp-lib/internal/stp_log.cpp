@@ -15,6 +15,8 @@
 	#define snprintf _snprintf
 #endif
 
+#if STP_USE_LOG
+
 void STP_FlushLog (STP_BRIDGE* bridge)
 {
 	assert (bridge->logBufferUsedSize < bridge->logBufferMaxSize);
@@ -275,3 +277,4 @@ void STP_Log (STP_BRIDGE* bridge, int port, int tree, const char* format, ...)
 
 	va_end (ap);
 }
+#endif

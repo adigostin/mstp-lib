@@ -10,6 +10,7 @@
 
 using namespace PortRoleTransitions;
 
+#if STP_USE_LOG
 static const char* GetStateName (State state)
 {
 	switch (state)
@@ -55,6 +56,7 @@ static const char* GetStateName (State state)
 		default:				return "(undefined)";
 	}
 }
+#endif
 
 // ============================================================================
 
@@ -587,9 +589,12 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenT
 		assert (false);
 }
 
-const PerPortPerTreeStateMachine<PortRoleTransitions::State> PortRoleTransitions::sm = {
+const PerPortPerTreeStateMachine<PortRoleTransitions::State> PortRoleTransitions::sm =
+{
+#if STP_USE_LOG
 	"PortRoleTransitions",
 	&GetStateName,
+#endif
 	&CheckConditions,
 	&InitState
 };

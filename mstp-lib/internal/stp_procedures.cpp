@@ -813,13 +813,14 @@ void txConfig (STP_BRIDGE* bridge, PortIndex givenPort, unsigned int timestamp)
 		bpdu->ForwardDelay = cistTree->designatedTimes.ForwardDelay * 256;
 		bpdu->HelloTime    = cistTree->portTimes.HelloTime * 256;
 
-		LOG (bridge, givenPort, -1, "TX Config BPDU to port {D}:\r\n", 1 + givenPort);
-		LOG_INDENT (bridge);
-		DumpConfigBpdu (bridge, givenPort, -1, bpdu);
-		LOG_UNINDENT (bridge);
+		#if STP_USE_LOG
+			LOG (bridge, givenPort, -1, "TX Config BPDU to port {D}:\r\n", 1 + givenPort);
+			LOG_INDENT (bridge);
+			DumpConfigBpdu (bridge, givenPort, -1, bpdu);
+			LOG_UNINDENT (bridge);
 
-		FLUSH_LOG (bridge);
-
+			FLUSH_LOG (bridge);
+		#endif
 		bridge->callbacks.transmitReleaseBuffer (bridge, bpdu);
 	}
 }
@@ -958,22 +959,24 @@ void txRstp (STP_BRIDGE* bridge, PortIndex givenPort, unsigned int timestamp)
 			}
 		}
 
-		if (bridge->ForceProtocolVersion < 3)
-		{
-			LOG (bridge, givenPort, -1, "TX RSTP BPDU to port {D}:\r\n", 1 + givenPort);
-			LOG_INDENT (bridge);
-			DumpRstpBpdu (bridge, givenPort, -1, bpdu);
-			LOG_UNINDENT (bridge);
-		}
-		else
-		{
-			LOG (bridge, givenPort, -1, "TX MSTP BPDU to port {D}:\r\n", 1 + givenPort);
-			LOG_INDENT (bridge);
-			DumpMstpBpdu (bridge, givenPort, -1, bpdu);
-			LOG_UNINDENT (bridge);
-		}
+		#if STP_USE_LOG
+			if (bridge->ForceProtocolVersion < 3)
+			{
+				LOG (bridge, givenPort, -1, "TX RSTP BPDU to port {D}:\r\n", 1 + givenPort);
+				LOG_INDENT (bridge);
+				DumpRstpBpdu (bridge, givenPort, -1, bpdu);
+				LOG_UNINDENT (bridge);
+			}
+			else
+			{
+				LOG (bridge, givenPort, -1, "TX MSTP BPDU to port {D}:\r\n", 1 + givenPort);
+				LOG_INDENT (bridge);
+				DumpMstpBpdu (bridge, givenPort, -1, bpdu);
+				LOG_UNINDENT (bridge);
+			}
 
-		FLUSH_LOG (bridge);
+			FLUSH_LOG (bridge);
+		#endif
 
 		bridge->callbacks.transmitReleaseBuffer (bridge, bpdu);
 	}

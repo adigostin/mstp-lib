@@ -10,6 +10,7 @@
 
 using namespace PortInformation;
 
+#if STP_USE_LOG
 static const char* GetStateName (State state)
 {
 	switch (state)
@@ -27,6 +28,7 @@ static const char* GetStateName (State state)
 		default:					return "(undefined)";
 	}
 }
+#endif
 
 // ============================================================================
 
@@ -225,9 +227,12 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenT
 		assert (false);
 }
 
-const PerPortPerTreeStateMachine<State> PortInformation::sm = {
+const PerPortPerTreeStateMachine<State> PortInformation::sm =
+{
+#if STP_USE_LOG
 	"PortInformation",
 	&GetStateName,
+#endif
 	&CheckConditions,
 	&InitState
 };

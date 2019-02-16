@@ -10,6 +10,7 @@
 
 using namespace PortTransmit;
 
+#if STP_USE_LOG
 static const char* GetStateName (State state)
 {
 	switch (state)
@@ -24,6 +25,7 @@ static const char* GetStateName (State state)
 		default:                return "(undefined)";
 	}
 }
+#endif
 
 // ============================================================================
 
@@ -146,8 +148,10 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, uns
 
 const PerPortStateMachine<PortTransmit::State> PortTransmit::sm =
 {
+#if STP_USE_LOG
 	"PortTransmit",
 	&GetStateName,
+#endif
 	&CheckConditions,
 	&InitState
 };

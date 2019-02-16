@@ -10,6 +10,7 @@
 
 using namespace PortTimers;
 
+#if STP_USE_LOG
 static const char* GetStateName (State state)
 {
 	switch (state)
@@ -19,6 +20,7 @@ static const char* GetStateName (State state)
 		default:			return "(undefined)";
 	}
 }
+#endif
 
 // ============================================================================
 
@@ -91,9 +93,12 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, uns
 	}
 }
 
-const PerPortStateMachine<State> PortTimers::sm = {
+const PerPortStateMachine<State> PortTimers::sm =
+{
+#if STP_USE_LOG
 	"PortTimers",
 	&GetStateName,
+#endif
 	&CheckConditions,
 	&InitState
 };

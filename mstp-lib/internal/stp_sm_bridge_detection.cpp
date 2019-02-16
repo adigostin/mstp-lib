@@ -1,5 +1,5 @@
 
-// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
 // Copyright (c) 2011-2019 Adi Gostin, distributed under Apache License v2.0.
 
 // This file implements §13.33 from 802.1Q-2018.
@@ -10,6 +10,7 @@
 
 using namespace BridgeDetection;
 
+#if STP_USE_LOG
 static const char* GetStateName (State state)
 {
 	switch (state)
@@ -20,6 +21,7 @@ static const char* GetStateName (State state)
 		default:		return "(undefined)";
 	}
 }
+#endif
 
 // ============================================================================
 
@@ -27,10 +29,10 @@ static const char* GetStateName (State state)
 static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, State state)
 {
 	PORT* port = bridge->ports [givenPort];
-	
+
 	// ------------------------------------------------------------------------
 	// Check global conditions.
-	
+
 	if (bridge->BEGIN && !port->AdminEdge)
 	{
 		if (state == NOT_EDGE)
@@ -38,7 +40,7 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, Sta
 			// The entry block for this state has been executed already.
 			return (State)0;
 		}
-		
+
 		return NOT_EDGE;
 	}
 
@@ -49,13 +51,13 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, Sta
 			// The entry block for this state has been executed already.
 			return (State)0;
 		}
-		
+
 		return EDGE;
 	}
-	
+
 	// ------------------------------------------------------------------------
 	// Check exit conditions from each state.
-	
+
 	if (state == NOT_EDGE)
 	{
 		// I changed this condition slightly because it was looping endlessly between EDGE and NOT_EDGE when disconnecting
@@ -94,7 +96,7 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, Sta
 
 		return (State)0;
 	}
-	
+
 	if (state == ISOLATED)
 	{
 		if (port->AdminEdge || port->AutoEdge || !port->isolate || !port->operPointToPointMAC)
@@ -114,7 +116,7 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, Sta
 static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, unsigned int timestamp)
 {
 	PORT* port = bridge->ports[givenPort];
-	
+
 	if (state == EDGE)
 	{
 		port->operEdge = true;
@@ -134,10 +136,12 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, uns
 		assert (false);
 }
 
-const PerPortStateMachine<BridgeDetection::State> BridgeDetection::sm = 
+const PerPortStateMachine<BridgeDetection::State> BridgeDetection::sm =
 {
+#if STP_USE_LOG
 	"BridgeDetection",
 	&GetStateName,
+#endif
 	&CheckConditions,
 	&InitState,
 };

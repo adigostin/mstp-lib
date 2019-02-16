@@ -11,6 +11,10 @@
 
 #include <stdbool.h>
 
+#ifndef STP_USE_LOG
+	#define STP_USE_LOG 1
+#endif
+
 struct STP_BRIDGE;
 
 enum STP_FLUSH_FDB_TYPE

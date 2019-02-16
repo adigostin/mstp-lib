@@ -12,6 +12,7 @@
 
 using namespace TopologyChange;
 
+#if STP_USE_LOG
 static const char* GetStateName (TopologyChange::State state)
 {
 	switch (state)
@@ -27,6 +28,7 @@ static const char* GetStateName (TopologyChange::State state)
 		default:               return "(undefined)";
 	}
 }
+#endif
 
 // ============================================================================
 
@@ -212,9 +214,12 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenT
 		assert (false);
 }
 
-const PerPortPerTreeStateMachine<TopologyChange::State> TopologyChange::sm = {
+const PerPortPerTreeStateMachine<TopologyChange::State> TopologyChange::sm =
+{
+#if STP_USE_LOG
 	"TopologyChange",
 	&GetStateName,
+#endif
 	&CheckConditions,
 	&InitState
 };
