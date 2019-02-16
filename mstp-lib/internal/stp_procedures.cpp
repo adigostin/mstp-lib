@@ -1401,7 +1401,7 @@ void updtRolesDisabledTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 }
 
 // ============================================================================
-// 13.28.a) - 13.28.1 in 802.1Q-2018
+// 13.28.a) - 13.28.1
 // TRUE, if and only if, agree is TRUE for the given port for all SPTs.
 bool allSptAgree (const STP_BRIDGE* bridge)
 {
@@ -1409,7 +1409,7 @@ bool allSptAgree (const STP_BRIDGE* bridge)
 }
 
 // ============================================================================
-// 13.26.a) - 13.26.1
+// 13.28.b) - 13.28.2
 // The condition allSynced is TRUE for a given port, for a given tree, if and only if
 //
 // a) For all ports for the given tree, selected is TRUE, the port's role is the same as its selectedRole, and
@@ -1418,13 +1418,16 @@ bool allSptAgree (const STP_BRIDGE* bridge)
 //    1) Root Port or Alternate Port and synced is TRUE for all ports for the given tree other than the
 //       Root Port; or
 //    2) Designated Port and synced is TRUE for all ports for the given tree other than the given port; or
-//    3) Master Port and synced is TRUE for all ports for the given tree other than the given port.
+//    3) Designated Port, and the tree is an SPT or the IST, and the Root Port of the tree and the given
+//       port are both within the Bridge’s SPT Region, and both learning and forwarding are FALSE for
+//       the given port; or
+//    4) Master Port and synced is TRUE for all ports for the given tree other than the given port.
 bool allSynced (const STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 {
 	// a) For all ports for the given tree, selected is TRUE, the port's role is the same as its selectedRole, and updtInfo is FALSE; and
-	for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
+	for (PortIndex portIndex = (PortIndex)0; portIndex < bridge->portCount; portIndex++)
 	{
-		const PORT_TREE* portTree = bridge->ports [portIndex]->trees [givenTree];
+		const PORT_TREE* portTree = bridge->ports[portIndex]->trees[givenTree];
 
 		if (portTree->selected == false)
 			return false;
@@ -1436,17 +1439,25 @@ bool allSynced (const STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTr
 			return false;
 	}
 
+	// Condition b) 3) not yet implemented
+	assert (bridge->ForceProtocolVersion <= STP_VERSION_MSTP);
+
 	// b) The role of the given Port is
-	STP_PORT_ROLE role = bridge->ports [givenPort]->trees [givenTree]->role;
+	STP_PORT_ROLE role = bridge->ports[givenPort]->trees[givenTree]->role;
 	if ((role == STP_PORT_ROLE_ROOT) || (role == STP_PORT_ROLE_ALTERNATE) || (role == STP_PORT_ROLE_BACKUP))
 	{
-		// The standard doesn tell about the BackupPort role, but it makes sense to treat it as
-		// we treat the AlternatePort role.
+		// Note AG: The standard doesn tell about the BackupPort role. If we follow the letter of the standard, we should
+		// return False when this function is invoked on a Backup port. I tested that and it leads to some weird behavior
+		// even in the simple scenario of wiring two ports of the same bridge together: the non-Backup port becomes operEdge!
+		// Also in a scenario with multiple bridges and wires we get weird behavior, with the non-Backup port going through
+		// a Learning stage sometimes but not always.
+		//
+		// So I'm inclined to believe we should treat a Backup port the same as an Alternate port.
 
 		// 1) Root Port or Alternate Port and synced is TRUE for all ports for the given tree other than the Root Port; or
-		for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
+		for (PortIndex portIndex = (PortIndex)0; portIndex < bridge->portCount; portIndex++)
 		{
-			const PORT_TREE* portTree = bridge->ports [portIndex]->trees [givenTree];
+			const PORT_TREE* portTree = bridge->ports[portIndex]->trees[givenTree];
 
 			if (portTree->role == STP_PORT_ROLE_ROOT)
 				continue;
@@ -1460,8 +1471,8 @@ bool allSynced (const STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTr
 	else if ((role == STP_PORT_ROLE_DESIGNATED) || (role == STP_PORT_ROLE_MASTER))
 	{
 		// 2) Designated Port and synced is TRUE for all ports for the given tree other than the given port; or
-		// 3) Master Port     and synced is TRUE for all ports for the given tree other than the given port.
-		for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
+		// 4) Master Port     and synced is TRUE for all ports for the given tree other than the given port.
+		for (PortIndex portIndex = (PortIndex)0; portIndex < bridge->portCount; portIndex++)
 		{
 			if (portIndex == (unsigned int) givenPort)
 				continue;
