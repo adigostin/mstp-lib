@@ -109,15 +109,16 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 		// per-port CIST and MSTI vars
 		for (unsigned int treeIndex = 0; treeIndex < (1 + bridge->mstiCount); treeIndex++)
 		{
-			port->trees [treeIndex] = (PORT_TREE*) callbacks->allocAndZeroMemory (sizeof (PORT_TREE));
-			assert (port->trees [treeIndex] != nullptr);
-			port->trees [treeIndex]->portId.Set (0x80, (unsigned short) portIndex + 1);
+			port->trees[treeIndex] = (PORT_TREE*) callbacks->allocAndZeroMemory (sizeof (PORT_TREE));
+			assert (port->trees[treeIndex] != nullptr);
+			port->trees[treeIndex]->portId.Set (0x80, (unsigned short) portIndex + 1);
 			port->trees[treeIndex]->portTimes = bridge->trees[treeIndex]->BridgeTimes;
-			port->trees [treeIndex]->InternalPortPathCost = 200000;
+			port->trees[treeIndex]->InternalPortPathCost = 200000; // TODO: remove this hardcoded value and calculate the actual value in STP_OnPortEnabled
+			port->trees[treeIndex]->pseudoRootId = bridge->trees[treeIndex]->GetBridgeIdentifier();
 		}
 
 		port->adminPointToPointMAC = STP_ADMIN_P2P_AUTO;
-		port->AutoEdge = 1;
+		port->AutoEdge = true;
 		port->enableBPDUrx = true;
 		port->enableBPDUtx = true;
 	}
@@ -275,7 +276,7 @@ void STP_OnPortEnabled (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int
 	else
 		port->ExternalPortPathCost = port->detectedPortPathCost;
 
-// TODO: calculated also InternalPortPathCost
+// TODO: calculate also InternalPortPathCost and remove its hardcoded value from STP_CreateBridge
 
 	// If STP_OnPortEnabled is called for the first time after software startup,
 	// and if STP_SetPortAdminP2P was not yet called or called with AUTO,
@@ -1161,19 +1162,22 @@ void STP_SetAdminPortPathCost (struct STP_BRIDGE* bridge, unsigned int portIndex
 		if (treeIndex == CIST_INDEX)
 		{
 			port->adminExternalPortPathCost = adminPathCost;
-			if (port->adminExternalPortPathCost != 0)
-				port->ExternalPortPathCost = port->adminExternalPortPathCost;
-			else
-				port->ExternalPortPathCost = port->detectedPortPathCost;
 
-			LOG (bridge, -1, -1, "  ExternalPortPathCost is now {D}.\r\n", port->ExternalPortPathCost);
+			if (bridge->started && port->portEnabled)
+			{
+				if (port->adminExternalPortPathCost != 0)
+					port->ExternalPortPathCost = port->adminExternalPortPathCost;
+				else
+					port->ExternalPortPathCost = port->detectedPortPathCost;
 
-			if (bridge->started)
+				LOG (bridge, -1, -1, "  ExternalPortPathCost is now {D}.\r\n", port->ExternalPortPathCost);
+
 				RecomputePrioritiesAndPortRoles (bridge, CIST_INDEX, timestamp);
+			}
 		}
 		else
 		{
-			assert(false);
+			assert(false); // not yet implemented
 		}
 	}
 
@@ -1196,6 +1200,9 @@ unsigned int STP_GetAdminPortPathCost (const struct STP_BRIDGE* bridge, unsigned
 unsigned int STP_GetPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned treeIndex)
 {
 	PORT* port = bridge->ports[portIndex];
+	if (!bridge->started || !port->portEnabled)
+		return 0;
+
 	if (treeIndex == CIST_INDEX)
 		return port->ExternalPortPathCost;
 	else

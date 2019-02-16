@@ -58,8 +58,6 @@ struct BPDU_HEADER
 
 // ============================================================================
 
-// ============================================================================
-
 // The library uses this structure for STP Config BPDUs, RSTP BPDUs and MSTP BPDUs.
 //  - STP Config BPDUs use members up to and including ForwardDelay.
 //  - RSTP BPDUs use members up to and including Version1Length.

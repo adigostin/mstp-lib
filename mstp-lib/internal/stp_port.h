@@ -5,71 +5,79 @@
 #ifndef MSTP_LIB_PORT_H
 #define MSTP_LIB_PORT_H
 
+// This file implements "13.27 Per Port variables" from 802.1Q-2018.
+
 #include "stp_base_types.h"
 #include "stp_bpdu.h"
 #include "stp_sm.h"
 #include "../stp.h"
 
-// All references are to 802.1Q-2011
-
-// 13.25
 struct PORT_TREE
 {
-	bool pseudoRootId:1;	// 13.25.ad) - 13.25.37
-	bool agree		: 1;	// 13.25.ae) - 13.25.3
-	bool agreed		: 1;	// 13.25.af) - 13.25.4
-	bool disputed	: 1;	// 13.25.ai) - 13.25.9
-	bool fdbFlush	: 1;	// 13.25.aj) - 13.25.13
-	bool forward	: 1;	// 13.25.ak) - 13.25.14
-	bool learn		: 1;	// 13.25.ao) - 13.25.21
-	bool learning	: 1;	// 13.25.ap) - 13.25.13
-	bool forwarding	: 1;	// 13.25.al) - 13.25.15
-	bool proposed	: 1;	// 13.25.av) - 13.25.35
-	bool proposing	: 1;	// 13.25.aw) - 13.25.36
-	bool rcvdMsg	: 1;	// 13.25.ay) - 13.25.41
-	bool rcvdTc		: 1;	// 13.25.az) - 13.25.44
-	bool reRoot		: 1;	// 13.25.ba) - 13.25.47
-	bool reselect	: 1;	// 13.25.bb) - 13.25.48
-	bool selected	: 1;	// 13.25.bd) - 13.25.52
-	bool sync		: 1;	// 13.25.bf) - 13.25.55
-	bool synced		: 1;	// 13.25.bg) - 13.25.56
-	bool tcProp		: 1;	// 13.25.bh) - 13.25.58
-	bool updtInfo	: 1;	// 13.25.bi) - 13.25.61
+	BRIDGE_ID pseudoRootId; // 13.27.ae) - 13.27.51
+	bool agree      : 1; // 13.27.ap) - 13.27.3
+	bool agreed     : 1; // 13.27.aq) - 13.27.4
+	bool disputed   : 1; // 13.27.at) - 13.27.22
+	bool fdbFlush   : 1; // 13.27.au) - 13.27.28
+	bool forward    : 1; // 13.27.av) - 13.27.29
+	bool forwarding : 1; // 13.27.aw) - 13.27.30
+	bool learn      : 1; // 13.27.az) - 13.27.34
+	bool learning   : 1; // 13.27.ba) - 13.27.35
+	bool proposed   : 1; // 13.27.bg) - 13.27.49
+	bool proposing  : 1; // 13.27.bh) - 13.27.50
+	bool rcvdMsg    : 1; // 13.27.bj) - 13.27.55
+	bool rcvdTc     : 1; // 13.27.bk) - 13.27.58
+	bool reRoot     : 1; // 13.27.bl) - 13.27.61
+	bool reselect   : 1; // 13.27.bm) - 13.27.62
+	bool selected   : 1; // 13.27.bo) - 13.27.67
+	bool sync       : 1; // 13.27.bq) - 13.27.70
+	bool synced     : 1; // 13.27.br) - 13.27.71
+	bool tcProp     : 1; // 13.27.bs) - 13.27.73
+	bool updtInfo   : 1; // 13.27.bt) - 13.27.76
 
 	// Note AG: I added these flag variables here for convenience; they're not in the standard.
 	// When a BPDU is received, the procedure rcvMsgs() populates them with the flags present in the received BPDU.
-	bool          msgFlagsTc             : 1;
-	bool          msgFlagsProposal       : 1;
-	unsigned char msgFlagsPortRole       : 2;
-	bool          msgFlagsLearning       : 1;
-	bool          msgFlagsForwarding     : 1;
-	bool          msgFlagsAgreement      : 1;
-	bool          msgFlagsTcAckOrMaster  : 1;
+	bool          msgFlagsTc            : 1;
+	bool          msgFlagsProposal      : 1;
+	unsigned char msgFlagsPortRole      : 2;
+	bool          msgFlagsLearning      : 1;
+	bool          msgFlagsForwarding    : 1;
+	bool          msgFlagsAgreement     : 1;
+	bool          msgFlagsTcAckOrMaster : 1;
 
-	INFO_IS			infoIs		: 8;	// 13.25.am) - 13.25.17
-	RCVD_INFO		rcvdInfo	: 8;	// 13.25.ax) - 13.25.39
-	STP_PORT_ROLE	role		: 8;	// 13.25.bc) - 13.25.51
-	STP_PORT_ROLE	selectedRole: 8;	// 13.25.be) - 13.25.53
+	INFO_IS       infoIs;       // 13.27.ax) - 13.27.32
+	RCVD_INFO     rcvdInfo;	    // 13.27.bi) - 13.27.53
+	STP_PORT_ROLE role;	        // 13.27.bn) - 13.27.66
+	STP_PORT_ROLE selectedRole;	// 13.27.bp) - 13.27.68
 
-	unsigned int InternalPortPathCost;	// 13.25.an) - 13.25.18
+	unsigned int InternalPortPathCost; // 13.27.ay) - 13.27.33
 
-	PRIORITY_VECTOR designatedPriority; // 13.25.ag) - 13.25.7
-	PRIORITY_VECTOR msgPriority;		// 13.25.aq) - 13.25.26
-	PRIORITY_VECTOR portPriority;		// 13.25.at) - 13.25.33
+	PRIORITY_VECTOR designatedPriority; // 13.27.ar) - 13.27.20
+	PRIORITY_VECTOR msgPriority;        // 13.27.bb) - 13.27.39
+	PRIORITY_VECTOR portPriority;       // 13.27.be) - 13.27.47
 
-	TIMES	designatedTimes;// 13.25.ah) - 13.25.8
-	TIMES	msgTimes;		// 13.25.ar) - 13.25.27
-	TIMES	portTimes;		// 13.25.au) - 13.25.34
+	TIMES designatedTimes; // 13.27.as) - 13.27.21
+	TIMES msgTimes;        // 13.27.bc) - 13.27.40
+	TIMES portTimes;       // 13.27.bf) - 13.27.48
 
-	PORT_ID portId;			// 13.25.as) - 13.25.32
+	PORT_ID portId; // 13.27.bd) - 13.27.46
 
-	// 13.23 State machine timers
-	unsigned short fdWhile;			// e) - 13.23.2
-	unsigned short rrWhile;			// f) - 13.23.7
-	unsigned short rbWhile;			// g) - 13.23.5
-	unsigned short tcWhile;			// h) - 13.23.9
-	unsigned short rcvdInfoWhile;	// i) - 13.23.6
-	unsigned short tcDetected;		// j) - 13.23.8
+	// If the ISIS-SPB is implemented, there is one instance per port of the following variable(s) for the CIST and
+	// one per port for each SPT:
+	PRIORITY_VECTOR agreedPriority; // 13.27.bu) - 13.27.13
+	bool agreementOutstanding;      // 13.27.bv) - 13.27.15
+
+	// If the ISIS-SPB is implemented, there is one instance per port of the following variables for each SPT:
+	bool            agreedAbove;       // 13.27.bw) - 13.27.5
+	PRIORITY_VECTOR neighbourPriority; // 13.27.bx) - 13.27.41
+
+	// 13.25 State machine timers
+	unsigned short fdWhile;			// e) - 13.25.2
+	unsigned short rrWhile;			// f) - 13.25.7
+	unsigned short rbWhile;			// g) - 13.25.5
+	unsigned short tcWhile;			// h) - 13.25.9
+	unsigned short rcvdInfoWhile;	// i) - 13.25.6
+	unsigned short tcDetected;		// j) - 13.25.8
 
 	PortInformation::State     portInformationState;
 	PortRoleTransitions::State portRoleTransitionsState;
@@ -77,77 +85,72 @@ struct PORT_TREE
 	TopologyChange::State      topologyChangeState;
 };
 
-// ============================================================================
-
-// 13.25
 struct PORT
 {
 	// There is one instance per port of each of the following variables:
-	bool	AdminEdge;		// 13.25.a) - 13.25.1
-	unsigned int ageingTime;// 13.25.b) - 13.25.2
-	bool	AutoEdge;		// 13.25.c) - 13.25.5
-	bool	AutoIsolate;	// 13.25.d) - 13.25.6
-	bool	enableBPDUrx;	// 13.25.e) - 13.25.10
-	bool	enableBPDUtx;	// 13.25.f) - 13.25.11
-	bool	isL2gp;			// 13.25.g) - 13.25.19
-	bool	isolate;		// 13.25.h) - 13.25.20
-	bool	mcheck;			// 13.25.i) - 13.25.25
-	bool	newInfo;		// 13.25.j) - 13.25.28
-	bool	operEdge;		// 13.25.k) - 13.25.30
-	bool	portEnabled;	// 13.25.l) - 13.25.31
-	bool	rcvdBpdu;		// 13.25.m) - 13.25.38
-	bool	rcvdRSTP;		// 13.25.n) - 13.25.42
-	bool	rcvdSTP;		// 13.25.o) - 13.25.43
-	bool	rcvdTcAck;		// 13.25.p) - 13.25.45
-	bool	rcvdTcn;		// 13.25.q) - 13.25.46
-	bool	restrictedRole;	// 13.25.r) - 13.25.49
-	bool	restrictedTcn;	// 13.25.s) - 13.25.50
-	bool	sendRSTP;		// 13.25.t) - 13.25.54
-	bool	tcAck;			// 13.25.u) - 13.25.57
-	bool	tick;			// 13.25.v) - 13.25.59
-	unsigned short txCount;	// 13.25.w) - 13.25.60
+	bool AdminEdge;      // 13.27.a) - 13.27.1
+	unsigned short ageingTime; // 13.27.b) - 13.27.2
+	bool AutoEdge;       // 13.27.c) - 13.27.18
+	bool AutoIsolate;    // 13.27.d) - 13.27.19
+	bool enableBPDUrx;   // 13.27.e) - 13.27.23
+	bool enableBPDUtx;   // 13.27.f) - 13.27.24
+	unsigned int ExternalPortPathCost; // 13.27.g) - 13.27.25
+	bool isL2gp;         // 13.27.h) - 13.27.26
+	bool isolate;        // 13.27.i) - 13.27.27
+	bool mcheck;         // 13.27.j) - 13.27.38
+	bool newInfo;        // 13.27.k) - 13.27.42
+	bool operEdge;       // 13.27.l) - 13.27.44
+	bool portEnabled;    // 13.27.m) - 13.27.45
+	bool rcvdBpdu;       // 13.27.n) - 13.27.52
+	bool rcvdRSTP;       // 13.27.o) - 13.27.56
+	bool rcvdSTP;        // 13.27.p) - 13.27.57
+	bool rcvdTcAck;      // 13.27.q) - 13.27.59
+	bool rcvdTcn;        // 13.27.r) - 13.27.60
+	bool restrictedRole; // 13.27.s) - 13.27.64
+	bool restrictedTcn;  // 13.27.t) - 13.27.65
+	bool sendRSTP;       // 13.27.u) - 13.27.69
+	bool tcAck;          // 13.27.v) - 13.27.72
+	bool tick;           // 13.27.w) - 13.27.74
+	unsigned short txCount; // 13.27.x) - 13.27.75
 
-	// If MSTP is implemented there is one instance per port, applicable to the CIST and to all MSTIs, of the following variable(s):
-	bool	rcvdInternal;	// 13.25.x) - 13.25.40
+	// If MSTP or the ISIS-SPB is implemented, there is one instance per port, applicable to the CIST and to all
+	// MSTIs and SPTs, of the following variable(s):
+	bool rcvdInternal; // 13.27.y) - 13.27.54
+	bool restrictedDomainRole; // 13.27.z) - 13.27.63
 
-	// Not in the standard. Stores the path cost calculated in STP_OnPortEnabled, in case the user later resets the admin cost.
-	// See also detectedPointToPointMAC.
-	unsigned int detectedPortPathCost;
-
-	// Not in the standard. Stores ieee8021SpanningTreeRstpPortAdminPathCost / ieee8021MstpCistPortAdminPathCost
-	unsigned int adminExternalPortPathCost;
-	
-	// If MSTP is implemented there is one instance per port of each of the following variables for the CIST:
-	unsigned int ExternalPortPathCost;	// 13.25.y) - 13.25.12
-	bool	infoInternal;	// 13.25.z) - 13.25.16
-	bool	master;			// 13.25.aa) - 13.25.23
-	bool	mastered;		// 13.25.ab) - 13.25.24
+	// If MSTP or the ISIS-SPB is implemented, there is one instance per port of each of the following variables for the CIST:
+	bool infoInternal; // 13.27.aa) - 13.27.31
+	bool master;       // 13.27.ab) - 13.27.36
+	bool mastered;     // 13.27.ac) - 13.27.37
 
 	// A single per port instance of the following variable(s) applies to all MSTIs:
-	bool	newInfoMsti;	// 13.25.ac) - 13.25.29
+	bool newInfoMsti; // 13.27.ad) - 13.27.43
 
 	// If the ISIS-SPB is implemented, there is one instance per port of the following variable(s):
-	bool agreedMisorder;    // 13.27.af) - 13.27.10 in 802.1Q-2018
-	unsigned char agreedN;  // 13.27.ag) - 13.27.11 in 802.1Q-2018
-	unsigned char agreedND; // 13.27.ah) - 13.27.12 in 802.1Q-2018
-	unsigned char agreeN;   // 13.27.ai) - 13.27.16 in 802.1Q-2018
-	unsigned char agreeND;  // 13.27.aj) - 13.27.17 in 802.1Q-2018
+	bool agreedMisorder;    // 13.27.af) - 13.27.10
+	unsigned char agreedN;  // 13.27.ag) - 13.27.11
+	unsigned char agreedND; // 13.27.ah) - 13.27.12
+	unsigned char agreeN;   // 13.27.ai) - 13.27.16
+	unsigned char agreeND;  // 13.27.aj) - 13.27.17
 
 	// If the ISIS-SPB is implemented, there is one instance per port of the following variable(s), with that single
 	// instance supporting all SPTs:
-	bool agreedDigest;      // 13.27.6  in 802.1Q-2018
-	bool agreedDigestValid; // 13.27.7  in 802.1Q-2018
-	bool agreeDigest;       // 13.27.8  in 802.1Q-2018
-	bool agreeDigestValid;  // 13.27.9  in 802.1Q-2018
-	bool agreedTopology;    // 13.27.14 in 802.1Q-2018
+	int  agreedDigest;      // 13.27.ak) - 13.27.6
+	bool agreedDigestValid; // 13.27.al) - 13.27.7
+	bool agreeDigest;       // 13.27.am) - 13.27.8
+	bool agreeDigestValid;  // 13.27.an) - 13.27.9
+	bool agreedTopology;    // 13.27.ao) - 13.27.14
 
-	// 13.23 State machine timers
+	// 13.25 State machine timers
 	// One instance of the following shall be implemented per port:
-	unsigned short mDelayWhile;		// a) - 13.23.1
-	unsigned short helloWhen;		// b) - 13.23.3
-	unsigned short edgeDelayWhile;	// c) - 13.23.4
+	unsigned short edgeDelayWhile; // a) - 13.25.1
+	unsigned short helloWhen;      // b) - 13.25.3
+	unsigned short mDelayWhile;    // c) - 13.25.4
 	// One instance of the following shall be implemented per port when L2GP functionality is provided:
-	unsigned short pseudoInfoHelloWhen; // d) - 13.23.10
+	unsigned short pseudoInfoHelloWhen; // d) - 13.25.10
+
+
+
 
 	PORT_TREE** trees;
 
@@ -165,6 +168,13 @@ struct PORT
 	//  - application calls STP_SetAdminP2P(AUTO) => the library must set operPointToPointMAC to XXX, which it reads from this variable.
 	// See also detectedExternalPortPathCost.
 	bool detectedPointToPointMAC;
+
+	// Not in the standard. Stores the path cost calculated in STP_OnPortEnabled, in case the user later resets the admin cost.
+	// See also detectedPointToPointMAC.
+	unsigned int detectedPortPathCost;
+
+	// Not in the standard. Stores ieee8021SpanningTreeRstpPortAdminPathCost / ieee8021MstpCistPortAdminPathCost
+	unsigned int adminExternalPortPathCost;
 
 	PortTimers::State            portTimersState;
 	PortProtocolMigration::State portProtocolMigrationState;
