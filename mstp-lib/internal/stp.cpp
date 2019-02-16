@@ -549,7 +549,7 @@ static void RunStateMachines (STP_BRIDGE* bridge, unsigned int timestamp)
 
 		// We execute the PortTransmit state machine only after all other state machines have finished executing,
 		// so as to avoid transmitting BPDUs containing results from intermediary calculations.
-		// I remember reading this in the standard somewhere.
+		// See Note 1 on page 541 of 802.1Q-2018.
 		if (!changed)
 		{
 			for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
@@ -799,22 +799,8 @@ void STP_SetMstConfigName (STP_BRIDGE* bridge, const char* name, unsigned int ti
 	memset (bridge->MstConfigId.ConfigurationName, 0, 32);
 	memcpy (bridge->MstConfigId.ConfigurationName, name, strlen (name));
 
-	if (bridge->started)
-	{
-		if (bridge->ForceProtocolVersion >= STP_VERSION_MSTP)
-		{
-			bridge->BEGIN = true;
-			RunStateMachines (bridge, timestamp);
-			bridge->BEGIN = false;
-			RunStateMachines (bridge, timestamp);
-		}
-		else
-		{
-			STP_Indent(bridge);
-			LOG (bridge, -1, -1, "(This has no effect right now as the bridge isn't configured for MSTP.\r\n");
-			STP_Unindent(bridge);
-		}
-	}
+	if (bridge->started && (bridge->ForceProtocolVersion >= STP_VERSION_MSTP))
+		RestartStateMachines(bridge, timestamp);
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
 	FLUSH_LOG (bridge);
@@ -829,22 +815,8 @@ void STP_SetMstConfigRevisionLevel (STP_BRIDGE* bridge, unsigned short revisionL
 	bridge->MstConfigId.RevisionLevelHigh = revisionLevel >> 8;
 	bridge->MstConfigId.RevisionLevelLow = revisionLevel & 0xff;
 
-	if (bridge->started)
-	{
-		if (bridge->ForceProtocolVersion >= STP_VERSION_MSTP)
-		{
-			bridge->BEGIN = true;
-			RunStateMachines (bridge, timestamp);
-			bridge->BEGIN = false;
-			RunStateMachines (bridge, timestamp);
-		}
-		else
-		{
-			STP_Indent(bridge);
-			LOG (bridge, -1, -1, "(This has no effect right now as the bridge isn't configured for MSTP.\r\n");
-			STP_Unindent(bridge);
-		}
-	}
+	if (bridge->started && (bridge->ForceProtocolVersion >= STP_VERSION_MSTP))
+		RestartStateMachines(bridge, timestamp);
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
 	FLUSH_LOG (bridge);
@@ -897,7 +869,7 @@ void STP_SetMstConfigTable (struct STP_BRIDGE* bridge, const STP_CONFIG_TABLE_EN
 			 bridge->MstConfigId.ConfigurationDigest[0], bridge->MstConfigId.ConfigurationDigest[1],
 			 bridge->MstConfigId.ConfigurationDigest[14], bridge->MstConfigId.ConfigurationDigest[15]);
 
-		if (bridge->started)
+		if (bridge->started && (bridge->ForceProtocolVersion >= STP_VERSION_MSTP))
 			RestartStateMachines(bridge, timestamp);
 	}
 
