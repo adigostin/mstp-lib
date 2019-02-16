@@ -246,4 +246,6 @@ TestAppLPC2387+IP175D/_Debug
 *.ewt
 /TestAppTM4C129+88E6352/Executable_1 clang Debug
 /TestAppTM4C129+88E6352/Executable_1 gcc Debug
+/TestAppTM4C129+88E6352/Executable_1 clang Release
+/TestAppTM4C129+88E6352/Executable_1 gcc Release
 *.hzs

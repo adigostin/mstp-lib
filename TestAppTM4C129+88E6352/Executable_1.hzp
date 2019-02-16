@@ -7,7 +7,6 @@
       Placement="Flash"
       Target="TM4C1294KCPDT"
       arm_architecture="v7EM"
-      arm_compiler_variant="clang"
       arm_core_type="Cortex-M4"
       arm_fp_abi="Hard"
       arm_fpu_type="FPv4-SP-D16"
@@ -22,7 +21,7 @@
       arm_target_loader_applicable_loaders="Flash"
       arm_target_loader_default_loader="Flash"
       arm_target_restrict_memory_accesses="Yes"
-      c_preprocessor_definitions="UVS;PART_TM4C1294KCPDT;gcc"
+      c_preprocessor_definitions="PART_TM4C1294KCPDT"
       c_user_include_directories="$(ProjectDir);$(TargetsDir)/TIVA/Include"
       debug_initial_breakpoint=""
       debug_register_definition_file="$(TargetsDir)/TIVA/TM4C1294KCPDT.svd_Peripherals.xml"
@@ -64,8 +63,7 @@
       <file file_name="$(TargetsDir)/TIVA/Include/TM4C1294KCPDT.h" />
     </folder>
     <file file_name="stp_hw_specific.cpp">
-      <configuration Name="clang Debug" build_exclude_from_build="Yes" />
-      <configuration Name="gcc Debug" build_exclude_from_build="Yes" />
+      <configuration Name="Common" build_exclude_from_build="Yes" />
     </file>
     <file file_name="main.cpp" />
     <file file_name="ethernet.cpp" />
@@ -107,8 +105,14 @@
     <file file_name="smi.cpp" />
     <file file_name="smi.h" />
     <file file_name="test.c" />
+    <configuration
+      Name="clang"
+      arm_assembler_variant="clang"
+      arm_compiler_variant="clang" />
+    <configuration Name="Release" gcc_optimization_level="Optimize For Size" />
+    <configuration Name="Debug" gcc_optimization_level="Debug" />
   </project>
-  <configuration Name="gcc Debug" inherited_configurations="THUMB;Debug" />
+  <configuration Name="gcc Debug" inherited_configurations="Debug;gcc" />
   <configuration
     Name="Debug"
     c_preprocessor_definitions="DEBUG"
@@ -121,5 +125,12 @@
     arm_instruction_set="Thumb"
     arm_library_instruction_set="Thumb"
     c_preprocessor_definitions="_THUMB" />
-  <configuration Name="clang Debug" />
+  <configuration Name="clang Debug" inherited_configurations="Debug;clang" />
+  <configuration Name="Release" hidden="Yes" />
+  <configuration
+    Name="clang Release"
+    inherited_configurations="Release;clang" />
+  <configuration Name="clang" hidden="Yes" />
+  <configuration Name="gcc" hidden="Yes" />
+  <configuration Name="gcc Release" inherited_configurations="gcc;Release" />
 </solution>
