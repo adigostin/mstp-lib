@@ -221,22 +221,22 @@ unsigned int STP_GetPortPathCost (const struct STP_BRIDGE* bridge, unsigned int 
 unsigned int STP_GetPathCostToRootBridge (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
 
 // ieee8021SpanningTreeBridgeHelloTime / dot1dStpBridgeHelloTime
-void STP_SetBridgeHelloTime (struct STP_BRIDGE* bridge, unsigned int helloTimeCentiseconds, unsigned int timestamp);
-unsigned int STP_GetBridgeHelloTime (const struct STP_BRIDGE* bridge); // centiseconds
+void STP_SetBridgeHelloTime (struct STP_BRIDGE* bridge, unsigned int helloTime, unsigned int timestamp);
+unsigned int STP_GetBridgeHelloTime (const struct STP_BRIDGE* bridge);
 // ieee8021SpanningTreeHelloTime / dot1dStpHelloTime
-unsigned int STP_GetHelloTime (const struct STP_BRIDGE* bridge); // centiseconds
+unsigned int STP_GetHelloTime (const struct STP_BRIDGE* bridge);
 
 // ieee8021SpanningTreeBridgeMaxAge / dot1dStpBridgeMaxAge
-void STP_SetBridgeMaxAge (struct STP_BRIDGE* bridge, unsigned int maxAgeCentiseconds, unsigned int timestamp);
-unsigned int STP_GetBridgeMaxAge (const struct STP_BRIDGE* bridge); // centiseconds
+void STP_SetBridgeMaxAge (struct STP_BRIDGE* bridge, unsigned int maxAge, unsigned int timestamp);
+unsigned int STP_GetBridgeMaxAge (const struct STP_BRIDGE* bridge);
 // ieee8021SpanningTreeMaxAge / dot1dStpMaxAge
-unsigned int STP_GetMaxAge (const struct STP_BRIDGE* bridge); // centiseconds
+unsigned int STP_GetMaxAge (const struct STP_BRIDGE* bridge);
 
 // ieee8021SpanningTreeBridgeForwardDelay / dot1dStpBridgeForwardDelay
-void STP_SetBridgeForwardDelay (struct STP_BRIDGE* bridge, unsigned int forwardDelayCentiseconds, unsigned int timestamp);
-unsigned int STP_GetBridgeForwardDelay (const struct STP_BRIDGE* bridge); // centiseconds
+void STP_SetBridgeForwardDelay (struct STP_BRIDGE* bridge, unsigned int forwardDelay, unsigned int timestamp);
+unsigned int STP_GetBridgeForwardDelay (const struct STP_BRIDGE* bridge);
 // ieee8021SpanningTreeForwardDelay / dot1dStpForwardDelay
-unsigned int STP_GetForwardDelay (const struct STP_BRIDGE* bridge); // centiseconds
+unsigned int STP_GetForwardDelay (const struct STP_BRIDGE* bridge);
 
 void  STP_SetApplicationContext (struct STP_BRIDGE* bridge, void* applicationContext);
 void* STP_GetApplicationContext (const struct STP_BRIDGE* bridge);

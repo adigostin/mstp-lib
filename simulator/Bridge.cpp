@@ -791,37 +791,37 @@ void Bridge::SetStpVersion (STP_VERSION value)
 
 uint32_t Bridge::GetBridgeHelloTime() const
 {
-	return (uint32_t) STP_GetBridgeHelloTime(_stpBridge) / 100;
+	return (uint32_t) STP_GetBridgeHelloTime(_stpBridge);
 }
 
 void Bridge::SetBridgeHelloTime (uint32_t helloTime)
 {
 	this->on_property_changing(&BridgeHelloTime);
-	STP_SetBridgeHelloTime(_stpBridge, helloTime * 100, GetMessageTime());
+	STP_SetBridgeHelloTime(_stpBridge, helloTime, GetMessageTime());
 	this->on_property_changed(&BridgeHelloTime);
 }
 
 uint32_t Bridge::GetBridgeMaxAge() const
 {
-	return (uint32_t) STP_GetBridgeMaxAge(_stpBridge) / 100;
+	return (uint32_t) STP_GetBridgeMaxAge(_stpBridge);
 }
 
 void Bridge::SetBridgeMaxAge (uint32_t maxAge)
 {
 	this->on_property_changing(&BridgeMaxAge);
-	STP_SetBridgeMaxAge (_stpBridge, maxAge * 100, GetMessageTime());
+	STP_SetBridgeMaxAge (_stpBridge, maxAge, GetMessageTime());
 	this->on_property_changed(&BridgeMaxAge);
 }
 
 uint32_t Bridge::GetBridgeForwardDelay() const
 {
-	return (uint32_t) STP_GetBridgeForwardDelay(_stpBridge) / 100;
+	return (uint32_t) STP_GetBridgeForwardDelay(_stpBridge);
 }
 
 void Bridge::SetBridgeForwardDelay (uint32_t forwardDelay)
 {
 	this->on_property_changing(&BridgeForwardDelay);
-	STP_SetBridgeForwardDelay (_stpBridge, forwardDelay * 100, GetMessageTime());
+	STP_SetBridgeForwardDelay (_stpBridge, forwardDelay, GetMessageTime());
 	this->on_property_changed(&BridgeForwardDelay);
 }
 
@@ -916,7 +916,7 @@ const edge::uint32_p Bridge::BridgeForwardDelay {
 	&bridge_times_group,
 	nullptr,
 	//static_cast<edge::uint32_p::member_getter_t>(&Bridge::GetBridgeForwardDelay),
-	[](const object* o) { return (uint32_t) STP_GetBridgeForwardDelay(static_cast<const Bridge*>(o)->stp_bridge()) / 100; },
+	static_cast<edge::uint32_p::member_getter_t>(&Bridge::GetBridgeForwardDelay),
 	static_cast<edge::uint32_p::member_setter_t>(&Bridge::SetBridgeForwardDelay),
 	15 };
 
