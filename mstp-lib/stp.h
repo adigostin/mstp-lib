@@ -238,6 +238,9 @@ unsigned int STP_GetBridgeForwardDelay (const struct STP_BRIDGE* bridge);
 // ieee8021SpanningTreeForwardDelay / dot1dStpForwardDelay
 unsigned int STP_GetForwardDelay (const struct STP_BRIDGE* bridge);
 
+void STP_SetTxHoldCount (struct STP_BRIDGE* bridge, unsigned int txHoldCound, unsigned int timestamp);
+unsigned int STP_GetTxHoldCount (const struct STP_BRIDGE* bridge);
+
 void  STP_SetApplicationContext (struct STP_BRIDGE* bridge, void* applicationContext);
 void* STP_GetApplicationContext (const struct STP_BRIDGE* bridge);
 

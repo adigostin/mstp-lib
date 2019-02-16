@@ -56,7 +56,7 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 
 	// See "13.6.2 Force Protocol Version" on page 332
 	bridge->ForceProtocolVersion = STP_VERSION_RSTP;
-
+	bridge->TxHoldCount = 6;
 	bridge->callbacks = *callbacks;
 	bridge->portCount = portCount;
 	bridge->mstiCount = mstiCount;
@@ -1284,3 +1284,19 @@ extern "C" unsigned int STP_GetForwardDelay (const struct STP_BRIDGE* bridge)
 }
 
 // ============================================================================
+
+extern "C" void STP_SetTxHoldCount (struct STP_BRIDGE* bridge, unsigned int txHoldCound, unsigned int timestamp)
+{
+	assert (txHoldCound >= 1 && txHoldCound <= 10); // Table 13-5 in 802.1Q-2018.
+	if (bridge->TxHoldCount != txHoldCound)
+	{
+		bridge->TxHoldCount = txHoldCound;
+		for (unsigned int pi = 0; pi < bridge->portCount; pi++)
+			bridge->ports[pi]->txCount = 0;
+	}
+}
+
+extern "C" unsigned int STP_GetTxHoldCount (const struct STP_BRIDGE* bridge)
+{
+	return bridge->TxHoldCount;
+}

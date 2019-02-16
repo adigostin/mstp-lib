@@ -103,7 +103,7 @@ struct STP_BRIDGE
 	// 13.24 Per bridge variables
 	// There is one instance per bridge component of the following variable(s):
 	STP_VERSION ForceProtocolVersion;				// 13.24.a) - 13.24.4
-	static const unsigned int TxHoldCount = 6;		// 13.24.b) - 13.24.10
+	unsigned int TxHoldCount;                   // 13.26.b) - 13.26.12
 	static const unsigned short MigrateTime = 3;	// 13.24.c) - 13.24.5
 	STP_MST_CONFIG_ID MstConfigId;					// 13.24.d) - 13.24.6
 	// The above parameters ((a) through (d)) are not modified by the operation of the spanning tree protocols, but
