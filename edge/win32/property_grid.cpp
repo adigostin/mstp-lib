@@ -30,7 +30,7 @@ class edge::property_grid : d2d_window, public virtual property_grid_i
 	com_ptr<IDWriteTextFormat> _boldTextFormat;
 	com_ptr<IDWriteTextFormat> _wingdings;
 	std::unique_ptr<text_editor_i> _text_editor;
-	float _name_column_factor = 0.5f;
+	float _name_column_factor = 0.6f;
 	float _pixel_width;
 	float _line_thickness;
 	float _description_height = 120;
