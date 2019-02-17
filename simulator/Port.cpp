@@ -3,6 +3,7 @@
 #include "Port.h"
 #include "Bridge.h"
 #include "win32/utility_functions.h"
+#include "win32/d2d_window.h"
 
 using namespace std;
 using namespace D2D1;
@@ -238,11 +239,21 @@ void Port::Render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned
 	auto treeIndex  = STP_GetTreeIndexFromVlanNumber(b, vlanNumber);
 	if (STP_IsBridgeStarted (b))
 	{
-		auto role       = STP_GetPortRole (b, (unsigned int) _portIndex, treeIndex);
-		auto learning   = STP_GetPortLearning (b, (unsigned int) _portIndex, treeIndex);
-		auto forwarding = STP_GetPortForwarding (b, (unsigned int) _portIndex, treeIndex);
-		auto operEdge   = STP_GetPortOperEdge (b, (unsigned int) _portIndex);
+		auto role       = STP_GetPortRole (b, _portIndex, treeIndex);
+		auto learning   = STP_GetPortLearning (b, _portIndex, treeIndex);
+		auto forwarding = STP_GetPortForwarding (b, _portIndex, treeIndex);
+		auto operEdge   = STP_GetPortOperEdge (b, _portIndex);
 		RenderExteriorStpPort (rt, dos, role, learning, forwarding, operEdge);
+
+		if (STP_GetTxCount(b, _portIndex) == STP_GetTxHoldCount(b))
+		{
+			auto layout = edge::text_layout::create (dos._dWriteFactory, dos._smallTextFormat, "txCount=TxHoldCount");
+			D2D1_MATRIX_3X2_F old;
+			rt->GetTransform(&old);
+			rt->SetTransform (Matrix3x2F::Rotation(-90) * old);
+			rt->DrawTextLayout ({ -layout.metrics.width - 3, 2 }, layout.layout, dos._brushWindowText);
+			rt->SetTransform(&old);
+		}
 
 		if (role == STP_PORT_ROLE_ROOT)
 			interiorPortOutlineWidth *= 2;
@@ -260,7 +271,7 @@ void Port::Render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned
 	auto hr = dos._dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 9, L"en-US", &format); assert(SUCCEEDED(hr));
 	com_ptr<IDWriteTextLayout> layout;
 	wstringstream ss;
-	ss << setfill(L'0') << setw(4) << hex << STP_GetPortIdentifier(b, (unsigned int) _portIndex, treeIndex);
+	ss << setfill(L'0') << setw(4) << hex << STP_GetPortIdentifier(b, _portIndex, treeIndex);
 	auto portIdText = ss.str();
 	hr = dos._dWriteFactory->CreateTextLayout (portIdText.c_str(), (UINT32) portIdText.length(), format, 10000, 10000, &layout); assert(SUCCEEDED(hr));
 	DWRITE_TEXT_METRICS metrics;

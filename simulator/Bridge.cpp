@@ -436,7 +436,6 @@ static const _bstr_t BridgeTreesString = "BridgeTrees";
 static const _bstr_t VlanString = "Vlan";
 static const _bstr_t TreeString = "Tree";
 static const _bstr_t PortsString = "Ports";
-static const _bstr_t BridgeHelloTimeString = L"BridgeHelloTime";
 static const _bstr_t BridgeMaxAgeString = L"BridgeMaxAge";
 static const _bstr_t BridgeForwardDelayString = L"BridgeForwardDelay";
 
@@ -457,7 +456,6 @@ com_ptr<IXMLDOMElement> Bridge::Serialize (size_t bridgeIndex, IXMLDOMDocument3*
 	bridgeElement->setAttribute (YString,             _variant_t(_y));
 	bridgeElement->setAttribute (WidthString,         _variant_t(_width));
 	bridgeElement->setAttribute (HeightString,        _variant_t(_height));
-	bridgeElement->setAttribute (BridgeHelloTimeString,    _variant_t(GetBridgeHelloTime()));
 	bridgeElement->setAttribute (BridgeMaxAgeString,       _variant_t(GetBridgeMaxAge()));
 	bridgeElement->setAttribute (BridgeForwardDelayString, _variant_t(GetBridgeForwardDelay()));
 
@@ -556,10 +554,6 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 		else
 			STP_StopBridge (bridge->_stpBridge, GetMessageTime());
 	}
-
-	hr = element->getAttribute(BridgeHelloTimeString, &value);
-	if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
-		bridge->SetBridgeHelloTime (wcstoul (value.bstrVal, nullptr, 10));
 
 	hr = element->getAttribute(BridgeMaxAgeString, &value);
 	if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
@@ -789,18 +783,6 @@ void Bridge::SetStpVersion (STP_VERSION value)
 	}
 }
 
-uint32_t Bridge::GetBridgeHelloTime() const
-{
-	return (uint32_t) STP_GetBridgeHelloTime(_stpBridge);
-}
-
-void Bridge::SetBridgeHelloTime (uint32_t helloTime)
-{
-	this->on_property_changing(&BridgeHelloTime);
-	STP_SetBridgeHelloTime(_stpBridge, helloTime, GetMessageTime());
-	this->on_property_changed(&BridgeHelloTime);
-}
-
 uint32_t Bridge::GetBridgeMaxAge() const
 {
 	return (uint32_t) STP_GetBridgeMaxAge(_stpBridge);
@@ -808,9 +790,9 @@ uint32_t Bridge::GetBridgeMaxAge() const
 
 void Bridge::SetBridgeMaxAge (uint32_t maxAge)
 {
-	this->on_property_changing(&BridgeMaxAge);
+	this->on_property_changing (&bridge_max_age_property);
 	STP_SetBridgeMaxAge (_stpBridge, maxAge, GetMessageTime());
-	this->on_property_changed(&BridgeMaxAge);
+	this->on_property_changed (&bridge_max_age_property);
 }
 
 uint32_t Bridge::GetBridgeForwardDelay() const
@@ -820,14 +802,14 @@ uint32_t Bridge::GetBridgeForwardDelay() const
 
 void Bridge::SetBridgeForwardDelay (uint32_t forwardDelay)
 {
-	this->on_property_changing(&BridgeForwardDelay);
+	this->on_property_changing (&bridge_forward_delay_property);
 	STP_SetBridgeForwardDelay (_stpBridge, forwardDelay, GetMessageTime());
-	this->on_property_changed(&BridgeForwardDelay);
+	this->on_property_changed (&bridge_forward_delay_property);
 }
 
 #pragma region properties
 
-static const edge::property_group bridge_times_group = { 5, "Bridge Times" };
+static const edge::property_group bridge_times_group = { 5, "Timer Params (Table 13-5)" };
 static const edge::property_group mst_group = { 10, "MST Config Id" };
 
 const mac_address_p Bridge::bridge_address_property {
@@ -895,15 +877,24 @@ const config_id_digest_p Bridge::MstConfigIdDigest (
 	nullptr,
 	std::nullopt);
 
-const edge::uint32_p Bridge::BridgeHelloTime {
+#pragma region Timer and related parameters from Table 13-5
+const edge::uint32_p Bridge::migrate_time_property (
+	"MigrateTime",
+	&bridge_times_group,
+	nullptr,
+	[](const object* o) { return 3u; },
+	nullptr,
+	3);
+
+const edge::uint32_p Bridge::bridge_hello_time_property {
 	"BridgeHelloTime",
 	&bridge_times_group,
 	nullptr,
-	static_cast<edge::uint32_p::member_getter_t>(&Bridge::GetBridgeHelloTime),
-	static_cast<edge::uint32_p::member_setter_t>(&Bridge::SetBridgeHelloTime),
+	[](const object* o) { return 2u; },
+	nullptr,
 	2 };
 
-const edge::uint32_p Bridge::BridgeMaxAge {
+const edge::uint32_p Bridge::bridge_max_age_property {
 	"BridgeMaxAge",
 	&bridge_times_group,
 	nullptr,
@@ -911,7 +902,7 @@ const edge::uint32_p Bridge::BridgeMaxAge {
 	static_cast<edge::uint32_p::member_setter_t>(&Bridge::SetBridgeMaxAge),
 	20 };
 
-const edge::uint32_p Bridge::BridgeForwardDelay {
+const edge::uint32_p Bridge::bridge_forward_delay_property {
 	"BridgeForwardDelay",
 	&bridge_times_group,
 	nullptr,
@@ -919,6 +910,23 @@ const edge::uint32_p Bridge::BridgeForwardDelay {
 	static_cast<edge::uint32_p::member_getter_t>(&Bridge::GetBridgeForwardDelay),
 	static_cast<edge::uint32_p::member_setter_t>(&Bridge::SetBridgeForwardDelay),
 	15 };
+
+const edge::uint32_p Bridge::tx_hold_count_property (
+	"TxHoldCount",
+	&bridge_times_group,
+	nullptr,
+	[](const object* o) { return STP_GetTxHoldCount(static_cast<const Bridge*>(o)->stp_bridge()); },
+	[](object* o, uint32_t value) { STP_SetTxHoldCount(static_cast<Bridge*>(o)->stp_bridge(), value, ::GetMessageTime()); },
+	6);
+
+const edge::uint32_p Bridge::max_hops_property (
+	"MaxHops",
+	&bridge_times_group,
+	"Setting this is not yet implemented in the library",
+	[](const object* o) { return 20u; },
+	nullptr,
+	6);
+#pragma endregion
 
 const edge::property* const Bridge::_properties[] = {
 	&bridge_address_property,
@@ -929,9 +937,12 @@ const edge::property* const Bridge::_properties[] = {
 	&MstConfigIdName,
 	&MstConfigIdRevLevel,
 	&MstConfigIdDigest,
-	&BridgeHelloTime,
-	&BridgeMaxAge,
-	&BridgeForwardDelay,
+	&migrate_time_property,
+	&bridge_hello_time_property,
+	&bridge_max_age_property,
+	&bridge_forward_delay_property,
+	&tx_hold_count_property,
+	&max_hops_property
 };
 
 const edge::type_t Bridge::_type = { "Bridge", &base::_type, _properties };

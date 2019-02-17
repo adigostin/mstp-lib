@@ -254,6 +254,7 @@ unsigned int STP_GetForwardDelay (const struct STP_BRIDGE* bridge);
 
 void STP_SetTxHoldCount (struct STP_BRIDGE* bridge, unsigned int txHoldCound, unsigned int timestamp);
 unsigned int STP_GetTxHoldCount (const struct STP_BRIDGE* bridge);
+unsigned int STP_GetTxCount (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
 void  STP_SetApplicationContext (struct STP_BRIDGE* bridge, void* applicationContext);
 void* STP_GetApplicationContext (const struct STP_BRIDGE* bridge);

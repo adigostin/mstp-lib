@@ -142,8 +142,6 @@ public:
 	void SetMstConfigIdRevLevel (uint32_t revLevel);
 	std::string GetMstConfigIdDigest() const;
 	void SetMstConfigTable (const STP_CONFIG_TABLE_ENTRY* entries, size_t entryCount);
-	uint32_t GetBridgeHelloTime() const;
-	void SetBridgeHelloTime (uint32_t helloTime);
 	uint32_t GetBridgeMaxAge() const;
 	void SetBridgeMaxAge (uint32_t maxAge);
 	uint32_t GetBridgeForwardDelay() const;
@@ -178,9 +176,12 @@ public:
 	static const edge::temp_string_p MstConfigIdName;
 	static const edge::uint32_p      MstConfigIdRevLevel;
 	static const config_id_digest_p  MstConfigIdDigest;
-	static const edge::uint32_p      BridgeHelloTime;
-	static const edge::uint32_p      BridgeMaxAge;
-	static const edge::uint32_p      BridgeForwardDelay;
+	static const edge::uint32_p      migrate_time_property;
+	static const edge::uint32_p      bridge_hello_time_property;
+	static const edge::uint32_p      bridge_max_age_property;
+	static const edge::uint32_p      bridge_forward_delay_property;
+	static const edge::uint32_p      tx_hold_count_property;
+	static const edge::uint32_p      max_hops_property;
 
 	static const edge::property* const _properties[];
 	static const edge::type_t _type;

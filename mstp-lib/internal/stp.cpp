@@ -1259,3 +1259,9 @@ extern "C" unsigned int STP_GetTxHoldCount (const struct STP_BRIDGE* bridge)
 {
 	return bridge->TxHoldCount;
 }
+
+extern "C" unsigned int STP_GetTxCount (const struct STP_BRIDGE* bridge, unsigned int portIndex)
+{
+	return bridge->ports[portIndex]->txCount;
+}
+
