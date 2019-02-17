@@ -1599,15 +1599,17 @@ bool msti (const STP_BRIDGE* bridge, TreeIndex treeIndex)
 }
 
 // ============================================================================
-// 13.26.l) - 13.26.12
+// 13.28.14
 // TRUE if the role for any MSTI for the given port is either:
 // a) DesignatedPort; or
 // b) RootPort, and the instance for the given MSTI and port of the tcWhile timer is not zero.
 bool mstiDesignatedOrTCpropagatingRootPort (const STP_BRIDGE* bridge, PortIndex givenPort)
 {
+	assert (bridge->ForceProtocolVersion <= STP_VERSION_MSTP); // not yet implemented for SPT
+
 	for (unsigned int mstiIndex = 0; mstiIndex < bridge->mstiCount; mstiIndex++)
 	{
-		PORT_TREE* mstiInstance = bridge->ports [givenPort]->trees [1 + mstiIndex];
+		PORT_TREE* mstiInstance = bridge->ports[givenPort]->trees[1 + mstiIndex];
 
 		if (mstiInstance->role == STP_PORT_ROLE_DESIGNATED)
 			return true;
@@ -1620,13 +1622,16 @@ bool mstiDesignatedOrTCpropagatingRootPort (const STP_BRIDGE* bridge, PortIndex 
 }
 
 // ============================================================================
-// 13.26.m) - 13.26.13
+// 13.28.15
 // TRUE if the role for any MSTI for the given port is MasterPort.
 bool mstiMasterPort (const STP_BRIDGE* bridge, PortIndex givenPort)
 {
+	assert (bridge->ForceProtocolVersion <= STP_VERSION_MSTP); // not yet implemented for SPT
+
+	PORT* port = bridge->ports[givenPort];
 	for (unsigned int mstiIndex = 0; mstiIndex < bridge->mstiCount; mstiIndex++)
 	{
-		if (bridge->ports [givenPort]->trees [1 + mstiIndex]->role == STP_PORT_ROLE_MASTER)
+		if (port->trees [1 + mstiIndex]->role == STP_PORT_ROLE_MASTER)
 			return true;
 	}
 
@@ -1634,15 +1639,24 @@ bool mstiMasterPort (const STP_BRIDGE* bridge, PortIndex givenPort)
 }
 
 // ============================================================================
-// 13.26.o) - 13.26.15
+// 13.28.16
+// TRUE if operPointToPointMAC (IEEE Std 802.1AC) is TRUE for the Bridge Port.
+bool operPointToPoint (const STP_BRIDGE* bridge, PortIndex portIndex)
+{
+	return bridge->ports[portIndex]->operPointToPointMAC;
+}
+
+// ============================================================================
+// 13.28.17
 // TRUE for a given port if rcvdMsg is TRUE for the CIST or any MSTI for that port.
 bool rcvdAnyMsg (const STP_BRIDGE* bridge, PortIndex givenPort)
 {
-	PORT* port = bridge->ports [givenPort];
+	assert (bridge->ForceProtocolVersion <= STP_VERSION_MSTP); // not yet implemented for SPT
 
+	PORT* port = bridge->ports [givenPort];
 	for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount(); treeIndex++)
 	{
-		if (port->trees [treeIndex]->rcvdMsg)
+		if (port->trees[treeIndex]->rcvdMsg)
 			return true;
 	}
 
@@ -1650,36 +1664,37 @@ bool rcvdAnyMsg (const STP_BRIDGE* bridge, PortIndex givenPort)
 }
 
 // ============================================================================
-// 13.26.p) - 13.26.16
+// 13.28.18
 // TRUE for a given port if and only if rcvdMsg is TRUE for the CIST for that port.
 bool rcvdCistMsg (const STP_BRIDGE* bridge, PortIndex givenPort)
 {
-	return bridge->ports [givenPort]->trees [CIST_INDEX]->rcvdMsg;
+	return bridge->ports[givenPort]->trees[CIST_INDEX]->rcvdMsg;
 }
 
 // ============================================================================
-// 13.26.q) - 13.26.17
+// 13.26.17
 // TRUE for a given port and MSTI if and only if rcvdMsg is FALSE for the CIST for that port and rcvdMsg is
 // TRUE for the MSTI for that port.
 bool rcvdMstiMsg (const STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 {
+	assert (bridge->ForceProtocolVersion <= STP_VERSION_MSTP); // not yet implemented for SPT
 	assert (givenTree != CIST_INDEX); // this must be invoked on MSTIs only
 
-	return ((bridge->ports [givenPort]->trees [CIST_INDEX]->rcvdMsg == false)
-		&& (bridge->ports [givenPort]->trees [givenTree]->rcvdMsg == true));
+	PORT* port = bridge->ports[givenPort];
+	return !port->trees[CIST_INDEX]->rcvdMsg && port->trees[givenTree]->rcvdMsg;
 }
 
 // ============================================================================
-// 13.26.r) - 13.26.18
+// 13.28.20
 // TRUE if the rrWhile timer is clear (zero) for all Ports for the given tree other than the given Port.
 bool reRooted (const STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 {
 	for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
 	{
-		if (portIndex == (unsigned int) givenPort)
+		if (portIndex == givenPort)
 			continue;
 
-		if (bridge->ports [portIndex]->trees [givenTree]->rrWhile != 0)
+		if (bridge->ports[portIndex]->trees[givenTree]->rrWhile != 0)
 			return false;
 	}
 
@@ -1687,57 +1702,60 @@ bool reRooted (const STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTre
 }
 
 // ============================================================================
-// 13.26.s) - 13.26.19
-// TRUE if ForceProtocolVersion (13.6.2) is greater than or equal to 2.
+// 13.28.21
+// TRUE if ForceProtocolVersion (13.7.2) is greater than or equal to 2.
 bool rstpVersion (const STP_BRIDGE* bridge)
 {
 	return bridge->ForceProtocolVersion >= 2;
 }
 
 // ============================================================================
-// 13.28.v) - 13.28.22 in 802.1Q-2018
+// 13.28.22
 // TRUE only for SPT state machines, in an SPT Bridge; i.e., FALSE for CIST and MSTI state machine instances.
 bool spt (const STP_BRIDGE* bridge)
 {
-	assert (bridge->ForceProtocolVersion <= STP_VERSION_MSTP);
+	assert (bridge->ForceProtocolVersion <= STP_VERSION_MSTP); // not yet implemented for SPT
 	return false;
 }
 
 // ============================================================================
-// 13.26.t - 13.26.20
-// TRUE if Force Protocol Version (13.6.2) is less than 2.
+// 13.28.23
+// TRUE if Force Protocol Version (13.7.2) is less than 2.
 bool stpVersion (const STP_BRIDGE* bridge)
 {
 	return bridge->ForceProtocolVersion < 2;
 }
 
 // ============================================================================
-// 13.26.u) - 13.26.21
+// 13.28.24
 // TRUE for a given port if and only if updtInfo is TRUE for the CIST for that port.
 bool updtCistInfo (const STP_BRIDGE* bridge, PortIndex givenPort)
 {
-	return bridge->ports [givenPort]->trees [CIST_INDEX]->updtInfo;
+	return bridge->ports[givenPort]->trees[CIST_INDEX]->updtInfo;
 }
 
 // ============================================================================
-// 13.26.v) - 13.26.22
+// 13.28.25
 // TRUE for a given port and MSTI if and only if updtInfo is TRUE for the MSTI for that port or updtInfo is
 // TRUE for the CIST for that port.
 //
-// NOTE-The dependency of rcvdMstiMsg and updtMstiInfo on CIST variables for the port reflects the fact that MSTIs
+// NOTE—The dependency of rcvdMstiMsg and updtMstiInfo on CIST variables for the port reflects the fact that MSTIs
 // exist in a context of CST parameters. The state machines ensure that the CIST parameters from received BPDUs are
 // processed and updated prior to processing MSTI information.
 bool updtMstiInfo (const STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 {
+	assert (bridge->ForceProtocolVersion <= STP_VERSION_MSTP); // not yet implemented for SPT
 	assert (givenTree != CIST_INDEX); // this must be invoked on MSTIs only
 
-	return (bridge->ports [givenPort]->trees [givenTree]->updtInfo || bridge->ports [givenPort]->trees [CIST_INDEX]->updtInfo);
+	return bridge->ports[givenPort]->trees[givenTree]->updtInfo || bridge->ports[givenPort]->trees[CIST_INDEX]->updtInfo;
 }
 
 // ============================================================================
-// added by us
+// Note AG: added by me.
 bool rcvdXstMsg	(const STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 {
+	assert (bridge->ForceProtocolVersion <= STP_VERSION_MSTP); // not yet implemented for SPT
+
 	if (givenTree == CIST_INDEX)
 		return rcvdCistMsg (bridge, givenPort);
 	else
@@ -1745,9 +1763,11 @@ bool rcvdXstMsg	(const STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenT
 }
 
 // ============================================================================
-// added by us
+// Note AG: added by me.
 bool updtXstInfo (const STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 {
+	assert (bridge->ForceProtocolVersion <= STP_VERSION_MSTP); // not yet implemented for SPT
+
 	return (givenTree == CIST_INDEX) ? updtCistInfo (bridge, givenPort) : updtMstiInfo (bridge, givenPort, givenTree);
 }
 
