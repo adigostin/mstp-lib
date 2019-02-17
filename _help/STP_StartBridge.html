@@ -17,7 +17,7 @@ void STP_StartBridge
 </pre>
 	<h4>
 		Summary</h4>
-	<p>Starts a bridge.
+	<p>Starts the Spanning Tree Protocol on a bridge.
 		</p>
 	<h4>
 		Parameters</h4>
@@ -31,10 +31,18 @@ void STP_StartBridge
 	<h4>
 		Remarks</h4>
 	<p>
-		This function is useful when the application wants to set operational parameters, such as 
-		priorities, at bridge startup. In this case it creates the bridge with
-		<a href="STP_CreateBridge.html">STP_CreateBridge</a>, then sets these parameters, and then 
-		starts the bridge by calling this function.</p>
+		Starting the Spanning Tree Protocol from application code is usually a 
+		three-step procedure:</p>
+	<ul>
+		<li>a call to <a href="STP_CreateBridge.html">STP_CreateBridge</a>, which allocates 
+			internal structures and initializes all parameters to default values;</li>
+		<li>various calls to functions such as <a href="STP_SetBridgePriority.html">STP_SetBridgePriority</a>
+		and <a href="STP_SetStpVersion.html">STP_SetStpVersion</a>, possibly with values 
+			read from a configuration file; the protocol is not yet started, so there won&#39;t 
+			be any STP activity with temporary parameters.</li>
+		<li>a call to this function, which starts the protocol directly with 
+			application-specified parameters.</li>
+	</ul>
 	<p>
 		The 
 		application must not call this function for already-started bridges.</p>
