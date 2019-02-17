@@ -8,6 +8,24 @@ using namespace std;
 using namespace D2D1;
 using namespace edge;
 
+const edge::NVP SideNVPs[] =
+{
+	{ "Left",   (int) side::left },
+	{ "Top",    (int) side::top },
+	{ "Right",  (int) side::right },
+	{ "Bottom", (int) side::bottom },
+	{ 0, 0 },
+};
+
+const char admin_p2p_type_name[] = "admin_p2p";
+const edge::NVP admin_p2p_nvps[] =
+{
+	{ "ForceTrue", (int)STP_ADMIN_P2P_FORCE_TRUE },
+	{ "ForceFalse", (int)STP_ADMIN_P2P_FORCE_FALSE },
+	{ "Auto", (int)STP_ADMIN_P2P_AUTO },
+	{ 0, 0 },
+};
+
 Port::Port (Bridge* bridge, unsigned int portIndex, side side, float offset)
 	: _bridge(bridge), _portIndex(portIndex), _side(side), _offset(offset)
 {
@@ -437,14 +455,14 @@ unsigned int Port::GetDetectedPortPathCost() const
 
 unsigned int Port::GetAdminExternalPortPathCost() const
 {
-	return STP_GetAdminPortPathCost (_bridge->stp_bridge(), _portIndex, 0);
+	return STP_GetAdminExternalPortPathCost (_bridge->stp_bridge(), _portIndex);
 }
 
 void Port::SetAdminExternalPortPathCost(unsigned int adminExternalPortPathCost)
 {
 	this->on_property_changing (&AdminExternalPortPathCost);
 	this->on_property_changing (&ExternalPortPathCost);
-	STP_SetAdminPortPathCost (_bridge->stp_bridge(), _portIndex, 0, adminExternalPortPathCost, GetMessageTime());
+	STP_SetAdminExternalPortPathCost (_bridge->stp_bridge(), _portIndex, adminExternalPortPathCost, GetMessageTime());
 	this->on_property_changed (&ExternalPortPathCost);
 	this->on_property_changed (&AdminExternalPortPathCost);
 }
@@ -452,7 +470,31 @@ void Port::SetAdminExternalPortPathCost(unsigned int adminExternalPortPathCost)
 unsigned int Port::GetExternalPortPathCost() const
 {
 	unsigned int treeIndex = 0; // CIST
-	return STP_GetPortPathCost (_bridge->stp_bridge(), _portIndex, treeIndex);
+	return STP_GetExternalPortPathCost (_bridge->stp_bridge(), _portIndex);
+}
+
+bool Port::detected_p2p() const
+{
+	return STP_GetDetectedPointToPointMAC(_bridge->stp_bridge(), _portIndex);
+}
+
+STP_ADMIN_P2P Port::admin_p2p() const
+{
+	return STP_GetAdminPointToPointMAC(_bridge->stp_bridge(), _portIndex);
+}
+
+void Port::set_admin_p2p (STP_ADMIN_P2P admin_p2p)
+{
+	this->on_property_changing (&admin_p2p_property);
+	this->on_property_changing (&oper_p2p_property);
+	STP_SetAdminPointToPointMAC (_bridge->stp_bridge(), _portIndex, admin_p2p, ::GetMessageTime());
+	this->on_property_changed (&oper_p2p_property);
+	this->on_property_changed (&admin_p2p_property);
+}
+
+bool Port::oper_p2p() const
+{
+	return STP_GetOperPointToPointMAC(_bridge->stp_bridge(), _portIndex);
 }
 
 const bool_p Port::auto_edge_property
@@ -492,7 +534,7 @@ const bool_p Port::MacOperational (
 	nullptr,
 	false);
 
-static const edge::property_group port_path_cost_group = { 5, "Port Path Cost" };
+static const edge::property_group port_path_cost_group = { 5, "Port Path Costs" };
 
 const uint32_p Port::DetectedPortPathCost (
 	"DetectedPortPathCost",
@@ -518,6 +560,32 @@ const uint32_p Port::ExternalPortPathCost (
 	nullptr,
 	0);
 
+static const edge::property_group p2p_group = { 4, "Point to Point" };
+
+const bool_p Port::detected_p2p_property (
+	"detectedPointToPointMAC",
+	&p2p_group,
+	nullptr,
+	static_cast<bool_p::member_getter_t>(&detected_p2p),
+	nullptr,
+	std::nullopt);
+
+const admin_p2p_p Port::admin_p2p_property (
+	"adminPointToPointMAC",
+	&p2p_group,
+	nullptr,
+	static_cast<admin_p2p_p::member_getter_t>(&admin_p2p),
+	static_cast<admin_p2p_p::member_setter_t>(&set_admin_p2p),
+	STP_ADMIN_P2P_AUTO);
+
+const edge::bool_p Port::oper_p2p_property (
+	"operPointToPointMAC",
+	&p2p_group,
+	nullptr,
+	static_cast<bool_p::member_getter_t>(&oper_p2p),
+	nullptr,
+	std::nullopt);
+
 const edge::property* const Port::_properties[] =
 {
 	&auto_edge_property,
@@ -526,6 +594,9 @@ const edge::property* const Port::_properties[] =
 	&DetectedPortPathCost,
 	&AdminExternalPortPathCost,
 	&ExternalPortPathCost,
+	&detected_p2p_property,
+	&admin_p2p_property,
+	&oper_p2p_property,
 };
 
 const edge::type_t Port::_type = { "port", &base::_type, _properties };

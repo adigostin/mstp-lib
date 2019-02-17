@@ -160,18 +160,46 @@ bool STP_GetPortAdminEdge (const struct STP_BRIDGE* bridge, unsigned int portInd
 void STP_SetPortAutoEdge (struct STP_BRIDGE* bridge, unsigned int portIndex, bool autoEdge, unsigned int timestamp);
 bool STP_GetPortAutoEdge (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
+// ----------------------------------------------------------------------------
+
 // ieee8021BridgeBasePortAdminPointToPoint / dot1dStpPortAdminPointToPoint
-void STP_SetPortAdminPointToPointMAC (struct STP_BRIDGE* bridge, unsigned int portIndex, enum STP_ADMIN_P2P adminPointToPointMAC, unsigned int timestamp);
-enum STP_ADMIN_P2P STP_GetPortAdminPointToPointMAC (const struct STP_BRIDGE* bridge, unsigned int portIndex);
+void STP_SetAdminPointToPointMAC (struct STP_BRIDGE* bridge, unsigned int portIndex, enum STP_ADMIN_P2P adminPointToPointMAC, unsigned int timestamp);
+enum STP_ADMIN_P2P STP_GetAdminPointToPointMAC (const struct STP_BRIDGE* bridge, unsigned int portIndex);
+bool STP_GetDetectedPointToPointMAC (const struct STP_BRIDGE* bridge, unsigned int portIndex);
+// ieee8021BridgeBasePortOperPointToPoint / dot1dStpPortOperPointToPoint
+bool STP_GetOperPointToPointMAC (const struct STP_BRIDGE* bridge, unsigned int portIndex);
+
+// ----------------------------------------------------------------------------
+
+// References are to 802.1Q-2014.
+// dot1dStpPortAdminPathCost / ieee8021SpanningTreeRstpPortAdminPathCost / ieee8021MstpCistPortAdminPathCost (ExternalPortPathCost)
+void STP_SetAdminExternalPortPathCost (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int adminPortPathCost, unsigned int debugTimestamp);
+unsigned int STP_GetAdminExternalPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex);
+
+// ieee8021MstpPortAdminPathCost (13.27.33 InternalPortPathCost)
+//void STP_SetAdminInternalPortPathCost (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int adminPortPathCost, unsigned int debugTimestamp);
+
+unsigned int STP_GetDetectedPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex);
+
+// References are to 802.1Q-2014.
+// dot1dStpPortPathCost / ieee8021SpanningTreePortPathCost / ieee8021MstpCistPortCistPathCost (ExternalPortPathCost)
+unsigned int STP_GetExternalPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex);
+
+// ieee8021MstpPortPathCost (13.27.33 InternalPortPathCost)
+//unsigned int STP_GetInternalPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned treeIndex);
+
+// References are to 802.1Q-2014.
+// for treeIndex = 0: ieee8021MstpCistPathCost - path cost to CIST Regional Root (13.9 d) CIST Internal Root Path Cost)
+// for treeIndex > 0: ieee8021MstpRootPathCost - path cost to Root Bridge for the MSTI (13.27.20 designatedPriority)
+//unsigned int STP_GetPathCostToRootBridge (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
+
+// ----------------------------------------------------------------------------
 
 bool STP_GetPortEnabled             (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 enum STP_PORT_ROLE STP_GetPortRole  (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
 bool STP_GetPortLearning            (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
 bool STP_GetPortForwarding          (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
 bool STP_GetPortOperEdge            (const struct STP_BRIDGE* bridge, unsigned int portIndex);
-
-// ieee8021BridgeBasePortOperPointToPoint / dot1dStpPortOperPointToPoint
-bool STP_GetPortOperPointToPointMAC (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
 void STP_GetDefaultMstConfigName (const unsigned char bridgeAddress[6], char nameOut[18]);
 void STP_SetMstConfigName (struct STP_BRIDGE* bridge, const char* name, unsigned int timestamp);
@@ -205,24 +233,6 @@ void STP_GetRootTimes (const struct STP_BRIDGE* bridge,
 
 bool STP_IsCistRoot (const struct STP_BRIDGE* bridge);
 bool STP_IsRegionalRoot (const struct STP_BRIDGE* bridge, unsigned int treeIndex);
-
-unsigned int STP_GetDetectedPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex);
-
-// References are to 802.1Q-2014.
-// for treeIndex = 0: dot1dStpPortAdminPathCost / ieee8021SpanningTreeRstpPortAdminPathCost / ieee8021MstpCistPortAdminPathCost (ExternalPortPathCost)
-// for treeIndex > 0: ieee8021MstpPortAdminPathCost (13.27.33 InternalPortPathCost)
-void STP_SetAdminPortPathCost (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int adminPathCost, unsigned int debugTimestamp);
-unsigned int STP_GetAdminPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
-
-// References are to 802.1Q-2014.
-// for treeIndex = 0: dot1dStpPortPathCost / ieee8021SpanningTreePortPathCost / ieee8021MstpCistPortCistPathCost (ExternalPortPathCost)
-// for treeIndex > 0: ieee8021MstpPortPathCost (13.27.33 InternalPortPathCost)
-unsigned int STP_GetPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned treeIndex);
-
-// References are to 802.1Q-2014.
-// for treeIndex = 0: ieee8021MstpCistPathCost - path cost to CIST Regional Root (13.9 d) CIST Internal Root Path Cost)
-// for treeIndex > 0: ieee8021MstpRootPathCost - path cost to Root Bridge for the MSTI (13.27.20 designatedPriority)
-unsigned int STP_GetPathCostToRootBridge (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
 
 // ieee8021SpanningTreeBridgeHelloTime / dot1dStpBridgeHelloTime
 void STP_SetBridgeHelloTime (struct STP_BRIDGE* bridge, unsigned int helloTime, unsigned int timestamp);

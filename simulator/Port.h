@@ -13,14 +13,11 @@ struct PacketInfo
 
 enum class side { left, top, right, bottom };
 
-static constexpr edge::NVP SideNVPs[] =
-{
-	{ "Left",   (int) side::left },
-	{ "Top",    (int) side::top },
-	{ "Right",  (int) side::right },
-	{ "Bottom", (int) side::bottom },
-	{ 0, 0 },
-};
+extern const edge::NVP SideNVPs[];
+
+extern const char admin_p2p_type_name[];
+extern const edge::NVP admin_p2p_nvps[];
+using admin_p2p_p = edge::enum_property<STP_ADMIN_P2P, admin_p2p_type_name, admin_p2p_nvps>;
 
 class Port : public renderable_object
 {
@@ -54,7 +51,8 @@ public:
 	static constexpr float ExteriorHeight = 20;
 	static constexpr float OutlineWidth = 2;
 
-	Bridge* bridge() const { return _bridge; }
+	const Bridge* bridge() const { return _bridge; }
+	Bridge* bridge() { return _bridge; }
 	unsigned int GetPortIndex() const { return _portIndex; }
 	side GetSide() const { return _side; }
 	float GetOffset() const { return _offset; }
@@ -88,13 +86,21 @@ public:
 	void SetAdminExternalPortPathCost(unsigned int adminExternalPortPathCost);
 	unsigned int GetExternalPortPathCost() const;
 
+	bool detected_p2p() const;
+	STP_ADMIN_P2P admin_p2p() const;
+	void set_admin_p2p (STP_ADMIN_P2P admin_p2p);
+	bool oper_p2p() const;
+
 private:
 	static const edge::bool_p auto_edge_property;
 	static const edge::bool_p admin_edge_property;
 	static const edge::bool_p MacOperational;
-	static const edge::uint32_p DetectedPortPathCost;
 	static const edge::uint32_p AdminExternalPortPathCost;
+	static const edge::uint32_p DetectedPortPathCost;
 	static const edge::uint32_p ExternalPortPathCost;
+	static const admin_p2p_p admin_p2p_property;
+	static const edge::bool_p detected_p2p_property;
+	static const edge::bool_p oper_p2p_property;
 	static const edge::property* const Port::_properties[];
 	static const edge::type_t _type;
 

@@ -263,12 +263,14 @@ void STP_OnPortEnabled (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int
 
 	PORT* port = bridge->ports [portIndex];
 
-	// Check that this function is not called twice in a row for the same port.
-	assert (port->portEnabled == false);
-
+	assert (!port->portEnabled);
 	port->portEnabled = true;
 
 	port->detectedPointToPointMAC = detectedPointToPointMAC;
+	if (port->adminPointToPointMAC != STP_ADMIN_P2P_AUTO)
+		port->operPointToPointMAC = (port->adminPointToPointMAC == STP_ADMIN_P2P_FORCE_TRUE);
+	else
+		port->operPointToPointMAC = detectedPointToPointMAC;
 
 	port->detectedPortPathCost = GetDefaultPortPathCost(speedMegabitsPerSecond);
 	if (port->adminExternalPortPathCost != 0)
@@ -277,13 +279,6 @@ void STP_OnPortEnabled (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int
 		port->ExternalPortPathCost = port->detectedPortPathCost;
 
 // TODO: calculate also InternalPortPathCost and remove its hardcoded value from STP_CreateBridge
-
-	// If STP_OnPortEnabled is called for the first time after software startup,
-	// and if STP_SetPortAdminP2P was not yet called or called with AUTO,
-	// then operPointToPointMAC was never computed.
-	// So let's force a computation here to account for this case.
-	if (port->adminPointToPointMAC == STP_ADMIN_P2P_AUTO)
-		port->operPointToPointMAC = detectedPointToPointMAC;
 
 	if (bridge->started)
 		RunStateMachines (bridge, timestamp);
@@ -298,14 +293,17 @@ void STP_OnPortDisabled (STP_BRIDGE* bridge, unsigned int portIndex, unsigned in
 {
 	LOG (bridge, -1, -1, "{T}: Port {D} down\r\n", timestamp, 1 + portIndex);
 
-	// We allow disabling an already disabled port.
-	if (bridge->ports [portIndex]->portEnabled)
+	PORT* port = bridge->ports[portIndex];
+	// We allow calling this function on an already disabled port.
+	if (port->portEnabled)
 	{
-		bridge->ports [portIndex]->ExternalPortPathCost = 0;
+		port->detectedPointToPointMAC = false;
+		port->operPointToPointMAC = false;
+		port->detectedPortPathCost = 0;
+		port->ExternalPortPathCost = 0;
+		// TODO: clear also InternalPortPathCost
 
-// TODO: clear also InternalPortPathCost
-
-		bridge->ports [portIndex]->portEnabled = false;
+		port->portEnabled = false;
 
 		if (bridge->started)
 			RunStateMachines (bridge, timestamp);
@@ -595,43 +593,45 @@ bool STP_GetPortAutoEdge (const struct STP_BRIDGE* bridge, unsigned int portInde
 
 // ============================================================================
 
-void STP_SetPortAdminPointToPointMAC (STP_BRIDGE* bridge, unsigned int portIndex, STP_ADMIN_P2P adminPointToPointMAC, unsigned int timestamp)
+void STP_SetAdminPointToPointMAC (struct STP_BRIDGE* bridge, unsigned int portIndex, enum STP_ADMIN_P2P adminPointToPointMAC, unsigned int timestamp)
 {
 	const char* p2pString = STP_GetAdminP2PString (adminPointToPointMAC);
 	LOG (bridge, portIndex, -1, "{T}: Setting adminPointToPointMAC = {S} on port {D}...\r\n", timestamp, p2pString, 1 + portIndex);
 
-	PORT* port = bridge->ports [portIndex];
+	PORT* port = bridge->ports[portIndex];
 
-	if (port->adminPointToPointMAC != adminPointToPointMAC)
+	port->adminPointToPointMAC = adminPointToPointMAC;
+
+	if (port->portEnabled)
 	{
-		port->adminPointToPointMAC = adminPointToPointMAC;
+		bool newOperPointToPointMAC = (adminPointToPointMAC == STP_ADMIN_P2P_FORCE_TRUE)
+			|| ((adminPointToPointMAC == STP_ADMIN_P2P_AUTO) && port->detectedPointToPointMAC);
 
-		if (adminPointToPointMAC == STP_ADMIN_P2P_FORCE_TRUE)
+		if (port->operPointToPointMAC != newOperPointToPointMAC)
 		{
-			port->operPointToPointMAC = true;
+			port->operPointToPointMAC = newOperPointToPointMAC;
+			if (bridge->started)
+				RunStateMachines (bridge, timestamp);
 		}
-		else if (adminPointToPointMAC == STP_ADMIN_P2P_FORCE_FALSE)
-		{
-			port->operPointToPointMAC = false;
-		}
-		else if (adminPointToPointMAC == STP_ADMIN_P2P_AUTO)
-		{
-			port->operPointToPointMAC = port->detectedPointToPointMAC;
-		}
-		else
-			assert (false);
-
-		// operPointToPointMAC has changed, and there's logic in the STP state machines that depends on it,
-		// but reruning the state machines here seems to me like overkill; they run anyway every second.
 	}
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
 	FLUSH_LOG (bridge);
 }
 
-STP_ADMIN_P2P STP_GetPortAdminPointToPointMAC (const STP_BRIDGE* bridge, unsigned int portIndex)
+STP_ADMIN_P2P STP_GetAdminPointToPointMAC (const STP_BRIDGE* bridge, unsigned int portIndex)
 {
-	return bridge->ports [portIndex]->adminPointToPointMAC;
+	return bridge->ports[portIndex]->adminPointToPointMAC;
+}
+
+bool STP_GetDetectedPointToPointMAC (const struct STP_BRIDGE* bridge, unsigned int portIndex)
+{
+	return bridge->ports[portIndex]->detectedPointToPointMAC;
+}
+
+bool STP_GetOperPointToPointMAC (const STP_BRIDGE* bridge, unsigned int portIndex)
+{
+	return bridge->ports[portIndex]->operPointToPointMAC;
 }
 
 // ============================================================================
@@ -948,11 +948,6 @@ bool STP_GetPortOperEdge (const STP_BRIDGE* bridge, unsigned int portIndex)
 	return bridge->ports [portIndex]->operEdge;
 }
 
-bool STP_GetPortOperPointToPointMAC (const STP_BRIDGE* bridge, unsigned int portIndex)
-{
-	return bridge->ports [portIndex]->operPointToPointMAC;
-}
-
 unsigned int STP_GetMaxVlanNumber (const STP_BRIDGE* bridge)
 {
 	return bridge->maxVlanNumber;
@@ -1036,7 +1031,7 @@ const char* STP_GetAdminP2PString (enum STP_ADMIN_P2P adminP2P)
 		case STP_ADMIN_P2P_AUTO:        return "Auto";
 		case STP_ADMIN_P2P_FORCE_TRUE:  return "ForceTrue";
 		case STP_ADMIN_P2P_FORCE_FALSE: return "ForceFalse";
-		default: return "(unknown)";
+		default: return nullptr;
 	}
 }
 
@@ -1138,46 +1133,24 @@ bool STP_MST_CONFIG_ID::operator< (const STP_MST_CONFIG_ID& rhs) const
 
 // ============================================================================
 
-unsigned int STP_GetDetectedPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex)
+void STP_SetAdminExternalPortPathCost (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int adminExternalPortPathCost, unsigned int timestamp)
 {
-	return bridge->ports[portIndex]->detectedPortPathCost;
-}
+	LOG (bridge, -1, -1, "{T}: Setting Port {D} AdminExternalPortPathCost to {D}...\r\n", timestamp, 1 + portIndex, adminExternalPortPathCost);
 
-void STP_SetAdminPortPathCost (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int adminPathCost, unsigned int timestamp)
-{
-	LOG (bridge, -1, -1, "{T}: Setting Port {D} Admin {S} Port Path Cost to {D}...",
-		 timestamp, 1 + portIndex, (treeIndex == CIST_INDEX) ? "External" : "MSTI", adminPathCost);
+	PORT* port = bridge->ports[portIndex];
 
-	unsigned int old = STP_GetAdminPortPathCost (bridge, portIndex, treeIndex);
-	if (old == adminPathCost)
+	port->adminExternalPortPathCost = adminExternalPortPathCost;
+
+	if (port->portEnabled)
 	{
-		LOG (bridge, -1, -1, " nothing changed.\r\n");
-	}
-	else
-	{
-		LOG (bridge, -1, -1, "\r\n");
-
-		PORT* port = bridge->ports[portIndex];
-
-		if (treeIndex == CIST_INDEX)
+		unsigned int newCost = (port->adminExternalPortPathCost != 0) ? port->adminExternalPortPathCost : port->detectedPortPathCost;
+		if (port->ExternalPortPathCost != newCost)
 		{
-			port->adminExternalPortPathCost = adminPathCost;
+			port->ExternalPortPathCost = newCost;
+			LOG (bridge, -1, -1, "  ExternalPortPathCost is now {D}.\r\n", port->ExternalPortPathCost);
 
-			if (bridge->started && port->portEnabled)
-			{
-				if (port->adminExternalPortPathCost != 0)
-					port->ExternalPortPathCost = port->adminExternalPortPathCost;
-				else
-					port->ExternalPortPathCost = port->detectedPortPathCost;
-
-				LOG (bridge, -1, -1, "  ExternalPortPathCost is now {D}.\r\n", port->ExternalPortPathCost);
-
+			if (bridge->started)
 				RecomputePrioritiesAndPortRoles (bridge, CIST_INDEX, timestamp);
-			}
-		}
-		else
-		{
-			assert(false); // not yet implemented
 		}
 	}
 
@@ -1185,37 +1158,20 @@ void STP_SetAdminPortPathCost (struct STP_BRIDGE* bridge, unsigned int portIndex
 	FLUSH_LOG (bridge);
 }
 
-unsigned int STP_GetAdminPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
+unsigned int STP_GetAdminExternalPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex)
 {
-	PORT* port = bridge->ports[portIndex];
-	if (treeIndex == CIST_INDEX)
-		return port->adminExternalPortPathCost;
-	else
-	{
-		assert(false); // not implemented
-		return 0;
-	}
+	return bridge->ports[portIndex]->adminExternalPortPathCost;
 }
 
-unsigned int STP_GetPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned treeIndex)
+unsigned int STP_GetDetectedPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex)
 {
-	PORT* port = bridge->ports[portIndex];
-	if (!bridge->started || !port->portEnabled)
-		return 0;
-
-	if (treeIndex == CIST_INDEX)
-		return port->ExternalPortPathCost;
-	else
-	{
-		assert(false); // not implemented
-		return 0;
-	}
+	return bridge->ports[portIndex]->detectedPortPathCost;
 }
 
-unsigned int STP_GetPathCostToRootBridge (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
+unsigned int STP_GetExternalPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex)
 {
-	assert(false); // not implemented
-	return 0;
+	const PORT* port = bridge->ports[portIndex];
+	return port->portEnabled ? port->ExternalPortPathCost : 0;
 }
 
 // ============================================================================
