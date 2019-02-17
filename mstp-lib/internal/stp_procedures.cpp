@@ -1495,20 +1495,17 @@ bool allSynced (const STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTr
 }
 
 // ============================================================================
-// 13.26.b) - 13.26.2
+// 13.28.3
 // TRUE, if and only if, for the given port for all trees
 // a) selected is TRUE; and
 // b) updtInfo is FALSE.
 bool allTransmitReady (const STP_BRIDGE* bridge, PortIndex givenPort)
 {
-	for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount(); treeIndex++)
+	PORT* port = bridge->ports[givenPort];
+	for (unsigned int ti = 0; ti < bridge->treeCount(); ti++)
 	{
-		PORT_TREE* portTree = bridge->ports [givenPort]->trees [treeIndex];
-
-		if (portTree->selected == false)
-			return false;
-
-		if (portTree->updtInfo)
+		PORT_TREE* tree = port->trees[ti];
+		if (!tree->selected || tree->updtInfo)
 			return false;
 	}
 

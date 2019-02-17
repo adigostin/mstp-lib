@@ -44,7 +44,7 @@ void updtRolesDisabledTree (STP_BRIDGE*, TreeIndex treeIndex);				// 13.27.af) -
 // 13.28 State machine conditions and parameters
 bool allSptAgree        (const STP_BRIDGE*);
 bool allSynced			(const STP_BRIDGE*, PortIndex portIndex, TreeIndex treeIndex);
-bool allTransmitReady	(const STP_BRIDGE*, PortIndex portIndex); // 13.26.b) - 13.26.2
+bool allTransmitReady	(const STP_BRIDGE*, PortIndex portIndex);
 bool cist				(const STP_BRIDGE*, TreeIndex treeIndex); // 13.26.c) - 13.26.3
 bool cistRootPort		(const STP_BRIDGE*, PortIndex portIndex); // 13.26.d) - 13.26.4
 bool cistDesignatedPort	(const STP_BRIDGE*, PortIndex portIndex); // 13.26.e) - 13.26.5
