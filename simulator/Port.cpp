@@ -443,7 +443,9 @@ unsigned int Port::GetAdminExternalPortPathCost() const
 void Port::SetAdminExternalPortPathCost(unsigned int adminExternalPortPathCost)
 {
 	this->on_property_changing (&AdminExternalPortPathCost);
+	this->on_property_changing (&ExternalPortPathCost);
 	STP_SetAdminPortPathCost (_bridge->stp_bridge(), _portIndex, 0, adminExternalPortPathCost, GetMessageTime());
+	this->on_property_changed (&ExternalPortPathCost);
 	this->on_property_changed (&AdminExternalPortPathCost);
 }
 
@@ -490,9 +492,11 @@ const bool_p Port::MacOperational (
 	nullptr,
 	false);
 
+static const edge::property_group port_path_cost_group = { 5, "Port Path Cost" };
+
 const uint32_p Port::DetectedPortPathCost (
 	"DetectedPortPathCost",
-	nullptr,
+	&port_path_cost_group,
 	nullptr,
 	static_cast<uint32_p::member_getter_t>(&GetDetectedPortPathCost),
 	nullptr,
@@ -500,7 +504,7 @@ const uint32_p Port::DetectedPortPathCost (
 
 const uint32_p Port::AdminExternalPortPathCost (
 	"AdminExternalPortPathCost",
-	nullptr,
+	&port_path_cost_group,
 	nullptr,
 	static_cast<uint32_p::member_getter_t>(&GetAdminExternalPortPathCost),
 	static_cast<uint32_p::member_setter_t>(&SetAdminExternalPortPathCost),
@@ -508,7 +512,7 @@ const uint32_p Port::AdminExternalPortPathCost (
 
 const uint32_p Port::ExternalPortPathCost (
 	"ExternalPortPathCost",
-	nullptr,
+	&port_path_cost_group,
 	nullptr,
   	static_cast<uint32_p::member_getter_t>(&GetExternalPortPathCost),
 	nullptr,
