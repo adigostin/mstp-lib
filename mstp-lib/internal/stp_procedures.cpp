@@ -1513,7 +1513,15 @@ bool allTransmitReady (const STP_BRIDGE* bridge, PortIndex givenPort)
 }
 
 // ============================================================================
-// 13.26.c) - 13.26.3
+// 13.28.4
+const PRIORITY_VECTOR& BestAgreementPriority()
+{
+	static const PRIORITY_VECTOR best = { };
+	return best;
+}
+
+// ============================================================================
+// 13.28.5
 // TRUE only for CIST state machines; i.e., FALSE for MSTI state machine instances.
 bool cist (const STP_BRIDGE* bridge, TreeIndex givenTree)
 {
@@ -1521,64 +1529,73 @@ bool cist (const STP_BRIDGE* bridge, TreeIndex givenTree)
 }
 
 // ============================================================================
-// 13.26.d) - 13.26.4
+// 13.28.6
 // TRUE if the CIST role for the given port is RootPort.
 bool cistRootPort (const STP_BRIDGE* bridge, PortIndex givenPort)
 {
-	return (bridge->ports [givenPort]->trees [CIST_INDEX]->role == STP_PORT_ROLE_ROOT);
+	return bridge->ports[givenPort]->trees[CIST_INDEX]->role == STP_PORT_ROLE_ROOT;
 }
 
 // ============================================================================
-// 13.26.e) - 13.26.5
+// 13.28.7
 // TRUE if the CIST role for the given port is DesignatedPort.
 bool cistDesignatedPort	(const STP_BRIDGE* bridge, PortIndex givenPort)
 {
-	return (bridge->ports [givenPort]->trees [CIST_INDEX]->role == STP_PORT_ROLE_DESIGNATED);
+	return bridge->ports[givenPort]->trees[CIST_INDEX]->role == STP_PORT_ROLE_DESIGNATED;
 }
 
 // ============================================================================
-// 13.26.f) - 13.26.6
+// 13.28.8
 // Returns the value of MigrateTime if operPointToPointMAC is TRUE, and the value of MaxAge otherwise.
 unsigned short EdgeDelay (const STP_BRIDGE* bridge, PortIndex givenPort)
 {
-	PORT* port = bridge->ports [givenPort];
-	return port->operPointToPointMAC ? bridge->MigrateTime : MaxAge (bridge, givenPort);
+	PORT* port = bridge->ports[givenPort];
+	return port->operPointToPointMAC ? bridge->MigrateTime : MaxAge(bridge, givenPort);
 }
 
 // ============================================================================
-// 13.26.g) - 13.26.7
+// 13.28.9
 // Returns the value of HelloTime if sendRSTP is TRUE, and the value of FwdDelay otherwise.
 unsigned short forwardDelay (const STP_BRIDGE* bridge, PortIndex givenPort)
 {
-	if (bridge->ports [givenPort]->sendRSTP)
+	if (bridge->ports[givenPort]->sendRSTP)
 		return HelloTime (bridge, givenPort);
 	else
 		return FwdDelay (bridge, givenPort);
 }
 
 // ============================================================================
-// 13.26.h) - 13.26.8
-// The Forward Delay component of the CIST's designatedTimes parameter (13.25.8).
+// 13.28.10
+// The Forward Delay component of the CIST's designatedTimes parameter (13.27.21).
 unsigned short FwdDelay (const STP_BRIDGE* bridge, PortIndex givenPort)
 {
-	return bridge->ports [givenPort]->trees [CIST_INDEX]->designatedTimes.ForwardDelay;
+	return bridge->ports[givenPort]->trees[CIST_INDEX]->designatedTimes.ForwardDelay;
 }
 
 // ============================================================================
-// 13.26.i) - 13.26.9
-// The Hello Time component of the CIST's portTimes parameter (13.25.34) with the recommended default
+// 13.28.11
+// The Hello Time component of the CIST's portTimes parameter (13.27.48) with the recommended default
 // value given in Table 13-5.
 unsigned short HelloTime (const STP_BRIDGE* bridge, PortIndex givenPort)
 {
-	return bridge->ports [givenPort]->trees [CIST_INDEX]->portTimes.HelloTime;
+	return bridge->ports[givenPort]->trees[CIST_INDEX]->portTimes.HelloTime;
 }
 
 // ============================================================================
-// 13.26.j) - 13.26.11
-// The Max Age component of the CIST's designatedTimes parameter (13.25.8).
+// 13.28.12
+// The Max Age component of the CIST's designatedTimes parameter (13.27.21).
 unsigned short MaxAge (const STP_BRIDGE* bridge, PortIndex givenPort)
 {
-	return bridge->ports [givenPort]->trees [CIST_INDEX]->designatedTimes.MaxAge;
+	return bridge->ports[givenPort]->trees[CIST_INDEX]->designatedTimes.MaxAge;
+}
+
+// ============================================================================
+// 13.28.13
+// TRUE only for MSTI state machines; i.e., FALSE for CIST or SPT state machine instances
+bool msti (const STP_BRIDGE* bridge, TreeIndex treeIndex)
+{
+	assert (bridge->ForceProtocolVersion <= STP_VERSION_MSTP); // not yet implemented for SPT
+	return treeIndex > CIST_INDEX;
 }
 
 // ============================================================================
