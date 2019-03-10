@@ -254,29 +254,6 @@ int main ()
 	Timer_Wait (3);
 
 	// -----------------------------------
-	// Configure the switch chip for BPDU handling.
-
-	// Enable special tagging for RX and TX.
-	// See the Miscellaneous Control Register, page 102 of the IP175D datasheet.
-	unsigned short reg = ENET_MIIReadRegister (21, 22);
-	reg = (reg & ~3u) | 3u;
-	ENET_MIIWriteRegister (21, 22, reg);
-
-	// Add source-port tag for packets going to port 5 (RMII port).
-	// See the Add Tag Control Register, page 111 of the IP175D datasheet.
-	ENET_MIIWriteRegister (23, 8, (1 << 5));
-
-	// Remove source-port tag from packets going to ports 0-4.
-	// See the Remove Tag Control Register, page 111 of the IP175D datasheet.
-	ENET_MIIWriteRegister (23, 16, 0x1f);
-
-	// Forward BPDUs only to the CPU.
-	// Page 79 of the IP175D datasheet.
-	reg = ENET_MIIReadRegister (20, 8);
-	reg = (reg & ~3u) | 1u;
-	ENET_MIIWriteRegister (20, 8, reg);
-
-	// -----------------------------------
 	// Initialize and start the STP library.
 
 	unsigned int timestamp = Timer_GetTimeMilliseconds();
@@ -292,11 +269,6 @@ int main ()
 
 	// Port 2 (RMII) is always enabled.
 	STP_OnPortEnabled (bridge, PORT_RMII, 100, true, timestamp);
-
-	// Force all ports as P2P, since my connections are all P2P (no multidrop coaxial or something).
-	STP_SetPortAdminPointToPointMAC (bridge, PORT_RJ45_1, STP_ADMIN_P2P_FORCE_TRUE, timestamp);
-	STP_SetPortAdminPointToPointMAC (bridge, PORT_RJ45_2, STP_ADMIN_P2P_FORCE_TRUE, timestamp);
-	STP_SetPortAdminPointToPointMAC (bridge, PORT_RMII,   STP_ADMIN_P2P_FORCE_TRUE, timestamp);
 
 	STP_StartBridge (bridge, timestamp);
 
@@ -351,7 +323,7 @@ int main ()
 
 			for (unsigned int portIndex = 0; portIndex < 2; portIndex++)
 			{
-				reg = ENET_MIIReadRegister (portIndex, 1);
+				unsigned short reg = ENET_MIIReadRegister (portIndex, 1);
 				if ((reg & (1 << 2)) && !STP_GetPortEnabled (bridge, portIndex))
 				{
 					// link is now good
@@ -375,6 +347,37 @@ int main ()
 }
 
 // ============================================================================
+
+static void StpCallback_EnableBpduTrapping (const struct STP_BRIDGE* bridge, bool enable, unsigned int timestamp)
+{
+	if (enable)
+	{
+		// Enable special tagging for RX and TX.
+		// See the Miscellaneous Control Register, page 102 of the IP175D datasheet.
+		unsigned short reg = ENET_MIIReadRegister (21, 22);
+		reg = (reg & ~3u) | 3u;
+		ENET_MIIWriteRegister (21, 22, reg);
+
+		// Add source-port tag for packets going to port 5 (RMII port).
+		// See the Add Tag Control Register, page 111 of the IP175D datasheet.
+		ENET_MIIWriteRegister (23, 8, (1 << 5));
+
+		// Remove source-port tag from packets going to ports 0-4.
+		// See the Remove Tag Control Register, page 111 of the IP175D datasheet.
+		ENET_MIIWriteRegister (23, 16, 0x1f);
+
+		// Forward BPDUs only to the CPU.
+		// Page 79 of the IP175D datasheet.
+		reg = ENET_MIIReadRegister (20, 8);
+		reg = (reg & ~3u) | 1u;
+		ENET_MIIWriteRegister (20, 8, reg);
+	}
+	else
+	{
+		// Here goes the code that undoes the switch chip configuration from above.
+		// This is not yet implemented in this demo app.
+	}
+}
 
 static void StpCallback_EnableLearning (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
 {
@@ -529,6 +532,7 @@ static void StpCallback_FreeMemory (void* p)
 
 static STP_CALLBACKS const Callbacks =
 {
+	StpCallback_EnableBpduTrapping,
 	StpCallback_EnableLearning,
 	StpCallback_EnableForwarding,
 	StpCallback_TransmitGetBuffer,

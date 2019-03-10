@@ -34,6 +34,7 @@ enum STP_PORT_ROLE
 	STP_PORT_ROLE_MASTER     = 10,
 };
 
+typedef void  (*STP_CALLBACK_ENABLE_BPDU_TRAPPING)          (const struct STP_BRIDGE* bridge, bool enable, unsigned int timestamp);
 typedef void  (*STP_CALLBACK_ENABLE_LEARNING)				(const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp);
 typedef void  (*STP_CALLBACK_ENABLE_FORWARDING)				(const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp);
 typedef void* (*STP_CALLBACK_TRANSMIT_GET_BUFFER)			(const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int bpduSize, unsigned int timestamp);
@@ -48,6 +49,7 @@ typedef void  (*STP_CALLBACK_FREE_MEMORY) (void* p);
 
 struct STP_CALLBACKS
 {
+	STP_CALLBACK_ENABLE_BPDU_TRAPPING        enableBpduTrapping;
 	STP_CALLBACK_ENABLE_LEARNING			 enableLearning;
 	STP_CALLBACK_ENABLE_FORWARDING			 enableForwarding;
 	STP_CALLBACK_TRANSMIT_GET_BUFFER		 transmitGetBuffer;

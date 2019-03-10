@@ -260,7 +260,7 @@ void Bridge::ProcessReceivedPackets()
 		if ((rp.data.size() >= 6) && (memcmp (&rp.data[0], BpduDestAddress, 6) == 0))
 		{
 			// It's a BPDU.
-			if (STP_IsBridgeStarted(_stpBridge))
+			if (_bpdu_trapping_enabled)
 			{
 				STP_OnBpduReceived (_stpBridge, (unsigned int) rxPortIndex, &rp.data[21], (unsigned int) (rp.data.size() - 21), rp.timestamp);
 			}
@@ -951,17 +951,18 @@ const edge::type_t Bridge::_type = { "Bridge", &base::_type, _properties };
 #pragma region STP Callbacks
 const STP_CALLBACKS Bridge::StpCallbacks =
 {
-	StpCallback_EnableLearning,
-	StpCallback_EnableForwarding,
-	StpCallback_TransmitGetBuffer,
-	StpCallback_TransmitReleaseBuffer,
-	StpCallback_FlushFdb,
-	StpCallback_DebugStrOut,
-	StpCallback_OnTopologyChange,
-	StpCallback_OnNotifiedTopologyChange,
-	StpCallback_OnPortRoleChanged,
-	StpCallback_AllocAndZeroMemory,
-	StpCallback_FreeMemory,
+	&StpCallback_EnableBpduTrapping,
+	&StpCallback_EnableLearning,
+	&StpCallback_EnableForwarding,
+	&StpCallback_TransmitGetBuffer,
+	&StpCallback_TransmitReleaseBuffer,
+	&StpCallback_FlushFdb,
+	&StpCallback_DebugStrOut,
+	&StpCallback_OnTopologyChange,
+	&StpCallback_OnNotifiedTopologyChange,
+	&StpCallback_OnPortRoleChanged,
+	&StpCallback_AllocAndZeroMemory,
+	&StpCallback_FreeMemory,
 };
 
 void* Bridge::StpCallback_AllocAndZeroMemory(unsigned int size)
@@ -997,6 +998,12 @@ void Bridge::StpCallback_TransmitReleaseBuffer (const STP_BRIDGE* bridge, void* 
 	info.data = move(b->_txPacketData);
 	info.timestamp = b->_txTimestamp;
 	b->event_invoker<PacketTransmitEvent>()(b, b->_txTransmittingPort->GetPortIndex(), move(info));
+}
+
+void Bridge::StpCallback_EnableBpduTrapping (const STP_BRIDGE* bridge, bool enable, unsigned int timestamp)
+{
+	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
+	b->_bpdu_trapping_enabled = enable;
 }
 
 void Bridge::StpCallback_EnableLearning (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)

@@ -176,6 +176,8 @@ void STP_StartBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 
 	assert (bridge->started == false);
 
+	bridge->callbacks.enableBpduTrapping (bridge, true, timestamp);
+
 	bridge->started = true;
 
 	RestartStateMachines(bridge, timestamp);
@@ -189,7 +191,10 @@ void STP_StartBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 
 void STP_StopBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 {
+	assert (bridge->started);
 	bridge->started = false;
+
+	bridge->callbacks.enableBpduTrapping (bridge, false, timestamp);
 
 	LOG (bridge, -1, -1, "{T}: Bridge stopped.\r\n", timestamp);
 	LOG (bridge, -1, -1, "------------------------------------\r\n");

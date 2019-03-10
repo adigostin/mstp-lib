@@ -74,15 +74,6 @@
 		state machines). The application must explicitly start the bridge by calling <a href="STP_StartBridge.html">
 			STP_StartBridge</a>, usually after setting some operational parameters.</p>
 	<p>
-		Before calling this function, the application must
-		instruct the hardware to stop forwarding STP-specific BPDUs between ports, and forward
-		them instead to to the processor / microcontroller running the application; the
-		application must then pass these incoming BPDUs to the STP library by calling
-		<a href="STP_OnBpduReceived.html">STP_OnBpduReceived</a>. The application must also
-		instruct the hardware to tag somehow the incoming BPDUs so as to convey <em>port number
-		information </em>together with the content of the BPDU packet. This is usually realized by
-		writing to the hardware registers of the bridge IC.</p>
-	<p>
 		The STP library generates debug log text and passes it to the application
 		via <code><a href="StpCallback_DebugStrOut.html">StpCallback_DebugStrOut</a></code>. This callback in turn usually sends this text
 		to a PC via some "debug connection". For best performance, this log should be larger
