@@ -4,6 +4,12 @@
 
 #include "stp_bridge.h"
 #include "stp_log.h"
+#include <stddef.h>
+
+#ifdef __GNUC__
+	// For GCC older than 8.x: disable the warning for accessing a field of a non-POD NULL object
+	#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#endif
 
 const char* GetBpduPortRoleName (unsigned int bpduPortRole)
 {
@@ -86,7 +92,7 @@ enum VALIDATED_BPDU_TYPE STP_GetValidatedBpduType (const unsigned char* _bpdu, u
 		if (bpduSize >= 102)
 		{
 			unsigned short version3Length = mstpBpdu->Version3Length.GetValue ();
-			unsigned short version3Offset = 38; // offset of mstConfigId
+			unsigned short version3Offset = (unsigned short) offsetof (struct MSTP_BPDU, mstConfigId);
 			unsigned short version3CistLength = (unsigned short) sizeof (MSTP_BPDU) - version3Offset;
 			unsigned short mstiLength = version3Length - version3CistLength;
 
@@ -100,9 +106,7 @@ enum VALIDATED_BPDU_TYPE STP_GetValidatedBpduType (const unsigned char* _bpdu, u
 		return VALIDATED_BPDU_TYPE_UNKNOWN;
 	}
 	else
-	{
 		return VALIDATED_BPDU_TYPE_UNKNOWN;
-	}
 }
 
 // ============================================================================
@@ -133,7 +137,7 @@ void DumpMstpBpdu (STP_BRIDGE* bridge, int port, int tree, const MSTP_BPDU* bpdu
 	bpdu->mstConfigId.Dump (bridge, port, tree);
 
 	unsigned short v3Length = bpdu->Version3Length.GetValue ();
-	unsigned short headerRemainder = (unsigned short) sizeof (MSTP_BPDU) - 38; // 38 is offset of mstConfigId;
+	unsigned short headerRemainder = (unsigned short) sizeof (MSTP_BPDU) - (unsigned short) offsetof (struct MSTP_BPDU, mstConfigId);
 	assert (v3Length >= headerRemainder);
 	assert (((v3Length - headerRemainder) % 16) == 0);
 	unsigned short mstiCount = (v3Length - headerRemainder) / 16;

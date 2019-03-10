@@ -279,8 +279,6 @@ enum RCVD_INFO
 	RCVD_INFO_INFERIOR_DESIGNATED,
 	RCVD_INFO_INFERIOR_ROOT_ALTERNATE,
 	RCVD_INFO_OTHER,
-
-	RCVD_INFO_CONFIRMED_ROOT_MSG, // used by 802.1w-2001
 };
 
 // ============================================================================

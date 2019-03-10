@@ -9,6 +9,11 @@
 #include <assert.h>
 #include <stddef.h>
 
+#ifdef __GNUC__
+	// For GCC older than 8.x: disable the warning for accessing a field of a non-POD NULL object
+	#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#endif
+
 // ============================================================================
 // 13.27.a - 13.27.1
 // Returns TRUE if, for a given port and tree (CIST, or MSTI), either
