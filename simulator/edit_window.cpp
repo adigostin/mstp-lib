@@ -500,7 +500,7 @@ public:
 					L"Rotate mouse wheel for zooming, press wheel and drag for panning.",
 					DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_FAR, true);
 
-		if (_project->IsSimulationPaused())
+		if (_project->simulation_paused())
 			render_hint (dc, { client_width() / 2, 10 },
 						L"Simulation is paused. Right-click to resume.",
 						DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, true);
@@ -597,12 +597,12 @@ public:
 			}
 			else if (wParam == ID_PAUSE_SIMULATION)
 			{
-				_project->PauseSimulation();
+				_project->pause_simulation();
 				return 0;
 			}
 			else if (wParam == ID_RESUME_SIMULATION)
 			{
-				_project->ResumeSimulation();
+				_project->resume_simulation();
 				return 0;
 			}
 
@@ -954,8 +954,8 @@ public:
 		if (_selection->objects().empty())
 		{
 			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_EMPTY_SPACE));
-			::EnableMenuItem (hMenu, ID_PAUSE_SIMULATION, _project->IsSimulationPaused() ? MF_DISABLED : MF_ENABLED);
-			::EnableMenuItem (hMenu, ID_RESUME_SIMULATION, _project->IsSimulationPaused() ? MF_ENABLED : MF_DISABLED);
+			::EnableMenuItem (hMenu, ID_PAUSE_SIMULATION, _project->simulation_paused() ? MF_DISABLED : MF_ENABLED);
+			::EnableMenuItem (hMenu, ID_RESUME_SIMULATION, _project->simulation_paused() ? MF_ENABLED : MF_DISABLED);
 		}
 		else if (dynamic_cast<Bridge*>(_selection->objects().front()) != nullptr)
 			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_BRIDGE));

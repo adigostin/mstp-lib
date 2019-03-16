@@ -166,9 +166,9 @@ struct __declspec(novtable) project_i
 	virtual HRESULT Save (const wchar_t* filePath) = 0;
 	virtual void Load (const wchar_t* filePath) = 0;
 	virtual bool IsWireForwarding (wire* wire, uint32_t vlanNumber, _Out_opt_ bool* hasLoop) const = 0;
-	virtual void PauseSimulation() = 0;
-	virtual void ResumeSimulation() = 0;
-	virtual bool IsSimulationPaused() const = 0;
+	virtual void pause_simulation() = 0;
+	virtual void resume_simulation() = 0;
+	virtual bool simulation_paused() const = 0;
 	virtual bool GetChangedFlag() const = 0;
 	virtual void SetChangedFlag (bool projectChangedFlag) = 0;
 	virtual ChangedFlagChangedEvent::subscriber GetChangedFlagChangedEvent() = 0;

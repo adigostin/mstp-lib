@@ -21,7 +21,7 @@ public:
 			unsigned int mstiCount = 4;
 			size_t macAddressesToReserve = std::max ((size_t) 1 + portCount, (size_t) 16);
 			auto macAddress = _project->AllocMacAddressRange(macAddressesToReserve);
-			_bridge.reset (new Bridge (portCount, mstiCount, macAddress));
+			_bridge.reset (new Bridge (_project, portCount, mstiCount, macAddress));
 		}
 
 		_bridge->SetLocation (location.w.x - _bridge->GetWidth() / 2, location.w.y - _bridge->GetHeight() / 2);
@@ -47,7 +47,7 @@ public:
 	{
 		auto centerX = _bridge->GetLeft() + _bridge->GetWidth() / 2;
 		auto centerY = _bridge->GetTop() + _bridge->GetHeight() / 2;
-		_bridge.reset (new Bridge(numberOfPorts, _bridge->GetMstiCount(), _bridge->bridge_address()));
+		_bridge.reset (new Bridge(_project, numberOfPorts, _bridge->GetMstiCount(), _bridge->bridge_address()));
 		_bridge->SetLocation (centerX - _bridge->GetWidth() / 2, centerY - _bridge->GetHeight() / 2);
 		::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
 	}

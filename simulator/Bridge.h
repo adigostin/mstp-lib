@@ -28,9 +28,13 @@ using mac_address_p = edge::typed_property<mac_address, mac_address, mac_address
 extern edge::property_editor_factory_t config_id_editor_factory;
 using config_id_digest_p = edge::typed_property<std::string, std::string_view, std::string, edge::temp_string_type_name, edge::temp_string_to_string, nullptr, nullptr, config_id_editor_factory>;
 
+struct project_i;
+
 class Bridge : public renderable_object
 {
 	using base = renderable_object;
+
+	project_i* const _project;
 
 	float _x;
 	float _y;
@@ -44,7 +48,6 @@ class Bridge : public renderable_object
 	std::vector<std::unique_ptr<BridgeLogLine>> _logLines;
 	BridgeLogLine _currentLogLine;
 	HANDLE _oneSecondTimerHandle;
-	bool _simulationPaused = false;
 	std::queue<std::pair<size_t, PacketInfo>> _rxQueue;
 	std::vector<std::unique_ptr<BridgeTree>> _trees;
 
@@ -71,7 +74,7 @@ class Bridge : public renderable_object
 	unsigned int         _txTimestamp;
 
 public:
-	Bridge (unsigned int portCount, unsigned int mstiCount, mac_address macAddress);
+	Bridge (project_i* project, unsigned int portCount, unsigned int mstiCount, mac_address macAddress);
 	virtual ~Bridge();
 
 	static constexpr int HTCodeInner = 1;
@@ -123,10 +126,7 @@ public:
 	std::array<uint8_t, 6> GetPortAddress (size_t portIndex) const;
 
 	edge::com_ptr<IXMLDOMElement> Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) const;
-	static std::unique_ptr<Bridge> Deserialize (IXMLDOMElement* element);
-
-	void PauseSimulation();
-	void ResumeSimulation();
+	static std::unique_ptr<Bridge> Deserialize (project_i* project, IXMLDOMElement* element);
 
 	// Property getters and setters.
 	mac_address bridge_address() const;

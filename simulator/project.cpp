@@ -336,7 +336,7 @@ public:
 				hr = bridgeNodes->get_item(i, &bridgeNode); assert(SUCCEEDED(hr));
 				com_ptr<IXMLDOMElement> bridgeElement;
 				hr = bridgeNode->QueryInterface(&bridgeElement); assert(SUCCEEDED(hr));
-				auto bridge = Bridge::Deserialize(bridgeElement);
+				auto bridge = Bridge::Deserialize(this, bridgeElement);
 				this->insert_bridge(_bridges.size(), move(bridge));
 			}
 		}
@@ -361,23 +361,19 @@ public:
 		this->event_invoker<LoadedEvent>()(this);
 	}
 
-	virtual void PauseSimulation() override final
+	virtual void pause_simulation() override final
 	{
 		_simulationPaused = true;
-		for (auto& b : _bridges)
-			b->PauseSimulation();
 		this->event_invoker<invalidate_e>()(this);
 	}
 
-	virtual void ResumeSimulation() override final
+	virtual void resume_simulation() override final
 	{
 		_simulationPaused = false;
-		for (auto& b : _bridges)
-			b->ResumeSimulation();
 		this->event_invoker<invalidate_e>()(this);
 	}
 
-	virtual bool IsSimulationPaused() const override final { return _simulationPaused; }
+	virtual bool simulation_paused() const override final { return _simulationPaused; }
 
 	virtual bool GetChangedFlag() const override final { return _changedFlag; }
 

@@ -114,7 +114,8 @@ LRESULT CALLBACK Bridge::HelperWindow::SubclassProc (HWND hWnd, UINT uMsg, WPARA
 }
 #pragma endregion
 
-Bridge::Bridge (unsigned int portCount, unsigned int mstiCount, mac_address macAddress)
+Bridge::Bridge (project_i* project, unsigned int portCount, unsigned int mstiCount, mac_address macAddress)
+	: _project(project)
 {
 	for (unsigned int i = 0; i < 1 + mstiCount; i++)
 		_trees.push_back (make_unique<BridgeTree>(this, i));
@@ -178,7 +179,7 @@ void CALLBACK Bridge::OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOr
 void Bridge::OnWmOneSecondTimer (WPARAM wParam, LPARAM lParam)
 {
 	auto bridge = static_cast<Bridge*>((void*)wParam);
-	if (!bridge->_simulationPaused)
+	if (!bridge->_project->simulation_paused())
 		STP_OnOneSecondTick (bridge->_stpBridge, GetMessageTime());
 }
 
@@ -187,7 +188,7 @@ void Bridge::OnWmOneSecondTimer (WPARAM wParam, LPARAM lParam)
 void Bridge::OnLinkPulseTick (void* callbackArg)
 {
 	auto b = static_cast<Bridge*>(callbackArg);
-	if (b->_simulationPaused)
+	if (b->_project->simulation_paused())
 		return;
 
 	bool invalidate = false;
@@ -234,7 +235,7 @@ void Bridge::EnqueuePacket (PacketInfo&& packet, size_t rxPortIndex)
 void Bridge::OnWmPacketReceived (WPARAM wParam, LPARAM lParam)
 {
 	auto bridge = static_cast<Bridge*>((void*)wParam);
-	if (!bridge->_simulationPaused)
+	if (!bridge->_project->simulation_paused())
 		bridge->ProcessReceivedPackets();
 }
 
@@ -496,7 +497,7 @@ com_ptr<IXMLDOMElement> Bridge::Serialize (size_t bridgeIndex, IXMLDOMDocument3*
 }
 
 //static
-unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
+unique_ptr<Bridge> Bridge::Deserialize (project_i* project, IXMLDOMElement* element)
 {
 	auto getAttribute = [element](const _bstr_t& name) -> _variant_t
 	{
@@ -524,7 +525,7 @@ unique_ptr<Bridge> Bridge::Deserialize (IXMLDOMElement* element)
 	mac_address bridgeAddress;
 	mac_address_from_string<wchar_t>(getAttribute(AddressString).bstrVal, bridgeAddress);
 
-	auto bridge = unique_ptr<Bridge>(new Bridge(portCount, mstiCount, bridgeAddress));
+	auto bridge = unique_ptr<Bridge>(new Bridge(project, portCount, mstiCount, bridgeAddress));
 
 	bridge->_x = wcstof(getAttribute(XString).bstrVal, nullptr);
 	bridge->_y = wcstof(getAttribute(YString).bstrVal, nullptr);
@@ -681,17 +682,6 @@ void Bridge::SetCoordsForInteriorPort (Port* _port, D2D1_POINT_2F proposedLocati
 	}
 
 	this->event_invoker<invalidate_e>()(this);
-}
-
-void Bridge::PauseSimulation()
-{
-	_simulationPaused = true;
-}
-
-void Bridge::ResumeSimulation()
-{
-	_simulationPaused = false;
-	ProcessReceivedPackets();
 }
 
 void Bridge::clear_log()
