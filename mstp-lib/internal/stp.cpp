@@ -931,24 +931,28 @@ bool STP_GetPortEnabled (const STP_BRIDGE* bridge, unsigned int portIndex)
 
 STP_PORT_ROLE STP_GetPortRole (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
 {
+	// This value has meaning only while STP is enabled. Let's check that it is.
 	assert (bridge->started);
 	return bridge->ports [portIndex]->trees [treeIndex]->role;
 }
 
 bool STP_GetPortLearning (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
 {
+	// This value has meaning only while STP is enabled. Let's check that it is.
 	assert (bridge->started);
 	return bridge->ports [portIndex]->trees [treeIndex]->learning;
 }
 
 bool STP_GetPortForwarding (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
 {
+	// This value has meaning only while STP is enabled. Let's check that it is.
 	assert (bridge->started);
 	return bridge->ports [portIndex]->trees [treeIndex]->forwarding;
 }
 
 bool STP_GetPortOperEdge (const STP_BRIDGE* bridge, unsigned int portIndex)
 {
+	// This value has meaning only while STP is enabled. Let's check that it is.
 	assert (bridge->started);
 	return bridge->ports [portIndex]->operEdge;
 }
