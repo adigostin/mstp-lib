@@ -214,13 +214,6 @@ void Port::RenderExteriorStpPort (ID2D1RenderTarget* dc, const drawing_resources
 		dc->DrawLine (Point2F (-edw / 2, dfhly), Point2F (edw / 2, dfhly), dos._brushDiscardingPort);
 		dc->DrawLine (Point2F (-edw / 2, dshly), Point2F (edw / 2, dshly), dos._brushDiscardingPort);
 	}
-	else if (role == STP_PORT_ROLE_UNKNOWN)
-	{
-		// Undefined
-		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-		dc->DrawLine (Point2F (0, 0), Point2F (0, edh), dos._brushDiscardingPort, 2);
-		dc->DrawText (L"?", 1, dos._regularTextFormat, { 2, 0, 20, 20 }, dos._brushDiscardingPort, D2D1_DRAW_TEXT_OPTIONS_NO_SNAP);
-	}
 	else
 		assert(false); // not implemented
 

@@ -125,7 +125,7 @@ public:
 
 	static constexpr LegendInfoEntry LegendInfo[] =
 	{
-		{ L"Disabled",							STP_PORT_ROLE_DISABLED,   false, false, false },
+		{ L"Disabled",               STP_PORT_ROLE_DISABLED,   false, false, false },
 
 		{ L"Designated discarding",  STP_PORT_ROLE_DESIGNATED, false, false, false },
 		{ L"Designated learning",    STP_PORT_ROLE_DESIGNATED, true,  false, false },
@@ -140,7 +140,6 @@ public:
 		{ L"Alternate learning",     STP_PORT_ROLE_ALTERNATE,  true,  false, false },
 
 		{ L"Backup discarding",      STP_PORT_ROLE_BACKUP,     false, false, false },
-		{ L"Undefined",              STP_PORT_ROLE_UNKNOWN,    false, false, false },
 	};
 
 	void render_legend (ID2D1RenderTarget* dc) const
