@@ -7,6 +7,39 @@
 
 using namespace edge;
 
+
+const char port_priority_type_name[] = "PortPriority";
+const edge::NVP port_priority_nvps[] {
+	{ "10 (16 dec)",  0x10 },
+	{ "20 (32 dec)",  0x20 },
+	{ "30 (48 dec)",  0x30 },
+	{ "40 (64 dec)",  0x40 },
+	{ "50 (80 dec)",  0x50 },
+	{ "60 (96 dec)",  0x60 },
+	{ "70 (112 dec)", 0x70 },
+	{ "80 (128 dec)", 0x80 },
+	{ "90 (144 dec)", 0x90 },
+	{ "A0 (160 dec)", 0xA0 },
+	{ "B0 (176 dec)", 0xB0 },
+	{ "C0 (192 dec)", 0xC0 },
+	{ "D0 (208 dec)", 0xD0 },
+	{ "E0 (224 dec)", 0xE0 },
+	{ "F0 (240 dec)", 0xF0 },
+	{ nullptr, 0 },
+};
+
+const char port_role_type_name[] = "port_role";
+const edge::NVP port_role_nvps[] =
+{
+	{ STP_GetPortRoleString(STP_PORT_ROLE_DISABLED),   (int) STP_PORT_ROLE_DISABLED },
+	{ STP_GetPortRoleString(STP_PORT_ROLE_ROOT),       (int) STP_PORT_ROLE_ROOT },
+	{ STP_GetPortRoleString(STP_PORT_ROLE_DESIGNATED), (int) STP_PORT_ROLE_DESIGNATED },
+	{ STP_GetPortRoleString(STP_PORT_ROLE_ALTERNATE),  (int) STP_PORT_ROLE_ALTERNATE },
+	{ STP_GetPortRoleString(STP_PORT_ROLE_BACKUP),     (int) STP_PORT_ROLE_BACKUP },
+	{ STP_GetPortRoleString(STP_PORT_ROLE_MASTER),     (int) STP_PORT_ROLE_MASTER },
+	{ nullptr, 0 }
+};
+
 static const _bstr_t PortTreeString = "PortTree";
 static const _bstr_t TreeIndexString = "TreeIndex";
 static const _bstr_t PortPriorityString = "PortPriority";
@@ -58,26 +91,10 @@ bool PortTree::forwarding() const
 	return STP_GetPortForwarding(_port->bridge()->stp_bridge(), _port->GetPortIndex(), _treeIndex);
 }
 
-const edge::NVP port_priority_nvps[] {
-	{ "10 (16 dec)",  0x10 },
-	{ "20 (32 dec)",  0x20 },
-	{ "30 (48 dec)",  0x30 },
-	{ "40 (64 dec)",  0x40 },
-	{ "50 (80 dec)",  0x50 },
-	{ "60 (96 dec)",  0x60 },
-	{ "70 (112 dec)", 0x70 },
-	{ "80 (128 dec)", 0x80 },
-	{ "90 (144 dec)", 0x90 },
-	{ "A0 (160 dec)", 0xA0 },
-	{ "B0 (176 dec)", 0xB0 },
-	{ "C0 (192 dec)", 0xC0 },
-	{ "D0 (208 dec)", 0xD0 },
-	{ "E0 (224 dec)", 0xE0 },
-	{ "F0 (240 dec)", 0xF0 },
-	{ nullptr, 0 },
-};
-
-const char port_priority_type_name[] = "PortPriority";
+STP_PORT_ROLE PortTree::role() const
+{
+	return STP_GetPortRole (_port->bridge()->stp_bridge(), _port->GetPortIndex(), _treeIndex);
+}
 
 const port_priority_p PortTree::priority_property
 (
@@ -106,6 +123,14 @@ const edge::bool_p PortTree::forwarding_property (
 	nullptr,
 	std::nullopt);
 
-const edge::property* const PortTree::_properties[] = { &priority_property, &learning_property, &forwarding_property };
+const port_role_p PortTree::role_property (
+	"role",
+	nullptr,
+	"",
+	static_cast<port_role_p::member_getter_t>(&role),
+	nullptr,
+	std::nullopt);
+
+const edge::property* const PortTree::_properties[] = { &priority_property, &learning_property, &forwarding_property, &role_property };
 
 const edge::type_t PortTree::_type = { "PortTree", &base::_type, _properties };

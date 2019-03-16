@@ -1,12 +1,17 @@
 #pragma once
 #include "object.h"
 #include "win32/com_ptr.h"
+#include "stp.h"
 
 class Port;
 
 extern const edge::NVP port_priority_nvps[];
 extern const char port_priority_type_name[];
 using port_priority_p = edge::enum_property<uint32_t, port_priority_type_name, port_priority_nvps>;
+
+extern const edge::NVP port_role_nvps[];
+extern const char port_role_type_name[];
+using port_role_p = edge::enum_property<STP_PORT_ROLE, port_role_type_name, port_role_nvps>;
 
 class PortTree : public edge::object
 {
@@ -28,10 +33,12 @@ public:
 
 	bool learning() const;
 	bool forwarding() const;
+	STP_PORT_ROLE role() const;
 
 	static const port_priority_p priority_property;
 	static const edge::bool_p learning_property;
 	static const edge::bool_p forwarding_property;
+	static const port_role_p role_property;
 	static const edge::property* const _properties[];
 	static const edge::type_t _type;
 	const edge::type_t* type() const override { return &_type; }
