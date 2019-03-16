@@ -227,13 +227,13 @@ static void write_port_state_register (bool learning, bool forwarding, unsigned 
 // ============================================================================
 // STP callbacks
 
-static void StpCallback_EnableLearning (const struct STP_BRIDGE* bridge, unsigned int stp_port_index, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
+static void StpCallback_EnableLearning (const struct STP_BRIDGE* bridge, unsigned int stp_port_index, unsigned int treeIndex, bool enable, unsigned int timestamp)
 {
 	bool forwarding = STP_GetPortForwarding (bridge, stp_port_index, treeIndex);
 	write_port_state_register (enable, forwarding, stp_port_index);
 }
 
-static void StpCallback_EnableForwarding (const struct STP_BRIDGE* bridge, unsigned int stp_port_index, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
+static void StpCallback_EnableForwarding (const struct STP_BRIDGE* bridge, unsigned int stp_port_index, unsigned int treeIndex, bool enable, unsigned int timestamp)
 {
 	bool learning = STP_GetPortLearning (bridge, stp_port_index, treeIndex);
 	write_port_state_register (learning, enable, stp_port_index);

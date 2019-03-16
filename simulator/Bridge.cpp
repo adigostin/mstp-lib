@@ -1006,13 +1006,13 @@ void Bridge::StpCallback_EnableBpduTrapping (const STP_BRIDGE* bridge, bool enab
 	b->_bpdu_trapping_enabled = enable;
 }
 
-void Bridge::StpCallback_EnableLearning (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
+void Bridge::StpCallback_EnableLearning (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable, unsigned int timestamp)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 	b->event_invoker<invalidate_e>()(b);
 }
 
-void Bridge::StpCallback_EnableForwarding (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
+void Bridge::StpCallback_EnableForwarding (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable, unsigned int timestamp)
 {
 	auto b = static_cast<Bridge*>(STP_GetApplicationContext(bridge));
 	b->event_invoker<invalidate_e>()(b);

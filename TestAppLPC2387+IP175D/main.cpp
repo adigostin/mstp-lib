@@ -379,7 +379,7 @@ static void StpCallback_EnableBpduTrapping (const struct STP_BRIDGE* bridge, boo
 	}
 }
 
-static void StpCallback_EnableLearning (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
+static void StpCallback_EnableLearning (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable, unsigned int timestamp)
 {
 	unsigned int i = ENET_MIIReadRegister (20, 6);
 
@@ -401,7 +401,7 @@ static void StpCallback_EnableLearning (const struct STP_BRIDGE* bridge, unsigne
 	ENET_MIIWriteRegister (20, 6, i);
 }
 
-static void StpCallback_EnableForwarding (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int enable, unsigned int timestamp)
+static void StpCallback_EnableForwarding (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable, unsigned int timestamp)
 {
 	unsigned int i = ENET_MIIReadRegister (20, 6);
 
