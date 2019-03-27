@@ -28,7 +28,9 @@
 			See the Remarks section for information about changing the number
 			of ports at runtime.</dd>
 		<dt>mstiCount</dt>
-		<dd>Maximum number of MSTIs for when the device runs MSTP (this is in addition to the CIST, which is always present). Should be zero if your device supports only STP/RSTP, or 2..64 if your device supports also MSTP. Passing an invalid value will cause an assertion failure in the function.
+		<dd>Maximum number of MSTIs for when the device runs MSTP (this is in addition to the CIST, which is always present).
+			Should be zero if your device supports only STP/RSTP, or 2..64 if your device supports also MSTP 
+			(See Annex A.18, Item MSTP-1 in 802.1Q-2018). Passing an invalid value will cause an assertion failure in the function.
 		</dd>
         <dt>maxVlanNumber</dt>
         <dd>The maximum VLAN number your device supports, or otherwise zero. The library uses this to determine the size of an&nbsp;
