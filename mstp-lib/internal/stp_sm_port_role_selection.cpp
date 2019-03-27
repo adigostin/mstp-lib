@@ -1,5 +1,5 @@
 
-// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
 // Copyright (c) 2011-2019 Adi Gostin, distributed under Apache License v2.0.
 
 #include "stp_procedures.h"
@@ -29,7 +29,7 @@ static State CheckConditions (const STP_BRIDGE* bridge, TreeIndex givenTree, Sta
 {
 	// ------------------------------------------------------------------------
 	// Check global conditions.
-	
+
 	if (bridge->BEGIN)
 	{
 		if (state == INIT_TREE)
@@ -37,16 +37,16 @@ static State CheckConditions (const STP_BRIDGE* bridge, TreeIndex givenTree, Sta
 			// The entry block for this state has been executed already.
 			return (State)0;
 		}
-		
+
 		return INIT_TREE;
 	}
-	
+
 	// ------------------------------------------------------------------------
 	// Check exit conditions from each state.
-	
+
 	if (state == INIT_TREE)
 		return ROLE_SELECTION;
-	
+
 	if (state == ROLE_SELECTION)
 	{
 		for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
@@ -54,7 +54,7 @@ static State CheckConditions (const STP_BRIDGE* bridge, TreeIndex givenTree, Sta
 			if (bridge->ports [portIndex]->trees [givenTree]->reselect)
 				return ROLE_SELECTION;
 		}
-		
+
 		return (State)0;
 	}
 
@@ -80,7 +80,7 @@ static void InitState (STP_BRIDGE* bridge, TreeIndex givenTree, State state, uns
 		assert (false);
 }
 
-const PerTreeStateMachine<State> PortRoleSelection::sm =
+const StateMachine<State, TreeIndex> PortRoleSelection::sm =
 {
 #if STP_USE_LOG
 	"PortRoleSelection",

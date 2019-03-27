@@ -1,5 +1,5 @@
 
-// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
 // Copyright (c) 2011-2019 Adi Gostin, distributed under Apache License v2.0.
 
 #include "stp_procedures.h"
@@ -28,10 +28,10 @@ static const char* GetStateName (State state)
 static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, State state)
 {
 	PORT* port = bridge->ports[givenPort];
-	
+
 	// ------------------------------------------------------------------------
 	// Check global conditions.
-	
+
 	if (bridge->BEGIN)
 	{
 		if (state == ONE_SECOND)
@@ -39,10 +39,10 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, Sta
 			// The entry block for this state has been executed already.
 			return (State)0;
 		}
-		
+
 		return ONE_SECOND;
 	}
-	
+
 	// ------------------------------------------------------------------------
 	// Check exit conditions from each state.
 
@@ -50,13 +50,13 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, Sta
 	{
 		if (port->tick)
 			return TICK;
-		
+
 		return (State)0;
 	}
 
 	if (state == TICK)
 		return ONE_SECOND;
-	
+
 	assert (false);
 	return (State)0;
 }
@@ -66,11 +66,11 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, Sta
 static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, unsigned int timestamp)
 {
 	PORT* port = bridge->ports[givenPort];
-	
+
 	if (state == ONE_SECOND)
 	{
 		port->tick = false;
-	}		
+	}
 	else if (state == TICK)
 	{
 		if (port->helloWhen      > 0) port->helloWhen--;
@@ -93,7 +93,7 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, uns
 	}
 }
 
-const PerPortStateMachine<State> PortTimers::sm =
+const StateMachine<State, PortIndex> PortTimers::sm =
 {
 #if STP_USE_LOG
 	"PortTimers",

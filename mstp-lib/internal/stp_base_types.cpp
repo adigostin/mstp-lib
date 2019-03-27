@@ -34,7 +34,7 @@ const char* GetPortRoleName (STP_PORT_ROLE role)
 	else
 	{
 		assert (false);
-		return nullptr;
+		return NULL;
 	}
 }
 

@@ -136,7 +136,7 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, uns
 		assert (false);
 }
 
-const PerPortStateMachine<BridgeDetection::State> BridgeDetection::sm =
+const StateMachine<BridgeDetection::State, PortIndex> BridgeDetection::sm =
 {
 #if STP_USE_LOG
 	"BridgeDetection",
@@ -145,4 +145,3 @@ const PerPortStateMachine<BridgeDetection::State> BridgeDetection::sm =
 	&CheckConditions,
 	&InitState,
 };
-

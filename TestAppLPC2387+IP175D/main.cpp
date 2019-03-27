@@ -1,21 +1,22 @@
 
+#include "stp.h"
+#include "uart.h"
+#include "vic.h"
+#include "timer.h"
+#include "LPC23xx_enet.h"
 #include <nxp/iolpc2387.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <intrinsics.h>
 #include <string.h>
 #include <assert.h>
-#include "stp.h"
-#include "uart.h"
-#include "vic.h"
-#include "timer.h"
-#include "LPC23xx_enet.h"
 
 #define PORT_RJ45_1		0
 #define PORT_RJ45_2		1
 #define PORT_RMII		2
 
-extern STP_CALLBACKS const Callbacks;
+extern STP_CALLBACKS const callbacks_ip175c;
+extern STP_CALLBACKS const callbacks_ip175d;
 
 // ============================================================================
 
@@ -30,57 +31,20 @@ int putchar (int c)
 static void InitPins()
 {
 	PINSEL0 =
-		  (0 << 0)   // P0[0]  is GPIO
-		| (0 << 2)   // P0[1]  is GPIO
-		| (1 << 4)   // P0[2]  is serial TXD0
-		| (1 << 6)   // P0[3]  is serial RXD0
-		| (0 << 8)   // P0[4]  is GPIO
-		| (0 << 10)  // P0[5]  is GPIO
-		| (0 << 12)  // P0[6]  is GPIO
-		| (0 << 14)  // P0[7]  is GPIO
-		| (0 << 16)  // P0[8]  is GPIO
-		| (0 << 18)  // P0[9]  is GPIO
-		| (0 << 20)  // P0[10] is GPIO
-		| (0 << 22)  // P0[11] is GPIO
-		| (0 << 24)  // P0[12] is missing
-		| (0 << 26)  // P0[13] is missing
-		| (0 << 28)  // P0[14] is missing
-		| (0 << 30); // P0[15] is GPIO
+		  (1 << 4)   // P0[2]  is serial TXD0
+		| (1 << 6);  // P0[3]  is serial RXD0
 	PINSEL1 = 0;
 	PINSEL2 =
 		  (1 << 0)   // P1[0]  is ENET
 		| (1 << 2)   // P1[1]  is ENET
-		| (0 << 4)   // P1[2]  is missing
-		| (0 << 6)   // P1[3]  is missing
 		| (1 << 8)   // P1[4]  is ENET
-		| (0 << 10)  // P1[5]  is missing
-		| (0 << 12)  // P1[6]  is missing
-		| (0 << 14)  // P1[7]  is missing
 		| (1 << 16)  // P1[8]  is ENET
 		| (1 << 18)  // P1[9]  is ENET
 		| (1 << 20)  // P1[10] is ENET
-		| (0 << 22)  // P1[11] is missing
-		| (0 << 24)  // P1[12] is missing
-		| (0 << 26)  // P1[13] is missing
-		| (0 << 28)  // P1[14] is GPIO
 		| (1 << 30); // P1[15] is ENET
 	PINSEL3 =
 		  (1 << 0)   // P1[16] is ENET_MDC
-		| (1 << 2)   // P1[17] is ENET_MDIO
-		| (0 << 4)   // P1[18] is not connected
-		| (2 << 6)   // P1[19] is USB_PPWR1
-		| (0 << 8)   // P1[20] is GPIO
-		| (0 << 10)  // P1[21] is GPIO
-		| (2 << 12)  // P1[22] is USB_PWRD1
-		| (0 << 14)  // P1[23] is GPIO
-		| (2 << 16)  // P1[24] is PWM
-		| (0 << 18)  // P1[25] is GPIO
-		| (0 << 20)  // P1[26] is GPIO
-		| (2 << 22)  // P1[27] is USB_OVRCR1
-		| (0 << 24)  // P1[28] is GPIO
-		| (0 << 26)  // P1[29] is GPIO
-		| (0 << 28)  // P1[30] is GPIO
-		| (0 << 30); // P1[31] is GPIO
+		| (1 << 2);  // P1[17] is ENET_MDIO
 	PINSEL4 = 0;
 	PINSEL5 = 0;
 	PINSEL6 = 0;
@@ -178,12 +142,12 @@ int main ()
 
 	// -----------------------------------
 	// On my board the RESET pin of the switch IC is pulled down with a resistor to keep it from
-	// starting at powerup, and wired to P1[14] so that the software can start it when RSTP is running.
+	// starting at powerup, and wired to P1[18] so that the software can start it when RSTP is running.
 	// Let's deassert here this RESET signal, to let the switch IC generate the clock signal for
 	// the LPC Ethernet module. This clock signal is needed by the MII management interface of the LPC.
 
-	FIO1SET = (1 << 14);
-	FIO1DIR |= (1 << 14);
+	FIO1SET = (1 << 18);
+	FIO1DIR |= (1 << 18);
 
 	// Give it about 10ms to start its clock.
 	Timer_Wait (10);
@@ -211,6 +175,19 @@ int main ()
 	ENET_MIIWriteRegister (PORT_RJ45_1, 0, (1 << 11));
 	ENET_MIIWriteRegister (PORT_RJ45_2, 0, (1 << 11));
 
+	unsigned short chipId = ENET_MIIReadRegister (20, 0);
+	if (chipId == 0xffff)
+	{
+		chipId = 0x175c;
+		printf ("IP175C detected.\r\n");
+	}
+	else if (chipId == 0x175D)
+	{
+		printf ("IP175D detected.\r\n");
+	}
+	else
+		assert(false);
+
 	// -----------------------------------
 
 	// Initialize the driver of the built-in Ethernet controller.
@@ -222,33 +199,81 @@ int main ()
 	// Configure the RMII link between the switch chip and the built-in Ethernet controller.
 	// See the IP175D datasheet for details.
 
-	ENET_MIIWriteRegister (21, 3,
-						  (1 << 15) // P4EXT = 1
-						| (0 << 11) // MII0_MAC_MODE_EN (MII0 works as a PHY and should be connected to an external MAC device)
-						| (1 << 10) // MII0 RMII interface enabled
-						| (0 << 9)	// MII2 RMII interface disabled
-						| (0 << 8)	// MII1 RMII interface disabled
-						| (1 << 6)	// MII0_MAC_REPEATER = 1 (external PHY's TXEN does not loop back to CRS)
-						| (1 << 4)	// MII0_PHY_COL_DELAY = 1 (collision delay 24 clocks)
-						| (0 << 2));// MII2_EN = 0
+	if (chipId == 0x175c)
+	{
+		// See MII control register, page 98 of IP175C datasheet.
+		ENET_MIIWriteRegister (31, 5,
+							  (1 << 15) // P4EXT = 1
+							| (0 << 11) // MII0_mac_mode_en = 0 (MII0 works as a PHY and should be connected to an external MAC device)
+							| (1 << 10) // MII0_RMII_EN = 1 (MII0 RMII interface enabled)
+							| (0 << 9)  // MII2_RMII_EN = 0 (MII2 RMII interface disabled)
+							| (0 << 8)  // MII1_RMII_EN = 0 (MII1 RMII interface disabled)
+							| (1 << 6)  // MII0_MAC_REPEATER = 1 (external PHY's TXEN does not loop back to CRS)
+							| (1 << 4)  // MII0_PHY_COL_DELAY = 1 (collision delay 24 clocks)
+							| (0 << 2));// MII2_EN = 0
 
-	ENET_MIIWriteRegister (20, 4,
-						  (1 << 15)   // MAC5_FORCE_100
-						| (1 << 13)); // MAC5_FORCE_FULL
+		// P4_FORCE100 - page 74 of IP175C datasheet.
+		ENET_MIIWriteRegister (29, 22,
+							  (1 << 15) // P4_FORCE (enable force mode)
+							| (1 << 10) // P4_FORCE100 (force MII0 (PHY mode) to be 100M)
+							| (1 << 5)); // P4_FORCE_FULL (force MII0 (PHY mode) to be full duplex)
+	}
+	else if (chipId == 0x175d)
+	{
+		ENET_MIIWriteRegister (21, 3,
+							  (1 << 15) // P4EXT = 1
+							| (0 << 11) // MII0_MAC_MODE_EN (MII0 works as a PHY and should be connected to an external MAC device)
+							| (1 << 10) // MII0 RMII interface enabled
+							| (0 << 9)	// MII2 RMII interface disabled
+							| (0 << 8)	// MII1 RMII interface disabled
+							| (1 << 6)	// MII0_MAC_REPEATER = 1 (external PHY's TXEN does not loop back to CRS)
+							| (1 << 4)	// MII0_PHY_COL_DELAY = 1 (collision delay 24 clocks)
+							| (0 << 2));// MII2_EN = 0
+
+		ENET_MIIWriteRegister (20, 4,
+							  (1 << 15)   // MAC5_FORCE_100
+							| (1 << 13)); // MAC5_FORCE_FULL
+	}
+	else
+		assert (false);
 
 	// -----------------------------------
 	// Wait until we have a good RMII link.
 	// See paragraph 5.4.2 in the IP175D datasheet.
 
-	while ((ENET_MIIReadRegister (21, 1) & (1 << 5)) == 0)
-		;
-
-	printf ("21, 0 = 0x%04x\r\n", ENET_MIIReadRegister (21, 0));
-	printf ("21, 3 = 0x%04x\r\n", ENET_MIIReadRegister (21, 3));
+	while(true)
+	{
+		if (chipId == 0x175c)
+		{
+			// See MII MAC mode register, page 96 of IP175C datasheet.
+			if (ENET_MIIReadRegister (31, 3) & (1 << 5))
+				break;
+		}
+		else if (chipId == 0x175d)
+		{
+			// See paragraph 5.4.2 in the IP175D datasheet.
+			if (ENET_MIIReadRegister (21, 1) & (1 << 5))
+				break;
+		}
+		else
+			assert (false);
+	}
 
 	// -----------------------------------
 	// Reset the switching core.
-	ENET_MIIWriteRegister (20, 2, 0x175c);
+
+	if (chipId == 0x175c)
+	{
+		// Reset switching core - this doesn't reset registers 29.0-31, 30.0-31, 31.0-31
+		// See page 80 of IP175C datasheet.
+		ENET_MIIWriteRegister (30, 0, 0x175c);
+	}
+	else if (chipId == 0x175d)
+	{
+		ENET_MIIWriteRegister (20, 2, 0x175c);
+	}
+	else
+		assert (false);
 
 	// specifications say that we must wait at least 2 ms after this reset
 	Timer_Wait (3);
@@ -258,17 +283,12 @@ int main ()
 
 	unsigned int timestamp = Timer_GetTimeMilliseconds();
 
-	STP_BRIDGE* bridge = STP_CreateBridge (3, 0, 0, &Callbacks, MacAddress, 2);
+	const STP_CALLBACKS* callbacks = (chipId == 0x175c) ? &callbacks_ip175c : &callbacks_ip175d;
+	STP_BRIDGE* bridge = STP_CreateBridge (2, 0, 0, callbacks, MacAddress, 2);
 
 	STP_EnableLogging (bridge, true);
 
 	//STP_SetBridgePriority (bridge, 0, 0x9000, timestamp);
-
-	// Port 2 of the switch chip, which on my board is the RMII connection to the microcontroller's Ethernet module, is an Edge port.
-	STP_SetPortAdminEdge (bridge, PORT_RMII, true, timestamp);
-
-	// Port 2 (RMII) is always enabled.
-	STP_OnPortEnabled (bridge, PORT_RMII, 100, true, timestamp);
 
 	STP_StartBridge (bridge, timestamp);
 
@@ -347,202 +367,3 @@ int main ()
 }
 
 // ============================================================================
-
-static void StpCallback_EnableBpduTrapping (const struct STP_BRIDGE* bridge, bool enable, unsigned int timestamp)
-{
-	if (enable)
-	{
-		// Enable special tagging for RX and TX.
-		// See the Miscellaneous Control Register, page 102 of the IP175D datasheet.
-		unsigned short reg = ENET_MIIReadRegister (21, 22);
-		reg = (reg & ~3u) | 3u;
-		ENET_MIIWriteRegister (21, 22, reg);
-
-		// Add source-port tag for packets going to port 5 (RMII port).
-		// See the Add Tag Control Register, page 111 of the IP175D datasheet.
-		ENET_MIIWriteRegister (23, 8, (1 << 5));
-
-		// Remove source-port tag from packets going to ports 0-4.
-		// See the Remove Tag Control Register, page 111 of the IP175D datasheet.
-		ENET_MIIWriteRegister (23, 16, 0x1f);
-
-		// Forward BPDUs only to the CPU.
-		// Page 79 of the IP175D datasheet.
-		reg = ENET_MIIReadRegister (20, 8);
-		reg = (reg & ~3u) | 1u;
-		ENET_MIIWriteRegister (20, 8, reg);
-	}
-	else
-	{
-		// Here goes the code that undoes the switch chip configuration from above.
-		// This is not yet implemented in this demo app.
-	}
-}
-
-static void StpCallback_EnableLearning (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable, unsigned int timestamp)
-{
-	unsigned int i = ENET_MIIReadRegister (20, 6);
-
-	if (portIndex == PORT_RJ45_1)
-	{
-		i = (i & ~(1ul << 0)) | ((enable != 0) ? (1ul << 0) : 0);
-	}
-	else if (portIndex == PORT_RJ45_2)
-	{
-		i = (i & ~(1ul << 1)) | ((enable != 0) ? (1ul << 1) : 0);
-	}
-	else if (portIndex == PORT_RMII)
-	{
-		i = (i & ~(1ul << 5)) | ((enable != 0) ? (1ul << 5) : 0);
-	}
-	else
-		assert (0);
-
-	ENET_MIIWriteRegister (20, 6, i);
-}
-
-static void StpCallback_EnableForwarding (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable, unsigned int timestamp)
-{
-	unsigned int i = ENET_MIIReadRegister (20, 6);
-
-	if (portIndex == PORT_RJ45_1)
-	{
-		i = (i & ~(1ul << 8)) | ((enable != 0) ? (1ul << 8) : 0);
-	}
-	else if (portIndex == PORT_RJ45_2)
-	{
-		i = (i & ~(1ul << 9)) | ((enable != 0) ? (1ul << 9) : 0);
-	}
-	else if (portIndex == PORT_RMII)
-	{
-		i = (i & ~(1ul << 13)) | ((enable != 0) ? (1ul << 13) : 0);
-	}
-	else
-		assert (0);
-
-	ENET_MIIWriteRegister (20, 6, i);
-}
-
-static unsigned char BpduFrameBuffer [21 + 36];
-static unsigned int BpduFrameSize;
-
-static void* StpCallback_TransmitGetBuffer (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int bpduSize, unsigned int timestamp)
-{
-	if (portIndex == PORT_RMII)
-	{
-		// The library is trying to send a BPDU to the RMII port, which we know is us.
-		// Let's not allow it cause it would be a waste of bandwidth.
-		return NULL;
-	}
-
-	assert (21 + bpduSize <= sizeof (BpduFrameBuffer));
-	BpduFrameSize = 21 + bpduSize;
-
-	// Dest MAC address
-	BpduFrameBuffer[0] = 0x01;
-	BpduFrameBuffer[1] = 0x80;
-	BpduFrameBuffer[2] = 0xC2;
-	BpduFrameBuffer[3] = 0x00;
-	BpduFrameBuffer[4] = 0x00;
-	BpduFrameBuffer[5] = 0x00;
-
-	// Source Mac Address
-	memcpy (&BpduFrameBuffer[6], STP_GetBridgeAddress(bridge)->bytes, 6);
-	assert ((unsigned int) BpduFrameBuffer[11] + 1 + portIndex <= 255);
-	BpduFrameBuffer[11] += (1 + portIndex);
-
-	// switch chip header
-	BpduFrameBuffer[12] = 0x81;
-	BpduFrameBuffer[13] = (1 << portIndex);
-	BpduFrameBuffer[14] = 0;
-	BpduFrameBuffer[15] = 0;
-
-	// EtherType/Size
-	BpduFrameBuffer[16] = 0;
-	BpduFrameBuffer[17] = 3 + bpduSize;
-
-	// LLC field
-	BpduFrameBuffer[18] = 0x42;
-	BpduFrameBuffer[19] = 0x42;
-	BpduFrameBuffer[20] = 0x03;
-
-	return &BpduFrameBuffer[21];
-}
-
-static void StpCallback_TransmitReleaseBuffer (const struct STP_BRIDGE* bridge, void* bufferReturnedByGetBuffer)
-{
-	tapdev_send (BpduFrameBuffer, BpduFrameSize);
-}
-
-static void StpCallback_FlushFdb (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType)
-{
-	// quickly age out everything
-	ENET_MIIWriteRegister (20, 14, 0x60);
-
-	// wait 2 ms while the IC ages out the table
-	Timer_Wait (3);
-
-	// reenable slow aging (~5 min)
-	ENET_MIIWriteRegister (20, 14, 5);
-}
-
-static void StpCallback_DebugStrOut (const struct STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, unsigned int flush)
-{
-	printf ("%s", nullTerminatedString);
-	if (flush)
-		fflush (stdout);
-}
-
-// See long comment at the end of 802_1Q_2011_procedures.cpp.
-static void StpCallback_OnTopologyChange (const struct STP_BRIDGE* bridge, unsigned int treeIndex, unsigned int timestamp)
-{
-	// do nothing in this demo app
-	//printf ("TC\r\n");
-}
-
-// See long comment at the end of 802_1Q_2011_procedures.cpp.
-static void StpCallback_OnNotifiedTC (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp)
-{
-	// quickly age out everything
-	ENET_MIIWriteRegister (20, 14, 0x60);
-
-	// wait 2 ms while the IC ages out the table
-	Timer_Wait (3);
-
-	// reenable slow aging (~5 min)
-	ENET_MIIWriteRegister (20, 14, 5);
-}
-
-void StpCallback_OnPortRoleChanged (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_PORT_ROLE role, unsigned int timestamp)
-{
-}
-
-static void* StpCallback_AllocAndZeroMemory (unsigned int size)
-{
-	void* result = malloc (size);
-	assert (result != NULL);
-	memset (result, 0, size);
-	return result;
-}
-
-static void StpCallback_FreeMemory (void* p)
-{
-	free (p);
-}
-
-static STP_CALLBACKS const Callbacks =
-{
-	StpCallback_EnableBpduTrapping,
-	StpCallback_EnableLearning,
-	StpCallback_EnableForwarding,
-	StpCallback_TransmitGetBuffer,
-	StpCallback_TransmitReleaseBuffer,
-	StpCallback_FlushFdb,
-	StpCallback_DebugStrOut,
-	StpCallback_OnTopologyChange,
-	StpCallback_OnNotifiedTC,
-	StpCallback_OnPortRoleChanged,
-	StpCallback_AllocAndZeroMemory,
-	StpCallback_FreeMemory
-};
-

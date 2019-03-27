@@ -33,8 +33,11 @@ static const char* GetStateName (State state)
 // ============================================================================
 
 // Returns the new state, or 0 when no transition is to be made.
-static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree, State state)
+static State CheckConditions (const STP_BRIDGE* bridge, PortAndTree pt, State state)
 {
+	PortIndex givenPort = pt.portIndex;
+	TreeIndex givenTree = pt.treeIndex;
+
 	PORT* port = bridge->ports[givenPort];
 	PORT_TREE* portTree = port->trees[givenTree];
 
@@ -132,8 +135,11 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, Tre
 
 // ============================================================================
 
-static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree, State state, unsigned int timestamp)
+static void InitState (STP_BRIDGE* bridge, PortAndTree pt, State state, unsigned int timestamp)
 {
+	PortIndex givenPort = pt.portIndex;
+	TreeIndex givenTree = pt.treeIndex;
+
 	PORT* port = bridge->ports [givenPort];
 	PORT_TREE* portTree = port->trees [givenTree];
 
@@ -227,7 +233,7 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenT
 		assert (false);
 }
 
-const PerPortPerTreeStateMachine<State> PortInformation::sm =
+const StateMachine<State, PortAndTree> PortInformation::sm =
 {
 #if STP_USE_LOG
 	"PortInformation",

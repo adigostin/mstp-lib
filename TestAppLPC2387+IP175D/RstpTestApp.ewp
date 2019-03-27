@@ -1124,6 +1124,12 @@
         </file>
     </group>
     <file>
+        <name>$PROJ_DIR$\callbacks_ip175c.cpp</name>
+    </file>
+    <file>
+        <name>$PROJ_DIR$\callbacks_ip175d.cpp</name>
+    </file>
+    <file>
         <name>$PROJ_DIR$\main.cpp</name>
     </file>
     <file>

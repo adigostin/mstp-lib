@@ -24,7 +24,7 @@ const char* GetBpduPortRoleName (unsigned int bpduPortRole)
 	else
 	{
 		assert (false);
-		return nullptr;
+		return NULL;
 	}
 }
 

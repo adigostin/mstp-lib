@@ -98,7 +98,7 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, uns
 		assert (false);
 }
 
-const PerPortStateMachine<State> L2GPortReceive::sm = 
+const StateMachine<State, PortIndex> L2GPortReceive::sm =
 {
 #if STP_USE_LOG
 	"L2GPortReceive",

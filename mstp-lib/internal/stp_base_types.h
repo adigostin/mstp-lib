@@ -9,11 +9,11 @@
 #include <assert.h>
 #include <string.h>
 
-enum PortIndex : unsigned char { };
-inline PortIndex operator++(PortIndex& x, int) { auto res = x; x = (PortIndex) (x + 1); return res; }
+enum PortIndex { };
+inline PortIndex operator++(PortIndex& x, int) { PortIndex res = x; x = (PortIndex) (x + 1); return res; }
 
-enum TreeIndex : unsigned char { };
-inline TreeIndex operator++(TreeIndex& x, int) { auto res = x; x = (TreeIndex) (x + 1); return res; }
+enum TreeIndex { };
+inline TreeIndex operator++(TreeIndex& x, int) { TreeIndex res = x; x = (TreeIndex) (x + 1); return res; }
 
 static const TreeIndex CIST_INDEX = (TreeIndex)0;
 

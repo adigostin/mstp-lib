@@ -61,8 +61,11 @@ static const char* GetStateName (State state)
 // ============================================================================
 
 // Returns the new state, or 0 when no transition is to be made.
-static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree, State state)
+static State CheckConditions (const STP_BRIDGE* bridge, PortAndTree pt, State state)
 {
+	PortIndex givenPort = pt.portIndex;
+	TreeIndex givenTree = pt.treeIndex;
+
 	PORT* port = bridge->ports[givenPort];
 	PORT_TREE* tree = port->trees[givenTree];
 
@@ -351,8 +354,11 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, Tre
 
 // ============================================================================
 
-static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree, State state, unsigned int timestamp)
+static void InitState (STP_BRIDGE* bridge, PortAndTree pt, State state, unsigned int timestamp)
 {
+	PortIndex givenPort = pt.portIndex;
+	TreeIndex givenTree = pt.treeIndex;
+
 	PORT* port = bridge->ports[givenPort];
 	PORT_TREE* tree = port->trees[givenTree];
 
@@ -362,7 +368,7 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenT
 	if (state == INIT_PORT)
 	{
 		tree->role = STP_PORT_ROLE_DISABLED;
-		if (bridge->callbacks.onPortRoleChanged != nullptr)
+		if (bridge->callbacks.onPortRoleChanged != NULL)
 			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, STP_PORT_ROLE_DISABLED, timestamp);
 		tree->learn = tree->forward = false;
 		tree->synced = false;
@@ -374,7 +380,7 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenT
 	else if (state == DISABLE_PORT)
 	{
 		tree->role = STP_PORT_ROLE_DISABLED;
-		if (bridge->callbacks.onPortRoleChanged != nullptr)
+		if (bridge->callbacks.onPortRoleChanged != NULL)
 			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, STP_PORT_ROLE_DISABLED, timestamp);
 		tree->learn = tree->forward = false;
 	}
@@ -392,7 +398,7 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenT
 	else if (state == MASTER_PORT)
 	{
 		tree->role = STP_PORT_ROLE_MASTER;
-		if (bridge->callbacks.onPortRoleChanged != nullptr)
+		if (bridge->callbacks.onPortRoleChanged != NULL)
 			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, STP_PORT_ROLE_MASTER, timestamp);
 	}
 	else if (state == MASTER_PROPOSED)
@@ -438,7 +444,7 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenT
 	else if (state == ROOT_PORT)
 	{
 		tree->role = STP_PORT_ROLE_ROOT;
-		if (bridge->callbacks.onPortRoleChanged != nullptr)
+		if (bridge->callbacks.onPortRoleChanged != NULL)
 			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, STP_PORT_ROLE_ROOT, timestamp);
 		tree->rrWhile = FwdDelay (bridge, givenPort);
 	}
@@ -493,7 +499,7 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenT
 	else if (state == DESIGNATED_PORT)
 	{
 		tree->role = STP_PORT_ROLE_DESIGNATED;
-		if (bridge->callbacks.onPortRoleChanged != nullptr)
+		if (bridge->callbacks.onPortRoleChanged != NULL)
 			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, STP_PORT_ROLE_DESIGNATED, timestamp);
 
 		if (cist (bridge, givenTree))
@@ -581,7 +587,7 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenT
 	else if (state == BLOCK_PORT)
 	{
 		tree->role = tree->selectedRole;
-		if (bridge->callbacks.onPortRoleChanged != nullptr)
+		if (bridge->callbacks.onPortRoleChanged != NULL)
 			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, tree->role, timestamp);
 		tree->learn = tree->forward = false;
 	}
@@ -589,7 +595,7 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenT
 		assert (false);
 }
 
-const PerPortPerTreeStateMachine<PortRoleTransitions::State> PortRoleTransitions::sm =
+const StateMachine<PortRoleTransitions::State, PortAndTree> PortRoleTransitions::sm =
 {
 #if STP_USE_LOG
 	"PortRoleTransitions",

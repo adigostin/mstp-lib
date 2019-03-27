@@ -47,7 +47,7 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	assert (maxVlanNumber <= 4094);
 
 	STP_BRIDGE* bridge = (STP_BRIDGE*) callbacks->allocAndZeroMemory (sizeof (STP_BRIDGE));
-	assert (bridge != nullptr);
+	assert (bridge != NULL);
 
 	// See "13.6.2 Force Protocol Version" on page 332
 	bridge->ForceProtocolVersion = STP_VERSION_RSTP;
@@ -60,7 +60,7 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 #if STP_USE_LOG
 	assert (debugLogBufferSize >= 2); // one byte for the data, one for the null terminator of the string passed to the callback
 	bridge->logBuffer = (char*) callbacks->allocAndZeroMemory (debugLogBufferSize);
-	assert (bridge->logBuffer != nullptr);
+	assert (bridge->logBuffer != NULL);
 	bridge->logBufferMaxSize = debugLogBufferSize;
 	bridge->logBufferUsedSize = 0;
 	bridge->logCurrentPort = -1;
@@ -70,14 +70,14 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	// ------------------------------------------------------------------------
 
 	bridge->trees = (BRIDGE_TREE**) callbacks->allocAndZeroMemory ((1 + bridge->mstiCount) * sizeof (BRIDGE_TREE*));
-	assert (bridge->trees != nullptr);
+	assert (bridge->trees != NULL);
 
 	bridge->ports = (PORT**) callbacks->allocAndZeroMemory (portCount * sizeof (PORT*));
-	assert (bridge->ports != nullptr);
+	assert (bridge->ports != NULL);
 
 	// per-bridge CIST vars
 	bridge->trees [CIST_INDEX] = (BRIDGE_TREE*) callbacks->allocAndZeroMemory (sizeof (BRIDGE_TREE));
-	assert (bridge->trees [CIST_INDEX] != nullptr);
+	assert (bridge->trees [CIST_INDEX] != NULL);
 	bridge->trees [CIST_INDEX]->SetBridgeIdentifier (0x8000, CIST_INDEX, bridgeAddress);
 	// 13.24.3 in 802.1Q-2011
 	// Defaults from Table 13-5 on page 510 in 802.1Q-2018
@@ -90,7 +90,7 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	for (unsigned int treeIndex = 1; treeIndex < (1 + bridge->mstiCount); treeIndex++)
 	{
 		bridge->trees [treeIndex] = (BRIDGE_TREE*) callbacks->allocAndZeroMemory (sizeof (BRIDGE_TREE));
-		assert (bridge->trees [treeIndex] != nullptr);
+		assert (bridge->trees [treeIndex] != NULL);
 		bridge->trees [treeIndex]->SetBridgeIdentifier (0x8000, treeIndex, bridgeAddress);
 		bridge->trees [treeIndex]->BridgeTimes.remainingHops = 20;
 	}
@@ -99,18 +99,18 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
 	{
 		bridge->ports [portIndex] = (PORT*) callbacks->allocAndZeroMemory (sizeof (PORT));
-		assert (bridge->ports [portIndex] != nullptr);
+		assert (bridge->ports [portIndex] != NULL);
 
 		PORT* port = bridge->ports [portIndex];
 
 		port->trees = (PORT_TREE**) callbacks->allocAndZeroMemory ((1 + bridge->mstiCount) * sizeof (PORT_TREE*));
-		assert (port->trees != nullptr);
+		assert (port->trees != NULL);
 
 		// per-port CIST and MSTI vars
 		for (unsigned int treeIndex = 0; treeIndex < (1 + bridge->mstiCount); treeIndex++)
 		{
 			port->trees[treeIndex] = (PORT_TREE*) callbacks->allocAndZeroMemory (sizeof (PORT_TREE));
-			assert (port->trees[treeIndex] != nullptr);
+			assert (port->trees[treeIndex] != NULL);
 			port->trees[treeIndex]->portId.Set (0x80, (unsigned short) portIndex + 1);
 			port->trees[treeIndex]->portTimes = bridge->trees[treeIndex]->BridgeTimes;
 			port->trees[treeIndex]->InternalPortPathCost = 200000; // TODO: remove this hardcoded value and calculate the actual value in STP_OnPortEnabled
@@ -123,7 +123,7 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 		port->enableBPDUtx = true;
 	}
 
-	bridge->receivedBpduContent = nullptr; // see comment at declaration of receivedBpduContent
+	bridge->receivedBpduContent = NULL; // see comment at declaration of receivedBpduContent
 
 	// These were already zeroed by the allocation routine.
 	//bridge->MstConfigId.ConfigurationIdentifierFormatSelector = 0;
@@ -133,7 +133,7 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	STP_GetDefaultMstConfigName (bridgeAddress, bridge->MstConfigId.ConfigurationName);
 
 	bridge->mstConfigTable = (INV_UINT2*) callbacks->allocAndZeroMemory ((1 + maxVlanNumber) * 2);
-	assert (bridge->mstConfigTable != nullptr);
+	assert (bridge->mstConfigTable != NULL);
 
 	// The config table is all zeroes now, so all VIDs map to the CIST, no VID mapped to any MSTI.
 	ComputeMstConfigDigest (bridge);
@@ -396,7 +396,7 @@ void STP_OnBpduReceived (STP_BRIDGE* bridge, unsigned int portIndex, const unsig
 
 			if (passToStateMachines)
 			{
-				assert (bridge->receivedBpduContent == nullptr);
+				assert (bridge->receivedBpduContent == NULL);
 				assert (bridge->receivedBpduType == VALIDATED_BPDU_TYPE_UNKNOWN);
 				assert (bridge->ports [portIndex]->rcvdBpdu == false);
 
@@ -406,7 +406,7 @@ void STP_OnBpduReceived (STP_BRIDGE* bridge, unsigned int portIndex, const unsig
 
 				RunStateMachines (bridge, timestamp);
 
-				bridge->receivedBpduContent = nullptr; // to cause an exception on access
+				bridge->receivedBpduContent = NULL; // to cause an exception on access
 				bridge->receivedBpduType = VALIDATED_BPDU_TYPE_UNKNOWN; // to cause asserts on access
 
 				// Check that the state machines did process the BPDU.
@@ -449,8 +449,8 @@ bool STP_IsLoggingEnabled (const STP_BRIDGE* bridge)
 // ============================================================================
 
 #if STP_USE_LOG
-template<typename... PortTreeArgs>
-static void LogTransition (STP_BRIDGE* bridge, const char* smName, const char* newStateName, PortTreeArgs... args);
+template<typename PortTreeArgs>
+static void LogTransition (STP_BRIDGE* bridge, const char* smName, const char* newStateName, PortTreeArgs args);
 
 template<>
 void LogTransition (STP_BRIDGE* bridge, const char* smName, const char* newStateName, TreeIndex ti)
@@ -475,8 +475,10 @@ void LogTransition (STP_BRIDGE* bridge, const char* smName, const char* newState
 }
 
 template<>
-void LogTransition (STP_BRIDGE* bridge, const char* smName, const char* newStateName, PortIndex pi, TreeIndex ti)
+void LogTransition (STP_BRIDGE* bridge, const char* smName, const char* newStateName, PortAndTree pt)
 {
+	PortIndex pi = pt.portIndex;
+	TreeIndex ti = pt.treeIndex;
 	LOG (bridge, pi, ti, "Port {D}: ", 1 + pi);
 	if (bridge->ForceProtocolVersion >= STP_VERSION_MSTP)
 	{
@@ -491,21 +493,21 @@ void LogTransition (STP_BRIDGE* bridge, const char* smName, const char* newState
 
 // ============================================================================
 
-template<typename State, typename... PortTreeArgs>
-static bool RunStateMachineInstance (STP_BRIDGE* bridge, const StateMachine<State, PortTreeArgs...>& smInfo, State& state, unsigned int timestamp, PortTreeArgs... portTreeArgs)
+template<typename State, typename PortTreeArgs>
+static bool RunStateMachineInstance (STP_BRIDGE* bridge, const StateMachine<State, PortTreeArgs>& smInfo, State& state, unsigned int timestamp, PortTreeArgs portTreeArgs)
 {
 	volatile bool changed = false;
 
 rep:
-	State newState = smInfo.checkConditions (bridge, portTreeArgs..., state);
+	State newState = smInfo.checkConditions (bridge, portTreeArgs, state);
 	if (newState != 0)
 	{
 		#if STP_USE_LOG
 			const char* newStateName = smInfo.getStateName(newState);
-			LogTransition (bridge, smInfo.smName, newStateName, portTreeArgs...);
+			LogTransition (bridge, smInfo.smName, newStateName, portTreeArgs);
 		#endif
 
-		smInfo.initState (bridge, portTreeArgs..., newState, timestamp);
+		smInfo.initState (bridge, portTreeArgs, newState, timestamp);
 
 		state = newState;
 		changed = true;
@@ -537,10 +539,11 @@ static void RunStateMachines (STP_BRIDGE* bridge, unsigned int timestamp)
 			for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount(); treeIndex++)
 			{
 				PORT_TREE* tree = port->trees[treeIndex];
-				changed |= RunStateMachineInstance (bridge, PortInformation    ::sm, tree->portInformationState,     timestamp, (PortIndex) portIndex, (TreeIndex) treeIndex);
-				changed |= RunStateMachineInstance (bridge, PortRoleTransitions::sm, tree->portRoleTransitionsState, timestamp, (PortIndex) portIndex, (TreeIndex) treeIndex);
-				changed |= RunStateMachineInstance (bridge, PortStateTransition::sm, tree->portStateTransitionState, timestamp, (PortIndex) portIndex, (TreeIndex) treeIndex);
-				changed |= RunStateMachineInstance (bridge, TopologyChange     ::sm, tree->topologyChangeState,      timestamp, (PortIndex) portIndex, (TreeIndex) treeIndex);
+				PortAndTree pt = { (PortIndex)portIndex, (TreeIndex)treeIndex };
+				changed |= RunStateMachineInstance (bridge, PortInformation    ::sm, tree->portInformationState,     timestamp, pt);
+				changed |= RunStateMachineInstance (bridge, PortRoleTransitions::sm, tree->portRoleTransitionsState, timestamp, pt);
+				changed |= RunStateMachineInstance (bridge, PortStateTransition::sm, tree->portStateTransitionState, timestamp, pt);
+				changed |= RunStateMachineInstance (bridge, TopologyChange     ::sm, tree->topologyChangeState,      timestamp, pt);
 			}
 		}
 
@@ -1014,7 +1017,7 @@ const char* STP_GetVersionString (enum STP_VERSION version)
 		case STP_VERSION_MSTP:			return MSTPString;
 		default:
 			assert(false);
-			return nullptr;
+			return NULL;
 	}
 }
 
@@ -1040,7 +1043,7 @@ const char* STP_GetAdminP2PString (enum STP_ADMIN_P2P adminP2P)
 		case STP_ADMIN_P2P_AUTO:        return "Auto";
 		case STP_ADMIN_P2P_FORCE_TRUE:  return "ForceTrue";
 		case STP_ADMIN_P2P_FORCE_FALSE: return "ForceFalse";
-		default: return nullptr;
+		default: return NULL;
 	}
 }
 
@@ -1070,19 +1073,19 @@ void STP_GetRootTimes (const STP_BRIDGE* bridge,
 
 	BRIDGE_TREE* tree = bridge->trees [treeIndex];
 
-	if (forwardDelayOutOrNull != nullptr)
+	if (forwardDelayOutOrNull != NULL)
 		*forwardDelayOutOrNull = tree->rootTimes.ForwardDelay;
 
-	if (helloTimeOutOrNull != nullptr)
+	if (helloTimeOutOrNull != NULL)
 		*helloTimeOutOrNull = tree->rootTimes.HelloTime;
 
-	if (maxAgeOutOrNull != nullptr)
+	if (maxAgeOutOrNull != NULL)
 		*maxAgeOutOrNull = tree->rootTimes.MaxAge;
 
-	if (messageAgeOutOrNull != nullptr)
+	if (messageAgeOutOrNull != NULL)
 		*messageAgeOutOrNull = tree->rootTimes.MessageAge;
 
-	if (remainingHopsOutOrNull != nullptr)
+	if (remainingHopsOutOrNull != NULL)
 		*remainingHopsOutOrNull = tree->rootTimes.remainingHops;
 }
 

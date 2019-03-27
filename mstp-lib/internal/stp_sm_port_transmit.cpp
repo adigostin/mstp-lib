@@ -1,5 +1,5 @@
 
-// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
 // Copyright (c) 2011-2019 Adi Gostin, distributed under Apache License v2.0.
 
 #include "stp_procedures.h"
@@ -36,7 +36,7 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, Sta
 
 	// ------------------------------------------------------------------------
 	// Check global conditions.
-	
+
 	if (bridge->BEGIN || !port->portEnabled || !port->enableBPDUtx)
 	{
 		if (state == TRANSMIT_INIT)
@@ -44,10 +44,10 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, Sta
 			// The entry block for this state has been executed already.
 			return (State)0;
 		}
-		
+
 		return TRANSMIT_INIT;
 	}
-	
+
 	// ------------------------------------------------------------------------
 	// Check exit conditions from each state.
 
@@ -59,13 +59,13 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, Sta
 
 	if (state == TRANSMIT_CONFIG)
 		return IDLE;
-	
+
 	if (state == TRANSMIT_TCN)
 		return IDLE;
-	
+
 	if (state == TRANSMIT_RSTP)
 		return IDLE;
-	
+
 	if (state == AGREE_SPT)
 		return IDLE;
 
@@ -75,23 +75,23 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, Sta
 		{
 			if (port->helloWhen == 0)
 				return TRANSMIT_PERIODIC;
-			
+
 			if (!port->sendRSTP && port->newInfo && cistDesignatedPort (bridge, givenPort) && (port->txCount < bridge->TxHoldCount) && (port->helloWhen != 0))
 				return TRANSMIT_CONFIG;
-	
+
 			if (!port->sendRSTP && port->newInfo && cistRootPort (bridge, givenPort) && (port->txCount < bridge->TxHoldCount) && (port->helloWhen != 0))
 				return TRANSMIT_TCN;
-			
+
 			if (port->sendRSTP && (port->newInfo || (port->newInfoMsti && !mstiMasterPort (bridge, givenPort))) && (port->txCount < bridge->TxHoldCount) && (port->helloWhen != 0))
 				return TRANSMIT_RSTP;
 
 			if (spt(bridge) && port->sendRSTP && allSptAgree(bridge) && !port->agreeDigestValid)
 				return AGREE_SPT;
 		}
-		
+
 		return (State)0;
 	}
-	
+
 	assert (false);
 	return (State)0;
 }
@@ -126,7 +126,7 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, uns
 		port->newInfo = false;
 		txTcn (bridge, givenPort, timestamp);
 		port->txCount += 1;
-	}		
+	}
 	else if (state == TRANSMIT_RSTP)
 	{
 		port->newInfo = port->newInfoMsti = false;
@@ -146,7 +146,7 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, uns
 		assert (false);
 }
 
-const PerPortStateMachine<PortTransmit::State> PortTransmit::sm =
+const StateMachine<PortTransmit::State, PortIndex> PortTransmit::sm =
 {
 #if STP_USE_LOG
 	"PortTransmit",

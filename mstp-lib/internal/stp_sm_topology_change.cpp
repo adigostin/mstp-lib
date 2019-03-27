@@ -33,8 +33,11 @@ static const char* GetStateName (TopologyChange::State state)
 // ============================================================================
 
 // Returns the new state, or 0 when no transition is to be made.
-static TopologyChange::State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree, TopologyChange::State state)
+static TopologyChange::State CheckConditions (const STP_BRIDGE* bridge, PortAndTree pt, TopologyChange::State state)
 {
+	PortIndex givenPort = pt.portIndex;
+	TreeIndex givenTree = pt.treeIndex;
+
 	PORT* port = bridge->ports[givenPort];
 	PORT_TREE* portTree = port->trees[givenTree];
 
@@ -118,8 +121,11 @@ static TopologyChange::State CheckConditions (const STP_BRIDGE* bridge, PortInde
 
 // ============================================================================
 
-static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree, TopologyChange::State state, unsigned int timestamp)
+static void InitState (STP_BRIDGE* bridge, PortAndTree pt, TopologyChange::State state, unsigned int timestamp)
 {
+	PortIndex givenPort = pt.portIndex;
+	TreeIndex givenTree = pt.treeIndex;
+
 	PORT* port = bridge->ports[givenPort];
 	PORT_TREE* portTree = port->trees[givenTree];
 
@@ -214,7 +220,7 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenT
 		assert (false);
 }
 
-const PerPortPerTreeStateMachine<TopologyChange::State> TopologyChange::sm =
+const StateMachine<TopologyChange::State, PortAndTree> TopologyChange::sm =
 {
 #if STP_USE_LOG
 	"TopologyChange",

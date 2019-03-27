@@ -1,5 +1,5 @@
 
-// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
 // Copyright (c) 2011-2019 Adi Gostin, distributed under Apache License v2.0.
 
 #include "stp_procedures.h"
@@ -29,10 +29,10 @@ static const char* GetStateName (State state)
 static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, State state)
 {
 	PORT* port = bridge->ports[givenPort];
-	
+
 	// ------------------------------------------------------------------------
 	// Check global conditions.
-	
+
 	if (bridge->BEGIN)
 	{
 		if (state == CHECKING_RSTP)
@@ -40,29 +40,29 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, Sta
 			// The entry block for this state has been executed already.
 			return (State)0;
 		}
-		
+
 		return CHECKING_RSTP;
 	}
-	
+
 	// ------------------------------------------------------------------------
 	// Check exit conditions from each state.
-	
+
 	if (state == CHECKING_RSTP)
 	{
 		if (port->mDelayWhile == 0)
 			return SENSING;
-		
+
 		if ((port->mDelayWhile != bridge->MigrateTime) && !port->portEnabled)
 			return CHECKING_RSTP;
-		
+
 		return (State)0;
 	}
-	
+
 	if (state == SELECTING_STP)
 	{
 		if ((port->mDelayWhile == 0) || !port->portEnabled || port->mcheck)
 			return SENSING;
-		
+
 		return (State)0;
 	}
 
@@ -70,10 +70,10 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, Sta
 	{
 		if (port->sendRSTP && port->rcvdSTP)
 			return SELECTING_STP;
-		
+
 		if (!port->portEnabled || port->mcheck || ((rstpVersion(bridge) && !port->sendRSTP && port->rcvdRSTP)))
 			return CHECKING_RSTP;
-		
+
 		return (State)0;
 	}
 
@@ -86,7 +86,7 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, Sta
 static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, unsigned int timestamp)
 {
 	PORT* port = bridge->ports[givenPort];
-	
+
 	if (state == CHECKING_RSTP)
 	{
 		port->mcheck = false;
@@ -97,7 +97,7 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, uns
 	{
 		port->sendRSTP = false;
 		port->mDelayWhile = bridge->MigrateTime;
-	}		
+	}
 	else if (state == SENSING)
 	{
 		port->rcvdRSTP = port->rcvdSTP = false;
@@ -106,7 +106,7 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, uns
 		assert (false);
 }
 
-const PerPortStateMachine<PortProtocolMigration::State> PortProtocolMigration::sm =
+const StateMachine<PortProtocolMigration::State, PortIndex> PortProtocolMigration::sm =
 {
 #if STP_USE_LOG
 	"PortProtocolMigration",

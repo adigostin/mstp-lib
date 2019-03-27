@@ -96,7 +96,7 @@ bool fromSameRegion (STP_BRIDGE* bridge, PortIndex givenPort)
 {
 	PORT* port = bridge->ports [givenPort];
 
-	assert (bridge->receivedBpduContent != nullptr);
+	assert (bridge->receivedBpduContent != NULL);
 
 	// Note AG: I added the condition "&& ForceProtocolVersion >= MSTP"
 	// (if we're running STP or RSTP, we shouldn't be looking at our MST Config ID!)
@@ -414,7 +414,7 @@ void rcvMsgs (STP_BRIDGE* bridge, PortIndex givenPort)
 void recordAgreement (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 {
 	// we're accessing msgFlags below, which is valid only when a received BPDU is being handled
-	assert (bridge->receivedBpduContent != nullptr);
+	assert (bridge->receivedBpduContent != NULL);
 
 	PORT* port = bridge->ports [givenPort];
 	PORT_TREE* cistPortTree = port->trees [CIST_INDEX];
@@ -498,7 +498,7 @@ void recordAgreement (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTr
 void recordDispute (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 {
 	// we're accessing msgFlags below, which is valid only when a received BPDU is being handled
-	assert (bridge->receivedBpduContent != nullptr);
+	assert (bridge->receivedBpduContent != NULL);
 
 	PORT* port = bridge->ports [givenPort];
 	PORT_TREE* portTree = port->trees [givenTree];
@@ -545,7 +545,7 @@ void recordDispute (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree
 void recordMastered (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 {
 	// we're accessing msgFlags below, which is valid only when a received BPDU is being handled
-	assert (bridge->receivedBpduContent != nullptr);
+	assert (bridge->receivedBpduContent != NULL);
 
 	PORT* port = bridge->ports [givenPort];
 
@@ -574,7 +574,7 @@ void recordMastered (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTre
 void recordPriority (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 {
 	// we're accessing msgPriority below, which is valid only when a received BPDU is being handled
-	assert (bridge->receivedBpduContent != nullptr);
+	assert (bridge->receivedBpduContent != NULL);
 
 	PORT* port = bridge->ports [givenPort];
 	PORT_TREE* portTree = port->trees [givenTree];
@@ -598,7 +598,7 @@ void recordPriority (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTre
 void recordProposal (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 {
 	// we're accessing msgFlags below, which is valid only when a received BPDU is being handled
-	assert (bridge->receivedBpduContent != nullptr);
+	assert (bridge->receivedBpduContent != NULL);
 
 	PORT* port = bridge->ports [givenPort];
 	PORT_TREE* portTree = port->trees [givenTree];
@@ -632,7 +632,7 @@ void recordProposal (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTre
 void recordTimes (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 {
 	// we're accessing msgTimes below, which is valid only when a received BPDU is being handled
-	assert (bridge->receivedBpduContent != nullptr);
+	assert (bridge->receivedBpduContent != NULL);
 
 	PORT* port = bridge->ports [givenPort];
 	PORT_TREE* portTree = port->trees [givenTree];
@@ -700,7 +700,7 @@ void setSyncTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 void setTcFlags (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 {
 	// we're accessing msgFlags below, which is valid only when a received BPDU is being handled
-	assert (bridge->receivedBpduContent != nullptr);
+	assert (bridge->receivedBpduContent != NULL);
 
 	PORT* port = bridge->ports [givenPort];
 
@@ -846,7 +846,7 @@ void txRstp (STP_BRIDGE* bridge, PortIndex givenPort, unsigned int timestamp)
 	FLUSH_LOG (bridge);
 
 	MSTP_BPDU* bpdu = (MSTP_BPDU*) bridge->callbacks.transmitGetBuffer (bridge, givenPort, bpduSize, timestamp);
-	if (bpdu != nullptr)
+	if (bpdu != NULL)
 	{
 		// octets 1 and 2 - 14.5 in 802.1Q
 		bpdu->protocolId = 0;
@@ -994,7 +994,7 @@ void txTcn (STP_BRIDGE* bridge, PortIndex givenPort, unsigned int timestamp)
 	FLUSH_LOG (bridge);
 
 	BPDU_HEADER* bpdu = (BPDU_HEADER*) bridge->callbacks.transmitGetBuffer (bridge, givenPort, sizeof (BPDU_HEADER), timestamp);
-	if (bpdu != nullptr)
+	if (bpdu != NULL)
 	{
 		// 9.3.2 in 802.1D-2004 (not 2011!)
 		bpdu->protocolId = 0;
@@ -1065,7 +1065,7 @@ void updtRcvdInfoWhile	(STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex given
 
 // ============================================================================
 
-static void CalculateRootPathPriorityForPort (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree, PRIORITY_VECTOR* rootPathPriorityOut)
+static void CalculateRootPathPriorityForPort (STP_BRIDGE* bridge, unsigned int givenPort, TreeIndex givenTree, PRIORITY_VECTOR* rootPathPriorityOut)
 {
 	PORT* port = bridge->ports [givenPort];
 	PORT_TREE* portTree = port->trees [givenTree];
@@ -1166,9 +1166,9 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 	bridgeTree->rootPortId.Reset ();
 	bridgeTree->rootTimes = bridgeTree->BridgeTimes;
 
-	PORT_TREE* rootPortTree = nullptr;
+	PORT_TREE* rootPortTree = NULL;
 
-	for (PortIndex portIndex = (PortIndex)0; portIndex < bridge->portCount; portIndex++)
+	for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
 	{
 		PORT* port = bridge->ports [portIndex];
 		PORT_TREE* portTree = port->trees [givenTree];
@@ -1211,7 +1211,7 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 
 	// ------------------------------------------------------------------------
 
-	for (PortIndex portIndex = (PortIndex)0; portIndex < bridge->portCount; portIndex++)
+	for (PortIndex portIndex = (PortIndex)0; portIndex < (PortIndex)bridge->portCount; portIndex++)
 	{
 		PORT* port = bridge->ports [portIndex];
 		PORT_TREE* portTree = port->trees [givenTree];
@@ -1277,11 +1277,11 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 			{
 				portTree->updtInfo = true;
 			}
-			else if ((rootPortTree != nullptr) && (portTree->portTimes != rootPortTree->designatedTimes))
+			else if ((rootPortTree != NULL) && (portTree->portTimes != rootPortTree->designatedTimes))
 			{
 				portTree->updtInfo = true;
 			}
-			else if ((rootPortTree == nullptr) && (portTree->portTimes != bridgeTree->rootTimes))
+			else if ((rootPortTree == NULL) && (portTree->portTimes != bridgeTree->rootTimes))
 			{
 				portTree->updtInfo = true;
 			}
@@ -1321,11 +1321,11 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 				{
 					portTree->updtInfo = true;
 				}
-				else if ((rootPortTree != nullptr) && (portTree->portTimes != rootPortTree->designatedTimes))
+				else if ((rootPortTree != NULL) && (portTree->portTimes != rootPortTree->designatedTimes))
 				{
 					portTree->updtInfo = true;
 				}
-				else if ((rootPortTree == nullptr) && (portTree->portTimes != bridgeTree->rootTimes))
+				else if ((rootPortTree == NULL) && (portTree->portTimes != bridgeTree->rootTimes))
 				{
 					portTree->updtInfo = true;
 				}
@@ -1430,7 +1430,7 @@ bool allSptAgree (const STP_BRIDGE* bridge)
 bool allSynced (const STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 {
 	// a) For all ports for the given tree, selected is TRUE, the port's role is the same as its selectedRole, and updtInfo is FALSE; and
-	for (PortIndex portIndex = (PortIndex)0; portIndex < bridge->portCount; portIndex++)
+	for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
 	{
 		const PORT_TREE* portTree = bridge->ports[portIndex]->trees[givenTree];
 
@@ -1460,7 +1460,7 @@ bool allSynced (const STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTr
 		// So I'm inclined to believe we should treat a Backup port the same as an Alternate port.
 
 		// 1) Root Port or Alternate Port and synced is TRUE for all ports for the given tree other than the Root Port; or
-		for (PortIndex portIndex = (PortIndex)0; portIndex < bridge->portCount; portIndex++)
+		for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
 		{
 			const PORT_TREE* portTree = bridge->ports[portIndex]->trees[givenTree];
 
@@ -1477,7 +1477,7 @@ bool allSynced (const STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTr
 	{
 		// 2) Designated Port and synced is TRUE for all ports for the given tree other than the given port; or
 		// 4) Master Port     and synced is TRUE for all ports for the given tree other than the given port.
-		for (PortIndex portIndex = (PortIndex)0; portIndex < bridge->portCount; portIndex++)
+		for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
 		{
 			if (portIndex == (unsigned int) givenPort)
 				continue;
