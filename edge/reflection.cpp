@@ -10,7 +10,7 @@ namespace edge
 		return from ? "true" : "false";
 	}
 
-	bool bool_from_string (std::string_view from, bool& to)
+	bool bool_property_traits::from_string (std::string_view from, bool& to)
 	{
 		if (from == "true")
 		{
@@ -26,7 +26,7 @@ namespace edge
 			return false;
 	}
 
-	bool uint32_from_string (std::string_view from, uint32_t& to)
+	bool uint32_property_traits::from_string (std::string_view from, uint32_t& to)
 	{
 		if (from.empty())
 			return false;
@@ -41,7 +41,7 @@ namespace edge
 		return true;
 	}
 
-	bool int32_from_string (std::string_view from, int32_t& to)
+	bool int32_property_traits::from_string (std::string_view from, int32_t& to)
 	{
 		if (from.empty())
 			return false;
@@ -56,7 +56,7 @@ namespace edge
 		return true;
 	}
 
-	bool float_from_string (std::string_view from, float& to)
+	bool float_property_traits::from_string (std::string_view from, float& to)
 	{
 		if (from.empty())
 			return false;

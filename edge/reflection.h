@@ -108,13 +108,7 @@ namespace edge
 
 	// ========================================================================
 
-	template<
-		typename value_t_,
-		typename param_t_,
-		typename return_t,
-		const char* type_name_,
-		std::string (*to_string)(param_t_ value),
-		bool (*from_string_)(std::string_view str, value_t_& out),
+	template<typename property_traits,
 		const NVP* nvps_ = nullptr,
 		property_editor_factory_t* custom_editor_ = nullptr
 	>
@@ -122,14 +116,16 @@ namespace edge
 	{
 		using base = value_property;
 
-		using value_t = value_t_;
-		using param_t = param_t_;
-		static constexpr decltype(from_string_) from_string = from_string_;
+		using value_t  = typename property_traits::value_t;
+		using param_t  = typename property_traits::param_t;
+		using return_t = typename property_traits::return_t;
+
+		static constexpr auto from_string = &property_traits::from_string;
 
 		using member_getter_t = return_t (object::*)() const;
-		using member_setter_t = void (object::*)(param_t_);
+		using member_setter_t = void (object::*)(param_t);
 		using static_getter_t = return_t(*)(const object*);
-		using static_setter_t = void(*)(object*, param_t_);
+		using static_setter_t = void(*)(object*, param_t);
 
 		using getter_t = std::variant<member_getter_t, static_getter_t, nullptr_t>;
 		using setter_t = std::variant<member_setter_t, static_setter_t, nullptr_t>;
@@ -142,7 +138,7 @@ namespace edge
 			: base(name, group, description, ui_visible), _getter(getter), _setter(setter), _default_value(default_value)
 		{ }
 
-		virtual const char* type_name() const override final { return type_name_; }
+		virtual const char* type_name() const override final { return property_traits::type_name; }
 
 		virtual bool has_setter() const override final { return !std::holds_alternative<nullptr_t>(_setter); }
 
@@ -152,13 +148,13 @@ namespace edge
 		std::string get_to_string (const object* obj) const final
 		{
 			auto value = std::holds_alternative<member_getter_t>(_getter) ? (obj->*std::get<member_getter_t>(_getter))() : std::get<static_getter_t>(_getter)(obj);
-			return to_string (value);
+			return property_traits::to_string (value);
 		}
 
 		virtual bool try_set_from_string (object* obj, std::string_view str_in) const override final
 		{
 			value_t value;
-			bool ok = from_string(str_in, value);
+			bool ok = property_traits::from_string(str_in, value);
 			if (ok)
 			{
 				if (std::holds_alternative<member_setter_t>(_setter))
@@ -194,10 +190,15 @@ namespace edge
 		}
 	};
 
-	template<typename enum_t, const NVP* nvps>
-	struct enum_converters
+	template<typename enum_t, const char* type_name_, const NVP* nvps>
+	struct enum_property_traits
 	{
-		static std::string enum_to_string (enum_t from)
+		static constexpr const char* type_name = type_name_;
+		using value_t = enum_t;
+		using param_t = enum_t;
+		using return_t = enum_t;
+
+		static std::string to_string (enum_t from)
 		{
 			for (auto nvp = nvps; nvp->first != nullptr; nvp++)
 			{
@@ -232,8 +233,7 @@ namespace edge
 		}
 
 	public:
-		template<typename char_type>
-		static bool enum_from_string (std::basic_string_view<char_type> from, enum_t& to)
+		static bool from_string (std::string_view from, enum_t& to)
 		{
 			for (auto nvp = nvps; nvp->first != nullptr; nvp++)
 			{
@@ -251,41 +251,70 @@ namespace edge
 	template<
 		typename enum_t,
 		const char* type_name,
-		const NVP* nvps_
+		const NVP* nvps
 	>
-	using enum_property = typed_property<enum_t, enum_t, enum_t, type_name, enum_converters<enum_t, nvps_>::enum_to_string, enum_converters<enum_t, nvps_>::enum_from_string, nvps_>;
+	using enum_property = typed_property<enum_property_traits<enum_t, type_name, nvps>, nvps>;
 
 	// ===========================================
 
-	std::string bool_to_string (bool from);
-	bool bool_from_string (std::string_view from, bool& to);
-	static constexpr char bool_type_name[] = "bool";
-	using bool_p = typed_property<bool, bool, bool, bool_type_name, bool_to_string, bool_from_string>;
+	struct bool_property_traits
+	{
+		static constexpr char type_name[] = "bool";
+		using value_t = bool;
+		using param_t = bool;
+		using return_t = bool;
+		static std::string to_string (bool from) { return std::to_string(from); }
+		static bool from_string (std::string_view from, bool& to);
+	};
+	using bool_p = typed_property<bool_property_traits>;
 
-	inline std::string uint32_to_string (uint32_t from) { return std::to_string(from); }
-	bool uint32_from_string (std::string_view from, uint32_t& to);
-	static constexpr char uint32_type_name[] = "uint32";
-	using uint32_p = typed_property<uint32_t, uint32_t, uint32_t, uint32_type_name, uint32_to_string, uint32_from_string>;
+	struct uint32_property_traits
+	{
+		static constexpr char type_name[] = "uint32";
+		using value_t = uint32_t;
+		using param_t = uint32_t;
+		using return_t = uint32_t;
+		static std::string to_string (uint32_t from) { return std::to_string(from); }
+		static bool from_string (std::string_view from, uint32_t& to);
+	};
+	using uint32_p = typed_property<uint32_property_traits>;
 
-	inline std::string int32_to_string (int32_t from) { return std::to_string(from); }
-	bool int32_from_string (std::string_view from, int32_t& to);
-	static constexpr char int32_type_name[] = "int32";
-	using int32_property = typed_property<int32_t, int32_t, int32_t, int32_type_name, int32_to_string, int32_from_string>;
+	struct int32_property_traits
+	{
+		static constexpr char type_name[] = "int32";
+		using value_t = int32_t;
+		using param_t = int32_t;
+		using return_t = int32_t;
+		static std::string to_string (int32_t from) { return std::to_string(from); }
+		static bool from_string (std::string_view from, int32_t& to);
+	};
+	using int32_p = typed_property<int32_property_traits>;
 
-	inline std::string float_to_string (float from) { return std::to_string(from); }
-	bool float_from_string (std::string_view from, float& to);
-	static constexpr char float_type_name[] = "float";
-	using float_p = typed_property<float, float, float, float_type_name, float_to_string, float_from_string>;
+	struct float_property_traits
+	{
+		static constexpr char type_name[] = "float";
+		using value_t = float;
+		using param_t = float;
+		using return_t = float;
+		static std::string to_string (float from) { return std::to_string(from); }
+		static bool from_string (std::string_view from, float& to);
+	};
+	using float_p = typed_property<float_property_traits>;
 
-	inline std::string temp_string_to_string (std::string_view from) { return std::string(from); }
-	inline bool temp_string_from_string (std::string_view from, std::string& to) { to = from; return true; }
-	static constexpr char temp_string_type_name[] = "temp_string";
-	using temp_string_p = typed_property<std::string, std::string_view, std::string, temp_string_type_name, temp_string_to_string, temp_string_from_string>;
-
-	inline std::string backed_string_to_string (std::string_view from) { return std::string(from); }
-	inline bool backed_string_from_string (std::string_view from, std::string& to) { to = from; return true; }
-	static constexpr char backed_string_type_name[] = "backed_string";
-	using backed_string_p = typed_property<std::string, std::string_view, const std::string&, backed_string_type_name, backed_string_to_string, backed_string_from_string>;
+	template<bool backed>
+	struct string_property_traits
+	{
+		static constexpr const char* type_name = backed ? "backed_string" : "temp_string";
+		using value_t = std::string;
+		using param_t = std::string_view;
+		using return_t = std::conditional_t<backed, const std::string&, std::string>;
+		static std::string to_string (std::string_view from) { return std::string(from); }
+		static bool from_string (std::string_view from, std::string& to) { to = from; return true; }
+	};
+	using temp_string_property_traits = string_property_traits<false>;
+	using temp_string_p = typed_property<temp_string_property_traits>;
+	using backed_string_property_traits = string_property_traits<true>;
+	using backed_string_p = typed_property<backed_string_property_traits>;
 
 	// ===========================================
 

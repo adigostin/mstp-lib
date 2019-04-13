@@ -22,11 +22,19 @@ using stp_version_p = edge::enum_property<STP_VERSION, stp_version_type_name, st
 using mac_address = std::array<uint8_t, 6>;
 std::string mac_address_to_string (mac_address from);
 template<typename char_type> bool mac_address_from_string (std::basic_string_view<char_type> from, mac_address& to);
-static constexpr char mac_address_type_name[] = "mac_address";
-using mac_address_p = edge::typed_property<mac_address, mac_address, mac_address, mac_address_type_name, mac_address_to_string, mac_address_from_string>;
+struct mac_address_property_traits
+{
+	static constexpr char type_name[] = "mac_address";
+	using value_t = mac_address;
+	using param_t = mac_address;
+	using return_t = mac_address;
+	static std::string to_string (mac_address from) { return mac_address_to_string(from); }
+	static bool from_string (std::string_view from, mac_address& to) { return mac_address_from_string(from, to); }
+};
+using mac_address_p = edge::typed_property<mac_address_property_traits>;
 
 extern edge::property_editor_factory_t config_id_editor_factory;
-using config_id_digest_p = edge::typed_property<std::string, std::string_view, std::string, edge::temp_string_type_name, edge::temp_string_to_string, nullptr, nullptr, config_id_editor_factory>;
+using config_id_digest_p = edge::typed_property<edge::temp_string_property_traits, nullptr, config_id_editor_factory>;
 
 using edge::object_collection_property;
 using edge::typed_object_collection_property;
