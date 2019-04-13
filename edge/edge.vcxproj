@@ -23,7 +23,7 @@
     <ClInclude Include="object.h" />
     <ClInclude Include="events.h" />
     <ClInclude Include="win32\pch.h" />
-    <ClInclude Include="property_descriptor.h" />
+    <ClInclude Include="reflection.h" />
     <ClInclude Include="win32\com_ptr.h" />
     <ClInclude Include="win32\d2d_window.h" />
     <ClInclude Include="win32\property_grid.h" />
@@ -59,7 +59,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="property_descriptor.cpp">
+    <ClCompile Include="reflection.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
