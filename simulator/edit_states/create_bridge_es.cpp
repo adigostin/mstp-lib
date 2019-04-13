@@ -17,11 +17,11 @@ public:
 	{
 		if (_bridge == nullptr)
 		{
-			unsigned int portCount = 4;
-			unsigned int mstiCount = 4;
+			uint32_t portCount = 4;
+			uint32_t mstiCount = 4;
 			size_t macAddressesToReserve = std::max ((size_t) 1 + portCount, (size_t) 16);
 			auto macAddress = _project->AllocMacAddressRange(macAddressesToReserve);
-			_bridge.reset (new Bridge (_project, portCount, mstiCount, macAddress));
+			_bridge.reset (new Bridge (portCount, mstiCount, macAddress));
 		}
 
 		_bridge->SetLocation (location.w.x - _bridge->GetWidth() / 2, location.w.y - _bridge->GetHeight() / 2);
@@ -47,7 +47,7 @@ public:
 	{
 		auto centerX = _bridge->GetLeft() + _bridge->GetWidth() / 2;
 		auto centerY = _bridge->GetTop() + _bridge->GetHeight() / 2;
-		_bridge.reset (new Bridge(_project, numberOfPorts, _bridge->GetMstiCount(), _bridge->bridge_address()));
+		_bridge.reset (new Bridge(numberOfPorts, _bridge->msti_count(), _bridge->bridge_address()));
 		_bridge->SetLocation (centerX - _bridge->GetWidth() / 2, centerY - _bridge->GetHeight() / 2);
 		::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
 	}
@@ -63,15 +63,15 @@ public:
 
 		if ((virtualKey == VK_SUBTRACT) || (virtualKey == VK_OEM_MINUS))
 		{
-			if (_bridge->GetPortCount() > 2)
-				recreate_bridge (_bridge->GetPortCount() - 1);
+			if (_bridge->port_count() > 2)
+				recreate_bridge (_bridge->port_count() - 1);
 			return 0;
 		}
 
 		if ((virtualKey == VK_ADD) || (virtualKey == VK_OEM_PLUS))
 		{
-			if (_bridge->GetPortCount() < 4095)
-				recreate_bridge (_bridge->GetPortCount() + 1);
+			if (_bridge->port_count() < 4095)
+				recreate_bridge (_bridge->port_count() + 1);
 			return 0;
 		}
 

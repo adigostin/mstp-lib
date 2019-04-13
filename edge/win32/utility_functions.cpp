@@ -159,4 +159,13 @@ namespace edge
 		result.bottom = round(rect.bottom / pixel_width) * pixel_width;
 		return result;
 	}
+
+	std::string bstr_to_utf8 (BSTR bstr)
+	{
+		UINT char_count = SysStringLen(bstr);
+		int size_bytes = WideCharToMultiByte (CP_UTF8, 0, bstr, (int) char_count, nullptr, 0, nullptr, nullptr);
+		auto str = std::string (size_bytes, 0);
+		WideCharToMultiByte (CP_UTF8, 0, bstr, (int) char_count, str.data(), size_bytes, nullptr, nullptr);
+		return str;
+	}
 }

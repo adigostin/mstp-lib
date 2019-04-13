@@ -64,22 +64,6 @@ namespace edge
 			}
 		}
 
-		template<typename IFrom>
-		com_ptr<I>& operator= (const com_ptr<IFrom>& rhs)
-		{
-			static_assert (std::is_base_of_v<IUnknown, I>);
-			static_assert (std::is_base_of_v<IUnknown, IFrom>);
-
-			if (_ptr)
-			{
-				_ptr->Release();
-				_ptr = nullptr;
-			}
-
-			rhs.get()->QueryInterface(&_ptr);
-			return *this;
-		}
-
 		com_ptr(nullptr_t np)
 		{ }
 

@@ -23,6 +23,7 @@ using namespace edge;
 
 static const char company_name[] = "Adi Gostin";
 static const char app_name[] = "STP Simulator";
+static const wchar_t app_namew[] = L"STP Simulator";
 static const char app_version_string[] = "2.2";
 
 #pragma region project_i
@@ -131,6 +132,8 @@ public:
 	virtual const wchar_t* GetRegKeyPath() const override final { return _regKeyPath.c_str(); }
 
 	virtual const char* app_name() const override final { return ::app_name; }
+
+	virtual const wchar_t* app_namew() const override final { return ::app_namew; }
 
 	virtual const char* app_version_string() const override final { return ::app_version_string; }
 
@@ -274,7 +277,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 			assert(SUCCEEDED(hr));
 		}
 
-		d3d_dc = deviceContext;
+		d3d_dc = deviceContext.get();
 	}
 
 	com_ptr<IDWriteFactory> dwrite_factory;

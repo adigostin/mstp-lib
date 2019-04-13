@@ -10,8 +10,16 @@ using connected_wire_end = Port*;
 using loose_wire_end = D2D1_POINT_2F;
 using wire_end = std::variant<loose_wire_end, connected_wire_end>;
 
-class wire : public renderable_object
+using edge::xtype;
+using edge::com_ptr;
+using edge::type;
+using edge::property;
+using edge::uint32_p;
+
+class wire : public project_child
 {
+	using base = project_child;
+
 	std::array<wire_end, 2> _points;
 
 public:
@@ -37,6 +45,9 @@ public:
 	virtual HTResult hit_test (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
 
 private:
-	static edge::com_ptr<IXMLDOMElement> serialize_point (project_i* project, IXMLDOMDocument* doc, const wire_end& end);
+	static com_ptr<IXMLDOMElement> serialize_point (project_i* project, IXMLDOMDocument* doc, const wire_end& end);
 	static wire_end deserialize_point (project_i* project, IXMLDOMElement* element);
+
+	static const xtype<wire> _type;
+	virtual const struct type* type() const override { return &_type; }
 };

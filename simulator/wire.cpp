@@ -151,7 +151,7 @@ edge::com_ptr<IXMLDOMElement> wire::serialize_point (project_i* project, IXMLDOM
 		auto it = find_if (bridges.begin(), bridges.end(), [port](auto& up) { return up.get() == port->bridge(); });
 		auto bridgeIndex = it - bridges.begin();
 		hr = element->setAttribute (BridgeIndexString, _variant_t(std::to_string(bridgeIndex).c_str())); assert(SUCCEEDED(hr));
-		hr = element->setAttribute (PortIndexString, _variant_t(std::to_string(port->GetPortIndex()).c_str())); assert(SUCCEEDED(hr));
+		hr = element->setAttribute (PortIndexString, _variant_t(std::to_string(port->port_index()).c_str())); assert(SUCCEEDED(hr));
 	}
 	else //if (std::holds_alternative<loose_wire_end>(end))
 	{
@@ -196,3 +196,5 @@ wire_end wire::deserialize_point (project_i* project, IXMLDOMElement* element)
 		return nullptr;
 	}
 }
+
+const xtype<wire> wire::_type = { "Wire", &base::_type, { }, nullptr };

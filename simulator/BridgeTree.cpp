@@ -10,7 +10,7 @@ static const _bstr_t BridgeTreeString = "BridgeTree";
 static const _bstr_t TreeIndexString = "TreeIndex";
 static const _bstr_t BridgePriorityString = "BridgePriority";
 
-BridgeTree::BridgeTree (Bridge* parent, unsigned int treeIndex)
+BridgeTree::BridgeTree (Bridge* parent, uint32_t treeIndex)
 	: _parent(parent), _treeIndex(treeIndex)
 {
 	::GetSystemTime(&_last_topology_change);
@@ -211,32 +211,26 @@ const NVP bridge_priority_nvps[] =
 
 const char bridge_priority_type_name[] = "bridge_priority";
 
-const bridge_priority_p BridgeTree::bridge_priority_property (
-	"Bridge Priority",
-	nullptr,
-	nullptr,
+const bridge_priority_p BridgeTree::bridge_priority_property {
+	"Bridge Priority", nullptr, nullptr, ui_visible::yes,
 	static_cast<bridge_priority_p::member_getter_t>(&bridge_priority),
 	static_cast<bridge_priority_p::member_setter_t>(&set_bridge_priority),
-	0x8000
-);
+	0x8000,
+};
 
-const temp_string_p BridgeTree::root_bridge_id_property
-(
-	"Root Bridge ID",
-	nullptr,
-	nullptr,
+const temp_string_p BridgeTree::root_bridge_id_property {
+	"Root Bridge ID", nullptr, nullptr, ui_visible::yes,
 	static_cast<temp_string_p::member_getter_t>(&root_bridge_id),
 	nullptr,
-	std::nullopt
-);
+	std::nullopt,
+};
 
-const edge::uint32_p BridgeTree::topology_change_count_property (
-	"Topology Change Count",
-	nullptr,
-	"",
+const edge::uint32_p BridgeTree::topology_change_count_property {
+	"Topology Change Count", nullptr, nullptr, ui_visible::yes,
 	static_cast<edge::uint32_p::member_getter_t>(&topology_change_count),
 	nullptr,
-	std::nullopt);
+	std::nullopt,
+};
 /*
 static const TypedProperty<wstring> ExternalRootPathCost
 (
@@ -285,41 +279,51 @@ const edge::uint32_p BridgeTree::hello_time_property {
 	"HelloTime",
 	&root_times_group,
 	nullptr,
+	ui_visible::yes,
 	static_cast<edge::uint32_p::member_getter_t>(&BridgeTree::hello_time),
 	nullptr,
-	std::nullopt };
+	std::nullopt,
+};
 
 const edge::uint32_p BridgeTree::max_age_property {
 	"MaxAge",
 	&root_times_group,
 	nullptr,
+	ui_visible::yes,
 	static_cast<edge::uint32_p::member_getter_t>(&BridgeTree::max_age),
 	nullptr,
-	std::nullopt };
+	std::nullopt,
+};
 
 const edge::uint32_p BridgeTree::forward_delay_property {
 	"ForwardDelay",
 	&root_times_group,
 	nullptr,
+	ui_visible::yes,
 	static_cast<edge::uint32_p::member_getter_t>(&BridgeTree::forward_delay),
 	nullptr,
-	std::nullopt };
+	std::nullopt,
+};
 
 const edge::uint32_p BridgeTree::message_age_property {
 	"MessageAge",
 	&root_times_group,
 	nullptr,
+	ui_visible::yes,
 	static_cast<edge::uint32_p::member_getter_t>(&BridgeTree::message_age),
 	nullptr,
-	std::nullopt };
+	std::nullopt,
+};
 
 const edge::uint32_p BridgeTree::remaining_hops_property {
 	"remainingHops",
 	&root_times_group,
 	nullptr,
+	ui_visible::yes,
 	static_cast<edge::uint32_p::member_getter_t>(&remaining_hops),
 	nullptr,
-	std::nullopt };
+	std::nullopt,
+};
 
 const edge::property* const BridgeTree::_properties[] =
 {
@@ -340,4 +344,11 @@ const edge::property* const BridgeTree::_properties[] =
 	&remaining_hops_property
 };
 
-const edge::type_t BridgeTree::_type = { "BridgeTree", &base::_type, _properties };
+const edge::xtype<BridgeTree> BridgeTree::_type = {
+	"BridgeTree",
+	&base::_type,
+	_properties,
+	nullptr,
+};
+
+const edge::type* BridgeTree::type() const { return &_type; }

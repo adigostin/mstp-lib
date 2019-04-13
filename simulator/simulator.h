@@ -212,6 +212,7 @@ struct simulator_app_i
 	virtual void add_project_window (std::unique_ptr<project_window_i>&& pw) = 0;
 	virtual const std::vector<std::unique_ptr<project_window_i>>& project_windows() const = 0;
 	virtual const char* app_name() const = 0;
+	virtual const wchar_t* app_namew() const = 0;
 	virtual const char* app_version_string() const = 0;
 	virtual project_window_added_e::subscriber project_window_added() = 0;
 	virtual project_window_removing_e::subscriber project_window_removing() = 0;

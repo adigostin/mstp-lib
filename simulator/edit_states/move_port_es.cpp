@@ -20,8 +20,8 @@ public:
 		assert (_selection->objects().size() == 1);
 		_port = dynamic_cast<Port*>(_selection->objects().front());
 		assert (_port != nullptr);
-		_initialSide = _port->GetSide();
-		_initialOffset = _port->GetOffset();
+		_initialSide = _port->side();
+		_initialOffset = _port->offset();
 	}
 
 	virtual void process_mouse_move (const mouse_location& location) override final

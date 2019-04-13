@@ -601,19 +601,17 @@ public:
 
 		std::shared_ptr<project_i> projectToLoadTo = (_project->bridges().empty() && _project->wires().empty()) ? _project : project_factory();
 
-		assert(false);
-		/*
-		try
-		{
+//		try
+//		{
 			projectToLoadTo->Load(openPath);
-		}
-		catch (const exception& ex)
-		{
-			wstringstream ss;
-			ss << ex.what() << endl << endl << openPath;
-			TaskDialog (hwnd(), nullptr, _app->GetAppName(), L"Could Not Open", ss.str().c_str(), 0, nullptr, nullptr);
-			return;
-		}
+//		}
+//		catch (const exception& ex)
+//		{
+//			wstringstream ss;
+//			ss << ex.what() << endl << endl << openPath;
+//			TaskDialog (hwnd(), nullptr, _app->app_namew(), L"Could Not Open", ss.str().c_str(), 0, nullptr, nullptr);
+//			return;
+//		}
 
 		if (projectToLoadTo != _project)
 		{
@@ -621,7 +619,6 @@ public:
 			//auto newWindow = projectWindowFactory(_app, projectToLoadTo, selection_factory, edit_window_factory, true, true, SW_SHOW, 1);
 			//_app->add_project_window(newWindow);
 		}
-		*/
 	}
 
 	HRESULT Save()
@@ -640,9 +637,9 @@ public:
 		if (FAILED(hr))
 		{
 			auto werror = std::wstring (_com_error(hr).ErrorMessage());
-			auto text = std::string("Could Not Save\r\n");
+			auto text = std::wstring(L"Could Not Save\r\n");
 			text.append (werror.begin(), werror.end());
-			MessageBoxA (hwnd(), text.c_str(), _app->app_name(), 0);
+			MessageBox (hwnd(), text.c_str(), _app->app_namew(), 0);
 			return hr;
 		}
 

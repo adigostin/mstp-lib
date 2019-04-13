@@ -12,8 +12,9 @@ struct PacketInfo
 };
 
 enum class side { left, top, right, bottom };
-
-extern const edge::NVP SideNVPs[];
+extern const char side_type_name[];
+extern const edge::NVP side_nvps[];
+using side_p = edge::enum_property<enum side, side_type_name, side_nvps>;
 
 extern const char admin_p2p_type_name[];
 extern const edge::NVP admin_p2p_nvps[];
@@ -38,9 +39,6 @@ public:
 	Port (Bridge* bridge, unsigned int portIndex, side side, float offset);
 	~Port();
 
-	edge::com_ptr<IXMLDOMElement> Serialize (IXMLDOMDocument3* doc) const;
-	HRESULT Deserialize (IXMLDOMElement* portElement);
-
 	static constexpr int HTCodeInnerOuter = 1;
 	static constexpr int HTCodeCP = 2;
 
@@ -53,15 +51,15 @@ public:
 
 	const Bridge* bridge() const { return _bridge; }
 	Bridge* bridge() { return _bridge; }
-	unsigned int GetPortIndex() const { return _portIndex; }
-	side GetSide() const { return _side; }
-	float GetOffset() const { return _offset; }
+	unsigned int port_index() const { return _portIndex; }
+	enum side side() const { return _side; }
+	float offset() const { return _offset; }
 	D2D1_POINT_2F GetCPLocation() const;
 	bool GetMacOperational() const;
 	D2D1::Matrix3x2F GetPortTransform() const;
 	D2D1_RECT_F GetInnerOuterRect() const;
 	bool IsForwarding (unsigned int vlanNumber) const;
-	void SetSideAndOffset (side side, float offset);
+	void SetSideAndOffset (enum side side, float offset);
 	const std::vector<std::unique_ptr<PortTree>>& trees() const { return _trees; }
 
 	static void RenderExteriorNonStpPort (ID2D1RenderTarget* dc, const drawing_resources& dos, bool macOperational);
@@ -92,6 +90,11 @@ public:
 	bool oper_p2p() const;
 
 private:
+	void set_side (enum side side) { _side = side; }
+	void set_offset (float offset) { _offset = offset; }
+
+	static const side_p side_property;
+	static const edge::float_p offset_property;
 	static const edge::bool_p auto_edge_property;
 	static const edge::bool_p admin_edge_property;
 	static const edge::bool_p MacOperational;
@@ -102,8 +105,8 @@ private:
 	static const edge::bool_p detected_p2p_property;
 	static const edge::bool_p oper_p2p_property;
 	static const edge::property* const Port::_properties[];
-	static const edge::type_t _type;
+	static const xtype<Port> _type;
 
 public:
-	virtual const edge::type_t* type() const { return &_type; }
+	virtual const struct type* type() const { return &_type; }
 };

@@ -9,7 +9,9 @@ using namespace std;
 using namespace D2D1;
 using namespace edge;
 
-const edge::NVP SideNVPs[] =
+const char side_type_name[] = "side";
+
+const edge::NVP side_nvps[] =
 {
 	{ "Left",   (int) side::left },
 	{ "Top",    (int) side::top },
@@ -27,7 +29,7 @@ const edge::NVP admin_p2p_nvps[] =
 	{ 0, 0 },
 };
 
-Port::Port (Bridge* bridge, unsigned int portIndex, side side, float offset)
+Port::Port (Bridge* bridge, unsigned int portIndex, enum side side, float offset)
 	: _bridge(bridge), _portIndex(portIndex), _side(side), _offset(offset)
 {
 	for (unsigned int treeIndex = 0; treeIndex < (unsigned int) bridge->trees().size(); treeIndex++)
@@ -339,7 +341,7 @@ bool Port::IsForwarding (unsigned int vlanNumber) const
 	return STP_GetPortForwarding (stpb, (unsigned int) _portIndex, treeIndex);
 }
 
-void Port::SetSideAndOffset (side side, float offset)
+void Port::SetSideAndOffset (enum side side, float offset)
 {
 	if ((_side != side) || (_offset != offset))
 	{
@@ -372,84 +374,6 @@ bool Port::admin_edge() const
 void Port::set_admin_edge (bool adminEdge)
 {
 	STP_SetPortAdminEdge (_bridge->stp_bridge(), _portIndex, adminEdge, (unsigned int) GetMessageTime());
-}
-
-static const _bstr_t PortString = "Port";
-static const _bstr_t SideString = L"Side";
-static const _bstr_t OffsetString = L"Offset";
-static const _bstr_t AutoEdgeString = L"AutoEdge";
-static const _bstr_t AdminEdgeString = L"AdminEdge";
-static const _bstr_t PortTreesString = "PortTrees";
-
-com_ptr<IXMLDOMElement> Port::Serialize (IXMLDOMDocument3* doc) const
-{
-	com_ptr<IXMLDOMElement> portElement;
-	auto hr = doc->createElement (PortString, &portElement); assert(SUCCEEDED(hr));
-	portElement->setAttribute (SideString, _variant_t (enum_converters<side, SideNVPs>::enum_to_string(_side).c_str()));
-	portElement->setAttribute (OffsetString, _variant_t (_offset));
-	portElement->setAttribute (AutoEdgeString, _variant_t (auto_edge() ? L"True" : L"False"));
-	portElement->setAttribute (AdminEdgeString, _variant_t (admin_edge() ? L"True" : L"False"));
-
-	com_ptr<IXMLDOMElement> portTreesElement;
-	hr = doc->createElement (PortTreesString, &portTreesElement); assert(SUCCEEDED(hr));
-	hr = portElement->appendChild(portTreesElement, nullptr); assert(SUCCEEDED(hr));
-	for (size_t treeIndex = 0; treeIndex < _trees.size(); treeIndex++)
-	{
-		com_ptr<IXMLDOMElement> portTreeElement;
-		hr = _trees.at(treeIndex)->Serialize (doc, portTreeElement); assert(SUCCEEDED(hr));
-		hr = portTreesElement->appendChild (portTreeElement, nullptr); assert(SUCCEEDED(hr));
-	}
-
-	return portElement;
-}
-
-HRESULT Port::Deserialize (IXMLDOMElement* portElement)
-{
-	_variant_t value;
-	auto hr = portElement->getAttribute (SideString, &value);
-	if (FAILED(hr))
-		return hr;
-	if (value.vt == VT_BSTR)
-	{
-		bool ok = enum_converters<side, SideNVPs>::enum_from_string(wstring_view(value.bstrVal), _side);
-		assert(ok);
-	}
-
-	hr = portElement->getAttribute (OffsetString, &value);
-	if (FAILED(hr))
-		return hr;
-	if (value.vt == VT_BSTR)
-		_offset = wcstof (value.bstrVal, nullptr);
-
-	hr = portElement->getAttribute (AutoEdgeString, &value);
-	if (FAILED(hr))
-		return hr;
-	if (value.vt == VT_BSTR)
-		set_auto_edge (_wcsicmp (value.bstrVal, L"True") == 0);
-
-	hr = portElement->getAttribute (AdminEdgeString, &value);
-	if (FAILED(hr))
-		return hr;
-	if (value.vt == VT_BSTR)
-		set_admin_edge (_wcsicmp (value.bstrVal, L"True") == 0);
-
-	com_ptr<IXMLDOMNode> portTreesNode;
-	hr = portElement->selectSingleNode(PortTreesString, &portTreesNode);
-	if (SUCCEEDED(hr) && (portTreesNode != nullptr))
-	{
-		com_ptr<IXMLDOMNodeList> portTreeNodes;
-		hr = portTreesNode->get_childNodes(&portTreeNodes); assert(SUCCEEDED(hr));
-
-		for (size_t treeIndex = 0; treeIndex < _trees.size(); treeIndex++)
-		{
-			com_ptr<IXMLDOMNode> portTreeNode;
-			hr = portTreeNodes->get_item((long) treeIndex, &portTreeNode); assert(SUCCEEDED(hr));
-			com_ptr<IXMLDOMElement> portTreeElement = portTreeNode;
-			hr = _trees.at(treeIndex)->Deserialize(portTreeElement); assert(SUCCEEDED(hr));
-		}
-	}
-
-	return S_OK;
 }
 
 unsigned int Port::GetDetectedPortPathCost() const
@@ -501,8 +425,21 @@ bool Port::oper_p2p() const
 	return STP_GetOperPointToPointMAC(_bridge->stp_bridge(), _portIndex);
 }
 
-const bool_p Port::auto_edge_property
-(
+const side_p Port::side_property {
+	"Side", nullptr, nullptr, ui_visible::no,
+	static_cast<side_p::member_getter_t>(&side),
+	static_cast<side_p::member_setter_t>(&set_side),
+	std::nullopt,
+};
+
+const edge::float_p Port::offset_property {
+	"Offset", nullptr, nullptr, ui_visible::no,
+	static_cast<float_p::member_getter_t>(&offset),
+	static_cast<float_p::member_setter_t>(&set_offset),
+	std::nullopt,
+};
+
+const bool_p Port::auto_edge_property {
 	"AutoEdge",
 	nullptr,
 	"The administrative value of the Auto Edge Port parameter. "
@@ -510,13 +447,13 @@ const bool_p Port::auto_edge_property
 		"is to detect other Bridges attached to the LAN, and set ieee8021SpanningTreeRstpPortOperEdgePort automatically. "
 		"The default value is true(1) This is optional and provided only by implementations that support the automatic "
 		"identification of edge ports. The value of this object MUST be retained across reinitializations of the management system.",
+	ui_visible::yes,
 	static_cast<bool_p::member_getter_t>(&auto_edge),
 	static_cast<bool_p::member_setter_t>(&set_auto_edge),
-	true
-);
+	true,
+};
 
-const bool_p Port::admin_edge_property
-(
+const bool_p Port::admin_edge_property {
 	"AdminEdge",
 	nullptr,
 	"The administrative value of the Edge Port parameter. "
@@ -525,73 +462,90 @@ const bool_p Port::admin_edge_property
 		"of dot1dStpPortOperEdgePort to change to the same value. Note that even when this object's value is true, "
 		"the value of the corresponding instance of dot1dStpPortOperEdgePort can be false if a BPDU has been received. "
 		"The value of this object MUST be retained across reinitializations of the management system",
+	ui_visible::yes,
 	static_cast<bool_p::member_getter_t>(&admin_edge),
 	static_cast<bool_p::member_setter_t>(&set_admin_edge),
-	false
-);
+	false,
+};
 
-const bool_p Port::MacOperational (
+const bool_p Port::MacOperational {
 	"MAC_Operational",
 	nullptr,
 	nullptr,
+	ui_visible::yes,
 	static_cast<bool_p::member_getter_t>(&GetMacOperational),
 	nullptr,
-	false);
+	false,
+};
 
 static const edge::property_group port_path_cost_group = { 5, "Port Path Costs" };
 
-const uint32_p Port::DetectedPortPathCost (
+const uint32_p Port::DetectedPortPathCost {
 	"DetectedPortPathCost",
 	&port_path_cost_group,
 	nullptr,
+	ui_visible::yes,
 	static_cast<uint32_p::member_getter_t>(&GetDetectedPortPathCost),
 	nullptr,
-	0);
+	0,
+};
 
-const uint32_p Port::AdminExternalPortPathCost (
+const uint32_p Port::AdminExternalPortPathCost {
 	"AdminExternalPortPathCost",
 	&port_path_cost_group,
 	nullptr,
+	ui_visible::yes,
 	static_cast<uint32_p::member_getter_t>(&GetAdminExternalPortPathCost),
 	static_cast<uint32_p::member_setter_t>(&SetAdminExternalPortPathCost),
-	0);
+	0,
+};
 
-const uint32_p Port::ExternalPortPathCost (
+const uint32_p Port::ExternalPortPathCost {
 	"ExternalPortPathCost",
 	&port_path_cost_group,
 	nullptr,
-  	static_cast<uint32_p::member_getter_t>(&GetExternalPortPathCost),
+	ui_visible::yes,
+	static_cast<uint32_p::member_getter_t>(&GetExternalPortPathCost),
 	nullptr,
-	0);
+	0,
+};
 
 static const edge::property_group p2p_group = { 4, "Point to Point" };
 
-const bool_p Port::detected_p2p_property (
+const bool_p Port::detected_p2p_property {
 	"detectedPointToPointMAC",
 	&p2p_group,
 	nullptr,
+	ui_visible::yes,
 	static_cast<bool_p::member_getter_t>(&detected_p2p),
 	nullptr,
-	std::nullopt);
+	std::nullopt,
+};
 
-const admin_p2p_p Port::admin_p2p_property (
+const admin_p2p_p Port::admin_p2p_property {
 	"adminPointToPointMAC",
 	&p2p_group,
 	nullptr,
+	ui_visible::yes,
 	static_cast<admin_p2p_p::member_getter_t>(&admin_p2p),
 	static_cast<admin_p2p_p::member_setter_t>(&set_admin_p2p),
-	STP_ADMIN_P2P_AUTO);
+	STP_ADMIN_P2P_AUTO,
+};
 
-const edge::bool_p Port::oper_p2p_property (
+const edge::bool_p Port::oper_p2p_property {
 	"operPointToPointMAC",
 	&p2p_group,
 	nullptr,
+	ui_visible::yes,
 	static_cast<bool_p::member_getter_t>(&oper_p2p),
 	nullptr,
-	std::nullopt);
+	std::nullopt,
+};
 
 const edge::property* const Port::_properties[] =
 {
+	&side_property,
+	&offset_property,
 	&auto_edge_property,
 	&admin_edge_property,
 	&MacOperational,
@@ -603,5 +557,4 @@ const edge::property* const Port::_properties[] =
 	&oper_p2p_property,
 };
 
-const edge::type_t Port::_type = { "port", &base::_type, _properties };
-
+const edge::xtype<Port> Port::_type = { "Port", &base::_type, _properties, nullptr };

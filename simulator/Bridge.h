@@ -28,13 +28,14 @@ using mac_address_p = edge::typed_property<mac_address, mac_address, mac_address
 extern edge::property_editor_factory_t config_id_editor_factory;
 using config_id_digest_p = edge::typed_property<std::string, std::string_view, std::string, edge::temp_string_type_name, edge::temp_string_to_string, nullptr, nullptr, config_id_editor_factory>;
 
+using edge::object_collection_property;
+using edge::typed_object_collection_property;
+
 struct project_i;
 
-class Bridge : public renderable_object
+class Bridge : public project_child
 {
-	using base = renderable_object;
-
-	project_i* const _project;
+	using base = project_child;
 
 	float _x;
 	float _y;
@@ -66,7 +67,7 @@ class Bridge : public renderable_object
 		LinkPulseEvent::subscriber GetLinkPulseEvent() { return LinkPulseEvent::subscriber(this); }
 	};
 
-	HelperWindow _helperWindow;
+	std::unique_ptr<HelperWindow> _helper_window = nullptr;
 
 	// variables used by TransmitGetBuffer/ReleaseBuffer
 	std::vector<uint8_t> _txPacketData;
@@ -74,7 +75,7 @@ class Bridge : public renderable_object
 	unsigned int         _txTimestamp;
 
 public:
-	Bridge (project_i* project, unsigned int portCount, unsigned int mstiCount, mac_address macAddress);
+	Bridge (uint32_t portCount, uint32_t mstiCount, mac_address macAddress);
 	virtual ~Bridge();
 
 	static constexpr int HTCodeInner = 1;
@@ -125,20 +126,17 @@ public:
 	void clear_log();
 	std::array<uint8_t, 6> GetPortAddress (size_t portIndex) const;
 
-	edge::com_ptr<IXMLDOMElement> Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) const;
-	static std::unique_ptr<Bridge> Deserialize (project_i* project, IXMLDOMElement* element);
-
 	// Property getters and setters.
 	mac_address bridge_address() const;
 	void set_bridge_address (mac_address address);
 	bool stp_enabled() const { return (bool) STP_IsBridgeStarted(_stpBridge); }
 	void set_stp_enabled(bool enable);
-	STP_VERSION GetStpVersion() const { return STP_GetStpVersion(_stpBridge); }
-	void SetStpVersion(STP_VERSION version);
-	unsigned int GetPortCount() const { return STP_GetPortCount(_stpBridge); }
-	unsigned int GetMstiCount() const { return STP_GetMstiCount(_stpBridge); }
-	std::string GetMstConfigIdName() const;
-	void SetMstConfigIdName (std::string_view value);
+	STP_VERSION stp_version() const { return STP_GetStpVersion(_stpBridge); }
+	void set_stp_version(STP_VERSION version);
+	uint32_t port_count() const { return STP_GetPortCount(_stpBridge); }
+	uint32_t msti_count() const { return STP_GetMstiCount(_stpBridge); }
+	std::string mst_config_id_name() const;
+	void set_mst_config_id_name (std::string_view mst_config_id_name);
 	uint32_t GetMstConfigIdRevLevel() const;
 	void SetMstConfigIdRevLevel (uint32_t revLevel);
 	std::string GetMstConfigIdDigest() const;
@@ -149,6 +147,9 @@ public:
 	void SetBridgeForwardDelay (uint32_t forwardDelay);
 
 private:
+	virtual void on_added_to_project(project_i* project) override;
+	virtual void on_removing_from_project(project_i* project) override;
+
 	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
 	static void OnWmOneSecondTimer (WPARAM wParam, LPARAM lParam);
 	static void OnPortInvalidate (void* callbackArg, renderable_object* object);
@@ -168,24 +169,37 @@ private:
 	static void  StpCallback_OnTopologyChange         (const STP_BRIDGE* bridge, unsigned int treeIndex, unsigned int timestamp);
 	static void  StpCallback_OnNotifiedTopologyChange (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp);
 	static void  StpCallback_OnPortRoleChanged        (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role, unsigned int timestamp);
-	
-public:
-	static const mac_address_p       bridge_address_property;
-	static const edge::bool_p        stp_enabled_property;
-	static const stp_version_p       stp_version_property;
-	static const edge::uint32_p      PortCount;
-	static const edge::uint32_p      MstiCount;
-	static const edge::temp_string_p MstConfigIdName;
-	static const edge::uint32_p      MstConfigIdRevLevel;
-	static const config_id_digest_p  MstConfigIdDigest;
-	static const edge::uint32_p      migrate_time_property;
-	static const edge::uint32_p      bridge_hello_time_property;
-	static const edge::uint32_p      bridge_max_age_property;
-	static const edge::uint32_p      bridge_forward_delay_property;
-	static const edge::uint32_p      tx_hold_count_property;
-	static const edge::uint32_p      max_hops_property;
 
-	static const edge::property* const _properties[];
-	static const edge::type_t _type;
-	const edge::type_t* type() const override { return &_type; }
+	float x() const { return _x; }
+	void set_x (float x) { base::set_and_invalidate(&x_property, _x, x); }
+	float y() const { return _y; }
+	void set_y (float y) { base::set_and_invalidate(&y_property, _y, y); }
+	float width() const { return _width; }
+	void set_width (float width) { base::set_and_invalidate(&width_property, _width, width); }
+	float height() const { return _height; }
+	void set_height (float height) { base::set_and_invalidate(&height_property, _height, height); }
+
+	static const uint32_p      bridge_index_property;
+	static const mac_address_p bridge_address_property;
+	static const compat_bool_p stp_enabled_property;
+	static const stp_version_p stp_version_property;
+	static const uint32_p      port_count_property;
+	static const uint32_p      msti_count_property;
+	static const temp_string_p mst_config_id_name_property;
+	static const uint32_p      MstConfigIdRevLevel;
+	static const config_id_digest_p  MstConfigIdDigest;
+	static const uint32_p      migrate_time_property;
+	static const uint32_p      bridge_hello_time_property;
+	static const uint32_p      bridge_max_age_property;
+	static const uint32_p      bridge_forward_delay_property;
+	static const uint32_p      tx_hold_count_property;
+	static const uint32_p      max_hops_property;
+	static const float_p x_property;
+	static const float_p y_property;
+	static const float_p width_property;
+	static const float_p height_property;
+
+	static const property* const _properties[];
+	static const xtype<Bridge, uint32_p, uint32_p, mac_address_p> _type;
+	const struct type* type() const override { return &_type; }
 };

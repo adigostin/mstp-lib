@@ -4,6 +4,7 @@
 #include "Port.h"
 #include "Bridge.h"
 #include "stp.h"
+#include "win32/xml_serializer.h"
 
 using namespace edge;
 
@@ -40,35 +41,9 @@ const edge::NVP port_role_nvps[] =
 	{ nullptr, 0 }
 };
 
-static const _bstr_t PortTreeString = "PortTree";
-static const _bstr_t TreeIndexString = "TreeIndex";
-static const _bstr_t PortPriorityString = "PortPriority";
-
-HRESULT PortTree::Serialize (IXMLDOMDocument3* doc, com_ptr<IXMLDOMElement>& elementOut) const
-{
-	com_ptr<IXMLDOMElement> portTreeElement;
-	auto hr = doc->createElement (PortTreeString, &portTreeElement); assert(SUCCEEDED(hr));
-	portTreeElement->setAttribute (TreeIndexString, _variant_t(_treeIndex));
-	portTreeElement->setAttribute (PortPriorityString, _variant_t(priority()));
-	elementOut = std::move(portTreeElement);
-	return S_OK;
-}
-
-HRESULT PortTree::Deserialize (IXMLDOMElement* portTreeElement)
-{
-	_variant_t value;
-	auto hr = portTreeElement->getAttribute (PortPriorityString, &value);
-	if (FAILED(hr))
-		return hr;
-	if (value.vt == VT_BSTR)
-		set_priority(wcstol (value.bstrVal, nullptr, 10));
-
-	return S_OK;
-}
-
 uint32_t PortTree::priority() const
 {
-	return STP_GetPortPriority (_port->bridge()->stp_bridge(), _port->GetPortIndex(), _treeIndex);
+	return STP_GetPortPriority (_port->bridge()->stp_bridge(), _port->port_index(), _treeIndex);
 }
 
 void PortTree::set_priority (uint32_t priority)
@@ -76,61 +51,81 @@ void PortTree::set_priority (uint32_t priority)
 	if (this->priority() != priority)
 	{
 		this->on_property_changing(&priority_property);
-		STP_SetPortPriority (_port->bridge()->stp_bridge(), _port->GetPortIndex(), _treeIndex, (unsigned char) priority, GetMessageTime());
+		STP_SetPortPriority (_port->bridge()->stp_bridge(), _port->port_index(), _treeIndex, (unsigned char) priority, GetMessageTime());
 		this->on_property_changed(&priority_property);
 	}
 }
 
 bool PortTree::learning() const
 {
-	return STP_GetPortLearning(_port->bridge()->stp_bridge(), _port->GetPortIndex(), _treeIndex);
+	return STP_GetPortLearning(_port->bridge()->stp_bridge(), _port->port_index(), _treeIndex);
 }
 
 bool PortTree::forwarding() const
 {
-	return STP_GetPortForwarding(_port->bridge()->stp_bridge(), _port->GetPortIndex(), _treeIndex);
+	return STP_GetPortForwarding(_port->bridge()->stp_bridge(), _port->port_index(), _treeIndex);
 }
 
 STP_PORT_ROLE PortTree::role() const
 {
-	return STP_GetPortRole (_port->bridge()->stp_bridge(), _port->GetPortIndex(), _treeIndex);
+	return STP_GetPortRole (_port->bridge()->stp_bridge(), _port->port_index(), _treeIndex);
 }
 
-const port_priority_p PortTree::priority_property
-(
+const edge::uint32_p PortTree::tree_index_property {
+	"TreeIndex", nullptr, nullptr, edge::ui_visible::no,
+	static_cast<const edge::uint32_p::member_getter_t>(&tree_index),
+	nullptr,
+	std::nullopt,
+};
+
+const port_priority_p PortTree::priority_property {
 	"PortPriority",
 	nullptr,
 	"The value of the priority field which is contained in the first (in network byte order) octet of the (2 octet long) Port ID. "
 		"The other octet of the Port ID is given by the value of dot1dStpPort.",
+	ui_visible::yes,
 	static_cast<port_priority_p::member_getter_t>(&priority),
 	static_cast<port_priority_p::member_setter_t>(&set_priority),
-	0x80
-);
+	0x80,
+};
 
-const edge::bool_p PortTree::learning_property (
+const edge::bool_p PortTree::learning_property {
 	"learning",
 	nullptr,
-	"",
+	nullptr,
+	ui_visible::yes,
 	static_cast<edge::bool_p::member_getter_t>(&learning),
 	nullptr,
-	std::nullopt);
+	std::nullopt,
+};
 
-const edge::bool_p PortTree::forwarding_property (
+const edge::bool_p PortTree::forwarding_property {
 	"forwarding",
 	nullptr,
-	"",
+	nullptr,
+	ui_visible::yes,
 	static_cast<edge::bool_p::member_getter_t>(&forwarding),
 	nullptr,
-	std::nullopt);
+	std::nullopt,
+};
 
-const port_role_p PortTree::role_property (
+const port_role_p PortTree::role_property {
 	"role",
 	nullptr,
-	"",
+	nullptr,
+	ui_visible::yes,
 	static_cast<port_role_p::member_getter_t>(&role),
 	nullptr,
-	std::nullopt);
+	std::nullopt,
+};
 
-const edge::property* const PortTree::_properties[] = { &priority_property, &learning_property, &forwarding_property, &role_property };
+const edge::property* const PortTree::_properties[] = { &tree_index_property, &priority_property, &learning_property, &forwarding_property, &role_property };
 
-const edge::type_t PortTree::_type = { "PortTree", &base::_type, _properties };
+const xtype<PortTree> PortTree::_type = {
+	"PortTree",
+	&base::_type,
+	_properties, 
+	nullptr
+};
+
+const edge::type* PortTree::type() const { return &_type; }

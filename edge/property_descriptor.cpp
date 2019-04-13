@@ -58,6 +58,16 @@ namespace edge
 
 	bool float_from_string (std::string_view from, float& to)
 	{
-		assert(false); return false; // not implemented
+		if (from.empty())
+			return false;
+
+		char* end_ptr;
+		float value = std::strtof (from.data(), &end_ptr);
+
+		if (end_ptr != from.data() + from.length())
+			return false;
+
+		to = value;
+		return true;
 	}
 }

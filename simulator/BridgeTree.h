@@ -5,13 +5,17 @@
 
 class Bridge;
 
+using edge::object;
+using uint32_p = edge::uint32_p;
+using temp_string_p = edge::temp_string_p;
+
 extern const edge::NVP bridge_priority_nvps[];
 extern const char bridge_priority_type_name[];
 using bridge_priority_p = edge::enum_property<uint32_t, bridge_priority_type_name, bridge_priority_nvps>;
 
-class BridgeTree : edge::object
+class BridgeTree : public object
 {
-	using base = edge::object;
+	using base = object;
 
 	Bridge* const _parent;
 	unsigned int const _treeIndex;
@@ -24,7 +28,7 @@ class BridgeTree : edge::object
 	void on_topology_change (unsigned int timestamp);
 
 public:
-	BridgeTree (Bridge* parent, unsigned int treeIndex);
+	BridgeTree (Bridge* parent, uint32_t tree_index);
 
 	HRESULT Serialize (IXMLDOMDocument3* doc, edge::com_ptr<IXMLDOMElement>& elementOut) const;
 	HRESULT Deserialize (IXMLDOMElement* bridgeTreeElement);
@@ -49,16 +53,16 @@ public:
 	uint32_t message_age() const;
 	uint32_t remaining_hops() const;
 
-	static const bridge_priority_p   bridge_priority_property;
-	static const edge::temp_string_p root_bridge_id_property;
-	static const edge::uint32_p      topology_change_count_property;
-	static const edge::uint32_p      hello_time_property;
-	static const edge::uint32_p      max_age_property;
-	static const edge::uint32_p      forward_delay_property;
-	static const edge::uint32_p      message_age_property;
-	static const edge::uint32_p      remaining_hops_property;
+	static const bridge_priority_p bridge_priority_property;
+	static const temp_string_p root_bridge_id_property;
+	static const uint32_p      topology_change_count_property;
+	static const uint32_p      hello_time_property;
+	static const uint32_p      max_age_property;
+	static const uint32_p      forward_delay_property;
+	static const uint32_p      message_age_property;
+	static const uint32_p      remaining_hops_property;
 	static const edge::property* const _properties[];
-	static const edge::type_t _type;
-	const edge::type_t* type() const override { return &_type; }
+	static const edge::xtype<BridgeTree> _type;
+	const edge::type* type() const override;
 };
 

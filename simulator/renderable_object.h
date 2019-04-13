@@ -41,4 +41,38 @@ public:
 
 	virtual void render_selection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const = 0;
 	virtual HTResult hit_test (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) = 0;
+
+protected:
+	template<typename tpd_>
+	void set_and_invalidate (const tpd_* pd, typename tpd_::value_t& field, typename tpd_::param_t value)
+	{
+		this->on_property_changing(pd);
+		field = value;
+		this->on_property_changed(pd);
+		this->event_invoker<invalidate_e>()(this);
+	}
+};
+
+struct project_i;
+
+class project_child : public renderable_object
+{
+	friend class Project;
+
+	project_i* _project = nullptr;
+
+protected:
+	virtual void on_added_to_project(project_i* project)
+	{
+		assert (_project == nullptr);
+		_project = project;
+	}
+
+	virtual void on_removing_from_project(project_i* project)
+	{
+		assert (_project == project);
+		_project = nullptr;
+	}
+
+	project_i* project() const { return _project; }
 };

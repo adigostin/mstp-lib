@@ -5,17 +5,68 @@
 
 namespace edge
 {
-	struct type_t
+	struct type
 	{
-		const char* name;
-		const type_t* base;
-		view<const property* const> props;
+		static std::vector<const type*>* known_types;
 
+		const char*                 const name;
+		const type*               const base_type;
+		view<const property* const> const props;
+
+		type(const char* name, const type* base_type, view<const property* const> props);;
+		~type();
+
+		static const type* find_type (const char* name);
+
+		std::vector<const property*> make_property_list() const;
+		const property* find_property (const char* name) const;
+
+		virtual view<const value_property* const> factory_props() const = 0;
+		virtual object* deserialize (object* parent, const view<std::string_view>& string_values) const = 0;
 	private:
 		void add_properties (std::vector<const property*>& properties) const;
+	};
+
+	template<typename object_type, typename... factory_arg_props>
+	class xtype : public type
+	{
+		static constexpr size_t parameter_count = sizeof...(factory_arg_props);
+
+		static_assert (std::conjunction_v<std::is_base_of<value_property, factory_arg_props>...>, "factory params must derive from value_property");
+		static_assert (std::is_convertible_v<object_type*, object*>);
+
+		using factory_t = object_type*(*const)(typename factory_arg_props::param_t... factory_args);
+		
+		factory_t const _factory;
+		std::array<const value_property* const, parameter_count> const _factory_props;
 
 	public:
-		std::vector<const property*> make_property_list() const;
+		xtype (const char* name, const type* base, view<const property* const> props,
+			factory_t factory, const factory_arg_props*... factory_props)
+			: type(name, base, props)
+			, _factory(factory)
+			, _factory_props(std::array<const value_property* const, parameter_count>{ factory_props... })
+		{ }
+
+	private:
+		virtual view<const value_property* const> factory_props() const override { return _factory_props; }
+		
+		template<std::size_t... I>
+		static std::tuple<typename factory_arg_props::value_t...> strings_to_values (const view<std::string_view>& string_values, std::index_sequence<I...>)
+		{
+			std::tuple<typename factory_arg_props::value_t...> result;
+			bool cast_ok = (true && ... && factory_arg_props::from_string(string_values[I], std::get<I>(result)));
+			assert(cast_ok);
+			return result;
+		}
+
+		virtual object* deserialize (object* parent, const view<std::string_view>& string_values) const override
+		{
+			assert (string_values.size() == parameter_count);
+			auto values = strings_to_values (string_values, std::make_index_sequence<parameter_count>());
+			object_type* obj = std::apply (_factory, values);
+			return static_cast<object*>(obj);
+		}
 	};
 
 	class object;
@@ -104,7 +155,7 @@ namespace edge
 		virtual void on_property_changed (const property* property);
 
 	public:
-		static constexpr type_t _type = { "object", nullptr, { } };
-		virtual const type_t* type() const { return &_type; }
+		static const xtype<object> _type;
+		virtual const type* type() const { return &_type; }
 	};
 }

@@ -4,19 +4,22 @@
 #include "wire.h"
 #include "Bridge.h"
 #include "Port.h"
+#include "win32/xml_serializer.h"
 
 using namespace std;
 using namespace edge;
 
 static const _bstr_t NextMacAddressString = "NextMacAddress";
 
-class Project : public event_manager, public project_i
+class Project : public edge::object, public project_i
 {
+	using base = edge::object;
+
 	ULONG _refCount = 1;
 	wstring _path;
 	vector<unique_ptr<Bridge>> _bridges;
 	vector<unique_ptr<wire>> _wires;
-	mac_address _next_mac_address = { 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x80 };
+	mac_address _next_mac_address = next_mac_address_property._default_value.value();
 	bool _simulationPaused = false;
 	bool _changedFlag = false;
 
@@ -25,32 +28,32 @@ public:
 
 	virtual void insert_bridge (size_t index, unique_ptr<Bridge>&& bridge) override final
 	{
-		if (index > _bridges.size())
-			throw invalid_argument("index");
-
+		assert (index <= _bridges.size());
 		Bridge* b = bridge.get();
+		assert (b->project() == nullptr);
 		auto it = _bridges.insert (_bridges.begin() + index, (move(bridge)));
 		b->GetInvalidateEvent().add_handler (&OnObjectInvalidate, this);
 		b->GetPacketTransmitEvent().add_handler (&OnPacketTransmit, this);
 		b->GetLinkPulseEvent().add_handler (&OnLinkPulse, this);
 		this->event_invoker<bridge_inserted_e>()(this, index, b);
 		this->event_invoker<invalidate_e>()(this);
+		static_cast<project_child*>(b)->on_added_to_project(this);
 	}
 
 	virtual unique_ptr<Bridge> remove_bridge(size_t index) override final
 	{
-		if (index >= _bridges.size())
-			throw invalid_argument("index");
-
+		assert (index < _bridges.size());
 		Bridge* b = _bridges[index].get();
+		assert (b->project() == this);
 
 		if (any_of (_wires.begin(), _wires.end(), [b](const unique_ptr<wire>& w) {
 			return any_of (w->points().begin(), w->points().end(), [b] (wire_end p) {
 				return std::holds_alternative<connected_wire_end>(p) && (std::get<connected_wire_end>(p)->bridge() == b);
 			});
 		}))
-			throw invalid_argument("cannot remove a connected bridge");
+			assert(false); // can't remove a connected bridge
 
+		static_cast<project_child*>(b)->on_removing_from_project(this);
 		this->event_invoker<bridge_removing_e>()(this, index, b);
 		_bridges[index]->GetLinkPulseEvent().remove_handler (&OnLinkPulse, this);
 		_bridges[index]->GetPacketTransmitEvent().remove_handler (&OnPacketTransmit, this);
@@ -95,7 +98,7 @@ public:
 		if (rxPort != nullptr)
 		{
 			pi.txPortPath.push_back (bridge->GetPortAddress(txPortIndex));
-			rxPort->bridge()->EnqueuePacket(move(pi), rxPort->GetPortIndex());
+			rxPort->bridge()->EnqueuePacket(move(pi), rxPort->port_index());
 		}
 	}
 
@@ -105,7 +108,7 @@ public:
 		auto txPort = bridge->GetPorts().at(txPortIndex).get();
 		auto rxPort = project->FindConnectedPort(txPort);
 		if (rxPort != nullptr)
-			rxPort->bridge()->ProcessLinkPulse(rxPort->GetPortIndex(), timestamp);
+			rxPort->bridge()->ProcessLinkPulse(rxPort->port_index(), timestamp);
 	}
 
 	static void OnObjectInvalidate (void* callbackArg, renderable_object* object)
@@ -150,7 +153,7 @@ public:
 
 						for (unsigned int i = 0; i < (unsigned int) rx->bridge()->GetPorts().size(); i++)
 						{
-							if ((i != rx->GetPortIndex()) && rx->IsForwarding(vlanNumber))
+							if ((i != rx->port_index()) && rx->IsForwarding(vlanNumber))
 							{
 								Port* otherTxPort = rx->bridge()->GetPorts()[i].get();
 								if (otherTxPort == targetPort)
@@ -212,7 +215,7 @@ public:
 		for (size_t bridgeIndex = 0; bridgeIndex < _bridges.size(); bridgeIndex++)
 		{
 			auto b = _bridges.at(bridgeIndex).get();
-			auto e = b->Serialize(bridgeIndex, doc);
+			auto e = serialize (doc, b);
 			hr = bridgesElement->appendChild (e, nullptr); assert(SUCCEEDED(hr));
 		}
 
@@ -320,6 +323,8 @@ public:
 			throw runtime_error("Missing \"Project\" element in the XML.");
 		com_ptr<IXMLDOMElement> projectElement = projectNode;
 
+		deserialize (projectElement, this);
+		/*
 		_variant_t value;
 		hr = projectElement->getAttribute (NextMacAddressString, &value);
 		if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
@@ -356,7 +361,7 @@ public:
 				this->insert_wire(_wires.size(), move(wire));
 			}
 		}
-
+		*/
 		_path = filePath;
 		this->event_invoker<LoadedEvent>()(this);
 	}
@@ -395,6 +400,42 @@ public:
 	virtual ChangedFlagChangedEvent::subscriber GetChangedFlagChangedEvent() override final { return ChangedFlagChangedEvent::subscriber(this); }
 
 	virtual ChangedEvent::subscriber GetChangedEvent() override final { return ChangedEvent::subscriber(this); }
+
+	mac_address next_mac_address() const { return _next_mac_address; }
+	
+	void set_next_mac_address (mac_address value)
+	{
+		if (_next_mac_address != value)
+		{
+			this->on_property_changing(&next_mac_address_property);
+			_next_mac_address = value;
+			this->on_property_changed(&next_mac_address_property);
+		}
+	}
+
+	static inline mac_address_p next_mac_address_property = {
+		"NextMacAddress", nullptr, nullptr, ui_visible::yes,
+		static_cast<mac_address_p::member_getter_t>(&next_mac_address),
+		static_cast<mac_address_p::member_setter_t>(&set_next_mac_address),
+		mac_address{ 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x80 },
+	};
+
+	size_t bridge_count() const { return _bridges.size(); }
+	Bridge* bridge_at(size_t index) const { return _bridges[index].get(); }
+
+	static const typed_object_collection_property<Project, Bridge> bridges_property;
+	static const property* _properties[];
+	static const xtype<Project> _type;
+	virtual const struct type* type() const { return &_type; }
 };
+
+const typed_object_collection_property<Project, Bridge> Project::bridges_property = {
+	"Bridges", nullptr, nullptr, ui_visible::no,
+	&bridge_count, &bridge_at, &insert_bridge, &remove_bridge
+};
+
+const property* Project::_properties[] = { &next_mac_address_property, &bridges_property };
+
+const xtype<Project> Project::_type = { "Project", &base::_type, _properties, [] { return new Project(); } };
 
 extern const project_factory_t project_factory = []() -> std::shared_ptr<project_i> { return std::make_shared<Project>(); };

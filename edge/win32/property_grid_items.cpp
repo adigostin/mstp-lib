@@ -121,13 +121,16 @@ std::vector<std::unique_ptr<pgitem>> group_item::create_children()
 
 	for (auto prop : type->make_property_list())
 	{
-		if (auto value_prop = dynamic_cast<const value_property*>(prop))
+		if (prop->_ui_visible == ui_visible::yes)
 		{
-			if (value_prop->_group == _group)
-				items.push_back (std::make_unique<value_pgitem>(this, value_prop));
+			if (auto value_prop = dynamic_cast<const value_property*>(prop))
+			{
+				if (value_prop->_group == _group)
+					items.push_back (std::make_unique<value_pgitem>(this, value_prop));
+			}
+			else
+				assert(false); // not implemented
 		}
-		else
-			assert(false);// not implemented
 	}
 	
 	return items;
