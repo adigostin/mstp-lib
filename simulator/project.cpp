@@ -15,7 +15,6 @@ class Project : public edge::object, public project_i
 {
 	using base = edge::object;
 
-	ULONG _refCount = 1;
 	wstring _path;
 	vector<unique_ptr<Bridge>> _bridges;
 	vector<unique_ptr<wire>> _wires;
@@ -32,12 +31,12 @@ public:
 		Bridge* b = bridge.get();
 		assert (b->project() == nullptr);
 		auto it = _bridges.insert (_bridges.begin() + index, (move(bridge)));
+		static_cast<project_child*>(b)->on_added_to_project(this);
 		b->GetInvalidateEvent().add_handler (&OnObjectInvalidate, this);
 		b->GetPacketTransmitEvent().add_handler (&OnPacketTransmit, this);
 		b->GetLinkPulseEvent().add_handler (&OnLinkPulse, this);
 		this->event_invoker<bridge_inserted_e>()(this, index, b);
 		this->event_invoker<invalidate_e>()(this);
-		static_cast<project_child*>(b)->on_added_to_project(this);
 	}
 
 	virtual unique_ptr<Bridge> remove_bridge(size_t index) override final
@@ -53,11 +52,11 @@ public:
 		}))
 			assert(false); // can't remove a connected bridge
 
-		static_cast<project_child*>(b)->on_removing_from_project(this);
 		this->event_invoker<bridge_removing_e>()(this, index, b);
 		_bridges[index]->GetLinkPulseEvent().remove_handler (&OnLinkPulse, this);
 		_bridges[index]->GetPacketTransmitEvent().remove_handler (&OnPacketTransmit, this);
 		_bridges[index]->GetInvalidateEvent().remove_handler (&OnObjectInvalidate, this);
+		static_cast<project_child*>(b)->on_removing_from_project(this);
 		auto result = move(_bridges[index]);
 		_bridges.erase (_bridges.begin() + index);
 		this->event_invoker<invalidate_e>()(this);
@@ -323,7 +322,7 @@ public:
 			throw runtime_error("Missing \"Project\" element in the XML.");
 		com_ptr<IXMLDOMElement> projectElement = projectNode;
 
-		deserialize (projectElement, this);
+		deserialize_to (projectElement, this);
 		/*
 		_variant_t value;
 		hr = projectElement->getAttribute (NextMacAddressString, &value);

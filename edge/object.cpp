@@ -64,14 +64,14 @@ namespace edge
 			return nullptr;
 	}
 
-	void object::on_property_changing (const property* property)
+	void object::on_property_changing (const property_change_args& args)
 	{
-		this->event_invoker<property_changing_e>()(this, property);
+		this->event_invoker<property_changing_e>()(this, args);
 	}
 
-	void object::on_property_changed (const property* property)
+	void object::on_property_changed (const property_change_args& args)
 	{
-		this->event_invoker<property_changed_e>()(this, property);
+		this->event_invoker<property_changed_e>()(this, args);
 	}
 
 	const xtype<object> object::_type = { "object", nullptr, { }, [] { return new object(); }, };

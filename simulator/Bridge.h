@@ -38,6 +38,8 @@ using config_id_digest_p = edge::typed_property<edge::temp_string_property_trait
 
 using edge::object_collection_property;
 using edge::typed_object_collection_property;
+using edge::typed_value_collection_property;
+using edge::uint32_property_traits;
 
 struct project_i;
 
@@ -187,6 +189,10 @@ private:
 	float height() const { return _height; }
 	void set_height (float height) { base::set_and_invalidate(&height_property, _height, height); }
 
+	size_t mst_config_table_get_value_count() const;
+	uint32_t mst_config_table_get_value(size_t i) const;
+	void mst_config_table_set_value(size_t i, uint32_t value);
+
 	static const uint32_p      bridge_index_property;
 	static const mac_address_p bridge_address_property;
 	static const bool_p        stp_enabled_property;
@@ -194,6 +200,7 @@ private:
 	static const uint32_p      port_count_property;
 	static const uint32_p      msti_count_property;
 	static const temp_string_p mst_config_id_name_property;
+	static const typed_value_collection_property<Bridge, uint32_property_traits> mst_config_table_property;
 	static const uint32_p      MstConfigIdRevLevel;
 	static const config_id_digest_p  MstConfigIdDigest;
 	static const uint32_p      migrate_time_property;

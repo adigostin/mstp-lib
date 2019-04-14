@@ -67,8 +67,8 @@ namespace edge
 		std::vector<std::string_view> factory_params;
 		for (auto& str : factory_param_strings)
 			factory_params.push_back(str);
-		auto obj = std::unique_ptr<object>(type->deserialize(parent, { factory_params.data(), factory_params.data() + factory_params.size() }));
-		deserialize_to (elem, parent, obj.get());
+		auto obj = std::unique_ptr<object>(type->create(parent, { factory_params.data(), factory_params.data() + factory_params.size() }));
+		deserialize_to (elem, obj.get());
 		return obj;
 	}
 
@@ -87,7 +87,41 @@ namespace edge
 		}
 	}
 
-	void deserialize_to (IXMLDOMElement* element, object* parent, object* o)
+	static void deserialize_value_collection (IXMLDOMElement* collection_elem, object* o, const value_collection_property* prop)
+	{
+		size_t index = 0;
+		com_ptr<IXMLDOMNode> entry_node;
+		auto hr = collection_elem->get_firstChild(&entry_node); assert(SUCCEEDED(hr));
+		while (entry_node != nullptr)
+		{
+			com_ptr<IXMLDOMElement> entry_elem = entry_node.get();
+			_variant_t index_attr_value;
+			hr = entry_elem->getAttribute(_bstr_t(prop->_index_attr_name), index_attr_value.GetAddress()); assert(SUCCEEDED(hr));
+			size_t index;
+			bool converted = uint32_property_traits::from_string(bstr_to_utf8(index_attr_value.bstrVal), index); assert(converted);
+
+			_variant_t value_attr_value;
+			hr = entry_elem->getAttribute(_bstr_t(prop->_value_attr_name), value_attr_value.GetAddress()); assert(SUCCEEDED(hr));
+			
+			auto value_utf8 = bstr_to_utf8(value_attr_value.bstrVal);
+			if (prop->can_set())
+			{
+				bool converted = prop->set_value(o, index, value_utf8);
+				assert(converted);
+			}
+			else if (prop->can_insert())
+			{
+				bool converted = prop->insert_value (o, index, value_utf8);
+				assert(converted);
+			}
+			else
+				assert(false);
+
+			hr = entry_node->get_nextSibling(&entry_node); assert(SUCCEEDED(hr));
+		}
+	}
+
+	void deserialize_to (IXMLDOMElement* element, object* o)
 	{
 		//_bstr_t name;
 		//auto hr = element->get_nodeName(name.GetAddress()); assert(SUCCEEDED(hr));
@@ -137,11 +171,16 @@ namespace edge
 			if (prop == nullptr)
 				assert(false); // error handling for this not implemented
 
-			if (auto oc_prop = dynamic_cast<const object_collection_property*>(prop))
+			if (auto vc_prop = dynamic_cast<const value_collection_property*>(prop))
+				deserialize_value_collection (child_elem, o, vc_prop);
+			else if (auto oc_prop = dynamic_cast<const object_collection_property*>(prop))
 				deserialize_object_collection (child_elem, o, oc_prop);
 			else
 				assert(false); // error handling for this not implemented
+
+			hr = child_node->get_nextSibling(&child_node); assert(SUCCEEDED(hr));
 		}
+
 		assert(false); // not implemented
 	}
 }

@@ -44,25 +44,40 @@ object_item::~object_item()
 }
 
 //static
-void object_item::on_property_changing (void* arg, object* obj, const property* prop)
+void object_item::on_property_changing (void* arg, object* obj, const property_change_args& args)
 {
 }
 
 //static
-void object_item::on_property_changed (void* arg, object* obj, const property* prop)
+void object_item::on_property_changed (void* arg, object* obj, const property_change_args& args)
 {
+	if (args.property->_ui_visible == ui_visible::no)
+		return;
+
 	auto oi = static_cast<object_item*>(arg);
 	auto root_item = oi->root();
-	for (auto& gi : oi->children())
+
+	if (auto prop = dynamic_cast<const value_property*>(args.property))
 	{
-		for (auto& child_item : static_cast<group_item*>(gi.get())->children())
+		for (auto& gi : oi->children())
 		{
-			if (auto value_item = dynamic_cast<value_pgitem*>(child_item.get()); value_item->_prop == prop)
+			for (auto& child_item : static_cast<group_item*>(gi.get())->children())
 			{
-				value_item->recreate_value_text_layout();
-				break;
+				if (auto value_item = dynamic_cast<value_pgitem*>(child_item.get()); value_item->_prop == prop)
+				{
+					value_item->recreate_value_text_layout();
+					break;
+				}
 			}
 		}
+	}
+	else if (auto prop = dynamic_cast<const value_collection_property*>(args.property))
+	{
+		assert(false); // not implemented
+	}
+	else
+	{
+		assert(false); // not implemented
 	}
 }
 
@@ -129,7 +144,10 @@ std::vector<std::unique_ptr<pgitem>> group_item::create_children()
 					items.push_back (std::make_unique<value_pgitem>(this, value_prop));
 			}
 			else
-				assert(false); // not implemented
+			{
+				// TODO: placeholder pg item for unknown types of properties
+				assert(false);
+			}
 		}
 	}
 	

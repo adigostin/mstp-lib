@@ -22,7 +22,7 @@ namespace edge
 		const property* find_property (const char* name) const;
 
 		virtual view<const value_property* const> factory_props() const = 0;
-		virtual object* deserialize (object* parent, const view<std::string_view>& string_values) const = 0;
+		virtual object* create (object* parent, const view<std::string_view>& string_values) const = 0;
 	private:
 		void add_properties (std::vector<const property*>& properties) const;
 	};
@@ -60,7 +60,7 @@ namespace edge
 			return result;
 		}
 
-		virtual object* deserialize (object* parent, const view<std::string_view>& string_values) const override
+		virtual object* create (object* parent, const view<std::string_view>& string_values) const override
 		{
 			assert (string_values.size() == parameter_count);
 			auto values = strings_to_values (string_values, std::make_index_sequence<parameter_count>());
@@ -133,6 +133,23 @@ namespace edge
 		}
 	};
 
+	enum class list_property_change_type { set, insert, remove };
+
+	struct property_change_args
+	{
+		const struct property* property;
+		size_t index;
+		list_property_change_type type;
+
+		property_change_args (const value_property* property)
+			: property(property)
+		{ }
+
+		property_change_args (const value_collection_property* property, size_t index, list_property_change_type type)
+			: property(property), index(index), type(type)
+		{ }
+	};
+
 	class object : public event_manager
 	{
 		template<typename child_type>
@@ -144,15 +161,15 @@ namespace edge
 		template<typename T>
 		bool is() const { return dynamic_cast<const T*>(this) != nullptr; }
 
-		struct property_changing_e : event<property_changing_e, object*, const property*> { };
-		struct property_changed_e  : event<property_changed_e , object*, const property*> { };
+		struct property_changing_e : event<property_changing_e, object*, const property_change_args&> { };
+		struct property_changed_e  : event<property_changed_e , object*, const property_change_args&> { };
 
 		property_changing_e::subscriber property_changing() { return property_changing_e::subscriber(this); }
 		property_changed_e::subscriber property_changed() { return property_changed_e::subscriber(this); }
 
 	protected:
-		virtual void on_property_changing (const property* property);
-		virtual void on_property_changed (const property* property);
+		virtual void on_property_changing (const property_change_args&);
+		virtual void on_property_changed (const property_change_args&);
 
 	public:
 		static const xtype<object> _type;

@@ -98,8 +98,8 @@ namespace edge
 		pgitem* find_child (const property* prop) const;
 
 	private:
-		static void on_property_changing (void* arg, object* obj, const property* prop);
-		static void on_property_changed (void* arg, object* obj, const property* prop);
+		static void on_property_changing (void* arg, object* obj, const property_change_args& args);
+		static void on_property_changed (void* arg, object* obj, const property_change_args& args);
 		virtual std::vector<std::unique_ptr<pgitem>> create_children() override final;
 	};
 

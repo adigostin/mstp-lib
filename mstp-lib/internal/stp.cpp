@@ -882,6 +882,40 @@ void STP_SetMstConfigTable (struct STP_BRIDGE* bridge, const STP_CONFIG_TABLE_EN
 	FLUSH_LOG (bridge);
 }
 
+void STP_SetMstConfigTableEntry (struct STP_BRIDGE* bridge, unsigned int vlanNumber, unsigned int treeIndex, unsigned int timestamp)
+{
+	assert (vlanNumber <= bridge->maxVlanNumber);
+
+	LOG (bridge, -1, -1, "{T}: Setting MST Config Table... ", timestamp);
+
+	if (bridge->mstConfigTable[vlanNumber].GetValue() == treeIndex)
+	{
+		LOG (bridge, -1, -1, "... nothing changed.\r\n");
+	}
+	else
+	{
+		// Check that the caller is not trying to map a VLAN to a too-large tree number.
+		if ((vlanNumber == 0) || (vlanNumber == 4095))
+			assert (treeIndex == 0);
+		else
+			assert (treeIndex < (1 + bridge->mstiCount));
+
+		bridge->mstConfigTable[vlanNumber] = (unsigned short) treeIndex;
+
+		ComputeMstConfigDigest (bridge);
+
+		LOG (bridge, -1, -1, "New digest: 0x{X2}{X2}...{X2}{X2}.\r\n",
+			bridge->MstConfigId.ConfigurationDigest[0], bridge->MstConfigId.ConfigurationDigest[1],
+			bridge->MstConfigId.ConfigurationDigest[14], bridge->MstConfigId.ConfigurationDigest[15]);
+
+		if (bridge->started)
+			RestartStateMachines(bridge, timestamp);
+	}
+
+	LOG (bridge, -1, -1, "------------------------------------\r\n");
+	FLUSH_LOG (bridge);
+}
+
 const STP_CONFIG_TABLE_ENTRY* STP_GetMstConfigTable (STP_BRIDGE* bridge, unsigned int* entryCountOut)
 {
 	*entryCountOut = 1 + bridge->maxVlanNumber;

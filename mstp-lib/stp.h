@@ -213,6 +213,7 @@ struct STP_CONFIG_TABLE_ENTRY
 };
 
 void STP_SetMstConfigTable (struct STP_BRIDGE* bridge, const struct STP_CONFIG_TABLE_ENTRY* entries, unsigned int entryCount, unsigned int timestamp);
+void STP_SetMstConfigTableEntry (struct STP_BRIDGE* bridge, unsigned int vlanNumber, unsigned int treeIndex, unsigned int timestamp);
 const struct STP_CONFIG_TABLE_ENTRY* STP_GetMstConfigTable (struct STP_BRIDGE* bridge, unsigned int* entryCountOut);
 unsigned int STP_GetMaxVlanNumber (const struct STP_BRIDGE* bridge);
 unsigned int STP_GetTreeIndexFromVlanNumber (const struct STP_BRIDGE* bridge, unsigned int vlanNumber);

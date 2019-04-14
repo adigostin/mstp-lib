@@ -322,7 +322,6 @@ namespace edge
 	{
 		using base = property;
 		using base::base;
-
 		virtual size_t child_count (const object* parent) const = 0;
 		virtual object* child_at (const object* parent, size_t index) const = 0;
 		virtual void insert_child (object* parent, size_t index, std::unique_ptr<object>&& child) const = 0;
@@ -384,44 +383,108 @@ namespace edge
 			return std::unique_ptr<object>(raw_child);
 		}
 	};
-	/*
+	
 	struct value_collection_property : property
 	{
 		using base = property;
-		using base::base;
 
-		virtual size_t value_count (const object* parent) const = 0;
-		virtual std::string value_at (const object* parent, size_t index) const = 0;
-		virtual void insert_value (object* parent, size_t index, std::string_view value) const = 0;
-		virtual void remove_child (object* parent, size_t index) const = 0;
+		const char* const _index_attr_name;
+		const char* const _value_attr_name;
+
+		constexpr value_collection_property (const char* name, const property_group* group, const char* description, enum ui_visible ui_visible,
+			const char* index_attr_name, const char* value_attr_name)
+			: base(name, group, description, ui_visible)
+			, _index_attr_name(index_attr_name)
+			, _value_attr_name(value_attr_name)
+		{ }
+
+		virtual size_t value_count (const object* obj) const = 0;
+		virtual std::string get_value (const object* obj, size_t index) const = 0;
+		virtual bool set_value (object* obj, size_t index, std::string_view value) const = 0;
+		virtual bool insert_value (object* obj, size_t index, std::string_view value) const = 0;
+		virtual void remove_value (object* obj, size_t index) const = 0;
+		virtual bool can_set() const = 0;
+		virtual bool can_insert() const = 0;
 	};
 
-	template<typename object_t, typename value_t, typename>
+	template<typename object_t, typename property_traits>
 	struct typed_value_collection_property : value_collection_property
 	{
 		static_assert (std::is_convertible_v<object_t*, object*>);
 
 		using base = value_collection_property;
-		using base::base;
 
 		using get_value_count_t = size_t(object_t::*)() const;
-		using get_value_t       = value_t*(object_t::*)(size_t) const;
-		using insert_value_t    = void(object_t::*)(size_t, std::unique_ptr<value_t>&&);
-		using remove_value_t    = std::unique_ptr<value_t>(object_t::*)(size_t);
+		using get_value_t       = typename property_traits::return_t(object_t::*)(size_t) const;
+		using set_value_t       = void(object_t::*)(size_t, typename property_traits::param_t);
+		using insert_value_t    = void(object_t::*)(size_t, typename property_traits::param_t);
+		using remove_value_t    = void(object_t::*)(size_t);
 
 		get_value_count_t const _get_value_count;
 		get_value_t       const _get_value;
+		set_value_t       const _set_value;
 		insert_value_t    const _insert_value;
 		remove_value_t    const _remove_value;
+		const char*       const _index_attr_name;
 
-		constexpr value_collection_property (const char* name, const property_group* group, const char* description, enum ui_visible ui_visible,
-			get_child_count_t get_child_count, get_child_t get_child, insert_child_t insert_child, remove_child_t remove_child)
-			: base (name, group, description, ui_visible)
-			, _get_child_count(get_child_count)
-			, _get_child(get_child)
-			, _insert_child(insert_child)
-			, _remove_child(remove_child)
-		{ }
+		constexpr typed_value_collection_property (const char* name, const property_group* group, const char* description, enum ui_visible ui_visible,
+			const char* index_attr_name, const char* value_attr_name,
+			get_value_count_t get_value_count, get_value_t get_value, set_value_t set_value, insert_value_t insert_value, remove_value_t remove_value)
+			: base (name, group, description, ui_visible, index_attr_name, value_attr_name)
+			, _get_value_count(get_value_count)
+			, _get_value(get_value)
+			, _set_value(set_value)
+			, _insert_value(insert_value)
+			, _remove_value(remove_value)
+			, _index_attr_name(index_attr_name)
+		{
+			// At most one of "set_value" and "insert_value" must be non-null.
+			//
+			// If set_value is non-null, the object must pre-allocate the collection with default values,
+			// and the deserializer must call set_value to overwrite some values.
+			// 
+			// If insert_value is non-null, the object must not pre-allocate the collection,
+			// and the deserializer must call insert_value to append some values.
+			assert (set_value || insert_value);
+		}
+
+		virtual size_t value_count (const object* obj) const override
+		{
+			return (static_cast<const object_t*>(obj)->*_get_value_count)();
+		}
+
+		virtual std::string get_value (const object* obj, size_t index) const override
+		{
+			auto value = (static_cast<const object_t*>(obj)->*_get_value)(index);
+			return property_traits::to_string(value);
+		}
+
+		virtual bool set_value (object* obj, size_t index, std::string_view from) const override
+		{
+			typename property_traits::value_t value;
+			bool converted = property_traits::from_string(from, value);
+			if (!converted)
+				return false;
+			(static_cast<object_t*>(obj)->*_set_value) (index, value);
+			return true;
+		}
+
+		virtual bool insert_value (object* obj, size_t index, std::string_view from) const override
+		{
+			typename property_traits::value_t value;
+			bool converted = property_traits::from_string(from, value);
+			if (!converted)
+				return false;
+			(static_cast<object_t*>(obj)->*_insert_value) (index, value);
+			return true;
+		}
+
+		virtual void remove_value (object* obj, size_t index) const override
+		{
+			assert(false); // not implemented
+		}
+
+		virtual bool can_set() const override { return _set_value != nullptr; }
+		virtual bool can_insert() const override { return _insert_value != nullptr; }
 	};
-	*/
 }

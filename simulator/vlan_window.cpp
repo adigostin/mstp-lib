@@ -221,7 +221,7 @@ public:
 			b->property_changed().remove_handler (&OnBridgePropertyChanged, callbackArg);
 	}
 
-	static void OnBridgePropertyChanged (void* callbackArg, edge::object* o, const edge::property* property)
+	static void OnBridgePropertyChanged (void* callbackArg, edge::object* o, const edge::property_change_args& args)
 	{
 		static_cast<vlan_window*>(callbackArg)->LoadSelectedTreeEdit();
 	}

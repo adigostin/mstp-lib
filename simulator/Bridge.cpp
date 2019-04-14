@@ -150,6 +150,7 @@ Bridge::~Bridge()
 void Bridge::on_added_to_project(project_i* project)
 {
 	base::on_added_to_project(project);
+	assert (_helper_window == nullptr);
 	_helper_window = std::make_unique<HelperWindow>();
 	_helper_window->GetLinkPulseEvent().add_handler (&OnLinkPulseTick, this);
 	DWORD period = 950 + (std::random_device()() % 100);
@@ -799,6 +800,34 @@ void Bridge::SetBridgeForwardDelay (uint32_t forwardDelay)
 
 #pragma region properties
 
+size_t Bridge::mst_config_table_get_value_count() const
+{
+	unsigned int entry_count;
+	STP_GetMstConfigTable(_stpBridge, &entry_count);
+	return entry_count;
+}
+
+uint32_t Bridge::mst_config_table_get_value(size_t i) const
+{
+	unsigned int entry_count;
+	auto entries = STP_GetMstConfigTable(_stpBridge, &entry_count);
+	return entries[i].treeIndex;
+}
+
+void Bridge::mst_config_table_set_value(size_t i, uint32_t value)
+{
+	unsigned int entry_count;
+	auto table = STP_GetMstConfigTable (_stpBridge, &entry_count);
+	assert (i < entry_count);
+	if (table->treeIndex != value)
+	{
+		property_change_args args = { &mst_config_table_property, i, list_property_change_type::set };
+		this->on_property_changing(args);
+		STP_SetMstConfigTableEntry (_stpBridge, (unsigned int)i, value, ::GetMessageTime());
+		this->on_property_changed(args);
+	}
+}
+
 static const edge::property_group bridge_times_group = { 5, "Timer Params (Table 13-5)" };
 static const edge::property_group mst_group = { 10, "MST Config Id" };
 
@@ -850,6 +879,16 @@ const temp_string_p Bridge::mst_config_id_name_property {
 	static_cast<temp_string_p::member_getter_t>(&mst_config_id_name),
 	static_cast<temp_string_p::member_setter_t>(&set_mst_config_id_name),
 	std::nullopt,
+};
+
+const typed_value_collection_property<Bridge, uint32_property_traits> Bridge::mst_config_table_property {
+	"MstConfigTable", nullptr, nullptr, ui_visible::no,
+	"Vlan", "Tree",
+	&mst_config_table_get_value_count,
+	&mst_config_table_get_value,
+	&mst_config_table_set_value,
+	nullptr,
+	nullptr,
 };
 
 const edge::uint32_p Bridge::MstConfigIdRevLevel {
@@ -951,6 +990,7 @@ const edge::property* const Bridge::_properties[] = {
 	&msti_count_property,
 	&mst_config_id_name_property,
 	&MstConfigIdRevLevel,
+	&mst_config_table_property,
 	&MstConfigIdDigest,
 	&migrate_time_property,
 	&bridge_hello_time_property,
