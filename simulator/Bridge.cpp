@@ -817,10 +817,10 @@ const mac_address_p Bridge::bridge_address_property {
 	std::nullopt,
 };
 
-const compat_bool_p Bridge::stp_enabled_property {
+const bool_p Bridge::stp_enabled_property {
 	"STPEnabled", nullptr, nullptr, ui_visible::yes,
-	static_cast<compat_bool_p::member_getter_t>(&stp_enabled),
-	static_cast<compat_bool_p::member_setter_t>(&set_stp_enabled),
+	static_cast<bool_p::member_getter_t>(&stp_enabled),
+	static_cast<bool_p::member_setter_t>(&set_stp_enabled),
 	true,
 };
 

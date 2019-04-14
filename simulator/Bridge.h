@@ -189,7 +189,7 @@ private:
 
 	static const uint32_p      bridge_index_property;
 	static const mac_address_p bridge_address_property;
-	static const compat_bool_p stp_enabled_property;
+	static const bool_p        stp_enabled_property;
 	static const stp_version_p stp_version_property;
 	static const uint32_p      port_count_property;
 	static const uint32_p      msti_count_property;

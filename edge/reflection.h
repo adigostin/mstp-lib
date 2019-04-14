@@ -263,7 +263,7 @@ namespace edge
 		using value_t = bool;
 		using param_t = bool;
 		using return_t = bool;
-		static std::string to_string (bool from) { return std::to_string(from); }
+		static std::string to_string (bool from) { return from ? "True" : "False"; }
 		static bool from_string (std::string_view from, bool& to);
 	};
 	using bool_p = typed_property<bool_property_traits>;

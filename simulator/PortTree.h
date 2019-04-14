@@ -22,31 +22,6 @@ extern const edge::NVP port_role_nvps[];
 extern const char port_role_type_name[];
 using port_role_p = edge::enum_property<STP_PORT_ROLE, port_role_type_name, port_role_nvps>;
 
-struct compat_bool_property_traits
-{
-	static inline const char type_name[] = "compat_bool";
-	using value_t = bool;
-	using param_t = bool;
-	using return_t = bool;
-	static std::string to_string (bool from) { return edge::bool_property_traits::to_string(from); }
-	static bool from_string (std::string_view from, bool& to)
-	{
-		if (from == "-1" || from == "1")
-		{
-			to = true;
-			return true;
-		}
-		else if (from == "0")
-		{
-			to = false;
-			return true;
-		}
-		else
-			return edge::bool_property_traits::from_string(from, to);
-	}
-};
-using compat_bool_p = edge::typed_property<compat_bool_property_traits>;
-
 class PortTree : public edge::object
 {
 	using base = edge::object;
