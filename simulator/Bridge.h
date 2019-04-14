@@ -193,6 +193,10 @@ private:
 	uint32_t mst_config_table_get_value(size_t i) const;
 	void mst_config_table_set_value(size_t i, uint32_t value);
 
+	size_t tree_count() const { return _trees.size(); }
+	BridgeTree* tree (size_t index) const { return _trees[index].get(); }
+	Port* port (size_t index) const { return _ports[index].get(); }
+
 	static const uint32_p      bridge_index_property;
 	static const mac_address_p bridge_address_property;
 	static const bool_p        stp_enabled_property;
@@ -213,6 +217,8 @@ private:
 	static const float_p y_property;
 	static const float_p width_property;
 	static const float_p height_property;
+	static const typed_object_collection_property<Bridge, BridgeTree> trees_property;
+	static const typed_object_collection_property<Bridge, Port> ports_property;
 
 	static const property* const _properties[];
 	static const xtype<Bridge, uint32_p, uint32_p, mac_address_p> _type;

@@ -13,10 +13,11 @@ using edge::temp_string_p;
 using edge::property;
 using edge::type;
 using edge::xtype;
+using edge::typed_object_collection_property;
 
 extern const edge::NVP port_priority_nvps[];
 extern const char port_priority_type_name[];
-using port_priority_p = edge::enum_property<uint32_t, port_priority_type_name, port_priority_nvps>;
+using port_priority_p = edge::enum_property<uint32_t, port_priority_type_name, port_priority_nvps, true>;
 
 extern const edge::NVP port_role_nvps[];
 extern const char port_role_type_name[];

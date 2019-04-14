@@ -102,99 +102,31 @@ renderable_object::HTResult wire::hit_test (const edge::zoomable_i* zoomable, D2
 	return { };
 }
 
-static const _bstr_t WireElementName = "Wire";
+const xtype<wire> wire::_type = { "Wire", &base::_type, { }, [] { return new wire(); } };
 
-edge::com_ptr<IXMLDOMElement> wire::Serialize (project_i* project, IXMLDOMDocument* doc) const
+struct connected_end_wrapper : public object
 {
-	edge::com_ptr<IXMLDOMElement> wireElement;
-	HRESULT hr = doc->createElement (WireElementName, &wireElement); assert(SUCCEEDED(hr));
+	uint32_t bridge_index;
+	uint32_t port_index;
 
-	hr = wireElement->appendChild(serialize_point(project, doc, _points[0]), nullptr); assert(SUCCEEDED(hr));
-	hr = wireElement->appendChild(serialize_point(project, doc, _points[1]), nullptr); assert(SUCCEEDED(hr));
+	static const uint32_p bridge_index_property;
+	static const uint32_p port_index_property;
+	static inline const property* const props[] = { &bridge_index_property, &port_index_property };
+	static const xtype<connected_end_wrapper> _type;
+	virtual const struct type* type() const override { return &_type; }
+};
 
-	return wireElement;
-}
+const uint32_p connected_end_wrapper::bridge_index_property = {
+	"BridgeIndex", nullptr, nullptr, edge::ui_visible::no,
+	static_cast<uint32_p::member_var_t>(&connected_end_wrapper::bridge_index), std::nullopt
+};
 
-// static
-std::unique_ptr<wire> wire::Deserialize (project_i* project, IXMLDOMElement* wireElement)
-{
-	edge::com_ptr<IXMLDOMNode> firstChild;
-	auto hr = wireElement->get_firstChild(&firstChild); assert(SUCCEEDED(hr));
-	auto firstEnd = deserialize_point (project, (edge::com_ptr<IXMLDOMElement>) firstChild);
+const uint32_p connected_end_wrapper::port_index_property = {
+	"PortIndex", nullptr, nullptr, edge::ui_visible::no,
+	static_cast<uint32_p::member_var_t>(&connected_end_wrapper::port_index), std::nullopt
+};
 
-	edge::com_ptr<IXMLDOMNode> secondChild;
-	hr = firstChild->get_nextSibling(&secondChild); assert(SUCCEEDED(hr));
-	auto secondEnd = deserialize_point (project, (edge::com_ptr<IXMLDOMElement>) secondChild);
+const xtype<connected_end_wrapper> connected_end_wrapper::_type = {
+	"ConnectedEnd", &object::_type, props, [] { return new connected_end_wrapper(); }
+};
 
-	auto w = std::make_unique<wire>(firstEnd, secondEnd);
-	return w;
-}
-
-static const _bstr_t ConnectedEndString = "ConnectedEnd";
-static const _bstr_t BridgeIndexString  = "BridgeIndex";
-static const _bstr_t PortIndexString    = "PortIndex";
-static const _bstr_t LooseEndString     = "LooseEnd";
-static const _bstr_t XString            = "X";
-static const _bstr_t YString            = "Y";
-
-//static
-edge::com_ptr<IXMLDOMElement> wire::serialize_point (project_i* project, IXMLDOMDocument* doc, const wire_end& end)
-{
-	HRESULT hr;
-	edge::com_ptr<IXMLDOMElement> element;
-
-	if (std::holds_alternative<connected_wire_end>(end))
-	{
-		hr = doc->createElement (ConnectedEndString, &element); assert(SUCCEEDED(hr));
-		auto port = std::get<connected_wire_end>(end);
-		auto& bridges = project->bridges();
-		auto it = find_if (bridges.begin(), bridges.end(), [port](auto& up) { return up.get() == port->bridge(); });
-		auto bridgeIndex = it - bridges.begin();
-		hr = element->setAttribute (BridgeIndexString, _variant_t(std::to_string(bridgeIndex).c_str())); assert(SUCCEEDED(hr));
-		hr = element->setAttribute (PortIndexString, _variant_t(std::to_string(port->port_index()).c_str())); assert(SUCCEEDED(hr));
-	}
-	else //if (std::holds_alternative<loose_wire_end>(end))
-	{
-		auto& location = std::get<loose_wire_end>(end);
-		hr = doc->createElement (LooseEndString, &element); assert(SUCCEEDED(hr));
-		hr = element->setAttribute (XString, _variant_t(location.x)); assert(SUCCEEDED(hr));
-		hr = element->setAttribute (YString, _variant_t(location.y)); assert(SUCCEEDED(hr));
-	}
-
-	return element;
-}
-
-//static
-wire_end wire::deserialize_point (project_i* project, IXMLDOMElement* element)
-{
-	HRESULT hr;
-
-	_bstr_t name;
-	hr = element->get_nodeName(name.GetAddress()); assert(SUCCEEDED(hr));
-
-	if (wcscmp(name, ConnectedEndString) == 0)
-	{
-		_variant_t value;
-		hr = element->getAttribute (BridgeIndexString, &value); assert (SUCCEEDED(hr) && (value.vt == VT_BSTR));
-		size_t bridgeIndex = wcstoul (value.bstrVal, nullptr, 10);
-		hr = element->getAttribute (PortIndexString, &value); assert (SUCCEEDED(hr) && (value.vt == VT_BSTR));
-		size_t portIndex = wcstoul (value.bstrVal, nullptr, 10);
-		return connected_wire_end { project->bridges()[bridgeIndex]->GetPorts()[portIndex].get() };
-	}
-	else if (wcscmp (name, LooseEndString) == 0)
-	{
-		_variant_t value;
-		hr = element->getAttribute (XString, &value); assert (SUCCEEDED(hr) && (value.vt == VT_BSTR));
-		float x = wcstof (value.bstrVal, nullptr);
-		hr = element->getAttribute (YString, &value); assert (SUCCEEDED(hr) && (value.vt == VT_BSTR));
-		float y = wcstof (value.bstrVal, nullptr);
-		return loose_wire_end { x, y };
-	}
-	else
-	{
-		assert(false); // not implemented
-		return nullptr;
-	}
-}
-
-const xtype<wire> wire::_type = { "Wire", &base::_type, { }, nullptr };

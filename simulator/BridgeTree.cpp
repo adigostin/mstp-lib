@@ -54,7 +54,12 @@ uint32_t BridgeTree::bridge_priority() const
 
 void BridgeTree::set_bridge_priority (uint32_t priority)
 {
-	STP_SetBridgePriority (_parent->stp_bridge(), _treeIndex, (unsigned short) priority, GetMessageTime());
+	if (bridge_priority() != priority)
+	{
+		this->on_property_changing(&bridge_priority_property);
+		STP_SetBridgePriority (_parent->stp_bridge(), _treeIndex, (unsigned short) priority, GetMessageTime());
+		this->on_property_changed(&bridge_priority_property);
+	}
 }
 
 static constexpr char StpDisabledString[] = "(STP disabled)";
@@ -212,7 +217,7 @@ const NVP bridge_priority_nvps[] =
 const char bridge_priority_type_name[] = "bridge_priority";
 
 const bridge_priority_p BridgeTree::bridge_priority_property {
-	"Bridge Priority", nullptr, nullptr, ui_visible::yes,
+	"BridgePriority", nullptr, nullptr, ui_visible::yes,
 	static_cast<bridge_priority_p::member_getter_t>(&bridge_priority),
 	static_cast<bridge_priority_p::member_setter_t>(&set_bridge_priority),
 	0x8000,

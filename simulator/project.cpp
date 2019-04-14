@@ -67,24 +67,32 @@ public:
 
 	virtual void insert_wire (size_t index, unique_ptr<wire>&& wire) override final
 	{
-		if (index > _wires.size())
-			throw invalid_argument("index");
+		assert (index <= _wires.size());
+		property_change_args args = { &wires_property, index, collection_property_change_type::insert };
+		this->on_property_changing (args);
+		_wires.insert (_wires.begin() + index, move(wire));
+		this->on_property_changed (args);
 
-		auto it = _wires.insert (_wires.begin() + index, move(wire));
 		_wires[index]->GetInvalidateEvent().add_handler (&OnObjectInvalidate, this);
 		this->event_invoker<wire_inserted_e>()(this, index, _wires[index].get());
+
 		this->event_invoker<invalidate_e>()(this);
 	}
 
 	virtual unique_ptr<wire> remove_wire (size_t index) override final
 	{
-		if (index >= _wires.size())
-			throw invalid_argument("index");
+		assert (index < _wires.size());
 
 		this->event_invoker<wire_removing_e>()(this, index, _wires[index].get());
+
 		_wires[index]->GetInvalidateEvent().remove_handler (&OnObjectInvalidate, this);
+
+		property_change_args args = { &wires_property, index, collection_property_change_type::remove };
+		this->on_property_changing (args);
 		auto result = move(_wires[index]);
-		_wires.erase(_wires.begin() + index);
+		_wires.erase (_wires.begin() + index);
+		this->on_property_changed (args);
+
 		this->event_invoker<invalidate_e>()(this);
 		return result;
 	}
@@ -223,8 +231,8 @@ public:
 		hr = projectElement->appendChild (wiresElement, nullptr); assert(SUCCEEDED(hr));
 		for (auto& w : _wires)
 		{
-			hr = wiresElement->appendChild (w->Serialize(this, doc), nullptr);
-			assert(SUCCEEDED(hr));
+			auto e = serialize(doc, w.get());
+			hr = wiresElement->appendChild (e, nullptr); assert(SUCCEEDED(hr));
 		}
 
 		hr = FormatAndSaveToFile (doc, filePath);
@@ -421,8 +429,11 @@ public:
 
 	size_t bridge_count() const { return _bridges.size(); }
 	Bridge* bridge_at(size_t index) const { return _bridges[index].get(); }
+	size_t wire_count() const { return _wires.size(); }
+	wire* wire_at(size_t index) const { return _wires[index].get(); }
 
 	static const typed_object_collection_property<Project, Bridge> bridges_property;
+	static const typed_object_collection_property<Project, wire> wires_property;
 	static const property* _properties[];
 	static const xtype<Project> _type;
 	virtual const struct type* type() const { return &_type; }
@@ -430,10 +441,17 @@ public:
 
 const typed_object_collection_property<Project, Bridge> Project::bridges_property = {
 	"Bridges", nullptr, nullptr, ui_visible::no,
+	nullptr,
 	&bridge_count, &bridge_at, &insert_bridge, &remove_bridge
 };
 
-const property* Project::_properties[] = { &next_mac_address_property, &bridges_property };
+const typed_object_collection_property<Project, wire> Project::wires_property {
+	"Wires", nullptr, nullptr, ui_visible::no,
+	nullptr,
+	&wire_count, &wire_at, &insert_wire, nullptr
+};
+
+const property* Project::_properties[] = { &next_mac_address_property, &bridges_property, &wires_property };
 
 const xtype<Project> Project::_type = { "Project", &base::_type, _properties, [] { return new Project(); } };
 

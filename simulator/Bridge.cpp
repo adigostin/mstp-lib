@@ -821,7 +821,7 @@ void Bridge::mst_config_table_set_value(size_t i, uint32_t value)
 	assert (i < entry_count);
 	if (table->treeIndex != value)
 	{
-		property_change_args args = { &mst_config_table_property, i, list_property_change_type::set };
+		property_change_args args = { &mst_config_table_property, i, collection_property_change_type::set };
 		this->on_property_changing(args);
 		STP_SetMstConfigTableEntry (_stpBridge, (unsigned int)i, value, ::GetMessageTime());
 		this->on_property_changed(args);
@@ -979,6 +979,17 @@ const float_p Bridge::height_property {
 	std::nullopt
 };
 
+const typed_object_collection_property<Bridge, BridgeTree> Bridge::trees_property {
+	"BridgeTrees", nullptr, nullptr, ui_visible::no,
+	"TreeIndex",
+	&tree_count, &tree, nullptr, nullptr
+};
+
+const typed_object_collection_property<Bridge, Port> Bridge::ports_property {
+	"Ports", nullptr, nullptr, ui_visible::no,
+	"PortIndex",
+	&port_count, &port, nullptr, nullptr
+};
 #pragma endregion
 
 const edge::property* const Bridge::_properties[] = {
@@ -998,7 +1009,9 @@ const edge::property* const Bridge::_properties[] = {
 	&bridge_forward_delay_property,
 	&tx_hold_count_property,
 	&max_hops_property,
-	&x_property, &y_property, &width_property, &height_property
+	&x_property, &y_property, &width_property, &height_property,
+	&trees_property,
+	&ports_property,
 };
 
 const xtype<Bridge, uint32_p, uint32_p, mac_address_p>  Bridge::_type = {

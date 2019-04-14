@@ -542,6 +542,12 @@ const edge::bool_p Port::oper_p2p_property {
 	std::nullopt,
 };
 
+const typed_object_collection_property<Port, PortTree> Port::trees_property {
+	"PortTrees", nullptr, nullptr, ui_visible::no,
+	"TreeIndex",
+	&tree_count, &tree, nullptr, nullptr
+};
+
 const edge::property* const Port::_properties[] =
 {
 	&side_property,
@@ -555,6 +561,7 @@ const edge::property* const Port::_properties[] =
 	&detected_p2p_property,
 	&admin_p2p_property,
 	&oper_p2p_property,
+	&trees_property,
 };
 
 const edge::xtype<Port> Port::_type = { "Port", &base::_type, _properties, nullptr };

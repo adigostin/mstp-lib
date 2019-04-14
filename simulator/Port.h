@@ -92,21 +92,23 @@ public:
 private:
 	void set_side (enum side side) { _side = side; }
 	void set_offset (float offset) { _offset = offset; }
+	size_t tree_count() const { return _trees.size(); }
+	PortTree* tree (size_t index) const { return _trees[index].get(); }
 
 	static const side_p side_property;
-	static const edge::float_p offset_property;
-	static const edge::bool_p auto_edge_property;
-	static const edge::bool_p admin_edge_property;
-	static const edge::bool_p MacOperational;
-	static const edge::uint32_p AdminExternalPortPathCost;
-	static const edge::uint32_p DetectedPortPathCost;
-	static const edge::uint32_p ExternalPortPathCost;
+	static const float_p offset_property;
+	static const bool_p auto_edge_property;
+	static const bool_p admin_edge_property;
+	static const bool_p MacOperational;
+	static const uint32_p AdminExternalPortPathCost;
+	static const uint32_p DetectedPortPathCost;
+	static const uint32_p ExternalPortPathCost;
 	static const admin_p2p_p admin_p2p_property;
-	static const edge::bool_p detected_p2p_property;
-	static const edge::bool_p oper_p2p_property;
-	static const edge::property* const Port::_properties[];
-	static const xtype<Port> _type;
+	static const bool_p detected_p2p_property;
+	static const bool_p oper_p2p_property;
+	static const typed_object_collection_property<Port, PortTree> trees_property;
 
-public:
+	static const property* const Port::_properties[];
+	static const xtype<Port> _type;
 	virtual const struct type* type() const { return &_type; }
 };

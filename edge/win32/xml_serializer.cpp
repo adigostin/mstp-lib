@@ -5,6 +5,8 @@
 
 namespace edge
 {
+	static void deserialize_to_internal (IXMLDOMElement* element, object* o, const char* collection_index_attr_name);
+
 	com_ptr<IXMLDOMElement> serialize (IXMLDOMDocument* doc, const object* o)
 	{
 		com_ptr<IXMLDOMElement> element;
@@ -47,14 +49,8 @@ namespace edge
 		return element;
 	}
 
-	std::unique_ptr<object> deserialize (IXMLDOMElement* elem, object* parent)
+	static std::unique_ptr<object> deserialize_to_type (IXMLDOMElement* elem, const struct type* type)
 	{
-		_bstr_t namebstr;
-		auto hr = elem->get_nodeName(namebstr.GetAddress()); assert(SUCCEEDED(hr));
-		auto name = bstr_to_utf8(namebstr);
-		auto type = type::find_type(name.c_str());
-		if (type == nullptr)
-			assert(false); // error handling for this not implemented
 		std::vector<std::string> factory_param_strings;
 		for (auto factory_prop : type->factory_props())
 		{
@@ -67,12 +63,23 @@ namespace edge
 		std::vector<std::string_view> factory_params;
 		for (auto& str : factory_param_strings)
 			factory_params.push_back(str);
-		auto obj = std::unique_ptr<object>(type->create(parent, { factory_params.data(), factory_params.data() + factory_params.size() }));
+		auto obj = std::unique_ptr<object>(type->create({ factory_params.data(), factory_params.data() + factory_params.size() }));
 		deserialize_to (elem, obj.get());
 		return obj;
 	}
 
-	static void deserialize_object_collection (IXMLDOMElement* collection_elem, object* o, const object_collection_property* prop)
+	std::unique_ptr<object> deserialize (IXMLDOMElement* elem)
+	{
+		_bstr_t namebstr;
+		auto hr = elem->get_nodeName(namebstr.GetAddress()); assert(SUCCEEDED(hr));
+		auto name = bstr_to_utf8(namebstr);
+		auto type = type::find_type(name.c_str());
+		if (type == nullptr)
+			assert(false); // error handling for this not implemented
+		return deserialize_to_type (elem, type);
+	}
+
+	static void deserialize_to_new_object_collection (IXMLDOMElement* collection_elem, object* o, const object_collection_property* prop)
 	{
 		size_t index = 0;
 		com_ptr<IXMLDOMNode> child_node;
@@ -80,9 +87,35 @@ namespace edge
 		while (child_node != nullptr)
 		{
 			com_ptr<IXMLDOMElement> child_elem = child_node.get();
-			auto child = deserialize(child_elem, o);
+			auto child = deserialize(child_elem);
 			prop->insert_child (o, index, std::move(child));
 		
+			index++;
+			hr = child_node->get_nextSibling(&child_node); assert(SUCCEEDED(hr));
+		}
+	}
+
+	static void deserialize_to_existing_object_collection (IXMLDOMElement* collection_elem, object* o, const object_collection_property* prop)
+	{
+		size_t child_node_index = 0;
+		com_ptr<IXMLDOMNode> child_node;
+		auto hr = collection_elem->get_firstChild(&child_node); assert(SUCCEEDED(hr));
+		while (child_node != nullptr)
+		{
+			com_ptr<IXMLDOMElement> child_elem = child_node.get();
+			size_t index = child_node_index;
+			_variant_t index_attr_value;
+			hr = child_elem->getAttribute(_bstr_t(prop->_index_attr_name), index_attr_value.GetAddress());
+			if (hr == S_OK)
+			{
+				bool converted = uint32_property_traits::from_string(bstr_to_utf8(index_attr_value.bstrVal), index);
+				assert(converted);
+			}
+
+			auto child = prop->child_at(o, index);
+			deserialize_to_internal (child_elem, child, prop->_index_attr_name);
+
+			child_node_index++;
 			hr = child_node->get_nextSibling(&child_node); assert(SUCCEEDED(hr));
 		}
 	}
@@ -121,11 +154,8 @@ namespace edge
 		}
 	}
 
-	void deserialize_to (IXMLDOMElement* element, object* o)
+	static void deserialize_to_internal (IXMLDOMElement* element, object* o, const char* collection_index_attr_name)
 	{
-		//_bstr_t name;
-		//auto hr = element->get_nodeName(name.GetAddress()); assert(SUCCEEDED(hr));
-
 		com_ptr<IXMLDOMNamedNodeMap> attrs;
 		auto hr = element->get_attributes (&attrs); assert(SUCCEEDED(hr));
 		long attr_count;
@@ -139,23 +169,26 @@ namespace edge
 			hr = attr->get_name(namebstr.GetAddress()); assert(SUCCEEDED(hr));
 			auto name = bstr_to_utf8(namebstr);
 
-			bool is_factory_property = std::any_of (o->type()->factory_props().begin(), o->type()->factory_props().end(), [&name](auto fp) { return strcmp(name.c_str(), fp->_name) == 0; });
-			if (!is_factory_property)
-			{			
-				_bstr_t valuebstr;
-				hr = attr->get_text(valuebstr.GetAddress()); assert(SUCCEEDED(hr));
-				auto value = bstr_to_utf8(valuebstr);
+			if ((collection_index_attr_name != nullptr) && (name == collection_index_attr_name))
+				continue;
 
-				auto prop = o->type()->find_property(name.c_str());
-				if (prop == nullptr)
-					assert(false); // error handling for this not implemented
-				auto value_prop = dynamic_cast<const value_property*>(prop);
-				if (value_prop == nullptr)
-					assert(false); // error handling for this not implemented
-				bool set_successful = value_prop->try_set_from_string(o, value.c_str());
-				if (!set_successful)
-					assert(false); // error handling for this not implemented
-			}
+			bool is_factory_property = std::any_of (o->type()->factory_props().begin(), o->type()->factory_props().end(), [&name](auto fp) { return strcmp(name.c_str(), fp->_name) == 0; });
+			if (is_factory_property)
+				continue;
+
+			_bstr_t valuebstr;
+			hr = attr->get_text(valuebstr.GetAddress()); assert(SUCCEEDED(hr));
+			auto value = bstr_to_utf8(valuebstr);
+
+			auto prop = o->type()->find_property(name.c_str());
+			if (prop == nullptr)
+				assert(false); // error handling for this not implemented
+			auto value_prop = dynamic_cast<const value_property*>(prop);
+			if (value_prop == nullptr)
+				assert(false); // error handling for this not implemented
+			bool set_successful = value_prop->try_set_from_string(o, value.c_str());
+			if (!set_successful)
+				assert(false); // error handling for this not implemented
 		}
 
 		com_ptr<IXMLDOMNode> child_node;
@@ -174,13 +207,21 @@ namespace edge
 			if (auto vc_prop = dynamic_cast<const value_collection_property*>(prop))
 				deserialize_value_collection (child_elem, o, vc_prop);
 			else if (auto oc_prop = dynamic_cast<const object_collection_property*>(prop))
-				deserialize_object_collection (child_elem, o, oc_prop);
+			{
+				if (oc_prop->can_insert())
+					deserialize_to_new_object_collection (child_elem, o, oc_prop);
+				else
+					deserialize_to_existing_object_collection (child_elem, o, oc_prop);
+			}
 			else
 				assert(false); // error handling for this not implemented
 
 			hr = child_node->get_nextSibling(&child_node); assert(SUCCEEDED(hr));
 		}
+	}
 
-		assert(false); // not implemented
+	void deserialize_to (IXMLDOMElement* element, object* o)
+	{
+		deserialize_to_internal (element, o, nullptr);
 	}
 }

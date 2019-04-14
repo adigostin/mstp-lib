@@ -126,29 +126,69 @@ namespace edge
 		using member_setter_t = void (object::*)(param_t);
 		using static_getter_t = return_t(*)(const object*);
 		using static_setter_t = void(*)(object*, param_t);
+		using member_var_t = value_t object::*;
 
-		using getter_t = std::variant<member_getter_t, static_getter_t, nullptr_t>;
-		using setter_t = std::variant<member_setter_t, static_setter_t, nullptr_t>;
+		struct member_functions_t
+		{
+			member_getter_t getter;
+			member_setter_t setter;
+		};
 
-		getter_t const _getter;
-		setter_t const _setter;
+		struct static_functions_t
+		{
+			static_getter_t getter;
+			static_setter_t setter;
+		};
+
+		using accessors_t = std::variant<member_functions_t, static_functions_t, member_var_t>;
+
+		accessors_t const _accessors;
 		std::optional<value_t> const _default_value;
 
-		constexpr typed_property (const char* name, const property_group* group, const char* description, enum ui_visible ui_visible, getter_t getter, setter_t setter, std::optional<value_t> default_value)
-			: base(name, group, description, ui_visible), _getter(getter), _setter(setter), _default_value(default_value)
+		constexpr typed_property (const char* name, const property_group* group, const char* description, enum ui_visible ui_visible, member_getter_t getter, member_setter_t setter, std::optional<value_t> default_value)
+			: base(name, group, description, ui_visible), _accessors(member_functions_t{ getter, setter}), _default_value(default_value)
+		{ }
+
+		constexpr typed_property (const char* name, const property_group* group, const char* description, enum ui_visible ui_visible, static_getter_t getter, static_setter_t setter, std::optional<value_t> default_value)
+			: base(name, group, description, ui_visible), _accessors(static_functions_t{ getter, setter}), _default_value(default_value)
+		{ }
+
+		constexpr typed_property (const char* name, const property_group* group, const char* description, enum ui_visible ui_visible, member_var_t member_var, std::optional<value_t> default_value)
+			: base(name, group, description, ui_visible), _accessors(member_var), _default_value(default_value)
 		{ }
 
 		virtual const char* type_name() const override final { return property_traits::type_name; }
 
-		virtual bool has_setter() const override final { return !std::holds_alternative<nullptr_t>(_setter); }
+		virtual bool has_setter() const override final
+		{
+			return (std::holds_alternative<member_functions_t>(_accessors) && std::get<member_functions_t>(_accessors).setter)
+				|| (std::holds_alternative<static_functions_t>(_accessors) && std::get<static_functions_t>(_accessors).setter)
+				|| std::holds_alternative<member_var_t>(_accessors);
+		}
 
 		virtual property_editor_factory_t* custom_editor() const override { return custom_editor_; }
 
-	public:
+		return_t get (const object* obj) const
+		{
+			if (std::holds_alternative<member_functions_t>(_accessors))
+				return (obj->*std::get<member_functions_t>(_accessors).getter)();
+
+			if (std::holds_alternative<static_functions_t>(_accessors))
+				return std::get<static_functions_t>(_accessors).getter(obj);
+
+			if (std::holds_alternative<member_var_t>(_accessors))
+			{
+				assert(false); // not impl
+				return { };
+			}
+
+			assert(false);
+			return { };
+		}
+
 		std::string get_to_string (const object* obj) const final
 		{
-			auto value = std::holds_alternative<member_getter_t>(_getter) ? (obj->*std::get<member_getter_t>(_getter))() : std::get<static_getter_t>(_getter)(obj);
-			return property_traits::to_string (value);
+			return property_traits::to_string(get(obj));
 		}
 
 		virtual bool try_set_from_string (object* obj, std::string_view str_in) const override final
@@ -157,10 +197,15 @@ namespace edge
 			bool ok = property_traits::from_string(str_in, value);
 			if (ok)
 			{
-				if (std::holds_alternative<member_setter_t>(_setter))
-					(obj->*std::get<member_setter_t>(_setter))(value);
-				else if (std::holds_alternative<static_setter_t>(_setter))
-					std::get<static_setter_t>(_setter)(obj, value);
+				if (std::holds_alternative<member_functions_t>(_accessors))
+					(obj->*std::get<member_functions_t>(_accessors).setter)(value);
+				else if (std::holds_alternative<static_functions_t>(_accessors))
+					std::get<static_functions_t>(_accessors).setter(obj, value);
+				else if (std::holds_alternative<member_var_t>(_accessors))
+				{
+					// TODO: on_proeprty_changing / changed
+					assert(false); // not impl
+				}
 				else
 					assert(false);
 			}
@@ -175,9 +220,7 @@ namespace edge
 
 		virtual bool equal (object* obj1, object* obj2) const override final
 		{
-			auto val1 = std::holds_alternative<member_getter_t>(_getter) ? (obj1->*std::get<member_getter_t>(_getter))() : std::get<static_getter_t>(_getter)(obj1);
-			auto val2 = std::holds_alternative<member_getter_t>(_getter) ? (obj2->*std::get<member_getter_t>(_getter))() : std::get<static_getter_t>(_getter)(obj2);
-			return val1 == val2;
+			return get(obj1) == get(obj2);
 		}
 
 		virtual bool changed_from_default(const object* obj) const override
@@ -185,12 +228,11 @@ namespace edge
 			if (!_default_value.has_value())
 				return true;
 
-			auto val = std::holds_alternative<member_getter_t>(_getter) ? (obj->*std::get<member_getter_t>(_getter))() : std::get<static_getter_t>(_getter)(obj);
-			return val != _default_value.value();
+			return get(obj) != _default_value.value();
 		}
 	};
 
-	template<typename enum_t, const char* type_name_, const NVP* nvps>
+	template<typename enum_t, const char* type_name_, const NVP* nvps, bool serialize_as_integer = false>
 	struct enum_property_traits
 	{
 		static constexpr const char* type_name = type_name_;
@@ -200,6 +242,9 @@ namespace edge
 
 		static std::string to_string (enum_t from)
 		{
+			if (serialize_as_integer)
+				return int32_property_traits::to_string((int32_t)from);
+
 			for (auto nvp = nvps; nvp->first != nullptr; nvp++)
 			{
 				if (nvp->second == (int)from)
@@ -209,35 +254,22 @@ namespace edge
 			return "(unknown)";
 		}
 
-	private:
-		template<typename char_type>
-		static bool equals (std::basic_string_view<char_type> one, const char* other)
-		{
-			static_assert(false);
-		}
-
-		static bool equals (std::string_view one, const char* other)
-		{
-			return one == other;
-		}
-
-		static bool equals (std::wstring_view one, const char* other)
-		{
-			for (auto o = one.begin(); o != one.end(); o++)
-			{
-				if ((*other == 0) || (*other != *o))
-					return false;
-			}
-
-			return *other == 0;
-		}
-
-	public:
 		static bool from_string (std::string_view from, enum_t& to)
 		{
+			if (serialize_as_integer)
+			{
+				int32_t val;
+				bool ok = int32_property_traits::from_string(from, val);
+				if (ok)
+				{
+					to = (enum_t)val;
+					return true;
+				}
+			}
+
 			for (auto nvp = nvps; nvp->first != nullptr; nvp++)
 			{
-				if (equals(from, nvp->first))
+				if (from == nvp->first)
 				{
 					to = static_cast<enum_t>(nvp->second);
 					return true;
@@ -248,12 +280,8 @@ namespace edge
 		}
 	};
 
-	template<
-		typename enum_t,
-		const char* type_name,
-		const NVP* nvps
-	>
-	using enum_property = typed_property<enum_property_traits<enum_t, type_name, nvps>, nvps>;
+	template<typename enum_t, const char* type_name, const NVP* nvps, bool serialize_as_integer = false>
+	using enum_property = typed_property<enum_property_traits<enum_t, type_name, nvps, serialize_as_integer>, nvps>;
 
 	// ===========================================
 
@@ -322,8 +350,17 @@ namespace edge
 	{
 		using base = property;
 		using base::base;
+		
+		const char* const _index_attr_name;
+
+		object_collection_property (const char* name, const property_group* group, const char* description, enum ui_visible ui_visible, const char* index_attr_name)
+			: base(name, group, description, ui_visible)
+			, _index_attr_name(index_attr_name)
+		{ }
+
 		virtual size_t child_count (const object* parent) const = 0;
 		virtual object* child_at (const object* parent, size_t index) const = 0;
+		virtual bool can_insert() const = 0;
 		virtual void insert_child (object* parent, size_t index, std::unique_ptr<object>&& child) const = 0;
 		virtual std::unique_ptr<object> remove_child (object* parent, size_t index) const = 0;
 	};
@@ -348,8 +385,9 @@ namespace edge
 		remove_child_t    const _remove_child;
 
 		constexpr typed_object_collection_property (const char* name, const property_group* group, const char* description, enum ui_visible ui_visible,
+			const char* index_attr_name,
 			get_child_count_t get_child_count, get_child_t get_child, insert_child_t insert_child, remove_child_t remove_child)
-			: base (name, group, description, ui_visible)
+			: base (name, group, description, ui_visible, index_attr_name)
 			, _get_child_count(get_child_count)
 			, _get_child(get_child)
 			, _insert_child(insert_child)
@@ -367,7 +405,12 @@ namespace edge
 			auto typed_parent = static_cast<const parent_t*>(parent);
 			return (typed_parent->*_get_child)(index);
 		}
-		
+
+		virtual bool can_insert() const override
+		{
+			return _insert_child != nullptr;
+		}
+
 		virtual void insert_child (object* parent, size_t index, std::unique_ptr<object>&& child) const override
 		{
 			auto typed_parent = static_cast<parent_t*>(parent);

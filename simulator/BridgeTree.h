@@ -11,7 +11,7 @@ using temp_string_p = edge::temp_string_p;
 
 extern const edge::NVP bridge_priority_nvps[];
 extern const char bridge_priority_type_name[];
-using bridge_priority_p = edge::enum_property<uint32_t, bridge_priority_type_name, bridge_priority_nvps>;
+using bridge_priority_p = edge::enum_property<uint32_t, bridge_priority_type_name, bridge_priority_nvps, true>;
 
 class BridgeTree : public object
 {

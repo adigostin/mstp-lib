@@ -9,8 +9,8 @@ namespace edge
 	{
 		static std::vector<const type*>* known_types;
 
-		const char*                 const name;
-		const type*               const base_type;
+		const char* const name;
+		const type* const base_type;
 		view<const property* const> const props;
 
 		type(const char* name, const type* base_type, view<const property* const> props);;
@@ -21,8 +21,9 @@ namespace edge
 		std::vector<const property*> make_property_list() const;
 		const property* find_property (const char* name) const;
 
+		virtual bool has_factory() const = 0;
 		virtual view<const value_property* const> factory_props() const = 0;
-		virtual object* create (object* parent, const view<std::string_view>& string_values) const = 0;
+		virtual object* create (const view<std::string_view>& string_values) const = 0;
 	private:
 		void add_properties (std::vector<const property*>& properties) const;
 	};
@@ -49,6 +50,8 @@ namespace edge
 		{ }
 
 	private:
+		virtual bool has_factory() const override { return _factory != nullptr; }
+
 		virtual view<const value_property* const> factory_props() const override { return _factory_props; }
 		
 		template<std::size_t... I>
@@ -60,8 +63,9 @@ namespace edge
 			return result;
 		}
 
-		virtual object* create (object* parent, const view<std::string_view>& string_values) const override
+		virtual object* create (const view<std::string_view>& string_values) const override
 		{
+			assert (_factory != nullptr);
 			assert (string_values.size() == parameter_count);
 			auto values = strings_to_values (string_values, std::make_index_sequence<parameter_count>());
 			object_type* obj = std::apply (_factory, values);
@@ -133,19 +137,23 @@ namespace edge
 		}
 	};
 
-	enum class list_property_change_type { set, insert, remove };
+	enum class collection_property_change_type { set, insert, remove };
 
 	struct property_change_args
 	{
 		const struct property* property;
 		size_t index;
-		list_property_change_type type;
+		collection_property_change_type type;
 
 		property_change_args (const value_property* property)
 			: property(property)
 		{ }
 
-		property_change_args (const value_collection_property* property, size_t index, list_property_change_type type)
+		property_change_args (const value_collection_property* property, size_t index, collection_property_change_type type)
+			: property(property), index(index), type(type)
+		{ }
+
+		property_change_args (const object_collection_property* property, size_t index, collection_property_change_type type)
 			: property(property), index(index), type(type)
 		{ }
 	};
