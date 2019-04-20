@@ -8,7 +8,6 @@
 
 using namespace edge;
 
-
 const char port_priority_type_name[] = "PortPriority";
 const edge::NVP port_priority_nvps[] {
 	{ "10 (16 dec)",  0x10 },
