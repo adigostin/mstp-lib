@@ -39,8 +39,8 @@ namespace edge
 		if (this->base_type != nullptr)
 			this->base_type->add_properties (properties);
 
-		for (auto p = this->props.from; p != this->props.to; p++)
-			properties.push_back (*p);
+		for (auto p : props)
+			properties.push_back (p);
 	}
 
 	std::vector<const property*> type::make_property_list() const

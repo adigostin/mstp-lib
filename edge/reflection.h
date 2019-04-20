@@ -56,11 +56,12 @@ namespace edge
 	using NVP = std::pair<const char*, int>;
 
 	template<typename t>
-	struct view
+	class view
 	{
 		t* from;
 		t* to;
 
+	public:
 		constexpr view()
 			: from(nullptr), to(nullptr)
 		{ }
