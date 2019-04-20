@@ -1,9 +1,9 @@
 
 #include "pch.h"
 #include "edit_state.h"
-#include "Bridge.h"
+#include "bridge.h"
 #include "wire.h"
-#include "Port.h"
+#include "port.h"
 
 class create_wire_es : public edit_state
 {

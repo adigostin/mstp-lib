@@ -1,7 +1,7 @@
 
 #include "pch.h"
 #include "edit_state.h"
-#include "Bridge.h"
+#include "bridge.h"
 #include "win32/utility_functions.h"
 
 class move_bridges_es : public edit_state
@@ -13,7 +13,7 @@ class move_bridges_es : public edit_state
 
 	struct info
 	{
-		Bridge* b;
+		bridge* b;
 		D2D1_SIZE_F offset_from_first;
 	};
 
@@ -25,12 +25,12 @@ public:
 
 	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) override final
 	{
-		auto firstBridge = static_cast<Bridge*>(_selection->objects()[0]); assert (firstBridge != nullptr);
+		auto firstBridge = static_cast<bridge*>(_selection->objects()[0]); assert (firstBridge != nullptr);
 		_first_bridge_initial_location = firstBridge->GetLocation();
 
 		for (auto o : _selection->objects())
 		{
-			auto b = dynamic_cast<Bridge*>(o); assert (b != nullptr);
+			auto b = dynamic_cast<bridge*>(o); assert (b != nullptr);
 			_infos.push_back ({ b, b->GetLocation() - firstBridge->GetLocation() });
 		}
 

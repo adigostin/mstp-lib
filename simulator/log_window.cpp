@@ -4,8 +4,8 @@
 #include "resource.h"
 #include "win32/d2d_window.h"
 #include "win32/utility_functions.h"
-#include "Bridge.h"
-#include "Port.h"
+#include "bridge.h"
+#include "port.h"
 
 using namespace std;
 using namespace D2D1;
@@ -20,7 +20,7 @@ class log_window : public d2d_window, public log_window_i
 	selection_i* const _selection;
 	std::shared_ptr<project_i> const _project;
 	com_ptr<IDWriteTextFormat> _textFormat;
-	Bridge* _bridge = nullptr;
+	bridge* _bridge = nullptr;
 	int _selectedPort = -1;
 	int _selectedTree = -1;
 	vector<const BridgeLogLine*> _lines;
@@ -62,10 +62,10 @@ public:
 			logArea->SelectBridge(nullptr);
 		else
 		{
-			auto b = dynamic_cast<Bridge*>(selection->objects().front());
+			auto b = dynamic_cast<bridge*>(selection->objects().front());
 			if (b == nullptr)
 			{
-				auto port = dynamic_cast<Port*>(selection->objects().front());
+				auto port = dynamic_cast<class port*>(selection->objects().front());
 				if (port != nullptr)
 					b = port->bridge();
 			}
@@ -128,7 +128,7 @@ public:
 		}
 	}
 
-	static void OnLogLineGeneratedStatic (void* callbackArg, Bridge* b, const BridgeLogLine* ll)
+	static void OnLogLineGeneratedStatic (void* callbackArg, bridge* b, const BridgeLogLine* ll)
 	{
 		static_cast<log_window*>(callbackArg)->OnLogLineGenerated(ll);
 	}
@@ -181,7 +181,7 @@ public:
 		}
 	}
 
-	static void on_log_cleared(void* arg, Bridge* b)
+	static void on_log_cleared(void* arg, bridge* b)
 	{
 		auto lw = static_cast<log_window*>(arg);
 		if (lw->_animationScrollFramesRemaining > 0)
@@ -201,7 +201,7 @@ public:
 		lw->invalidate();
 	}
 
-	void SelectBridge (Bridge* b)
+	void SelectBridge (bridge* b)
 	{
 		if (_bridge != b)
 		{

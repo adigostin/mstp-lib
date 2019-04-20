@@ -3,15 +3,15 @@
 #include "win32/win32_lib.h"
 #include "renderable_object.h"
 #include "stp.h"
-#include "Bridge.h"
+#include "bridge.h"
 
 struct simulator_app_i;
 struct project_i;
 struct project_window_i;
 struct selection_i;
 struct log_window_i;
-class Bridge;
-class Port;
+class bridge;
+class port;
 class wire;
 
 static constexpr unsigned char DefaultConfigTableDigest[16] = { 0xAC, 0x36, 0x17, 0x7F, 0x50, 0x28, 0x3C, 0xD4, 0xB8, 0x38, 0x21, 0xD8, 0xAB, 0x26, 0xDE, 0x62 };
@@ -81,7 +81,7 @@ struct __declspec(novtable) edit_window_i : virtual edge::win32_window_i
 {
 	virtual const struct drawing_resources& drawing_resources() const = 0;
 	virtual void EnterState (std::unique_ptr<edit_state>&& state) = 0;
-	virtual Port* GetCPAt (D2D1_POINT_2F dLocation, float tolerance) const = 0;
+	virtual port* GetCPAt (D2D1_POINT_2F dLocation, float tolerance) const = 0;
 	virtual void RenderSnapRect (ID2D1RenderTarget* rt, D2D1_POINT_2F wLocation) const = 0;
 	virtual void render_hint (ID2D1RenderTarget* rt,
 							 D2D1_POINT_2F dLocation,
@@ -132,8 +132,8 @@ extern const ProjectWindowFactory projectWindowFactory;
 
 // ============================================================================
 
-struct bridge_inserted_e : public edge::event<bridge_inserted_e, project_i*, size_t, Bridge*> { };
-struct bridge_removing_e : public edge::event<bridge_removing_e, project_i*, size_t, Bridge*> { };
+struct bridge_inserted_e : public edge::event<bridge_inserted_e, project_i*, size_t, bridge*> { };
+struct bridge_removing_e : public edge::event<bridge_removing_e, project_i*, size_t, bridge*> { };
 
 struct wire_inserted_e : public edge::event<wire_inserted_e, project_i*, size_t, wire*> { };
 struct wire_removing_e : public edge::event<wire_removing_e, project_i*, size_t, wire*> { };
@@ -149,9 +149,9 @@ struct __declspec(novtable) project_i
 	struct ChangedFlagChangedEvent : public edge::event<ChangedFlagChangedEvent, project_i*> { };
 	struct ChangedEvent : public edge::event<ChangedEvent, project_i*> { };
 
-	virtual const std::vector<std::unique_ptr<Bridge>>& bridges() const = 0;
-	virtual void insert_bridge (size_t index, std::unique_ptr<Bridge>&& bridge) = 0;
-	virtual std::unique_ptr<Bridge> remove_bridge (size_t index) = 0;
+	virtual const std::vector<std::unique_ptr<bridge>>& bridges() const = 0;
+	virtual void insert_bridge (size_t index, std::unique_ptr<bridge>&& bridge) = 0;
+	virtual std::unique_ptr<bridge> remove_bridge (size_t index) = 0;
 	virtual bridge_inserted_e::subscriber bridge_inserted() = 0;
 	virtual bridge_removing_e::subscriber bridge_removing() = 0;
 	virtual const std::vector<std::unique_ptr<wire>>& wires() const = 0;
@@ -174,10 +174,10 @@ struct __declspec(novtable) project_i
 	virtual ChangedFlagChangedEvent::subscriber GetChangedFlagChangedEvent() = 0;
 	virtual ChangedEvent::subscriber GetChangedEvent() = 0;
 
-	std::pair<wire*, size_t> GetWireConnectedToPort (const Port* port) const;
-	Port* FindConnectedPort (Port* txPort) const;
+	std::pair<wire*, size_t> GetWireConnectedToPort (const port* port) const;
+	port* FindConnectedPort (port* txPort) const;
 	std::unique_ptr<wire> remove_wire (wire* w);
-	std::unique_ptr<Bridge> remove_bridge (Bridge* b);
+	std::unique_ptr<bridge> remove_bridge (bridge* b);
 };
 using project_factory_t = std::shared_ptr<project_i>(*const)();
 extern const project_factory_t project_factory;

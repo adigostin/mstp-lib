@@ -3,10 +3,10 @@
 #include "win32/win32_lib.h"
 #include "win32/utility_functions.h"
 
-class Port;
+class port;
 struct project_i;
 
-using connected_wire_end = Port*;
+using connected_wire_end = port*;
 using loose_wire_end = D2D1_POINT_2F;
 using wire_end = std::variant<loose_wire_end, connected_wire_end>;
 

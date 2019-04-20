@@ -1,7 +1,7 @@
 
 #include "pch.h"
-#include "Port.h"
-#include "Bridge.h"
+#include "port.h"
+#include "bridge.h"
 #include "win32/utility_functions.h"
 #include "win32/d2d_window.h"
 
@@ -29,21 +29,17 @@ const edge::NVP admin_p2p_nvps[] =
 	{ 0, 0 },
 };
 
-Port::Port (Bridge* bridge, unsigned int portIndex, enum side side, float offset)
+port::port (class bridge* bridge, unsigned int portIndex, enum side side, float offset)
 	: _bridge(bridge), _portIndex(portIndex), _side(side), _offset(offset)
 {
 	for (unsigned int treeIndex = 0; treeIndex < (unsigned int) bridge->trees().size(); treeIndex++)
 	{
-		auto tree = unique_ptr<PortTree>(new PortTree(this, treeIndex));
+		auto tree = unique_ptr<port_tree>(new port_tree(this, treeIndex));
 		_trees.push_back (move(tree));
 	}
 }
 
-Port::~Port()
-{
-}
-
-D2D1_POINT_2F Port::GetCPLocation() const
+D2D1_POINT_2F port::GetCPLocation() const
 {
 	auto bounds = _bridge->GetBounds();
 
@@ -60,7 +56,7 @@ D2D1_POINT_2F Port::GetCPLocation() const
 	return Point2F (bounds.left + _offset, bounds.bottom + ExteriorHeight);
 }
 
-Matrix3x2F Port::GetPortTransform() const
+Matrix3x2F port::GetPortTransform() const
 {
 	if (_side == side::left)
 	{
@@ -86,14 +82,14 @@ Matrix3x2F Port::GetPortTransform() const
 }
 
 // static
-void Port::RenderExteriorNonStpPort (ID2D1RenderTarget* dc, const drawing_resources& dos, bool macOperational)
+void port::RenderExteriorNonStpPort (ID2D1RenderTarget* dc, const drawing_resources& dos, bool macOperational)
 {
 	auto& brush = macOperational ? dos._brushForwarding : dos._brushDiscardingPort;
 	dc->DrawLine (Point2F (0, 0), Point2F (0, ExteriorHeight), brush, 2);
 }
 
 // static
-void Port::RenderExteriorStpPort (ID2D1RenderTarget* dc, const drawing_resources& dos, STP_PORT_ROLE role, bool learning, bool forwarding, bool operEdge)
+void port::RenderExteriorStpPort (ID2D1RenderTarget* dc, const drawing_resources& dos, STP_PORT_ROLE role, bool learning, bool forwarding, bool operEdge)
 {
 	static constexpr float circleDiameter = min (ExteriorHeight / 2, ExteriorWidth);
 
@@ -222,7 +218,7 @@ void Port::RenderExteriorStpPort (ID2D1RenderTarget* dc, const drawing_resources
 	dc->SetAntialiasMode(oldaa);
 }
 
-void Port::Render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned int vlanNumber) const
+void port::Render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned int vlanNumber) const
 {
 	D2D1_MATRIX_3X2_F oldtr;
 	rt->GetTransform(&oldtr);
@@ -279,7 +275,7 @@ void Port::Render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned
 	rt->SetTransform (&oldtr);
 }
 
-D2D1_RECT_F Port::GetInnerOuterRect() const
+D2D1_RECT_F port::GetInnerOuterRect() const
 {
 	auto tl = D2D1_POINT_2F { -InteriorWidth / 2, -InteriorDepth };
 	auto br = D2D1_POINT_2F { InteriorWidth / 2, ExteriorHeight };
@@ -289,7 +285,7 @@ D2D1_RECT_F Port::GetInnerOuterRect() const
 	return { min(tl.x, br.x), min (tl.y, br.y), max(tl.x, br.x), max(tl.y, br.y) };
 }
 
-void Port::render_selection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const
+void port::render_selection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const
 {
 	auto ir = GetInnerOuterRect();
 
@@ -303,7 +299,7 @@ void Port::render_selection (const edge::zoomable_i* zoomable, ID2D1RenderTarget
 	rt->SetAntialiasMode(oldaa);
 }
 
-bool Port::HitTestCP (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) const
+bool port::HitTestCP (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) const
 {
 	auto cpWLocation = GetCPLocation();
 	auto cpDLocation = zoomable->pointw_to_pointd(cpWLocation);
@@ -312,7 +308,7 @@ bool Port::HitTestCP (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation,
 		&& (abs (cpDLocation.y - dLocation.y) <= tolerance);
 }
 
-bool Port::HitTestInnerOuter (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) const
+bool port::HitTestInnerOuter (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) const
 {
 	auto ir = GetInnerOuterRect();
 	auto lt = zoomable->pointw_to_pointd ({ ir.left, ir.top });
@@ -320,7 +316,7 @@ bool Port::HitTestInnerOuter (const edge::zoomable_i* zoomable, D2D1_POINT_2F dL
 	return (dLocation.x >= lt.x) && (dLocation.y >= lt.y) && (dLocation.x < rb.x) && (dLocation.y < rb.y);
 }
 
-renderable_object::HTResult Port::hit_test (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance)
+renderable_object::HTResult port::hit_test (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance)
 {
 	if (HitTestCP (zoomable, dLocation, tolerance))
 		return { this, HTCodeCP };
@@ -331,7 +327,7 @@ renderable_object::HTResult Port::hit_test (const edge::zoomable_i* zoomable, D2
 	return { };
 }
 
-bool Port::IsForwarding (unsigned int vlanNumber) const
+bool port::IsForwarding (unsigned int vlanNumber) const
 {
 	auto stpb = _bridge->stp_bridge();
 	if (!STP_IsBridgeStarted(stpb))
@@ -341,7 +337,7 @@ bool Port::IsForwarding (unsigned int vlanNumber) const
 	return STP_GetPortForwarding (stpb, (unsigned int) _portIndex, treeIndex);
 }
 
-void Port::SetSideAndOffset (enum side side, float offset)
+void port::SetSideAndOffset (enum side side, float offset)
 {
 	if ((_side != side) || (_offset != offset))
 	{
@@ -351,42 +347,42 @@ void Port::SetSideAndOffset (enum side side, float offset)
 	}
 }
 
-bool Port::GetMacOperational() const
+bool port::GetMacOperational() const
 {
 	return _missedLinkPulseCounter < MissedLinkPulseCounterMax;
 }
 
-bool Port::auto_edge() const
+bool port::auto_edge() const
 {
 	return STP_GetPortAutoEdge (_bridge->stp_bridge(), _portIndex);
 }
 
-void Port::set_auto_edge (bool autoEdge)
+void port::set_auto_edge (bool autoEdge)
 {
 	STP_SetPortAutoEdge (_bridge->stp_bridge(), _portIndex, autoEdge, (unsigned int) GetMessageTime());
 }
 
-bool Port::admin_edge() const
+bool port::admin_edge() const
 {
 	return STP_GetPortAdminEdge (_bridge->stp_bridge(), _portIndex);
 }
 
-void Port::set_admin_edge (bool adminEdge)
+void port::set_admin_edge (bool adminEdge)
 {
 	STP_SetPortAdminEdge (_bridge->stp_bridge(), _portIndex, adminEdge, (unsigned int) GetMessageTime());
 }
 
-unsigned int Port::GetDetectedPortPathCost() const
+unsigned int port::GetDetectedPortPathCost() const
 {
 	return STP_GetDetectedPortPathCost(_bridge->stp_bridge(), _portIndex);
 }
 
-unsigned int Port::GetAdminExternalPortPathCost() const
+unsigned int port::GetAdminExternalPortPathCost() const
 {
 	return STP_GetAdminExternalPortPathCost (_bridge->stp_bridge(), _portIndex);
 }
 
-void Port::SetAdminExternalPortPathCost(unsigned int adminExternalPortPathCost)
+void port::SetAdminExternalPortPathCost(unsigned int adminExternalPortPathCost)
 {
 	this->on_property_changing (&AdminExternalPortPathCost);
 	this->on_property_changing (&ExternalPortPathCost);
@@ -395,23 +391,23 @@ void Port::SetAdminExternalPortPathCost(unsigned int adminExternalPortPathCost)
 	this->on_property_changed (&AdminExternalPortPathCost);
 }
 
-unsigned int Port::GetExternalPortPathCost() const
+unsigned int port::GetExternalPortPathCost() const
 {
 	unsigned int treeIndex = 0; // CIST
 	return STP_GetExternalPortPathCost (_bridge->stp_bridge(), _portIndex);
 }
 
-bool Port::detected_p2p() const
+bool port::detected_p2p() const
 {
 	return STP_GetDetectedPointToPointMAC(_bridge->stp_bridge(), _portIndex);
 }
 
-STP_ADMIN_P2P Port::admin_p2p() const
+STP_ADMIN_P2P port::admin_p2p() const
 {
 	return STP_GetAdminPointToPointMAC(_bridge->stp_bridge(), _portIndex);
 }
 
-void Port::set_admin_p2p (STP_ADMIN_P2P admin_p2p)
+void port::set_admin_p2p (STP_ADMIN_P2P admin_p2p)
 {
 	this->on_property_changing (&admin_p2p_property);
 	this->on_property_changing (&oper_p2p_property);
@@ -420,26 +416,26 @@ void Port::set_admin_p2p (STP_ADMIN_P2P admin_p2p)
 	this->on_property_changed (&admin_p2p_property);
 }
 
-bool Port::oper_p2p() const
+bool port::oper_p2p() const
 {
 	return STP_GetOperPointToPointMAC(_bridge->stp_bridge(), _portIndex);
 }
 
-const side_p Port::side_property {
+const side_p port::side_property {
 	"Side", nullptr, nullptr, ui_visible::no,
 	static_cast<side_p::member_getter_t>(&side),
 	static_cast<side_p::member_setter_t>(&set_side),
 	std::nullopt,
 };
 
-const edge::float_p Port::offset_property {
+const edge::float_p port::offset_property {
 	"Offset", nullptr, nullptr, ui_visible::no,
 	static_cast<float_p::member_getter_t>(&offset),
 	static_cast<float_p::member_setter_t>(&set_offset),
 	std::nullopt,
 };
 
-const bool_p Port::auto_edge_property {
+const bool_p port::auto_edge_property {
 	"AutoEdge",
 	nullptr,
 	"The administrative value of the Auto Edge Port parameter. "
@@ -453,7 +449,7 @@ const bool_p Port::auto_edge_property {
 	true,
 };
 
-const bool_p Port::admin_edge_property {
+const bool_p port::admin_edge_property {
 	"AdminEdge",
 	nullptr,
 	"The administrative value of the Edge Port parameter. "
@@ -468,7 +464,7 @@ const bool_p Port::admin_edge_property {
 	false,
 };
 
-const bool_p Port::MacOperational {
+const bool_p port::MacOperational {
 	"MAC_Operational",
 	nullptr,
 	nullptr,
@@ -480,7 +476,7 @@ const bool_p Port::MacOperational {
 
 static const edge::property_group port_path_cost_group = { 5, "Port Path Costs" };
 
-const uint32_p Port::DetectedPortPathCost {
+const uint32_p port::DetectedPortPathCost {
 	"DetectedPortPathCost",
 	&port_path_cost_group,
 	nullptr,
@@ -490,7 +486,7 @@ const uint32_p Port::DetectedPortPathCost {
 	0,
 };
 
-const uint32_p Port::AdminExternalPortPathCost {
+const uint32_p port::AdminExternalPortPathCost {
 	"AdminExternalPortPathCost",
 	&port_path_cost_group,
 	nullptr,
@@ -500,7 +496,7 @@ const uint32_p Port::AdminExternalPortPathCost {
 	0,
 };
 
-const uint32_p Port::ExternalPortPathCost {
+const uint32_p port::ExternalPortPathCost {
 	"ExternalPortPathCost",
 	&port_path_cost_group,
 	nullptr,
@@ -512,7 +508,7 @@ const uint32_p Port::ExternalPortPathCost {
 
 static const edge::property_group p2p_group = { 4, "Point to Point" };
 
-const bool_p Port::detected_p2p_property {
+const bool_p port::detected_p2p_property {
 	"detectedPointToPointMAC",
 	&p2p_group,
 	nullptr,
@@ -522,7 +518,7 @@ const bool_p Port::detected_p2p_property {
 	std::nullopt,
 };
 
-const admin_p2p_p Port::admin_p2p_property {
+const admin_p2p_p port::admin_p2p_property {
 	"adminPointToPointMAC",
 	&p2p_group,
 	nullptr,
@@ -532,7 +528,7 @@ const admin_p2p_p Port::admin_p2p_property {
 	STP_ADMIN_P2P_AUTO,
 };
 
-const edge::bool_p Port::oper_p2p_property {
+const edge::bool_p port::oper_p2p_property {
 	"operPointToPointMAC",
 	&p2p_group,
 	nullptr,
@@ -542,13 +538,13 @@ const edge::bool_p Port::oper_p2p_property {
 	std::nullopt,
 };
 
-const typed_object_collection_property<Port, PortTree> Port::trees_property {
+const typed_object_collection_property<port, port_tree> port::trees_property {
 	"PortTrees", nullptr, nullptr, ui_visible::no,
 	"TreeIndex",
 	&tree_count, &tree, nullptr, nullptr
 };
 
-const edge::property* const Port::_properties[] =
+const edge::property* const port::_properties[] =
 {
 	&side_property,
 	&offset_property,
@@ -564,4 +560,4 @@ const edge::property* const Port::_properties[] =
 	&trees_property,
 };
 
-const edge::xtype<Port> Port::_type = { "Port", &base::_type, _properties, nullptr };
+const edge::xtype<port> port::_type = { "Port", &base::_type, _properties, nullptr };

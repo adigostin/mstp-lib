@@ -3,8 +3,8 @@
 #include "simulator.h"
 #include "resource.h"
 #include "edit_states/edit_state.h"
-#include "Bridge.h"
-#include "Port.h"
+#include "bridge.h"
+#include "port.h"
 #include "wire.h"
 #include "win32/zoomable_window.h"
 #include "win32/utility_functions.h"
@@ -90,7 +90,7 @@ public:
 		window->invalidate();
 	}
 
-	static void OnBridgeRemoving (void* callbackArg, project_i* project, size_t index, Bridge* b)
+	static void OnBridgeRemoving (void* callbackArg, project_i* project, size_t index, bridge* b)
 	{
 		auto window = static_cast<edit_window*>(callbackArg);
 		window->_htResult = { nullptr, 0 };
@@ -164,10 +164,10 @@ public:
 			layouts.push_back(move(tl));
 		}
 
-		float textX = client_width() - (5 + maxLineWidth + 5 + Port::ExteriorHeight + 5);
+		float textX = client_width() - (5 + maxLineWidth + 5 + port::ExteriorHeight + 5);
 		float lineX = textX - 3;
-		float bitmapX = client_width() - (5 + Port::ExteriorHeight + 5);
-		float rowHeight = 2 + max (maxLineHeight, Port::ExteriorWidth);
+		float bitmapX = client_width() - (5 + port::ExteriorHeight + 5);
+		float rowHeight = 2 + max (maxLineHeight, port::ExteriorWidth);
 		float y = client_height() - _countof(LegendInfo) * rowHeight;
 
 		auto lineWidth = GetDipSizeFromPixelSize({ 0, 1 }).height;
@@ -198,7 +198,7 @@ public:
 			// Rotate 270 degrees and then translate.
 			Matrix3x2F tr (0, -1, 1, 0, bitmapX, y + rowHeight / 2);
 			dc->SetTransform (tr * oldtr);
-			Port::RenderExteriorStpPort (dc, _drawing_resources, info.role, info.learning, info.forwarding, info.operEdge);
+			port::RenderExteriorStpPort (dc, _drawing_resources, info.role, info.learning, info.forwarding, info.operEdge);
 			dc->SetTransform (&oldtr);
 
 			y += rowHeight;
@@ -333,7 +333,7 @@ public:
 		dc->GetTransform(&oldtr);
 		dc->SetTransform (GetZoomTransform() * oldtr);
 
-		for (const unique_ptr<Bridge>& bridge : _project->bridges())
+		for (const unique_ptr<bridge>& bridge : _project->bridges())
 		{
 			D2D1_COLOR_F color = ColorF(ColorF::LightGreen);
 			if (STP_GetStpVersion(bridge->stp_bridge()) >= STP_VERSION_MSTP)
@@ -380,13 +380,13 @@ public:
 			bool anyPortConnected = false;
 			for (auto& b : _project->bridges())
 				anyPortConnected |= any_of (b->GetPorts().begin(), b->GetPorts().end(),
-											[this](const unique_ptr<Port>& p) { return _project->GetWireConnectedToPort(p.get()).first != nullptr; });
+											[this](const unique_ptr<port>& p) { return _project->GetWireConnectedToPort(p.get()).first != nullptr; });
 
 			if (!anyPortConnected)
 			{
-				Bridge* b = _project->bridges().front().get();
+				bridge* b = _project->bridges().front().get();
 				auto text = L"No port connected. You can connect\r\nports by drawing wires with the mouse.";
-				auto wl = D2D1_POINT_2F { b->GetLeft() + b->GetWidth() / 2, b->GetBottom() + Port::ExteriorHeight * 1.5f };
+				auto wl = D2D1_POINT_2F { b->GetLeft() + b->GetWidth() / 2, b->GetBottom() + port::ExteriorHeight * 1.5f };
 				auto dl = pointw_to_pointd(wl);
 				render_hint (dc, { dl.x, dl.y }, text, DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, false);
 			}
@@ -395,10 +395,10 @@ public:
 
 	void render_hover (ID2D1RenderTarget* dc) const
 	{
-		if (dynamic_cast<Port*>(_htResult.object) != nullptr)
+		if (dynamic_cast<port*>(_htResult.object) != nullptr)
 		{
-			if (_htResult.code == Port::HTCodeCP)
-				RenderSnapRect (dc, static_cast<Port*>(_htResult.object)->GetCPLocation());
+			if (_htResult.code == port::HTCodeCP)
+				RenderSnapRect (dc, static_cast<port*>(_htResult.object)->GetCPLocation());
 		}
 		else if (dynamic_cast<wire*>(_htResult.object) != nullptr)
 		{
@@ -589,7 +589,7 @@ public:
 				bool enable = (wParam == ID_BRIDGE_ENABLE_STP);
 				for (object* o : _selection->objects())
 				{
-					if (auto b = dynamic_cast<Bridge*>(o))
+					if (auto b = dynamic_cast<bridge*>(o))
 						b->set_stp_enabled(enable);
 				}
 
@@ -612,7 +612,7 @@ public:
 		return base::window_proc (hwnd, uMsg, wParam, lParam);
 	}
 
-	virtual Port* GetCPAt (D2D1_POINT_2F dLocation, float tolerance) const override final
+	virtual port* GetCPAt (D2D1_POINT_2F dLocation, float tolerance) const override final
 	{
 		auto& bridges = _project->bridges();
 		for (auto it = bridges.rbegin(); it != bridges.rend(); it++)
@@ -620,8 +620,8 @@ public:
 			auto ht = it->get()->hit_test(this, dLocation, tolerance);
 			if (ht.object != nullptr)
 			{
-				auto port = dynamic_cast<Port*>(ht.object);
-				if ((port != nullptr) && (ht.code == Port::HTCodeCP))
+				auto port = dynamic_cast<class port*>(ht.object);
+				if ((port != nullptr) && (ht.code == port::HTCodeCP))
 					return port;
 				else
 					return nullptr;
@@ -654,13 +654,13 @@ public:
 
 	void DeleteSelection()
 	{
-		if (any_of(_selection->objects().begin(), _selection->objects().end(), [](object* o) { return o->is<Port>(); }))
+		if (any_of(_selection->objects().begin(), _selection->objects().end(), [](object* o) { return o->is<port>(); }))
 		{
 			MessageBoxA (hwnd(), "Ports cannot be deleted.", _app->app_name(), 0);
 			return;
 		}
 
-		std::set<Bridge*> bridgesToRemove;
+		std::set<bridge*> bridgesToRemove;
 		std::set<wire*> wiresToRemove;
 		std::unordered_map<wire*, std::vector<size_t>> pointsToDisconnect;
 
@@ -668,7 +668,7 @@ public:
 		{
 			if (auto w = dynamic_cast<wire*>(o); w != nullptr)
 				wiresToRemove.insert(w);
-			else if (auto b = dynamic_cast<Bridge*>(o); b != nullptr)
+			else if (auto b = dynamic_cast<bridge*>(o); b != nullptr)
 				bridgesToRemove.insert(b);
 			else
 				assert(false);
@@ -821,21 +821,21 @@ public:
 			unique_ptr<edit_state> stateMoveThreshold;
 			unique_ptr<edit_state> stateButtonUp;
 
-			if (dynamic_cast<Bridge*>(ht.object) != nullptr)
+			if (dynamic_cast<bridge*>(ht.object) != nullptr)
 			{
 				if (button == mouse_button::left)
 					stateMoveThreshold = create_state_move_bridges (make_edit_state_deps());
 			}
-			else if (dynamic_cast<Port*>(ht.object) != nullptr)
+			else if (dynamic_cast<port*>(ht.object) != nullptr)
 			{
-				auto port = dynamic_cast<Port*>(ht.object);
+				auto port = dynamic_cast<class port*>(ht.object);
 
-				if (ht.code == Port::HTCodeInnerOuter)
+				if (ht.code == port::HTCodeInnerOuter)
 				{
-					if ((button == mouse_button::left) && (_selection->objects().size() == 1) && (dynamic_cast<Port*>(_selection->objects()[0]) != nullptr))
+					if ((button == mouse_button::left) && (_selection->objects().size() == 1) && (dynamic_cast<class port*>(_selection->objects()[0]) != nullptr))
 						stateMoveThreshold = create_state_move_port (make_edit_state_deps());
 				}
-				else if (ht.code == Port::HTCodeCP)
+				else if (ht.code == port::HTCodeCP)
 				{
 					auto alreadyConnectedWire = _project->GetWireConnectedToPort(port);
 					if (alreadyConnectedWire.first == nullptr)
@@ -903,9 +903,9 @@ public:
 			auto ht = HitTestObjects (dLocation, SnapDistance);
 
 			LPCWSTR idc = IDC_ARROW;
-			if (dynamic_cast<Port*>(ht.object) != nullptr)
+			if (dynamic_cast<port*>(ht.object) != nullptr)
 			{
-				if (ht.code == Port::HTCodeCP)
+				if (ht.code == port::HTCodeCP)
 					idc = IDC_CROSS;
 			}
 			else if (dynamic_cast<wire*>(ht.object) != nullptr)
@@ -957,9 +957,9 @@ public:
 			::EnableMenuItem (hMenu, ID_PAUSE_SIMULATION, _project->simulation_paused() ? MF_DISABLED : MF_ENABLED);
 			::EnableMenuItem (hMenu, ID_RESUME_SIMULATION, _project->simulation_paused() ? MF_ENABLED : MF_DISABLED);
 		}
-		else if (dynamic_cast<Bridge*>(_selection->objects().front()) != nullptr)
+		else if (dynamic_cast<bridge*>(_selection->objects().front()) != nullptr)
 			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_BRIDGE));
-		else if (dynamic_cast<Port*>(_selection->objects().front()) != nullptr)
+		else if (dynamic_cast<port*>(_selection->objects().front()) != nullptr)
 			hMenu = LoadMenu (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_CONTEXT_MENU_PORT));
 
 		if (hMenu != nullptr)

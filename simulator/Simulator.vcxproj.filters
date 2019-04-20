@@ -10,15 +10,15 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="wire.h" />
-    <ClInclude Include="Bridge.h" />
     <ClInclude Include="edit_states\edit_state.h">
       <Filter>edit_states</Filter>
     </ClInclude>
-    <ClInclude Include="Port.h" />
     <ClInclude Include="simulator.h" />
-    <ClInclude Include="BridgeTree.h" />
-    <ClInclude Include="PortTree.h" />
     <ClInclude Include="renderable_object.h" />
+    <ClInclude Include="bridge.h" />
+    <ClInclude Include="bridge_tree.h" />
+    <ClInclude Include="port.h" />
+    <ClInclude Include="port_tree.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -27,7 +27,6 @@
     <ClCompile Include="edit_window.cpp" />
     <ClCompile Include="simulator.cpp" />
     <ClCompile Include="wire.cpp" />
-    <ClCompile Include="Bridge.cpp" />
     <ClCompile Include="edit_states\beginning_drag_es.cpp">
       <Filter>edit_states</Filter>
     </ClCompile>
@@ -35,7 +34,6 @@
       <Filter>edit_states</Filter>
     </ClCompile>
     <ClCompile Include="log_window.cpp" />
-    <ClCompile Include="Port.cpp" />
     <ClCompile Include="edit_states\create_wire_es.cpp">
       <Filter>edit_states</Filter>
     </ClCompile>
@@ -50,10 +48,12 @@
     <ClCompile Include="edit_states\move_wire_point_es.cpp">
       <Filter>edit_states</Filter>
     </ClCompile>
-    <ClCompile Include="BridgeTree.cpp" />
-    <ClCompile Include="PortTree.cpp" />
     <ClCompile Include="selection.cpp" />
     <ClCompile Include="vlan_window.cpp" />
+    <ClCompile Include="bridge.cpp" />
+    <ClCompile Include="bridge_tree.cpp" />
+    <ClCompile Include="port.cpp" />
+    <ClCompile Include="port_tree.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="simulator.rc" />

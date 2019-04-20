@@ -204,21 +204,21 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Bridge.h" />
-    <ClInclude Include="BridgeTree.h" />
+    <ClInclude Include="bridge.h" />
+    <ClInclude Include="bridge_tree.h" />
     <ClInclude Include="edit_states\edit_state.h" />
+    <ClInclude Include="port.h" />
+    <ClInclude Include="port_tree.h" />
     <ClInclude Include="renderable_object.h" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="Port.h" />
-    <ClInclude Include="PortTree.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="simulator.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="wire.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Bridge.cpp" />
-    <ClCompile Include="BridgeTree.cpp" />
+    <ClCompile Include="bridge.cpp" />
+    <ClCompile Include="bridge_tree.cpp" />
     <ClCompile Include="edit_window.cpp" />
     <ClCompile Include="edit_states\beginning_drag_es.cpp" />
     <ClCompile Include="edit_states\create_bridge_es.cpp" />
@@ -234,8 +234,8 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Port.cpp" />
-    <ClCompile Include="PortTree.cpp" />
+    <ClCompile Include="port.cpp" />
+    <ClCompile Include="port_tree.cpp" />
     <ClCompile Include="project.cpp" />
     <ClCompile Include="project_window.cpp" />
     <ClCompile Include="selection.cpp" />

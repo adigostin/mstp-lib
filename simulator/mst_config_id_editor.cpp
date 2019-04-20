@@ -2,7 +2,7 @@
 #include "pch.h"
 #include "simulator.h"
 #include "resource.h"
-#include "Bridge.h"
+#include "bridge.h"
 #include "win32/utility_functions.h"
 
 using namespace std;
@@ -10,7 +10,7 @@ using namespace edge;
 
 class mst_config_id_editor : public property_editor_i
 {
-	std::unordered_set<Bridge*> _bridges;
+	std::unordered_set<bridge*> _bridges;
 	HWND _hwnd = nullptr;
 
 public:
@@ -19,10 +19,10 @@ public:
 		assert (!objects.empty());
 		for (auto o : objects)
 		{
-			if (o->is<Bridge>())
-				_bridges.insert (static_cast<Bridge*>(o));
-			else if (o->is<Port>())
-				_bridges.insert (static_cast<Port*>(o)->bridge());
+			if (o->is<bridge>())
+				_bridges.insert (static_cast<bridge*>(o));
+			else if (o->is<port>())
+				_bridges.insert (static_cast<port*>(o)->bridge());
 			else
 				assert(false);
 		}
@@ -31,7 +31,7 @@ public:
 	~mst_config_id_editor()
 	{ }
 
-	static void OnBridgeRemoving (void* callbackArg, project_i* project, size_t index, Bridge* bridge)
+	static void OnBridgeRemoving (void* callbackArg, project_i* project, size_t index, bridge* bridge)
 	{
 		auto dialog = static_cast<mst_config_id_editor*>(callbackArg);
 		if (find (dialog->_bridges.begin(), dialog->_bridges.end(), bridge) != dialog->_bridges.end())
@@ -140,7 +140,7 @@ public:
 		//ListView_SetBkColor (list, GetSysColor(COLOR_3DFACE));
 
 		const unsigned char* digest = STP_GetMstConfigId((*_bridges.begin())->stp_bridge())->ConfigurationDigest;
-		bool allSameDigest = all_of(_bridges.begin(), _bridges.end(), [&](Bridge* b)
+		bool allSameDigest = all_of(_bridges.begin(), _bridges.end(), [&](bridge* b)
 			{ return memcmp (digest, STP_GetMstConfigId(b->stp_bridge())->ConfigurationDigest, 16) == 0; });
 
 		LVCOLUMN lvc = { 0 };
@@ -163,7 +163,7 @@ public:
 		}
 
 		HWND hint = GetDlgItem (_hwnd, IDC_STATIC_HINT_NOT_MSTP);
-		bool showHint = any_of (_bridges.begin(), _bridges.end(), [](Bridge* b) { return STP_GetStpVersion(b->stp_bridge()) < STP_VERSION_MSTP; });
+		bool showHint = any_of (_bridges.begin(), _bridges.end(), [](bridge* b) { return STP_GetStpVersion(b->stp_bridge()) < STP_VERSION_MSTP; });
 		auto style = ::GetWindowLongPtr (hint, GWL_STYLE);
 		style = (style & ~WS_VISIBLE) | (showHint ? WS_VISIBLE : 0);
 		::SetWindowLongPtr (hint, GWL_STYLE, style);
@@ -174,7 +174,7 @@ public:
 		return true;
 	}
 
-	void LoadTable (HWND list, Bridge* bridge)
+	void LoadTable (HWND list, bridge* bridge)
 	{
 		LVITEM lvi = { 0 };
 		lvi.mask = LVIF_TEXT;

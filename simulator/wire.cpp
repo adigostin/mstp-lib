@@ -1,8 +1,8 @@
 
 #include "pch.h"
 #include "wire.h"
-#include "Bridge.h"
-#include "Port.h"
+#include "bridge.h"
+#include "port.h"
 #include "win32/utility_functions.h"
 #include "simulator.h"
 

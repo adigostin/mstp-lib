@@ -1,14 +1,14 @@
 
 #include "pch.h"
 #include "edit_state.h"
-#include "Bridge.h"
+#include "bridge.h"
 #include "win32/utility_functions.h"
 
 class create_bridge_es : public edit_state
 {
 	typedef edit_state base;
 	bool _completed = false;
-	std::unique_ptr<Bridge> _bridge;
+	std::unique_ptr<bridge> _bridge;
 
 public:
 	using base::base;
@@ -21,7 +21,7 @@ public:
 			uint32_t mstiCount = 4;
 			size_t macAddressesToReserve = std::max ((size_t) 1 + portCount, (size_t) 16);
 			auto macAddress = _project->AllocMacAddressRange(macAddressesToReserve);
-			_bridge.reset (new Bridge (portCount, mstiCount, macAddress));
+			_bridge.reset (new bridge (portCount, mstiCount, macAddress));
 		}
 
 		_bridge->SetLocation (location.w.x - _bridge->GetWidth() / 2, location.w.y - _bridge->GetHeight() / 2);
@@ -32,7 +32,7 @@ public:
 	{
 		if (_bridge != nullptr)
 		{
-			Bridge* b = _bridge.get();
+			bridge* b = _bridge.get();
 			size_t insertIndex = _project->bridges().size();
 			_project->insert_bridge(insertIndex, move(_bridge));
 			STP_StartBridge (_project->bridges().back()->stp_bridge(), GetMessageTime());
@@ -47,7 +47,7 @@ public:
 	{
 		auto centerX = _bridge->GetLeft() + _bridge->GetWidth() / 2;
 		auto centerY = _bridge->GetTop() + _bridge->GetHeight() / 2;
-		_bridge.reset (new Bridge(numberOfPorts, _bridge->msti_count(), _bridge->bridge_address()));
+		_bridge.reset (new bridge(numberOfPorts, _bridge->msti_count(), _bridge->bridge_address()));
 		_bridge->SetLocation (centerX - _bridge->GetWidth() / 2, centerY - _bridge->GetHeight() / 2);
 		::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
 	}
@@ -91,7 +91,7 @@ public:
 			dc->SetTransform(&oldtr);
 
 			auto x = _bridge->GetLeft() + _bridge->GetWidth() / 2;
-			auto y = _bridge->GetBottom() + Port::ExteriorHeight * 1.1f;
+			auto y = _bridge->GetBottom() + port::ExteriorHeight * 1.1f;
 			auto centerD = _ew->GetZoomTransform().TransformPoint({ x, y });
 			_ew->render_hint (dc, centerD, L"Press + or - to change the number of ports.",
 								   DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, true);

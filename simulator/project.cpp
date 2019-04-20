@@ -2,8 +2,8 @@
 #include "pch.h"
 #include "simulator.h"
 #include "wire.h"
-#include "Bridge.h"
-#include "Port.h"
+#include "bridge.h"
+#include "port.h"
 #include "win32/xml_serializer.h"
 
 using namespace std;
@@ -16,19 +16,19 @@ class Project : public edge::object, public project_i
 	using base = edge::object;
 
 	wstring _path;
-	vector<unique_ptr<Bridge>> _bridges;
+	vector<unique_ptr<bridge>> _bridges;
 	vector<unique_ptr<wire>> _wires;
 	mac_address _next_mac_address = next_mac_address_property._default_value.value();
 	bool _simulationPaused = false;
 	bool _changedFlag = false;
 
 public:
-	virtual const vector<unique_ptr<Bridge>>& bridges() const override final { return _bridges; }
+	virtual const vector<unique_ptr<bridge>>& bridges() const override final { return _bridges; }
 
-	virtual void insert_bridge (size_t index, unique_ptr<Bridge>&& bridge) override final
+	virtual void insert_bridge (size_t index, unique_ptr<bridge>&& bridge) override final
 	{
 		assert (index <= _bridges.size());
-		Bridge* b = bridge.get();
+		auto b = bridge.get();
 		assert (b->project() == nullptr);
 		auto it = _bridges.insert (_bridges.begin() + index, (move(bridge)));
 		static_cast<project_child*>(b)->on_added_to_project(this);
@@ -39,10 +39,10 @@ public:
 		this->event_invoker<invalidate_e>()(this);
 	}
 
-	virtual unique_ptr<Bridge> remove_bridge(size_t index) override final
+	virtual unique_ptr<bridge> remove_bridge(size_t index) override final
 	{
 		assert (index < _bridges.size());
-		Bridge* b = _bridges[index].get();
+		bridge* b = _bridges[index].get();
 		assert (b->project() == this);
 
 		if (any_of (_wires.begin(), _wires.end(), [b](const unique_ptr<wire>& w) {
@@ -97,7 +97,7 @@ public:
 		return result;
 	}
 
-	static void OnPacketTransmit (void* callbackArg, Bridge* bridge, size_t txPortIndex, PacketInfo&& pi)
+	static void OnPacketTransmit (void* callbackArg, bridge* bridge, size_t txPortIndex, PacketInfo&& pi)
 	{
 		auto project = static_cast<Project*>(callbackArg);
 		auto txPort = bridge->GetPorts().at(txPortIndex).get();
@@ -109,7 +109,7 @@ public:
 		}
 	}
 
-	static void OnLinkPulse (void* callbackArg, Bridge* bridge, size_t txPortIndex, unsigned int timestamp)
+	static void OnLinkPulse (void* callbackArg, bridge* bridge, size_t txPortIndex, unsigned int timestamp)
 	{
 		auto project = static_cast<Project*>(callbackArg);
 		auto txPort = bridge->GetPorts().at(txPortIndex).get();
@@ -147,9 +147,9 @@ public:
 
 		if (hasLoop != nullptr)
 		{
-			unordered_set<Port*> txPorts;
+			unordered_set<port*> txPorts;
 
-			function<bool(Port* txPort)> transmitsTo = [this, vlanNumber, &txPorts, &transmitsTo, targetPort=portA](Port* txPort) -> bool
+			function<bool(port* txPort)> transmitsTo = [this, vlanNumber, &txPorts, &transmitsTo, targetPort=portA](port* txPort) -> bool
 			{
 				if (txPort->IsForwarding(vlanNumber))
 				{
@@ -162,7 +162,7 @@ public:
 						{
 							if ((i != rx->port_index()) && rx->IsForwarding(vlanNumber))
 							{
-								Port* otherTxPort = rx->bridge()->GetPorts()[i].get();
+								port* otherTxPort = rx->bridge()->GetPorts()[i].get();
 								if (otherTxPort == targetPort)
 									return true;
 
@@ -339,7 +339,7 @@ public:
 
 		{
 			com_ptr<IXMLDOMNodeList> bridgeNodes;
-			hr = doc->selectNodes(_bstr_t("Project/Bridges/Bridge"), &bridgeNodes); assert(SUCCEEDED(hr));
+			hr = doc->selectNodes(_bstr_t("Project/Bridges/bridge"), &bridgeNodes); assert(SUCCEEDED(hr));
 			long bridgeCount;
 			hr = bridgeNodes->get_length(&bridgeCount); assert(SUCCEEDED(hr));
 			for (long i = 0; i < bridgeCount; i++)
@@ -348,7 +348,7 @@ public:
 				hr = bridgeNodes->get_item(i, &bridgeNode); assert(SUCCEEDED(hr));
 				com_ptr<IXMLDOMElement> bridgeElement;
 				hr = bridgeNode->QueryInterface(&bridgeElement); assert(SUCCEEDED(hr));
-				auto bridge = Bridge::Deserialize(this, bridgeElement);
+				auto bridge = bridge::Deserialize(this, bridgeElement);
 				this->insert_bridge(_bridges.size(), move(bridge));
 			}
 		}
@@ -428,18 +428,18 @@ public:
 	};
 
 	size_t bridge_count() const { return _bridges.size(); }
-	Bridge* bridge_at(size_t index) const { return _bridges[index].get(); }
+	bridge* bridge_at(size_t index) const { return _bridges[index].get(); }
 	size_t wire_count() const { return _wires.size(); }
 	wire* wire_at(size_t index) const { return _wires[index].get(); }
 
-	static const typed_object_collection_property<Project, Bridge> bridges_property;
+	static const typed_object_collection_property<Project, bridge> bridges_property;
 	static const typed_object_collection_property<Project, wire> wires_property;
 	static const property* _properties[];
 	static const xtype<Project> _type;
 	virtual const struct type* type() const { return &_type; }
 };
 
-const typed_object_collection_property<Project, Bridge> Project::bridges_property = {
+const typed_object_collection_property<Project, bridge> Project::bridges_property = {
 	"Bridges", nullptr, nullptr, ui_visible::no,
 	nullptr,
 	&bridge_count, &bridge_at, &insert_bridge, &remove_bridge

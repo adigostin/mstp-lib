@@ -2,8 +2,8 @@
 #include "pch.h"
 #include "simulator.h"
 #include "resource.h"
-#include "Bridge.h"
-#include "Port.h"
+#include "bridge.h"
+#include "port.h"
 
 class vlan_window : public virtual vlan_window_i, public edge::property_editor_parent_i
 {
@@ -47,7 +47,7 @@ public:
 
 		for (auto o : _selection->objects())
 		{
-			if (auto b = dynamic_cast<Bridge*>(o); b != nullptr)
+			if (auto b = dynamic_cast<bridge*>(o); b != nullptr)
 				b->property_changed().add_handler (&OnBridgePropertyChanged, this);
 		}
 	}
@@ -56,7 +56,7 @@ public:
 	{
 		for (auto o : _selection->objects())
 		{
-			if (auto b = dynamic_cast<Bridge*>(o); b != nullptr)
+			if (auto b = dynamic_cast<bridge*>(o); b != nullptr)
 				b->property_changed().remove_handler (&OnBridgePropertyChanged, this);
 		}
 
@@ -182,16 +182,16 @@ public:
 
 			if ((HIWORD(wParam) == BN_CLICKED) && (LOWORD(wParam) == IDC_BUTTON_EDIT_MST_CONFIG_TABLE))
 			{
-				if (std::all_of (_selection->objects().begin(), _selection->objects().end(), [](edge::object* o) { return o->is<Bridge>(); }))
+				if (std::all_of (_selection->objects().begin(), _selection->objects().end(), [](edge::object* o) { return o->is<bridge>(); }))
 				{
 					auto editor = config_id_editor_factory(_selection->objects());
 					editor->show(this);
 				}
-				else if (std::all_of (_selection->objects().begin(), _selection->objects().end(), [](edge::object* o) { return o->is<Port>(); }))
+				else if (std::all_of (_selection->objects().begin(), _selection->objects().end(), [](edge::object* o) { return o->is<port>(); }))
 				{
 					std::vector<edge::object*> objects;
 					std::transform (_selection->objects().begin(), _selection->objects().end(), std::back_inserter(objects),
-									[](edge::object* o) { return (edge::object*) static_cast<Port*>(o)->bridge(); });
+									[](edge::object* o) { return (edge::object*) static_cast<port*>(o)->bridge(); });
 					auto editor = config_id_editor_factory(objects);
 					editor->show(this);
 				}
@@ -209,14 +209,14 @@ public:
 
 	static void OnAddedToSelection (void* callbackArg, selection_i* selection, edge::object* obj)
 	{
-		auto b = dynamic_cast<Bridge*>(obj);
+		auto b = dynamic_cast<bridge*>(obj);
 		if (b != nullptr)
 			b->property_changed().add_handler (&OnBridgePropertyChanged, callbackArg);
 	}
 
 	static void OnRemovingFromSelection (void* callbackArg, selection_i* selection, edge::object* obj)
 	{
-		auto b = dynamic_cast<Bridge*>(obj);
+		auto b = dynamic_cast<bridge*>(obj);
 		if (b != nullptr)
 			b->property_changed().remove_handler (&OnBridgePropertyChanged, callbackArg);
 	}
@@ -276,7 +276,7 @@ public:
 		auto tableButton = GetDlgItem (_hwnd, IDC_BUTTON_EDIT_MST_CONFIG_TABLE); assert (tableButton != nullptr);
 		auto& objects = _selection->objects();
 
-		if (objects.empty() || std::any_of (objects.begin(), objects.end(), [](edge::object* o) { return !o->is<Bridge>() && !o->is<Port>(); }))
+		if (objects.empty() || std::any_of (objects.begin(), objects.end(), [](edge::object* o) { return !o->is<bridge>() && !o->is<port>(); }))
 		{
 			::SetWindowText (edit, L"(no bridge selected)");
 			::EnableWindow (edit, FALSE);
@@ -287,19 +287,19 @@ public:
 		::EnableWindow (edit, TRUE);
 		::EnableWindow (tableButton, TRUE);
 
-		std::unordered_set<Bridge*> bridges;
+		std::unordered_set<bridge*> bridges;
 		for (auto o : _selection->objects())
 		{
-			if (auto b = dynamic_cast<Bridge*>(o))
+			if (auto b = dynamic_cast<bridge*>(o))
 				bridges.insert(b);
-			else if (auto p = dynamic_cast<Port*>(o))
+			else if (auto p = dynamic_cast<port*>(o))
 				bridges.insert(p->bridge());
 			else
 				assert(false);
 		}
 
 		auto tree = STP_GetTreeIndexFromVlanNumber ((*bridges.begin())->stp_bridge(), _pw->selected_vlan_number());
-		bool all_same_tree = all_of (bridges.begin(), bridges.end(), [tree, vlan=_pw->selected_vlan_number()](Bridge* b)
+		bool all_same_tree = all_of (bridges.begin(), bridges.end(), [tree, vlan=_pw->selected_vlan_number()](bridge* b)
 			{ return STP_GetTreeIndexFromVlanNumber(b->stp_bridge(), vlan) == tree; });
 		if (!all_same_tree)
 		{
@@ -307,7 +307,7 @@ public:
 			return;
 		}
 
-		Bridge* bridge = *bridges.begin();
+		bridge* bridge = *bridges.begin();
 		auto treeIndex = STP_GetTreeIndexFromVlanNumber (bridge->stp_bridge(), _pw->selected_vlan_number());
 		if (treeIndex == 0)
 			::SetWindowTextA (edit, "CIST (0)");

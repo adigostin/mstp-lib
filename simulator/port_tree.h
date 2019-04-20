@@ -3,7 +3,7 @@
 #include "win32/com_ptr.h"
 #include "stp.h"
 
-class Port;
+class port;
 
 using edge::uint32_p;
 using edge::bool_p;
@@ -23,15 +23,15 @@ extern const edge::NVP port_role_nvps[];
 extern const char port_role_type_name[];
 using port_role_p = edge::enum_property<STP_PORT_ROLE, port_role_type_name, port_role_nvps>;
 
-class PortTree : public edge::object
+class port_tree : public edge::object
 {
 	using base = edge::object;
 
-	Port* const _port;
+	port* const _port;
 	unsigned int const _treeIndex;
 	
 public:
-	PortTree (Port* port, unsigned int treeIndex)
+	port_tree (port* port, unsigned int treeIndex)
 		: _port(port), _treeIndex(treeIndex)
 	{ }
 
@@ -53,6 +53,6 @@ public:
 	static const bool_p forwarding_property;
 	static const port_role_p role_property;
 	static const property* const _properties[];
-	static const xtype<PortTree> _type;
+	static const xtype<port_tree> _type;
 	const struct type* type() const;
 };

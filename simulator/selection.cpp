@@ -1,9 +1,9 @@
 
 #include "pch.h"
 #include "simulator.h"
-#include "Bridge.h"
+#include "bridge.h"
 #include "wire.h"
-#include "Port.h"
+#include "port.h"
 #include "events.h"
 
 using namespace std;
@@ -29,13 +29,13 @@ public:
 		_project->wire_removing().remove_handler (&on_wire_removing_from_project, this);
 	}
 
-	static void on_bridge_removing_from_project (void* callbackArg, project_i* project, size_t index, Bridge* b)
+	static void on_bridge_removing_from_project (void* callbackArg, project_i* project, size_t index, bridge* b)
 	{
 		auto s = static_cast<selection*>(callbackArg);
 		for (size_t i = 0; i < s->_objects.size(); )
 		{
 			auto so = s->_objects[i];
-			if ((so == b) || ((dynamic_cast<Port*>(so) != nullptr) && (static_cast<Port*>(so)->bridge() == b)))
+			if ((so == b) || ((dynamic_cast<port*>(so) != nullptr) && (static_cast<port*>(so)->bridge() == b)))
 				s->remove_internal(i);
 			else
 				i++;

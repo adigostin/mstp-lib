@@ -1,13 +1,13 @@
 
 #include "pch.h"
 #include "edit_state.h"
-#include "Bridge.h"
-#include "Port.h"
+#include "bridge.h"
+#include "port.h"
 
 class move_port_es : public edit_state
 {
 	typedef edit_state base;
-	Port* _port;
+	port* _port;
 	side _initialSide;
 	float _initialOffset;
 	bool _completed = false;
@@ -18,7 +18,7 @@ public:
 	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) override final
 	{
 		assert (_selection->objects().size() == 1);
-		_port = dynamic_cast<Port*>(_selection->objects().front());
+		_port = dynamic_cast<port*>(_selection->objects().front());
 		assert (_port != nullptr);
 		_initialSide = _port->side();
 		_initialOffset = _port->offset();

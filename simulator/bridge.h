@@ -1,7 +1,7 @@
 
 #pragma once
-#include "BridgeTree.h"
-#include "Port.h"
+#include "bridge_tree.h"
+#include "port.h"
 
 struct BridgeLogLine
 {
@@ -43,7 +43,7 @@ using edge::uint32_property_traits;
 
 struct project_i;
 
-class Bridge : public project_child
+class bridge : public project_child
 {
 	using base = project_child;
 
@@ -51,7 +51,7 @@ class Bridge : public project_child
 	float _y;
 	float _width;
 	float _height;
-	std::vector<std::unique_ptr<Port>> _ports;
+	std::vector<std::unique_ptr<port>> _ports;
 	bool _powered = true;
 	STP_BRIDGE* _stpBridge = nullptr;
 	bool _bpdu_trapping_enabled = false;
@@ -60,7 +60,7 @@ class Bridge : public project_child
 	BridgeLogLine _currentLogLine;
 	HANDLE _oneSecondTimerHandle;
 	std::queue<std::pair<size_t, PacketInfo>> _rxQueue;
-	std::vector<std::unique_ptr<BridgeTree>> _trees;
+	std::vector<std::unique_ptr<bridge_tree>> _trees;
 
 	// Let's keep things simple and do everything on the GUI thread.
 	struct HelperWindow : edge::event_manager
@@ -81,12 +81,12 @@ class Bridge : public project_child
 
 	// variables used by TransmitGetBuffer/ReleaseBuffer
 	std::vector<uint8_t> _txPacketData;
-	Port*                _txTransmittingPort;
+	port*                _txTransmittingPort;
 	unsigned int         _txTimestamp;
 
 public:
-	Bridge (uint32_t portCount, uint32_t mstiCount, mac_address macAddress);
-	virtual ~Bridge();
+	bridge (uint32_t portCount, uint32_t mstiCount, mac_address macAddress);
+	virtual ~bridge();
 
 	static constexpr int HTCodeInner = 1;
 
@@ -106,10 +106,10 @@ public:
 	void SetLocation (D2D1_POINT_2F location) { SetLocation (location.x, location.y); }
 	D2D1_RECT_F GetBounds() const { return { _x, _y, _x + _width, _y + _height }; }
 
-	void SetCoordsForInteriorPort (Port* port, D2D1_POINT_2F proposedLocation);
+	void SetCoordsForInteriorPort (port* port, D2D1_POINT_2F proposedLocation);
 
-	const std::vector<std::unique_ptr<BridgeTree>>& trees() const { return _trees; }
-	const std::vector<std::unique_ptr<Port>>& GetPorts() const { return _ports; }
+	const std::vector<std::unique_ptr<bridge_tree>>& trees() const { return _trees; }
+	const std::vector<std::unique_ptr<port>>& GetPorts() const { return _ports; }
 
 	void Render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsigned int vlanNumber, const D2D1_COLOR_F& configIdColor) const;
 
@@ -118,10 +118,10 @@ public:
 
 	STP_BRIDGE* stp_bridge() const { return _stpBridge; }
 
-	struct LogLineGenerated : public edge::event<LogLineGenerated, Bridge*, const BridgeLogLine*> { };
-	struct log_cleared_e : public edge::event<log_cleared_e, Bridge*> { };
-	struct LinkPulseEvent : public edge::event<LinkPulseEvent, Bridge*, size_t, unsigned int> { };
-	struct PacketTransmitEvent : public edge::event<PacketTransmitEvent, Bridge*, size_t, PacketInfo&&> { };
+	struct LogLineGenerated : public edge::event<LogLineGenerated, bridge*, const BridgeLogLine*> { };
+	struct log_cleared_e : public edge::event<log_cleared_e, bridge*> { };
+	struct LinkPulseEvent : public edge::event<LinkPulseEvent, bridge*, size_t, unsigned int> { };
+	struct PacketTransmitEvent : public edge::event<PacketTransmitEvent, bridge*, size_t, PacketInfo&&> { };
 
 	LogLineGenerated::subscriber GetLogLineGeneratedEvent() { return LogLineGenerated::subscriber(this); }
 	log_cleared_e::subscriber log_cleared() { return log_cleared_e::subscriber(this); }
@@ -194,8 +194,8 @@ private:
 	void mst_config_table_set_value(size_t i, uint32_t value);
 
 	size_t tree_count() const { return _trees.size(); }
-	BridgeTree* tree (size_t index) const { return _trees[index].get(); }
-	Port* port (size_t index) const { return _ports[index].get(); }
+	bridge_tree* tree (size_t index) const { return _trees[index].get(); }
+	port* port (size_t index) const { return _ports[index].get(); }
 
 	static const uint32_p      bridge_index_property;
 	static const mac_address_p bridge_address_property;
@@ -204,7 +204,7 @@ private:
 	static const uint32_p      port_count_property;
 	static const uint32_p      msti_count_property;
 	static const temp_string_p mst_config_id_name_property;
-	static const typed_value_collection_property<Bridge, uint32_property_traits> mst_config_table_property;
+	static const typed_value_collection_property<bridge, uint32_property_traits> mst_config_table_property;
 	static const uint32_p      MstConfigIdRevLevel;
 	static const config_id_digest_p  MstConfigIdDigest;
 	static const uint32_p      migrate_time_property;
@@ -217,10 +217,10 @@ private:
 	static const float_p y_property;
 	static const float_p width_property;
 	static const float_p height_property;
-	static const typed_object_collection_property<Bridge, BridgeTree> trees_property;
-	static const typed_object_collection_property<Bridge, Port> ports_property;
+	static const typed_object_collection_property<bridge, bridge_tree> trees_property;
+	static const typed_object_collection_property<bridge, class port> ports_property;
 
 	static const property* const _properties[];
-	static const xtype<Bridge, uint32_p, uint32_p, mac_address_p> _type;
+	static const xtype<bridge, uint32_p, uint32_p, mac_address_p> _type;
 	const struct type* type() const override { return &_type; }
 };

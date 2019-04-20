@@ -1,7 +1,7 @@
 
 #pragma once
 #include "renderable_object.h"
-#include "PortTree.h"
+#include "port_tree.h"
 #include "stp.h"
 
 struct PacketInfo
@@ -20,24 +20,23 @@ extern const char admin_p2p_type_name[];
 extern const edge::NVP admin_p2p_nvps[];
 using admin_p2p_p = edge::enum_property<STP_ADMIN_P2P, admin_p2p_type_name, admin_p2p_nvps>;
 
-class Port : public renderable_object
+class port : public renderable_object
 {
 	using base = renderable_object;
 
-	friend class Bridge;
+	friend class bridge;
 
-	Bridge* const _bridge;
+	bridge* const _bridge;
 	unsigned int const _portIndex;
 	side _side;
 	float _offset;
-	std::vector<std::unique_ptr<PortTree>> _trees;
+	std::vector<std::unique_ptr<port_tree>> _trees;
 
 	static constexpr unsigned int MissedLinkPulseCounterMax = 5;
 	unsigned int _missedLinkPulseCounter = MissedLinkPulseCounterMax; // _missedLinkPulseCounter equal to MissedLinkPulseCounterMax means macOperational=false
 
 public:
-	Port (Bridge* bridge, unsigned int portIndex, side side, float offset);
-	~Port();
+	port (class bridge* bridge, unsigned int portIndex, side side, float offset);
 
 	static constexpr int HTCodeInnerOuter = 1;
 	static constexpr int HTCodeCP = 2;
@@ -49,8 +48,8 @@ public:
 	static constexpr float ExteriorHeight = 20;
 	static constexpr float OutlineWidth = 2;
 
-	const Bridge* bridge() const { return _bridge; }
-	Bridge* bridge() { return _bridge; }
+	const bridge* bridge() const { return _bridge; }
+	class bridge* bridge() { return _bridge; }
 	unsigned int port_index() const { return _portIndex; }
 	enum side side() const { return _side; }
 	float offset() const { return _offset; }
@@ -60,7 +59,7 @@ public:
 	D2D1_RECT_F GetInnerOuterRect() const;
 	bool IsForwarding (unsigned int vlanNumber) const;
 	void SetSideAndOffset (enum side side, float offset);
-	const std::vector<std::unique_ptr<PortTree>>& trees() const { return _trees; }
+	const std::vector<std::unique_ptr<port_tree>>& trees() const { return _trees; }
 
 	static void RenderExteriorNonStpPort (ID2D1RenderTarget* dc, const drawing_resources& dos, bool macOperational);
 	static void RenderExteriorStpPort (ID2D1RenderTarget* dc, const drawing_resources& dos, STP_PORT_ROLE role, bool learning, bool forwarding, bool operEdge);
@@ -93,7 +92,7 @@ private:
 	void set_side (enum side side) { _side = side; }
 	void set_offset (float offset) { _offset = offset; }
 	size_t tree_count() const { return _trees.size(); }
-	PortTree* tree (size_t index) const { return _trees[index].get(); }
+	port_tree* tree (size_t index) const { return _trees[index].get(); }
 
 	static const side_p side_property;
 	static const float_p offset_property;
@@ -106,9 +105,9 @@ private:
 	static const admin_p2p_p admin_p2p_property;
 	static const bool_p detected_p2p_property;
 	static const bool_p oper_p2p_property;
-	static const typed_object_collection_property<Port, PortTree> trees_property;
+	static const typed_object_collection_property<port, port_tree> trees_property;
 
-	static const property* const Port::_properties[];
-	static const xtype<Port> _type;
+	static const property* const port::_properties[];
+	static const xtype<port> _type;
 	virtual const struct type* type() const { return &_type; }
 };

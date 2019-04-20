@@ -1,7 +1,7 @@
 
 #include "pch.h"
 #include "simulator.h"
-#include "Bridge.h"
+#include "bridge.h"
 #include "wire.h"
 #include "resource.h"
 
@@ -27,7 +27,7 @@ static const wchar_t app_namew[] = L"STP Simulator";
 static const char app_version_string[] = "2.2";
 
 #pragma region project_i
-pair<wire*, size_t> project_i::GetWireConnectedToPort (const Port* port) const
+pair<wire*, size_t> project_i::GetWireConnectedToPort (const port* port) const
 {
 	for (auto& w : wires())
 	{
@@ -40,7 +40,7 @@ pair<wire*, size_t> project_i::GetWireConnectedToPort (const Port* port) const
 	return { };
 }
 
-Port* project_i::FindConnectedPort (Port* txPort) const
+port* project_i::FindConnectedPort (port* txPort) const
 {
 	for (auto& w : wires())
 	{
@@ -73,7 +73,7 @@ std::unique_ptr<wire> project_i::remove_wire (wire* w)
 	assert(false); return nullptr;
 }
 
-std::unique_ptr<Bridge> project_i::remove_bridge (Bridge* b)
+std::unique_ptr<bridge> project_i::remove_bridge (bridge* b)
 {
 	auto& bridges = this->bridges();
 	for (size_t bi = 0; bi < bridges.size(); bi++)

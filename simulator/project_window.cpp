@@ -1,8 +1,8 @@
 #include "pch.h"
 #include "simulator.h"
 #include "resource.h"
-#include "Bridge.h"
-#include "Port.h"
+#include "bridge.h"
+#include "port.h"
 #include "wire.h"
 #include "win32/property_grid.h"
 
@@ -958,31 +958,31 @@ public:
 		if (objs.empty())
 			return;
 
-		if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<Bridge>(); })
-			|| all_of (objs.begin(), objs.end(), [](object* o) { return o->is<Port>(); }))
+		if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<bridge>(); })
+			|| all_of (objs.begin(), objs.end(), [](object* o) { return o->is<port>(); }))
 		{
 			const char* first_section_name;
 			std::function<std::pair<object*, unsigned int>(object* o)> tree_selector;
 
-			if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<Bridge>(); }))
+			if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<bridge>(); }))
 			{
 				first_section_name = "Bridge Properties";
 
 				tree_selector = [vlan=_selectedVlanNumber](object* o)
 				{
-					auto b = static_cast<Bridge*>(o);
+					auto b = static_cast<bridge*>(o);
 					auto tree_index = STP_GetTreeIndexFromVlanNumber(b->stp_bridge(), vlan);
 					auto tree_object = b->trees().at(tree_index).get();
 					return std::make_pair((object*)tree_object, tree_index);
 				};
 			}
-			else //if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<Port>(); }))
+			else //if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<port>(); }))
 			{
 				first_section_name = "Port Properties";
 
 				tree_selector = [vlan=_selectedVlanNumber](object* o)
 				{
-					auto p = static_cast<Port*>(o);
+					auto p = static_cast<port*>(o);
 					auto tree_index = STP_GetTreeIndexFromVlanNumber(p->bridge()->stp_bridge(), vlan);
 					auto tree_object = p->trees().at(tree_index).get();
 					return std::make_pair((object*)tree_object, tree_index);

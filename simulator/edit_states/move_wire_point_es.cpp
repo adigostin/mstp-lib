@@ -2,7 +2,7 @@
 #include "pch.h"
 #include "edit_state.h"
 #include "wire.h"
-#include "Port.h"
+#include "port.h"
 
 using namespace std;
 
