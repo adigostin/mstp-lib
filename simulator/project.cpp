@@ -441,14 +441,12 @@ public:
 
 const typed_object_collection_property<Project, bridge> Project::bridges_property = {
 	"Bridges", nullptr, nullptr, ui_visible::no,
-	nullptr,
 	&bridge_count, &bridge_at, &insert_bridge, &remove_bridge
 };
 
 const typed_object_collection_property<Project, wire> Project::wires_property {
 	"Wires", nullptr, nullptr, ui_visible::no,
-	nullptr,
-	&wire_count, &wire_at, &insert_wire, nullptr
+	&wire_count, &wire_at, &insert_wire, &remove_wire
 };
 
 const property* Project::_properties[] = { &next_mac_address_property, &bridges_property, &wires_property };

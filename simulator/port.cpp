@@ -540,8 +540,7 @@ const edge::bool_p port::oper_p2p_property {
 
 const typed_object_collection_property<port, port_tree> port::trees_property {
 	"PortTrees", nullptr, nullptr, ui_visible::no,
-	"TreeIndex",
-	&tree_count, &tree, nullptr, nullptr
+	&tree_count, &tree
 };
 
 const edge::property* const port::_properties[] =

@@ -5,8 +5,6 @@
 
 namespace edge
 {
-	static void deserialize_to_internal (IXMLDOMElement* element, object* o, const char* collection_index_attr_name);
-
 	com_ptr<IXMLDOMElement> serialize (IXMLDOMDocument* doc, const object* o)
 	{
 		com_ptr<IXMLDOMElement> element;
@@ -105,7 +103,7 @@ namespace edge
 			com_ptr<IXMLDOMElement> child_elem = child_node.get();
 			size_t index = child_node_index;
 			_variant_t index_attr_value;
-			hr = child_elem->getAttribute(_bstr_t(prop->_index_attr_name), index_attr_value.GetAddress());
+			hr = child_elem->getAttribute(_bstr_t(collection_property::index_attr_name), index_attr_value.GetAddress());
 			if (hr == S_OK)
 			{
 				bool converted = uint32_property_traits::from_string(bstr_to_utf8(index_attr_value.bstrVal), index);
@@ -113,7 +111,7 @@ namespace edge
 			}
 
 			auto child = prop->child_at(o, index);
-			deserialize_to_internal (child_elem, child, prop->_index_attr_name);
+			deserialize_to (child_elem, child);
 
 			child_node_index++;
 			hr = child_node->get_nextSibling(&child_node); assert(SUCCEEDED(hr));
@@ -137,24 +135,22 @@ namespace edge
 			hr = entry_elem->getAttribute(_bstr_t(prop->_value_attr_name), value_attr_value.GetAddress()); assert(SUCCEEDED(hr));
 			
 			auto value_utf8 = bstr_to_utf8(value_attr_value.bstrVal);
-			if (prop->can_set())
-			{
-				bool converted = prop->set_value(o, index, value_utf8);
-				assert(converted);
-			}
-			else if (prop->can_insert())
+			if (prop->can_insert_remove())
 			{
 				bool converted = prop->insert_value (o, index, value_utf8);
 				assert(converted);
 			}
 			else
-				assert(false);
+			{
+				bool converted = prop->set_value(o, index, value_utf8);
+				assert(converted);
+			}
 
 			hr = entry_node->get_nextSibling(&entry_node); assert(SUCCEEDED(hr));
 		}
 	}
 
-	static void deserialize_to_internal (IXMLDOMElement* element, object* o, const char* collection_index_attr_name)
+	void deserialize_to (IXMLDOMElement* element, object* o)
 	{
 		com_ptr<IXMLDOMNamedNodeMap> attrs;
 		auto hr = element->get_attributes (&attrs); assert(SUCCEEDED(hr));
@@ -168,9 +164,6 @@ namespace edge
 			_bstr_t namebstr;
 			hr = attr->get_name(namebstr.GetAddress()); assert(SUCCEEDED(hr));
 			auto name = bstr_to_utf8(namebstr);
-
-			if ((collection_index_attr_name != nullptr) && (name == collection_index_attr_name))
-				continue;
 
 			bool is_factory_property = std::any_of (o->type()->factory_props().begin(), o->type()->factory_props().end(), [&name](auto fp) { return strcmp(name.c_str(), fp->_name) == 0; });
 			if (is_factory_property)
@@ -205,10 +198,12 @@ namespace edge
 				assert(false); // error handling for this not implemented
 
 			if (auto vc_prop = dynamic_cast<const value_collection_property*>(prop))
+			{
 				deserialize_value_collection (child_elem, o, vc_prop);
+			}
 			else if (auto oc_prop = dynamic_cast<const object_collection_property*>(prop))
 			{
-				if (oc_prop->can_insert())
+				if (oc_prop->can_insert_remove())
 					deserialize_to_new_object_collection (child_elem, o, oc_prop);
 				else
 					deserialize_to_existing_object_collection (child_elem, o, oc_prop);
@@ -218,10 +213,5 @@ namespace edge
 
 			hr = child_node->get_nextSibling(&child_node); assert(SUCCEEDED(hr));
 		}
-	}
-
-	void deserialize_to (IXMLDOMElement* element, object* o)
-	{
-		deserialize_to_internal (element, o, nullptr);
 	}
 }

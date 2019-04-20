@@ -280,36 +280,26 @@ namespace edge
 	struct collection_property : property
 	{
 		using property::property;
-
+		static constexpr char index_attr_name[] = "Index";
 		virtual size_t size (const object* parent) const = 0;
+		virtual bool can_insert_remove() const = 0;
 	};
 
 	struct object_collection_property : collection_property
 	{
-		using base = collection_property;
-		using base::base;
-		
-		const char* const _index_attr_name;
-
-		object_collection_property (const char* name, const property_group* group, const char* description, enum ui_visible ui_visible, const char* index_attr_name)
-			: base(name, group, description, ui_visible)
-			, _index_attr_name(index_attr_name)
-		{ }
-
+		using collection_property::collection_property;
 		virtual object* child_at (const object* parent, size_t index) const = 0;
-		virtual bool can_insert() const = 0;
 		virtual void insert_child (object* parent, size_t index, std::unique_ptr<object>&& child) const = 0;
 		virtual std::unique_ptr<object> remove_child (object* parent, size_t index) const = 0;
 	};
-	
+
 	template<typename parent_t, typename child_t>
 	struct typed_object_collection_property : object_collection_property
 	{
+		using base = object_collection_property;
+
 		static_assert (std::is_base_of_v<object, child_t>);
 		static_assert (std::is_base_of_v<object, parent_t>);
-
-		using base = object_collection_property;
-		using base::base;
 
 		using get_child_count_t = size_t(parent_t::*)() const;
 		using get_child_t       = child_t*(parent_t::*)(size_t) const;
@@ -322,31 +312,29 @@ namespace edge
 		remove_child_t    const _remove_child;
 
 		constexpr typed_object_collection_property (const char* name, const property_group* group, const char* description, enum ui_visible ui_visible,
-			const char* index_attr_name,
-			get_child_count_t get_child_count, get_child_t get_child, insert_child_t insert_child, remove_child_t remove_child)
-			: base (name, group, description, ui_visible, index_attr_name)
+			get_child_count_t get_child_count, get_child_t get_child, insert_child_t insert_child = nullptr, remove_child_t remove_child = nullptr)
+		: base (name, group, description, ui_visible)
 			, _get_child_count(get_child_count)
 			, _get_child(get_child)
 			, _insert_child(insert_child)
 			, _remove_child(remove_child)
-		{ }
+		{
+			assert (!((insert_child == nullptr) ^ (remove_child == nullptr))); // both must be null or both must be non-null
+		}
 
 		virtual size_t size (const object* parent) const override
 		{
 			auto typed_parent = static_cast<const parent_t*>(parent);
 			return (typed_parent->*_get_child_count)();
 		}
-		
+
 		virtual object* child_at (const object* parent, size_t index) const override
 		{
 			auto typed_parent = static_cast<const parent_t*>(parent);
 			return (typed_parent->*_get_child)(index);
 		}
 
-		virtual bool can_insert() const override
-		{
-			return _insert_child != nullptr;
-		}
+		virtual bool can_insert_remove() const override { return _insert_child != nullptr; }
 
 		virtual void insert_child (object* parent, size_t index, std::unique_ptr<object>&& child) const override
 		{
@@ -382,8 +370,6 @@ namespace edge
 		virtual bool set_value (object* obj, size_t index, std::string_view value) const = 0;
 		virtual bool insert_value (object* obj, size_t index, std::string_view value) const = 0;
 		virtual void remove_value (object* obj, size_t index) const = 0;
-		virtual bool can_set() const = 0;
-		virtual bool can_insert() const = 0;
 	};
 
 	template<typename object_t, typename property_traits>
@@ -463,7 +449,6 @@ namespace edge
 			assert(false); // not implemented
 		}
 
-		virtual bool can_set() const override { return _set_value != nullptr; }
-		virtual bool can_insert() const override { return _insert_value != nullptr; }
+		virtual bool can_insert_remove() const override { return _insert_value != nullptr; }
 	};
 }

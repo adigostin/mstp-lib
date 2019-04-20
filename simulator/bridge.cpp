@@ -780,14 +780,12 @@ const float_p bridge::height_property {
 
 const typed_object_collection_property<bridge, bridge_tree> bridge::trees_property {
 	"BridgeTrees", nullptr, nullptr, ui_visible::no,
-	"TreeIndex",
-	&tree_count, &tree, nullptr, nullptr
+	&tree_count, &tree
 };
 
 const typed_object_collection_property<bridge, port> bridge::ports_property {
 	"Ports", nullptr, nullptr, ui_visible::no,
-	"PortIndex",
-	&port_count, &port, nullptr, nullptr
+	&port_count, &port
 };
 #pragma endregion
 
