@@ -424,205 +424,6 @@ void bridge::set_bridge_address (mac_address address)
 	}
 }
 
-static const _bstr_t StpVersionString = "StpVersion";
-static const _bstr_t PortCountString = "PortCount";
-static const _bstr_t MstiCountString = "MstiCount";
-static const _bstr_t MstConfigNameString = "MstConfigName";
-static const _bstr_t MstConfigTableString = "MstConfigTable";
-static const _bstr_t EntryString = "Entry";
-static const _bstr_t XString = "X";
-static const _bstr_t YString = "Y";
-static const _bstr_t WidthString = "Width";
-static const _bstr_t HeightString = "Height";
-static const _bstr_t BridgeTreesString = "BridgeTrees";
-static const _bstr_t VlanString = "Vlan";
-static const _bstr_t TreeString = "Tree";
-static const _bstr_t PortsString = "Ports";
-static const _bstr_t BridgeMaxAgeString = L"BridgeMaxAge";
-static const _bstr_t BridgeForwardDelayString = L"BridgeForwardDelay";
-
-/*
-com_ptr<IXMLDOMElement> bridge::Serialize (size_t bridgeIndex, IXMLDOMDocument3* doc) const
-{
-	com_ptr<IXMLDOMElement> bridgeElement;
-	auto hr = doc->createElement (BridgeString, &bridgeElement); assert(SUCCEEDED(hr));
-
-	bridgeElement->setAttribute (BridgeIndexString,   _variant_t(bridgeIndex));
-	bridgeElement->setAttribute (AddressString,       _variant_t(mac_address_to_string(bridge_address()).c_str()));
-	bridgeElement->setAttribute (StpEnabledString,    _variant_t(STP_IsBridgeStarted(_stpBridge)));
-	bridgeElement->setAttribute (StpVersionString,    _variant_t(STP_GetVersionString(STP_GetStpVersion(_stpBridge))));
-	bridgeElement->setAttribute (PortCountString,     _variant_t(_ports.size()));
-	bridgeElement->setAttribute (MstiCountString,     _variant_t(STP_GetMstiCount(_stpBridge)));
-	bridgeElement->setAttribute (MstConfigNameString, _variant_t(STP_GetMstConfigId(_stpBridge)->ConfigurationName));
-	bridgeElement->setAttribute (XString,             _variant_t(_x));
-	bridgeElement->setAttribute (YString,             _variant_t(_y));
-	bridgeElement->setAttribute (WidthString,         _variant_t(_width));
-	bridgeElement->setAttribute (HeightString,        _variant_t(_height));
-	bridgeElement->setAttribute (BridgeMaxAgeString,       _variant_t(GetBridgeMaxAge()));
-	bridgeElement->setAttribute (BridgeForwardDelayString, _variant_t(GetBridgeForwardDelay()));
-
-	com_ptr<IXMLDOMElement> configTableElement;
-	hr = doc->createElement (MstConfigTableString, &configTableElement); assert(SUCCEEDED(hr));
-	hr = bridgeElement->appendChild(configTableElement, nullptr); assert(SUCCEEDED(hr));
-	unsigned int entryCount;
-	auto configTable = STP_GetMstConfigTable(_stpBridge, &entryCount);
-	for (unsigned int vlan = 0; vlan < entryCount; vlan++)
-	{
-		com_ptr<IXMLDOMElement> entryElement;
-		hr = doc->createElement (EntryString, &entryElement); assert(SUCCEEDED(hr));
-		hr = entryElement->setAttribute (VlanString, _variant_t(vlan)); assert(SUCCEEDED(hr));
-		hr = entryElement->setAttribute (TreeString, _variant_t(configTable[vlan].treeIndex)); assert(SUCCEEDED(hr));
-		hr = configTableElement->appendChild(entryElement, nullptr); assert(SUCCEEDED(hr));
-	}
-
-	com_ptr<IXMLDOMElement> bridgeTreesElement;
-	hr = doc->createElement (BridgeTreesString, &bridgeTreesElement); assert(SUCCEEDED(hr));
-	hr = bridgeElement->appendChild(bridgeTreesElement, nullptr); assert(SUCCEEDED(hr));
-	for (size_t treeIndex = 0; treeIndex < _trees.size(); treeIndex++)
-	{
-		com_ptr<IXMLDOMElement> bridgeTreeElement;
-		hr = _trees.at(treeIndex)->Serialize (doc, bridgeTreeElement); assert(SUCCEEDED(hr));
-		hr = bridgeTreesElement->appendChild (bridgeTreeElement, nullptr); assert(SUCCEEDED(hr));
-	}
-
-	com_ptr<IXMLDOMElement> portsElement;
-	hr = doc->createElement (PortsString, &portsElement); assert(SUCCEEDED(hr));
-	hr = bridgeElement->appendChild(portsElement, nullptr); assert(SUCCEEDED(hr));
-	for (size_t portIndex = 0; portIndex < _ports.size(); portIndex++)
-	{
-		auto portElement = _ports.at(portIndex)->Serialize(doc);
-		hr = portsElement->appendChild(portElement, nullptr); assert(SUCCEEDED(hr));
-	}
-
-	return bridgeElement;
-}
-
-//static
-unique_ptr<bridge> bridge::Deserialize (project_i* project, IXMLDOMElement* element)
-{
-	auto getAttribute = [element](const _bstr_t& name) -> _variant_t
-	{
-		_variant_t value;
-		auto hr = element->getAttribute (name, &value);
-		assert (SUCCEEDED(hr) && (value.vt == VT_BSTR));
-		return value;
-	};
-
-	HRESULT hr;
-	_variant_t value;
-
-	auto make_string = [](const _variant_t& v)
-	{
-		assert (v.vt == VT_BSTR);
-		size_t len = wcslen(v.bstrVal);
-		std::string str (len, (char) 0);
-		for (size_t i = 0; i < len; i++)
-			str[i] = (char) v.bstrVal[i];
-		return str;
-	};
-
-	unsigned int portCount = wcstoul(getAttribute(PortCountString).bstrVal, nullptr, 10);
-	unsigned int mstiCount = wcstoul(getAttribute(MstiCountString).bstrVal, nullptr, 10);
-	mac_address bridgeAddress;
-	mac_address_from_string<wchar_t>(getAttribute(AddressString).bstrVal, bridgeAddress);
-
-	auto bridge = unique_ptr<bridge>(new bridge(project, portCount, mstiCount, bridgeAddress));
-
-	bridge->_x = wcstof(getAttribute(XString).bstrVal, nullptr);
-	bridge->_y = wcstof(getAttribute(YString).bstrVal, nullptr);
-	bridge->_width  = wcstof(getAttribute(WidthString).bstrVal, nullptr);
-	bridge->_height = wcstof(getAttribute(HeightString).bstrVal, nullptr);
-
-	hr = element->getAttribute(StpVersionString, &value);
-	if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
-	{
-		auto versionString = make_string(value.bstrVal);
-		auto version = STP_GetVersionFromString(versionString.c_str());
-		STP_SetStpVersion (bridge->_stpBridge, version, GetMessageTime());
-	}
-
-	hr = element->getAttribute(MstConfigNameString, &value);
-	if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
-	{
-		auto name = make_string(value.bstrVal);
-		STP_SetMstConfigName (bridge->_stpBridge, name.c_str(), GetMessageTime());
-	}
-
-	hr = element->getAttribute(StpEnabledString, &value);
-	if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
-	{
-		if (wcstoul(value.bstrVal, nullptr, 10) != 0)
-			STP_StartBridge (bridge->_stpBridge, GetMessageTime());
-		else
-			STP_StopBridge (bridge->_stpBridge, GetMessageTime());
-	}
-
-	hr = element->getAttribute(BridgeMaxAgeString, &value);
-	if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
-		bridge->SetBridgeMaxAge (wcstoul (value.bstrVal, nullptr, 10));
-
-	hr = element->getAttribute(BridgeForwardDelayString, &value);
-	if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
-		bridge->SetBridgeForwardDelay (wcstoul (value.bstrVal, nullptr, 10));
-
-	com_ptr<IXMLDOMNode> configTableNode;
-	hr = element->selectSingleNode(MstConfigTableString, &configTableNode);
-	if (SUCCEEDED(hr) && (configTableNode != nullptr))
-	{
-		com_ptr<IXMLDOMNodeList> nodes;
-		hr = configTableNode->get_childNodes(&nodes); assert(SUCCEEDED(hr));
-		long entryCount;
-		hr = nodes->get_length(&entryCount); assert(SUCCEEDED(hr));
-		vector<STP_CONFIG_TABLE_ENTRY> configTable;
-		for (unsigned int vlan = 0; vlan < (unsigned int) entryCount; vlan++)
-		{
-			com_ptr<IXMLDOMNode> entryNode;
-			hr = nodes->get_item(vlan, &entryNode); assert(SUCCEEDED(hr));
-			com_ptr<IXMLDOMElement> entryElement (entryNode);
-
-			hr = entryElement->getAttribute(TreeString, &value); assert(SUCCEEDED(hr) && (value.vt == VT_BSTR));
-			auto treeIndex = wcstoul(value.bstrVal, nullptr, 10);
-			configTable.push_back (STP_CONFIG_TABLE_ENTRY { 0, (unsigned char) treeIndex });
-		}
-
-		STP_SetMstConfigTable(bridge->_stpBridge, &configTable[0], (unsigned int) configTable.size(), GetMessageTime());
-	}
-
-	com_ptr<IXMLDOMNode> bridgeTreesNode;
-	hr = element->selectSingleNode(BridgeTreesString, &bridgeTreesNode);
-	if (SUCCEEDED(hr) && (bridgeTreesNode != nullptr))
-	{
-		com_ptr<IXMLDOMNodeList> bridgeTreeNodes;
-		hr = bridgeTreesNode->get_childNodes(&bridgeTreeNodes); assert(SUCCEEDED(hr));
-
-		for (size_t treeIndex = 0; treeIndex < 1 + mstiCount; treeIndex++)
-		{
-			com_ptr<IXMLDOMNode> bridgeTreeNode;
-			hr = bridgeTreeNodes->get_item((long) treeIndex, &bridgeTreeNode); assert(SUCCEEDED(hr));
-			com_ptr<IXMLDOMElement> bridgeTreeElement = bridgeTreeNode;
-			hr = bridge->_trees.at(treeIndex)->Deserialize(bridgeTreeElement); assert(SUCCEEDED(hr));
-		}
-	}
-
-	com_ptr<IXMLDOMNode> portsNode;
-	hr = element->selectSingleNode (PortsString, &portsNode);
-	if (SUCCEEDED(hr) && (portsNode != nullptr))
-	{
-		com_ptr<IXMLDOMNodeList> portNodes;
-		hr = portsNode->get_childNodes (&portNodes); assert(SUCCEEDED(hr));
-
-		for (size_t portIndex = 0; portIndex < portCount; portIndex++)
-		{
-			com_ptr<IXMLDOMNode> portNode;
-			hr = portNodes->get_item((long) portIndex, &portNode); assert(SUCCEEDED(hr));
-			com_ptr<IXMLDOMElement> portElement = portNode;
-			hr = bridge->_ports[portIndex]->Deserialize(portElement); assert(SUCCEEDED(hr));
-		}
-	}
-
-	return bridge;
-}
-*/
 void bridge::SetCoordsForInteriorPort (class port* _port, D2D1_POINT_2F proposedLocation)
 {
 	float mouseX = proposedLocation.x - _x;
@@ -774,28 +575,34 @@ void bridge::set_stp_version (STP_VERSION stp_version)
 	}
 }
 
-uint32_t bridge::GetBridgeMaxAge() const
+void bridge::set_bridge_max_age (uint32_t value)
 {
-	return (uint32_t) STP_GetBridgeMaxAge(_stpBridge);
+	if (bridge_max_age() != value)
+	{
+		this->on_property_changing (&bridge_max_age_property);
+		STP_SetBridgeMaxAge (_stpBridge, value, ::GetMessageTime());
+		this->on_property_changed (&bridge_max_age_property);
+	}
 }
 
-void bridge::SetBridgeMaxAge (uint32_t maxAge)
+void bridge::set_bridge_forward_delay (uint32_t value)
 {
-	this->on_property_changing (&bridge_max_age_property);
-	STP_SetBridgeMaxAge (_stpBridge, maxAge, GetMessageTime());
-	this->on_property_changed (&bridge_max_age_property);
+	if (bridge_forward_delay() != value)
+	{
+		this->on_property_changing (&bridge_forward_delay_property);
+		STP_SetBridgeForwardDelay (_stpBridge, value, ::GetMessageTime());
+		this->on_property_changed (&bridge_forward_delay_property);
+	}
 }
 
-uint32_t bridge::GetBridgeForwardDelay() const
+void bridge::set_tx_hold_count (uint32_t value)
 {
-	return (uint32_t) STP_GetBridgeForwardDelay(_stpBridge);
-}
-
-void bridge::SetBridgeForwardDelay (uint32_t forwardDelay)
-{
-	this->on_property_changing (&bridge_forward_delay_property);
-	STP_SetBridgeForwardDelay (_stpBridge, forwardDelay, GetMessageTime());
-	this->on_property_changed (&bridge_forward_delay_property);
+	if (tx_hold_count() != value)
+	{
+		this->on_property_changing(&tx_hold_count_property);
+		STP_SetTxHoldCount(_stpBridge, value, ::GetMessageTime());
+		this->on_property_changed(&tx_hold_count_property);
+	}
 }
 
 #pragma region properties
@@ -906,42 +713,42 @@ const config_id_digest_p bridge::MstConfigIdDigest {
 };
 
 #pragma region Timer and related parameters from Table 13-5
-const edge::uint32_p bridge::migrate_time_property {
+const uint32_p bridge::migrate_time_property {
 	"MigrateTime", &bridge_times_group, nullptr, ui_visible::yes,
 	[](const object* o) { return 3u; },
 	nullptr,
 	3,
 };
 
-const edge::uint32_p bridge::bridge_hello_time_property {
+const uint32_p bridge::bridge_hello_time_property {
 	"BridgeHelloTime", &bridge_times_group, nullptr, ui_visible::yes,
 	[](const object* o) { return 2u; },
 	nullptr,
 	2,
 };
 
-const edge::uint32_p bridge::bridge_max_age_property {
+const uint32_p bridge::bridge_max_age_property {
 	"BridgeMaxAge", &bridge_times_group, nullptr, ui_visible::yes,
-	static_cast<edge::uint32_p::member_getter_t>(&bridge::GetBridgeMaxAge),
-	static_cast<edge::uint32_p::member_setter_t>(&bridge::SetBridgeMaxAge),
+	static_cast<uint32_p::member_getter_t>(&bridge_max_age),
+	static_cast<uint32_p::member_setter_t>(&set_bridge_max_age),
 	20,
 };
 
-const edge::uint32_p bridge::bridge_forward_delay_property {
+const uint32_p bridge::bridge_forward_delay_property {
 	"BridgeForwardDelay", &bridge_times_group, nullptr, ui_visible::yes,
-	static_cast<edge::uint32_p::member_getter_t>(&bridge::GetBridgeForwardDelay),
-	static_cast<edge::uint32_p::member_setter_t>(&bridge::SetBridgeForwardDelay),
+	static_cast<uint32_p::member_getter_t>(&bridge_forward_delay),
+	static_cast<uint32_p::member_setter_t>(&set_bridge_forward_delay),
 	15,
 };
 
-const edge::uint32_p bridge::tx_hold_count_property {
+const uint32_p bridge::tx_hold_count_property {
 	"TxHoldCount", &bridge_times_group, nullptr, ui_visible::yes,
-	[](const object* o) { return STP_GetTxHoldCount(static_cast<const bridge*>(o)->stp_bridge()); },
-	[](object* o, uint32_t value) { STP_SetTxHoldCount(static_cast<bridge*>(o)->stp_bridge(), value, ::GetMessageTime()); },
+	static_cast<uint32_p::member_getter_t>(&tx_hold_count),
+	static_cast<uint32_p::member_setter_t>(&set_tx_hold_count),
 	6
 };
 
-const edge::uint32_p bridge::max_hops_property {
+const uint32_p bridge::max_hops_property {
 	"MaxHops",
 	&bridge_times_group,
 	"Setting this is not yet implemented in the library",

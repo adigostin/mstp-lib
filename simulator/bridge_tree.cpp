@@ -143,7 +143,7 @@ uint32_t bridge_tree::max_age() const
 	return ma;
 }
 
-uint32_t bridge_tree::forward_delay() const
+uint32_t bridge_tree::bridge_forward_delay() const
 {
 	unsigned short fd;
 	STP_GetRootTimes(_parent->stp_bridge(), _treeIndex, &fd, nullptr, nullptr, nullptr, nullptr);
@@ -279,7 +279,7 @@ const edge::uint32_p bridge_tree::forward_delay_property {
 	&root_times_group,
 	nullptr,
 	ui_visible::yes,
-	static_cast<edge::uint32_p::member_getter_t>(&bridge_tree::forward_delay),
+	static_cast<edge::uint32_p::member_getter_t>(&bridge_tree::bridge_forward_delay),
 	nullptr,
 	std::nullopt,
 };

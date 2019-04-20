@@ -46,7 +46,7 @@ public:
 
 	uint32_t hello_time() const;
 	uint32_t max_age() const;
-	uint32_t forward_delay() const;
+	uint32_t bridge_forward_delay() const;
 	uint32_t message_age() const;
 	uint32_t remaining_hops() const;
 

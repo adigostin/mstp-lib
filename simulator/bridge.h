@@ -151,11 +151,12 @@ public:
 	void SetMstConfigIdRevLevel (uint32_t revLevel);
 	std::string GetMstConfigIdDigest() const;
 	void SetMstConfigTable (const STP_CONFIG_TABLE_ENTRY* entries, size_t entryCount);
-	uint32_t GetBridgeMaxAge() const;
-	void SetBridgeMaxAge (uint32_t maxAge);
-	uint32_t GetBridgeForwardDelay() const;
-	void SetBridgeForwardDelay (uint32_t forwardDelay);
-
+	uint32_t bridge_max_age() const { return (uint32_t) STP_GetBridgeMaxAge(_stpBridge); }
+	void set_bridge_max_age (uint32_t value);
+	uint32_t bridge_forward_delay() const { return (uint32_t) STP_GetBridgeForwardDelay(_stpBridge); }
+	void set_bridge_forward_delay (uint32_t value);
+	uint32_t tx_hold_count() const { return STP_GetTxHoldCount(_stpBridge); }
+	void set_tx_hold_count (uint32_t value);
 private:
 	virtual void on_added_to_project(project_i* project) override;
 	virtual void on_removing_from_project(project_i* project) override;
