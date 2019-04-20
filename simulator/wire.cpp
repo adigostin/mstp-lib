@@ -118,12 +118,16 @@ struct connected_end_wrapper : public object
 
 const uint32_p connected_end_wrapper::bridge_index_property = {
 	"BridgeIndex", nullptr, nullptr, edge::ui_visible::no,
-	static_cast<uint32_p::member_var_t>(&connected_end_wrapper::bridge_index), std::nullopt
+	static_cast<uint32_p::member_var_t>(&connected_end_wrapper::bridge_index),
+	[](object* o, uint32_t i) { static_cast<connected_end_wrapper*>(o)->bridge_index = i; },
+	std::nullopt
 };
 
 const uint32_p connected_end_wrapper::port_index_property = {
 	"PortIndex", nullptr, nullptr, edge::ui_visible::no,
-	static_cast<uint32_p::member_var_t>(&connected_end_wrapper::port_index), std::nullopt
+	static_cast<uint32_p::member_var_t>(&connected_end_wrapper::port_index),
+	[](object* o, uint32_t i) { static_cast<connected_end_wrapper*>(o)->port_index = i; },
+	std::nullopt
 };
 
 const xtype<connected_end_wrapper> connected_end_wrapper::_type = {

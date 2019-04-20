@@ -129,59 +129,33 @@ namespace edge
 		using static_setter_t = void(*)(object*, param_t);
 		using member_var_t = value_t object::*;
 
-		struct member_functions_t
-		{
-			member_getter_t getter;
-			member_setter_t setter;
-		};
+		using getter_t = std::variant<member_getter_t, static_getter_t, member_var_t>;
+		using setter_t = std::variant<member_setter_t, static_setter_t, nullptr_t>;
 
-		struct static_functions_t
-		{
-			static_getter_t getter;
-			static_setter_t setter;
-		};
-
-		using accessors_t = std::variant<member_functions_t, static_functions_t, member_var_t>;
-
-		accessors_t const _accessors;
+		getter_t const _getter;
+		setter_t const _setter;
 		std::optional<value_t> const _default_value;
 
-		constexpr typed_property (const char* name, const property_group* group, const char* description, enum ui_visible ui_visible, member_getter_t getter, member_setter_t setter, std::optional<value_t> default_value)
-			: base(name, group, description, ui_visible), _accessors(member_functions_t{ getter, setter}), _default_value(default_value)
-		{ }
-
-		constexpr typed_property (const char* name, const property_group* group, const char* description, enum ui_visible ui_visible, static_getter_t getter, static_setter_t setter, std::optional<value_t> default_value)
-			: base(name, group, description, ui_visible), _accessors(static_functions_t{ getter, setter}), _default_value(default_value)
-		{ }
-
-		constexpr typed_property (const char* name, const property_group* group, const char* description, enum ui_visible ui_visible, member_var_t member_var, std::optional<value_t> default_value)
-			: base(name, group, description, ui_visible), _accessors(member_var), _default_value(default_value)
+		constexpr typed_property (const char* name, const property_group* group, const char* description, enum ui_visible ui_visible, getter_t getter, setter_t setter, std::optional<value_t> default_value)
+			: base(name, group, description, ui_visible), _getter(getter), _setter(setter), _default_value(default_value)
 		{ }
 
 		virtual const char* type_name() const override final { return property_traits::type_name; }
 
-		virtual bool has_setter() const override final
-		{
-			return (std::holds_alternative<member_functions_t>(_accessors) && std::get<member_functions_t>(_accessors).setter)
-				|| (std::holds_alternative<static_functions_t>(_accessors) && std::get<static_functions_t>(_accessors).setter)
-				|| std::holds_alternative<member_var_t>(_accessors);
-		}
+		virtual bool has_setter() const override final { return !std::holds_alternative<nullptr_t>(_setter); }
 
 		virtual property_editor_factory_t* custom_editor() const override { return custom_editor_; }
 
 		return_t get (const object* obj) const
 		{
-			if (std::holds_alternative<member_functions_t>(_accessors))
-				return (obj->*std::get<member_functions_t>(_accessors).getter)();
+			if (std::holds_alternative<member_getter_t>(_getter))
+				return (obj->*std::get<member_getter_t>(_getter))();
 
-			if (std::holds_alternative<static_functions_t>(_accessors))
-				return std::get<static_functions_t>(_accessors).getter(obj);
+			if (std::holds_alternative<static_getter_t>(_getter))
+				return std::get<static_getter_t>(_getter)(obj);
 
-			if (std::holds_alternative<member_var_t>(_accessors))
-			{
-				assert(false); // not impl
-				return { };
-			}
+			if (std::holds_alternative<member_var_t>(_getter))
+				return obj->*std::get<member_var_t>(_getter);
 
 			assert(false);
 			return { };
@@ -198,15 +172,10 @@ namespace edge
 			bool ok = property_traits::from_string(str_in, value);
 			if (ok)
 			{
-				if (std::holds_alternative<member_functions_t>(_accessors))
-					(obj->*std::get<member_functions_t>(_accessors).setter)(value);
-				else if (std::holds_alternative<static_functions_t>(_accessors))
-					std::get<static_functions_t>(_accessors).setter(obj, value);
-				else if (std::holds_alternative<member_var_t>(_accessors))
-				{
-					// TODO: on_proeprty_changing / changed
-					assert(false); // not impl
-				}
+				if (std::holds_alternative<member_setter_t>(_setter))
+					(obj->*std::get<member_setter_t>(_setter))(value);
+				else if (std::holds_alternative<static_setter_t>(_setter))
+					std::get<static_setter_t>(_setter)(obj, value);
 				else
 					assert(false);
 			}

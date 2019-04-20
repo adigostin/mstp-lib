@@ -638,14 +638,6 @@ void bridge::mst_config_table_set_value(size_t i, uint32_t value)
 static const edge::property_group bridge_times_group = { 5, "Timer Params (Table 13-5)" };
 static const edge::property_group mst_group = { 10, "MST Config Id" };
 
-// kept for compatibility with old versions of the simulator
-const edge::uint32_p bridge::bridge_index_property {
-	"BridgeIndex", nullptr, nullptr, ui_visible::no,
-	nullptr,
-	static_cast<uint32_p::static_setter_t>([](object*, uint32_t) { }), // setter
-	std::nullopt
-};
-
 const mac_address_p bridge::bridge_address_property {
 	"Address", nullptr, nullptr, ui_visible::yes,
 	static_cast<mac_address_p::member_getter_t>(&bridge_address),
@@ -800,7 +792,6 @@ const typed_object_collection_property<bridge, port> bridge::ports_property {
 #pragma endregion
 
 const edge::property* const bridge::_properties[] = {
-	&bridge_index_property,
 	&bridge_address_property,
 	&stp_enabled_property,
 	&stp_version_property,
