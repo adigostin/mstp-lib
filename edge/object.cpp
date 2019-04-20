@@ -5,7 +5,7 @@ namespace edge
 {
 	std::vector<const type*>* type::known_types;
 
-	type::type (const char* name, const type* base_type, view<const property* const> props)
+	type::type (const char* name, const type* base_type, span<const property* const> props)
 		: name(name), base_type(base_type), props(props)
 	{
 		if (known_types == nullptr)

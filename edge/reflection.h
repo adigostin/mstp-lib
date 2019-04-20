@@ -55,45 +55,6 @@ namespace edge
 
 	using NVP = std::pair<const char*, int>;
 
-	template<typename t>
-	class view
-	{
-		t* from;
-		t* to;
-
-	public:
-		constexpr view()
-			: from(nullptr), to(nullptr)
-		{ }
-
-		template<size_t size>
-		constexpr view (const t(&array)[size])
-			: from(array), to(&array[size])
-		{ }
-
-		template<size_t size>
-		constexpr view (const std::array<t, size>& array)
-			: from(array.data()), to(array.data() + array.size())
-		{ }
-
-		constexpr view (t* from, t* to)
-			: from(from), to(to)
-		{ }
-
-		t* data() const { return from; }
-		size_t size() const { return to - from; }
-		
-		const t& operator[](size_t i) const
-		{
-			assert (i < size());
-			return from[i];
-		}
-
-		using iterator = t*;
-		iterator begin() const { return from; }
-		iterator end() const { return to; }
-	};
-
 	struct value_property : property
 	{
 		using property::property;

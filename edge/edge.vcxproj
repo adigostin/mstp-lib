@@ -22,6 +22,7 @@
     <ClInclude Include="assert.h" />
     <ClInclude Include="object.h" />
     <ClInclude Include="events.h" />
+    <ClInclude Include="span.hpp" />
     <ClInclude Include="win32\pch.h" />
     <ClInclude Include="reflection.h" />
     <ClInclude Include="win32\com_ptr.h" />

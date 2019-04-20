@@ -42,6 +42,7 @@
     </ClInclude>
     <ClInclude Include="win32\xml_serializer.h" />
     <ClInclude Include="reflection.h" />
+    <ClInclude Include="span.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="object.cpp" />

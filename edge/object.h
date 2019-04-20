@@ -2,18 +2,21 @@
 #pragma once
 #include "reflection.h"
 #include "events.h"
+#include "span.hpp"
 
 namespace edge
 {
+	using tcb::span;
+
 	struct type
 	{
 		static std::vector<const type*>* known_types;
 
 		const char* const name;
 		const type* const base_type;
-		view<const property* const> const props;
+		span<const property* const> const props;
 
-		type(const char* name, const type* base_type, view<const property* const> props);;
+		type(const char* name, const type* base_type, span<const property* const> props);;
 		~type();
 
 		static const type* find_type (const char* name);
@@ -22,8 +25,8 @@ namespace edge
 		const property* find_property (const char* name) const;
 
 		virtual bool has_factory() const = 0;
-		virtual view<const value_property* const> factory_props() const = 0;
-		virtual object* create (const view<std::string_view>& string_values) const = 0;
+		virtual span<const value_property* const> factory_props() const = 0;
+		virtual object* create (const span<std::string_view>& string_values) const = 0;
 	private:
 		void add_properties (std::vector<const property*>& properties) const;
 	};
@@ -39,23 +42,23 @@ namespace edge
 		using factory_t = object_type*(*const)(typename factory_arg_props::param_t... factory_args);
 		
 		factory_t const _factory;
-		std::array<const value_property* const, parameter_count> const _factory_props;
+		std::array<const value_property*, parameter_count> const _factory_props;
 
 	public:
-		xtype (const char* name, const type* base, view<const property* const> props,
+		xtype (const char* name, const type* base, span<const property* const> props,
 			factory_t factory, const factory_arg_props*... factory_props)
 			: type(name, base, props)
 			, _factory(factory)
-			, _factory_props(std::array<const value_property* const, parameter_count>{ factory_props... })
+			, _factory_props(std::array<const value_property*, parameter_count>{ factory_props... })
 		{ }
 
 	private:
 		virtual bool has_factory() const override { return _factory != nullptr; }
 
-		virtual view<const value_property* const> factory_props() const override { return _factory_props; }
+		virtual span<const value_property* const> factory_props() const override { return _factory_props; }
 		
 		template<std::size_t... I>
-		static std::tuple<typename factory_arg_props::value_t...> strings_to_values (const view<std::string_view>& string_values, std::index_sequence<I...>)
+		static std::tuple<typename factory_arg_props::value_t...> strings_to_values (const span<std::string_view>& string_values, std::index_sequence<I...>)
 		{
 			std::tuple<typename factory_arg_props::value_t...> result;
 			bool cast_ok = (true && ... && factory_arg_props::from_string(string_values[I], std::get<I>(result)));
@@ -63,7 +66,7 @@ namespace edge
 			return result;
 		}
 
-		virtual object* create (const view<std::string_view>& string_values) const override
+		virtual object* create (const span<std::string_view>& string_values) const override
 		{
 			assert (_factory != nullptr);
 			assert (string_values.size() == parameter_count);
