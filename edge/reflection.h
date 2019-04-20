@@ -275,11 +275,18 @@ namespace edge
 	using backed_string_property_traits = string_property_traits<true>;
 	using backed_string_p = typed_property<backed_string_property_traits>;
 
-	// ===========================================
+	// ========================================================================
 
-	struct object_collection_property : property
+	struct collection_property : property
 	{
-		using base = property;
+		using property::property;
+
+		virtual size_t size (const object* parent) const = 0;
+	};
+
+	struct object_collection_property : collection_property
+	{
+		using base = collection_property;
 		using base::base;
 		
 		const char* const _index_attr_name;
@@ -289,7 +296,6 @@ namespace edge
 			, _index_attr_name(index_attr_name)
 		{ }
 
-		virtual size_t child_count (const object* parent) const = 0;
 		virtual object* child_at (const object* parent, size_t index) const = 0;
 		virtual bool can_insert() const = 0;
 		virtual void insert_child (object* parent, size_t index, std::unique_ptr<object>&& child) const = 0;
@@ -325,7 +331,7 @@ namespace edge
 			, _remove_child(remove_child)
 		{ }
 
-		virtual size_t child_count (const object* parent) const override
+		virtual size_t size (const object* parent) const override
 		{
 			auto typed_parent = static_cast<const parent_t*>(parent);
 			return (typed_parent->*_get_child_count)();
@@ -358,9 +364,9 @@ namespace edge
 		}
 	};
 	
-	struct value_collection_property : property
+	struct value_collection_property : collection_property
 	{
-		using base = property;
+		using base = collection_property;
 
 		const char* const _index_attr_name;
 		const char* const _value_attr_name;
@@ -372,7 +378,6 @@ namespace edge
 			, _value_attr_name(value_attr_name)
 		{ }
 
-		virtual size_t value_count (const object* obj) const = 0;
 		virtual std::string get_value (const object* obj, size_t index) const = 0;
 		virtual bool set_value (object* obj, size_t index, std::string_view value) const = 0;
 		virtual bool insert_value (object* obj, size_t index, std::string_view value) const = 0;
@@ -388,24 +393,24 @@ namespace edge
 
 		using base = value_collection_property;
 
-		using get_value_count_t = size_t(object_t::*)() const;
-		using get_value_t       = typename property_traits::return_t(object_t::*)(size_t) const;
-		using set_value_t       = void(object_t::*)(size_t, typename property_traits::param_t);
-		using insert_value_t    = void(object_t::*)(size_t, typename property_traits::param_t);
-		using remove_value_t    = void(object_t::*)(size_t);
+		using get_size_t     = size_t(object_t::*)() const;
+		using get_value_t    = typename property_traits::return_t(object_t::*)(size_t) const;
+		using set_value_t    = void(object_t::*)(size_t, typename property_traits::param_t);
+		using insert_value_t = void(object_t::*)(size_t, typename property_traits::param_t);
+		using remove_value_t = void(object_t::*)(size_t);
 
-		get_value_count_t const _get_value_count;
-		get_value_t       const _get_value;
-		set_value_t       const _set_value;
-		insert_value_t    const _insert_value;
-		remove_value_t    const _remove_value;
-		const char*       const _index_attr_name;
+		get_size_t     const _get_size;
+		get_value_t    const _get_value;
+		set_value_t    const _set_value;
+		insert_value_t const _insert_value;
+		remove_value_t const _remove_value;
+		const char*    const _index_attr_name;
 
 		constexpr typed_value_collection_property (const char* name, const property_group* group, const char* description, enum ui_visible ui_visible,
 			const char* index_attr_name, const char* value_attr_name,
-			get_value_count_t get_value_count, get_value_t get_value, set_value_t set_value, insert_value_t insert_value, remove_value_t remove_value)
+			get_size_t get_size, get_value_t get_value, set_value_t set_value, insert_value_t insert_value, remove_value_t remove_value)
 			: base (name, group, description, ui_visible, index_attr_name, value_attr_name)
-			, _get_value_count(get_value_count)
+			, _get_size(get_size)
 			, _get_value(get_value)
 			, _set_value(set_value)
 			, _insert_value(insert_value)
@@ -422,9 +427,9 @@ namespace edge
 			assert (set_value || insert_value);
 		}
 
-		virtual size_t value_count (const object* obj) const override
+		virtual size_t size (const object* obj) const override
 		{
-			return (static_cast<const object_t*>(obj)->*_get_value_count)();
+			return (static_cast<const object_t*>(obj)->*_get_size)();
 		}
 
 		virtual std::string get_value (const object* obj, size_t index) const override

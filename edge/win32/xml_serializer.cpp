@@ -33,7 +33,7 @@ namespace edge
 			{
 				com_ptr<IXMLDOMElement> collection_element;
 				hr = doc->createElement (_bstr_t(oc_prop->_name), &collection_element); assert(SUCCEEDED(hr));
-				for (size_t i = 0; i < oc_prop->child_count(o); i++)
+				for (size_t i = 0; i < oc_prop->size(o); i++)
 				{
 					auto child = oc_prop->child_at(o, i);
 					auto child_element = serialize (doc, child);
