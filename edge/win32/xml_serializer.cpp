@@ -10,7 +10,7 @@ namespace edge
 	static const _bstr_t index_attr_name = "index";
 	static const _bstr_t value_attr_name = "Value";
 	
-	static com_ptr<IXMLDOMElement> serialize_internal (IXMLDOMDocument* doc, const object* obj, size_t index_attribute = (size_t)-1);
+	static com_ptr<IXMLDOMElement> serialize_internal (IXMLDOMDocument* doc, const object* obj, bool force_serialize_unchanged, size_t index_attribute);
 
 	static com_ptr<IXMLDOMElement> serialize_property (IXMLDOMDocument* doc, const object* obj, const object_collection_property* prop)
 	{
@@ -29,24 +29,29 @@ namespace edge
 			}
 		};
 
+		bool force_serialize_unchanged;
+		bool add_index_attribute;
 		if (prop->can_insert_remove())
 		{
 			// variable-size collection - always serialize all children
-			
-			assert(false); // not implemented
+			force_serialize_unchanged = true;
+			add_index_attribute = false;
 		}
 		else
 		{
 			// fixed-size collection allocated by the object in its constructor - serialize only changed children
-			for (size_t i = 0; i < size; i++)
+			force_serialize_unchanged = false;
+			add_index_attribute = true;
+		}
+
+		for (size_t i = 0; i < size; i++)
+		{
+			auto child = prop->child_at(obj, i);
+			auto child_elem = serialize_internal(doc, child, force_serialize_unchanged, add_index_attribute ? i : -1);
+			if (child_elem != nullptr)
 			{
-				auto child = prop->child_at(obj, i);
-				auto child_elem = serialize_internal(doc, child, i);
-				if (child_elem != nullptr)
-				{
-					ensure_collection_element_created();
-					hr = collection_element->appendChild (child_elem, nullptr);  assert(SUCCEEDED(hr));
-				}
+				ensure_collection_element_created();
+				hr = collection_element->appendChild (child_elem, nullptr);  assert(SUCCEEDED(hr));
 			}
 		}
 
@@ -77,7 +82,7 @@ namespace edge
 		return collection_element;
 	}
 
-	static com_ptr<IXMLDOMElement> serialize_internal (IXMLDOMDocument* doc, const object* obj, size_t index_attribute)
+	static com_ptr<IXMLDOMElement> serialize_internal (IXMLDOMDocument* doc, const object* obj, bool force_serialize_unchanged, size_t index_attribute)
 	{
 		com_ptr<IXMLDOMElement> object_element;
 		auto ensure_object_element_created = [doc, obj, index_attribute, &object_element]()
@@ -95,6 +100,9 @@ namespace edge
 			}
 		};
 		
+		if (force_serialize_unchanged)
+			ensure_object_element_created();
+
 		auto props = obj->type()->make_property_list();
 		for (const property* prop : props)
 		{
@@ -136,9 +144,9 @@ namespace edge
 		return object_element;
 	}
 
-	com_ptr<IXMLDOMElement> serialize (IXMLDOMDocument* doc, const object* obj)
+	com_ptr<IXMLDOMElement> serialize (IXMLDOMDocument* doc, const object* obj, bool force_serialize_unchanged)
 	{
-		return serialize_internal (doc, obj, -1);
+		return serialize_internal (doc, obj, force_serialize_unchanged, -1);
 	}
 
 	// ========================================================================

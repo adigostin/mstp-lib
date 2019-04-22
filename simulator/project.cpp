@@ -211,29 +211,11 @@ public:
 		if (FAILED(hr))
 			return hr;
 
-		com_ptr<IXMLDOMElement> projectElement;
-		hr = doc->createElement (_bstr_t("Project"), &projectElement); assert(SUCCEEDED(hr));
-		projectElement->setAttribute (NextMacAddressString, _variant_t(mac_address_to_string(_next_mac_address).c_str()));
-		hr = doc->appendChild (projectElement, nullptr); assert(SUCCEEDED(hr));
+		auto project_element = serialize (doc, this, true);
 
-		com_ptr<IXMLDOMElement> bridgesElement;
-		hr = doc->createElement (_bstr_t("Bridges"), &bridgesElement); assert(SUCCEEDED(hr));
-		hr = projectElement->appendChild (bridgesElement, nullptr); assert(SUCCEEDED(hr));
-		for (size_t bridgeIndex = 0; bridgeIndex < _bridges.size(); bridgeIndex++)
-		{
-			auto b = _bridges.at(bridgeIndex).get();
-			auto e = serialize (doc, b);
-			hr = bridgesElement->appendChild (e, nullptr); assert(SUCCEEDED(hr));
-		}
-
-		com_ptr<IXMLDOMElement> wiresElement;
-		hr = doc->createElement (_bstr_t("Wires"), &wiresElement); assert(SUCCEEDED(hr));
-		hr = projectElement->appendChild (wiresElement, nullptr); assert(SUCCEEDED(hr));
-		for (auto& w : _wires)
-		{
-			auto e = serialize(doc, w.get());
-			hr = wiresElement->appendChild (e, nullptr); assert(SUCCEEDED(hr));
-		}
+		hr = doc->appendChild (project_element, nullptr);
+		if (FAILED(hr))
+			return hr;
 
 		hr = FormatAndSaveToFile (doc, filePath);
 		if (FAILED(hr))
@@ -245,7 +227,7 @@ public:
 
 	HRESULT FormatAndSaveToFile (IXMLDOMDocument3* doc, const wchar_t* path) const
 	{
-		static const char StylesheetText[] =
+		static const _bstr_t StylesheetText =
 			"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
 			"<xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"1.0\">\n"
 			"  <xsl:output method=\"xml\" indent=\"yes\" omit-xml-declaration=\"no\" />\n"
@@ -262,7 +244,7 @@ public:
 		if (FAILED(hr))
 			return hr;
 		VARIANT_BOOL successful;
-		hr = loadXML->loadXML (_bstr_t(StylesheetText), &successful);
+		hr = loadXML->loadXML (StylesheetText, &successful);
 		if (FAILED(hr))
 			return hr;
 
