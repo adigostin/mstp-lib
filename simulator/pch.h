@@ -3,12 +3,12 @@
 
 #define NOMINMAX
 #define _USE_MATH_DEFINES
-#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
+#define WIN32_LEAN_AND_MEAN   // Exclude rarely-used stuff from Windows headers
+#define _WIN7_PLATFORM_UPDATE // Needed by wincodec.h
 #define _HAS_EXCEPTIONS 0
+#define TCB_SPAN_NO_EXCEPTIONS
 
 #include "targetver.h"
-
-#define _WIN7_PLATFORM_UPDATE // needed by wincodec.h
 
 // From https://msdn.microsoft.com/en-us/library/974tc9t1.aspx
 #include <crtdbg.h>
@@ -56,3 +56,6 @@
 #include <Unknwn.h>
 #include <VersionHelpers.h>
 #include <wincodec.h>
+
+#include "assert.h"
+#include "span.hpp"
