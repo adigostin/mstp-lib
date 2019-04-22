@@ -227,64 +227,50 @@ public:
 
 	HRESULT FormatAndSaveToFile (IXMLDOMDocument3* doc, const wchar_t* path) const
 	{
-		static const _bstr_t StylesheetText =
-			"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-			"<xsl:stylesheet xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" version=\"1.0\">\n"
-			"  <xsl:output method=\"xml\" indent=\"yes\" omit-xml-declaration=\"no\" />\n"
-			"  <xsl:template match=\"@* | node()\">\n"
-			"    <xsl:copy>\n"
-			"      <xsl:apply-templates select=\"@* | node()\"/>\n"
-			"    </xsl:copy>\n"
-			"  </xsl:template>\n"
-			"</xsl:stylesheet>\n"
-			"";
-
-		com_ptr<IXMLDOMDocument3> loadXML;
-		HRESULT hr = CoCreateInstance (CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(loadXML), (void**) &loadXML);
-		if (FAILED(hr))
-			return hr;
-		VARIANT_BOOL successful;
-		hr = loadXML->loadXML (StylesheetText, &successful);
+		com_ptr<IStream> stream;
+		auto hr = SHCreateStreamOnFileEx (path, STGM_WRITE | STGM_SHARE_DENY_WRITE | STGM_CREATE, FILE_ATTRIBUTE_NORMAL, FALSE, nullptr, &stream);
 		if (FAILED(hr))
 			return hr;
 
-		// Create the final document which will be indented properly.
-		com_ptr<IXMLDOMDocument3> pXMLFormattedDoc;
-		hr = CoCreateInstance(CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(pXMLFormattedDoc), (void**) &pXMLFormattedDoc);
+		com_ptr<IMXWriter> writer;
+		hr = CoCreateInstance (CLSID_MXXMLWriter60, nullptr, CLSCTX_ALL, IID_PPV_ARGS(&writer));
 		if (FAILED(hr))
 			return hr;
 
-		com_ptr<IDispatch> pDispatch;
-		hr = pXMLFormattedDoc->QueryInterface(IID_IDispatch, (void**)&pDispatch);
+		hr = writer->put_encoding (_bstr_t("utf-8"));
 		if (FAILED(hr))
 			return hr;
 
-		_variant_t vtOutObject;
-		vtOutObject.vt = VT_DISPATCH;
-		vtOutObject.pdispVal = pDispatch;
-		vtOutObject.pdispVal->AddRef();
-
-		// Apply the transformation to format the final document.
-		hr = doc->transformNodeToObject(loadXML,vtOutObject);
+		hr = writer->put_indent (_variant_t(true));
 		if (FAILED(hr))
 			return hr;
 
-		// By default it writes the encoding UTF-16; let's change it to UTF-8.
-		com_ptr<IXMLDOMNode> firstChild;
-		hr = pXMLFormattedDoc->get_firstChild(&firstChild);
+		hr = writer->put_standalone (_variant_t(true));
 		if (FAILED(hr))
 			return hr;
-		com_ptr<IXMLDOMNamedNodeMap> pXMLAttributeMap;
-		hr = firstChild->get_attributes(&pXMLAttributeMap);
-		if (FAILED(hr))
-			return hr;
-		com_ptr<IXMLDOMNode> encodingNode;
-		hr = pXMLAttributeMap->getNamedItem(_bstr_t("encoding"), &encodingNode);
-		if (FAILED(hr))
-			return hr;
-		encodingNode->put_nodeValue (_variant_t("UTF-8"));
 
-		hr = pXMLFormattedDoc->save(_variant_t(path));
+		hr = writer->put_output (_variant_t(stream));
+		if (FAILED(hr))
+			return hr;
+
+		com_ptr<ISAXXMLReader> saxReader;
+		hr = CoCreateInstance (CLSID_SAXXMLReader60, nullptr, CLSCTX_ALL, IID_PPV_ARGS(&saxReader));
+		if (FAILED(hr))
+			return hr;
+
+		hr = saxReader->putContentHandler(com_ptr<ISAXContentHandler>(writer));
+		if (FAILED(hr))
+			return hr;
+
+		hr = saxReader->putProperty(L"http://xml.org/sax/properties/lexical-handler", _variant_t(writer));
+		if (FAILED(hr))
+			return hr;
+
+		hr = saxReader->parse(_variant_t(doc));
+		if (FAILED(hr))
+			return hr;
+
+		hr = stream->Commit(STGC_DEFAULT);
 		return hr;
 	}
 
