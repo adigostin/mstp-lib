@@ -11,7 +11,7 @@ using namespace edge;
 
 static const _bstr_t NextMacAddressString = "NextMacAddress";
 
-class Project : public edge::object, public project_i
+class project : public edge::object, public project_i
 {
 	using base = edge::object;
 
@@ -99,7 +99,7 @@ public:
 
 	static void OnPacketTransmit (void* callbackArg, bridge* bridge, size_t txPortIndex, PacketInfo&& pi)
 	{
-		auto project = static_cast<Project*>(callbackArg);
+		auto project = static_cast<class project*>(callbackArg);
 		auto txPort = bridge->GetPorts().at(txPortIndex).get();
 		auto rxPort = project->FindConnectedPort(txPort);
 		if (rxPort != nullptr)
@@ -111,7 +111,7 @@ public:
 
 	static void OnLinkPulse (void* callbackArg, bridge* bridge, size_t txPortIndex, unsigned int timestamp)
 	{
-		auto project = static_cast<Project*>(callbackArg);
+		auto project = static_cast<class project*>(callbackArg);
 		auto txPort = bridge->GetPorts().at(txPortIndex).get();
 		auto rxPort = project->FindConnectedPort(txPort);
 		if (rxPort != nullptr)
@@ -120,7 +120,7 @@ public:
 
 	static void OnObjectInvalidate (void* callbackArg, renderable_object* object)
 	{
-		auto project = static_cast<Project*>(callbackArg);
+		auto project = static_cast<class project*>(callbackArg);
 		project->event_invoker<invalidate_e>()(project);
 	}
 
@@ -414,25 +414,25 @@ public:
 	size_t wire_count() const { return _wires.size(); }
 	wire* wire_at(size_t index) const { return _wires[index].get(); }
 
-	static const typed_object_collection_property<Project, bridge> bridges_property;
-	static const typed_object_collection_property<Project, wire> wires_property;
+	static const typed_object_collection_property<class project, bridge> bridges_property;
+	static const typed_object_collection_property<class project, wire> wires_property;
 	static const property* _properties[];
-	static const xtype<Project> _type;
+	static const xtype<class project> _type;
 	virtual const struct type* type() const { return &_type; }
 };
 
-const typed_object_collection_property<Project, bridge> Project::bridges_property = {
+const typed_object_collection_property<project, bridge> project::bridges_property = {
 	"Bridges", nullptr, nullptr, ui_visible::no,
 	&bridge_count, &bridge_at, &insert_bridge, &remove_bridge
 };
 
-const typed_object_collection_property<Project, wire> Project::wires_property {
+const typed_object_collection_property<project, wire> project::wires_property {
 	"Wires", nullptr, nullptr, ui_visible::no,
 	&wire_count, &wire_at, &insert_wire, &remove_wire
 };
 
-const property* Project::_properties[] = { &next_mac_address_property, &bridges_property, &wires_property };
+const property* project::_properties[] = { &next_mac_address_property, &bridges_property, &wires_property };
 
-const xtype<Project> Project::_type = { "Project", &base::_type, _properties, [] { return new Project(); } };
+const xtype<project> project::_type = { "Project", &base::_type, _properties, [] { return new project(); } };
 
-extern const project_factory_t project_factory = []() -> std::shared_ptr<project_i> { return std::make_shared<Project>(); };
+extern const project_factory_t project_factory = []() -> std::shared_ptr<project_i> { return std::make_shared<project>(); };

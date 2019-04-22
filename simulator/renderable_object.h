@@ -57,7 +57,7 @@ struct project_i;
 
 class project_child : public renderable_object
 {
-	friend class Project;
+	friend class project;
 
 	project_i* _project = nullptr;
 
