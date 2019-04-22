@@ -425,7 +425,7 @@ const side_p port::side_property {
 	"Side", nullptr, nullptr, ui_visible::no,
 	static_cast<side_p::member_getter_t>(&side),
 	static_cast<side_p::member_setter_t>(&set_side),
-	std::nullopt,
+	side::bottom
 };
 
 const edge::float_p port::offset_property {

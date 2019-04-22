@@ -5,20 +5,106 @@
 
 namespace edge
 {
-	com_ptr<IXMLDOMElement> serialize (IXMLDOMDocument* doc, const object* o)
+	static const _bstr_t entries_elem_name = "Entries";
+	static const _bstr_t entry_elem_name = "Entry";
+	static const _bstr_t index_attr_name = "index";
+	static const _bstr_t value_attr_name = "Value";
+	
+	static com_ptr<IXMLDOMElement> serialize_internal (IXMLDOMDocument* doc, const object* obj, size_t index_attribute = (size_t)-1);
+
+	static com_ptr<IXMLDOMElement> serialize_property (IXMLDOMDocument* doc, const object* obj, const object_collection_property* prop)
 	{
-		com_ptr<IXMLDOMElement> element;
-		auto hr = doc->createElement(_bstr_t(o->type()->name), &element); assert(SUCCEEDED(hr));
+		size_t size = prop->size(obj);
+		if (size == 0)
+			return nullptr;
+
+		HRESULT hr;
+		com_ptr<IXMLDOMElement> collection_element;
+		auto ensure_collection_element_created = [doc, prop, &collection_element]()
+		{
+			if (collection_element == nullptr)
+			{
+				auto hr = doc->createElement(_bstr_t(prop->_name), &collection_element);
+				assert(SUCCEEDED(hr));
+			}
+		};
+
+		if (prop->can_insert_remove())
+		{
+			// variable-size collection - always serialize all children
+			
+			assert(false); // not implemented
+		}
+		else
+		{
+			// fixed-size collection allocated by the object in its constructor - serialize only changed children
+			for (size_t i = 0; i < size; i++)
+			{
+				auto child = prop->child_at(obj, i);
+				auto child_elem = serialize_internal(doc, child, i);
+				if (child_elem != nullptr)
+				{
+					ensure_collection_element_created();
+					hr = collection_element->appendChild (child_elem, nullptr);  assert(SUCCEEDED(hr));
+				}
+			}
+		}
+
+		return collection_element;
+	}
+
+	static com_ptr<IXMLDOMElement> serialize_property (IXMLDOMDocument* doc, const object* obj, const value_collection_property* prop)
+	{
+		size_t size = prop->size(obj);
+		if (size == 0)
+			return nullptr;
 		
-		auto props = o->type()->make_property_list();
+		if (!prop->changed(obj))
+			return nullptr;
+
+		com_ptr<IXMLDOMElement> collection_element;
+		auto hr = doc->createElement (entries_elem_name, &collection_element); assert(SUCCEEDED(hr));
+		for (size_t i = 0; i < size; i++)
+		{
+			auto value = prop->get_value(obj, i);
+			com_ptr<IXMLDOMElement> entry_element;
+			hr = doc->createElement (entry_elem_name, &entry_element); assert(SUCCEEDED(hr));
+			hr = entry_element->setAttribute (index_attr_name, _variant_t(i)); assert(SUCCEEDED(hr));
+			hr = entry_element->setAttribute (value_attr_name, _variant_t(value.c_str())); assert(SUCCEEDED(hr));
+			hr = collection_element->appendChild (entry_element, nullptr); assert(SUCCEEDED(hr));
+		}
+
+		return collection_element;
+	}
+
+	static com_ptr<IXMLDOMElement> serialize_internal (IXMLDOMDocument* doc, const object* obj, size_t index_attribute)
+	{
+		com_ptr<IXMLDOMElement> object_element;
+		auto ensure_object_element_created = [doc, obj, index_attribute, &object_element]()
+		{
+			if (object_element == nullptr)
+			{
+				auto hr = doc->createElement(_bstr_t(obj->type()->name), &object_element);
+				assert(SUCCEEDED(hr));
+
+				if (index_attribute != (size_t)-1)
+				{
+					hr = object_element->setAttribute (index_attr_name, _variant_t(index_attribute));
+					assert(SUCCEEDED(hr));
+				}
+			}
+		};
+		
+		auto props = obj->type()->make_property_list();
 		for (const property* prop : props)
 		{
 			if (auto value_prop = dynamic_cast<const value_property*>(prop))
 			{
-				if (value_prop->has_setter() && value_prop->changed_from_default(o))
+				if (value_prop->has_setter() && value_prop->changed_from_default(obj))
 				{
-					auto value = value_prop->get_to_string(o);
-					hr = element->setAttribute(_bstr_t(value_prop->_name), _variant_t(value.c_str())); assert(SUCCEEDED(hr));
+					ensure_object_element_created();
+					auto value = value_prop->get_to_string(obj);
+					auto hr = object_element->setAttribute(_bstr_t(value_prop->_name), _variant_t(value.c_str())); assert(SUCCEEDED(hr));
 				}
 			}
 		}
@@ -26,26 +112,36 @@ namespace edge
 		for (const property* prop : props)
 		{
 			if (dynamic_cast<const value_property*>(prop))
-			{ }
-			else if (auto oc_prop = dynamic_cast<const object_collection_property*>(prop))
+				continue;
+
+			com_ptr<IXMLDOMElement> prop_element;
+			if (auto oc_prop = dynamic_cast<const object_collection_property*>(prop))
 			{
-				com_ptr<IXMLDOMElement> collection_element;
-				hr = doc->createElement (_bstr_t(oc_prop->_name), &collection_element); assert(SUCCEEDED(hr));
-				for (size_t i = 0; i < oc_prop->size(o); i++)
-				{
-					auto child = oc_prop->child_at(o, i);
-					auto child_element = serialize (doc, child);
-					hr = collection_element->appendChild(child_element, nullptr); assert(SUCCEEDED(hr));
-				}
-				
-				hr = element->appendChild (collection_element, nullptr); assert(SUCCEEDED(hr));
+				prop_element = serialize_property (doc, obj, oc_prop);
+			}
+			else if (auto vc_prop = dynamic_cast<const value_collection_property*>(prop))
+			{
+				prop_element = serialize_property (doc, obj, vc_prop);
 			}
 			else
 				assert(false); // not implemented
+
+			if (prop_element)
+			{
+				ensure_object_element_created();
+				auto hr = object_element->appendChild (prop_element, nullptr); assert(SUCCEEDED(hr));
+			}
 		}
 
-		return element;
+		return object_element;
 	}
+
+	com_ptr<IXMLDOMElement> serialize (IXMLDOMDocument* doc, const object* obj)
+	{
+		return serialize_internal (doc, obj, -1);
+	}
+
+	// ========================================================================
 
 	static std::unique_ptr<object> deserialize_to_type (IXMLDOMElement* elem, const struct type* type)
 	{
@@ -103,7 +199,7 @@ namespace edge
 			com_ptr<IXMLDOMElement> child_elem = child_node.get();
 			size_t index = child_node_index;
 			_variant_t index_attr_value;
-			hr = child_elem->getAttribute(_bstr_t(collection_property::index_attr_name), index_attr_value.GetAddress());
+			hr = child_elem->getAttribute(index_attr_name, index_attr_value.GetAddress());
 			if (hr == S_OK)
 			{
 				bool converted = uint32_property_traits::from_string(bstr_to_utf8(index_attr_value.bstrVal), index);
@@ -127,12 +223,12 @@ namespace edge
 		{
 			com_ptr<IXMLDOMElement> entry_elem = entry_node.get();
 			_variant_t index_attr_value;
-			hr = entry_elem->getAttribute(_bstr_t(prop->_index_attr_name), index_attr_value.GetAddress()); assert(SUCCEEDED(hr));
+			hr = entry_elem->getAttribute(index_attr_name, index_attr_value.GetAddress()); assert(SUCCEEDED(hr));
 			size_t index;
 			bool converted = uint32_property_traits::from_string(bstr_to_utf8(index_attr_value.bstrVal), index); assert(converted);
 
 			_variant_t value_attr_value;
-			hr = entry_elem->getAttribute(_bstr_t(prop->_value_attr_name), value_attr_value.GetAddress()); assert(SUCCEEDED(hr));
+			hr = entry_elem->getAttribute(value_attr_name, value_attr_value.GetAddress()); assert(SUCCEEDED(hr));
 			
 			auto value_utf8 = bstr_to_utf8(value_attr_value.bstrVal);
 			if (prop->can_insert_remove())

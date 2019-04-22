@@ -28,7 +28,7 @@ class port : public renderable_object
 
 	bridge* const _bridge;
 	unsigned int const _portIndex;
-	side _side;
+	side _side = side_property._default_value.value();
 	float _offset;
 	std::vector<std::unique_ptr<port_tree>> _trees;
 

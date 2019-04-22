@@ -103,6 +103,7 @@ namespace edge
 
 		virtual const char* type_name() const override final { return property_traits::type_name; }
 
+		// TODO: rename to "can_set" for consistency
 		virtual bool has_setter() const override final { return !std::holds_alternative<nullptr_t>(_setter); }
 
 		virtual property_editor_factory_t* custom_editor() const override { return custom_editor_; }
@@ -280,8 +281,7 @@ namespace edge
 	struct collection_property : property
 	{
 		using property::property;
-		static constexpr char index_attr_name[] = "Index";
-		virtual size_t size (const object* parent) const = 0;
+		virtual size_t size (const object* obj) const = 0;
 		virtual bool can_insert_remove() const = 0;
 	};
 
@@ -322,9 +322,9 @@ namespace edge
 			assert (!((insert_child == nullptr) ^ (remove_child == nullptr))); // both must be null or both must be non-null
 		}
 
-		virtual size_t size (const object* parent) const override
+		virtual size_t size (const object* obj) const override
 		{
-			auto typed_parent = static_cast<const parent_t*>(parent);
+			auto typed_parent = static_cast<const parent_t*>(obj);
 			return (typed_parent->*_get_child_count)();
 		}
 
@@ -354,22 +354,13 @@ namespace edge
 	
 	struct value_collection_property : collection_property
 	{
-		using base = collection_property;
-
-		const char* const _index_attr_name;
-		const char* const _value_attr_name;
-
-		constexpr value_collection_property (const char* name, const property_group* group, const char* description, enum ui_visible ui_visible,
-			const char* index_attr_name, const char* value_attr_name)
-			: base(name, group, description, ui_visible)
-			, _index_attr_name(index_attr_name)
-			, _value_attr_name(value_attr_name)
-		{ }
+		using collection_property::collection_property;
 
 		virtual std::string get_value (const object* obj, size_t index) const = 0;
 		virtual bool set_value (object* obj, size_t index, std::string_view value) const = 0;
 		virtual bool insert_value (object* obj, size_t index, std::string_view value) const = 0;
 		virtual void remove_value (object* obj, size_t index) const = 0;
+		virtual bool changed (const object* obj) const = 0;
 	};
 
 	template<typename object_t, typename property_traits>
@@ -384,24 +375,24 @@ namespace edge
 		using set_value_t    = void(object_t::*)(size_t, typename property_traits::param_t);
 		using insert_value_t = void(object_t::*)(size_t, typename property_traits::param_t);
 		using remove_value_t = void(object_t::*)(size_t);
+		using changed_t      = bool(object_t::*)() const;
 
 		get_size_t     const _get_size;
 		get_value_t    const _get_value;
 		set_value_t    const _set_value;
 		insert_value_t const _insert_value;
 		remove_value_t const _remove_value;
-		const char*    const _index_attr_name;
+		changed_t      const _changed;
 
 		constexpr typed_value_collection_property (const char* name, const property_group* group, const char* description, enum ui_visible ui_visible,
-			const char* index_attr_name, const char* value_attr_name,
-			get_size_t get_size, get_value_t get_value, set_value_t set_value, insert_value_t insert_value, remove_value_t remove_value)
-			: base (name, group, description, ui_visible, index_attr_name, value_attr_name)
+			get_size_t get_size, get_value_t get_value, set_value_t set_value, insert_value_t insert_value, remove_value_t remove_value, changed_t changed)
+			: base (name, group, description, ui_visible)
 			, _get_size(get_size)
 			, _get_value(get_value)
 			, _set_value(set_value)
 			, _insert_value(insert_value)
 			, _remove_value(remove_value)
-			, _index_attr_name(index_attr_name)
+			, _changed(changed)
 		{
 			// At most one of "set_value" and "insert_value" must be non-null.
 			//
@@ -450,5 +441,11 @@ namespace edge
 		}
 
 		virtual bool can_insert_remove() const override { return _insert_value != nullptr; }
+
+		virtual bool changed (const object* obj) const override
+		{
+			const object_t* ot = static_cast<const object_t*>(obj);
+			return (ot->*_changed)();
+		}
 	};
 }

@@ -193,6 +193,7 @@ private:
 	size_t mst_config_table_get_value_count() const;
 	uint32_t mst_config_table_get_value(size_t i) const;
 	void mst_config_table_set_value(size_t i, uint32_t value);
+	bool mst_config_table_changed() const;
 
 	size_t tree_count() const { return _trees.size(); }
 	bridge_tree* tree (size_t index) const { return _trees[index].get(); }

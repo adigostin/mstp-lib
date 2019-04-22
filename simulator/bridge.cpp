@@ -635,6 +635,21 @@ void bridge::mst_config_table_set_value(size_t i, uint32_t value)
 	}
 }
 
+bool bridge::mst_config_table_changed() const
+{
+	unsigned int entry_count;
+	const STP_CONFIG_TABLE_ENTRY* entries = STP_GetMstConfigTable (_stpBridge, &entry_count);
+
+	static constexpr STP_CONFIG_TABLE_ENTRY zero = { };
+	for (auto e = entries; e < &entries[entry_count]; e++)
+	{
+		if (memcmp(e, &zero, sizeof(zero)))
+			return true; // changed from default
+	}
+
+	return false; // not changed
+}
+
 static const edge::property_group bridge_times_group = { 5, "Timer Params (Table 13-5)" };
 static const edge::property_group mst_group = { 10, "MST Config Id" };
 
@@ -682,12 +697,12 @@ const temp_string_p bridge::mst_config_id_name_property {
 
 const typed_value_collection_property<bridge, uint32_property_traits> bridge::mst_config_table_property {
 	"MstConfigTable", nullptr, nullptr, ui_visible::no,
-	"Vlan", "Tree",
 	&mst_config_table_get_value_count,
 	&mst_config_table_get_value,
 	&mst_config_table_set_value,
-	nullptr,
-	nullptr,
+	nullptr, // insert
+	nullptr, // remove
+	&mst_config_table_changed,
 };
 
 const edge::uint32_p bridge::MstConfigIdRevLevel {
