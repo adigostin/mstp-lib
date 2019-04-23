@@ -7,9 +7,6 @@
 
 using namespace edge;
 
-static constexpr UINT WM_CLOSE_POPUP = WM_APP + 1;
-static constexpr UINT WM_WORK        = WM_APP + 2;
-
 static constexpr float indent_width = 10;
 static constexpr float line_thickness_not_aligned = 0.6f;
 static constexpr float separator_height = 4;
@@ -40,7 +37,8 @@ class edge::property_grid : d2d_window, public virtual property_grid_i
 
 	std::queue<std::function<void()>> _workQueue;
 
-	// ========================================================================
+	static constexpr UINT WM_CLOSE_POPUP = base::WM_NEXT + 0;
+	static constexpr UINT WM_WORK        = base::WM_NEXT + 1;
 
 public:
 	property_grid (HINSTANCE hInstance, DWORD exStyle, const RECT& rect, HWND hWndParent, ID3D11DeviceContext1* deviceContext, IDWriteFactory* dWriteFactory)

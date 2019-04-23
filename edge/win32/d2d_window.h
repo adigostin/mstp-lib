@@ -2,6 +2,7 @@
 #pragma once
 #include "window.h"
 #include "com_ptr.h"
+#include "utility_functions.h"
 
 namespace edge
 {
@@ -20,8 +21,10 @@ namespace edge
 		com_ptr<IDXGISwapChain1> _swapChain;
 		com_ptr<ID2D1DeviceContext> _d2dDeviceContext;
 		com_ptr<ID2D1Factory1> _d2dFactory;
-		bool _caret_shown = false;
-		RECT _caret_bounds;
+		timer_queue_timer_unique_ptr _caret_blink_timer;
+		bool _caret_blink_on = false;
+		std::pair<D2D1_RECT_F, D2D1_MATRIX_3X2_F> _caret_bounds;
+		D2D1_COLOR_F _caret_color;
 		uint32_t _dpi;
 
 		struct RenderPerfInfo
@@ -45,6 +48,10 @@ namespace edge
 		DebugFlag _debugFlags = (DebugFlag)0; //DebugFlag::RenderFrameDurationsAndFPS;
 		com_ptr<IDWriteTextFormat> _debugTextFormat;
 
+		static constexpr UINT WM_BLINK = base::WM_NEXT + 0;
+	protected:
+		static constexpr UINT WM_NEXT = base::WM_NEXT + 1;
+
 	public:
 		d2d_window (HINSTANCE hInstance, DWORD exStyle, DWORD style,
 				   const RECT& rect, HWND hWndParent, int child_control_id,
@@ -65,9 +72,8 @@ namespace edge
 		ID2D1Factory1* d2d_factory() const { return _d2dFactory; }
 		IDWriteFactory* dwrite_factory() const { return _dwrite_factory; }
 
-		void SetCaretBounds (const D2D1_RECT_F& bounds);
-		void ShowCaret();
-		void HideCaret();
+		void show_caret (const D2D1_RECT_F& bounds, D2D1_COLOR_F color, const D2D1_MATRIX_3X2_F* transform = nullptr);
+		void hide_caret();
 
 		float GetFPS();
 		float GetAverageRenderDuration();
@@ -84,7 +90,8 @@ namespace edge
 		virtual void release_render_resources (ID2D1DeviceContext* dc) { }
 
 	private:
-		void create_and_show_win32_caret();
+		void invalidate_caret();
+		void process_wm_blink();
 		void CreateD2DDeviceContext();
 		void ReleaseD2DDeviceContext();
 		void process_wm_paint();

@@ -31,6 +31,8 @@ namespace edge
 
 		static UINT GetModifierKeys();
 
+		static constexpr UINT WM_NEXT = WM_APP;
+
 	public:
 		SIZE client_size_pixels() const { return _clientSize; }
 		LONG client_width_pixels() const { return _clientSize.cx; }

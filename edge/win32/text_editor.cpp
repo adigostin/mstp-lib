@@ -44,7 +44,6 @@ namespace edge
 
 			set_caret_pos (_text.size(), true);
 			SetCaretScreenLocationFromCaretIndex();
-			_control->ShowCaret();
 
 			//_control->GetZoomOrOriginChanged().AddHandler (&TextEditor::OnZoomOrOriginChanged, this);
 
@@ -54,7 +53,7 @@ namespace edge
 		~text_editor()
 		{
 			//_control->GetZoomOrOriginChanged().RemoveHandler (&TextEditor::OnZoomOrOriginChanged, this);
-			_control->HideCaret();
+			_control->hide_caret();
 		}
 
 		void set_caret_pos (size_t pos, bool keepSelectionOrigin)
@@ -103,13 +102,17 @@ namespace edge
 			DWRITE_TEXT_METRICS metrics;
 			hr = _text_layout->GetMetrics(&metrics); assert(SUCCEEDED(hr));
 
-			static constexpr float width = 2;
+			static constexpr float caret_width_not_aligned = 1.5f;
+			float pixel_width = 96.0f / _control->dpi();
+			auto caret_width = roundf(caret_width_not_aligned / pixel_width) * pixel_width;
+
 			D2D1_RECT_F b;
-			b.left = offset.x + x - width / 2;
-			b.top = offset.y;
-			b.right = b.left + width;
-			b.bottom = b.top + metrics.height;
-			_control->SetCaretBounds (b);
+			b.left = roundf ((offset.x + x - caret_width / 2) / pixel_width) * pixel_width;
+			b.top = roundf (offset.y / pixel_width) * pixel_width;
+			b.right = b.left + caret_width;
+			b.bottom = roundf ((b.top + metrics.height) / pixel_width) * pixel_width;
+			b = align_to_pixel(b, _control->dpi());
+			_control->show_caret(b, D2D1::ColorF(_text_argb & 0x00FF'FFFF));
 		}
 	/*
 		// static

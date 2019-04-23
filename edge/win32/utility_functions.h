@@ -15,6 +15,9 @@ inline bool operator== (POINT a, POINT b) { return (a.x == b.x) && (a.y == b.y);
 inline bool operator!= (POINT a, POINT b) { return (a.x != b.x) || (a.y != b.y); }
 inline bool operator== (SIZE a, SIZE b) { return (a.cx == b.cx) && (a.cy == b.cy); }
 inline bool operator!= (SIZE a, SIZE b) { return (a.cx != b.cx) || (a.cy != b.cy); }
+inline bool operator== (const D2D1_MATRIX_3X2_F& a, const D2D1_MATRIX_3X2_F& b) { return memcmp(&a, &b, sizeof(D2D1_MATRIX_3X2_F)) == 0; }
+inline bool operator== (const D2D1_COLOR_F& a, const D2D1_COLOR_F& b) { return memcmp(&a, &b, sizeof(D2D1_COLOR_F)) == 0; }
+inline bool operator!= (const D2D1_COLOR_F& a, const D2D1_COLOR_F& b) { return memcmp(&a, &b, sizeof(D2D1_COLOR_F)) != 0; }
 
 namespace edge
 {
@@ -34,4 +37,17 @@ namespace edge
 	D2D1_COLOR_F interpolate (const D2D1_COLOR_F& first, const D2D1_COLOR_F& second, uint32_t percent_first);
 	D2D1_RECT_F align_to_pixel (const D2D1_RECT_F& rect, uint32_t dpi);
 	std::string bstr_to_utf8 (BSTR bstr);
+}
+
+struct timer_queue_timer_deleter
+{
+	void operator() (HANDLE handle) { ::DeleteTimerQueueTimer(nullptr, handle, INVALID_HANDLE_VALUE); }
+};
+using timer_queue_timer_unique_ptr = std::unique_ptr<std::remove_pointer_t<HANDLE>, timer_queue_timer_deleter>;
+inline timer_queue_timer_unique_ptr create_timer_queue_timer (WAITORTIMERCALLBACK Callback, PVOID Parameter, DWORD DueTime, DWORD Period)
+{
+	HANDLE handle;
+	BOOL bres = ::CreateTimerQueueTimer (&handle, nullptr, Callback, Parameter, DueTime, Period, 0);
+	assert(bres);
+	return timer_queue_timer_unique_ptr(handle);
 }

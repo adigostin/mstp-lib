@@ -39,7 +39,7 @@ namespace edge
 		desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 		desc.BufferCount = 2;
 		desc.Scaling = DXGI_SCALING_STRETCH;
-		desc.SwapEffect = DXGI_SWAP_EFFECT_SEQUENTIAL; // DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL makes the caret invisible
+		desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
 		desc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 		desc.Flags = 0;
 		hr = _dxgiFactory->CreateSwapChainForHwnd (_d3dDevice, hwnd(), &desc, nullptr, nullptr, &_swapChain); assert(SUCCEEDED(hr));
@@ -146,6 +146,12 @@ namespace edge
 			return 0;
 		}
 
+		if (uMsg == WM_BLINK)
+		{
+			process_wm_blink();
+			return 0;
+		}
+
 		return std::nullopt;
 	}
 
@@ -197,9 +203,9 @@ namespace edge
 			DWORD numberOfRects = (requiredLength - sizeof(RGNDATAHEADER)) / sizeof(RECT);
 			RECT* rects = (RECT*)_updateRegionData->Buffer;
 
-			// At least when rendering the Conning.g mimic, Windows creates an update region with a huge number
-			// of rectangles (100-1000). It seems this number can be greatly reduced by combining adjacent rectangles.
-			// Let's do this. We take advantage of the fact that the update region contains many rectangles
+			// It seems that Windows creates an update region with a huge number of rectangles (100-1000).
+			// This number can be greatly reduced by combining adjacent rectangles. Let's do this.
+			// We take advantage of the fact that the update region contains many rectangles
 			// arranged like in the figure below, ordered first by "top", and we create a list of fewer rectangles
 			// covering the same areas.
 			//      ------------
@@ -263,15 +269,7 @@ namespace edge
 		::BeginPaint(hwnd(), &ps); // this will also hide the caret, if shown.
 
 		_painting = true;
-		/*
-		com_ptr<ID3D11Texture2D> backBuffer;
-		hr = _swapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer)); assert(SUCCEEDED(hr));
 
-		com_ptr<ID3D11RenderTargetView> rtView;
-		hr = _d3dDevice->CreateRenderTargetView(backBuffer, nullptr, &rtView); assert(SUCCEEDED(hr));
-
-		_d3dDeviceContext->OMSetRenderTargets(1, &rtView, nullptr);
-		*/
 		_d2dDeviceContext->BeginDraw();
 		_d2dDeviceContext->SetTransform(IdentityMatrix());
 		/*
@@ -367,6 +365,15 @@ namespace edge
 			_d2dDeviceContext->PopLayer();
 		}
 		*/
+
+		if ((_caret_blink_timer != nullptr) && (::GetFocus() == hwnd()) && _caret_blink_on)
+		{
+			_d2dDeviceContext->SetTransform(dpi_transform() * _caret_bounds.second);
+			com_ptr<ID2D1SolidColorBrush> b;
+			_d2dDeviceContext->CreateSolidColorBrush(_caret_color, &b);
+			_d2dDeviceContext->FillRectangle (&_caret_bounds.first, b);
+		}
+
 		hr = _d2dDeviceContext->EndDraw(); assert(SUCCEEDED(hr));
 
 		DXGI_PRESENT_PARAMETERS pp = {};
@@ -485,102 +492,73 @@ namespace edge
 	#pragma region Caret methods
 	void d2d_window::process_wm_set_focus()
 	{
-		if (_caret_shown)
-			create_and_show_win32_caret();
+		if ((_caret_blink_timer != nullptr) && _caret_blink_on)
+			invalidate_caret();
 	}
 
 	void d2d_window::process_wm_kill_focus()
 	{
-		if (_caret_shown)
-		{
-			::DestroyCaret();
-			//assert(bResult);
-			// Commented out the assertion because DestroyCaret() fails in at lease one case we need to support:
-			// when the text in a TextBox is being edited and the project window is closed by the user
-			// (::DestroyWindow seems to generate WM_KILLFOCUS.)
-		}
+		if ((_caret_blink_timer != nullptr) && _caret_blink_on)
+			invalidate_caret();
 	}
 
-	void d2d_window::create_and_show_win32_caret()
+	void d2d_window::invalidate_caret()
 	{
-		assert (_caret_shown);
-		assert (::GetFocus() == hwnd());
-		assert (!_painting);
-		auto w = _caret_bounds.right - _caret_bounds.left;
-		auto h = _caret_bounds.bottom - _caret_bounds.top;
-		assert ((w > 0) && (h > 0));
-
-		BOOL bRes;
-		bRes = ::CreateCaret (hwnd(), nullptr, w, h); assert(bRes);
-		bRes = ::SetCaretPos (_caret_bounds.left, _caret_bounds.top); assert(bRes);
-		bRes = ::ShowCaret (hwnd()); assert(bRes);
+		auto points = corners(_caret_bounds.first);
+		auto matrix = D2D1::Matrix3x2F::ReinterpretBaseType(&_caret_bounds.second);
+		for (auto& point : points)
+			point = matrix->TransformPoint(point);
+		auto bounds = polygon_bounds(points);
+		invalidate(bounds);
 	}
 
-	void d2d_window::SetCaretBounds (const D2D1_RECT_F& bounds)
+	void d2d_window::show_caret (const D2D1_RECT_F& bounds, D2D1_COLOR_F color, const D2D1_MATRIX_3X2_F* transform)
 	{
-		// This function may be called without calling ShowCaret() first.
-
 		assert (!_painting);
 
-		auto w = bounds.right - bounds.left;
-		auto h = bounds.bottom - bounds.top;
-		assert ((w > 0) && (h > 0)); // This function accepts only positive sizes.
+		auto new_bounds = std::make_pair (bounds, (transform != nullptr) ? *transform : IdentityMatrix());
 
-		auto tlp = pointd_to_pointp (bounds.left, bounds.top, 0);
-		auto brp = pointd_to_pointp (bounds.right, bounds.bottom, 0);
-		auto new_bounds = RECT { tlp.x, tlp.y, brp.x, brp.y };
-
-		if (size(_caret_bounds) != size(new_bounds))
+		if ((_caret_bounds != new_bounds) || (_caret_color != color))
 		{
-			// The caret size changed. Destroy the caret, then recreate and show it.
+			if (::GetFocus() == hwnd())
+				invalidate_caret();
+
 			_caret_bounds = new_bounds;
+			_caret_color = color;
 
-			if (_caret_shown && (::GetFocus() == hwnd()))
-			{
-				BOOL bRes = ::HideCaret (hwnd()); assert(bRes);
-				bRes = ::DestroyCaret(); assert(bRes);
-				create_and_show_win32_caret();
-			}
+			if (::GetFocus() == hwnd())
+				invalidate_caret();
 		}
-		else if (location(_caret_bounds) != location(new_bounds))
-		{
-			// Caret size stays the same, the location changes.
-			_caret_bounds = new_bounds;
 
-			if (_caret_shown && (::GetFocus() == hwnd()))
-			{
-				BOOL bRes = ::SetCaretPos (_caret_bounds.left, _caret_bounds.top);
-				assert(bRes);
-			}
-		}
-		else
+		static const auto blink_callback = [](void* lpParameter, BOOLEAN)
 		{
-			// Caret location and size stay the same.
-		}
+			// We're on a worker thread. Let's post this message and continue processing on the GUI thread.
+			auto d2dw = static_cast<d2d_window*>(lpParameter);
+			::PostMessage(d2dw->hwnd(), WM_BLINK, 0, 0);
+		};
+		_caret_blink_timer = create_timer_queue_timer (blink_callback, this, GetCaretBlinkTime(), GetCaretBlinkTime());
+		_caret_blink_on = true;
 	}
 
-	void d2d_window::ShowCaret ()
-	{
-		assert (!_caret_shown); // ShowCaret() was already called.
-
-		assert (!_painting); // This function may not be called during paiting.
-
-		_caret_shown = true;
-
-		if (::GetFocus() == hwnd())
-			create_and_show_win32_caret();
-	}
-
-	void d2d_window::HideCaret ()
+	void d2d_window::hide_caret()
 	{
 		assert (!_painting); // "This function may not be called during paiting.
 
-		assert (_caret_shown); // ShowCaret() was not called.
+		assert (_caret_blink_timer != nullptr); // ShowCaret() was not called.
 
-		// Don't assert on the result of DestroyCaret cause we might lose focus asynchronously.
-		::DestroyCaret();
+		_caret_blink_timer = nullptr;
 
-		_caret_shown = false;
+		if ((::GetFocus() == hwnd()) && _caret_blink_on)
+			invalidate_caret();
+	}
+
+	void d2d_window::process_wm_blink()
+	{
+		if (_caret_blink_timer != nullptr)
+		{
+			_caret_blink_on = !_caret_blink_on;
+			invalidate_caret();
+		}
 	}
 
 	#pragma endregion
