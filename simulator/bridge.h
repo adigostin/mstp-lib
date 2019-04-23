@@ -57,23 +57,21 @@ class bridge : public project_child
 	static const STP_CALLBACKS StpCallbacks;
 	std::vector<std::unique_ptr<BridgeLogLine>> _logLines;
 	BridgeLogLine _currentLogLine;
-	HANDLE _oneSecondTimerHandle;
 	std::queue<std::pair<size_t, PacketInfo>> _rxQueue;
 	std::vector<std::unique_ptr<bridge_tree>> _trees;
 
 	// Let's keep things simple and do everything on the GUI thread.
 	struct HelperWindow : edge::event_manager
 	{
+		bridge* const _bridge;
 		HWND _hwnd;
 		HANDLE _linkPulseTimerHandle;
+		HANDLE _oneSecondTimerHandle;
 
-		HelperWindow();
+		HelperWindow (bridge* bridge);
 		~HelperWindow();
 
 		static LRESULT CALLBACK SubclassProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
-
-		struct LinkPulseEvent : public edge::event<LinkPulseEvent> { };
-		LinkPulseEvent::subscriber GetLinkPulseEvent() { return LinkPulseEvent::subscriber(this); }
 	};
 
 	std::unique_ptr<HelperWindow> _helper_window = nullptr;
@@ -159,11 +157,8 @@ private:
 	virtual void on_added_to_project(project_i* project) override;
 	virtual void on_removing_from_project(project_i* project) override;
 
-	static void CALLBACK OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired);
-	static void OnWmOneSecondTimer (WPARAM wParam, LPARAM lParam);
 	static void OnPortInvalidate (void* callbackArg, renderable_object* object);
-	static void OnLinkPulseTick(void* callbackArg);
-	static void OnWmPacketReceived (WPARAM wParam, LPARAM lParam);
+	void OnLinkPulseTick();
 	void ProcessReceivedPackets();
 
 	static void* StpCallback_AllocAndZeroMemory (unsigned int size);

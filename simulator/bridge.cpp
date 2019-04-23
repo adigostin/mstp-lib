@@ -62,7 +62,8 @@ template bool mac_address_from_string (std::basic_string_view<char> from, mac_ad
 template bool mac_address_from_string (std::basic_string_view<wchar_t> from, mac_address& to);
 
 #pragma region bridge::HelperWindow
-bridge::HelperWindow::HelperWindow()
+bridge::HelperWindow::HelperWindow (bridge* bridge)
+	: _bridge(bridge)
 {
 	HINSTANCE hInstance;
 	BOOL bRes = ::GetModuleHandleExW (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &SubclassProc, &hInstance); assert(bRes);
@@ -71,17 +72,27 @@ bridge::HelperWindow::HelperWindow()
 
 	bRes = ::SetWindowSubclass (_hwnd, SubclassProc, 0, (DWORD_PTR) this); assert (bRes);
 
-	auto callback = [](void* lpParameter, BOOLEAN TimerOrWaitFired)
+	auto link_pulse_callback = [](void* lpParameter, BOOLEAN TimerOrWaitFired)
 	{
+		// We're on a worker thread. Let's post this message and continue processing on the GUI thread.
 		auto helperWindow = static_cast<HelperWindow*>(lpParameter);
 		::PostMessage (helperWindow->_hwnd, WM_LINK_PULSE_TIMER, 0, 0);
 	};
+	bRes = ::CreateTimerQueueTimer (&_linkPulseTimerHandle, nullptr, link_pulse_callback, this, 16, 16, 0); assert(bRes);
 
-	bRes = ::CreateTimerQueueTimer (&_linkPulseTimerHandle, nullptr, callback, this, 16, 16, 0); assert(bRes);
+	DWORD period = 950 + (std::random_device()() % 100);
+	auto one_second_callback = [](void* lpParameter, BOOLEAN TimerOrWaitFired)
+	{
+		// We're on a worker thread. Let's post this message and continue processing on the GUI thread.
+		auto helperWindow = static_cast<HelperWindow*>(lpParameter);
+		::PostMessage (helperWindow->_hwnd, WM_ONE_SECOND_TIMER, 0, 0);
+	};
+	bRes = ::CreateTimerQueueTimer (&_oneSecondTimerHandle, nullptr, one_second_callback, this, period, period, 0); assert(bRes);
 }
 
 bridge::HelperWindow::~HelperWindow()
 {
+	::DeleteTimerQueueTimer (nullptr, _oneSecondTimerHandle, INVALID_HANDLE_VALUE);
 	::DeleteTimerQueueTimer (nullptr, _linkPulseTimerHandle, INVALID_HANDLE_VALUE);
 	::RemoveWindowSubclass (_hwnd, SubclassProc, 0);
 	::DestroyWindow (_hwnd);
@@ -95,17 +106,19 @@ LRESULT CALLBACK bridge::HelperWindow::SubclassProc (HWND hWnd, UINT uMsg, WPARA
 	if (uMsg == WM_LINK_PULSE_TIMER)
 	{
 		// We use a timer on a single thread for pulses because we want to avoid links going down due to delays on some threads but not on others.
-		hw->event_invoker<LinkPulseEvent>()();
+		hw->_bridge->OnLinkPulseTick();
 		return 0;
 	}
 	else if (uMsg == WM_ONE_SECOND_TIMER)
 	{
-		bridge::OnWmOneSecondTimer (wParam, lParam);
+		if (!hw->_bridge->project()->simulation_paused())
+			STP_OnOneSecondTick (hw->_bridge->_stpBridge, GetMessageTime());
 		return 0;
 	}
 	else if (uMsg == WM_PACKET_RECEIVED)
 	{
-		bridge::OnWmPacketReceived (wParam, lParam);
+		if (!hw->_bridge->project()->simulation_paused())
+			hw->_bridge->ProcessReceivedPackets();
 		return 0;
 	}
 
@@ -151,18 +164,11 @@ void bridge::on_added_to_project(project_i* project)
 {
 	base::on_added_to_project(project);
 	assert (_helper_window == nullptr);
-	_helper_window = std::make_unique<HelperWindow>();
-	_helper_window->GetLinkPulseEvent().add_handler (&OnLinkPulseTick, this);
-	DWORD period = 950 + (std::random_device()() % 100);
-	BOOL bRes = ::CreateTimerQueueTimer (&_oneSecondTimerHandle, nullptr, OneSecondTimerCallback, this, period, period, 0); assert(bRes);
-
+	_helper_window = std::make_unique<HelperWindow>(this);
 }
 
 void bridge::on_removing_from_project(project_i* project)
 {
-	// First stop the timers, to be sure the mutex won't be acquired in a background thread (when we'll have background threads).
-	::DeleteTimerQueueTimer (nullptr, _oneSecondTimerHandle, INVALID_HANDLE_VALUE);
-	_helper_window->GetLinkPulseEvent().remove_handler (&OnLinkPulseTick, this);
 	_helper_window = nullptr;
 	base::on_removing_from_project(project);
 }
@@ -174,49 +180,31 @@ void bridge::OnPortInvalidate (void* callbackArg, renderable_object* object)
 	bridge->event_invoker<invalidate_e>()(bridge);
 }
 
-//static
-void CALLBACK bridge::OneSecondTimerCallback (void* lpParameter, BOOLEAN TimerOrWaitFired)
-{
-	auto bridge = static_cast<class bridge*>(lpParameter);
-	// We're on a worker thread. Let's post this message and continue processing on the GUI thread.
-	::PostMessage (bridge->_helper_window->_hwnd, WM_ONE_SECOND_TIMER, (WPARAM) bridge, 0);
-}
-
-//static
-void bridge::OnWmOneSecondTimer (WPARAM wParam, LPARAM lParam)
-{
-	auto bridge = static_cast<class bridge*>((void*)wParam);
-	if (!bridge->project()->simulation_paused())
-		STP_OnOneSecondTick (bridge->_stpBridge, GetMessageTime());
-}
-
 // Checks the wires and computes macOperational for each port on this bridge.
-//static
-void bridge::OnLinkPulseTick (void* callbackArg)
+void bridge::OnLinkPulseTick()
 {
-	auto b = static_cast<bridge*>(callbackArg);
-	if (b->project()->simulation_paused())
+	if (project()->simulation_paused())
 		return;
 
 	bool invalidate = false;
-	for (size_t portIndex = 0; portIndex < b->_ports.size(); portIndex++)
+	for (size_t portIndex = 0; portIndex < _ports.size(); portIndex++)
 	{
-		auto port = b->_ports[portIndex].get();
+		auto port = _ports[portIndex].get();
 		if (port->_missedLinkPulseCounter < port::MissedLinkPulseCounterMax)
 		{
 			port->_missedLinkPulseCounter++;
 			if (port->_missedLinkPulseCounter == port::MissedLinkPulseCounterMax)
 			{
-				STP_OnPortDisabled (b->_stpBridge, (unsigned int) portIndex, ::GetMessageTime());
+				STP_OnPortDisabled (_stpBridge, (unsigned int) portIndex, ::GetMessageTime());
 				invalidate = true;
 			}
 		}
 
-		b->event_invoker<LinkPulseEvent>()(b, portIndex, ::GetMessageTime());
+		this->event_invoker<LinkPulseEvent>()(this, portIndex, ::GetMessageTime());
 	}
 
 	if (invalidate)
-		b->event_invoker<invalidate_e>()(b);
+		this->event_invoker<invalidate_e>()(this);
 }
 
 void bridge::ProcessLinkPulse (size_t rxPortIndex, unsigned int timestamp)
@@ -235,15 +223,6 @@ void bridge::EnqueuePacket (PacketInfo&& packet, size_t rxPortIndex)
 {
 	_rxQueue.push ({ rxPortIndex, move(packet) });
 	::PostMessage (_helper_window->_hwnd, WM_PACKET_RECEIVED, (WPARAM)(void*)this, 0);
-}
-
-// WM_PACKET_RECEIVED
-//static
-void bridge::OnWmPacketReceived (WPARAM wParam, LPARAM lParam)
-{
-	auto bridge = static_cast<class bridge*>((void*)wParam);
-	if (!bridge->project()->simulation_paused())
-		bridge->ProcessReceivedPackets();
 }
 
 void bridge::ProcessReceivedPackets()
