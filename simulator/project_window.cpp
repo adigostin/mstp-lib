@@ -66,7 +66,7 @@ public:
 				 CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr)
 		, _app(create_params.app)
 		, _project(create_params.project)
-		, _selection(selection_factory(create_params.project.get()))
+		, _selection(create_params.app->selection_factory()(create_params.project.get()))
 		, _selectedVlanNumber(create_params.selectedVlan)
 		, _d3d_dc(create_params.d3d_dc)
 		, _dwrite_factory(create_params.dwrite_factory)
@@ -103,7 +103,8 @@ public:
 		_vlanWindow = vlan_window_factory (_app, this, _project, _selection.get(), hwnd(), { GetVlanWindowLeft(), 0 }, _d3d_dc, _dwrite_factory);
 		SetMainMenuItemCheck (ID_VIEW_VLANS, true);
 
-		_edit_window = edit_window_factory (create_params.app, this, _project.get(), _selection.get(), hwnd(), edit_window_rect(), create_params.d3d_dc, create_params.dwrite_factory);
+		edit_window_create_params cps = { _app, this, _project.get(), _selection.get(), hwnd(), edit_window_rect(), create_params.d3d_dc, create_params.dwrite_factory };
+		_edit_window = _app->edit_window_factory()(cps);
 
 		if (auto recentFiles = GetRecentFileList(); !recentFiles.empty())
 			AddRecentFileMenuItems(recentFiles);
@@ -543,10 +544,10 @@ public:
 			auto project = project_factory();
 			project_window_create_params params = 
 			{
-				_app, project, selection_factory, edit_window_factory, true, true, 1, SW_SHOW, _d3d_dc, _dwrite_factory
+				_app, project, true, true, 1, SW_SHOW, _d3d_dc, _dwrite_factory
 			};
 			
-			auto pw = projectWindowFactory(params);
+			auto pw = _app->project_window_factory()(params);
 			_app->add_project_window(std::move(pw));
 			return 0;
 		}
@@ -601,23 +602,21 @@ public:
 
 		std::shared_ptr<project_i> projectToLoadTo = (_project->bridges().empty() && _project->wires().empty()) ? _project : project_factory();
 
-//		try
-//		{
-			projectToLoadTo->Load(openPath);
-//		}
-//		catch (const exception& ex)
-//		{
-//			wstringstream ss;
-//			ss << ex.what() << endl << endl << openPath;
-//			TaskDialog (hwnd(), nullptr, _app->app_namew(), L"Could Not Open", ss.str().c_str(), 0, nullptr, nullptr);
-//			return;
-//		}
+		auto hr = projectToLoadTo->load(openPath);
+		if (FAILED(hr))
+		{
+			auto werror = std::wstring (_com_error(hr).ErrorMessage());
+			auto text = std::wstring(L"Cannot open ") + openPath + L"\r\n";
+			text.append (werror.begin(), werror.end());
+			TaskDialog (hwnd(), GetWindowInstance(hwnd()), _app->app_namew(), text.c_str(), nullptr, 0, TD_ERROR_ICON, nullptr);
+			return;
+		}
 
 		if (projectToLoadTo != _project)
 		{
-			assert(false);
-			//auto newWindow = projectWindowFactory(_app, projectToLoadTo, selection_factory, edit_window_factory, true, true, SW_SHOW, 1);
-			//_app->add_project_window(newWindow);
+			project_window_create_params cps = { _app, _project, true, true, 0, SW_SHOW, _d3d_dc, _dwrite_factory };
+			auto newWindow = _app->project_window_factory()(cps);
+			_app->add_project_window(std::move(newWindow));
 		}
 	}
 
@@ -633,7 +632,7 @@ public:
 				return hr;
 		}
 
-		hr = _project->Save (savePath.c_str());
+		hr = _project->save (savePath.c_str());
 		if (FAILED(hr))
 		{
 			auto werror = std::wstring (_com_error(hr).ErrorMessage());
@@ -1023,7 +1022,7 @@ public:
 	}
 };
 
-extern const ProjectWindowFactory projectWindowFactory = [](const project_window_create_params& create_params) -> std::unique_ptr<project_window_i>
+extern const project_window_factory_t project_window_factory = [](const project_window_create_params& create_params) -> std::unique_ptr<project_window_i>
 {
 	return std::make_unique<project_window>(create_params);
 };

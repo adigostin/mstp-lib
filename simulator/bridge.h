@@ -52,7 +52,6 @@ class bridge : public project_child
 	float _width;
 	float _height;
 	std::vector<std::unique_ptr<port>> _ports;
-	bool _powered = true;
 	STP_BRIDGE* _stpBridge = nullptr;
 	bool _bpdu_trapping_enabled = false;
 	static const STP_CALLBACKS StpCallbacks;
@@ -131,7 +130,6 @@ public:
 	void ProcessLinkPulse (size_t rxPortIndex, unsigned int timestamp);
 	void EnqueuePacket (PacketInfo&& packet, size_t rxPortIndex);
 
-	bool IsPowered() const { return _powered; }
 	const std::vector<std::unique_ptr<BridgeLogLine>>& GetLogLines() const { return _logLines; }
 	void clear_log();
 	std::array<uint8_t, 6> GetPortAddress (size_t portIndex) const;

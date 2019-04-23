@@ -26,6 +26,10 @@ static const char app_name[] = "STP Simulator";
 static const wchar_t app_namew[] = L"STP Simulator";
 static const char app_version_string[] = "2.2";
 
+extern const selection_factory_t selection_factory;
+extern const edit_window_factory_t edit_window_factory;
+extern const project_window_factory_t project_window_factory;
+
 #pragma region project_i
 pair<wire*, size_t> project_i::GetWireConnectedToPort (const port* port) const
 {
@@ -142,6 +146,12 @@ public:
 	virtual project_window_removing_e::subscriber project_window_removing() override final { return project_window_removing_e::subscriber(this); }
 
 	virtual project_window_removed_e::subscriber project_window_removed() override final { return project_window_removed_e::subscriber(this); }
+
+	virtual selection_factory_t selection_factory() const override final { return ::selection_factory; }
+
+	virtual edit_window_factory_t edit_window_factory() const override final { return ::edit_window_factory; }
+
+	virtual const project_window_factory_t project_window_factory() const override final { return ::project_window_factory; }
 
 	WPARAM RunMessageLoop()
 	{
@@ -290,10 +300,10 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 		auto project = project_factory();
 		project_window_create_params params = 
 		{
-			&app, project, selection_factory, edit_window_factory, true, true, 1, SW_SHOW, d3d_dc, dwrite_factory
+			&app, project, true, true, 1, SW_SHOW, d3d_dc, dwrite_factory
 		};
 
-		auto projectWindow = projectWindowFactory (params);
+		auto projectWindow = project_window_factory (params);
 		app.add_project_window(move(projectWindow));
 
 		processExitValue = (int)app.RunMessageLoop();

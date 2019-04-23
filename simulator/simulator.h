@@ -46,8 +46,7 @@ struct __declspec(novtable) selection_i
 	struct changed_e : public edge::event<changed_e, selection_i*> { };
 	virtual changed_e::subscriber changed() = 0;
 };
-using selection_factory_t = std::unique_ptr<selection_i>(*const)(project_i* project);
-extern const selection_factory_t selection_factory;
+using selection_factory_t = std::unique_ptr<selection_i>(*)(project_i* project);
 
 // ============================================================================
 
@@ -91,15 +90,18 @@ struct __declspec(novtable) edit_window_i : virtual edge::win32_window_i
 							 bool smallFont = false) const = 0;
 	virtual D2D1::Matrix3x2F GetZoomTransform() const = 0;
 };
-using edit_window_factory_t = std::unique_ptr<edit_window_i>(*const)(simulator_app_i* app,
-																 project_window_i* pw,
-																 project_i* project,
-																 selection_i* selection,
-																 HWND hWndParent,
-																 const RECT& rect,
-																 ID3D11DeviceContext1* d3d_dc,
-																 IDWriteFactory* dWriteFactory);
-extern const edit_window_factory_t edit_window_factory;
+struct edit_window_create_params
+{
+	simulator_app_i* app;
+	project_window_i* pw;
+	project_i* project;
+	selection_i* selection;
+	HWND hWndParent;
+	RECT rect;
+	ID3D11DeviceContext1* d3d_dc;
+	IDWriteFactory* dWriteFactory;
+};
+using edit_window_factory_t = std::unique_ptr<edit_window_i>(*)(const edit_window_create_params& cps);
 
 // ============================================================================
 
@@ -115,10 +117,8 @@ struct __declspec(novtable) project_window_i : public virtual edge::win32_window
 
 struct project_window_create_params
 {
-	simulator_app_i*                 app;
+	simulator_app_i*           app;
 	const std::shared_ptr<project_i>& project;
-	selection_factory_t              selection_factory;
-	edit_window_factory_t              edit_window_factory;
 	bool     show_property_grid;
 	bool     showLogWindow;
 	uint32_t selectedVlan;
@@ -127,8 +127,7 @@ struct project_window_create_params
 	IDWriteFactory*       dwrite_factory;
 };
 
-using ProjectWindowFactory = std::unique_ptr<project_window_i>(*const)(const project_window_create_params& create_params);
-extern const ProjectWindowFactory projectWindowFactory;
+using project_window_factory_t = std::unique_ptr<project_window_i>(*)(const project_window_create_params& create_params);
 
 // ============================================================================
 
@@ -163,8 +162,8 @@ struct __declspec(novtable) project_i
 	virtual LoadedEvent::subscriber GetLoadedEvent() = 0;
 	virtual mac_address AllocMacAddressRange (size_t count) = 0;
 	virtual const std::wstring& GetFilePath() const = 0;
-	virtual HRESULT Save (const wchar_t* filePath) = 0;
-	virtual void Load (const wchar_t* filePath) = 0;
+	virtual HRESULT save (const wchar_t* filePath) = 0;
+	virtual HRESULT load (const wchar_t* filePath) = 0;
 	virtual bool IsWireForwarding (wire* wire, uint32_t vlanNumber, _Out_opt_ bool* hasLoop) const = 0;
 	virtual void pause_simulation() = 0;
 	virtual void resume_simulation() = 0;
@@ -217,6 +216,9 @@ struct simulator_app_i
 	virtual project_window_added_e::subscriber project_window_added() = 0;
 	virtual project_window_removing_e::subscriber project_window_removing() = 0;
 	virtual project_window_removed_e::subscriber project_window_removed() = 0;
+	virtual selection_factory_t selection_factory() const = 0;
+	virtual edit_window_factory_t edit_window_factory() const = 0;
+	virtual const project_window_factory_t project_window_factory() const = 0;
 };
 
 // ============================================================================

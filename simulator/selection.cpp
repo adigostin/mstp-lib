@@ -130,10 +130,7 @@ public:
 	virtual changed_e::subscriber changed() override final { return changed_e::subscriber(this); }
 };
 
-template<typename... Args>
-static std::unique_ptr<selection_i> create (Args... args)
+extern const selection_factory_t selection_factory = [](project_i* project) -> std::unique_ptr<selection_i>
 {
-	return std::make_unique<selection>(std::forward<Args>(args)...);
-}
-
-const selection_factory_t selection_factory = &create;
+	return std::make_unique<selection>(project);
+};

@@ -664,7 +664,7 @@ const bool_p bridge::stp_enabled_property {
 	"STPEnabled", nullptr, nullptr, ui_visible::yes,
 	static_cast<bool_p::member_getter_t>(&stp_enabled),
 	static_cast<bool_p::member_setter_t>(&set_stp_enabled),
-	true,
+	false,
 };
 
 const stp_version_p bridge::stp_version_property {

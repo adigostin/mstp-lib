@@ -204,7 +204,7 @@ public:
 
 	virtual const std::wstring& GetFilePath() const override final { return _path; }
 
-	virtual HRESULT Save (const wchar_t* filePath) override final
+	virtual HRESULT save (const wchar_t* filePath) override final
 	{
 		com_ptr<IXMLDOMDocument3> doc;
 		HRESULT hr = CoCreateInstance (CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(doc), (void**) &doc);
@@ -274,71 +274,38 @@ public:
 		return hr;
 	}
 
-	virtual void Load (const wchar_t* filePath) override final
+	virtual HRESULT load (const wchar_t* filePath) override final
 	{
 		com_ptr<IXMLDOMDocument3> doc;
-		HRESULT hr = CoCreateInstance (CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(doc), (void**) &doc); assert(SUCCEEDED(hr));
+		HRESULT hr = CoCreateInstance (CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(doc), (void**) &doc); if (FAILED(hr)) return hr;
+
+		if (!PathFileExists(filePath))
+			return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
 
 		VARIANT_BOOL isSuccessful;
-		hr = doc->load(_variant_t(filePath), &isSuccessful); assert(SUCCEEDED(hr));
+		hr = doc->load(_variant_t(filePath), &isSuccessful); if (FAILED(hr)) return hr;
 		if (isSuccessful != VARIANT_TRUE)
-			throw runtime_error("Load failed.");
+			return E_FAIL;
 
 		com_ptr<IXMLDOMNode> xmlDeclarationNode;
-		hr = doc->get_firstChild(&xmlDeclarationNode); assert(SUCCEEDED(hr));
+		hr = doc->get_firstChild(&xmlDeclarationNode); if (FAILED(hr)) return hr;
 		_bstr_t nodeName;
-		hr = xmlDeclarationNode->get_nodeName(nodeName.GetAddress()); assert(SUCCEEDED(hr));
+		hr = xmlDeclarationNode->get_nodeName(nodeName.GetAddress()); if (FAILED(hr)) return hr;
 		if (_wcsicmp (nodeName.GetBSTR(), L"xml") != 0)
-			throw runtime_error("Missing XML declaration.");
+			return E_FAIL;
 
 		com_ptr<IXMLDOMNode> projectNode;
 		hr = xmlDeclarationNode->get_nextSibling(&projectNode); assert(SUCCEEDED(hr));
 		hr = projectNode->get_nodeName(nodeName.GetAddress()); assert(SUCCEEDED(hr));
 		if (_wcsicmp (nodeName.GetBSTR(), L"Project") != 0)
-			throw runtime_error("Missing \"Project\" element in the XML.");
+			return E_FAIL;
 		com_ptr<IXMLDOMElement> projectElement = projectNode;
 
 		deserialize_to (projectElement, this);
-		/*
-		_variant_t value;
-		hr = projectElement->getAttribute (NextMacAddressString, &value);
-		if (SUCCEEDED(hr) && (value.vt == VT_BSTR))
-			mac_address_from_string<wchar_t>(value.bstrVal, _next_mac_address);
 
-		{
-			com_ptr<IXMLDOMNodeList> bridgeNodes;
-			hr = doc->selectNodes(_bstr_t("Project/Bridges/bridge"), &bridgeNodes); assert(SUCCEEDED(hr));
-			long bridgeCount;
-			hr = bridgeNodes->get_length(&bridgeCount); assert(SUCCEEDED(hr));
-			for (long i = 0; i < bridgeCount; i++)
-			{
-				com_ptr<IXMLDOMNode> bridgeNode;
-				hr = bridgeNodes->get_item(i, &bridgeNode); assert(SUCCEEDED(hr));
-				com_ptr<IXMLDOMElement> bridgeElement;
-				hr = bridgeNode->QueryInterface(&bridgeElement); assert(SUCCEEDED(hr));
-				auto bridge = bridge::Deserialize(this, bridgeElement);
-				this->insert_bridge(_bridges.size(), move(bridge));
-			}
-		}
-
-		{
-			com_ptr<IXMLDOMNodeList> wireNodes;
-			hr = doc->selectNodes(_bstr_t("Project/Wires/Wire"), &wireNodes); assert(SUCCEEDED(hr));
-			long wireCount;
-			hr = wireNodes->get_length(&wireCount); assert(SUCCEEDED(hr));
-			for (long i = 0; i < wireCount; i++)
-			{
-				com_ptr<IXMLDOMNode> wireNode;
-				hr = wireNodes->get_item(i, &wireNode); assert(SUCCEEDED(hr));
-				com_ptr<IXMLDOMElement> wireElement;
-				hr = wireNode->QueryInterface(&wireElement); assert(SUCCEEDED(hr));
-				auto wire = wire::Deserialize (this, wireElement);
-				this->insert_wire(_wires.size(), move(wire));
-			}
-		}
-		*/
 		_path = filePath;
 		this->event_invoker<LoadedEvent>()(this);
+		return S_OK;
 	}
 
 	virtual void pause_simulation() override final

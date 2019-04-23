@@ -43,24 +43,17 @@ class edit_window : public zoomable_window, public edit_window_i
 	HTResult _htResult = { nullptr, 0 };
 
 public:
-	edit_window (simulator_app_i* app,
-			  project_window_i* pw,
-			  project_i* project,
-			  selection_i* selection,
-			  HWND hWndParent,
-			  const RECT& rect,
-			  ID3D11DeviceContext1* d3d_dc,
-			  IDWriteFactory* dWriteFactory)
-		: base(app->GetHInstance(), WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, hWndParent, 0, d3d_dc, dWriteFactory)
-		, _app(app)
-		, _pw(pw)
-		, _project(project)
-		, _selection(selection)
+	edit_window (const edit_window_create_params& cps)
+		: base(cps.app->GetHInstance(), WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, cps.rect, cps.hWndParent, 0, cps.d3d_dc, cps.dWriteFactory)
+		, _app(cps.app)
+		, _pw(cps.pw)
+		, _project(cps.project)
+		, _selection(cps.selection)
 	{
 		HRESULT hr;
 
 		auto dc = base::d2d_dc();
-		_drawing_resources._dWriteFactory = dWriteFactory;
+		_drawing_resources._dWriteFactory = dwrite_factory();
 		hr = dwrite_factory()->CreateTextFormat (L"Segoe UI", NULL, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
 			DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_drawing_resources._regularTextFormat); assert(SUCCEEDED(hr));
 		hr = dwrite_factory()->CreateTextFormat (L"Tahoma", NULL, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
@@ -978,10 +971,7 @@ public:
 	}
 };
 
-template<typename... Args>
-static std::unique_ptr<edit_window_i> create (Args... args)
+extern const edit_window_factory_t edit_window_factory = [](const edit_window_create_params& create_params) -> std::unique_ptr<edit_window_i>
 {
-	return std::make_unique<edit_window>(std::forward<Args>(args)...);
-}
-
-extern const edit_window_factory_t edit_window_factory = &create;
+	return std::make_unique<edit_window>(create_params);
+};
