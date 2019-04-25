@@ -55,6 +55,7 @@ class project_window : public window, public virtual project_window_i
 	uint32_t _dpi;
 	float _pg_desired_width_dips;
 	float _log_desired_width_dips;
+	bool _restoring_size_from_registry = false;
 
 	enum class tool_window { none, props, vlan, log };
 	tool_window _windowBeingResized = tool_window::none;
@@ -71,10 +72,18 @@ public:
 		, _d3d_dc(create_params.d3d_dc)
 		, _dwrite_factory(create_params.dwrite_factory)
 	{
+		assert (create_params.selectedVlan >= 1);
+
 		int nCmdShow = create_params.nCmdShow;
 		bool read = TryGetSavedWindowLocation (&_restoreBounds, &nCmdShow);
 		if (!read)
 			::GetWindowRect(hwnd(), &_restoreBounds);
+		else
+		{
+			_restoring_size_from_registry = true;
+			::MoveWindow(hwnd(), _restoreBounds.left, _restoreBounds.top, width(_restoreBounds), height(_restoreBounds), TRUE);
+			_restoring_size_from_registry = false;
+		}
 		::ShowWindow (hwnd(), nCmdShow);
 
 		if (auto proc_addr = GetProcAddress(GetModuleHandleA("User32.dll"), "GetDpiForWindow"))
@@ -290,8 +299,11 @@ public:
 		if (msg == WM_DPICHANGED)
 		{
 			_dpi = LOWORD(wParam);
-			auto r = (RECT*) lParam;
-			::SetWindowPos (hwnd, nullptr, r->left, r->top, r->right - r->left, r->bottom - r->top, SWP_NOZORDER | SWP_NOACTIVATE);
+			if (!_restoring_size_from_registry)
+			{
+				auto r = (RECT*) lParam;
+				::SetWindowPos (hwnd, nullptr, r->left, r->top, r->right - r->left, r->bottom - r->top, SWP_NOZORDER | SWP_NOACTIVATE);
+			}
 			return 0;
 		}
 
@@ -614,7 +626,7 @@ public:
 
 		if (projectToLoadTo != _project)
 		{
-			project_window_create_params cps = { _app, _project, true, true, 0, SW_SHOW, _d3d_dc, _dwrite_factory };
+			project_window_create_params cps = { _app, projectToLoadTo, true, true, 1, SW_SHOW, _d3d_dc, _dwrite_factory };
 			auto newWindow = _app->project_window_factory()(cps);
 			_app->add_project_window(std::move(newWindow));
 		}

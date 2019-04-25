@@ -1,7 +1,5 @@
 #pragma once
 
-inline D2D1_POINT_2F location (const D2D1_RECT_F& r) { return { r.left, r.top }; }
-inline D2D1_SIZE_F size (const D2D1_RECT_F& r) { return { r.right - r.left, r.bottom - r.top }; }
 inline D2D1_SIZE_F operator- (D2D1_POINT_2F p0, D2D1_POINT_2F p1) { return { p0.x - p1.x, p0.y - p1.y }; }
 inline D2D1_POINT_2F operator- (D2D1_POINT_2F p, D2D1_SIZE_F s) {return { p.x - s.width, p.y - s.height }; }
 inline D2D1_POINT_2F operator+ (D2D1_POINT_2F p, D2D1_SIZE_F s) {return { p.x + s.width, p.y + s.height }; }
@@ -37,6 +35,10 @@ namespace edge
 	D2D1_COLOR_F interpolate (const D2D1_COLOR_F& first, const D2D1_COLOR_F& second, uint32_t percent_first);
 	D2D1_RECT_F align_to_pixel (const D2D1_RECT_F& rect, uint32_t dpi);
 	std::string bstr_to_utf8 (BSTR bstr);
+	inline D2D1_POINT_2F location (const D2D1_RECT_F& r) { return { r.left, r.top }; }
+	inline D2D1_SIZE_F size (const D2D1_RECT_F& r) { return { r.right - r.left, r.bottom - r.top }; }
+	inline LONG width (const RECT& rc) { return rc.right - rc.left; }
+	inline LONG height (const RECT& rc) { return rc.bottom - rc.top; }
 }
 
 struct timer_queue_timer_deleter
