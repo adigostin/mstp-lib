@@ -370,7 +370,9 @@ namespace edge
 
 		using base = value_collection_property;
 
-		using get_size_t     = size_t(object_t::*)() const;
+		using member_get_size_t = size_t(object_t::*)() const;
+		using static_get_size_t = size_t(*)(const object_t*);
+		using get_size_t     = std::variant<member_get_size_t, static_get_size_t>;
 		using get_value_t    = typename property_traits::return_t(object_t::*)(size_t) const;
 		using set_value_t    = void(object_t::*)(size_t, typename property_traits::param_t);
 		using insert_value_t = void(object_t::*)(size_t, typename property_traits::param_t);
@@ -406,7 +408,12 @@ namespace edge
 
 		virtual size_t size (const object* obj) const override
 		{
-			return (static_cast<const object_t*>(obj)->*_get_size)();
+			auto ot = static_cast<const object_t*>(obj);
+
+			if (std::holds_alternative<member_get_size_t>(_get_size))
+				return (ot->*std::get<member_get_size_t>(_get_size))();
+			else
+				return std::get<static_get_size_t>(_get_size)(ot);
 		}
 
 		virtual std::string get_value (const object* obj, size_t index) const override

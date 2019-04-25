@@ -28,14 +28,18 @@ public:
 	virtual void insert_bridge (size_t index, unique_ptr<bridge>&& bridge) override final
 	{
 		assert (index <= _bridges.size());
+		assert (bridge->_project == nullptr);
 		auto b = bridge.get();
-		assert (b->project() == nullptr);
-		auto it = _bridges.insert (_bridges.begin() + index, (move(bridge)));
+
+		property_change_args args = { &bridges_property, index, collection_property_change_type::insert };
+		this->on_property_changing(args);
+		_bridges.insert (_bridges.begin() + index, std::move(bridge));
 		static_cast<project_child*>(b)->on_added_to_project(this);
+		this->on_property_changed(args);
+
 		b->GetInvalidateEvent().add_handler (&OnObjectInvalidate, this);
 		b->GetPacketTransmitEvent().add_handler (&OnPacketTransmit, this);
 		b->GetLinkPulseEvent().add_handler (&OnLinkPulse, this);
-		this->event_invoker<bridge_inserted_e>()(this, index, b);
 		this->event_invoker<invalidate_e>()(this);
 	}
 
@@ -43,22 +47,26 @@ public:
 	{
 		assert (index < _bridges.size());
 		bridge* b = _bridges[index].get();
-		assert (b->project() == this);
+		assert (b->_project == this);
 
-		if (any_of (_wires.begin(), _wires.end(), [b](const unique_ptr<wire>& w) {
-			return any_of (w->points().begin(), w->points().end(), [b] (wire_end p) {
-				return std::holds_alternative<connected_wire_end>(p) && (std::get<connected_wire_end>(p)->bridge() == b);
+		if (any_of (_wires.begin(), _wires.end(), [b, this](const unique_ptr<wire>& w) {
+			return any_of (w->points().begin(), w->points().end(), [b, this] (wire_end p) {
+				return std::holds_alternative<connected_wire_end>(p) && (port_at(std::get<connected_wire_end>(p))->bridge() == b);
 			});
 		}))
 			assert(false); // can't remove a connected bridge
 
-		this->event_invoker<bridge_removing_e>()(this, index, b);
-		_bridges[index]->GetLinkPulseEvent().remove_handler (&OnLinkPulse, this);
-		_bridges[index]->GetPacketTransmitEvent().remove_handler (&OnPacketTransmit, this);
-		_bridges[index]->GetInvalidateEvent().remove_handler (&OnObjectInvalidate, this);
+		b->GetLinkPulseEvent().remove_handler (&OnLinkPulse, this);
+		b->GetPacketTransmitEvent().remove_handler (&OnPacketTransmit, this);
+		b->GetInvalidateEvent().remove_handler (&OnObjectInvalidate, this);
+
+		property_change_args args = { &bridges_property, index, collection_property_change_type::remove };
+		this->on_property_changing(args);
 		static_cast<project_child*>(b)->on_removing_from_project(this);
-		auto result = move(_bridges[index]);
+		auto result = std::move(_bridges[index]);
 		_bridges.erase (_bridges.begin() + index);
+		this->on_property_changed(args);
+
 		this->event_invoker<invalidate_e>()(this);
 		return result;
 	}
@@ -68,28 +76,31 @@ public:
 	virtual void insert_wire (size_t index, unique_ptr<wire>&& wire) override final
 	{
 		assert (index <= _wires.size());
+		assert (wire->_project == nullptr);
+		auto w = wire.get();
+
 		property_change_args args = { &wires_property, index, collection_property_change_type::insert };
-		this->on_property_changing (args);
-		_wires.insert (_wires.begin() + index, move(wire));
-		this->on_property_changed (args);
+		this->on_property_changing(args);
+		_wires.insert (_wires.begin() + index, std::move(wire));
+		static_cast<project_child*>(w)->on_added_to_project(this);
+		this->on_property_changed(args);
 
-		_wires[index]->GetInvalidateEvent().add_handler (&OnObjectInvalidate, this);
-		this->event_invoker<wire_inserted_e>()(this, index, _wires[index].get());
-
+		w->GetInvalidateEvent().add_handler (&OnObjectInvalidate, this);
 		this->event_invoker<invalidate_e>()(this);
 	}
 
 	virtual unique_ptr<wire> remove_wire (size_t index) override final
 	{
 		assert (index < _wires.size());
-
-		this->event_invoker<wire_removing_e>()(this, index, _wires[index].get());
+		wire* w = _wires[index].get();
+		assert(w->_project == this);
 
 		_wires[index]->GetInvalidateEvent().remove_handler (&OnObjectInvalidate, this);
 
 		property_change_args args = { &wires_property, index, collection_property_change_type::remove };
 		this->on_property_changing (args);
-		auto result = move(_wires[index]);
+		static_cast<project_child*>(w)->on_removing_from_project(this);
+		auto result = std::move(_wires[index]);
 		_wires.erase (_wires.begin() + index);
 		this->on_property_changed (args);
 
@@ -124,13 +135,8 @@ public:
 		project->event_invoker<invalidate_e>()(project);
 	}
 
-	virtual bridge_inserted_e::subscriber bridge_inserted() override final { return bridge_inserted_e::subscriber(this); }
-	virtual bridge_removing_e::subscriber bridge_removing() override final { return bridge_removing_e::subscriber(this); }
-
-	virtual wire_inserted_e::subscriber wire_inserted() override final { return wire_inserted_e::subscriber(this); }
-	virtual wire_removing_e::subscriber wire_removing() override final { return wire_removing_e::subscriber(this); }
-
 	virtual invalidate_e::subscriber GetInvalidateEvent() override final { return invalidate_e::subscriber(this); }
+
 	virtual LoadedEvent::subscriber GetLoadedEvent() override final { return LoadedEvent::subscriber(this); }
 
 	virtual bool IsWireForwarding (wire* wire, unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const override final
@@ -138,8 +144,8 @@ public:
 		if (!holds_alternative<connected_wire_end>(wire->p0()) || !holds_alternative<connected_wire_end>(wire->p1()))
 			return false;
 
-		auto portA = get<connected_wire_end>(wire->p0());
-		auto portB = get<connected_wire_end>(wire->p1());
+		auto portA = port_at(std::get<connected_wire_end>(wire->p0()));
+		auto portB = port_at(std::get<connected_wire_end>(wire->p1()));
 		bool portAFw = portA->IsForwarding(vlanNumber);
 		bool portBFw = portB->IsForwarding(vlanNumber);
 		if (!portAFw || !portBFw)
@@ -342,6 +348,14 @@ public:
 	virtual ChangedFlagChangedEvent::subscriber GetChangedFlagChangedEvent() override final { return ChangedFlagChangedEvent::subscriber(this); }
 
 	virtual ChangedEvent::subscriber GetChangedEvent() override final { return ChangedEvent::subscriber(this); }
+
+	virtual const object_collection_property* bridges_prop() const override final { return &bridges_property; }
+	
+	virtual const object_collection_property* wires_prop() const override final { return &wires_property; }
+
+	virtual property_changing_e::subscriber property_changing() override final { return property_changing_e::subscriber(this); }
+
+	virtual property_changed_e::subscriber property_changed() override final { return property_changed_e::subscriber(this); }
 
 	mac_address next_mac_address() const { return _next_mac_address; }
 	

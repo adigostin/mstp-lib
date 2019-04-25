@@ -4,6 +4,7 @@
 #include "renderable_object.h"
 #include "stp.h"
 #include "bridge.h"
+#include "wire.h"
 
 struct simulator_app_i;
 struct project_i;
@@ -14,6 +15,10 @@ class bridge;
 class port;
 class wire;
 
+using edge::property_changing_e;
+using edge::property_changed_e;
+using edge::property_change_args;
+
 static constexpr unsigned char DefaultConfigTableDigest[16] = { 0xAC, 0x36, 0x17, 0x7F, 0x50, 0x28, 0x3C, 0xD4, 0xB8, 0x38, 0x21, 0xD8, 0xAB, 0x26, 0xDE, 0x62 };
 
 // Maximum VLAN number supported by the simulator (too large a number would complicate the UI).
@@ -22,6 +27,8 @@ static constexpr uint32_t max_vlan_number = 16;
 
 static constexpr wchar_t FileExtensionWithoutDot[] = L"stp";
 static constexpr wchar_t FileExtensionWithDot[] = L".stp";
+
+static constexpr char app_version_string[] = "2.2";
 
 // ============================================================================
 
@@ -131,12 +138,6 @@ using project_window_factory_t = std::unique_ptr<project_window_i>(*)(const proj
 
 // ============================================================================
 
-struct bridge_inserted_e : public edge::event<bridge_inserted_e, project_i*, size_t, bridge*> { };
-struct bridge_removing_e : public edge::event<bridge_removing_e, project_i*, size_t, bridge*> { };
-
-struct wire_inserted_e : public edge::event<wire_inserted_e, project_i*, size_t, wire*> { };
-struct wire_removing_e : public edge::event<wire_removing_e, project_i*, size_t, wire*> { };
-
 enum class save_project_option { save_unconditionally, save_if_changed_ask_user_first };
 
 struct __declspec(novtable) project_i
@@ -151,13 +152,9 @@ struct __declspec(novtable) project_i
 	virtual const std::vector<std::unique_ptr<bridge>>& bridges() const = 0;
 	virtual void insert_bridge (size_t index, std::unique_ptr<bridge>&& bridge) = 0;
 	virtual std::unique_ptr<bridge> remove_bridge (size_t index) = 0;
-	virtual bridge_inserted_e::subscriber bridge_inserted() = 0;
-	virtual bridge_removing_e::subscriber bridge_removing() = 0;
 	virtual const std::vector<std::unique_ptr<wire>>& wires() const = 0;
 	virtual void insert_wire (size_t index, std::unique_ptr<wire>&& wire) = 0;
 	virtual std::unique_ptr<wire> remove_wire (size_t index) = 0;
-	virtual wire_inserted_e::subscriber wire_inserted() = 0;
-	virtual wire_removing_e::subscriber wire_removing() = 0;
 	virtual invalidate_e::subscriber GetInvalidateEvent() = 0;
 	virtual LoadedEvent::subscriber GetLoadedEvent() = 0;
 	virtual mac_address AllocMacAddressRange (size_t count) = 0;
@@ -172,11 +169,16 @@ struct __declspec(novtable) project_i
 	virtual void SetChangedFlag (bool projectChangedFlag) = 0;
 	virtual ChangedFlagChangedEvent::subscriber GetChangedFlagChangedEvent() = 0;
 	virtual ChangedEvent::subscriber GetChangedEvent() = 0;
+	virtual const object_collection_property* bridges_prop() const = 0;
+	virtual const object_collection_property* wires_prop() const = 0;
+	virtual property_changing_e::subscriber property_changing() = 0;
+	virtual property_changed_e::subscriber property_changed() = 0;
 
 	std::pair<wire*, size_t> GetWireConnectedToPort (const port* port) const;
 	port* FindConnectedPort (port* txPort) const;
 	std::unique_ptr<wire> remove_wire (wire* w);
 	std::unique_ptr<bridge> remove_bridge (bridge* b);
+	port* port_at (connected_wire_end end) const;
 };
 using project_factory_t = std::shared_ptr<project_i>(*const)();
 extern const project_factory_t project_factory;

@@ -62,8 +62,7 @@ public:
 			DWRITE_FONT_STRETCH_CONDENSED, 11, L"en-US", &_legendFont); assert(SUCCEEDED(hr));
 
 		_selection->changed().add_handler (&OnSelectionChanged, this);
-		_project->bridge_removing().add_handler (&OnBridgeRemoving, this);
-		_project->wire_removing().add_handler (&OnWireRemoving, this);
+		_project->property_changing().add_handler(&on_project_property_changing, this);
 		_project->GetInvalidateEvent().add_handler (&OnProjectInvalidate, this);
 		_pw->selected_vlan_number_changed().add_handler (&on_selected_vlan_changed, this);
 	}
@@ -72,8 +71,7 @@ public:
 	{
 		_pw->selected_vlan_number_changed().remove_handler (&on_selected_vlan_changed, this);
 		_project->GetInvalidateEvent().remove_handler (&OnProjectInvalidate, this);
-		_project->wire_removing().remove_handler (&OnWireRemoving, this);
-		_project->bridge_removing().remove_handler (&OnBridgeRemoving, this);
+		_project->property_changing().remove_handler(&on_project_property_changing, this);
 		_selection->changed().remove_handler (&OnSelectionChanged, this);
 	}
 
@@ -83,28 +81,37 @@ public:
 		window->invalidate();
 	}
 
-	static void OnBridgeRemoving (void* callbackArg, project_i* project, size_t index, bridge* b)
+	static void on_project_property_changing (void* callback_arg, object* project_obj, const property_change_args& args)
 	{
-		auto window = static_cast<edit_window*>(callbackArg);
-		window->_htResult = { nullptr, 0 };
-	}
+		auto window = static_cast<edit_window*>(callback_arg);
+		auto project = dynamic_cast<project_i*>(project_obj);
 
-	static void OnWireRemoving (void* callbackArg, project_i* project, size_t index, wire* w)
-	{
-		auto window = static_cast<edit_window*>(callbackArg);
-		window->_htResult = { nullptr, 0 };
+		if ((args.property == project->bridges_prop())
+			&& (args.type == collection_property_change_type::remove)
+			&& (window->_htResult.object == project->bridges()[args.index].get()))
+		{
+			window->_htResult = { nullptr, 0 };
+			window->invalidate();
+		}
+		else if ((args.property == project->wires_prop())
+			&& (args.type == collection_property_change_type::remove)
+			&& (window->_htResult.object == project->wires()[args.index].get()))
+		{
+			window->_htResult = { nullptr, 0 };
+			window->invalidate();
+		}
 	}
 
 	static void OnProjectInvalidate (void* callbackArg, project_i*)
 	{
 		auto window = static_cast<edit_window*>(callbackArg);
-		::InvalidateRect (window->hwnd(), nullptr, FALSE);
+		window->invalidate();
 	}
 
 	static void OnSelectionChanged (void* callbackArg, selection_i* selection)
 	{
-		auto ea = static_cast<edit_window*>(callbackArg);
-		::InvalidateRect (ea->hwnd(), nullptr, FALSE);
+		auto window = static_cast<edit_window*>(callbackArg);
+		window->invalidate();
 	}
 
 	struct LegendInfoEntry
@@ -677,7 +684,7 @@ public:
 				if (!std::holds_alternative<connected_wire_end>(w->points()[pi]))
 					continue;
 
-				auto port = std::get<connected_wire_end>(w->points()[pi]);
+				auto port = _project->port_at(std::get<connected_wire_end>(w->points()[pi]));
 				if (bridgesToRemove.find(port->bridge()) == bridgesToRemove.end())
 					continue;
 
@@ -690,8 +697,8 @@ public:
 		{
 			wire* wire = it->first;
 			bool anyPointRemainsConnected = any_of (wire->points().begin(), wire->points().end(),
-				[&bridgesToRemove](auto& pt) { return std::holds_alternative<connected_wire_end>(pt)
-				&& (bridgesToRemove.count(std::get<connected_wire_end>(pt)->bridge()) == 0); });
+				[&bridgesToRemove, this](auto& pt) { return std::holds_alternative<connected_wire_end>(pt)
+					&& (bridgesToRemove.count(_project->port_at(std::get<connected_wire_end>(pt))->bridge()) == 0); });
 			
 			auto it1 = it;
 			it++;

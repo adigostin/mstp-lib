@@ -24,20 +24,19 @@ using namespace edge;
 static const char company_name[] = "Adi Gostin";
 static const char app_name[] = "STP Simulator";
 static const wchar_t app_namew[] = L"STP Simulator";
-static const char app_version_string[] = "2.2";
 
 extern const selection_factory_t selection_factory;
 extern const edit_window_factory_t edit_window_factory;
 extern const project_window_factory_t project_window_factory;
 
 #pragma region project_i
-pair<wire*, size_t> project_i::GetWireConnectedToPort (const port* port) const
+pair<wire*, size_t> project_i::GetWireConnectedToPort (const class port* port) const
 {
 	for (auto& w : wires())
 	{
-		if (holds_alternative<connected_wire_end>(w->p0()) && (get<connected_wire_end>(w->p0()) == port))
+		if (holds_alternative<connected_wire_end>(w->p0()) && (port_at(get<connected_wire_end>(w->p0())) == port))
 			return { w.get(), 0 };
-		else if (holds_alternative<connected_wire_end>(w->p1()) && (get<connected_wire_end>(w->p1()) == port))
+		else if (holds_alternative<connected_wire_end>(w->p1()) && (port_at(get<connected_wire_end>(w->p1())) == port))
 			return { w.get(), 1 };
 	}
 
@@ -51,11 +50,11 @@ port* project_i::FindConnectedPort (port* txPort) const
 		for (size_t i = 0; i < 2; i++)
 		{
 			auto& thisEnd = w->points()[i];
-			if (holds_alternative<connected_wire_end>(thisEnd) && (get<connected_wire_end>(thisEnd) == txPort))
+			if (holds_alternative<connected_wire_end>(thisEnd) && (port_at(get<connected_wire_end>(thisEnd)) == txPort))
 			{
 				auto& otherEnd = w->points()[1 - i];
 				if (holds_alternative<connected_wire_end>(otherEnd))
-					return get<connected_wire_end>(otherEnd);
+					return port_at(get<connected_wire_end>(otherEnd));
 				else
 					return nullptr;
 			}
@@ -87,6 +86,13 @@ std::unique_ptr<bridge> project_i::remove_bridge (bridge* b)
 	}
 
 	assert(false); return nullptr;
+}
+
+port* project_i::port_at (connected_wire_end end) const
+{
+	auto bridge = bridges()[end.bridge_index].get();
+	auto port = bridge->GetPorts()[end.port_index].get();
+	return port;
 }
 #pragma endregion
 

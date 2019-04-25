@@ -161,6 +161,9 @@ namespace edge
 		{ }
 	};
 
+	struct property_changing_e : event<property_changing_e, object*, const property_change_args&> { };
+	struct property_changed_e  : event<property_changed_e , object*, const property_change_args&> { };
+
 	class object : public event_manager
 	{
 		template<typename child_type>
@@ -171,9 +174,6 @@ namespace edge
 
 		template<typename T>
 		bool is() const { return dynamic_cast<const T*>(this) != nullptr; }
-
-		struct property_changing_e : event<property_changing_e, object*, const property_change_args&> { };
-		struct property_changed_e  : event<property_changed_e , object*, const property_change_args&> { };
 
 		property_changing_e::subscriber property_changing() { return property_changing_e::subscriber(this); }
 		property_changed_e::subscriber property_changed() { return property_changed_e::subscriber(this); }

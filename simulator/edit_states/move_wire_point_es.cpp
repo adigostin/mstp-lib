@@ -95,7 +95,7 @@ public:
 	{
 		auto& point = _wire->points()[_pointIndex];
 		if (holds_alternative<connected_wire_end>(point))
-			_ew->RenderSnapRect (rt, get<connected_wire_end>(point)->GetCPLocation());
+			_ew->RenderSnapRect (rt, _project->port_at(get<connected_wire_end>(point))->GetCPLocation());
 	}
 
 	virtual HCURSOR cursor() const override final { return LoadCursor(nullptr, IDC_CROSS); }

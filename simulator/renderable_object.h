@@ -74,5 +74,6 @@ protected:
 		_project = nullptr;
 	}
 
+public:
 	project_i* project() const { return _project; }
 };

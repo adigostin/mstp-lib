@@ -19,44 +19,48 @@ public:
 	selection (project_i* project)
 		: _project(project)
 	{
-		_project->wire_removing().add_handler (&on_wire_removing_from_project, this);
-		_project->bridge_removing().add_handler (&on_bridge_removing_from_project, this);
+		_project->property_changing().add_handler (&on_project_property_changing, this);
 	}
 
 	~selection()
 	{
-		_project->bridge_removing().remove_handler (&on_bridge_removing_from_project, this);
-		_project->wire_removing().remove_handler (&on_wire_removing_from_project, this);
+		_project->property_changing().remove_handler (&on_project_property_changing, this);
 	}
 
-	static void on_bridge_removing_from_project (void* callbackArg, project_i* project, size_t index, bridge* b)
+	static void on_project_property_changing (void* callback_arg, object* project_obj, const property_change_args& args)
 	{
-		auto s = static_cast<selection*>(callbackArg);
-		for (size_t i = 0; i < s->_objects.size(); )
+		auto s = static_cast<class selection*>(callback_arg);
+		auto project = dynamic_cast<project_i*>(project_obj);
+		if ((args.property == project->bridges_prop()) && (args.type == collection_property_change_type::remove))
 		{
-			auto so = s->_objects[i];
-			if ((so == b) || ((dynamic_cast<port*>(so) != nullptr) && (static_cast<port*>(so)->bridge() == b)))
-				s->remove_internal(i);
-			else
-				i++;
+			bridge* b = project->bridges()[args.index].get();
+
+			for (size_t i = 0; i < s->_objects.size(); )
+			{
+				auto so = s->_objects[i];
+				if ((so == b) || ((dynamic_cast<port*>(so) != nullptr) && (static_cast<port*>(so)->bridge() == b)))
+					s->remove_internal(i);
+				else
+					i++;
+			}
+
+			s->event_invoker<changed_e>()(s);
 		}
-
-		s->event_invoker<changed_e>()(s);
-	}
-
-	static void on_wire_removing_from_project (void* callbackArg, project_i* project, size_t index, wire* w)
-	{
-		auto s = static_cast<selection*>(callbackArg);
-		for (size_t i = 0; i < s->_objects.size(); )
+		else if ((args.property == project->wires_prop()) && (args.type == collection_property_change_type::remove))
 		{
-			auto so = s->_objects[i];
-			if (so == w)
-				s->remove_internal(i);
-			else
-				i++;
-		}
+			wire* w = project->wires()[args.index].get();
 
-		s->event_invoker<changed_e>()(s);
+			for (size_t i = 0; i < s->_objects.size(); )
+			{
+				auto so = s->_objects[i];
+				if (so == w)
+					s->remove_internal(i);
+				else
+					i++;
+			}
+
+			s->event_invoker<changed_e>()(s);
+		}
 	}
 
 	virtual const vector<object*>& objects() const override final { return _objects; }

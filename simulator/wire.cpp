@@ -8,29 +8,68 @@
 
 static constexpr float thickness = 2;
 
+std::string wire_end_property_traits::to_string (wire_end from)
+{
+	std::stringstream ss;
+	if (std::holds_alternative<connected_wire_end>(from))
+	{
+		auto ce = std::get<connected_wire_end>(from);
+		ss << "Connected;" << ce.bridge_index << ";" << ce.port_index;
+	}
+	else
+	{
+		auto location = std::get<loose_wire_end>(from);
+		ss << "Loose;" << location.x << ";" << location.y;
+	}
+
+	return ss.str();
+}
+
+bool wire_end_property_traits::from_string (std::string_view from, wire_end& to)
+{
+	size_t s1 = from.find(';');
+	size_t s2 = from.rfind(';');
+
+	if (std::string_view(from.data(), s1) == "Connected")
+	{
+		connected_wire_end end;
+		std::from_chars (from.data() + s1 + 1, from.data() + s2, end.bridge_index);
+		std::from_chars (from.data() + s2 + 1, from.data() + from.size(), end.port_index);
+		to = end;
+		return true;
+	}
+
+	if (std::string_view(from.data(), s1) == "Loose")
+	{
+		loose_wire_end end;
+		std::from_chars (from.data() + s1 + 1, from.data() + s2, end.x);
+		std::from_chars (from.data() + s2 + 1, from.data() + from.size(), end.y);
+		to = end;
+		return true;
+	}
+
+	return false;
+}
+
 wire::wire (wire_end firstEnd, wire_end secondEnd)
 	: _points({ firstEnd, secondEnd })
 { }
 
-// Workaround for what seems like a library bug: std::variant's operators == and != not working.
-static bool Same (const wire_end& a, const wire_end& b)
+void wire::set_point (size_t pointIndex, wire_end point)
 {
-	if (a.index() != b.index())
-		return false;
-
-	if (std::holds_alternative<loose_wire_end>(a))
-		return std::get<loose_wire_end>(a) == std::get<loose_wire_end>(b);
-	else
-		return std::get<connected_wire_end>(a) == std::get<connected_wire_end>(b);
-}
-
-void wire::set_point (size_t pointIndex, const wire_end& point)
-{
-	if (!Same(_points[pointIndex], point))
+	if (_points[pointIndex] != point)
 	{
 		_points[pointIndex] = point;
 		event_invoker<invalidate_e>()(this);
 	}
+}
+
+void wire::set_point (size_t i, port* port)
+{
+	auto& bridges = port->bridge()->project()->bridges();
+	auto it = std::find_if (bridges.begin(), bridges.end(), [port](auto& p) { return p.get() == port->bridge(); });
+	size_t bridge_index = it - bridges.begin();
+	set_point (i, connected_wire_end { bridge_index, port->port_index() });
 }
 
 D2D1_POINT_2F wire::point_coords (size_t pointIndex) const
@@ -38,7 +77,7 @@ D2D1_POINT_2F wire::point_coords (size_t pointIndex) const
 	if (std::holds_alternative<loose_wire_end>(_points[pointIndex]))
 		return std::get<loose_wire_end>(_points[pointIndex]);
 	else
-		return std::get<connected_wire_end>(_points[pointIndex])->GetCPLocation();
+		return project()->port_at(std::get<connected_wire_end>(_points[pointIndex]))->GetCPLocation();
 }
 
 void wire::render (ID2D1RenderTarget* rt, const drawing_resources& dos, bool forwarding, bool hasLoop) const
@@ -102,35 +141,20 @@ renderable_object::HTResult wire::hit_test (const edge::zoomable_i* zoomable, D2
 	return { };
 }
 
-const xtype<wire> wire::_type = { "Wire", &base::_type, { }, [] { return new wire(); } };
-
-struct connected_end_wrapper : public object
-{
-	uint32_t bridge_index;
-	uint32_t port_index;
-
-	static const uint32_p bridge_index_property;
-	static const uint32_p port_index_property;
-	static inline const property* const props[] = { &bridge_index_property, &port_index_property };
-	static const xtype<connected_end_wrapper> _type;
-	virtual const struct type* type() const override { return &_type; }
-};
-
-const uint32_p connected_end_wrapper::bridge_index_property = {
-	"BridgeIndex", nullptr, nullptr, edge::ui_visible::no,
-	static_cast<uint32_p::member_var_t>(&connected_end_wrapper::bridge_index),
-	[](object* o, uint32_t i) { static_cast<connected_end_wrapper*>(o)->bridge_index = i; },
+const wire_end_p wire::p0_property = {
+	"P0", nullptr, nullptr, ui_visible::no,
+	static_cast<wire_end_p::member_getter_t>(&p0),
+	static_cast<wire_end_p::member_setter_t>(&set_p0),
 	std::nullopt
 };
 
-const uint32_p connected_end_wrapper::port_index_property = {
-	"PortIndex", nullptr, nullptr, edge::ui_visible::no,
-	static_cast<uint32_p::member_var_t>(&connected_end_wrapper::port_index),
-	[](object* o, uint32_t i) { static_cast<connected_end_wrapper*>(o)->port_index = i; },
+const wire_end_p wire::p1_property = {
+	"P1", nullptr, nullptr, ui_visible::no,
+	static_cast<wire_end_p::member_getter_t>(&p1),
+	static_cast<wire_end_p::member_setter_t>(&set_p1),
 	std::nullopt
 };
 
-const xtype<connected_end_wrapper> connected_end_wrapper::_type = {
-	"ConnectedEnd", &object::_type, props, [] { return new connected_end_wrapper(); }
-};
+const property* wire::_properties[] = { &p0_property, &p1_property };
 
+const xtype<wire> wire::_type = { "Wire", &base::_type, _properties, [] { return new wire(); } };
