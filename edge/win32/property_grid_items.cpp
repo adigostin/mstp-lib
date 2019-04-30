@@ -225,12 +225,30 @@ bool value_pgitem::multiple_values() const
 	return false;
 }
 
+bool value_pgitem::can_edit() const
+{
+	return _value.readable && (_prop->custom_editor() || _prop->has_setter());
+}
+
 void value_pgitem::create_value_layout_internal (IDWriteFactory* factory, IDWriteTextFormat* format, float width)
 {
-	if (multiple_values())
-		_value = text_layout::create (factory, format, "(multiple values)", width);
-	else
-		_value = text_layout::create (factory, format, _prop->get_to_string(parent()->parent()->objects().front()), width);
+	text_layout tl;
+	bool readable;
+	try
+	{
+		if (multiple_values())
+			tl = text_layout::create (factory, format, "(multiple values)", width);
+		else
+			tl = text_layout::create (factory, format, _prop->get_to_string(parent()->parent()->objects().front()), width);
+		readable = true;
+	}
+	catch (const std::exception& ex)
+	{
+		tl = text_layout::create (factory, format, ex.what(), width);
+		readable = false;
+	}
+
+	_value = { std::move(tl), readable };
 }
 
 void value_pgitem::create_text_layouts (IDWriteFactory* factory, IDWriteTextFormat* format, const item_layout_horz& l, float line_thickness)
@@ -243,7 +261,7 @@ void value_pgitem::create_text_layouts (IDWriteFactory* factory, IDWriteTextForm
 void value_pgitem::recreate_value_text_layout()
 {
 	auto grid = root()->_grid;
-	create_value_layout_internal (grid->dwrite_factory(), grid->text_format(), _value.metrics.layoutWidth);
+	create_value_layout_internal (grid->dwrite_factory(), grid->text_format(), _value.tl.metrics.layoutWidth);
 	grid->invalidate();
 }
 
@@ -262,19 +280,18 @@ void value_pgitem::render (const render_context& rc, const item_layout& l, float
 
 	float linex = l.x_value + line_thickness / 2;
 	rc.dc->DrawLine ({ linex, l.y_top }, { linex, l.y_bottom }, rc.disabled_fore_brush, line_thickness);
-	bool canEdit = (_prop->custom_editor() != nullptr) || _prop->has_setter();
-	fore = !canEdit ? rc.disabled_fore_brush.get() : (selected ? rc.selected_fore_brush.get() : rc.fore_brush.get());
-	rc.dc->DrawTextLayout ({ l.x_value + line_thickness + text_lr_padding, l.y_top }, _value.layout, fore);
+	fore = !can_edit() ? rc.disabled_fore_brush.get() : (selected ? rc.selected_fore_brush.get() : rc.fore_brush.get());
+	rc.dc->DrawTextLayout ({ l.x_value + line_thickness + text_lr_padding, l.y_top }, _value.tl.layout, fore);
 }
 
 float value_pgitem::content_height() const
 {
-	return std::max (_name.metrics.height, _value.metrics.height);
+	return std::max (_name.metrics.height, _value.tl.metrics.height);
 }
 
 HCURSOR value_pgitem::cursor() const
 {
-	if (!_prop->has_setter() && !_prop->custom_editor())
+	if (!can_edit())
 		return ::LoadCursor(nullptr, IDC_ARROW);
 
 	if (auto bool_p = dynamic_cast<const edge::bool_p*>(_prop))

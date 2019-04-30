@@ -168,8 +168,14 @@ namespace edge
 
 		void create_value_layout_internal (IDWriteFactory* factory, IDWriteTextFormat* format, float width);
 		bool multiple_values() const;
+		bool can_edit() const;
 
 		text_layout _name;
-		text_layout _value;
+
+		struct
+		{
+			text_layout tl;
+			bool readable;
+		} _value;
 	};
 }
