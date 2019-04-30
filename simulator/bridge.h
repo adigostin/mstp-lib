@@ -200,8 +200,8 @@ public:
 	static const uint32_p      msti_count_property;
 	static const temp_string_p mst_config_id_name_property;
 	static const typed_value_collection_property<bridge, uint32_property_traits> mst_config_table_property;
-	static const uint32_p      MstConfigIdRevLevel;
-	static const config_id_digest_p  MstConfigIdDigest;
+	static const uint32_p      mst_config_id_rev_level;
+	static const config_id_digest_p  mst_config_id_digest;
 	static const uint32_p      migrate_time_property;
 	static const uint32_p      bridge_hello_time_property;
 	static const uint32_p      bridge_max_age_property;

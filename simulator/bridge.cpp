@@ -503,9 +503,9 @@ void bridge::SetMstConfigIdRevLevel (uint32_t revLevel)
 {
 	if (GetMstConfigIdRevLevel() != revLevel)
 	{
-		this->on_property_changing(&MstConfigIdRevLevel);
+		this->on_property_changing(&mst_config_id_rev_level);
 		STP_SetMstConfigRevisionLevel (_stpBridge, revLevel, GetMessageTime());
-		this->on_property_changed(&MstConfigIdRevLevel);
+		this->on_property_changed(&mst_config_id_rev_level);
 	}
 }
 
@@ -523,9 +523,9 @@ std::string bridge::GetMstConfigIdDigest() const
 
 void bridge::SetMstConfigTable (const STP_CONFIG_TABLE_ENTRY* entries, size_t entryCount)
 {
-	this->on_property_changing (&MstConfigIdDigest);
+	this->on_property_changing (&mst_config_id_digest);
 	STP_SetMstConfigTable (_stpBridge, &entries[0], (unsigned int) entryCount, GetMessageTime());
-	this->on_property_changed (&MstConfigIdDigest);
+	this->on_property_changed (&mst_config_id_digest);
 }
 
 void bridge::set_stp_enabled (bool value)
@@ -686,15 +686,15 @@ const typed_value_collection_property<bridge, uint32_property_traits> bridge::ms
 	&mst_config_table_changed,
 };
 
-const edge::uint32_p bridge::MstConfigIdRevLevel {
-	"Revision Level", &mst_group, nullptr, ui_visible::yes,
+const edge::uint32_p bridge::mst_config_id_rev_level {
+	"MstConfigRevLevel", &mst_group, nullptr, ui_visible::yes,
 	static_cast<uint32_p::member_getter_t>(&bridge::GetMstConfigIdRevLevel),
 	static_cast<uint32_p::member_setter_t>(&bridge::SetMstConfigIdRevLevel),
 	0,
 };
 
-const config_id_digest_p bridge::MstConfigIdDigest {
-	"Digest", &mst_group, nullptr, ui_visible::yes,
+const config_id_digest_p bridge::mst_config_id_digest {
+	"MstConfigDigest", &mst_group, nullptr, ui_visible::yes,
 	static_cast<temp_string_p::member_getter_t>(&bridge::GetMstConfigIdDigest),
 	nullptr,
 	std::nullopt,
@@ -792,9 +792,9 @@ const edge::property* const bridge::_properties[] = {
 	&port_count_property,
 	&msti_count_property,
 	&mst_config_id_name_property,
-	&MstConfigIdRevLevel,
+	&mst_config_id_rev_level,
 	&mst_config_table_property,
-	&MstConfigIdDigest,
+	&mst_config_id_digest,
 	&migrate_time_property,
 	&bridge_hello_time_property,
 	&bridge_max_age_property,
