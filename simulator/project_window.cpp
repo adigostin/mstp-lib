@@ -892,7 +892,7 @@ public:
 			return fileList;
 
 		// This function retrieves the list created via calls to SHAddToRecentDocs.
-		// We use the standard file dialogs througout the application, which call SHAddToRecentDocs for us.
+		// We use the standard file dialogs througout the application; they call SHAddToRecentDocs for us.
 		com_ptr<IObjectArray> objects;
 		hr = docList->GetList(APPDOCLISTTYPE::ADLT_RECENT, 16, __uuidof(IObjectArray), (void**) &objects);
 		if (FAILED(hr))
