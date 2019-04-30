@@ -12,12 +12,12 @@ namespace edge
 
 	bool bool_property_traits::from_string (std::string_view from, bool& to)
 	{
-		if ((from == "1") || ((from.size() == 4) && (_strnicmp(from.data(), "true", 4) == 0)))
+		if ((from.size() == 4) && ((*(uint32_t*)from.data() & ~0x20202020u) == 'EURT'))
 		{
 			to = true;
 			return true;
 		}
-		else if ((from == "0") || ((from.size() == 5) && (_strnicmp(from.data(), "false", 5) == 0)))
+		else if ((from.size() == 5) && ((*(uint64_t*)from.data() & ~0x2020202020u) == (((uint64_t)'E' << 32) | 'SLAF')))
 		{
 			to = false;
 			return true;

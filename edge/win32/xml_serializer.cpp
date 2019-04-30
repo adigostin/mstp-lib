@@ -5,7 +5,6 @@
 
 namespace edge
 {
-	static const _bstr_t entries_elem_name = "Entries";
 	static const _bstr_t entry_elem_name = "Entry";
 	static const _bstr_t index_attr_name = "index";
 	static const _bstr_t value_attr_name = "Value";
@@ -69,7 +68,7 @@ namespace edge
 			return nullptr;
 
 		com_ptr<IXMLDOMElement> collection_element;
-		auto hr = doc->createElement (entries_elem_name, &collection_element); assert(SUCCEEDED(hr));
+		auto hr = doc->createElement (_bstr_t(prop->_name), &collection_element); assert(SUCCEEDED(hr));
 		for (size_t i = 0; i < size; i++)
 		{
 			auto value = prop->get_value(obj, i);
