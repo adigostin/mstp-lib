@@ -287,8 +287,8 @@ HCURSOR value_pgitem::cursor() const
 }
 
 static const NVP bool_nvps[] = {
-	{ "false", 0 },
-	{ "true", 1 },
+	{ "False", 0 },
+	{ "True", 1 },
 	{ nullptr, -1 },
 };
 
