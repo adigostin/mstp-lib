@@ -1,7 +1,7 @@
 
 #include "assert.h"
 
-bool assert_function_running = false;
+volatile unsigned int assert_function_running = 0;
 
 #ifdef _MSC_VER
 	#include <Windows.h>
@@ -10,7 +10,7 @@ bool assert_function_running = false;
 
 	#pragma comment (lib, "Comctl32")
 
-
+	// From https://stackoverflow.com/a/21767578/451036
 	class MainWindowFinder
 	{
 		HWND bestHandle;
@@ -49,9 +49,8 @@ bool assert_function_running = false;
 
 	__declspec(noinline) void __stdcall assert_function (const char* expression, const char* file, unsigned line)
 	{
-		if (assert_function_running)
+		if (InterlockedCompareExchange(&assert_function_running, 1, 0))
 			return;
-		assert_function_running = true;
 
 		// We remove WM_QUIT because if it is in the queue then the message box won't display.
 		MSG msg;
@@ -78,8 +77,8 @@ bool assert_function_running = false;
 		static constexpr TASKDIALOG_BUTTON Buttons[] =
 		{
 			{ BUTTON_ID_CLOSE_APP,	L"Close Application\nYou will lose unsaved work." },
-			{ BUTTON_ID_IGNORE,		L"Ignore Error\nApplication might eventually crash." },
-			{ BUTTON_ID_DEBUG,		L"Debug Application" },
+			{ BUTTON_ID_IGNORE,		L"Ignore Error\nThere's a chance the application will continue to work normally." },
+			{ BUTTON_ID_DEBUG,		L"Debug Application\nThis option will launch the JIT debugger if one is configured on this machine, and if Windows is in the mood for it after its latest patch." },
 		};
 
 		TASKDIALOGCONFIG config;
@@ -102,17 +101,15 @@ bool assert_function_running = false;
 
 		switch (pressedButtonID)
 		{
-			case BUTTON_ID_CLOSE_APP:
-				TerminateProcess (GetCurrentProcess(), ERROR_ASSERTION_FAILURE);
-
 			case BUTTON_ID_DEBUG:
-			case IDCANCEL:
 				__debugbreak();
 				break;
 
 			case BUTTON_ID_IGNORE:
+			case IDCANCEL:
 				break;
 
+			case BUTTON_ID_CLOSE_APP:
 			default:
 				TerminateProcess (GetCurrentProcess(), ERROR_ASSERTION_FAILURE);
 		}
@@ -120,7 +117,7 @@ bool assert_function_running = false;
 		if (bQuit)
 			PostQuitMessage((int) msg.wParam);
 
-		assert_function_running = false;
+		assert_function_running = 0;
 	}
 #else
 	#error

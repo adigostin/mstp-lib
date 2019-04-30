@@ -1,7 +1,7 @@
 
 #pragma once
 
-extern bool assert_function_running;
+extern volatile unsigned int assert_function_running;
 
 #ifdef _MSC_VER
 	extern "C" __declspec(dllimport) int __stdcall IsDebuggerPresent(void);

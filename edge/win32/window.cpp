@@ -59,11 +59,11 @@ window::~window()
 //static
 LRESULT CALLBACK window::WindowProcStatic (HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	//if (AssertFunctionRunning)
-	//{
-	//	// Let's try not to run application code while the assertion dialog is shown. We'll probably mess things up even more.
-	//	return DefWindowProc (hwnd, uMsg, wParam, lParam);
-	//}
+	if (assert_function_running)
+	{
+		// Let's try not to run application code while the assertion dialog is shown. We'll probably mess things up even more.
+		return DefWindowProc (hwnd, uMsg, wParam, lParam);
+	}
 
 	window* wnd;
 	if (uMsg == WM_NCCREATE)
