@@ -535,12 +535,14 @@ void bridge::set_stp_enabled (bool value)
 		this->on_property_changing(&stp_enabled_property);
 		STP_StartBridge (_stpBridge, GetMessageTime());
 		this->on_property_changed(&stp_enabled_property);
+		this->event_invoker<invalidate_e>()(this);
 	}
 	else if (!value && STP_IsBridgeStarted(_stpBridge))
 	{
 		this->on_property_changing(&stp_enabled_property);
 		STP_StopBridge (_stpBridge, GetMessageTime());
 		this->on_property_changed(&stp_enabled_property);
+		this->event_invoker<invalidate_e>()(this);
 	}
 }
 
