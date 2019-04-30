@@ -312,8 +312,7 @@ namespace edge
 				layerParams.layerOptions = D2D1_LAYER_OPTIONS1_IGNORE_ALPHA | D2D1_LAYER_OPTIONS1_INITIALIZE_FROM_BACKGROUND;
 				_d2dDeviceContext->PushLayer(&layerParams, nullptr);
 				// Note AG: without D2D1_LAYER_OPTIONS1_INITIALIZE_FROM_BACKGROUND Direct2D calls ClearView,
-				// which on the Marine PC is simulated in software and is very slow.
-				// We clear the render target anyway before drawing anything, so we don't care whether it's initialized or not.
+				// which some graphic drivers implement in software, which is extremely slow. (Intel integrated for example.)
 			}
 			#pragma endregion
 		}
