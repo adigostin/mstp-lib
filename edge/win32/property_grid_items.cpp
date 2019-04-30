@@ -262,7 +262,7 @@ void value_pgitem::render (const render_context& rc, const item_layout& l, float
 
 	float linex = l.x_value + line_thickness / 2;
 	rc.dc->DrawLine ({ linex, l.y_top }, { linex, l.y_bottom }, rc.disabled_fore_brush, line_thickness);
-	bool canEdit = /*(_prop->_customEditor != nullptr) || */_prop->has_setter();
+	bool canEdit = (_prop->custom_editor() != nullptr) || _prop->has_setter();
 	fore = !canEdit ? rc.disabled_fore_brush.get() : (selected ? rc.selected_fore_brush.get() : rc.fore_brush.get());
 	rc.dc->DrawTextLayout ({ l.x_value + line_thickness + text_lr_padding, l.y_top }, _value.layout, fore);
 }
