@@ -5,8 +5,6 @@
 #define _USE_MATH_DEFINES
 #define WIN32_LEAN_AND_MEAN   // Exclude rarely-used stuff from Windows headers
 #define _WIN7_PLATFORM_UPDATE // Needed by wincodec.h
-#define _HAS_EXCEPTIONS 0
-#define TCB_SPAN_NO_EXCEPTIONS
 
 #include "targetver.h"
 
@@ -28,8 +26,10 @@
 #include <comdef.h>
 #include <Commctrl.h>
 #include <cstdint>
+#include <cstdlib>
 #include <d2d1_1.h>
 #include <d3d11_1.h>
+#include <exception>
 #include <dwrite_1.h>
 #include <functional>
 #include <intrin.h>
@@ -42,8 +42,7 @@
 #include <random>
 #include <set>
 #include <sstream>
-#include <stdint.h>
-#include <stdlib.h>
+#include <stdexcept>
 #include <thread>
 #include <typeindex>
 #include <unordered_map>
