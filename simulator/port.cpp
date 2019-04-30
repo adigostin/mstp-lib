@@ -32,10 +32,32 @@ const edge::NVP admin_p2p_nvps[] =
 port::port (class bridge* bridge, unsigned int portIndex, enum side side, float offset)
 	: _bridge(bridge), _portIndex(portIndex), _side(side), _offset(offset)
 {
+	// No need to call remove_handler since a bridge and its bridge_trees are deleted at the same time.
+	_bridge->property_changing().add_handler(&on_bridge_property_changing, this);
+	_bridge->property_changed().add_handler(&on_bridge_property_changed, this);
+
 	for (unsigned int treeIndex = 0; treeIndex < (unsigned int) bridge->trees().size(); treeIndex++)
 	{
 		auto tree = unique_ptr<port_tree>(new port_tree(this, treeIndex));
 		_trees.push_back (move(tree));
+	}
+}
+
+void port::on_bridge_property_changing (void* arg, object* obj, const property_change_args& args)
+{
+	auto bt = static_cast<port*>(arg);
+	if (args.property == &bridge::stp_enabled_property)
+	{
+		// Currently no port property needs to change when STP is enabled/disabled.
+	}
+}
+
+void port::on_bridge_property_changed (void* arg, object* obj, const property_change_args& args)
+{
+	auto bt = static_cast<port*>(arg);
+	if (args.property == &bridge::stp_enabled_property)
+	{
+		// Currently no port property needs to change when STP is enabled/disabled.
 	}
 }
 

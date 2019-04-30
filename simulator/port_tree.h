@@ -13,7 +13,9 @@ using edge::temp_string_p;
 using edge::property;
 using edge::type;
 using edge::xtype;
+using edge::value_property;
 using edge::typed_object_collection_property;
+using edge::property_change_args;
 
 extern const edge::NVP port_priority_nvps[];
 extern const char port_priority_type_name[];
@@ -23,6 +25,8 @@ extern const edge::NVP port_role_nvps[];
 extern const char port_role_type_name[];
 using port_role_p = edge::enum_property<STP_PORT_ROLE, port_role_type_name, port_role_nvps>;
 
+extern const char stp_disabled_text[];
+
 class port_tree : public edge::object
 {
 	using base = edge::object;
@@ -30,13 +34,11 @@ class port_tree : public edge::object
 	port* const _port;
 	unsigned int const _treeIndex;
 	
-public:
-	port_tree (port* port, unsigned int treeIndex)
-		: _port(port), _treeIndex(treeIndex)
-	{ }
+	static void on_bridge_property_changing (void* arg, object* obj, const property_change_args& args);
+	static void on_bridge_property_changed (void* arg, object* obj, const property_change_args& args);
 
-	HRESULT Serialize (IXMLDOMDocument3* doc, edge::com_ptr<IXMLDOMElement>& elementOut) const;
-	HRESULT Deserialize (IXMLDOMElement* portTreeElement);
+public:
+	port_tree (port* port, unsigned int treeIndex);
 
 	uint32_t priority() const;
 	void set_priority (uint32_t priority);

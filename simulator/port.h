@@ -35,6 +35,9 @@ class port : public renderable_object
 	static constexpr unsigned int MissedLinkPulseCounterMax = 5;
 	unsigned int _missedLinkPulseCounter = MissedLinkPulseCounterMax; // _missedLinkPulseCounter equal to MissedLinkPulseCounterMax means macOperational=false
 
+	static void on_bridge_property_changing (void* arg, object* obj, const property_change_args& args);
+	static void on_bridge_property_changed (void* arg, object* obj, const property_change_args& args);
+
 public:
 	port (class bridge* bridge, unsigned int portIndex, side side, float offset);
 

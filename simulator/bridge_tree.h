@@ -6,8 +6,9 @@
 class bridge;
 
 using edge::object;
-using uint32_p = edge::uint32_p;
-using temp_string_p = edge::temp_string_p;
+using edge::uint32_p;
+using edge::temp_string_p;
+using edge::property_change_args;
 
 extern const edge::NVP bridge_priority_nvps[];
 extern const char bridge_priority_type_name[];
@@ -26,6 +27,8 @@ class bridge_tree : public object
 	friend class bridge;
 
 	void on_topology_change (unsigned int timestamp);
+	static void on_bridge_property_changing (void* arg, object* obj, const property_change_args& args);
+	static void on_bridge_property_changed (void* arg, object* obj, const property_change_args& args);
 
 public:
 	bridge_tree (bridge* parent, uint32_t tree_index);

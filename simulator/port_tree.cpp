@@ -40,6 +40,39 @@ const edge::NVP port_role_nvps[] =
 	{ nullptr, 0 }
 };
 
+const char stp_disabled_text[] = "(STP disabled)";
+
+port_tree::port_tree (port* port, unsigned int treeIndex)
+	: _port(port), _treeIndex(treeIndex)
+{
+	// No need to call remove_handler since a bridge and its bridge_trees are deleted at the same time.
+	_port->bridge()->property_changing().add_handler(&on_bridge_property_changing, this);
+	_port->bridge()->property_changed().add_handler(&on_bridge_property_changed, this);
+}
+
+
+void port_tree::on_bridge_property_changing (void* arg, object* obj, const property_change_args& args)
+{
+	auto bt = static_cast<port_tree*>(arg);
+	if (args.property == &bridge::stp_enabled_property)
+	{
+		bt->on_property_changing(&learning_property);
+		bt->on_property_changing(&forwarding_property);
+		bt->on_property_changing(&role_property);
+	}
+}
+
+void port_tree::on_bridge_property_changed (void* arg, object* obj, const property_change_args& args)
+{
+	auto bt = static_cast<port_tree*>(arg);
+	if (args.property == &bridge::stp_enabled_property)
+	{
+		bt->on_property_changed(&role_property);
+		bt->on_property_changed(&forwarding_property);
+		bt->on_property_changed(&learning_property);
+	}
+}
+
 uint32_t port_tree::priority() const
 {
 	return STP_GetPortPriority (_port->bridge()->stp_bridge(), _port->port_index(), _treeIndex);
@@ -57,16 +90,22 @@ void port_tree::set_priority (uint32_t priority)
 
 bool port_tree::learning() const
 {
+	if (!STP_IsBridgeStarted(_port->bridge()->stp_bridge()))
+		throw std::logic_error(stp_disabled_text);
 	return STP_GetPortLearning(_port->bridge()->stp_bridge(), _port->port_index(), _treeIndex);
 }
 
 bool port_tree::forwarding() const
 {
+	if (!STP_IsBridgeStarted(_port->bridge()->stp_bridge()))
+		throw std::logic_error(stp_disabled_text);
 	return STP_GetPortForwarding(_port->bridge()->stp_bridge(), _port->port_index(), _treeIndex);
 }
 
 STP_PORT_ROLE port_tree::role() const
 {
+	if (!STP_IsBridgeStarted(_port->bridge()->stp_bridge()))
+		throw std::logic_error(stp_disabled_text);
 	return STP_GetPortRole (_port->bridge()->stp_bridge(), _port->port_index(), _treeIndex);
 }
 

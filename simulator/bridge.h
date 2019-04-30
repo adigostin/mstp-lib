@@ -192,6 +192,7 @@ private:
 	bridge_tree* tree (size_t index) const { return _trees[index].get(); }
 	port* port (size_t index) const { return _ports[index].get(); }
 
+public:
 	static const mac_address_p bridge_address_property;
 	static const bool_p        stp_enabled_property;
 	static const stp_version_p stp_version_property;
