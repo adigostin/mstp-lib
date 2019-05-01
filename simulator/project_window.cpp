@@ -553,7 +553,7 @@ public:
 
 		if (((HIWORD(wParam) == 0) || (HIWORD(wParam) == 1)) && (LOWORD(wParam) == ID_FILE_NEW))
 		{
-			auto project = project_factory();
+			auto project = _app->project_factory()();
 			project_window_create_params params = 
 			{
 				_app, project, true, true, 1, SW_SHOW, _d3d_dc, _dwrite_factory
@@ -612,7 +612,11 @@ public:
 			}
 		}
 
-		std::shared_ptr<project_i> projectToLoadTo = (_project->bridges().empty() && _project->wires().empty()) ? _project : project_factory();
+		std::shared_ptr<project_i> projectToLoadTo;
+		if (_project->bridges().empty() && _project->wires().empty())
+			projectToLoadTo = _project;
+		else
+			projectToLoadTo = _app->project_factory()();
 
 		auto hr = projectToLoadTo->load(openPath);
 		if (FAILED(hr))

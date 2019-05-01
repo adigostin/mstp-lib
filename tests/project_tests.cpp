@@ -5,7 +5,7 @@
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
-TEST_CLASS(bridge_tests)
+TEST_CLASS(project_tests)
 {
 public:
 	TEST_METHOD(TestMethod1)

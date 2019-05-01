@@ -181,7 +181,6 @@ struct __declspec(novtable) project_i
 	port* port_at (connected_wire_end end) const;
 };
 using project_factory_t = std::shared_ptr<project_i>(*const)();
-extern const project_factory_t project_factory;
 
 // ============================================================================
 
@@ -220,7 +219,8 @@ struct simulator_app_i
 	virtual project_window_removed_e::subscriber project_window_removed() = 0;
 	virtual selection_factory_t selection_factory() const = 0;
 	virtual edit_window_factory_t edit_window_factory() const = 0;
-	virtual const project_window_factory_t project_window_factory() const = 0;
+	virtual project_window_factory_t project_window_factory() const = 0;
+	virtual project_factory_t project_factory() const = 0;
 };
 
 // ============================================================================
