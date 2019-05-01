@@ -1,4 +1,4 @@
-
+﻿
 #pragma once
 
 #define NOMINMAX
@@ -16,23 +16,13 @@
 #define new new(_CLIENT_BLOCK, __FILE__, __LINE__)
 #endif
 
-#include <Windows.h>
-#include <windowsx.h>
-#undef DrawText
-
 #include <algorithm>
 #include <array>
 #include <charconv>
-#include <comdef.h>
-#include <Commctrl.h>
 #include <cstdint>
 #include <cstdlib>
-#include <d2d1_1.h>
-#include <d3d11_1.h>
 #include <exception>
-#include <dwrite_1.h>
 #include <functional>
-#include <intrin.h>
 #include <iomanip>
 #include <locale>
 #include <memory>
@@ -49,12 +39,20 @@
 #include <unordered_set>
 #include <variant>
 
+#include <comdef.h>
+#include <Commctrl.h>
+#include <d2d1_1.h>
+#include <d3d11_1.h>
+#include <dwrite_1.h>
+#include <intrin.h>
 #include <MsXml6.h>
 #include <ShlObj.h>
 #include <Shlwapi.h>
 #include <Unknwn.h>
 #include <VersionHelpers.h>
 #include <wincodec.h>
+#include <Windows.h>
+#include <windowsx.h>
 
 #include "assert.h"
 #include "span.hpp"
