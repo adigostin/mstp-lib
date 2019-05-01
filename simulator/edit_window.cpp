@@ -379,7 +379,7 @@ public:
 		{
 			bool anyPortConnected = false;
 			for (auto& b : _project->bridges())
-				anyPortConnected |= any_of (b->GetPorts().begin(), b->GetPorts().end(),
+				anyPortConnected |= any_of (b->ports().begin(), b->ports().end(),
 											[this](const unique_ptr<port>& p) { return _project->GetWireConnectedToPort(p.get()).first != nullptr; });
 
 			if (!anyPortConnected)

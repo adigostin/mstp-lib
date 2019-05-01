@@ -92,7 +92,7 @@ std::unique_ptr<bridge> project_i::remove_bridge (bridge* b)
 port* project_i::port_at (connected_wire_end end) const
 {
 	auto bridge = bridges()[end.bridge_index].get();
-	auto port = bridge->GetPorts()[end.port_index].get();
+	auto port = bridge->ports()[end.port_index].get();
 	return port;
 }
 #pragma endregion

@@ -111,7 +111,7 @@ public:
 	static void OnPacketTransmit (void* callbackArg, bridge* bridge, size_t txPortIndex, PacketInfo&& pi)
 	{
 		auto project = static_cast<class project*>(callbackArg);
-		auto txPort = bridge->GetPorts().at(txPortIndex).get();
+		auto txPort = bridge->ports().at(txPortIndex).get();
 		auto rxPort = project->FindConnectedPort(txPort);
 		if (rxPort != nullptr)
 		{
@@ -123,7 +123,7 @@ public:
 	static void OnLinkPulse (void* callbackArg, bridge* bridge, size_t txPortIndex, unsigned int timestamp)
 	{
 		auto project = static_cast<class project*>(callbackArg);
-		auto txPort = bridge->GetPorts().at(txPortIndex).get();
+		auto txPort = bridge->ports().at(txPortIndex).get();
 		auto rxPort = project->FindConnectedPort(txPort);
 		if (rxPort != nullptr)
 			rxPort->bridge()->ProcessLinkPulse(rxPort->port_index(), timestamp);
@@ -164,11 +164,11 @@ public:
 					{
 						txPorts.insert(txPort);
 
-						for (unsigned int i = 0; i < (unsigned int) rx->bridge()->GetPorts().size(); i++)
+						for (unsigned int i = 0; i < (unsigned int) rx->bridge()->ports().size(); i++)
 						{
 							if ((i != rx->port_index()) && rx->IsForwarding(vlanNumber))
 							{
-								port* otherTxPort = rx->bridge()->GetPorts()[i].get();
+								port* otherTxPort = rx->bridge()->ports()[i].get();
 								if (otherTxPort == targetPort)
 									return true;
 

@@ -106,7 +106,7 @@ public:
 	void SetCoordsForInteriorPort (port* port, D2D1_POINT_2F proposedLocation);
 
 	const std::vector<std::unique_ptr<bridge_tree>>& trees() const { return _trees; }
-	const std::vector<std::unique_ptr<port>>& GetPorts() const { return _ports; }
+	const std::vector<std::unique_ptr<port>>& ports() const { return _ports; }
 
 	void Render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsigned int vlanNumber, const D2D1_COLOR_F& configIdColor) const;
 
