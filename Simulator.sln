@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26430.6
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "StpSimulator", "simulator\simulator.vcxproj", "{072C8C7E-79FA-413C-A33C-EDDB256D72BE}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "simulator", "simulator\simulator.vcxproj", "{072C8C7E-79FA-413C-A33C-EDDB256D72BE}"
 EndProject
 Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "_help", "_help\", "{FF53569A-1D66-4F24-9E1A-D0598E5B56EF}"
 	ProjectSection(WebsiteProperties) = preProject
@@ -29,6 +29,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mstp-lib", "mstp-lib.vcxproj", "{1DC9DD21-A2C5-46FC-B13E-C3382471BED2}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "edge", "edge\edge.vcxproj", "{C4C530F1-E67C-48A2-81ED-41E428F17ED9}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tests", "tests\tests.vcxproj", "{4C5CA0AB-18CA-47FA-A989-176A37CACFB4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -72,6 +74,14 @@ Global
 		{C4C530F1-E67C-48A2-81ED-41E428F17ED9}.Release|Win32.Build.0 = Release|Win32
 		{C4C530F1-E67C-48A2-81ED-41E428F17ED9}.Release|x64.ActiveCfg = Release|x64
 		{C4C530F1-E67C-48A2-81ED-41E428F17ED9}.Release|x64.Build.0 = Release|x64
+		{4C5CA0AB-18CA-47FA-A989-176A37CACFB4}.Debug|Win32.ActiveCfg = Debug|Win32
+		{4C5CA0AB-18CA-47FA-A989-176A37CACFB4}.Debug|Win32.Build.0 = Debug|Win32
+		{4C5CA0AB-18CA-47FA-A989-176A37CACFB4}.Debug|x64.ActiveCfg = Debug|x64
+		{4C5CA0AB-18CA-47FA-A989-176A37CACFB4}.Debug|x64.Build.0 = Debug|x64
+		{4C5CA0AB-18CA-47FA-A989-176A37CACFB4}.Release|Win32.ActiveCfg = Release|Win32
+		{4C5CA0AB-18CA-47FA-A989-176A37CACFB4}.Release|Win32.Build.0 = Release|Win32
+		{4C5CA0AB-18CA-47FA-A989-176A37CACFB4}.Release|x64.ActiveCfg = Release|x64
+		{4C5CA0AB-18CA-47FA-A989-176A37CACFB4}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

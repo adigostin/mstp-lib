@@ -107,6 +107,11 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
+    <PreLinkEvent>
+      <Command>@ECHO ON
+@ECHO "$(VC_ExecutablePath_x86)\lib.exe" /out:"$(OutDir)$(ProjectName).lib" "$(IntermediateOutputPath)*.obj"
+"$(VC_ExecutablePath_x86)\lib.exe" /out:"$(OutDir)$(ProjectName).lib" "$(IntermediateOutputPath)*.obj"</Command>
+    </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
