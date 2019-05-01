@@ -29,14 +29,14 @@ const edge::NVP admin_p2p_nvps[] =
 	{ 0, 0 },
 };
 
-port::port (class bridge* bridge, unsigned int portIndex, enum side side, float offset)
-	: _bridge(bridge), _portIndex(portIndex), _side(side), _offset(offset)
+port::port (class bridge* bridge, size_t port_index, enum side side, float offset)
+	: _bridge(bridge), _port_index(port_index), _side(side), _offset(offset)
 {
 	// No need to call remove_handler since a bridge and its bridge_trees are deleted at the same time.
 	_bridge->property_changing().add_handler(&on_bridge_property_changing, this);
 	_bridge->property_changed().add_handler(&on_bridge_property_changed, this);
 
-	for (unsigned int treeIndex = 0; treeIndex < (unsigned int) bridge->trees().size(); treeIndex++)
+	for (size_t treeIndex = 0; treeIndex < bridge->trees().size(); treeIndex++)
 	{
 		auto tree = unique_ptr<port_tree>(new port_tree(this, treeIndex));
 		_trees.push_back (move(tree));
@@ -252,13 +252,13 @@ void port::Render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned
 	auto treeIndex  = STP_GetTreeIndexFromVlanNumber(b, vlanNumber);
 	if (STP_IsBridgeStarted (b))
 	{
-		auto role       = STP_GetPortRole (b, _portIndex, treeIndex);
-		auto learning   = STP_GetPortLearning (b, _portIndex, treeIndex);
-		auto forwarding = STP_GetPortForwarding (b, _portIndex, treeIndex);
-		auto operEdge   = STP_GetPortOperEdge (b, _portIndex);
+		auto role       = STP_GetPortRole (b, (unsigned int)_port_index, treeIndex);
+		auto learning   = STP_GetPortLearning (b, (unsigned int)_port_index, treeIndex);
+		auto forwarding = STP_GetPortForwarding (b, (unsigned int)_port_index, treeIndex);
+		auto operEdge   = STP_GetPortOperEdge (b, (unsigned int)_port_index);
 		RenderExteriorStpPort (rt, dos, role, learning, forwarding, operEdge);
 
-		if (STP_GetTxCount(b, _portIndex) == STP_GetTxHoldCount(b))
+		if (STP_GetTxCount(b, (unsigned int)_port_index) == STP_GetTxHoldCount(b))
 		{
 			auto layout = edge::text_layout::create (dos._dWriteFactory, dos._smallTextFormat, "txCount=TxHoldCount");
 			D2D1_MATRIX_3X2_F old;
@@ -284,7 +284,7 @@ void port::Render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned
 	auto hr = dos._dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 9, L"en-US", &format); assert(SUCCEEDED(hr));
 	com_ptr<IDWriteTextLayout> layout;
 	wstringstream ss;
-	ss << setfill(L'0') << setw(4) << hex << STP_GetPortIdentifier(b, _portIndex, treeIndex);
+	ss << setfill(L'0') << setw(4) << hex << STP_GetPortIdentifier(b, (unsigned int)_port_index, treeIndex);
 	auto portIdText = ss.str();
 	hr = dos._dWriteFactory->CreateTextLayout (portIdText.c_str(), (UINT32) portIdText.length(), format, 10000, 10000, &layout); assert(SUCCEEDED(hr));
 	DWRITE_TEXT_METRICS metrics;
@@ -356,7 +356,7 @@ bool port::IsForwarding (unsigned int vlanNumber) const
 		return true;
 
 	auto treeIndex = STP_GetTreeIndexFromVlanNumber(stpb, vlanNumber);
-	return STP_GetPortForwarding (stpb, (unsigned int) _portIndex, treeIndex);
+	return STP_GetPortForwarding (stpb, (unsigned int)_port_index, treeIndex);
 }
 
 void port::SetSideAndOffset (enum side side, float offset)
@@ -376,39 +376,39 @@ bool port::GetMacOperational() const
 
 bool port::auto_edge() const
 {
-	return STP_GetPortAutoEdge (_bridge->stp_bridge(), _portIndex);
+	return STP_GetPortAutoEdge (_bridge->stp_bridge(), (unsigned int)_port_index);
 }
 
 void port::set_auto_edge (bool autoEdge)
 {
-	STP_SetPortAutoEdge (_bridge->stp_bridge(), _portIndex, autoEdge, (unsigned int) GetMessageTime());
+	STP_SetPortAutoEdge (_bridge->stp_bridge(), (unsigned int)_port_index, autoEdge, (unsigned int) GetMessageTime());
 }
 
 bool port::admin_edge() const
 {
-	return STP_GetPortAdminEdge (_bridge->stp_bridge(), _portIndex);
+	return STP_GetPortAdminEdge (_bridge->stp_bridge(), (unsigned int)_port_index);
 }
 
 void port::set_admin_edge (bool adminEdge)
 {
-	STP_SetPortAdminEdge (_bridge->stp_bridge(), _portIndex, adminEdge, (unsigned int) GetMessageTime());
+	STP_SetPortAdminEdge (_bridge->stp_bridge(), (unsigned int)_port_index, adminEdge, (unsigned int) GetMessageTime());
 }
 
 unsigned int port::GetDetectedPortPathCost() const
 {
-	return STP_GetDetectedPortPathCost(_bridge->stp_bridge(), _portIndex);
+	return STP_GetDetectedPortPathCost(_bridge->stp_bridge(), (unsigned int)_port_index);
 }
 
 unsigned int port::GetAdminExternalPortPathCost() const
 {
-	return STP_GetAdminExternalPortPathCost (_bridge->stp_bridge(), _portIndex);
+	return STP_GetAdminExternalPortPathCost (_bridge->stp_bridge(), (unsigned int)_port_index);
 }
 
 void port::SetAdminExternalPortPathCost(unsigned int adminExternalPortPathCost)
 {
 	this->on_property_changing (&AdminExternalPortPathCost);
 	this->on_property_changing (&ExternalPortPathCost);
-	STP_SetAdminExternalPortPathCost (_bridge->stp_bridge(), _portIndex, adminExternalPortPathCost, GetMessageTime());
+	STP_SetAdminExternalPortPathCost (_bridge->stp_bridge(), (unsigned int)_port_index, adminExternalPortPathCost, GetMessageTime());
 	this->on_property_changed (&ExternalPortPathCost);
 	this->on_property_changed (&AdminExternalPortPathCost);
 }
@@ -416,31 +416,31 @@ void port::SetAdminExternalPortPathCost(unsigned int adminExternalPortPathCost)
 unsigned int port::GetExternalPortPathCost() const
 {
 	unsigned int treeIndex = 0; // CIST
-	return STP_GetExternalPortPathCost (_bridge->stp_bridge(), _portIndex);
+	return STP_GetExternalPortPathCost (_bridge->stp_bridge(), (unsigned int)_port_index);
 }
 
 bool port::detected_p2p() const
 {
-	return STP_GetDetectedPointToPointMAC(_bridge->stp_bridge(), _portIndex);
+	return STP_GetDetectedPointToPointMAC(_bridge->stp_bridge(), (unsigned int)_port_index);
 }
 
 STP_ADMIN_P2P port::admin_p2p() const
 {
-	return STP_GetAdminPointToPointMAC(_bridge->stp_bridge(), _portIndex);
+	return STP_GetAdminPointToPointMAC(_bridge->stp_bridge(), (unsigned int)_port_index);
 }
 
 void port::set_admin_p2p (STP_ADMIN_P2P admin_p2p)
 {
 	this->on_property_changing (&admin_p2p_property);
 	this->on_property_changing (&oper_p2p_property);
-	STP_SetAdminPointToPointMAC (_bridge->stp_bridge(), _portIndex, admin_p2p, ::GetMessageTime());
+	STP_SetAdminPointToPointMAC (_bridge->stp_bridge(), (unsigned int)_port_index, admin_p2p, ::GetMessageTime());
 	this->on_property_changed (&oper_p2p_property);
 	this->on_property_changed (&admin_p2p_property);
 }
 
 bool port::oper_p2p() const
 {
-	return STP_GetOperPointToPointMAC(_bridge->stp_bridge(), _portIndex);
+	return STP_GetOperPointToPointMAC(_bridge->stp_bridge(), (unsigned int)_port_index);
 }
 
 const side_p port::side_property {

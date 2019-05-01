@@ -43,11 +43,11 @@ public:
 		_completed = true;
 	}
 
-	void recreate_bridge (unsigned int numberOfPorts)
+	void recreate_bridge (size_t port_count)
 	{
 		auto centerX = _bridge->GetLeft() + _bridge->GetWidth() / 2;
 		auto centerY = _bridge->GetTop() + _bridge->GetHeight() / 2;
-		_bridge.reset (new bridge(numberOfPorts, _bridge->msti_count(), _bridge->bridge_address()));
+		_bridge.reset (new bridge(port_count, _bridge->msti_count(), _bridge->bridge_address()));
 		_bridge->SetLocation (centerX - _bridge->GetWidth() / 2, centerY - _bridge->GetHeight() / 2);
 		::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
 	}

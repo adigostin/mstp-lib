@@ -126,13 +126,13 @@ LRESULT CALLBACK bridge::HelperWindow::SubclassProc (HWND hWnd, UINT uMsg, WPARA
 }
 #pragma endregion
 
-bridge::bridge (uint32_t portCount, uint32_t mstiCount, mac_address macAddress)
+bridge::bridge (size_t port_count, size_t msti_count, mac_address macAddress)
 {
-	for (unsigned int i = 0; i < 1 + mstiCount; i++)
+	for (size_t i = 0; i < 1 + msti_count; i++)
 		_trees.push_back (make_unique<bridge_tree>(this, i));
 
 	float offset = 0;
-	for (unsigned int portIndex = 0; portIndex < portCount; portIndex++)
+	for (size_t portIndex = 0; portIndex < port_count; portIndex++)
 	{
 		offset += (port::PortToPortSpacing / 2 + port::InteriorWidth / 2);
 		auto port = unique_ptr<class port>(new class port(this, portIndex, side::bottom, offset));
@@ -145,7 +145,7 @@ bridge::bridge (uint32_t portCount, uint32_t mstiCount, mac_address macAddress)
 	_width = max (offset, MinWidth);
 	_height = DefaultHeight;
 
-	_stpBridge = STP_CreateBridge (portCount, mstiCount, max_vlan_number, &StpCallbacks, macAddress.data(), 256);
+	_stpBridge = STP_CreateBridge ((unsigned int)port_count, (unsigned int)msti_count, max_vlan_number, &StpCallbacks, macAddress.data(), 256);
 	STP_EnableLogging (_stpBridge, true);
 	STP_SetApplicationContext (_stpBridge, this);
 
@@ -655,16 +655,16 @@ const stp_version_p bridge::stp_version_property {
 	STP_VERSION_RSTP,
 };
 
-const uint32_p bridge::port_count_property {
+const size_p bridge::port_count_property {
 	"PortCount", nullptr, nullptr, ui_visible::yes,
-	static_cast<uint32_p::member_getter_t>(&port_count),
+	static_cast<size_p::member_getter_t>(&port_count),
 	nullptr,
 	std::nullopt,
 };
 
-const edge::uint32_p bridge::msti_count_property {
+const size_p bridge::msti_count_property {
 	"MstiCount", nullptr, nullptr, ui_visible::yes,
-	static_cast<uint32_p::member_getter_t>(&msti_count),
+	static_cast<size_p::member_getter_t>(&msti_count),
 	nullptr,
 	std::nullopt,
 };
@@ -806,11 +806,11 @@ const edge::property* const bridge::_properties[] = {
 	&ports_property,
 };
 
-const xtype<bridge, uint32_p, uint32_p, mac_address_p>  bridge::_type = {
+const xtype<bridge, size_p, size_p, mac_address_p>  bridge::_type = {
 	"Bridge",
 	&base::_type,
 	_properties,
-	[](uint32_t port_count, uint32_t msti_count, mac_address address) { return new bridge(port_count, msti_count, address); },
+	[](size_t port_count, size_t msti_count, mac_address address) { return new bridge(port_count, msti_count, address); },
 	&port_count_property,
 	&msti_count_property,
 	&bridge_address_property,

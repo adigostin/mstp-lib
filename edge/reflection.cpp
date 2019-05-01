@@ -26,6 +26,21 @@ namespace edge
 			return false;
 	}
 
+	bool int32_property_traits::from_string (std::string_view from, int32_t& to)
+	{
+		if (from.empty())
+			return false;
+
+		char* endPtr;
+		long value = std::strtol (from.data(), &endPtr, 10);
+
+		if (endPtr != from.data() + from.length())
+			return false;
+
+		to = value;
+		return true;
+	}
+
 	bool uint32_property_traits::from_string (std::string_view from, uint32_t& to)
 	{
 		if (from.empty())
@@ -41,19 +56,32 @@ namespace edge
 		return true;
 	}
 
-	bool int32_property_traits::from_string (std::string_view from, int32_t& to)
+	bool uint64_property_traits::from_string (std::string_view from, uint64_t& to)
 	{
 		if (from.empty())
 			return false;
 
 		char* endPtr;
-		long value = std::strtol (from.data(), &endPtr, 10);
+		unsigned long long value = std::strtoull (from.data(), &endPtr, 10);
 
 		if (endPtr != from.data() + from.length())
 			return false;
 
 		to = value;
 		return true;
+	}
+
+	bool size_property_traits::from_string (std::string_view from, size_t&to)
+	{
+	#if defined(_WIN32) || defined(_WIN64)
+		#ifdef _WIN64
+			return uint64_property_traits::from_string(from, to);
+		#else
+			return uint32_property_traits::from_string(from, to);
+		#endif
+	#else
+		#error
+	#endif
 	}
 
 	bool float_property_traits::from_string (std::string_view from, float& to)

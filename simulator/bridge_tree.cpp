@@ -6,8 +6,8 @@
 using namespace std;
 using namespace edge;
 
-bridge_tree::bridge_tree (bridge* parent, uint32_t treeIndex)
-	: _parent(parent), _treeIndex(treeIndex)
+bridge_tree::bridge_tree (bridge* parent, size_t tree_index)
+	: _parent(parent), _tree_index(tree_index)
 {
 	// No need to call remove_handler since a bridge and its bridge_trees are deleted at the same time.
 	_parent->property_changing().add_handler(&on_bridge_property_changing, this);
@@ -45,7 +45,7 @@ void bridge_tree::on_topology_change (unsigned int timestamp)
 
 uint32_t bridge_tree::bridge_priority() const
 {
-	return STP_GetBridgePriority (_parent->stp_bridge(), _treeIndex);
+	return STP_GetBridgePriority (_parent->stp_bridge(), (unsigned int)_tree_index);
 }
 
 void bridge_tree::set_bridge_priority (uint32_t priority)
@@ -53,7 +53,7 @@ void bridge_tree::set_bridge_priority (uint32_t priority)
 	if (bridge_priority() != priority)
 	{
 		this->on_property_changing(&bridge_priority_property);
-		STP_SetBridgePriority (_parent->stp_bridge(), _treeIndex, (unsigned short) priority, GetMessageTime());
+		STP_SetBridgePriority (_parent->stp_bridge(), (unsigned int)_tree_index, (unsigned short) priority, GetMessageTime());
 		this->on_property_changed(&bridge_priority_property);
 	}
 }
@@ -61,7 +61,7 @@ void bridge_tree::set_bridge_priority (uint32_t priority)
 array<unsigned char, 36> bridge_tree::root_priorty_vector() const
 {
 	array<unsigned char, 36> prioVector;
-	STP_GetRootPriorityVector(_parent->stp_bridge(), _treeIndex, prioVector.data());
+	STP_GetRootPriorityVector(_parent->stp_bridge(), (unsigned int)_tree_index, prioVector.data());
 	return prioVector;
 }
 
@@ -152,35 +152,35 @@ std::string bridge_tree::GetReceivingPortId() const
 uint32_t bridge_tree::hello_time() const
 {
 	unsigned short ht;
-	STP_GetRootTimes(_parent->stp_bridge(), _treeIndex, nullptr, &ht, nullptr, nullptr, nullptr);
+	STP_GetRootTimes(_parent->stp_bridge(), (unsigned int)_tree_index, nullptr, &ht, nullptr, nullptr, nullptr);
 	return ht;
 }
 
 uint32_t bridge_tree::max_age() const
 {
 	unsigned short ma;
-	STP_GetRootTimes(_parent->stp_bridge(), _treeIndex, nullptr, nullptr, &ma, nullptr, nullptr);
+	STP_GetRootTimes(_parent->stp_bridge(), (unsigned int)_tree_index, nullptr, nullptr, &ma, nullptr, nullptr);
 	return ma;
 }
 
 uint32_t bridge_tree::bridge_forward_delay() const
 {
 	unsigned short fd;
-	STP_GetRootTimes(_parent->stp_bridge(), _treeIndex, &fd, nullptr, nullptr, nullptr, nullptr);
+	STP_GetRootTimes(_parent->stp_bridge(), (unsigned int)_tree_index, &fd, nullptr, nullptr, nullptr, nullptr);
 	return fd;
 }
 
 uint32_t bridge_tree::message_age() const
 {
 	unsigned short ma;
-	STP_GetRootTimes(_parent->stp_bridge(), _treeIndex, nullptr, nullptr, nullptr, &ma, nullptr);
+	STP_GetRootTimes(_parent->stp_bridge(), (unsigned int)_tree_index, nullptr, nullptr, nullptr, &ma, nullptr);
 	return ma;
 }
 
 uint32_t bridge_tree::remaining_hops() const
 {
 	unsigned char rh;
-	STP_GetRootTimes(_parent->stp_bridge(), _treeIndex, nullptr, nullptr, nullptr, nullptr, &rh);
+	STP_GetRootTimes(_parent->stp_bridge(), (unsigned int)_tree_index, nullptr, nullptr, nullptr, nullptr, &rh);
 	return rh;
 }
 

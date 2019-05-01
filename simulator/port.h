@@ -27,7 +27,7 @@ class port : public renderable_object
 	friend class bridge;
 
 	bridge* const _bridge;
-	unsigned int const _portIndex;
+	size_t  const _port_index;
 	side _side = side_property._default_value.value();
 	float _offset;
 	std::vector<std::unique_ptr<port_tree>> _trees;
@@ -39,7 +39,7 @@ class port : public renderable_object
 	static void on_bridge_property_changed (void* arg, object* obj, const property_change_args& args);
 
 public:
-	port (class bridge* bridge, unsigned int portIndex, side side, float offset);
+	port (class bridge* bridge, size_t port_index, side side, float offset);
 
 	static constexpr int HTCodeInnerOuter = 1;
 	static constexpr int HTCodeCP = 2;
@@ -53,7 +53,7 @@ public:
 
 	const bridge* bridge() const { return _bridge; }
 	class bridge* bridge() { return _bridge; }
-	unsigned int port_index() const { return _portIndex; }
+	size_t port_index() const { return _port_index; }
 	enum side side() const { return _side; }
 	float offset() const { return _offset; }
 	D2D1_POINT_2F GetCPLocation() const;

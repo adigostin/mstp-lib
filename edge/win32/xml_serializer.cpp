@@ -211,7 +211,7 @@ namespace edge
 			hr = child_elem->getAttribute(index_attr_name, index_attr_value.GetAddress());
 			if (hr == S_OK)
 			{
-				bool converted = uint32_property_traits::from_string(bstr_to_utf8(index_attr_value.bstrVal), index);
+				bool converted = size_property_traits::from_string(bstr_to_utf8(index_attr_value.bstrVal), index);
 				assert(converted);
 			}
 
@@ -225,7 +225,6 @@ namespace edge
 
 	static void deserialize_value_collection (IXMLDOMElement* collection_elem, object* o, const value_collection_property* prop)
 	{
-		size_t index = 0;
 		com_ptr<IXMLDOMNode> entry_node;
 		auto hr = collection_elem->get_firstChild(&entry_node); assert(SUCCEEDED(hr));
 		while (entry_node != nullptr)
@@ -234,7 +233,7 @@ namespace edge
 			_variant_t index_attr_value;
 			hr = entry_elem->getAttribute(index_attr_name, index_attr_value.GetAddress()); assert(SUCCEEDED(hr));
 			size_t index;
-			bool converted = uint32_property_traits::from_string(bstr_to_utf8(index_attr_value.bstrVal), index); assert(converted);
+			bool converted = size_property_traits::from_string(bstr_to_utf8(index_attr_value.bstrVal), index); assert(converted);
 
 			_variant_t value_attr_value;
 			hr = entry_elem->getAttribute(value_attr_name, value_attr_value.GetAddress()); assert(SUCCEEDED(hr));

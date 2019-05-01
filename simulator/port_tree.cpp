@@ -42,8 +42,8 @@ const edge::NVP port_role_nvps[] =
 
 const char stp_disabled_text[] = "(STP disabled)";
 
-port_tree::port_tree (port* port, unsigned int treeIndex)
-	: _port(port), _treeIndex(treeIndex)
+port_tree::port_tree (port* port, size_t tree_index)
+	: _port(port), _tree_index(tree_index)
 {
 	// No need to call remove_handler since a bridge and its bridge_trees are deleted at the same time.
 	_port->bridge()->property_changing().add_handler(&on_bridge_property_changing, this);
@@ -75,7 +75,7 @@ void port_tree::on_bridge_property_changed (void* arg, object* obj, const proper
 
 uint32_t port_tree::priority() const
 {
-	return STP_GetPortPriority (_port->bridge()->stp_bridge(), _port->port_index(), _treeIndex);
+	return STP_GetPortPriority (_port->bridge()->stp_bridge(), (unsigned int)_port->port_index(), (unsigned int)_tree_index);
 }
 
 void port_tree::set_priority (uint32_t priority)
@@ -83,7 +83,7 @@ void port_tree::set_priority (uint32_t priority)
 	if (this->priority() != priority)
 	{
 		this->on_property_changing(&priority_property);
-		STP_SetPortPriority (_port->bridge()->stp_bridge(), _port->port_index(), _treeIndex, (unsigned char) priority, GetMessageTime());
+		STP_SetPortPriority (_port->bridge()->stp_bridge(), (unsigned int)_port->port_index(), (unsigned int)_tree_index, (unsigned char) priority, GetMessageTime());
 		this->on_property_changed(&priority_property);
 	}
 }
@@ -92,26 +92,26 @@ bool port_tree::learning() const
 {
 	if (!STP_IsBridgeStarted(_port->bridge()->stp_bridge()))
 		throw std::logic_error(stp_disabled_text);
-	return STP_GetPortLearning(_port->bridge()->stp_bridge(), _port->port_index(), _treeIndex);
+	return STP_GetPortLearning(_port->bridge()->stp_bridge(), (unsigned int)_port->port_index(), (unsigned int)_tree_index);
 }
 
 bool port_tree::forwarding() const
 {
 	if (!STP_IsBridgeStarted(_port->bridge()->stp_bridge()))
 		throw std::logic_error(stp_disabled_text);
-	return STP_GetPortForwarding(_port->bridge()->stp_bridge(), _port->port_index(), _treeIndex);
+	return STP_GetPortForwarding(_port->bridge()->stp_bridge(), (unsigned int)_port->port_index(), (unsigned int)_tree_index);
 }
 
 STP_PORT_ROLE port_tree::role() const
 {
 	if (!STP_IsBridgeStarted(_port->bridge()->stp_bridge()))
 		throw std::logic_error(stp_disabled_text);
-	return STP_GetPortRole (_port->bridge()->stp_bridge(), _port->port_index(), _treeIndex);
+	return STP_GetPortRole (_port->bridge()->stp_bridge(), (unsigned int)_port->port_index(), (unsigned int)_tree_index);
 }
 
-const edge::uint32_p port_tree::tree_index_property {
+const edge::size_p port_tree::tree_index_property {
 	"TreeIndex", nullptr, nullptr, edge::ui_visible::no,
-	static_cast<const edge::uint32_p::member_getter_t>(&tree_index),
+	static_cast<const edge::size_p::member_getter_t>(&tree_index),
 	nullptr,
 	std::nullopt,
 };

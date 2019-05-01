@@ -19,7 +19,7 @@ class bridge_tree : public object
 	using base = object;
 
 	bridge* const _parent;
-	unsigned int const _treeIndex;
+	size_t const _tree_index;
 
 	SYSTEMTIME _last_topology_change;
 	uint32_t _topology_change_count;
@@ -31,7 +31,7 @@ class bridge_tree : public object
 	static void on_bridge_property_changed (void* arg, object* obj, const property_change_args& args);
 
 public:
-	bridge_tree (bridge* parent, uint32_t tree_index);
+	bridge_tree (bridge* parent, size_t tree_index);
 
 	uint32_t bridge_priority() const;
 	void set_bridge_priority (uint32_t priority);

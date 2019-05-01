@@ -82,7 +82,7 @@ class bridge : public project_child
 	unsigned int         _txTimestamp;
 
 public:
-	bridge (uint32_t portCount, uint32_t mstiCount, mac_address macAddress);
+	bridge (size_t port_count, size_t msti_count, mac_address macAddress);
 	virtual ~bridge();
 
 	static constexpr int HTCodeInner = 1;
@@ -139,8 +139,8 @@ public:
 	void set_stp_enabled(bool enable);
 	STP_VERSION stp_version() const { return STP_GetStpVersion(_stpBridge); }
 	void set_stp_version(STP_VERSION version);
-	uint32_t port_count() const { return STP_GetPortCount(_stpBridge); }
-	uint32_t msti_count() const { return STP_GetMstiCount(_stpBridge); }
+	size_t port_count() const { return STP_GetPortCount(_stpBridge); }
+	size_t msti_count() const { return STP_GetMstiCount(_stpBridge); }
 	std::string mst_config_id_name() const;
 	void set_mst_config_id_name (std::string_view mst_config_id_name);
 	uint32_t GetMstConfigIdRevLevel() const;
@@ -196,8 +196,8 @@ public:
 	static const mac_address_p bridge_address_property;
 	static const bool_p        stp_enabled_property;
 	static const stp_version_p stp_version_property;
-	static const uint32_p      port_count_property;
-	static const uint32_p      msti_count_property;
+	static const size_p        port_count_property;
+	static const size_p        msti_count_property;
 	static const temp_string_p mst_config_id_name_property;
 	static const typed_value_collection_property<bridge, uint32_property_traits> mst_config_table_property;
 	static const uint32_p      mst_config_id_rev_level;
@@ -216,6 +216,6 @@ public:
 	static const typed_object_collection_property<bridge, class port> ports_property;
 
 	static const property* const _properties[];
-	static const xtype<bridge, uint32_p, uint32_p, mac_address_p> _type;
+	static const xtype<bridge, size_p, size_p, mac_address_p> _type;
 	const struct type* type() const override { return &_type; }
 };

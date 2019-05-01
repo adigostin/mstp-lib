@@ -228,37 +228,36 @@ namespace edge
 	};
 	using bool_p = typed_property<bool_property_traits>;
 
-	struct uint32_property_traits
+	template<typename t_, const char* type_name_>
+	struct arithmetic_property_traits
 	{
-		static constexpr char type_name[] = "uint32";
-		using value_t = uint32_t;
-		using param_t = uint32_t;
-		using return_t = uint32_t;
-		static std::string to_string (uint32_t from) { return std::to_string(from); }
-		static bool from_string (std::string_view from, uint32_t& to);
+		static_assert (std::is_arithmetic_v<t_>);
+		static constexpr const char* type_name = type_name_;
+		using value_t = t_;
+		using param_t = t_;
+		using return_t = t_;
+		static std::string to_string (t_ from) { return std::to_string(from); }
+		static bool from_string (std::string_view from, t_& to);
 	};
-	using uint32_p = typed_property<uint32_property_traits>;
 
-	struct int32_property_traits
-	{
-		static constexpr char type_name[] = "int32";
-		using value_t = int32_t;
-		using param_t = int32_t;
-		using return_t = int32_t;
-		static std::string to_string (int32_t from) { return std::to_string(from); }
-		static bool from_string (std::string_view from, int32_t& to);
-	};
+	static inline const char int32_type_name[] = "int32";
+	using int32_property_traits = arithmetic_property_traits<int32_t, int32_type_name>;
 	using int32_p = typed_property<int32_property_traits>;
 
-	struct float_property_traits
-	{
-		static constexpr char type_name[] = "float";
-		using value_t = float;
-		using param_t = float;
-		using return_t = float;
-		static std::string to_string (float from) { return std::to_string(from); }
-		static bool from_string (std::string_view from, float& to);
-	};
+	static inline const char uint32_type_name[] = "uint32";
+	using uint32_property_traits = arithmetic_property_traits<uint32_t, uint32_type_name>;
+	using uint32_p = typed_property<uint32_property_traits>;
+
+	static inline const char uint64_type_name[] = "uint64";
+	using uint64_property_traits = arithmetic_property_traits<uint64_t, uint64_type_name>;
+	using uint64_p = typed_property<uint64_property_traits>;
+
+	static inline const char size_type_name[] = "size";
+	using size_property_traits = arithmetic_property_traits<size_t, size_type_name>;
+	using size_p = typed_property<size_property_traits>;
+
+	static inline const char float_type_name[] = "float";
+	using float_property_traits = arithmetic_property_traits<float_t, float_type_name>;
 	using float_p = typed_property<float_property_traits>;
 
 	template<bool backed>

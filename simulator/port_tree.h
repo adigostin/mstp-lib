@@ -5,6 +5,7 @@
 
 class port;
 
+using edge::size_p;
 using edge::uint32_p;
 using edge::bool_p;
 using edge::float_p;
@@ -32,13 +33,13 @@ class port_tree : public edge::object
 	using base = edge::object;
 
 	port* const _port;
-	unsigned int const _treeIndex;
+	size_t const _tree_index;
 	
 	static void on_bridge_property_changing (void* arg, object* obj, const property_change_args& args);
 	static void on_bridge_property_changed (void* arg, object* obj, const property_change_args& args);
 
 public:
-	port_tree (port* port, unsigned int treeIndex);
+	port_tree (port* port, size_t tree_index);
 
 	uint32_t priority() const;
 	void set_priority (uint32_t priority);
@@ -47,9 +48,9 @@ public:
 	bool forwarding() const;
 	STP_PORT_ROLE role() const;
 
-	uint32_t tree_index() const { return _treeIndex; }
+	size_t tree_index() const { return _tree_index; }
 
-	static const uint32_p tree_index_property;
+	static const size_p tree_index_property;
 	static const port_priority_p priority_property;
 	static const bool_p learning_property;
 	static const bool_p forwarding_property;
