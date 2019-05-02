@@ -1,9 +1,11 @@
 
 #include "stp.h"
-#include "uart.h"
-#include "vic.h"
-#include "timer.h"
-#include "LPC23xx_enet.h"
+#include "drivers/uart.h"
+#include "drivers/vic.h"
+#include "drivers/timer.h"
+#include "drivers/LPC23xx_enet.h"
+#include "drivers/gpio.h"
+#include "debug_leds.h"
 #include <nxp/iolpc2387.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -125,8 +127,7 @@ int main ()
 	MAMTIM_bit.CYCLES  = 3;   // FCLK > 40 MHz
 	MAMCR_bit.MODECTRL = 2;   // MAM functions fully enabled
 
-	// Enable Fast GPIO0,1
-	SCS_bit.GPIOM = 1;
+	gpio_init();
 
 	VIC_Init();
 
@@ -139,6 +140,8 @@ int main ()
 	printf ("\x1B[2J"); // ANSI_CLEAR_SCREEN
 	printf("\r\nThis is the IAR-LPC-P2378-SK demo app that comes with IAR Embedded Workbench for ARM, "
 		   "with the minimum required changes to support the IP175D switch and RSTP.\r\n");
+
+	init_debug_leds();
 
 	// -----------------------------------
 	// On my board the RESET pin of the switch IC is pulled down with a resistor to keep it from
@@ -320,6 +323,7 @@ int main ()
 			if (!STP_GetPortEnabled (bridge, receivePortIndex))
 			{
 				STP_OnPortEnabled (bridge, receivePortIndex, 100, true, timestamp);
+				update_debug_leds(bridge);
 			}
 
 			if (memcmp (frame, "\x01\x80\xC2\x00\x00\x00", 6) == 0)
@@ -348,11 +352,13 @@ int main ()
 				{
 					// link is now good
 					STP_OnPortEnabled (bridge, portIndex, 100, true, timestamp);
+					update_debug_leds(bridge);
 				}
 				else if (!(reg & (1 << 2)) && STP_GetPortEnabled (bridge, portIndex))
 				{
 					// link is now down
 					STP_OnPortDisabled (bridge, portIndex, timestamp);
+					update_debug_leds(bridge);
 				}
 			}
 		}
@@ -362,6 +368,7 @@ int main ()
 			oneSecondTimerTickCount += 1000;
 
 			STP_OnOneSecondTick (bridge, timestamp);
+			update_debug_leds(bridge);
 		}
 	}
 }

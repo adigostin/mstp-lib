@@ -1,7 +1,8 @@
 
 #include "stp.h"
-#include "LPC23xx_enet.h"
-#include "timer.h"
+#include "drivers/LPC23xx_enet.h"
+#include "drivers/timer.h"
+#include "debug_leds.h"
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
@@ -62,6 +63,8 @@ static void StpCallback_EnableLearning (const struct STP_BRIDGE* bridge, unsigne
 		assert (0);
 
 	ENET_MIIWriteRegister (20, 6, i);
+
+	update_debug_leds(bridge);
 }
 
 static void StpCallback_EnableForwarding (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable, unsigned int timestamp)
@@ -84,6 +87,8 @@ static void StpCallback_EnableForwarding (const struct STP_BRIDGE* bridge, unsig
 		assert (0);
 
 	ENET_MIIWriteRegister (20, 6, i);
+
+	update_debug_leds(bridge);
 }
 
 static unsigned char BpduFrameBuffer [21 + 36];
