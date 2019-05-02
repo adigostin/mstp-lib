@@ -13,29 +13,43 @@ std::string wire_end_property_traits::to_string (wire_end from)
 	std::stringstream ss;
 	if (std::holds_alternative<connected_wire_end>(from))
 	{
-		auto ce = std::get<connected_wire_end>(from);
-		ss << "Connected;" << ce.bridge_index << ";" << ce.port_index;
+		port* p = std::get<connected_wire_end>(from);
+		for (size_t bi = 0; bi < p->bridge()->project()->bridges().size(); bi++)
+		{
+			auto b = p->bridge()->project()->bridges()[bi].get();
+			for (size_t pi = 0; pi < b->ports().size(); pi++)
+			{
+				if (b->ports()[pi].get() == p)
+				{
+					ss << "Connected;" << bi << ";" << pi;
+					return ss.str();
+				}
+			}
+		}
+
+		assert(false); return { };
 	}
 	else
 	{
 		auto location = std::get<loose_wire_end>(from);
 		ss << "Loose;" << location.x << ";" << location.y;
+		return ss.str();
 	}
-
-	return ss.str();
 }
 
-bool wire_end_property_traits::from_string (std::string_view from, wire_end& to)
+bool wire_end_property_traits::from_string (std::string_view from, wire_end& to, const object* obj)
 {
 	size_t s1 = from.find(';');
 	size_t s2 = from.rfind(';');
 
 	if (std::string_view(from.data(), s1) == "Connected")
 	{
-		connected_wire_end end;
-		std::from_chars (from.data() + s1 + 1, from.data() + s2, end.bridge_index);
-		std::from_chars (from.data() + s2 + 1, from.data() + from.size(), end.port_index);
-		to = end;
+		size_t bridge_index, port_index;
+		std::from_chars (from.data() + s1 + 1, from.data() + s2, bridge_index);
+		std::from_chars (from.data() + s2 + 1, from.data() + from.size(), port_index);
+		auto w = static_cast<const wire*>(obj);
+		auto port = w->project()->bridges()[bridge_index]->ports()[port_index].get();
+		to = port;
 		return true;
 	}
 
@@ -64,20 +78,12 @@ void wire::set_point (size_t pointIndex, wire_end point)
 	}
 }
 
-void wire::set_point (size_t i, port* port)
-{
-	auto& bridges = port->bridge()->project()->bridges();
-	auto it = std::find_if (bridges.begin(), bridges.end(), [port](auto& p) { return p.get() == port->bridge(); });
-	size_t bridge_index = it - bridges.begin();
-	set_point (i, connected_wire_end { bridge_index, port->port_index() });
-}
-
 D2D1_POINT_2F wire::point_coords (size_t pointIndex) const
 {
 	if (std::holds_alternative<loose_wire_end>(_points[pointIndex]))
 		return std::get<loose_wire_end>(_points[pointIndex]);
 	else
-		return project()->port_at(std::get<connected_wire_end>(_points[pointIndex]))->GetCPLocation();
+		return std::get<connected_wire_end>(_points[pointIndex])->GetCPLocation();
 }
 
 void wire::render (ID2D1RenderTarget* rt, const drawing_resources& dos, bool forwarding, bool hasLoop) const

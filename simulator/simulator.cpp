@@ -35,9 +35,9 @@ pair<wire*, size_t> project_i::GetWireConnectedToPort (const class port* port) c
 {
 	for (auto& w : wires())
 	{
-		if (holds_alternative<connected_wire_end>(w->p0()) && (port_at(get<connected_wire_end>(w->p0())) == port))
+		if (std::holds_alternative<connected_wire_end>(w->p0()) && (std::get<connected_wire_end>(w->p0()) == port))
 			return { w.get(), 0 };
-		else if (holds_alternative<connected_wire_end>(w->p1()) && (port_at(get<connected_wire_end>(w->p1())) == port))
+		else if (std::holds_alternative<connected_wire_end>(w->p1()) && (std::get<connected_wire_end>(w->p1()) == port))
 			return { w.get(), 1 };
 	}
 
@@ -51,11 +51,11 @@ port* project_i::FindConnectedPort (port* txPort) const
 		for (size_t i = 0; i < 2; i++)
 		{
 			auto& thisEnd = w->points()[i];
-			if (holds_alternative<connected_wire_end>(thisEnd) && (port_at(get<connected_wire_end>(thisEnd)) == txPort))
+			if (std::holds_alternative<connected_wire_end>(thisEnd) && (std::get<connected_wire_end>(thisEnd) == txPort))
 			{
 				auto& otherEnd = w->points()[1 - i];
-				if (holds_alternative<connected_wire_end>(otherEnd))
-					return port_at(get<connected_wire_end>(otherEnd));
+				if (std::holds_alternative<connected_wire_end>(otherEnd))
+					return std::get<connected_wire_end>(otherEnd);
 				else
 					return nullptr;
 			}
@@ -87,13 +87,6 @@ std::unique_ptr<bridge> project_i::remove_bridge (bridge* b)
 	}
 
 	assert(false); return nullptr;
-}
-
-port* project_i::port_at (connected_wire_end end) const
-{
-	auto bridge = bridges()[end.bridge_index].get();
-	auto port = bridge->ports()[end.port_index].get();
-	return port;
 }
 #pragma endregion
 

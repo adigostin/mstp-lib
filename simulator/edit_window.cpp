@@ -684,7 +684,7 @@ public:
 				if (!std::holds_alternative<connected_wire_end>(w->points()[pi]))
 					continue;
 
-				auto port = _project->port_at(std::get<connected_wire_end>(w->points()[pi]));
+				auto port = std::get<connected_wire_end>(w->points()[pi]);
 				if (bridgesToRemove.find(port->bridge()) == bridgesToRemove.end())
 					continue;
 
@@ -698,7 +698,7 @@ public:
 			wire* wire = it->first;
 			bool anyPointRemainsConnected = any_of (wire->points().begin(), wire->points().end(),
 				[&bridgesToRemove, this](auto& pt) { return std::holds_alternative<connected_wire_end>(pt)
-					&& (bridgesToRemove.count(_project->port_at(std::get<connected_wire_end>(pt))->bridge()) == 0); });
+					&& (bridgesToRemove.count(std::get<connected_wire_end>(pt)->bridge()) == 0); });
 			
 			auto it1 = it;
 			it++;

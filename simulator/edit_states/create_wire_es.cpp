@@ -53,7 +53,7 @@ public:
 		auto port = _ew->GetCPAt (location.d, SnapDistance);
 		if (port != nullptr)
 		{
-			if (port != _project->port_at(std::get<connected_wire_end>(_wire->p0())))
+			if (port != std::get<connected_wire_end>(_wire->p0()))
 			{
 				auto alreadyConnectedWire = _project->GetWireConnectedToPort(port);
 				if (alreadyConnectedWire.first == nullptr)
@@ -103,7 +103,7 @@ public:
 	{
 		base::render(rt);
 		if ((_wire != nullptr) && std::holds_alternative<connected_wire_end>(_wire->p1()))
-			_ew->RenderSnapRect (rt, _project->port_at(std::get<connected_wire_end>(_wire->p1()))->GetCPLocation());
+			_ew->RenderSnapRect (rt, std::get<connected_wire_end>(_wire->p1())->GetCPLocation());
 	}
 
 	virtual bool completed() const override final

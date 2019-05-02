@@ -4,8 +4,6 @@
 #include "wire.h"
 #include "port.h"
 
-using namespace std;
-
 class MoveWirePointES : public edit_state
 {
 	typedef edit_state base;
@@ -88,20 +86,20 @@ public:
 			return 0;
 		}
 
-		return nullopt;
+		return std::nullopt;
 	}
 
 	virtual void render (ID2D1DeviceContext* rt) override final
 	{
 		auto& point = _wire->points()[_pointIndex];
-		if (holds_alternative<connected_wire_end>(point))
-			_ew->RenderSnapRect (rt, _project->port_at(get<connected_wire_end>(point))->GetCPLocation());
+		if (std::holds_alternative<connected_wire_end>(point))
+			_ew->RenderSnapRect (rt, std::get<connected_wire_end>(point)->GetCPLocation());
 	}
 
 	virtual HCURSOR cursor() const override final { return LoadCursor(nullptr, IDC_CROSS); }
 };
 
-unique_ptr<edit_state> CreateStateMoveWirePoint (const edit_state_deps& deps, wire* wire, size_t pointIndex)
+std::unique_ptr<edit_state> CreateStateMoveWirePoint (const edit_state_deps& deps, wire* wire, size_t pointIndex)
 {
-	return unique_ptr<edit_state>(new MoveWirePointES(deps, wire, pointIndex));
+	return std::unique_ptr<edit_state>(new MoveWirePointES(deps, wire, pointIndex));
 }

@@ -178,7 +178,6 @@ struct __declspec(novtable) project_i
 	port* FindConnectedPort (port* txPort) const;
 	std::unique_ptr<wire> remove_wire (wire* w);
 	std::unique_ptr<bridge> remove_bridge (bridge* b);
-	port* port_at (connected_wire_end end) const;
 };
 using project_factory_t = std::shared_ptr<project_i>(*const)();
 

@@ -6,13 +6,7 @@
 class port;
 struct project_i;
 
-struct connected_wire_end
-{
-	size_t bridge_index;
-	size_t port_index;
-	bool operator== (const connected_wire_end& other) const { return (bridge_index == other.bridge_index) && (port_index == other.port_index); }
-	bool operator!= (const connected_wire_end& other) const { return (bridge_index != other.bridge_index) || (port_index != other.port_index); }
-};
+using connected_wire_end = port*;
 using loose_wire_end = D2D1_POINT_2F;
 using wire_end = std::variant<loose_wire_end, connected_wire_end>;
 
@@ -23,6 +17,7 @@ using edge::property;
 using edge::typed_property;
 using edge::uint32_p;
 using edge::ui_visible;
+using edge::object;
 
 struct wire_end_property_traits
 {
@@ -31,7 +26,7 @@ struct wire_end_property_traits
 	using param_t = wire_end;
 	using return_t = wire_end;
 	static std::string to_string (wire_end from);
-	static bool from_string (std::string_view from, wire_end& to);
+	static bool from_string (std::string_view from, wire_end& to, const object* obj);
 };
 using wire_end_p = typed_property<wire_end_property_traits>;
 
@@ -48,7 +43,6 @@ public:
 	const std::array<wire_end, 2>& points() const { return _points; }
 	wire_end point (size_t i) const { return _points[i]; }
 	void set_point (size_t i, wire_end point);
-	void set_point (size_t i, port* point);
 
 	wire_end p0() const { return _points[0]; }
 	void set_p0 (wire_end p0) { set_point(0, p0); }

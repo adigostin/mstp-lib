@@ -61,7 +61,7 @@ namespace edge
 		static std::tuple<typename factory_arg_props::value_t...> strings_to_values (const span<std::string_view>& string_values, std::index_sequence<I...>)
 		{
 			std::tuple<typename factory_arg_props::value_t...> result;
-			bool cast_ok = (true && ... && factory_arg_props::from_string(string_values[I], std::get<I>(result)));
+			bool cast_ok = (true && ... && factory_arg_props::from_string(string_values[I], std::get<I>(result), nullptr));
 			assert(cast_ok);
 			return result;
 		}

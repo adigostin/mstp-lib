@@ -51,7 +51,7 @@ public:
 
 		if (any_of (_wires.begin(), _wires.end(), [b, this](const unique_ptr<wire>& w) {
 			return any_of (w->points().begin(), w->points().end(), [b, this] (wire_end p) {
-				return std::holds_alternative<connected_wire_end>(p) && (port_at(std::get<connected_wire_end>(p))->bridge() == b);
+				return std::holds_alternative<connected_wire_end>(p) && (std::get<connected_wire_end>(p)->bridge() == b);
 			});
 		}))
 			assert(false); // can't remove a connected bridge
@@ -144,8 +144,8 @@ public:
 		if (!holds_alternative<connected_wire_end>(wire->p0()) || !holds_alternative<connected_wire_end>(wire->p1()))
 			return false;
 
-		auto portA = port_at(std::get<connected_wire_end>(wire->p0()));
-		auto portB = port_at(std::get<connected_wire_end>(wire->p1()));
+		auto portA = std::get<connected_wire_end>(wire->p0());
+		auto portB = std::get<connected_wire_end>(wire->p1());
 		bool portAFw = portA->IsForwarding(vlanNumber);
 		bool portBFw = portB->IsForwarding(vlanNumber);
 		if (!portAFw || !portBFw)
