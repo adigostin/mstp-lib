@@ -217,8 +217,8 @@ public:
 			stringstream ss;
 			ss << configId.ConfigurationName << " -- " << (configId.RevisionLevelLow | (configId.RevisionLevelHigh << 8)) << " -- "
 				<< uppercase << setfill('0') << hex
-				<< setw(2) << configId.ConfigurationDigest[0] << setw(2) << configId.ConfigurationDigest[1] << ".."
-				<< setw(2) << configId.ConfigurationDigest[14] << setw(2) << configId.ConfigurationDigest[15];
+				<< setw(2) << (int)configId.ConfigurationDigest[0] << setw(2) << (int)configId.ConfigurationDigest[1] << ".."
+				<< setw(2) << (int)configId.ConfigurationDigest[14] << setw(2) << (int)configId.ConfigurationDigest[15];
 			string line = ss.str();
 			auto tl = text_layout::create (dwrite_factory(), _legendFont, line.c_str());
 
@@ -236,7 +236,7 @@ public:
 		float UpDownPadding = 2;
 		float coloredRectWidth = lineHeight * 2;
 
-		auto title = text_layout::create (dwrite_factory(), _legendFont, "MST Config IDs:");
+		auto title = text_layout::create (dwrite_factory(), _legendFont, "MST Regions:");
 
 		float y = client_height() - lines.size() * (lineHeight + 2 * UpDownPadding) - title.metrics.height - 2 * UpDownPadding;
 
