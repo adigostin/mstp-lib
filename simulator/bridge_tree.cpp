@@ -17,22 +17,28 @@ bridge_tree::bridge_tree (bridge* parent, size_t tree_index)
 	_topology_change_count = 0;
 }
 
+static const value_property* const properties_changed_on_stp_enable_disable[] = {
+	&bridge_tree::root_id_property,
+	&bridge_tree::external_root_path_cost_property,
+	&bridge_tree::regional_root_id_property,
+	&bridge_tree::internal_root_path_cost_property,
+	&bridge_tree::designated_bridge_id_property,
+	&bridge_tree::designated_port_id_property,
+	&bridge_tree::receiving_port_id_property,
+};
+
 void bridge_tree::on_bridge_property_changing (void* arg, object* obj, const property_change_args& args)
 {
 	auto bt = static_cast<bridge_tree*>(arg);
-	if (args.property == &bridge::stp_enabled_property)
-	{
-		bt->on_property_changing(&root_bridge_id_property);
-	}
+	for (auto it = std::begin(properties_changed_on_stp_enable_disable); it != std::end(properties_changed_on_stp_enable_disable); it++)
+		bt->on_property_changing(*it);
 }
 
 void bridge_tree::on_bridge_property_changed (void* arg, object* obj, const property_change_args& args)
 {
 	auto bt = static_cast<bridge_tree*>(arg);
-	if (args.property == &bridge::stp_enabled_property)
-	{
-		bt->on_property_changed(&root_bridge_id_property);
-	}
+	for (auto it = std::rbegin(properties_changed_on_stp_enable_disable); it != std::rend(properties_changed_on_stp_enable_disable); it++)
+		bt->on_property_changed(*it);
 }
 
 void bridge_tree::on_topology_change (unsigned int timestamp)
@@ -79,17 +85,17 @@ std::string bridge_tree::root_bridge_id() const
 	return ss.str();
 }
 
-std::string bridge_tree::GetExternalRootPathCost() const
+uint32_t bridge_tree::external_root_path_cost() const
 {
 	if (!STP_IsBridgeStarted(_parent->stp_bridge()))
 		throw std::logic_error(stp_disabled_text);
 
 	auto rpv = root_priorty_vector();
 	auto cost = ((uint32_t) rpv[8] << 24) | ((uint32_t) rpv[9] << 16) | ((uint32_t) rpv[10] << 8) | rpv[11];
-	return to_string (cost);
+	return cost;
 }
 
-std::string bridge_tree::GetRegionalRootBridgeId() const
+std::string bridge_tree::regional_root_id() const
 {
 	if (!STP_IsBridgeStarted (_parent->stp_bridge()))
 		throw std::logic_error(stp_disabled_text);
@@ -97,23 +103,23 @@ std::string bridge_tree::GetRegionalRootBridgeId() const
 	auto rpv = root_priorty_vector();
 	stringstream ss;
 	ss << uppercase << setfill('0') << hex
-		<< setw(2) << rpv[12] << setw(2) << rpv[13] << "."
-		<< setw(2) << rpv[14] << setw(2) << rpv[15] << setw(2) << rpv[16]
-		<< setw(2) << rpv[17] << setw(2) << rpv[18] << setw(2) << rpv[19];
+		<< setw(2) << (int)rpv[12] << setw(2) << (int)rpv[13] << "."
+		<< setw(2) << (int)rpv[14] << setw(2) << (int)rpv[15] << setw(2) << (int)rpv[16]
+		<< setw(2) << (int)rpv[17] << setw(2) << (int)rpv[18] << setw(2) << (int)rpv[19];
 	return ss.str();
 }
 
-std::string bridge_tree::GetInternalRootPathCost() const
+uint32_t bridge_tree::internal_root_path_cost() const
 {
 	if (!STP_IsBridgeStarted(_parent->stp_bridge()))
 		throw std::logic_error(stp_disabled_text);
 
 	auto rpv = root_priorty_vector();
 	auto cost = ((uint32_t) rpv[20] << 24) | ((uint32_t) rpv[21] << 16) | ((uint32_t) rpv[22] << 8) | rpv[23];
-	return to_string(cost);
+	return cost;
 }
 
-std::string bridge_tree::GetDesignatedBridgeId() const
+std::string bridge_tree::designated_bridge_id() const
 {
 	if (!STP_IsBridgeStarted(_parent->stp_bridge()))
 		throw std::logic_error(stp_disabled_text);
@@ -121,31 +127,31 @@ std::string bridge_tree::GetDesignatedBridgeId() const
 	auto rpv = root_priorty_vector();
 	stringstream ss;
 	ss << uppercase << setfill('0') << hex
-		<< setw(2) << rpv[24] << setw(2) << rpv[25] << "."
-		<< setw(2) << rpv[26] << setw(2) << rpv[27] << setw(2) << rpv[28]
-		<< setw(2) << rpv[29] << setw(2) << rpv[30] << setw(2) << rpv[31];
+		<< setw(2) << (int)rpv[24] << setw(2) << (int)rpv[25] << "."
+		<< setw(2) << (int)rpv[26] << setw(2) << (int)rpv[27] << setw(2) << (int)rpv[28]
+		<< setw(2) << (int)rpv[29] << setw(2) << (int)rpv[30] << setw(2) << (int)rpv[31];
 	return ss.str();
 }
 
-std::string bridge_tree::GetDesignatedPortId() const
+std::string bridge_tree::designated_port_id() const
 {
 	if (!STP_IsBridgeStarted(_parent->stp_bridge()))
 		throw std::logic_error(stp_disabled_text);
 
 	auto rpv = root_priorty_vector();
 	stringstream ss;
-	ss << uppercase << setfill('0') << hex << setw(2) << rpv[32] << setw(2) << rpv[33];
+	ss << uppercase << setfill('0') << hex << setw(2) << (int)rpv[32] << setw(2) << (int)rpv[33];
 	return ss.str();
 }
 
-std::string bridge_tree::GetReceivingPortId() const
+std::string bridge_tree::receiving_port_id() const
 {
 	if (!STP_IsBridgeStarted(_parent->stp_bridge()))
 		throw std::logic_error(stp_disabled_text);
 
 	auto rpv = root_priorty_vector();
 	stringstream ss;
-	ss << uppercase << setfill('0') << hex << setw(2) << rpv[34] << setw(2) << rpv[35];
+	ss << uppercase << setfill('0') << hex << setw(2) << (int)rpv[34] << setw(2) << (int)rpv[35];
 	return ss.str();
 }
 
@@ -186,7 +192,8 @@ uint32_t bridge_tree::remaining_hops() const
 
 // ============================================================================
 
-static const edge::property_group root_times_group = { 5, "Root Times" };
+static const property_group rpv_group = { 4, "Root Priority Vector" };
+static const property_group root_times_group = { 5, "Root Times" };
 
 const NVP bridge_priority_nvps[] =
 {
@@ -217,9 +224,86 @@ const bridge_priority_p bridge_tree::bridge_priority_property {
 	0x8000,
 };
 
-const temp_string_p bridge_tree::root_bridge_id_property {
-	"Root Bridge ID", nullptr, nullptr, ui_visible::yes,
+const temp_string_p bridge_tree::root_id_property {
+	"RootID", &rpv_group, nullptr, ui_visible::yes,
 	static_cast<temp_string_p::member_getter_t>(&root_bridge_id),
+	nullptr,
+	std::nullopt,
+};
+
+const uint32_p bridge_tree::external_root_path_cost_property {
+	"ExternalRootPathCost", &rpv_group, nullptr, ui_visible::yes,
+	static_cast<uint32_p::member_getter_t>(&external_root_path_cost),
+	nullptr,
+	std::nullopt,
+};
+
+const temp_string_p bridge_tree::regional_root_id_property {
+	"RegionalRootId", &rpv_group, nullptr, ui_visible::yes,
+	static_cast<temp_string_p::member_getter_t>(&regional_root_id),
+	nullptr,
+	std::nullopt,
+};
+
+const uint32_p bridge_tree::internal_root_path_cost_property {
+	"InternalRootPathCost", &rpv_group, nullptr, ui_visible::yes,
+	static_cast<uint32_p::member_getter_t>(&internal_root_path_cost),
+	nullptr,
+	std::nullopt,
+};
+
+const temp_string_p bridge_tree::designated_bridge_id_property {
+	"DesignatedBridgeId", &rpv_group, nullptr, ui_visible::yes,
+	static_cast<temp_string_p::member_getter_t>(&designated_bridge_id),
+	nullptr,
+	std::nullopt,
+};
+
+const temp_string_p bridge_tree::designated_port_id_property {
+	"DesignatedPortId", &rpv_group, nullptr, ui_visible::yes,
+	static_cast<temp_string_p::member_getter_t>(&designated_port_id),
+	nullptr,
+	std::nullopt,
+};
+
+const temp_string_p bridge_tree::receiving_port_id_property {
+	"ReceivingPortId", &rpv_group, nullptr, ui_visible::yes,
+	static_cast<temp_string_p::member_getter_t>(&receiving_port_id),
+	nullptr,
+	std::nullopt,
+};
+
+const edge::uint32_p bridge_tree::hello_time_property {
+	"HelloTime", &root_times_group, nullptr, ui_visible::yes,
+	static_cast<edge::uint32_p::member_getter_t>(&hello_time),
+	nullptr,
+	std::nullopt,
+};
+
+const edge::uint32_p bridge_tree::max_age_property {
+	"MaxAge", &root_times_group, nullptr, ui_visible::yes,
+	static_cast<edge::uint32_p::member_getter_t>(&max_age),
+	nullptr,
+	std::nullopt,
+};
+
+const edge::uint32_p bridge_tree::forward_delay_property {
+	"ForwardDelay", &root_times_group, nullptr, ui_visible::yes,
+	static_cast<edge::uint32_p::member_getter_t>(&bridge_forward_delay),
+	nullptr,
+	std::nullopt,
+};
+
+const edge::uint32_p bridge_tree::message_age_property {
+	"MessageAge", &root_times_group, nullptr, ui_visible::yes,
+	static_cast<edge::uint32_p::member_getter_t>(&message_age),
+	nullptr,
+	std::nullopt,
+};
+
+const edge::uint32_p bridge_tree::remaining_hops_property {
+	"remainingHops", &root_times_group, nullptr, ui_visible::yes,
+	static_cast<edge::uint32_p::member_getter_t>(&remaining_hops),
 	nullptr,
 	std::nullopt,
 };
@@ -230,112 +314,18 @@ const edge::uint32_p bridge_tree::topology_change_count_property {
 	nullptr,
 	std::nullopt,
 };
-/*
-static const TypedProperty<wstring> ExternalRootPathCost
-(
-	L"External Root Path Cost",
-	static_cast<TypedProperty<wstring>::Getter>(&GetExternalRootPathCost),
-	nullptr
-);
-
-static const TypedProperty<wstring> RegionalRootBridgeId
-(
-	L"Regional Root Bridge Id",
-	static_cast<TypedProperty<wstring>::Getter>(&GetRegionalRootBridgeId),
-	nullptr
-);
-
-static const TypedProperty<wstring> InternalRootPathCost
-(
-	L"Internal Root Path Cost",
-	static_cast<TypedProperty<wstring>::Getter>(&GetInternalRootPathCost),
-	nullptr
-);
-
-static const TypedProperty<wstring> DesignatedBridgeId
-(
-	L"Designated Bridge Id",
-	static_cast<TypedProperty<wstring>::Getter>(&GetDesignatedBridgeId),
-	nullptr
-);
-
-static const TypedProperty<wstring> DesignatedPortId
-(
-	L"Designated Port Id",
-	static_cast<TypedProperty<wstring>::Getter>(&GetDesignatedPortId),
-	nullptr
-);
-
-static const TypedProperty<wstring> ReceivingPortId
-(
-	L"Receiving Port Id",
-	static_cast<TypedProperty<wstring>::Getter>(&GetReceivingPortId),
-	nullptr
-);
-*/
-
-const edge::uint32_p bridge_tree::hello_time_property {
-	"HelloTime",
-	&root_times_group,
-	nullptr,
-	ui_visible::yes,
-	static_cast<edge::uint32_p::member_getter_t>(&hello_time),
-	nullptr,
-	std::nullopt,
-};
-
-const edge::uint32_p bridge_tree::max_age_property {
-	"MaxAge",
-	&root_times_group,
-	nullptr,
-	ui_visible::yes,
-	static_cast<edge::uint32_p::member_getter_t>(&max_age),
-	nullptr,
-	std::nullopt,
-};
-
-const edge::uint32_p bridge_tree::forward_delay_property {
-	"ForwardDelay",
-	&root_times_group,
-	nullptr,
-	ui_visible::yes,
-	static_cast<edge::uint32_p::member_getter_t>(&bridge_forward_delay),
-	nullptr,
-	std::nullopt,
-};
-
-const edge::uint32_p bridge_tree::message_age_property {
-	"MessageAge",
-	&root_times_group,
-	nullptr,
-	ui_visible::yes,
-	static_cast<edge::uint32_p::member_getter_t>(&message_age),
-	nullptr,
-	std::nullopt,
-};
-
-const edge::uint32_p bridge_tree::remaining_hops_property {
-	"remainingHops",
-	&root_times_group,
-	nullptr,
-	ui_visible::yes,
-	static_cast<edge::uint32_p::member_getter_t>(&remaining_hops),
-	nullptr,
-	std::nullopt,
-};
 
 const edge::property* const bridge_tree::_properties[] =
 {
 	&bridge_priority_property,
-	&root_bridge_id_property,
+	&root_id_property,
 	&topology_change_count_property,
-/*	&ExternalRootPathCost,
-	&RegionalRootBridgeId,
-	&InternalRootPathCost,
-	&DesignatedBridgeId,
-	&DesignatedPortId,
-	&ReceivingPortId,
-*/
+	&external_root_path_cost_property,
+	&regional_root_id_property,
+	&internal_root_path_cost_property,
+	&designated_bridge_id_property,
+	&designated_port_id_property,
+	&receiving_port_id_property,
 	&hello_time_property,
 	&max_age_property,
 	&forward_delay_property,
