@@ -1,10 +1,12 @@
 
 #include "stp.h"
 #include "drivers/uart.h"
+#include "drivers/serial_console.h"
 #include "drivers/vic.h"
 #include "drivers/timer.h"
 #include "drivers/LPC23xx_enet.h"
 #include "drivers/gpio.h"
+#include "drivers/event_queue.h"
 #include "debug_leds.h"
 #include <nxp/iolpc2387.h>
 #include <stdio.h>
@@ -20,13 +22,7 @@
 extern STP_CALLBACKS const callbacks_ip175c;
 extern STP_CALLBACKS const callbacks_ip175d;
 
-// ============================================================================
-
-int putchar (int c)
-{
-	UART_Send (UART_INDEX_0, (unsigned char) c);
-	return c;
-}
+static STP_BRIDGE* bridge;
 
 // ============================================================================
 
@@ -112,6 +108,33 @@ static void InitClock ()
 	PLLFEED = 0x55;
 }
 
+static void process_log_command (const char* params)
+{
+	if (*params == 0)
+	{
+		printf ("STP logging is currently %s.\r\n", STP_IsLoggingEnabled(bridge) ? "enabled" : "disabled");
+		return;
+	}
+
+	if (strcasecmp(params, "on") == 0)
+	{
+		STP_EnableLogging (bridge, true);
+		printf ("STP logging is now %s.\r\n", "enabled");
+	}
+	else if (strcasecmp(params, "off") == 0)
+	{
+		STP_EnableLogging (bridge, false);
+		printf ("STP logging is now %s.\r\n", "disabled");
+	}
+	else
+		printf ("Wrong params.\r\n");
+}
+
+static const serial_command commands[] = {
+	{ "log", "log [on|off] - Enables or disables STP logging.", &process_log_command },
+	{ 0, 0, 0 }
+};
+
 // ============================================================================
 
 int main ()
@@ -127,19 +150,23 @@ int main ()
 	MAMTIM_bit.CYCLES  = 3;   // FCLK > 40 MHz
 	MAMCR_bit.MODECTRL = 2;   // MAM functions fully enabled
 
+	static __no_init unsigned char event_queue_buffer[1024];
+	event_queue_init (event_queue_buffer, sizeof(event_queue_buffer));
+
 	gpio_init();
 
 	VIC_Init();
 
 	Timer_Init (72000000, 4);
 
-	UART_Init (UART_INDEX_0, 72000000, 115200, NULL);
+	serial_console_init (0, 72000000);
+
+	serial_console_register_command_set (commands);
 
 	__enable_interrupt();
 
 	printf ("\x1B[2J"); // ANSI_CLEAR_SCREEN
-	printf("\r\nThis is the IAR-LPC-P2378-SK demo app that comes with IAR Embedded Workbench for ARM, "
-		   "with the minimum required changes to support the IP175D switch and RSTP.\r\n");
+	printf("\r\nSample embedded app for mstp-lib that runs on LPC2xxx and IP175C/D.\r\n");
 
 	init_debug_leds();
 
@@ -287,9 +314,9 @@ int main ()
 	unsigned int timestamp = Timer_GetTimeMilliseconds();
 
 	const STP_CALLBACKS* callbacks = (chipId == 0x175c) ? &callbacks_ip175c : &callbacks_ip175d;
-	STP_BRIDGE* bridge = STP_CreateBridge (2, 0, 0, callbacks, MacAddress, 2);
+	bridge = STP_CreateBridge (2, 0, 0, callbacks, MacAddress, 2);
 
-	STP_EnableLogging (bridge, true);
+	//STP_EnableLogging (bridge, true);
 
 	//STP_SetBridgePriority (bridge, 0, 0x9000, timestamp);
 
@@ -313,8 +340,8 @@ int main ()
 
 		static unsigned char frame [MAX_FRAME_SIZE_IN_SOFTWARE];
 
-		unsigned int frameSize = tapdev_read (frame);
-		if (frameSize > 0)
+		unsigned int frameSize;
+		while ((frameSize = tapdev_read(frame)) > 0)
 		{
 			unsigned int receivePortIndex = ((frame [13] == 1) ? 0 : 1);
 
@@ -329,6 +356,7 @@ int main ()
 			if (memcmp (frame, "\x01\x80\xC2\x00\x00\x00", 6) == 0)
 			{
 				STP_OnBpduReceived (bridge, receivePortIndex, &frame[21], frameSize - 21, timestamp);
+				update_debug_leds(bridge);
 			}
 			else if ((frame[12] == 0x08) && (frame[13] == 0))
 			{
@@ -339,7 +367,8 @@ int main ()
 				// ARP frame
 			}
 		}
-		else if ((Timer_GetTimeMilliseconds() - portCheckTimerTickCount) >= 100)
+
+		if ((Timer_GetTimeMilliseconds() - portCheckTimerTickCount) >= 100)
 		{
 			// Code that runs every 100 ms and checks the link state of the RJ45 ports.
 
@@ -362,7 +391,8 @@ int main ()
 				}
 			}
 		}
-		else if ((Timer_GetTimeMilliseconds() - oneSecondTimerTickCount) >= 1000)
+
+		if ((Timer_GetTimeMilliseconds() - oneSecondTimerTickCount) >= 1000)
 		{
 			// Code that runs once every second and calls into the STP library.
 			oneSecondTimerTickCount += 1000;
@@ -370,6 +400,8 @@ int main ()
 			STP_OnOneSecondTick (bridge, timestamp);
 			update_debug_leds(bridge);
 		}
+
+		event_queue_pop_all();
 	}
 }
 

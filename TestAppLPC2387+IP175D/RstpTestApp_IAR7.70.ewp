@@ -262,11 +262,11 @@
         </option>
         <option>
           <name>IExtraOptionsCheck</name>
-          <state>0</state>
+          <state>1</state>
         </option>
         <option>
           <name>IExtraOptions</name>
-          <state></state>
+          <state>--no_path_in_file_macros</state>
         </option>
         <option>
           <name>CCLangConformance</name>
@@ -964,6 +964,12 @@
   <group>
     <name>drivers</name>
     <file>
+      <name>$PROJ_DIR$\drivers\event_queue.cpp</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\drivers\event_queue.h</name>
+    </file>
+    <file>
       <name>$PROJ_DIR$\drivers\gpio.cpp</name>
     </file>
     <file>
@@ -974,6 +980,12 @@
     </file>
     <file>
       <name>$PROJ_DIR$\drivers\LPC23xx_enet.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\drivers\serial_console.cpp</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\drivers\serial_console.h</name>
     </file>
     <file>
       <name>$PROJ_DIR$\drivers\timer.cpp</name>
