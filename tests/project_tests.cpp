@@ -1,20 +1,11 @@
 
 #include "pch.h"
-#include "CppUnitTest.h"
 #include "bridge.h"
 #include "wire.h"
 #include "simulator.h"
+#include "test_helpers.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
-
-namespace Microsoft::VisualStudio::CppUnitTestFramework
-{
-	template<>
-	static std::wstring ToString(port* p)
-	{
-		return L"port";
-	}
-}
 
 extern const project_factory_t project_factory;
 

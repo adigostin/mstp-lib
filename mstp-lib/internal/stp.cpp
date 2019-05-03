@@ -1028,46 +1028,30 @@ const char* STP_GetPortRoleString (STP_PORT_ROLE portRole)
 {
 	switch (portRole)
 	{
-		case STP_PORT_ROLE_DISABLED:	return "Disabled";
-		case STP_PORT_ROLE_ROOT:		return "Root";
-		case STP_PORT_ROLE_DESIGNATED:	return "Designated";
-		case STP_PORT_ROLE_ALTERNATE:	return "Alternate";
-		case STP_PORT_ROLE_BACKUP:		return "Backup";
-		case STP_PORT_ROLE_MASTER:		return "Master";
-		default:						return "(unknown)";
-	}
-}
-
-static const char LegacySTPString[] = "LegacySTP";
-static const char RSTPString[] = "RSTP";
-static const char MSTPString[] = "MSTP";
-
-const char* STP_GetVersionString (enum STP_VERSION version)
-{
-	switch (version)
-	{
-		case STP_VERSION_LEGACY_STP:	return LegacySTPString;
-		case STP_VERSION_RSTP:			return RSTPString;
-		case STP_VERSION_MSTP:			return MSTPString;
+		case STP_PORT_ROLE_UNDEFINED:  return "(undefined)";
+		case STP_PORT_ROLE_DISABLED:   return "Disabled";
+		case STP_PORT_ROLE_ROOT:       return "Root";
+		case STP_PORT_ROLE_DESIGNATED: return "Designated";
+		case STP_PORT_ROLE_ALTERNATE:  return "Alternate";
+		case STP_PORT_ROLE_BACKUP:     return "Backup";
+		case STP_PORT_ROLE_MASTER:     return "Master";
 		default:
 			assert(false);
 			return NULL;
 	}
 }
 
-enum STP_VERSION STP_GetVersionFromString (const char* str)
+const char* STP_GetVersionString (enum STP_VERSION version)
 {
-	if (strcmp(str, LegacySTPString) == 0)
-		return STP_VERSION_LEGACY_STP;
-
-	if (strcmp(str, RSTPString) == 0)
-		return STP_VERSION_RSTP;
-
-	if (strcmp(str, MSTPString) == 0)
-		return STP_VERSION_MSTP;
-
-	assert(false);
-	return (STP_VERSION) -1;
+	switch (version)
+	{
+		case STP_VERSION_LEGACY_STP: return "LegacySTP";
+		case STP_VERSION_RSTP:       return "RSTP";
+		case STP_VERSION_MSTP:       return "MSTP";
+		default:
+			assert(false);
+			return NULL;
+	}
 }
 
 const char* STP_GetAdminP2PString (enum STP_ADMIN_P2P adminP2P)
@@ -1077,7 +1061,9 @@ const char* STP_GetAdminP2PString (enum STP_ADMIN_P2P adminP2P)
 		case STP_ADMIN_P2P_AUTO:        return "Auto";
 		case STP_ADMIN_P2P_FORCE_TRUE:  return "ForceTrue";
 		case STP_ADMIN_P2P_FORCE_FALSE: return "ForceFalse";
-		default: return NULL;
+		default:
+			assert(false);
+			return NULL;
 	}
 }
 

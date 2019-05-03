@@ -180,6 +180,7 @@
     <ClCompile Include="project_tests.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="test_helpers.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>

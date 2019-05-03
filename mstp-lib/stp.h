@@ -25,6 +25,7 @@ enum STP_FLUSH_FDB_TYPE
 
 enum STP_PORT_ROLE
 {
+	STP_PORT_ROLE_UNDEFINED	= 0,
 	STP_PORT_ROLE_DISABLED,
 	STP_PORT_ROLE_ROOT,
 	STP_PORT_ROLE_DESIGNATED,
@@ -221,7 +222,6 @@ const struct STP_MST_CONFIG_ID* STP_GetMstConfigId (const struct STP_BRIDGE* bri
 
 const char* STP_GetPortRoleString (enum STP_PORT_ROLE portRole);
 const char* STP_GetVersionString (enum STP_VERSION version);
-enum STP_VERSION STP_GetVersionFromString (const char* str);
 const char* STP_GetAdminP2PString (enum STP_ADMIN_P2P adminP2P);
 
 void STP_GetRootPriorityVector (const struct STP_BRIDGE* bridge, unsigned int treeIndex, unsigned char priorityVectorOut[36]);

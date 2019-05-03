@@ -10,10 +10,10 @@ struct BridgeLogLine
 	int treeIndex;
 };
 
-static constexpr edge::NVP stp_version_nvps[] =  {
-	{ "LegacySTP", STP_VERSION_LEGACY_STP },
-	{ "RSTP", STP_VERSION_RSTP },
-	{ "MSTP", STP_VERSION_MSTP },
+static inline const edge::NVP stp_version_nvps[] =  {
+	{ STP_GetVersionString(STP_VERSION_LEGACY_STP), STP_VERSION_LEGACY_STP },
+	{ STP_GetVersionString(STP_VERSION_RSTP), STP_VERSION_RSTP },
+	{ STP_GetVersionString(STP_VERSION_MSTP), STP_VERSION_MSTP },
 	{ nullptr, 0 }
 };
 static constexpr char stp_version_type_name[] = "stp_version";
