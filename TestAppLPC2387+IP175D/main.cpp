@@ -3,7 +3,7 @@
 #include "drivers/uart.h"
 #include "drivers/serial_console.h"
 #include "drivers/vic.h"
-#include "drivers/timer.h"
+#include "drivers/scheduler.h"
 #include "drivers/LPC23xx_enet.h"
 #include "drivers/gpio.h"
 #include "drivers/event_queue.h"
@@ -137,6 +137,38 @@ static const serial_command commands[] = {
 
 // ============================================================================
 
+static void on_one_second_timer()
+{
+	uint32_t timestamp = scheduler_get_time_ms32();
+	STP_OnOneSecondTick (bridge, timestamp);
+	update_debug_leds(bridge);
+}
+
+static void on_port_state_polling_timer()
+{
+	// Code that runs every 100 ms and checks the link state of the RJ45 ports.
+	uint32_t timestamp = scheduler_get_time_ms32();
+
+	for (unsigned int portIndex = 0; portIndex < 2; portIndex++)
+	{
+		unsigned short reg = ENET_MIIReadRegister (portIndex, 1);
+		if ((reg & (1 << 2)) && !STP_GetPortEnabled (bridge, portIndex))
+		{
+			// link is now good
+			STP_OnPortEnabled (bridge, portIndex, 100, true, timestamp);
+			update_debug_leds(bridge);
+		}
+		else if (!(reg & (1 << 2)) && STP_GetPortEnabled (bridge, portIndex))
+		{
+			// link is now down
+			STP_OnPortDisabled (bridge, portIndex, timestamp);
+			update_debug_leds(bridge);
+		}
+	}
+}
+
+// ============================================================================
+
 int main ()
 {
 	// Power down the EMAC controller. Required during debugging.
@@ -157,7 +189,7 @@ int main ()
 
 	VIC_Init();
 
-	Timer_Init (72000000, 4);
+	scheduler_init (0, 72000000);
 
 	serial_console_init (0, 72000000);
 
@@ -180,7 +212,7 @@ int main ()
 	FIO1DIR |= (1 << 18);
 
 	// Give it about 10ms to start its clock.
-	Timer_Wait (10);
+	scheduler_wait(10);
 
 	// -----------------------------------
 	// Initialize RMII.
@@ -306,12 +338,12 @@ int main ()
 		assert (false);
 
 	// specifications say that we must wait at least 2 ms after this reset
-	Timer_Wait (3);
+	scheduler_wait(3);
 
 	// -----------------------------------
 	// Initialize and start the STP library.
 
-	unsigned int timestamp = Timer_GetTimeMilliseconds();
+	uint32_t timestamp = scheduler_get_time_ms32();
 
 	const STP_CALLBACKS* callbacks = (chipId == 0x175c) ? &callbacks_ip175c : &callbacks_ip175d;
 	bridge = STP_CreateBridge (2, 0, 0, callbacks, MacAddress, 2);
@@ -329,14 +361,14 @@ int main ()
 	ENET_MIIWriteRegister (PORT_RJ45_1, 0, (1 << 12));
 	ENET_MIIWriteRegister (PORT_RJ45_2, 0, (1 << 12));
 
-	unsigned int oneSecondTimerTickCount = Timer_GetTimeMilliseconds();
-	unsigned int portCheckTimerTickCount = Timer_GetTimeMilliseconds();
+	scheduler_schedule_event_timer (on_one_second_timer, "on_one_second_timer", 1000, true);
+	scheduler_schedule_event_timer (on_port_state_polling_timer, "on_port_state_polling_timer", 100, true);
 
 	// ========================================================================
 
 	while(1)
 	{
-		timestamp = Timer_GetTimeMilliseconds();
+		timestamp = scheduler_get_time_ms32();
 
 		static unsigned char frame [MAX_FRAME_SIZE_IN_SOFTWARE];
 
@@ -366,39 +398,6 @@ int main ()
 			{
 				// ARP frame
 			}
-		}
-
-		if ((Timer_GetTimeMilliseconds() - portCheckTimerTickCount) >= 100)
-		{
-			// Code that runs every 100 ms and checks the link state of the RJ45 ports.
-
-			portCheckTimerTickCount += 100;
-
-			for (unsigned int portIndex = 0; portIndex < 2; portIndex++)
-			{
-				unsigned short reg = ENET_MIIReadRegister (portIndex, 1);
-				if ((reg & (1 << 2)) && !STP_GetPortEnabled (bridge, portIndex))
-				{
-					// link is now good
-					STP_OnPortEnabled (bridge, portIndex, 100, true, timestamp);
-					update_debug_leds(bridge);
-				}
-				else if (!(reg & (1 << 2)) && STP_GetPortEnabled (bridge, portIndex))
-				{
-					// link is now down
-					STP_OnPortDisabled (bridge, portIndex, timestamp);
-					update_debug_leds(bridge);
-				}
-			}
-		}
-
-		if ((Timer_GetTimeMilliseconds() - oneSecondTimerTickCount) >= 1000)
-		{
-			// Code that runs once every second and calls into the STP library.
-			oneSecondTimerTickCount += 1000;
-
-			STP_OnOneSecondTick (bridge, timestamp);
-			update_debug_leds(bridge);
 		}
 
 		event_queue_pop_all();

@@ -1,11 +1,7 @@
 
-#ifndef TIMER_H
-#define TIMER_H
+#pragma once
+#include <stdint.h>
 
-void Timer_Init (unsigned int clockFrequency, unsigned int IntrPriority);
+typedef void (*timer_callback)();
 
-unsigned int Timer_GetTimeMilliseconds ();
-
-void Timer_Wait (unsigned int milliseconds);
-
-#endif
+void timer_init (uint32_t timer, uint32_t clock_frequency, uint32_t ticks_per_second, timer_callback callback_irql);

@@ -1,7 +1,7 @@
 
 #include "event_queue.h"
 #include "assert.h"
-//#include <stm32f769xx.h>
+#include "vic.h"
 #include <intrinsics.h>
 #include <string.h>
 #include <stdio.h>
@@ -139,11 +139,6 @@ static void process_event (event* e)
 
 	// if (show_event_durations)
 	//	printf(...);
-}
-
-static __arm __interwork bool irq_enabled()
-{
-	return (__get_CPSR () & 0x80) == 0;
 }
 
 void event_queue_pop_all()

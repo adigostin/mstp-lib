@@ -2,6 +2,7 @@
 #include "stp.h"
 #include "drivers/LPC23xx_enet.h"
 #include "drivers/timer.h"
+#include "drivers/scheduler.h"
 #include "debug_leds.h"
 #include <stdlib.h>
 #include <assert.h>
@@ -148,7 +149,7 @@ static void StpCallback_FlushFdb (const struct STP_BRIDGE* bridge, unsigned int 
 	ENET_MIIWriteRegister (20, 14, 0x60);
 
 	// wait 2 ms while the IC ages out the table
-	Timer_Wait (3);
+	scheduler_wait(3);
 
 	// reenable slow aging (~5 min)
 	ENET_MIIWriteRegister (20, 14, 5);
@@ -175,7 +176,7 @@ static void StpCallback_OnNotifiedTC (const struct STP_BRIDGE* bridge, unsigned 
 	ENET_MIIWriteRegister (20, 14, 0x60);
 
 	// wait 2 ms while the IC ages out the table
-	Timer_Wait (3);
+	scheduler_wait(3);
 
 	// reenable slow aging (~5 min)
 	ENET_MIIWriteRegister (20, 14, 5);

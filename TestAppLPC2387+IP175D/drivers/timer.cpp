@@ -1,41 +1,32 @@
 
-#include <nxp/iolpc2387.h>
 #include "timer.h"
 #include "vic.h"
+#include <nxp/iolpc2387.h>
+#include <assert.h>
+#include <stddef.h>
 
-#define TICKS_PER_SECOND        1000
+static const size_t timer_count = 4;
 
-static volatile unsigned int tickCount;
+static timer_callback callbacks[timer_count];
 
-static void Timer0IntrHandler ()
+static void timer0_isr()
 {
 	T0IR = 1; // clear interrupt flag
-
-	tickCount++;
+	callbacks[0]();
 }
 
-void Timer_Init (unsigned int clockFrequency, unsigned int IntrPriority)
+void timer_init (uint32_t timer, uint32_t clock_frequency, uint32_t ticks_per_second, timer_callback callback)
 {
-	tickCount = 0;
-
-	VIC_SetVectoredIRQ (Timer0IntrHandler, IntrPriority, VIC_TIMER0);
-
-	PCONP_bit.PCTIM0 = 1;
-	PCLKSEL0_bit.PCLK_TIMER0 = 1; // from main clock
-	T0MR0 = clockFrequency / TICKS_PER_SECOND;
-	T0MCR = 3; // Interrupt and Reset on MR0
-	T0TCR = 1; // enable it
-}
-
-unsigned int Timer_GetTimeMilliseconds ()
-{
-	return tickCount;
-}
-
-void Timer_Wait (unsigned int milliseconds)
-{
-	unsigned int start = ::tickCount;
-
-	while (::tickCount < start + milliseconds)
-		;
+	if (timer == 0)
+	{
+		PCONP_bit.PCTIM0 = 1;
+		PCLKSEL0_bit.PCLK_TIMER0 = 1; // from main clock
+		T0MR0 = clock_frequency / ticks_per_second;
+		T0MCR = 3; // Interrupt and Reset on MR0
+		T0TCR = 1; // enable it
+		callbacks[0] = callback;
+		VIC_SetVectoredIRQ (timer0_isr, 4, VIC_TIMER0);
+	}
+	else
+		assert(false); // not implemented
 }

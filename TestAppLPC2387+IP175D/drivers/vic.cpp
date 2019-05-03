@@ -1,8 +1,8 @@
 
-#include <assert.h>
 #include "vic.h"
-
 #include <nxp/iolpc2387.h>
+#include <intrinsics.h>
+#include <assert.h>
 
 static __interwork void IRQ_Handler_Thumb ()
 {
@@ -77,3 +77,9 @@ void VIC_SetVectoredIRQ(void(*pIRQSub)(), unsigned int Priority, unsigned int Vi
 
     VICINTENABLE = (1u << VicIntSource);
 }
+
+__arm __interwork bool irq_enabled()
+{
+	return (__get_CPSR () & 0x80) == 0;
+}
+

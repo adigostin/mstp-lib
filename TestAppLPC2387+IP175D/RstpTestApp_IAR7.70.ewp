@@ -982,6 +982,12 @@
       <name>$PROJ_DIR$\drivers\LPC23xx_enet.h</name>
     </file>
     <file>
+      <name>$PROJ_DIR$\drivers\scheduler.cpp</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\drivers\scheduler.h</name>
+    </file>
+    <file>
       <name>$PROJ_DIR$\drivers\serial_console.cpp</name>
     </file>
     <file>
