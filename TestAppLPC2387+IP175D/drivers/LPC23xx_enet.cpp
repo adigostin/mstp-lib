@@ -348,7 +348,9 @@ void tapdev_send (void* pPacket, unsigned int size)
 
 	do
 	{
-		nextProduceIndex = (TXPRODUCEINDEX + 1) % TX_BUFFER_COUNT;
+		nextProduceIndex = TXPRODUCEINDEX + 1;
+		if (nextProduceIndex == TX_BUFFER_COUNT)
+			nextProduceIndex = 0;
 	} while (nextProduceIndex == TXCONSUMEINDEX);
 
 	EnetDmaTxDesc_t* descriptor = &EnetDmaTx [TXPRODUCEINDEX];
@@ -361,7 +363,7 @@ void tapdev_send (void* pPacket, unsigned int size)
 		| (1U << 28) // Pad
 		| (1U << 29) // CRC
 		| (1U << 30) // Last
-		| (0U << 31);// Interrupt
+		| (1U << 31);// Interrupt - needs to be set to avoid a hardware bug, see https://www.embeddedrelated.com/showthread/lpc2000/49876-1.php
 
 	TXPRODUCEINDEX = nextProduceIndex;
 }
