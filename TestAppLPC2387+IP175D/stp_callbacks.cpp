@@ -9,77 +9,125 @@
 #include <string.h>
 #include <stdio.h>
 
-#define PORT_RJ45_1		0
-#define PORT_RJ45_2		1
-#define PORT_RMII		2
+extern unsigned short chip_id;
 
 static void StpCallback_EnableBpduTrapping (const struct STP_BRIDGE* bridge, bool enable, unsigned int timestamp)
 {
-	if (enable)
+	if (chip_id == 0x175C)
 	{
-		// Enable source-port special tag.
-		// See the spanning tree register, page 89 of the IP175C datasheet.
-		unsigned short reg = ENET_MIIReadRegister (30, 16);
-		reg |= (1u << 7);
-		ENET_MIIWriteRegister (30, 16, reg);
-
-		// Add source-port tag for packets going to port 5 (RMII port).
-		// Remove source-port tag from packets going to ports 0-4.
-		// See the Tag register 10, page 76 of IP175C.
-		reg = ENET_MIIReadRegister (29, 23);
-		reg = reg | (1 << 1) | (0x1f << 6);
-		ENET_MIIWriteRegister (29, 23, reg);
-
-		// Forward BPDUs only to the CPU.
-		// Page 79 of the IP175D datasheet.
-		reg = ENET_MIIReadRegister (20, 8);
-		reg = (reg & ~3u) | 1u;
-		ENET_MIIWriteRegister (20, 8, reg);
+		if (enable)
+		{
+			// Forward BPDUs only to the CPU (i.e., don't flood them across all ports).
+			// Page 93 of IP175C datasheet.
+			unsigned short reg = ENET_MIIReadRegister (30, 26);
+			reg = (reg & 0xFF00) | 0xE0;
+			ENET_MIIWriteRegister (30, 26, reg);
+		}
+		else
+		{
+			// Resume flooding of BPDUs across ports.
+			unsigned short reg = ENET_MIIReadRegister (30, 26);
+			reg = (reg & 0xFF00) | 0xA0;
+			ENET_MIIWriteRegister (30, 26, reg);
+		}
+	}
+	else if (chip_id == 0x175D)
+	{
+		if (enable)
+		{
+			// Forward BPDUs only to the CPU.
+			// Page 79 of the IP175D datasheet.
+			unsigned short reg = ENET_MIIReadRegister (20, 8);
+			reg = (reg & ~3u) | 1u;
+			ENET_MIIWriteRegister (20, 8, reg);
+		}
+		else
+		{
+			// Here goes the code that undoes the switch chip configuration from above.
+			// This is not yet implemented in this demo app.
+			assert(false);
+		}
 	}
 	else
-	{
-		// Here goes the code that undoes the switch chip configuration from above.
-		// This is not yet implemented in this demo app.
 		assert(false);
-	}
 }
 
 static void StpCallback_EnableLearning (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable, unsigned int timestamp)
 {
-	unsigned int i = ENET_MIIReadRegister (20, 6);
+	if (chip_id == 0x175C)
+	{
+		// IP175C doesn't support flushing the filtering database.
+		// As a workaround, we disable learning at power-up and we keep it disabled.
+		/*
+		unsigned short bit = (1u << (8 + portIndex));
 
-	if (portIndex == PORT_RJ45_1)
-	{
-		i = (i & ~(1ul << 0)) | ((enable != 0) ? (1ul << 0) : 0);
+		unsigned short reg = ENET_MIIReadRegister (30, 16);
+		if (enable)
+			reg = reg | bit;
+		else
+			reg = reg & ~bit;
+		ENET_MIIWriteRegister (30, 16, reg);
+		*/
 	}
-	else if (portIndex == PORT_RJ45_2)
+	else if (chip_id == 0x175D)
 	{
-		i = (i & ~(1ul << 1)) | ((enable != 0) ? (1ul << 1) : 0);
+		unsigned short i = ENET_MIIReadRegister (20, 6);
+
+		if (portIndex == 0)
+		{
+			i = (i & ~(1ul << 0)) | ((enable != 0) ? (1ul << 0) : 0);
+		}
+		else if (portIndex == 1)
+		{
+			i = (i & ~(1ul << 1)) | ((enable != 0) ? (1ul << 1) : 0);
+		}
+		else
+			assert (0);
+
+		ENET_MIIWriteRegister (20, 6, i);
 	}
 	else
 		assert(false);
 
-	ENET_MIIWriteRegister (20, 6, i);
+	printf ("STP: %s %s on port index %d.\r\n", enable ? "Enabled" : "Disabled", "  learning", portIndex);
 
 	update_debug_leds(bridge);
 }
 
 static void StpCallback_EnableForwarding (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable, unsigned int timestamp)
 {
-	unsigned int i = ENET_MIIReadRegister (20, 6);
+	if (chip_id == 0x175C)
+	{
+		unsigned short bit = 1u << portIndex;
 
-	if (portIndex == PORT_RJ45_1)
-	{
-		i = (i & ~(1ul << 8)) | ((enable != 0) ? (1ul << 8) : 0);
+		unsigned short reg = ENET_MIIReadRegister (30, 16);
+		if (enable)
+			reg = reg | bit;
+		else
+			reg = reg & ~bit;
+		ENET_MIIWriteRegister (30, 16, reg);
 	}
-	else if (portIndex == PORT_RJ45_2)
+	else if (chip_id == 0x175D)
 	{
-		i = (i & ~(1ul << 9)) | ((enable != 0) ? (1ul << 9) : 0);
+		unsigned short i = ENET_MIIReadRegister (20, 6);
+
+		if (portIndex == 0)
+		{
+			i = (i & ~(1ul << 8)) | ((enable != 0) ? (1ul << 8) : 0);
+		}
+		else if (portIndex == 1)
+		{
+			i = (i & ~(1ul << 9)) | ((enable != 0) ? (1ul << 9) : 0);
+		}
+		else
+			assert (0);
+
+		ENET_MIIWriteRegister (20, 6, i);
 	}
 	else
 		assert(false);
 
-	ENET_MIIWriteRegister (20, 6, i);
+	printf ("STP: %s %s on port index %d.\r\n", enable ? "Enabled" : "Disabled", "forwarding", portIndex);
 
 	update_debug_leds(bridge);
 }
@@ -89,12 +137,7 @@ static unsigned int BpduFrameSize;
 
 static void* StpCallback_TransmitGetBuffer (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int bpduSize, unsigned int timestamp)
 {
-	if (portIndex == PORT_RMII)
-	{
-		// The library is trying to send a BPDU to the RMII port, which we know is us.
-		// Let's not allow it cause it would be a waste of bandwidth.
-		return NULL;
-	}
+	assert (portIndex < 2);
 
 	assert (21 + bpduSize <= sizeof (BpduFrameBuffer));
 	BpduFrameSize = 21 + bpduSize;
@@ -137,14 +180,24 @@ static void StpCallback_TransmitReleaseBuffer (const struct STP_BRIDGE* bridge, 
 
 static void StpCallback_FlushFdb (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType)
 {
-	// quickly age out everything
-	ENET_MIIWriteRegister (20, 14, 0x60);
+	if (chip_id == 0x175C)
+	{
+		// IP175C doesn't support flushing the filtering database.
+		// As a workaround, we disable learning at power-up and we keep it disabled.
+	}
+	else if (chip_id == 0x175D)
+	{
+		// quickly age out everything
+		ENET_MIIWriteRegister (20, 14, 0x60);
 
-	// wait 2 ms while the IC ages out the table
-	scheduler_wait(3);
+		// wait 2 ms while the IC ages out the table
+		scheduler_wait(3);
 
-	// reenable slow aging (~5 min)
-	ENET_MIIWriteRegister (20, 14, 5);
+		// reenable slow aging (~5 min)
+		ENET_MIIWriteRegister (20, 14, 5);
+	}
+	else
+		assert(false);
 }
 
 static void StpCallback_DebugStrOut (const struct STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, unsigned int flush)
@@ -158,24 +211,37 @@ static void StpCallback_DebugStrOut (const struct STP_BRIDGE* bridge, int portIn
 static void StpCallback_OnTopologyChange (const struct STP_BRIDGE* bridge, unsigned int treeIndex, unsigned int timestamp)
 {
 	// do nothing in this demo app
-	//printf ("TC\r\n");
+	printf ("STP: TC\r\n");
 }
 
 // See long comment at the end of 802_1Q_2011_procedures.cpp.
 static void StpCallback_OnNotifiedTC (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp)
 {
-	// quickly age out everything
-	ENET_MIIWriteRegister (20, 14, 0x60);
+	if (chip_id == 0x175C)
+	{
+		// IP175C doesn't support flushing the filtering database.
+		// As a workaround, we disable learning at power-up and we keep it disabled.
+	}
+	else if (chip_id == 0x175D)
+	{
+		// quickly age out everything
+		ENET_MIIWriteRegister (20, 14, 0x60);
 
-	// wait 2 ms while the IC ages out the table
-	scheduler_wait(3);
+		// wait 2 ms while the IC ages out the table
+		scheduler_wait(3);
 
-	// reenable slow aging (~5 min)
-	ENET_MIIWriteRegister (20, 14, 5);
+		// reenable slow aging (~5 min)
+		ENET_MIIWriteRegister (20, 14, 5);
+	}
+	else
+		assert(false);
+
+	printf ("STP: port index %d NotifiedTC\r\n", portIndex);
 }
 
 static void StpCallback_OnPortRoleChanged (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_PORT_ROLE role, unsigned int timestamp)
 {
+	printf ("STP: port index %d role = %s.\r\n", portIndex, STP_GetPortRoleString(role));
 }
 
 static void* StpCallback_AllocAndZeroMemory (unsigned int size)
@@ -191,7 +257,7 @@ static void StpCallback_FreeMemory (void* p)
 	free (p);
 }
 
-extern STP_CALLBACKS const callbacks_ip175c =
+extern STP_CALLBACKS const stp_callbacks =
 {
 	StpCallback_EnableBpduTrapping,
 	StpCallback_EnableLearning,

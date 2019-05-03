@@ -19,10 +19,9 @@
 #define PORT_RJ45_2		1
 #define PORT_RMII		2
 
-extern STP_CALLBACKS const callbacks_ip175c;
-extern STP_CALLBACKS const callbacks_ip175d;
-
+extern STP_CALLBACKS const stp_callbacks;
 static STP_BRIDGE* bridge;
+unsigned short chip_id;
 
 // ============================================================================
 
@@ -130,8 +129,44 @@ static void process_log_command (const char* params)
 		printf ("Wrong params.\r\n");
 }
 
+static void process_stp_command (const char* params)
+{
+	if (*params == 0)
+	{
+		printf ("STP is currently %s.\r\n", STP_IsBridgeStarted(bridge) ? "enabled" : "disabled");
+		return;
+	}
+
+	if (strcasecmp(params, "on") == 0)
+	{
+		if (STP_IsBridgeStarted(bridge))
+			printf ("STP is already %s.\r\n", "enabled");
+		else
+		{
+			printf ("Enabling STP...\r\n");
+			STP_StartBridge(bridge, true);
+			printf ("STP is now %s.\r\n", "enabled");
+		}
+	}
+	else if (strcasecmp(params, "off") == 0)
+	{
+		if (!STP_IsBridgeStarted(bridge))
+			printf ("STP is already %s.\r\n", "disabled");
+		else
+		{
+			printf ("Disabling STP...\r\n");
+			STP_StopBridge(bridge, true);
+			printf ("STP is now %s.\r\n", "disabled");
+		}
+	}
+	else
+		printf ("Wrong params.\r\n");
+
+}
+
 static const serial_command commands[] = {
 	{ "log", "log [on|off] - Enables or disables STP logging.", &process_log_command },
+	{ "stp", "stp [on|off] - Enables or disables the protocol.", &process_stp_command },
 	{ 0, 0, 0 }
 };
 
@@ -165,6 +200,43 @@ static void on_port_state_polling_timer()
 			update_debug_leds(bridge);
 		}
 	}
+}
+
+static void enable_source_port_special_tag()
+{
+	if (chip_id == 0x175c)
+	{
+		// Enable source-port special tag.
+		// See the spanning tree register, page 89 of the IP175C datasheet.
+		unsigned short reg = ENET_MIIReadRegister (30, 16);
+		reg |= (1u << 7);
+		ENET_MIIWriteRegister (30, 16, reg);
+
+		// Add source-port tag for packets going to port 5 (RMII port).
+		// Remove source-port tag from packets going to ports 0-4.
+		// See the Tag register 10, page 76 of IP175C.
+		reg = ENET_MIIReadRegister (29, 23);
+		reg = reg | (1 << 1) | (0x1f << 6);
+		ENET_MIIWriteRegister (29, 23, reg);
+	}
+	else if (chip_id == 0x175d)
+	{
+		// Enable special tagging for RX and TX.
+		// See the Miscellaneous Control Register, page 102 of the IP175D datasheet.
+		unsigned short reg = ENET_MIIReadRegister (21, 22);
+		reg = reg | 3;
+		ENET_MIIWriteRegister (21, 22, reg);
+
+		// Add source-port tag for packets going to port 5 (RMII port).
+		// See the Add Tag Control Register, page 111 of the IP175D datasheet.
+		ENET_MIIWriteRegister (23, 8, (1 << 5));
+
+		// Remove source-port tag from packets going to ports 0-4.
+		// See the Remove Tag Control Register, page 111 of the IP175D datasheet.
+		ENET_MIIWriteRegister (23, 16, 0x1f);
+	}
+	else
+		assert (false);
 }
 
 // ============================================================================
@@ -237,23 +309,28 @@ int main ()
 	ENET_MIIWriteRegister (PORT_RJ45_1, 0, (1 << 11));
 	ENET_MIIWriteRegister (PORT_RJ45_2, 0, (1 << 11));
 
-	unsigned short chipId = ENET_MIIReadRegister (20, 0);
-	if (chipId == 0xffff)
+	chip_id = ENET_MIIReadRegister (20, 0);
+	if (chip_id == 0xffff)
 	{
-		chipId = 0x175c;
+		chip_id = 0x175c;
 		printf ("IP175C detected.\r\n");
 	}
-	else if (chipId == 0x175D)
+	else if (chip_id == 0x175D)
 	{
 		printf ("IP175D detected.\r\n");
 	}
 	else
 		assert(false);
 
+	// Let's instruct the switch chip to insert source port information in frames forwarded to us.
+	// Since the switch doesn't appear to be able to insert this tag only in BPDUs (DA of 0180C2000000),
+	// we enable this setting at startup and discard the tag for non-BPDU frames.
+	enable_source_port_special_tag();
+
 	// -----------------------------------
 
 	// Initialize the driver of the built-in Ethernet controller.
-	static const unsigned char MacAddress[] = { 0x01, 0x55, 0x55, 0xAA, 0xAA, 0x01 };
+	static const unsigned char MacAddress[] = { 0x80, 0x55, 0x55, 0xAA, 0xAA, 0x01 };
 
 	ENET_Init (MacAddress);
 
@@ -261,7 +338,7 @@ int main ()
 	// Configure the RMII link between the switch chip and the built-in Ethernet controller.
 	// See the IP175D datasheet for details.
 
-	if (chipId == 0x175c)
+	if (chip_id == 0x175c)
 	{
 		// See MII control register, page 98 of IP175C datasheet.
 		ENET_MIIWriteRegister (31, 5,
@@ -280,7 +357,7 @@ int main ()
 							| (1 << 10) // P4_FORCE100 (force MII0 (PHY mode) to be 100M)
 							| (1 << 5)); // P4_FORCE_FULL (force MII0 (PHY mode) to be full duplex)
 	}
-	else if (chipId == 0x175d)
+	else if (chip_id == 0x175d)
 	{
 		ENET_MIIWriteRegister (21, 3,
 							  (1 << 15) // P4EXT = 1
@@ -305,13 +382,13 @@ int main ()
 
 	while(true)
 	{
-		if (chipId == 0x175c)
+		if (chip_id == 0x175c)
 		{
 			// See MII MAC mode register, page 96 of IP175C datasheet.
 			if (ENET_MIIReadRegister (31, 3) & (1 << 5))
 				break;
 		}
-		else if (chipId == 0x175d)
+		else if (chip_id == 0x175d)
 		{
 			// See paragraph 5.4.2 in the IP175D datasheet.
 			if (ENET_MIIReadRegister (21, 1) & (1 << 5))
@@ -324,15 +401,15 @@ int main ()
 	// -----------------------------------
 	// Reset the switching core.
 
-	if (chipId == 0x175c)
+	if (chip_id == 0x175c)
 	{
 		// Reset switching core - this doesn't reset registers 29.0-31, 30.0-31, 31.0-31
 		// See page 80 of IP175C datasheet.
-		ENET_MIIWriteRegister (30, 0, 0x175c);
+		ENET_MIIWriteRegister (30, 0, 0x175C);
 	}
-	else if (chipId == 0x175d)
+	else if (chip_id == 0x175d)
 	{
-		ENET_MIIWriteRegister (20, 2, 0x175c);
+		ENET_MIIWriteRegister (20, 2, 0x175D);
 	}
 	else
 		assert (false);
@@ -340,13 +417,21 @@ int main ()
 	// specifications say that we must wait at least 2 ms after this reset
 	scheduler_wait(3);
 
+	// IP175C doesn't support flushing the filtering database.
+	// As a workaround, we disable learning at power-up and we keep it disabled.
+	if (chip_id == 0x175C)
+	{
+		unsigned short reg = ENET_MIIReadRegister (30, 16);
+		reg = reg & 0xCF;
+		ENET_MIIWriteRegister (30, 16, reg);
+	}
+
 	// -----------------------------------
 	// Initialize and start the STP library.
 
 	uint32_t timestamp = scheduler_get_time_ms32();
 
-	const STP_CALLBACKS* callbacks = (chipId == 0x175c) ? &callbacks_ip175c : &callbacks_ip175d;
-	bridge = STP_CreateBridge (2, 0, 0, callbacks, MacAddress, 2);
+	bridge = STP_CreateBridge (2, 0, 0, &stp_callbacks, MacAddress, 2);
 
 	//STP_EnableLogging (bridge, true);
 

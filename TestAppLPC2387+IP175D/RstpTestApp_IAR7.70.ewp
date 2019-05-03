@@ -1097,12 +1097,6 @@
     </file>
   </group>
   <file>
-    <name>$PROJ_DIR$\callbacks_ip175c.cpp</name>
-  </file>
-  <file>
-    <name>$PROJ_DIR$\callbacks_ip175d.cpp</name>
-  </file>
-  <file>
     <name>$PROJ_DIR$\debug_leds.cpp</name>
   </file>
   <file>
@@ -1110,6 +1104,9 @@
   </file>
   <file>
     <name>$PROJ_DIR$\main.cpp</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\stp_callbacks.cpp</name>
   </file>
   <file>
     <name>$PROJ_DIR$\test.c</name>
