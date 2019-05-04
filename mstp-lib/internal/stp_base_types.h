@@ -40,11 +40,6 @@ public:
 		vl = (unsigned char) value;
 	}
 
-	bool operator== (unsigned short rhs) const
-	{
-		return GetValue () == rhs;
-	}
-
 	bool operator== (const INV_UINT2& rhs) const
 	{
 		return ((this->vh == rhs.vh) && (this->vl == rhs.vl));
