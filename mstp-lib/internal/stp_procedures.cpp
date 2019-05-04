@@ -370,7 +370,8 @@ void rcvMsgs (STP_BRIDGE* bridge, PortIndex givenPort)
 
 		const MSTI_CONFIG_MESSAGE* mstiMessages = (MSTI_CONFIG_MESSAGE*) (bridge->receivedBpduContent + 1);
 
-		for (unsigned int messageIndex = 0; messageIndex < mstiMessageCount; messageIndex++)
+		unsigned int mstiCount = (mstiMessageCount < bridge->mstiCount) ? mstiMessageCount : bridge->mstiCount;
+		for (unsigned int messageIndex = 0; messageIndex < mstiCount; messageIndex++)
 		{
 			const MSTI_CONFIG_MESSAGE* message = &mstiMessages [messageIndex];
 
