@@ -1109,6 +1109,9 @@
     <name>$PROJ_DIR$\main.cpp</name>
   </file>
   <file>
+    <name>$PROJ_DIR$\serial_commands.cpp</name>
+  </file>
+  <file>
     <name>$PROJ_DIR$\stp_callbacks.cpp</name>
   </file>
   <file>
