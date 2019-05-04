@@ -128,4 +128,46 @@ public:
 
 		Assert::AreEqual (STP_PORT_ROLE_DISABLED, role);
 	}
+
+	TEST_METHOD(receive_more_mstis_on_same_mst_config)
+	{
+		std::vector<unsigned char> buffer;
+
+		auto transmitGetBuffer = [](const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int bpduSize, unsigned int timestamp) -> void*
+		{
+			auto& buffer = *static_cast<std::vector<unsigned char>*>(STP_GetApplicationContext(bridge));
+			buffer.resize(bpduSize);
+			return buffer.data();
+		};
+
+		auto transmitReleaseBuffer = [](const struct STP_BRIDGE* bridge, void* bufferReturnedByGetBuffer)
+		{
+		};
+
+		uint32_t port_count = 4;
+		uint32_t msti_count = 5;
+		auto bridge0_callbacks = default_callbacks();
+		bridge0_callbacks.transmitGetBuffer = transmitGetBuffer;
+		bridge0_callbacks.transmitReleaseBuffer = transmitReleaseBuffer;
+		const uint8_t bridge0_address[] = { 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 };
+		auto bridge0 = STP_CreateBridge (port_count, msti_count, 16, &bridge0_callbacks, bridge0_address, 256);
+		STP_SetApplicationContext (bridge0, &buffer);
+		STP_SetStpVersion (bridge0, STP_VERSION_MSTP, 0);
+		STP_SetMstConfigName (bridge0, "ABC", 0);
+		STP_StartBridge (bridge0, 0);
+		STP_OnPortEnabled (bridge0, 0, 100, true, 0);
+
+		msti_count = 4;
+		auto bridge1_callbacks = default_callbacks();
+		const uint8_t bridge1_address[] = { 0x10, 0x20, 0x30, 0x40, 0x50, 0x70 };
+		auto bridge1 = STP_CreateBridge (port_count, msti_count, 16, &bridge1_callbacks, bridge1_address, 256);
+		STP_SetStpVersion (bridge1, STP_VERSION_MSTP, 0);
+		STP_SetMstConfigName (bridge1, "ABC", 0);
+		STP_StartBridge (bridge1, 0);
+		STP_OnPortEnabled (bridge1, 0, 100, true, 0);
+		STP_OnBpduReceived (bridge1, 0, buffer.data(), buffer.size(), 0);
+
+		STP_DestroyBridge (bridge0);
+		STP_DestroyBridge (bridge1);
+	}
 };
