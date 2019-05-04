@@ -136,9 +136,6 @@ static void process_event (event* e)
 		e->callback_buffer (e->payload, e->_len - sizeof(event));
 	else
 		assert(false);
-
-	// if (show_event_durations)
-	//	printf(...);
 }
 
 void event_queue_pop_all()

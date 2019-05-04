@@ -1,147 +1,23 @@
 
+#include "ethernet.h"
+#include "ethernet_defs.h"
+#include "vic.h"
+#include "event_queue.h"
 #include <nxp/iolpc2387.h>
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include "LPC23xx_enet.h"
 
-// ============================================================================
-/*!
- * \brief EnetTxCtrl_t
- *
- * Transmit descriptor control word
- *
- * See LPC23xx User Manual Ch16, Table 212
- *
- */
-typedef union _EnetTxCtrl_t
-{
-	unsigned int Data;
-	struct
-	{
-		unsigned int Size     : 11;
-		unsigned int 		  : 15;
-		unsigned int Override :  1;
-		unsigned int Huge     :  1;
-		unsigned int Pad      :  1;
-		unsigned int CRC      :  1;
-		unsigned int Last     :  1;
-		unsigned int Intr     :  1;
-	};
-} EnetTxCtrl_t, *pEnetTxCtrl_t;
+static void ethernet_isr();
+static void on_rx_event();
 
-// ============================================================================
-/*!
- * \brief EnetTxCtrl_t
- *
- * Transmit descriptor
- *
- * See LPC23xx User Manual Ch16, Table 211
- *
- */
-typedef struct _EnetDmaTxDesc_t
-{
-  unsigned char* pBuffer;
-  EnetTxCtrl_t EnetTxCtrl;
-} EnetDmaTxDesc_t, * pEnetDmaTxDesc_t;
+static ethernet_receive_handler rx_handler;
+static bool rx_event_posted;
 
-// ============================================================================
-/*!
- * \brief EnetDmaTxStatus_t
- *
- * Transmit status
- *
- * See LPC23xx User Manual Ch16, Table 211
- *
- */
-typedef union _EnetDmaTxStatus_t
-{
-	unsigned int Data;
-	struct
-	{
-		unsigned int                    :21;
-		unsigned int CollisionCount     : 4;
-		unsigned int Defer              : 1;
-		unsigned int ExcessiveDefer     : 1;
-		unsigned int ExcessiveCollision : 1;
-		unsigned int LateCollision      : 1;
-		unsigned int Underrun           : 1;
-		unsigned int NoDescriptor       : 1;
-		unsigned int Error              : 1;
-	};
-} EnetDmaTxStatus_t, * pEnetDmaTxStatus_t;
-
-// ============================================================================
-/*!
- * \brief EnetRxCtrl_t
- *
- * Receive descriptor control word
- *
- * See LPC23xx User Manual Ch16, Table 207
- *
- */
-typedef struct _EnetRxCtrl_t
-{
-  unsigned int Size     : 11;
-  unsigned int          : 20;
-  unsigned int Intr     :  1;
-} EnetRxCtrl_t, *pEnetRxCtrl_t;
-
-// ============================================================================
-/*!
- * \brief EnetDmaRxDesc_t
- *
- * Receive descriptor
- *
- * See LPC23xx User Manual Ch16, Table 206
- *
- */
-typedef struct _EnetDmaRxDesc_t
-{
-  unsigned char* pBuffer;
-  EnetRxCtrl_t EnetRxCtrl;
-} EnetDmaRxDesc_t, * pEnetDmaRxDesc_t;
-
-// ============================================================================
-/*!
- * \brief EnetDmaRxStatus_t
- *
- * Receive status
- *
- * See LPC23xx User Manual Ch16, Table 208
- *
- */
-typedef union _EnetDmaRxStatus_t
-{
-	unsigned int Data[2];
-	struct
-	{
-		unsigned int RxSize         :11;
-		unsigned int                : 7;
-		unsigned int ControlFrame   : 1; // bit 18
-		unsigned int VLAN           : 1; // bit 19
-
-		unsigned int FailFilter     : 1; // bit 20
-		unsigned int Multicast      : 1; // bit 21
-		unsigned int Broadcast      : 1; // bit 22
-		unsigned int CRCError       : 1; // bit 23
-
-		unsigned int SymbolError    : 1; // bit 24
-		unsigned int LengthError    : 1; // bit 25
-		unsigned int RangeError     : 1; // bit 26
-		unsigned int AlignmentError : 1; // bit 27
-
-		unsigned int Overrun        : 1; // bit 28
-		unsigned int NoDescriptor   : 1; // bit 29
-		unsigned int LastFlag       : 1; // bit 30
-		unsigned int Error          : 1; // bit 31
-
-		unsigned int SAHashCRC      : 8;
-		unsigned int                : 8;
-		unsigned int DAHashCRC      : 8;
-		unsigned int                : 8;
-	};
-} EnetDmaRxStatus_t, * pEnetDmaRxStatus_t;
+// Max allowed size on the wire is 1536, but we will tell the controller to add 4 CRC bytes
+// and the switch IC to add 4 more, so the max allowed size in this point is 1536 - 4 - 4.
+// There's a lot to be changed in the driver if we want frames 1536 bytes long in software.
+#define MAX_FRAME_SIZE_IN_SOFTWARE	(1536 - 4 - 4)
 
 #pragma segment="EMAC_DMA_RAM"
 
@@ -179,8 +55,10 @@ __no_init static EnetDmaRxDesc_t EnetDmaRx [RX_BUFFER_COUNT];
 #pragma data_alignment=8
 __no_init static EnetDmaRxStatus_t EnetDmaRxSta [RX_BUFFER_COUNT];
 
-void ENET_Init (const unsigned char macAddress[6])
+void ethernet_init (const uint8_t macAddress[6], ethernet_receive_handler rx_handler)
 {
+	::rx_handler = rx_handler;
+
 	unsigned int tout;
 
 	for (tout = 100; tout; tout--);
@@ -238,9 +116,9 @@ void ENET_Init (const unsigned char macAddress[6])
 	// ----------------------------------------
 	// init RX FIFO
 
-	for (unsigned int i = 0; i < RX_BUFFER_COUNT; i++)
+	for (size_t i = 0; i < RX_BUFFER_COUNT; i++)
 	{
-		EnetDmaRx [i].EnetRxCtrl.Size = MAX_FRAME_SIZE_IN_SOFTWARE - 1;
+		EnetDmaRx [i].EnetRxCtrl.data = (MAX_FRAME_SIZE_IN_SOFTWARE - 1) | (1u << 31);
 		EnetDmaRx [i].pBuffer = rxBuffers [i];
 		EnetDmaRxSta [i].Data [0] = 0;
 		EnetDmaRxSta [i].Data [1] = 0;
@@ -271,6 +149,21 @@ void ENET_Init (const unsigned char macAddress[6])
 	SA1 = (macAddress[3] << 8) | macAddress[2];
 	SA2 = (macAddress[5] << 8) | macAddress[4];
 
+	// ----------------------------------------
+
+	// Reset all interrupts
+	INTCLEAR = 0xffffffff;
+
+	// Enable EMAC interrupts.
+	INTENABLE = (0 << 0) // rx overrun
+			  | (0 << 1) // rx error
+			  | (0 << 2) // rx finished (overflow)
+			  | (1 << 3) // rx done
+			  | (0 << 4) // tx underrun
+			  | (0 << 5) // tx error
+			  | (0 << 6) // tx finished
+			  | (1 << 7);// tx done
+
 	RXFILTERCTRL = (1 << 1)  // accept broadcast
 				 | (1 << 2)  // accept multicast
 				 | (1 << 5); // accept perfect match
@@ -278,69 +171,121 @@ void ENET_Init (const unsigned char macAddress[6])
 	COMMAND_bit.RXENABLE = 1;
 	MAC1_bit.RE = 1;
 	COMMAND_bit.TXENABLE = 1;
+
+	VIC_SetVectoredIRQ (ethernet_isr, 5, VIC_ETHERNET);
+
+	// TODO: Send two frames with one fragment each - to account for the TXCONSUMEINDEX bug specified in the errata sheet.
 }
 
 // ============================================================================
 
-unsigned int tapdev_read (void* pPacket)
+static void ethernet_isr()
 {
-	unsigned int index = RXCONSUMEINDEX;
-	if (index == RXPRODUCEINDEX)
-		return 0;
+	uint32_t intstatus = INTSTATUS;
+	intstatus &= INTENABLE;
 
-	unsigned int frameSize = 0;
+	if (intstatus & (1 << 3))
+	{
+		// rx done
+		INTCLEAR = (1 << 3);
 
-	const EnetDmaRxStatus_t* status = &EnetDmaRxSta[index];
-	if (status->FailFilter)
-	{
-		printf ("FailFilter\r\n");
-	}
-	else if (status->NoDescriptor)
-	{
-		printf ("NoDesc\r\n");
-	}
-	else if (status->AlignmentError)
-	{
-		printf ("Alignment\r\n");
-	}
-	else if (status->LengthError)
-	{
-		printf ("Length\r\n");
-	}
-	else if (status->SymbolError)
-	{
-		printf ("Symbol\r\n");
-	}
-	else if (status->CRCError)
-	{
-		printf ("CRC\r\n");
-	}
-	else if (status->Overrun)
-	{
-		printf ("Overrun\r\n");
-	}
-	else
-	{
-		frameSize = status->RxSize + 1;
-		assert (frameSize >= 64);
-
-		// strip the CRC at the end
-		frameSize -= 4;
-
-		memcpy (pPacket, EnetDmaRx[index].pBuffer, frameSize);
+		if (!rx_event_posted)
+		{
+			rx_event_posted = event_queue_try_push (on_rx_event, "on_rx_event");
+			if (!rx_event_posted)
+			{
+				// TODO: handle this somehow
+				printf ("!rx_event_posted\r\n");
+			}
+		}
 	}
 
-	index++;
-	if (index == RX_BUFFER_COUNT)
-		index = 0;
-	RXCONSUMEINDEX = index;
+	if (intstatus & ((1 << 5) | (1 << 7)))
+	{
+		// TX error or TX done
 
-	return frameSize;
+		if (intstatus & (1 << 5))
+			printf ("tx error\r\n");
+
+		if ((intstatus & (1 << 7)) && (intstatus & (1 << 5)))
+		{
+			// tx error and tx done
+			INTCLEAR = (1 << 5) | (1 << 7);
+		}
+		else if (intstatus & (1 << 5))
+		{
+			// tx error
+			INTCLEAR = (1 << 5);
+		}
+		else if (intstatus & (1 << 7))
+		{
+			// tx done
+			INTCLEAR = (1 << 7);
+		}
+	}
 }
 
 // ============================================================================
 
-void tapdev_send (void* pPacket, unsigned int size)
+#pragma diag_suppress=Pa082 // order of volatile access
+static void on_rx_event()
+{
+	rx_event_posted = false;
+
+	while (RXCONSUMEINDEX != RXPRODUCEINDEX)
+	{
+		uint32_t index = RXCONSUMEINDEX;
+		const EnetDmaRxStatus_t* status = &EnetDmaRxSta[index];
+		if (status->FailFilter)
+		{
+			printf ("FailFilter\r\n");
+		}
+		else if (status->NoDescriptor)
+		{
+			printf ("NoDesc\r\n");
+		}
+		else if (status->AlignmentError)
+		{
+			printf ("Alignment\r\n");
+		}
+		else if (status->LengthError)
+		{
+			printf ("Length\r\n");
+		}
+		else if (status->SymbolError)
+		{
+			printf ("Symbol\r\n");
+		}
+		else if (status->CRCError)
+		{
+			printf ("CRC\r\n");
+		}
+		else if (status->Overrun)
+		{
+			printf ("Overrun\r\n");
+		}
+		else
+		{
+			uint32_t frameSize = status->RxSize + 1;
+			assert (frameSize >= 64);
+
+			// strip the CRC at the end
+			frameSize -= 4;
+
+			rx_handler (EnetDmaRx[index].pBuffer, frameSize);
+		}
+
+		index++;
+		if (index == RX_BUFFER_COUNT)
+			index = 0;
+		RXCONSUMEINDEX = index;
+	}
+}
+#pragma diag_default=Pa082
+
+// ============================================================================
+
+void ethernet_send (void* pPacket, unsigned int size)
 {
 	assert ((size > 0) && (size <= MAX_FRAME_SIZE_IN_SOFTWARE));
 

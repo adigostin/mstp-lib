@@ -4,7 +4,7 @@
 #include "drivers/serial_console.h"
 #include "drivers/vic.h"
 #include "drivers/scheduler.h"
-#include "drivers/LPC23xx_enet.h"
+#include "drivers/ethernet.h"
 #include "drivers/gpio.h"
 #include "drivers/event_queue.h"
 #include "debug_leds.h"
@@ -241,6 +241,37 @@ static void enable_source_port_special_tag()
 
 // ============================================================================
 
+static void on_frame_received (uint8_t* frame, size_t size)
+{
+	uint32_t timestamp = scheduler_get_time_ms32();
+
+	unsigned int receivePortIndex = ((frame [13] == 1) ? 0 : 1);
+
+	//printf ("frame[12]=%02x, frame[13]=%02x\r\n", frame[12], frame[13]);
+
+	if (!STP_GetPortEnabled (bridge, receivePortIndex))
+	{
+		STP_OnPortEnabled (bridge, receivePortIndex, 100, true, timestamp);
+		update_debug_leds(bridge);
+	}
+
+	if (memcmp (frame, "\x01\x80\xC2\x00\x00\x00", 6) == 0)
+	{
+		STP_OnBpduReceived (bridge, receivePortIndex, &frame[21], size - 21, timestamp);
+		update_debug_leds(bridge);
+	}
+	else if ((frame[12] == 0x08) && (frame[13] == 0))
+	{
+		// IP frame
+	}
+	else if ((frame[12] == 0x08) && (frame[13] == 0x06))
+	{
+		// ARP frame
+	}
+}
+
+// ============================================================================
+
 int main ()
 {
 	// Power down the EMAC controller. Required during debugging.
@@ -332,7 +363,7 @@ int main ()
 	// Initialize the driver of the built-in Ethernet controller.
 	static const unsigned char MacAddress[] = { 0x80, 0x55, 0x55, 0xAA, 0xAA, 0x01 };
 
-	ENET_Init (MacAddress);
+	ethernet_init (MacAddress, &on_frame_received);
 
 	// -----------------------------------
 	// Configure the RMII link between the switch chip and the built-in Ethernet controller.
@@ -451,40 +482,8 @@ int main ()
 
 	// ========================================================================
 
-	while(1)
+	while(true)
 	{
-		timestamp = scheduler_get_time_ms32();
-
-		static unsigned char frame [MAX_FRAME_SIZE_IN_SOFTWARE];
-
-		unsigned int frameSize;
-		while ((frameSize = tapdev_read(frame)) > 0)
-		{
-			unsigned int receivePortIndex = ((frame [13] == 1) ? 0 : 1);
-
-			//printf ("frame[12]=%02x, frame[13]=%02x\r\n", frame[12], frame[13]);
-
-			if (!STP_GetPortEnabled (bridge, receivePortIndex))
-			{
-				STP_OnPortEnabled (bridge, receivePortIndex, 100, true, timestamp);
-				update_debug_leds(bridge);
-			}
-
-			if (memcmp (frame, "\x01\x80\xC2\x00\x00\x00", 6) == 0)
-			{
-				STP_OnBpduReceived (bridge, receivePortIndex, &frame[21], frameSize - 21, timestamp);
-				update_debug_leds(bridge);
-			}
-			else if ((frame[12] == 0x08) && (frame[13] == 0))
-			{
-				// IP frame
-			}
-			else if ((frame[12] == 0x08) && (frame[13] == 0x06))
-			{
-				// ARP frame
-			}
-		}
-
 		event_queue_pop_all();
 	}
 }

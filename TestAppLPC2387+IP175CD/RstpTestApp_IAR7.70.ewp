@@ -964,6 +964,15 @@
   <group>
     <name>drivers</name>
     <file>
+      <name>$PROJ_DIR$\drivers\ethernet.cpp</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\drivers\ethernet.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\drivers\ethernet_defs.h</name>
+    </file>
+    <file>
       <name>$PROJ_DIR$\drivers\event_queue.cpp</name>
     </file>
     <file>
@@ -974,12 +983,6 @@
     </file>
     <file>
       <name>$PROJ_DIR$\drivers\gpio.h</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\drivers\LPC23xx_enet.cpp</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\drivers\LPC23xx_enet.h</name>
     </file>
     <file>
       <name>$PROJ_DIR$\drivers\scheduler.cpp</name>

@@ -1,6 +1,6 @@
 
 #include "stp.h"
-#include "drivers/LPC23xx_enet.h"
+#include "drivers/ethernet.h"
 #include "drivers/timer.h"
 #include "drivers/scheduler.h"
 #include "debug_leds.h"
@@ -175,7 +175,7 @@ static void* StpCallback_TransmitGetBuffer (const struct STP_BRIDGE* bridge, uns
 
 static void StpCallback_TransmitReleaseBuffer (const struct STP_BRIDGE* bridge, void* bufferReturnedByGetBuffer)
 {
-	tapdev_send (BpduFrameBuffer, BpduFrameSize);
+	ethernet_send (BpduFrameBuffer, BpduFrameSize);
 }
 
 static void StpCallback_FlushFdb (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType)

@@ -70,8 +70,8 @@ ipch/
 *.nuget.props
 *.nuget.targets
 
-TestAppLPC2387+IP175D/settings/
-TestAppLPC2387+IP175D/_Debug
+TestAppLPC2387+IP175CD/settings/
+TestAppLPC2387+IP175CD/_Debug
 *.dep
 *.ewt
 /TestAppTM4C129+88E6352/Executable_1 clang Debug
