@@ -29,7 +29,7 @@ private:
 	unsigned char vl;
 
 public:
-	unsigned short GetValue () const
+	unsigned short GetValue() const
 	{
 		return (vh << 8) | vl;
 	}
@@ -45,7 +45,7 @@ public:
 		return ((this->vh == rhs.vh) && (this->vl == rhs.vl));
 	}
 
-	operator unsigned short ()
+	operator unsigned short() const
 	{
 		return (vh << 8) | vl;
 	}
