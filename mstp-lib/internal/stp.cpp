@@ -24,16 +24,19 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 {
 	// Let's make a few checks on the data types, because we might be compiled with strange
 	// compiler options which will turn upside down all our assumptions about structure layouts.
-	static_assert (sizeof(unsigned char) == 1, "");
-	static_assert (sizeof(unsigned short) == 2, "");
-	static_assert (sizeof(unsigned int) == 4, "");
-	static_assert (sizeof(INV_UINT2) == 2, "");
-	static_assert (sizeof(INV_UINT4) == 4, "");
-	static_assert (sizeof(STP_BRIDGE_ADDRESS) == 6, "");
-	static_assert (sizeof(BRIDGE_ID) == 8, "");
-	static_assert (sizeof(PORT_ID) == 2, "");
-	static_assert (sizeof(PRIORITY_VECTOR) == 34, "");
-	static_assert (sizeof(MSTP_BPDU) == 102, "");
+	// These really should use static_assert, but I'm not sure all compilers support static_assert.
+	// If you get one of these asserts, you should reset your compiler options to their defaults,
+	// at least those options related to structure layouts, at least for the files belonging to the STP library.
+	assert (sizeof (unsigned short) == 2);
+	assert (sizeof (unsigned int) == 4);
+	assert (sizeof (INV_UINT2) == 2);
+	assert (sizeof (INV_UINT4) == 4);
+	assert (sizeof (STP_BRIDGE_ADDRESS) == 6);
+	assert (sizeof (BRIDGE_ID) == 8);
+	assert (sizeof (PORT_ID) == 2);
+	assert (sizeof (PRIORITY_VECTOR) == 34);
+	assert (sizeof (MSTP_BPDU) == 102);
+	assert (sizeof(MSTI_CONFIG_MESSAGE) == 16);
 
 	// Upper limit for number of MSTIs is defined in 802.1Q-2011, page 342, top paragraph:
 	//		"No more than 64 MSTI Configuration Messages shall be encoded in an MST
