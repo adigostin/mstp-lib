@@ -41,35 +41,6 @@ void updtRcvdInfoWhile	(STP_BRIDGE*, PortIndex portIndex, TreeIndex treeIndex);	
 void updtRolesTree		(STP_BRIDGE*, TreeIndex treeIndex);					// 13.27.ae) - 13.27.31
 void updtRolesDisabledTree (STP_BRIDGE*, TreeIndex treeIndex);				// 13.27.af) - 13.27.32
 
-// 13.28 State machine conditions and parameters
-bool allSptAgree        (const STP_BRIDGE*);
-bool allSynced			(const STP_BRIDGE*, PortIndex, TreeIndex);
-bool allTransmitReady	(const STP_BRIDGE*, PortIndex);
-const PRIORITY_VECTOR& BestAgreementPriority();
-bool cist				(const STP_BRIDGE*, TreeIndex);
-bool cistRootPort		(const STP_BRIDGE*, PortIndex);
-bool cistDesignatedPort	(const STP_BRIDGE*, PortIndex);
-unsigned short EdgeDelay    (const STP_BRIDGE*, PortIndex);
-unsigned short forwardDelay (const STP_BRIDGE*, PortIndex);
-unsigned short FwdDelay     (const STP_BRIDGE*, PortIndex);
-unsigned short HelloTime    (const STP_BRIDGE*, PortIndex);
-unsigned short MaxAge	    (const STP_BRIDGE*, PortIndex);
-bool msti				(const STP_BRIDGE*, TreeIndex);
-bool mstiDesignatedOrTCpropagatingRootPort (const STP_BRIDGE*, PortIndex);
-bool mstiMasterPort		(const STP_BRIDGE*, PortIndex);
-bool operPointToPoint   (const STP_BRIDGE*, PortIndex);
-bool rcvdAnyMsg			(const STP_BRIDGE*, PortIndex);
-bool rcvdCistMsg		(const STP_BRIDGE*, PortIndex);
-bool rcvdMstiMsg		(const STP_BRIDGE*, PortIndex, TreeIndex);
-bool reRooted			(const STP_BRIDGE*, PortIndex, TreeIndex);
-bool rstpVersion		(const STP_BRIDGE*);
-bool spt                (const STP_BRIDGE*);
-bool stpVersion			(const STP_BRIDGE*);
-bool updtCistInfo		(const STP_BRIDGE*, PortIndex);
-bool updtMstiInfo		(const STP_BRIDGE*, PortIndex, TreeIndex);
-bool rcvdXstMsg			(const STP_BRIDGE*, PortIndex, TreeIndex);
-bool updtXstInfo		(const STP_BRIDGE*, PortIndex, TreeIndex);
-
 // Not from the standard. See long comment in 802_1Q_2011_procedures.cpp, just above CallTcCallback().
 void CallNotifiedTcCallback (STP_BRIDGE* bridge, TreeIndex, unsigned int timestamp);
 

@@ -1038,6 +1038,12 @@
         <name>$PROJ_DIR$\..\mstp-lib\internal\stp_bridge.h</name>
       </file>
       <file>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_conditions_and_params.cpp</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\..\mstp-lib\internal\stp_conditions_and_params.h</name>
+      </file>
+      <file>
         <name>$PROJ_DIR$\..\mstp-lib\internal\stp_log.cpp</name>
       </file>
       <file>

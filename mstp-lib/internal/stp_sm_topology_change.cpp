@@ -5,6 +5,7 @@
 // This file implements §13.39 from 802.1Q-2018.
 
 #include "stp_procedures.h"
+#include "stp_conditions_and_params.h"
 #include "stp_bridge.h"
 #include "stp_log.h"
 #include "stp_sm.h"

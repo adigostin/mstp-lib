@@ -22,6 +22,7 @@
     <ClInclude Include="mstp-lib\internal\stp_base_types.h" />
     <ClInclude Include="mstp-lib\internal\stp_bpdu.h" />
     <ClInclude Include="mstp-lib\internal\stp_bridge.h" />
+    <ClInclude Include="mstp-lib\internal\stp_conditions_and_params.h" />
     <ClInclude Include="mstp-lib\internal\stp_log.h" />
     <ClInclude Include="mstp-lib\internal\stp_md5.h" />
     <ClInclude Include="mstp-lib\internal\stp_port.h" />
@@ -33,6 +34,7 @@
     <ClCompile Include="mstp-lib\internal\stp.cpp" />
     <ClCompile Include="mstp-lib\internal\stp_base_types.cpp" />
     <ClCompile Include="mstp-lib\internal\stp_bpdu.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_conditions_and_params.cpp" />
     <ClCompile Include="mstp-lib\internal\stp_log.cpp" />
     <ClCompile Include="mstp-lib\internal\stp_md5.cpp" />
     <ClCompile Include="mstp-lib\internal\stp_procedures.cpp" />

@@ -15,6 +15,7 @@ add_executable (build_test_gcc_arm_6.x
 	"../mstp-lib/internal/stp_md5.cpp" "../mstp-lib/internal/stp_md5.h"
 	"../mstp-lib/internal/stp_port.h"
 	"../mstp-lib/internal/stp_procedures.cpp" "../mstp-lib/internal/stp_procedures.h"
+	"../mstp-lib/internal/stp_conditions_and_params.cpp" "../mstp-lib/internal/stp_conditions_and_params.h"
 	"../mstp-lib/internal/stp_sm.h"
 	"../mstp-lib/internal/stp_sm_bridge_detection.cpp"
 	"../mstp-lib/internal/stp_sm_l2g_port_receive.cpp"

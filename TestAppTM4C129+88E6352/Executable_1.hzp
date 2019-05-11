@@ -100,6 +100,8 @@
         <file file_name="../mstp-lib/internal/stp_sm_port_transmit.cpp" />
         <file file_name="../mstp-lib/internal/stp_sm_topology_change.cpp" />
         <file file_name="../mstp-lib/internal/stp_sm.h" />
+        <file file_name="../mstp-lib/internal/stp_conditions_and_params.cpp" />
+        <file file_name="../mstp-lib/internal/stp_conditions_and_params.h" />
       </folder>
     </folder>
     <file file_name="smi.cpp" />

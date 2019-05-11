@@ -3,6 +3,7 @@
 // Copyright (c) 2011-2019 Adi Gostin, distributed under Apache License v2.0.
 
 #include "stp_procedures.h"
+#include "stp_conditions_and_params.h"
 #include "stp_bridge.h"
 #include <assert.h>
 
