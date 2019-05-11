@@ -2,6 +2,7 @@
 #pragma once
 #include "CppUnitTest.h"
 #include "stp.h"
+#include "port.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 

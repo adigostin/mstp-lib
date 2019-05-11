@@ -8,7 +8,7 @@
 #include "stp_base_types.h"
 #include "../stp.h"
 
-// 14.2.1
+// 14.2.9 in 802.1Q-2018
 enum BPDU_PORT_ROLE
 {
 	BPDU_PORT_ROLE_MASTER     = 0,
@@ -17,38 +17,37 @@ enum BPDU_PORT_ROLE
 	BPDU_PORT_ROLE_DESIGNATED = 3,
 };
 
-// 14.6
-bool           GetBpduFlagTc         (unsigned char bpduFlags);
-bool           GetBpduFlagProposal   (unsigned char bpduFlags);
-BPDU_PORT_ROLE GetBpduFlagPortRole   (unsigned char bpduFlags);
-bool           GetBpduFlagLearning   (unsigned char bpduFlags);
-bool           GetBpduFlagForwarding (unsigned char bpduFlags);
-bool           GetBpduFlagAgreement  (unsigned char bpduFlags);
-bool           GetBpduFlagTcAck      (unsigned char bpduFlags);
-bool           GetBpduFlagMaster     (unsigned char bpduFlags);
+inline bool           GetBpduFlagTc         (unsigned char bpduFlags) { return (bpduFlags & 1) != 0; } // 14.4.a) in 802.1Q-2018
+inline bool           GetBpduFlagProposal   (unsigned char bpduFlags) { return (bpduFlags & 2) != 0; } // 14.4.b) in 802.1Q-2018
+inline BPDU_PORT_ROLE GetBpduFlagPortRole   (unsigned char bpduFlags) { return (BPDU_PORT_ROLE) ((bpduFlags >> 2) & 3); } // 14.4.c) in 802.1Q-2018
+inline bool           GetBpduFlagLearning   (unsigned char bpduFlags) { return (bpduFlags & 0x10) != 0; } // 14.4.d) in 802.1Q-2018
+inline bool           GetBpduFlagForwarding (unsigned char bpduFlags) { return (bpduFlags & 0x20) != 0; } // 14.4.e) in 802.1Q-2018
+inline bool           GetBpduFlagAgreement  (unsigned char bpduFlags) { return (bpduFlags & 0x40) != 0; } // 14.4.f) in 802.1Q-2018
+inline bool           GetBpduFlagTcAck      (unsigned char bpduFlags) { return (bpduFlags & 0x80) != 0; } // 14.4.g) in 802.1Q-2018
+inline bool           GetBpduFlagMaster     (unsigned char bpduFlags) { return (bpduFlags & 0x80) != 0; } // 14.4.1.a) in 802.1Q-2018
 
-
+// 14.4.1 in 802.1Q-2018
 struct MSTI_CONFIG_MESSAGE
 {
-	unsigned char flags;
-	BRIDGE_ID     RegionalRootId;
-	INV_UINT4     InternalRootPathCost;
+	unsigned char flags; // a)
+	BRIDGE_ID     RegionalRootId; // b)
+	INV_UINT4     InternalRootPathCost; // c)
 
-	// Bits 5 through 8 of Octet 14 convey the value of the Bridge Identifier Priority for this MSTI.
+	// d) Bits 5 through 8 of Octet 14 convey the value of the Bridge Identifier Priority for this MSTI.
 	// Bits 1 through 4 of Octet 14 shall be transmitted as 0, and ignored on receipt.
 	unsigned char BridgePriority;
 
-	// Bits 5 through 8 of Octet 15 convey the value of the Port Identifier Priority for this MSTI.
+	// e) Bits 5 through 8 of Octet 15 convey the value of the Port Identifier Priority for this MSTI.
 	// Bits 1 through 4 of Octet 15 shall be transmitted as 0, and ignored on receipt.
 	unsigned char PortPriority;
 
-	unsigned char RemainingHops;
+	unsigned char RemainingHops; // f)
 
 	void Dump (STP_BRIDGE* bridge, int port, int tree) const;
 };
 
 // ============================================================================
-
+// 14.1.2 in 802.1Q-2018
 struct BPDU_HEADER
 {
 	INV_UINT2 protocolId;
@@ -57,7 +56,7 @@ struct BPDU_HEADER
 };
 
 // ============================================================================
-
+// Figure 14-1 in 802.1Q-2018
 // The library uses this structure for STP Config BPDUs, RSTP BPDUs and MSTP BPDUs.
 //  - STP Config BPDUs use members up to and including ForwardDelay.
 //  - RSTP BPDUs use members up to and including Version1Length.
@@ -90,17 +89,18 @@ struct MSTP_BPDU : public BPDU_HEADER
 };
 
 // ============================================================================
-
+// §14.5 in 802.1Q-2018
 enum VALIDATED_BPDU_TYPE
 {
 	VALIDATED_BPDU_TYPE_UNKNOWN,
 	VALIDATED_BPDU_TYPE_STP_CONFIG,
 	VALIDATED_BPDU_TYPE_STP_TCN,
 	VALIDATED_BPDU_TYPE_RST,
-	VALIDATED_BPDU_TYPE_MST
+	VALIDATED_BPDU_TYPE_MST,
+	VALIDATED_BPDU_TYPE_SPT,
 };
 
-enum VALIDATED_BPDU_TYPE STP_GetValidatedBpduType (const unsigned char* _bpdu, unsigned int bpduSize);
+enum VALIDATED_BPDU_TYPE STP_GetValidatedBpduType (enum STP_VERSION bridgeStpVersion, const unsigned char* bpdu, size_t bpduSize);
 
 BPDU_PORT_ROLE GetBpduPortRole (STP_PORT_ROLE role);
 

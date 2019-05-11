@@ -353,7 +353,7 @@ void STP_OnBpduReceived (STP_BRIDGE* bridge, unsigned int portIndex, const unsig
 		{
 			LOG (bridge, -1, -1, "{T}: BPDU received on Port {D}:\r\n", timestamp, 1 + portIndex);
 
-			enum VALIDATED_BPDU_TYPE type = STP_GetValidatedBpduType (bpdu, bpduSize);
+			enum VALIDATED_BPDU_TYPE type = STP_GetValidatedBpduType (bridge->ForceProtocolVersion, bpdu, bpduSize);
 			bool passToStateMachines;
 			switch (type)
 			{
