@@ -63,19 +63,17 @@ void port::on_bridge_property_changed (void* arg, object* obj, const property_ch
 
 D2D1_POINT_2F port::GetCPLocation() const
 {
-	auto bounds = _bridge->GetBounds();
-
 	if (_side == side::left)
-		return Point2F (bounds.left - ExteriorHeight, bounds.top + _offset);
+		return { _bridge->GetLeft() - ExteriorHeight, _bridge->GetTop() + _offset };
 
 	if (_side == side::right)
-		return Point2F (bounds.right + ExteriorHeight, bounds.top + _offset);
+		return { _bridge->GetRight() + ExteriorHeight, _bridge->GetTop() + _offset };
 
 	if (_side == side::top)
-		return Point2F (bounds.left + _offset, bounds.top - ExteriorHeight);
+		return { _bridge->GetLeft() + _offset, _bridge->GetTop() - ExteriorHeight };
 
 	// _side == side::bottom
-	return Point2F (bounds.left + _offset, bounds.bottom + ExteriorHeight);
+	return { _bridge->GetLeft() + _offset, _bridge->GetBottom() + ExteriorHeight };
 }
 
 Matrix3x2F port::GetPortTransform() const

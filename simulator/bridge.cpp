@@ -322,7 +322,7 @@ void bridge::Render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsign
 	}
 
 	// Draw bridge outline.
-	D2D1_ROUNDED_RECT rr = RoundedRect (GetBounds(), RoundRadius, RoundRadius);
+	D2D1_ROUNDED_RECT rr = RoundedRect (bounds(), RoundRadius, RoundRadius);
 	InflateRoundedRect (&rr, -bridgeOutlineWidth / 2);
 	com_ptr<ID2D1SolidColorBrush> brush;
 	dc->CreateSolidColorBrush (configIdColor, &brush);

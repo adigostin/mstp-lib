@@ -37,6 +37,11 @@ namespace edge
 			BOOL bRes = ::MoveWindow (hwnd(), rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE);
 			assert(bRes);
 		}
+
+		void invalidate()
+		{
+			::InvalidateRect (hwnd(), nullptr, FALSE);
+		}
 	};
 
 	struct zoomable_i abstract
