@@ -2,29 +2,24 @@
 #include "pch.h"
 #include "edit_state.h"
 #include "bridge.h"
-#include "win32/utility_functions.h"
+#include "win32/d2d_window.h"
 
 class create_bridge_es : public edit_state
 {
-	typedef edit_state base;
+	using base = edit_state;
+
+	static constexpr mac_address null_address = { 0, 0, 0, 0, 0, 0 };
 	bool _completed = false;
 	std::unique_ptr<bridge> _bridge;
 
-public:
 	using base::base;
 
-	virtual void process_mouse_move (const mouse_location& location) override final
+	virtual void process_mouse_move (const mouse_location& ml) override final
 	{
 		if (_bridge == nullptr)
-		{
-			uint32_t portCount = 4;
-			uint32_t mstiCount = 4;
-			size_t macAddressesToReserve = std::max ((size_t) 1 + portCount, (size_t) 16);
-			auto macAddress = _project->AllocMacAddressRange(macAddressesToReserve);
-			_bridge.reset (new bridge (portCount, mstiCount, macAddress));
-		}
+			_bridge = make_temp_bridge(4, 4, ml.w);
 
-		_bridge->SetLocation (location.w.x - _bridge->GetWidth() / 2, location.w.y - _bridge->GetHeight() / 2);
+		_bridge->SetLocation (ml.w.x - _bridge->GetWidth() / 2, ml.w.y - _bridge->GetHeight() / 2);
 		::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
 	}
 
@@ -32,24 +27,26 @@ public:
 	{
 		if (_bridge != nullptr)
 		{
-			bridge* b = _bridge.get();
-			size_t insertIndex = _project->bridges().size();
-			_project->insert_bridge(insertIndex, move(_bridge));
-			STP_StartBridge (_project->bridges().back()->stp_bridge(), GetMessageTime());
+			size_t number_of_addresses_to_reserve = (_bridge->port_count() + 15) / 16 * 16;
+			auto bridge_address = _project->AllocMacAddressRange(number_of_addresses_to_reserve);
+			auto b = std::make_unique<bridge>(_bridge->port_count(), _bridge->msti_count(), bridge_address);
+			b->set_stp_enabled(true);
+			b->SetLocation(_bridge->GetLocation());
+
+			size_t insert_index = _project->bridges().size();
+			_project->insert_bridge(insert_index, std::move(b));
 			_project->SetChangedFlag(true);
-			_selection->select(b);
+			_selection->select(_project->bridges().back().get());
 		}
 
 		_completed = true;
 	}
 
-	void recreate_bridge (size_t port_count)
+	static std::unique_ptr<bridge> make_temp_bridge (size_t port_count, size_t msti_count, D2D1_POINT_2F center)
 	{
-		auto centerX = _bridge->GetLeft() + _bridge->GetWidth() / 2;
-		auto centerY = _bridge->GetTop() + _bridge->GetHeight() / 2;
-		_bridge.reset (new bridge(port_count, _bridge->msti_count(), _bridge->bridge_address()));
-		_bridge->SetLocation (centerX - _bridge->GetWidth() / 2, centerY - _bridge->GetHeight() / 2);
-		::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
+		auto new_bridge = std::make_unique<bridge>(port_count, msti_count, null_address);
+		new_bridge->SetLocation (center.x - new_bridge->GetWidth() / 2, center.y - new_bridge->GetHeight() / 2);
+		return new_bridge;
 	}
 
 	virtual std::optional<LRESULT> process_key_or_syskey_down (UINT virtualKey, UINT modifierKeys) override final
@@ -57,21 +54,43 @@ public:
 		if (virtualKey == VK_ESCAPE)
 		{
 			_completed = true;
-			::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
+			_ew->invalidate();
 			return 0;
 		}
 
-		if ((virtualKey == VK_SUBTRACT) || (virtualKey == VK_OEM_MINUS))
+		static constexpr UINT keys[] = { VK_SUBTRACT, VK_OEM_MINUS, VK_LEFT, VK_ADD, VK_OEM_PLUS, VK_RIGHT, VK_UP, VK_DOWN };
+		if ((_bridge != nullptr) && (std::find(std::begin(keys), std::end(keys), virtualKey) != std::end(keys)))
 		{
-			if (_bridge->port_count() > 2)
-				recreate_bridge (_bridge->port_count() - 1);
-			return 0;
-		}
+			size_t new_port_count = _bridge->port_count();
+			size_t new_msti_count = _bridge->msti_count();
 
-		if ((virtualKey == VK_ADD) || (virtualKey == VK_OEM_PLUS))
-		{
-			if (_bridge->port_count() < 4095)
-				recreate_bridge (_bridge->port_count() + 1);
+			if ((virtualKey == VK_SUBTRACT) || (virtualKey == VK_OEM_MINUS) || (virtualKey == VK_LEFT))
+			{
+				if (new_port_count > 2)
+					new_port_count--;
+			}
+			else if ((virtualKey == VK_ADD) || (virtualKey == VK_OEM_PLUS) || (virtualKey == VK_RIGHT))
+			{
+				if (new_port_count < 4095)
+					new_port_count++;
+			}
+			else if (virtualKey == VK_UP)
+			{
+				if (new_msti_count < 64)
+					new_msti_count++;
+			}
+			else if (virtualKey == VK_DOWN)
+			{
+				if (new_msti_count > 0)
+					new_msti_count--;
+			}
+
+			if ((new_port_count != _bridge->port_count()) || (new_msti_count != _bridge->msti_count()))
+			{
+				_bridge = make_temp_bridge (new_port_count, new_msti_count, edge::center(_bridge->bounds()));
+				_ew->invalidate();
+			}
+
 			return 0;
 		}
 
@@ -93,8 +112,11 @@ public:
 			auto x = _bridge->GetLeft() + _bridge->GetWidth() / 2;
 			auto y = _bridge->GetBottom() + port::ExteriorHeight * 1.1f;
 			auto centerD = _ew->GetZoomTransform().TransformPoint({ x, y });
-			_ew->render_hint (dc, centerD, "Press + or - to change the number of ports.",
-								   DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, true);
+			std::stringstream ss;
+			ss << "Port Count = " << _bridge->port_count() << ", MSTI Count = " << _bridge->msti_count() << "\r\n"
+				<< "Press Arrow Left / Right to change the number of ports.\r\n"
+				<< "Press Arrow Up / Down to change the number of MSTIs.";
+			_ew->render_hint (dc, centerD, ss.str(), DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, true);
 		}
 	}
 

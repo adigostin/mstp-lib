@@ -79,7 +79,7 @@ namespace edge
 		float GetAverageRenderDuration();
 
 		void invalidate (const D2D1_RECT_F& rect);
-		void invalidate();
+		using base::invalidate;
 
 		uint32_t dpi() const { return _dpi; }
 

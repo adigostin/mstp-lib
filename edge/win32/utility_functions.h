@@ -37,6 +37,7 @@ namespace edge
 	std::string bstr_to_utf8 (BSTR bstr);
 	inline D2D1_POINT_2F location (const D2D1_RECT_F& r) { return { r.left, r.top }; }
 	inline D2D1_SIZE_F size (const D2D1_RECT_F& r) { return { r.right - r.left, r.bottom - r.top }; }
+	inline D2D1_POINT_2F center (const D2D1_RECT_F& r) { return { (r.left + r.right) / 2, (r.top + r.bottom) / 2 }; }
 	inline LONG width (const RECT& rc) { return rc.right - rc.left; }
 	inline LONG height (const RECT& rc) { return rc.bottom - rc.top; }
 }

@@ -8,8 +8,11 @@
 using namespace std;
 using namespace edge;
 
+static constexpr UINT WM_SHOWN = WM_APP + 1;
+
 class mst_config_id_editor : public property_editor_i
 {
+	project_i* _project;
 	std::unordered_set<bridge*> _bridges;
 	HWND _hwnd = nullptr;
 
@@ -17,25 +20,49 @@ public:
 	mst_config_id_editor (const std::vector<object*>& objects)
 	{
 		assert (!objects.empty());
-		for (auto o : objects)
+
+		if (auto first = dynamic_cast<bridge*>(objects[0]))
 		{
-			if (o->is<bridge>())
-				_bridges.insert (static_cast<bridge*>(o));
-			else if (o->is<port>())
-				_bridges.insert (static_cast<port*>(o)->bridge());
-			else
-				assert(false);
+			_project = first->project();
+			for (auto o : objects)
+			{
+				auto b = dynamic_cast<bridge*>(o);
+				assert (b != nullptr);
+				assert (b->project() == _project);
+				_bridges.insert(b);
+			}
 		}
+		else if (auto first = dynamic_cast<port*>(objects[0]))
+		{
+			_project = first->bridge()->project();
+			for (auto o : objects)
+			{
+				auto p = dynamic_cast<port*>(o);
+				assert (p != nullptr);
+				assert (p->bridge()->project() == _project);
+				_bridges.insert(p->bridge());
+			}
+		}
+		else
+			assert(false);
+
+		_project->property_changing().add_handler(&on_project_property_changing, this);
 	}
 
 	~mst_config_id_editor()
-	{ }
+	{
+		_project->property_changing().remove_handler(&on_project_property_changing, this);
+	}
 
-	static void OnBridgeRemoving (void* callbackArg, project_i* project, size_t index, bridge* bridge)
+	static void on_project_property_changing (void* callbackArg, object* o, const edge::property_change_args& e)
 	{
 		auto dialog = static_cast<mst_config_id_editor*>(callbackArg);
-		if (find (dialog->_bridges.begin(), dialog->_bridges.end(), bridge) != dialog->_bridges.end())
-			::EndDialog (dialog->_hwnd, IDCANCEL);
+		if ((e.property == dialog->_project->bridges_prop()) && (e.type == collection_property_change_type::remove))
+		{
+			auto bridge_being_removed = dialog->_project->bridges()[e.index].get();
+			if (dialog->_bridges.count(bridge_being_removed))
+				::EndDialog (dialog->_hwnd, IDCANCEL);
+		}
 	}
 
 	virtual bool show (property_editor_parent_i* parent) override
@@ -49,7 +76,6 @@ public:
 	virtual void cancel() override
 	{
 		::EndDialog (_hwnd, IDCANCEL);
-		return;
 	}
 
 	static INT_PTR CALLBACK DialogProcStatic (HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -89,6 +115,31 @@ public:
 		{
 			ProcessWmInitDialog();
 			return { FALSE, 0 };
+		}
+
+		if (msg == WM_SHOWWINDOW)
+		{
+			::PostMessage (_hwnd, WM_SHOWN, 0, 0);
+			return { TRUE, 0 };
+		}
+
+		if (msg == WM_SHOWN)
+		{
+			auto it = _bridges.begin();
+			auto msti_count = (*it)->msti_count();
+			while (++it != _bridges.end())
+			{
+				if ((*it)->msti_count() != msti_count)
+				{
+					::MessageBoxA (_hwnd, "There are multiple bridges selected and they have different values for MSTI Count.\r\n"
+						"The Simulator does not currently support editing their MST Config Tables at the same time. Try editing it one by one.",
+						"Multiple Selection", 0);
+					::EndDialog (_hwnd, IDCANCEL);
+					return { TRUE, 0 };
+				}
+			}
+
+			return { TRUE, 0 };
 		}
 
 		if (msg == WM_CTLCOLORSTATIC)

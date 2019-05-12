@@ -483,11 +483,6 @@ namespace edge
 		::InvalidateRect (hwnd(), &rc, FALSE);
 	}
 
-	void d2d_window::invalidate()
-	{
-		::InvalidateRect (hwnd(), nullptr, FALSE);
-	}
-
 	#pragma region Caret methods
 	void d2d_window::process_wm_set_focus()
 	{
