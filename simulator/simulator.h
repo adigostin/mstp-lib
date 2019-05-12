@@ -91,7 +91,7 @@ struct __declspec(novtable) edit_window_i : virtual edge::win32_window_i
 	virtual void RenderSnapRect (ID2D1RenderTarget* rt, D2D1_POINT_2F wLocation) const = 0;
 	virtual void render_hint (ID2D1RenderTarget* rt,
 							 D2D1_POINT_2F dLocation,
-							 const wchar_t* text,
+							 std::string_view text,
 							 DWRITE_TEXT_ALIGNMENT ha,
 							 DWRITE_PARAGRAPH_ALIGNMENT va,
 							 bool smallFont = false) const = 0;

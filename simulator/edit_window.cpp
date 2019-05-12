@@ -281,7 +281,7 @@ public:
 
 	virtual void render_hint (ID2D1RenderTarget* rt,
 							 D2D1_POINT_2F dLocation,
-							 const wchar_t* text,
+							 std::string_view text,
 							 DWRITE_TEXT_ALIGNMENT ha,
 							 DWRITE_PARAGRAPH_ALIGNMENT va,
 							 bool smallFont) const override final
@@ -289,28 +289,25 @@ public:
 		float leftRightPadding = 3;
 		float topBottomPadding = 1.5f;
 		auto textFormat = smallFont ? _drawing_resources._smallTextFormat.get() : _drawing_resources._regularTextFormat.get();
-		com_ptr<IDWriteTextLayout> tl;
-		auto hr = _drawing_resources._dWriteFactory->CreateTextLayout(text, (UINT32) wcslen(text), textFormat, 10000, 10000, &tl); assert(SUCCEEDED(hr));
-		DWRITE_TEXT_METRICS metrics;
-		hr = tl->GetMetrics(&metrics); assert(SUCCEEDED(hr));
+		auto tl = edge::text_layout::create (_drawing_resources._dWriteFactory, textFormat, text);
 
 		float pixelWidthDips = GetDipSizeFromPixelSize ({ 1, 0 }).width;
 		float lineWidthDips = roundf(1.0f / pixelWidthDips) * pixelWidthDips;
 
 		float left = dLocation.x - leftRightPadding;
 		if (ha == DWRITE_TEXT_ALIGNMENT_CENTER)
-			left -= metrics.width / 2;
+			left -= tl.metrics.width / 2;
 		else if (ha == DWRITE_TEXT_ALIGNMENT_TRAILING)
-			left -= metrics.width;
+			left -= tl.metrics.width;
 
 		float top = dLocation.y;
 		if (va == DWRITE_PARAGRAPH_ALIGNMENT_FAR)
-			top -= (topBottomPadding * 2 + metrics.height + lineWidthDips * 2);
+			top -= (topBottomPadding * 2 + tl.metrics.height + lineWidthDips * 2);
 		else if (va == DWRITE_PARAGRAPH_ALIGNMENT_CENTER)
-			top -= (topBottomPadding + metrics.height + lineWidthDips);
+			top -= (topBottomPadding + tl.metrics.height + lineWidthDips);
 		
-		float right = left + 2 * leftRightPadding + metrics.width;
-		float bottom = top + 2 * topBottomPadding + metrics.height;
+		float right = left + 2 * leftRightPadding + tl.metrics.width;
+		float bottom = top + 2 * topBottomPadding + tl.metrics.height;
 		left   = roundf (left   / pixelWidthDips) * pixelWidthDips - lineWidthDips / 2;
 		top    = roundf (top    / pixelWidthDips) * pixelWidthDips - lineWidthDips / 2;
 		right  = roundf (right  / pixelWidthDips) * pixelWidthDips + lineWidthDips / 2;
@@ -324,7 +321,7 @@ public:
 		brush->SetColor (GetD2DSystemColor(COLOR_INFOTEXT));
 		rt->DrawRoundedRectangle (&rr, brush, lineWidthDips);
 
-		rt->DrawTextLayout ({ rr.rect.left + leftRightPadding, rr.rect.top + topBottomPadding }, tl, brush);
+		rt->DrawTextLayout ({ rr.rect.left + leftRightPadding, rr.rect.top + topBottomPadding }, tl.layout, brush);
 	}
 
 	void render_bridges (ID2D1RenderTarget* dc, const std::set<STP_MST_CONFIG_ID>& configIds) const
@@ -369,11 +366,11 @@ public:
 
 		if (_project->bridges().empty())
 		{
-			render_hint (dc, { client_width() / 2, client_height() / 2 }, L"No bridges created. Right-click to create some.", DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, false);
+			render_hint (dc, { client_width() / 2, client_height() / 2 }, "No bridges created. Right-click to create some.", DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, false);
 		}
 		else if (_project->bridges().size() == 1)
 		{
-			render_hint (dc, { client_width() / 2, client_height() / 2 }, L"Right-click to add more bridges.", DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, false);
+			render_hint (dc, { client_width() / 2, client_height() / 2 }, "Right-click to add more bridges.", DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, false);
 		}
 		else
 		{
@@ -385,7 +382,7 @@ public:
 			if (!anyPortConnected)
 			{
 				bridge* b = _project->bridges().front().get();
-				auto text = L"No port connected. You can connect\r\nports by drawing wires with the mouse.";
+				auto text = "No port connected. You can connect\r\nports by drawing wires with the mouse.";
 				auto wl = D2D1_POINT_2F { b->GetLeft() + b->GetWidth() / 2, b->GetBottom() + port::ExteriorHeight * 1.5f };
 				auto dl = pointw_to_pointd(wl);
 				render_hint (dc, { dl.x, dl.y }, text, DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, false);
@@ -497,12 +494,12 @@ public:
 			render_hover(dc);
 
 		render_hint (dc, { client_width() / 2, client_height() },
-					L"Rotate mouse wheel for zooming, press wheel and drag for panning.",
+					"Rotate mouse wheel for zooming, press wheel and drag for panning.",
 					DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_FAR, true);
 
 		if (_project->simulation_paused())
 			render_hint (dc, { client_width() / 2, 10 },
-						L"Simulation is paused. Right-click to resume.",
+						"Simulation is paused. Right-click to resume.",
 						DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, true);
 
 		if (_state != nullptr)

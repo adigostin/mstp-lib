@@ -93,7 +93,7 @@ public:
 			auto x = _bridge->GetLeft() + _bridge->GetWidth() / 2;
 			auto y = _bridge->GetBottom() + port::ExteriorHeight * 1.1f;
 			auto centerD = _ew->GetZoomTransform().TransformPoint({ x, y });
-			_ew->render_hint (dc, centerD, L"Press + or - to change the number of ports.",
+			_ew->render_hint (dc, centerD, "Press + or - to change the number of ports.",
 								   DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, true);
 		}
 	}
