@@ -30,7 +30,7 @@ void StpCallback_OnTopologyChange
 		Parameters</h4>
 	<dl>
 		<dt>bridge</dt>
-		<dd>The application receives in this parameter a pointer to a STP_BRIDGE object.</dd>
+		<dd>The application receives in this parameter a pointer to an STP_BRIDGE object.</dd>
 		<dt>treeIndex</dt>
 		<dd>The application receives in this parameter the zero-based index of the spanning tree on which the topology change ocurred. For STP or RSTP, this is always zero. For
 			MSTP, this is zero for CIST, or 1..64 for a MSTI.</dd>
@@ -40,6 +40,8 @@ void StpCallback_OnTopologyChange
 	<h4>
 		Remarks</h4>
 	<p>
+			The library calls this callback only as long as the bridge is running at least RSTP (see <a href="STP_CreateBridge.html">STP_CreateBridge</a>, <a href="STP_SetStpVersion.html">STP_SetStpVersion</a>). The detection of topology changes in LegacySTP mode (as per 8.5.3.12 in 802.1D-1998) is not yet implemented.</p>
+    <p>
 			The STP library calls this callback when it detects a topology change
 			<em>on the local bridge</em> (i.e., a non-edge port transitioning to/from the forwarding state while the bridge is not isolated).</p>
 

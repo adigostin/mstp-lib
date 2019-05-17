@@ -67,8 +67,8 @@ struct MSTP_BPDU : public BPDU_HEADER
 
 	BRIDGE_ID	cistRootId;				// octets 6 to 13
 	INV_UINT4	cistExternalPathCost;	// octets 14 to 17
-	BRIDGE_ID	cistRegionalRootId;		// octets 18 to 25
-	PORT_ID		cistPortId;				// octets 26 to 27
+	BRIDGE_ID	cistRegionalRootId;		// octets 18 to 25 - called Bridge Identifier pre-MSTP, referred to also as Designated Bridge
+	PORT_ID		cistPortId;				// octets 26 to 27 - called Port Identifier pre-MSTP, referred to also as Designated Port
 
 	INV_UINT2	MessageAge;		// octets 28 to 29
 	INV_UINT2	MaxAge;			// octets 30 to 31

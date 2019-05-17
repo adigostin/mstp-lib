@@ -165,7 +165,7 @@ public:
 		STP_SetMstConfigName (bridge1, "ABC", 0);
 		STP_StartBridge (bridge1, 0);
 		STP_OnPortEnabled (bridge1, 0, 100, true, 0);
-		STP_OnBpduReceived (bridge1, 0, buffer.data(), buffer.size(), 0);
+		STP_OnBpduReceived (bridge1, 0, buffer.data(), (unsigned int)buffer.size(), 0);
 
 		STP_DestroyBridge (bridge0);
 		STP_DestroyBridge (bridge1);

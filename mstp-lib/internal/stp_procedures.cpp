@@ -1,6 +1,8 @@
-
+﻿
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
 // Copyright (c) 2011-2019 Adi Gostin, distributed under Apache License v2.0.
+
+// This file implements §13.29 from 802.1Q-2018.
 
 #include "stp_procedures.h"
 #include "stp_bridge.h"
@@ -15,12 +17,12 @@
 #endif
 
 // ============================================================================
-// 13.27.a - 13.27.1
+// 13.29.a - 13.29.1 in 802.1Q-2018
 // Returns TRUE if, for a given port and tree (CIST, or MSTI), either
 // a) The procedure's parameter newInfoIs is Received, and infoIs is Received and the msgPriority vector
-//    is better than or the same as (13.9) the portPriority vector; or,
+//    is better than or the same as (13.10) the portPriority vector; or,
 // b) The procedure's parameter newInfoIs is Mine, and infoIs is Mine and the designatedPriority vector is
-//    better than or the same as (13.9) the portPriority vector.
+//    better than or the same as (13.10) the portPriority vector.
 // Returns False otherwise.
 bool betterorsameInfo (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree, INFO_IS newInfoIs)
 {
@@ -37,7 +39,7 @@ bool betterorsameInfo (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenT
 }
 
 // ============================================================================
-// 13.27.b) - 13.27.2
+// 13.29.b) - 13.29.2 in 802.1Q-2018
 // Clears rcvdMsg for the CIST and all MSTIs, for this port.
 void clearAllRcvdMsgs (STP_BRIDGE* bridge, PortIndex givenPort)
 {
@@ -46,7 +48,7 @@ void clearAllRcvdMsgs (STP_BRIDGE* bridge, PortIndex givenPort)
 }
 
 // ============================================================================
-// 13.27.c) - 13.27.3
+// 13.29.c) - 13.29.3 in 802.1Q-2018
 // Clears reselect for the tree (the CIST or a given MSTI) for all ports of the bridge.
 void clearReselectTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 {
@@ -55,7 +57,9 @@ void clearReselectTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 }
 
 // ============================================================================
-// 13.27.d - 13.27.4
+// 13.29.d) - 13.29.4 in 802.1Q-2018
+// An implementation-dependent procedure that causes the Forwarding Process (8.6) to stop forwarding frames
+// through the port. The procedure does not complete until forwarding has stopped.
 void disableForwarding (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree, unsigned int timestamp)
 {
 	FLUSH_LOG (bridge);
@@ -63,7 +67,9 @@ void disableForwarding (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex given
 }
 
 // ============================================================================
-// 13.27.e - 13.27.5
+// 13.29.e) - 13.29.5 in 802.1Q-2018
+// An implementation-dependent procedure that causes the Learning Process (8.7) to stop learning from the
+// source address of frames received on the port. The procedure does not complete until learning has stopped.
 void disableLearning (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree, unsigned int timestamp)
 {
 	FLUSH_LOG (bridge);
@@ -71,35 +77,39 @@ void disableLearning (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTr
 }
 
 // ============================================================================
-// 13.27.f - 13.27.6
+// 13.29.f) - 13.29.6 in 802.1Q-2018
+// An implementation-dependent procedure that causes the Forwarding Process (8.6) to start forwarding
+// frames through the port. The procedure does not complete until forwarding has been enabled.
 void enableForwarding (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree, unsigned int timestamp)
 {
 	FLUSH_LOG (bridge);
-
 	bridge->callbacks.enableForwarding (bridge, givenPort, givenTree, true, timestamp);
 }
 
 // ============================================================================
-// 13.27.g - 13.27.7
+// 13.29.g) - 13.29.7 in 802.1Q-2018
+// An implementation-dependent procedure that causes the Learning Process (8.7) to start learning from frames
+// received on the port. The procedure does not complete until learning has been enabled.
 void enableLearning (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree, unsigned int timestamp)
 {
 	FLUSH_LOG (bridge);
-
 	bridge->callbacks.enableLearning (bridge, givenPort, givenTree, true, timestamp);
 }
 
 // ============================================================================
-// 13.27.h - 13.27.8
-// Returns TRUE if rcvdRSTP is TRUE, and the received BPDU conveys a MST Configuration Identifier that
-// matches that held for the bridge. Returns FALSE otherwise.
+// 13.29.h) - 13.29.8 in 802.1Q-2018
+// Returns TRUE if rcvdRSTP is TRUE, and the received BPDU conveys a MCID that matches that held for
+// the Bridge. Returns FALSE otherwise.
 bool fromSameRegion (STP_BRIDGE* bridge, PortIndex givenPort)
 {
+	assert (bridge->ForceProtocolVersion <= STP_VERSION_MSTP); // The SPT part of this function is not yet implemented.
+
 	PORT* port = bridge->ports [givenPort];
 
 	assert (bridge->receivedBpduContent != NULL);
 
 	// Note AG: I added the condition "&& ForceProtocolVersion >= MSTP"
-	// (if we're running STP or RSTP, we shouldn't be looking at our MST Config ID!)
+	// (if we're running STP or RSTP, we shouldn't be looking at our MST Config ID.)
 
 	bool result = port->rcvdRSTP
 		&& (bridge->receivedBpduType == VALIDATED_BPDU_TYPE_MST)
@@ -110,48 +120,46 @@ bool fromSameRegion (STP_BRIDGE* bridge, PortIndex givenPort)
 }
 
 // ============================================================================
-// 13.27.i - 13.27.9
+// 13.29.i - 13.29.9 in 802.1Q-2018
 // If the value of tcDetected is zero and sendRSTP is TRUE, this procedure sets the value of tcDetected to
-// HelloTime plus one second. The value of HelloTime is taken from the CIST's portTimes parameter (13.25.34)
+// HelloTime plus one second. The value of HelloTime is taken from the CIST’s portTimes parameter (13.27.48)
 // for this port.
 //
 // If the value of tcDetected is zero and sendRSTP is FALSE, this procedure sets the value of tcDetected to the
 // sum of the Max Age and Forward Delay components of rootTimes.
 //
-// Otherwise the procedure takes no action.
+// Otherwise, the procedure takes no action.
 void newTcDetected (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 {
-	PORT* port = bridge->ports [givenPort];
-	PORT_TREE* tree = port->trees [givenTree];
+	PORT* port = bridge->ports[givenPort];
+	PORT_TREE* portTree = port->trees[givenTree];
 
-	if ((tree->tcDetected == 0) && port->sendRSTP)
-		tree->tcDetected = port->trees [CIST_INDEX]->portTimes.HelloTime + 1;
+	if ((portTree->tcDetected == 0) && port->sendRSTP)
+		portTree->tcDetected = port->trees [CIST_INDEX]->portTimes.HelloTime + 1;
 
-	if ((tree->tcDetected == 0) && (port->sendRSTP == false))
-	{
-		tree->tcDetected = bridge->trees [givenTree]->rootTimes.MaxAge + bridge->trees [givenTree]->rootTimes.ForwardDelay;
-	}
+	if ((portTree->tcDetected == 0) && !port->sendRSTP)
+		portTree->tcDetected = bridge->trees[givenTree]->rootTimes.MaxAge + bridge->trees[givenTree]->rootTimes.ForwardDelay;
 }
 
 // ============================================================================
-// 13.27.j) - 13.27.10
+// 13.29.j) - 13.29.10 in 802.1Q-2018
 // If the value of tcWhile is zero and sendRSTP is TRUE, this procedure sets the value of tcWhile to HelloTime
 // plus one second and sets either newInfo TRUE for the CIST or newInfoMsti TRUE for a given MSTI. The
-// value of HelloTime is taken from the CIST's portTimes parameter (13.25.34) for this port.
+// value of HelloTime is taken from the CIST’s portTimes parameter (13.27.48) for this port.
 //
 // If the value of tcWhile is zero and sendRSTP is FALSE, this procedure sets the value of tcWhile to the sum
 // of the Max Age and Forward Delay components of rootTimes and does not change the value of either
 // newInfo or newInfoMsti.
 //
-// Otherwise the procedure takes no action.
+// Otherwise, the procedure takes no action.
 void newTcWhile (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree, unsigned int timestamp)
 {
 	PORT* port = bridge->ports [givenPort];
 	PORT_TREE* portTree = port->trees [givenTree];
 
-	if ((portTree->tcWhile == 0) && (port->sendRSTP == true))
+	if ((portTree->tcWhile == 0) && port->sendRSTP)
 	{
-		// See in 802.1Q-2018:
+		// Note AG: See in 802.1Q-2018:
 		//  - 12.8.1.1.3, b) and c);
 		//  - 12.8.1.2.3, c) and d).
 		if (bridge->callbacks.onTopologyChange)
@@ -171,49 +179,50 @@ void newTcWhile (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree, u
 			port->newInfoMsti = true;
 	}
 
-	if ((portTree->tcWhile == 0) && (port->sendRSTP == false))
+	if ((portTree->tcWhile == 0) && !port->sendRSTP)
 	{
 		portTree->tcWhile = bridge->trees [givenTree]->rootTimes.MaxAge + bridge->trees [givenTree]->rootTimes.ForwardDelay;
 	}
 }
 
 // ============================================================================
-// 13.27.k) - 13.27.11
+// 13.29.k) - 13.29.11 in 802.1Q-2018
 // Using local parameters, this procedure simulates the processing that would be applied by rcvInfo() and
 // rcvMsgs() to a BPDU received on the port, from the same region and with the following parameters:
+//   a) Message Age, Max Age, Hello Time and Forward Delay are derived from BridgeTimes (13.26.4).
+//   b) The CIST information carries the message priority vector (13.10) with a value of {pseudoRootId, 0,
+//      pseudoRootId, 0, 0, 0}.
+//   c) A CIST Port Role of Designated Port, with the Learning and Forwarding flags set.
+//   d) The Version 1 Length is 0 and Version 3 Length calculated appropriately.
+//   e) For each MSTI configured on the Bridge, the corresponding MSTI Configuration Message carries
+//      the following:
+//      1) A message priority vector with a value of {pseudoRootId, 0, 0, 0}
+//      2) A Port Role of Designated Port, with the Learning and Forwarding flags set
+//      3) MSTI Remaining Hops set to the value of the MaxHops component of BridgeTimes (13.26.4)
 //
-// a) Message Age, Max Age, Hello Time and Forward Delay are derived from BridgeTimes (13.24.3);
-// b) The CIST information carries the message priority vector (13.9) with a value of {pseudoRootId, 0,
-//    pseudoRootId, 0, 0, 0};
-// c) A CIST Port Role of Designated Port, with the Learning and Forwarding flags set;
-// d) The Version 1 Length is 0 and Version 3 Length calculated appropriately;
-// e) For each MSTI configured on the bridge, the corresponding MSTI Configuration Message carries:
-//    1) A message priority vector with a value of {pseudoRootId, 0, 0, 0};
-//    2) A Port Role of Designated Port, with the Learning and Forwarding flags set;
-//    3) MSTI Remaining Hops set to the value of the MaxHops component of BridgeTimes (13.24.3).
-//
-// NOTE-If two L2GP ports are configured with the same CIST pseudoRootId then the IST may partition within the MST
-// Region, but either of the L2GP ports can be selected to provide conectivity from the Region/customer network to a
-// provider's network on an MSTI by MSTI basis.
+// NOTE—If two L2GP ports are configured with the same CIST pseudoRootId then the IST may partition within the MST
+// Region, but either of the L2GP ports can be selected to provide connectivity from the Region/customer network to a
+// provider’s network on an MSTI by MSTI basis.
 void pseudoRcvMsgs (STP_BRIDGE* bridge, PortIndex givenPort)
 {
-	assert (false); // not implemented
+	// The L2GP state machine is not yet implemented.
+	assert (false);
 }
 
 // ============================================================================
-// 13.27.l) - 13.27.12
+// 13.29.l) - 13.29.12 in 802.1Q-2018
 RCVD_INFO rcvInfo (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 {
 	PORT* port = bridge->ports [givenPort];
 	PORT_TREE* portTree = port->trees [givenTree];
 
-	// Returns SuperiorDesignatedInfo if, for a given port and tree (CIST, or MSTI):
-	// a) The received CIST or MSTI message conveys a Designated Port Role, and
-	//    1) The message priority (msgPriority-13.25.26) is superior (13.9 or 13.10) to the port's port
-	//       priority vector, or
-	//    2) The message priority is the same as the port's port priority vector, and any of the received timer
-	//       parameter values (msgTimes-13.25.27) differ from those already held for the port
-	//       (portTimes-13.25.34).
+	// Returns SuperiorDesignatedInfo if, for a given port and tree (CIST or MSTI),
+	//  a) The received CIST or MSTI message conveys a Designated Port Role and
+	//     1) The message priority (msgPriority—13.27.39) is superior (13.10 or 13.11) to the port’s port
+	//        priority vector; or
+	//     2) The message priority is the same as the port’s port priority vector, and any of the received timer
+	//        parameter values (msgTimes—13.27.40) differ from those already held for the port
+	//        (portTimes—13.27.48).
 	if (portTree->msgFlagsPortRole == BPDU_PORT_ROLE_DESIGNATED)
 	{
 		if (   portTree->msgPriority.IsSuperiorTo (portTree->portPriority)
@@ -230,10 +239,10 @@ RCVD_INFO rcvInfo (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 		}
 	}
 
-	// Otherwise, returns RepeatedDesignatedInfo if, for a given port and tree (CIST, or MSTI):
-	// b) The received CIST or MSTI message conveys a Designated Port Role, and
+	// Otherwise, returns RepeatedDesignatedInfo if, for a given port and tree (CIST or MSTI),
+	// b) The received CIST or MSTI message conveys a Designated Port Role and
 	//    1) A message priority vector and timer parameters that are the same as the port's port priority
-	//       vector and timer values; and
+	//       vector and timer values and
 	//    2) infoIs is Received.
 	if (   (portTree->msgFlagsPortRole == BPDU_PORT_ROLE_DESIGNATED)
 		&& ((portTree->msgPriority == portTree->portPriority) && (portTree->msgTimes == portTree->portTimes))
@@ -242,14 +251,14 @@ RCVD_INFO rcvInfo (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 		return RCVD_INFO_REPEATED_DESIGNATED;
 	}
 
-	// Otherwise, returns InferiorDesignatedInfo if, for a given port and tree (CIST, or MSTI):
+	// Otherwise, returns InferiorDesignatedInfo if, for a given port and tree (CIST or MSTI),
 	// c) The received CIST or MSTI message conveys a Designated Port Role.
 	if (portTree->msgFlagsPortRole == BPDU_PORT_ROLE_DESIGNATED)
 	{
 		return RCVD_INFO_INFERIOR_DESIGNATED;
 	}
 
-	// Otherwise, returns InferiorRootAlternateInfo if, for a given port and tree (CIST, or MSTI):
+	// Otherwise, returns InferiorRootAlternateInfo if, for a given port and tree (CIST or MSTI),
 	// d) The received CIST or MSTI message conveys a Root Port, Alternate Port, or Backup Port Role and
 	//    a CIST or MSTI message priority that is the same as or worse than the CIST or MSTI port priority
 	//    vector.
@@ -264,12 +273,12 @@ RCVD_INFO rcvInfo (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 }
 
 // ============================================================================
-// 13.27.m) - 13.27.13 in 802.1Q-2011
+// 13.29.m) - 13.29.13 in 802.1Q-2018
 void rcvMsgs (STP_BRIDGE* bridge, PortIndex givenPort)
 {
 	PORT* port = bridge->ports [givenPort];
 
-	// This procedure is invoked by the Port Receive state machine (13.29) to decode a received BPDU. Sets
+	// This procedure is invoked by the Port Receive state machine (13.31) to decode a received BPDU. Sets
 	// rcvdTcn and rcvdTc for each and every MSTI if a TCN BPDU has been received, and extracts the message
 	// priority and timer values from the received BPDU storing them in the msgPriority and msgTimes variables.
 	if (bridge->receivedBpduType == VALIDATED_BPDU_TYPE_STP_TCN)
@@ -281,14 +290,14 @@ void rcvMsgs (STP_BRIDGE* bridge, PortIndex givenPort)
 	}
 	else if ((bridge->receivedBpduType == VALIDATED_BPDU_TYPE_STP_CONFIG)
 		||   (bridge->receivedBpduType == VALIDATED_BPDU_TYPE_RST)
-		||   (bridge->receivedBpduType == VALIDATED_BPDU_TYPE_MST))
+		||   (bridge->receivedBpduType == VALIDATED_BPDU_TYPE_MST)
+		||   (bridge->receivedBpduType == VALIDATED_BPDU_TYPE_SPT))
 	{
 		PORT_TREE* portCistTree = port->trees [CIST_INDEX];
 
-		// See 13.25.26 in 802.1Q-2011
-
 		// priority
-		// See the definition of "port priority vector" in "13.9 CIST Priority Vector calculations" in 802.1Q-2011
+		// See 13.27.39 in 802.1Q-2018
+		// See the definition of "message priority vector" in "13.10 CIST Priority Vector calculations" in 802.1Q-2018
 		portCistTree->msgPriority.RootId				= bridge->receivedBpduContent->cistRootId;
 		portCistTree->msgPriority.ExternalRootPathCost	= bridge->receivedBpduContent->cistExternalPathCost;
 		portCistTree->msgPriority.RegionalRootId		= bridge->receivedBpduContent->cistRegionalRootId;
@@ -299,19 +308,27 @@ void rcvMsgs (STP_BRIDGE* bridge, PortIndex givenPort)
 		}
 		else
 		{
+			// From page 486 of 802.1Q-2018:
+			// NOTE 1-If a Configuration Message is received in an RST or STP BPDU, both the Regional Root Identifier and the
+			// Designated Bridge Identifier are decoded from the single BPDU field used for the Designated Bridge Parameter (the
+			// MST BPDU field in this position encodes the CIST Regional Root Identifier). An STP or RST Bridge is always treated
+			// by MSTP as being in an region of its own, so the Internal Root Path Cost is decoded as zero.
 			portCistTree->msgPriority.InternalRootPathCost = 0;
 			portCistTree->msgPriority.DesignatedBridgeId = bridge->receivedBpduContent->cistRegionalRootId;
 		}
 		portCistTree->msgPriority.DesignatedPortId		= bridge->receivedBpduContent->cistPortId;
 
 		// times
-		portCistTree->msgTimes.ForwardDelay = bridge->receivedBpduContent->ForwardDelay.GetValue () / 256;
-		portCistTree->msgTimes.HelloTime    = bridge->receivedBpduContent->HelloTime.GetValue () / 256;
-		portCistTree->msgTimes.MaxAge       = bridge->receivedBpduContent->MaxAge.GetValue () / 256;
-		portCistTree->msgTimes.MessageAge   = bridge->receivedBpduContent->MessageAge.GetValue () / 256;
-		// This "if" condition deviates from the standard. The standard says "If the BPDU is an STP or RST BPDU
-		// without MSTP parameters", but I'm pretty sure also BPDUs from a different MST region should be treated
-		// the same. A false value in rcvdInternal covers both cases.
+		// See 13.27.40 in 802.1Q-2018
+		portCistTree->msgTimes.ForwardDelay = bridge->receivedBpduContent->ForwardDelay / 256;
+		portCistTree->msgTimes.HelloTime    = bridge->receivedBpduContent->HelloTime / 256;
+		portCistTree->msgTimes.MaxAge       = bridge->receivedBpduContent->MaxAge / 256;
+		portCistTree->msgTimes.MessageAge   = bridge->receivedBpduContent->MessageAge / 256;
+		// Note AG: Standard says: "If the BPDU is an STP or RST BPDU without MSTP parameters,
+		// remainingHops is set to the value of the MaxHops component of BridgeTimes (13.26.4)"
+		// I'm pretty sure that also BPDUs coming from a different MST region should be treated the same.
+		// A false value in rcvdInternal covers all cases; it is also similar to the condition above for
+		// setting the message priority, so likely correct.
 		if (port->rcvdInternal)
 			portCistTree->msgTimes.remainingHops = bridge->receivedBpduContent->cistRemainingHops;
 		else
@@ -323,7 +340,7 @@ void rcvMsgs (STP_BRIDGE* bridge, PortIndex givenPort)
 			portCistTree->msgFlagsTc            = GetBpduFlagTc    (bridge->receivedBpduContent->cistFlags);
 			portCistTree->msgFlagsTcAckOrMaster = GetBpduFlagTcAck (bridge->receivedBpduContent->cistFlags);
 
-			// From the note at the end of 13.27.12 in 802.1Q-2011:
+			// From the note at the end of 13.29.12 in 802.1Q-2018:
 			// A Configuration BPDU implicitly conveys a Designated Port Role.
 			portCistTree->msgFlagsPortRole      = BPDU_PORT_ROLE_DESIGNATED;
 
@@ -341,15 +358,25 @@ void rcvMsgs (STP_BRIDGE* bridge, PortIndex givenPort)
 			portCistTree->msgFlagsLearning      = GetBpduFlagLearning   (bridge->receivedBpduContent->cistFlags);
 			portCistTree->msgFlagsForwarding    = GetBpduFlagForwarding (bridge->receivedBpduContent->cistFlags);
 			portCistTree->msgFlagsAgreement     = GetBpduFlagAgreement  (bridge->receivedBpduContent->cistFlags);
-			portCistTree->msgFlagsTcAckOrMaster = false;
+			portCistTree->msgFlagsTcAckOrMaster = false; // TcAck is found only in STP Config BPDUs, Master only in MSTIs; we are in neither case here.
 		}
 	}
 	else
 		assert (false);
 
-	// The procedure sets rcvdMsg for the CIST, and makes the received CST or CIST message available to the
-	// CIST Port Information state machines.
-	bridge->ports [givenPort]->trees [CIST_INDEX]->rcvdMsg = true;
+	// If ISIS-SPB is implemented, ForceProtocolVersion is 4 (or greater), the BPDU is an SPT BPDU, and has been
+	// received on a Bridge Port that is internal to the SPT Region (i.e., is not a Boundary Port, see 13.12), then the
+	// rcvAgreements() procedure processes the CIST and SPT information conveyed by the BPDU.
+	if ((int)bridge->ForceProtocolVersion >= 4)
+	{
+		assert(false); // not yet implemented for SPT
+	}
+	else
+	{
+		// Otherwise (i.e., if rcvAgreements() is not used), this procedure sets rcvdMsg for the CIST and makes the
+		// received CST or CIST message available to the CIST Port Information state machines.
+		bridge->ports[givenPort]->trees[CIST_INDEX]->rcvdMsg = true;
+	}
 
 	// If and only if rcvdInternal is set, this procedure sets rcvdMsg for each and every MSTI for which a MSTI
 	// message is conveyed in the BPDU, and makes available each MSTI message and the common parts of the
@@ -360,35 +387,40 @@ void rcvMsgs (STP_BRIDGE* bridge, PortIndex givenPort)
 		LOG (bridge, -1, -1, "rcvMsgs() -- rcvdInternal==1\r\n");
 
 		// these assert conditions should have been checked while validating the received bpdu
-		unsigned short version3Length = bridge->receivedBpduContent->Version3Length.GetValue ();
-		unsigned short version3Offset = (unsigned short) offsetof (struct MSTP_BPDU, mstConfigId);
-		unsigned short version3CistLength = (unsigned short) sizeof (MSTP_BPDU) - version3Offset;
-		unsigned short mstiLength = version3Length - version3CistLength;
-		assert ((mstiLength % sizeof (MSTI_CONFIG_MESSAGE)) == 0);
+		size_t version3Length = bridge->receivedBpduContent->Version3Length;
+		size_t version3Offset = offsetof (struct MSTP_BPDU, mstConfigId);
+		size_t version3CistLength = sizeof(MSTP_BPDU) - version3Offset;
+		size_t mstiLength = version3Length - version3CistLength;
+		assert ((mstiLength % sizeof(MSTI_CONFIG_MESSAGE)) == 0); // this should have been checked while validating the BPDU as MST
 
-		unsigned int mstiMessageCount = mstiLength / sizeof (MSTI_CONFIG_MESSAGE);
+		size_t mstiMessageCount = mstiLength / sizeof(MSTI_CONFIG_MESSAGE);
 
-		const MSTI_CONFIG_MESSAGE* mstiMessages = (MSTI_CONFIG_MESSAGE*) (bridge->receivedBpduContent + 1);
+		const MSTI_CONFIG_MESSAGE* mstiMessages = reinterpret_cast<const MSTI_CONFIG_MESSAGE*>(bridge->receivedBpduContent + 1);
 
-		unsigned int mstiCount = (mstiMessageCount < bridge->mstiCount) ? mstiMessageCount : bridge->mstiCount;
-		for (unsigned int messageIndex = 0; messageIndex < mstiCount; messageIndex++)
+		if (mstiMessageCount > bridge->mstiCount)
 		{
-			const MSTI_CONFIG_MESSAGE* message = &mstiMessages [messageIndex];
+			// The sender sent us too many MSTI messages. Let's ignore the ones we can't handle.
+			LOG (bridge, -1, -1, "rcvMsgs() -- Ignoring MSTI messages {D}..{D}\r\n", (int)bridge->mstiCount, (int)mstiMessageCount - 1);
+			mstiMessageCount = bridge->mstiCount;
+		}
+		
+		for (size_t messageIndex = 0; messageIndex < mstiMessageCount; messageIndex++)
+		{
+			const MSTI_CONFIG_MESSAGE* message = &mstiMessages[messageIndex];
 
-			unsigned int mstid = 1 + messageIndex;
+			size_t mstid = 1 + messageIndex;
 
-			PORT_TREE* portTree = port->trees [mstid];
+			PORT_TREE* portTree = port->trees[mstid];
 
-			// first two components are always zero for MSTIs
+			// See 13.11 in 802.1Q-2018, definition of "message priority vector".
+			// First two components are always zero for MSTIs; the library never sets them.
 			// portTree->msgPriority.RootId
 			// portTree->msgPriority.ExternalRootPathCost
 			portTree->msgPriority.RegionalRootId		= message->RegionalRootId;
 			portTree->msgPriority.InternalRootPathCost	= message->InternalRootPathCost;
-
-			// TODO: not sure about the lines below
-			portTree->msgPriority.DesignatedBridgeId.SetPriority (message->BridgePriority << 8, mstid);
+			portTree->msgPriority.DesignatedBridgeId.SetPriority (message->BridgePriority << 8, (unsigned short)mstid); // 14.2.5 in 802.1Q-2018
 			portTree->msgPriority.DesignatedBridgeId.SetAddress (bridge->receivedBpduContent->cistBridgeId.GetAddress().bytes);
-			portTree->msgPriority.DesignatedPortId.Set (message->PortPriority & 0xF0, bridge->receivedBpduContent->cistPortId.GetPortNumber ());
+			portTree->msgPriority.DesignatedPortId.Set (message->PortPriority & 0xF0, bridge->receivedBpduContent->cistPortId.GetPortNumber());
 
 			portTree->msgTimes.remainingHops = message->RemainingHops;
 
@@ -405,6 +437,7 @@ void rcvMsgs (STP_BRIDGE* bridge, PortIndex givenPort)
 	}
 	else
 	{
+		// From 13.11 in 802.1Q-2018: An MSTI message priority vector received from a Bridge not in the same MST Region is discarded.
 		LOG (bridge, -1, -1, "rcvMsgs() -- rcvdInternal==0\r\n");
 	}
 }

@@ -1,0 +1,47 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<link rel="Stylesheet" type="text/css" media="screen" href="Screen.css" />
+  <title>StpCallback_OnNotifiedTopologyChange</title>
+</head>
+<body>
+	<h3>StpCallback_OnNotifiedTopologyChange</h3>
+	<hr />
+<pre>
+void StpCallback_OnNotifiedTopologyChange
+(
+    const STP_BRIDGE* bridge,
+    unsigned int portIndex,
+    unsigned int treeIndex,
+    unsigned int timestamp,
+);
+</pre>
+	<h4>
+		Summary</h4>
+	<p>
+		Application-defined function that is called by the STP library when it detects a change in the network topology somewhere within the network, on a distant bridge that&#39;s reachable from a specific local port. </p>
+	<p>
+		This callback should flush the FDB entries (MAC-to-port associations) on the specified port and specified spanning tree. See also the related <a href="StpCallback_FlushFdb.html">StpCallback_FlushFdb</a>.</p>
+	<h4>
+		Parameters</h4>
+	<dl>
+		<dt>bridge</dt>
+		<dd>The application receives in this parameter a pointer to an STP_BRIDGE object.</dd>
+		<dt>portIndex</dt>
+		<dd>The application receives in this parameter the index of the physical port that in the spanning tree topology was, or is, connected to the point in network where the topology change ocurred.</dd>
+		<dt>treeIndex</dt>
+		<dd>The application receives in this parameter the zero-based index of the spanning tree on which the topology change ocurred. For STP or RSTP, this is always zero. For
+			MSTP, this is zero for CIST, or 1..64 for an MSTI.</dd>
+		<dt>timestamp</dt>
+		<dd>The application receives in this parameter the timestamp that it passed to the function that triggerred the detection (usually STP_OnBpduReceived). Useful for debugging and troubleshooting.</dd>
+	</dl>
+	<h4>
+		Remarks</h4>
+
+	<p>
+		StpCallback_OnNotifiedTopologyChange is a placeholder name used throughout this documentation. The
+		application may name this callback differently.</p>
+
+</body>
+</html>
