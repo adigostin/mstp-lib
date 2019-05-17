@@ -354,7 +354,6 @@ void STP_OnBpduReceived (STP_BRIDGE* bridge, unsigned int portIndex, const unsig
 			LOG (bridge, -1, -1, "{T}: BPDU received on Port {D}:\r\n", timestamp, 1 + portIndex);
 
 			enum VALIDATED_BPDU_TYPE type = STP_GetValidatedBpduType (bridge->ForceProtocolVersion, bpdu, bpduSize);
-			bool passToStateMachines;
 			switch (type)
 			{
 				case VALIDATED_BPDU_TYPE_STP_CONFIG:
@@ -364,7 +363,6 @@ void STP_OnBpduReceived (STP_BRIDGE* bridge, unsigned int portIndex, const unsig
 						DumpConfigBpdu (bridge, portIndex, -1, (const MSTP_BPDU*) bpdu);
 						LOG_UNINDENT (bridge);
 					#endif
-					passToStateMachines = true;
 					break;
 
 				case VALIDATED_BPDU_TYPE_RST:
@@ -374,30 +372,34 @@ void STP_OnBpduReceived (STP_BRIDGE* bridge, unsigned int portIndex, const unsig
 						DumpRstpBpdu (bridge, portIndex, -1, (const MSTP_BPDU*) bpdu);
 						LOG_UNINDENT (bridge);
 					#endif
-					passToStateMachines = true;
 					break;
 
 				case VALIDATED_BPDU_TYPE_MST:
+				case VALIDATED_BPDU_TYPE_SPT:
 					#if STP_USE_LOG
-						LOG (bridge, portIndex, -1, "MSTP BPDU:\r\n");
+						if (type == VALIDATED_BPDU_TYPE_MST)
+							LOG (bridge, portIndex, -1, "MSTP BPDU:\r\n");
+						else
+							LOG (bridge, portIndex, -1, "SPT BPDU (processed as MSTP):\r\n");
 						LOG_INDENT (bridge);
 						DumpMstpBpdu (bridge, portIndex, -1, (const MSTP_BPDU*) bpdu);
 						LOG_UNINDENT (bridge);
 					#endif
-					passToStateMachines = true;
 					break;
 
 				case VALIDATED_BPDU_TYPE_STP_TCN:
 					LOG (bridge, portIndex, -1, "TCN BPDU.\r\n");
-					passToStateMachines = true;
+					break;
+
+				case VALIDATED_BPDU_TYPE_UNKNOWN:
+					LOG (bridge, portIndex, -1, "Invalid BPDU received. Discarding it.\r\n");
 					break;
 
 				default:
-					LOG (bridge, portIndex, -1, "Invalid BPDU received. Discarding it.\r\n");
-					passToStateMachines = false;
+					assert(false);
 			}
 
-			if (passToStateMachines)
+			if (type != VALIDATED_BPDU_TYPE_UNKNOWN)
 			{
 				assert (bridge->receivedBpduContent == NULL);
 				assert (bridge->receivedBpduType == VALIDATED_BPDU_TYPE_UNKNOWN);

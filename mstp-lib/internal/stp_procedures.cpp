@@ -1,8 +1,8 @@
-﻿
+
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
 // Copyright (c) 2011-2019 Adi Gostin, distributed under Apache License v2.0.
 
-// This file implements §13.29 from 802.1Q-2018.
+// This file implements 13.29 from 802.1Q-2018.
 
 #include "stp_procedures.h"
 #include "stp_bridge.h"
@@ -122,7 +122,7 @@ bool fromSameRegion (STP_BRIDGE* bridge, PortIndex givenPort)
 // ============================================================================
 // 13.29.i - 13.29.9 in 802.1Q-2018
 // If the value of tcDetected is zero and sendRSTP is TRUE, this procedure sets the value of tcDetected to
-// HelloTime plus one second. The value of HelloTime is taken from the CIST’s portTimes parameter (13.27.48)
+// HelloTime plus one second. The value of HelloTime is taken from the CIST's portTimes parameter (13.27.48)
 // for this port.
 //
 // If the value of tcDetected is zero and sendRSTP is FALSE, this procedure sets the value of tcDetected to the
@@ -145,7 +145,7 @@ void newTcDetected (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree
 // 13.29.j) - 13.29.10 in 802.1Q-2018
 // If the value of tcWhile is zero and sendRSTP is TRUE, this procedure sets the value of tcWhile to HelloTime
 // plus one second and sets either newInfo TRUE for the CIST or newInfoMsti TRUE for a given MSTI. The
-// value of HelloTime is taken from the CIST’s portTimes parameter (13.27.48) for this port.
+// value of HelloTime is taken from the CIST's portTimes parameter (13.27.48) for this port.
 //
 // If the value of tcWhile is zero and sendRSTP is FALSE, this procedure sets the value of tcWhile to the sum
 // of the Max Age and Forward Delay components of rootTimes and does not change the value of either
@@ -200,9 +200,9 @@ void newTcWhile (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree, u
 //      2) A Port Role of Designated Port, with the Learning and Forwarding flags set
 //      3) MSTI Remaining Hops set to the value of the MaxHops component of BridgeTimes (13.26.4)
 //
-// NOTE—If two L2GP ports are configured with the same CIST pseudoRootId then the IST may partition within the MST
+// NOTE-If two L2GP ports are configured with the same CIST pseudoRootId then the IST may partition within the MST
 // Region, but either of the L2GP ports can be selected to provide connectivity from the Region/customer network to a
-// provider’s network on an MSTI by MSTI basis.
+// provider's network on an MSTI by MSTI basis.
 void pseudoRcvMsgs (STP_BRIDGE* bridge, PortIndex givenPort)
 {
 	// The L2GP state machine is not yet implemented.
@@ -218,11 +218,11 @@ RCVD_INFO rcvInfo (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 
 	// Returns SuperiorDesignatedInfo if, for a given port and tree (CIST or MSTI),
 	//  a) The received CIST or MSTI message conveys a Designated Port Role and
-	//     1) The message priority (msgPriority—13.27.39) is superior (13.10 or 13.11) to the port’s port
+	//     1) The message priority (msgPriority-13.27.39) is superior (13.10 or 13.11) to the port's port
 	//        priority vector; or
-	//     2) The message priority is the same as the port’s port priority vector, and any of the received timer
-	//        parameter values (msgTimes—13.27.40) differ from those already held for the port
-	//        (portTimes—13.27.48).
+	//     2) The message priority is the same as the port's port priority vector, and any of the received timer
+	//        parameter values (msgTimes-13.27.40) differ from those already held for the port
+	//        (portTimes-13.27.48).
 	if (portTree->msgFlagsPortRole == BPDU_PORT_ROLE_DESIGNATED)
 	{
 		if (   portTree->msgPriority.IsSuperiorTo (portTree->portPriority)
