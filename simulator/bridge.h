@@ -51,6 +51,7 @@ class bridge : public project_child
 	float _y;
 	float _width;
 	float _height;
+	uint32_t _uptime = 0;
 	std::vector<std::unique_ptr<port>> _ports;
 	STP_BRIDGE* _stpBridge = nullptr;
 	bool _bpdu_trapping_enabled = false;
@@ -73,6 +74,8 @@ class bridge : public project_child
 
 		static LRESULT CALLBACK SubclassProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 	};
+
+	friend struct HelperWindow;
 
 	std::unique_ptr<HelperWindow> _helper_window = nullptr;
 
@@ -212,6 +215,7 @@ public:
 	static const float_p y_property;
 	static const float_p width_property;
 	static const float_p height_property;
+	static const uint32_p uptime_property;
 	static const typed_object_collection_property<bridge, bridge_tree> trees_property;
 	static const typed_object_collection_property<bridge, class port> ports_property;
 

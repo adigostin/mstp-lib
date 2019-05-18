@@ -112,7 +112,13 @@ LRESULT CALLBACK bridge::HelperWindow::SubclassProc (HWND hWnd, UINT uMsg, WPARA
 	else if (uMsg == WM_ONE_SECOND_TIMER)
 	{
 		if (!hw->_bridge->project()->simulation_paused())
+		{
 			STP_OnOneSecondTick (hw->_bridge->_stpBridge, GetMessageTime());
+			hw->_bridge->on_property_changing({ &bridge::uptime_property });
+			hw->_bridge->_uptime++;
+			hw->_bridge->on_property_changed({ &bridge::uptime_property });
+			hw->_bridge->event_invoker<invalidate_e>()(hw->_bridge);
+		}
 		return 0;
 	}
 	else if (uMsg == WM_PACKET_RECEIVED)
@@ -774,6 +780,13 @@ const float_p bridge::height_property {
 	std::nullopt
 };
 
+const uint32_p bridge::uptime_property {
+	"Uptime", nullptr, "Code in this class changes this property every time it calls STP_OnOneSecondTick", ui_visible::no,
+	static_cast<uint32_p::member_var_t>(&bridge::_uptime),
+	nullptr,
+	std::nullopt
+};
+
 const typed_object_collection_property<bridge, bridge_tree> bridge::trees_property {
 	"BridgeTrees", nullptr, nullptr, ui_visible::no,
 	&tree_count, &tree
@@ -802,6 +815,7 @@ const edge::property* const bridge::_properties[] = {
 	&tx_hold_count_property,
 	&max_hops_property,
 	&x_property, &y_property, &width_property, &height_property,
+	&uptime_property,
 	&trees_property,
 	&ports_property,
 };

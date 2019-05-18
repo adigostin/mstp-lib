@@ -247,7 +247,7 @@ void port::Render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned
 	// Draw the exterior of the port.
 	float interiorPortOutlineWidth = OutlineWidth;
 	auto b = _bridge->stp_bridge();
-	auto treeIndex  = STP_GetTreeIndexFromVlanNumber(b, vlanNumber);
+	auto treeIndex = STP_GetTreeIndexFromVlanNumber(b, vlanNumber);
 	if (STP_IsBridgeStarted (b))
 	{
 		auto role       = STP_GetPortRole (b, (unsigned int)_port_index, treeIndex);
@@ -291,6 +291,13 @@ void port::Render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned
 	UINT32 actualLineCount;
 	hr = layout->GetLineMetrics(&lineMetrics, 1, &actualLineCount); assert(SUCCEEDED(hr));
 	rt->DrawTextLayout ({ -metrics.width / 2, -lineMetrics.baseline - OutlineWidth * 2 - 1}, layout, dos._brushWindowText);
+
+	if (STP_IsBridgeStarted(b) && STP_GetTcWhile(b, (unsigned int)_port_index, treeIndex))
+	{
+		float radius = 5;
+		D2D1_ELLIPSE e = { { -InteriorWidth / 2 + radius, -InteriorDepth - radius - OutlineWidth }, radius, radius };
+		rt->FillEllipse (e, dos._brushWindowText);
+	}
 
 	rt->SetTransform (&oldtr);
 }

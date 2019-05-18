@@ -203,6 +203,8 @@ bool STP_GetPortLearning            (const struct STP_BRIDGE* bridge, unsigned i
 bool STP_GetPortForwarding          (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
 bool STP_GetPortOperEdge            (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
+unsigned short STP_GetTcWhile (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
+
 void STP_GetDefaultMstConfigName (const unsigned char bridgeAddress[6], char nameOut[18]);
 void STP_SetMstConfigName (struct STP_BRIDGE* bridge, const char* name, unsigned int timestamp);
 void STP_SetMstConfigRevisionLevel (struct STP_BRIDGE* bridge, unsigned short revisionLevel, unsigned int debugTimestamp);

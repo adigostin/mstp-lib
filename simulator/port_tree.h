@@ -47,6 +47,7 @@ public:
 	bool learning() const;
 	bool forwarding() const;
 	STP_PORT_ROLE role() const;
+	uint32_t tcWhile() const;
 
 	size_t tree_index() const { return _tree_index; }
 
@@ -55,6 +56,7 @@ public:
 	static const bool_p learning_property;
 	static const bool_p forwarding_property;
 	static const port_role_p role_property;
+	static const uint32_p tcWhile_property;
 	static const property* const _properties[];
 	static const xtype<port_tree> _type;
 	const struct type* type() const;
