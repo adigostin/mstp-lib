@@ -286,7 +286,7 @@ static void StpCallback_TransmitReleaseBuffer (const struct STP_BRIDGE* bridge, 
 	ethernet_transmit_release_buffer (buffer);
 }
 
-static void StpCallback_FlushFdb (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE  flushType)
+static void StpCallback_FlushFdb (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType, unsigned int timestamp)
 {
 	assert (STP_GetStpVersion(bridge) == STP_VERSION_RSTP);
 	assert (treeIndex == 0);
@@ -314,17 +314,6 @@ static void StpCallback_OnTopologyChange (const struct STP_BRIDGE* bridge, unsig
 	// nothing to do
 }
 
-static void StpCallback_OnNotifiedTopologyChange (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp)
-{
-	// A topology change occurred on some distant bridge. See the comment of the CallNotifiedTcCallback function for details.
-	unsigned int stpPortCount = STP_GetPortCount(bridge);
-	for (unsigned int stpPortIndex = 0; stpPortIndex < stpPortCount; stpPortIndex++)
-	{
-		unsigned int switchPortIndex = get_switch_port_from_stp_port(stpPortIndex);
-		flush_atu(switchPortIndex);
-	}
-}
-	
 static void StpCallback_OnPortRoleChanged (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_PORT_ROLE role, unsigned int timestamp)
 {
 }
@@ -356,7 +345,6 @@ static const STP_CALLBACKS stp_callbacks =
 	.flushFdb                 = StpCallback_FlushFdb,
 	.debugStrOut              = StpCallback_DebugStrOut,
 	.onTopologyChange         = StpCallback_OnTopologyChange,
-	.onNotifiedTopologyChange = StpCallback_OnNotifiedTopologyChange,
 	.onPortRoleChanged        = StpCallback_OnPortRoleChanged,
 	.allocAndZeroMemory       = StpCallback_AllocAndZeroMemory,
 	.freeMemory               = StpCallback_FreeMemory,

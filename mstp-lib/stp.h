@@ -107,11 +107,11 @@ extern "C" {
 #endif
 
 struct STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
-									 unsigned int mstiCount,
-									 unsigned int maxVlanNumber,
-									 const struct STP_CALLBACKS* callbacks,
-									 const unsigned char bridgeAddress[6],
-									 unsigned int debugLogBufferSize);
+                                     unsigned int mstiCount,
+                                     unsigned int maxVlanNumber,
+                                     const struct STP_CALLBACKS* callbacks,
+                                     const unsigned char bridgeAddress[6],
+                                     unsigned int debugLogBufferSize);
 void STP_DestroyBridge (struct STP_BRIDGE* bridge);
 
 void STP_StartBridge (struct STP_BRIDGE* bridge, unsigned int timestamp);
@@ -224,12 +224,12 @@ const char* STP_GetAdminP2PString (enum STP_ADMIN_P2P adminP2P);
 
 void STP_GetRootPriorityVector (const struct STP_BRIDGE* bridge, unsigned int treeIndex, unsigned char priorityVectorOut[36]);
 void STP_GetRootTimes (const struct STP_BRIDGE* bridge,
-					   unsigned int treeIndex,
-					   unsigned short* forwardDelayOutOrNull,
-					   unsigned short* helloTimeOutOrNull,
-					   unsigned short* maxAgeOutOrNull,
-					   unsigned short* messageAgeOutOrNull,
-					   unsigned char* remainingHopsOutOrNull);
+                       unsigned int treeIndex,
+                       unsigned short* forwardDelayOutOrNull,
+                       unsigned short* helloTimeOutOrNull,
+                       unsigned short* maxAgeOutOrNull,
+                       unsigned short* messageAgeOutOrNull,
+                       unsigned char* remainingHopsOutOrNull);
 
 bool STP_IsCistRoot (const struct STP_BRIDGE* bridge);
 bool STP_IsRegionalRoot (const struct STP_BRIDGE* bridge, unsigned int treeIndex);

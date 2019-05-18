@@ -178,7 +178,7 @@ static void StpCallback_TransmitReleaseBuffer (const struct STP_BRIDGE* bridge, 
 	ethernet_send (BpduFrameBuffer, BpduFrameSize);
 }
 
-static void StpCallback_FlushFdb (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType)
+static void StpCallback_FlushFdb (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType, unsigned int timestamp)
 {
 	if (chip_id == 0x175C)
 	{
@@ -214,31 +214,6 @@ static void StpCallback_OnTopologyChange (const struct STP_BRIDGE* bridge, unsig
 	printf ("STP: TC\r\n");
 }
 
-// See long comment at the end of 802_1Q_2011_procedures.cpp.
-static void StpCallback_OnNotifiedTC (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp)
-{
-	if (chip_id == 0x175C)
-	{
-		// IP175C doesn't support flushing the filtering database.
-		// As a workaround, we disable learning at power-up and we keep it disabled.
-	}
-	else if (chip_id == 0x175D)
-	{
-		// quickly age out everything
-		ENET_MIIWriteRegister (20, 14, 0x60);
-
-		// wait 2 ms while the IC ages out the table
-		scheduler_wait(3);
-
-		// reenable slow aging (~5 min)
-		ENET_MIIWriteRegister (20, 14, 5);
-	}
-	else
-		assert(false);
-
-	printf ("STP: port index %d NotifiedTC\r\n", portIndex);
-}
-
 static void StpCallback_OnPortRoleChanged (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_PORT_ROLE role, unsigned int timestamp)
 {
 	printf ("STP: port index %d role = %s.\r\n", portIndex, STP_GetPortRoleString(role));
@@ -267,7 +242,6 @@ extern STP_CALLBACKS const stp_callbacks =
 	StpCallback_FlushFdb,
 	StpCallback_DebugStrOut,
 	StpCallback_OnTopologyChange,
-	StpCallback_OnNotifiedTC,
 	StpCallback_OnPortRoleChanged,
 	StpCallback_AllocAndZeroMemory,
 	StpCallback_FreeMemory
