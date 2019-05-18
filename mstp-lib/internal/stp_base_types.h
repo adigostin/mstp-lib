@@ -143,11 +143,6 @@ public:
 	{
 		return _address;
 	}
-
-	operator const unsigned char* () const
-	{
-		return (const unsigned char*) this;
-	}
 };
 
 // ============================================================================

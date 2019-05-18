@@ -686,7 +686,7 @@ static void RecomputePrioritiesAndPortRoles (STP_BRIDGE* bridge, unsigned int tr
 	RunStateMachines (bridge, timestamp);
 }
 
-// Problem when setting a worse bridge priority (numerically higher)
+// Note AG: Problem when setting a worse bridge priority (numerically higher)
 // on the root bridge, and that bridge remains root even with the new priority:
 //
 // BPDUs with the old priority could still be propagating throughout the network, until they are discarded
@@ -695,11 +695,7 @@ static void RecomputePrioritiesAndPortRoles (STP_BRIDGE* bridge, unsigned int tr
 //
 // This increases the convergence time by up to HelloTime seconds, and it seems to be a problem of the protocol itself.
 // If compounded with delays introduced either by other problems of the protocol, or by problems in the rest of the firmware,
-// it might leads to the formation of loops.
-//
-// I don't think this could be resolved given the current BPDU format. In a future version of the protocol it could be resolved,
-// for example, by encoding a timestamp in BPDUs, and using this timestamp to determine whether a received BPDU is Superior.
-
+// it might leads to the formation of loops. I don't think this could be resolved given the current BPDU format.
 void STP_SetBridgePriority (STP_BRIDGE* bridge, unsigned int treeIndex, unsigned short bridgePriority, unsigned int timestamp)
 {
 	// See table 13-3 on page 501 of 802.1Q-2018.
