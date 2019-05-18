@@ -997,13 +997,6 @@ bool STP_GetPortOperEdge (const STP_BRIDGE* bridge, unsigned int portIndex)
 	return bridge->ports [portIndex]->operEdge;
 }
 
-unsigned short STP_GetTcWhile (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
-{
-	// This value has meaning only while STP is enabled. Let's check that it is.
-	assert (bridge->started);
-	return bridge->ports[portIndex]->trees[treeIndex]->tcWhile;
-}
-
 unsigned int STP_GetMaxVlanNumber (const STP_BRIDGE* bridge)
 {
 	return bridge->maxVlanNumber;

@@ -238,7 +238,7 @@ void port::RenderExteriorStpPort (ID2D1RenderTarget* dc, const drawing_resources
 	dc->SetAntialiasMode(oldaa);
 }
 
-void port::Render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned int vlanNumber) const
+void port::render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned int vlanNumber) const
 {
 	D2D1_MATRIX_3X2_F oldtr;
 	rt->GetTransform(&oldtr);
@@ -278,25 +278,24 @@ void port::Render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned
 	rt->FillRectangle (&portRect, GetMacOperational() ? dos._poweredFillBrush : dos._unpoweredBrush);
 	rt->DrawRectangle (&portRect, dos._brushWindowText, interiorPortOutlineWidth);
 
-	com_ptr<IDWriteTextFormat> format;
-	auto hr = dos._dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 9, L"en-US", &format); assert(SUCCEEDED(hr));
 	com_ptr<IDWriteTextLayout> layout;
 	wstringstream ss;
 	ss << setfill(L'0') << setw(4) << hex << STP_GetPortIdentifier(b, (unsigned int)_port_index, treeIndex);
-	auto portIdText = ss.str();
-	hr = dos._dWriteFactory->CreateTextLayout (portIdText.c_str(), (UINT32) portIdText.length(), format, 10000, 10000, &layout); assert(SUCCEEDED(hr));
+	auto hr = dos._dWriteFactory->CreateTextLayout (ss.str().c_str(), (UINT32) ss.tellp(), dos._smallTextFormat, 10000, 10000, &layout); assert(SUCCEEDED(hr));
 	DWRITE_TEXT_METRICS metrics;
 	hr = layout->GetMetrics(&metrics); assert(SUCCEEDED(hr));
 	DWRITE_LINE_METRICS lineMetrics;
 	UINT32 actualLineCount;
 	hr = layout->GetLineMetrics(&lineMetrics, 1, &actualLineCount); assert(SUCCEEDED(hr));
 	rt->DrawTextLayout ({ -metrics.width / 2, -lineMetrics.baseline - OutlineWidth * 2 - 1}, layout, dos._brushWindowText);
-
-	if (STP_IsBridgeStarted(b) && STP_GetTcWhile(b, (unsigned int)_port_index, treeIndex))
+	
+	if (_trees[treeIndex]->fdb_flush_text_visible)
 	{
-		float radius = 5;
-		D2D1_ELLIPSE e = { { -InteriorWidth / 2 + radius, -InteriorDepth - radius - OutlineWidth }, radius, radius };
-		rt->FillEllipse (e, dos._brushWindowText);
+		hr = dos._dWriteFactory->CreateTextLayout (L"Flush", 5, dos._smallBoldTextFormat, 10000, 10000, &layout); assert(SUCCEEDED(hr));
+		hr = layout->GetMetrics(&metrics); assert(SUCCEEDED(hr));
+		hr = layout->GetLineMetrics(&lineMetrics, 1, &actualLineCount); assert(SUCCEEDED(hr));
+		D2D1_POINT_2F l = { -metrics.width / 2, -InteriorDepth - lineMetrics.baseline - lineMetrics.height * 0.2f };
+		rt->DrawTextLayout (l, layout, dos._brushWindowText);
 	}
 
 	rt->SetTransform (&oldtr);
@@ -352,6 +351,11 @@ renderable_object::HTResult port::hit_test (const edge::zoomable_i* zoomable, D2
 		return { this, HTCodeInnerOuter };
 
 	return { };
+}
+
+void port::invalidate()
+{
+	this->event_invoker<invalidate_e>()(this);
 }
 
 bool port::IsForwarding (unsigned int vlanNumber) const

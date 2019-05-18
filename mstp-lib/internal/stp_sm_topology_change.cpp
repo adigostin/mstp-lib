@@ -156,7 +156,7 @@ static void InitState (STP_BRIDGE* bridge, PortAndTree pt, TopologyChange::State
 		{
 			FLUSH_LOG (bridge);
 
-			bridge->callbacks.flushFdb (bridge, givenPort, givenTree, rstpVersion (bridge) ? STP_FLUSH_FDB_TYPE_IMMEDIATE : STP_FLUSH_FDB_TYPE_RAPID_AGEING);
+			bridge->callbacks.flushFdb (bridge, givenPort, givenTree, rstpVersion (bridge) ? STP_FLUSH_FDB_TYPE_IMMEDIATE : STP_FLUSH_FDB_TYPE_RAPID_AGEING, timestamp);
 		}
 
 		portTree->tcDetected = 0;
@@ -187,9 +187,6 @@ static void InitState (STP_BRIDGE* bridge, PortAndTree pt, TopologyChange::State
 	}
 	else if (state == NOTIFIED_TC)
 	{
-		// Note AG: Added by me, see comment at the top of the function.
-		CallNotifiedTcCallback (bridge, givenTree, timestamp);
-
 		if (givenTree == CIST_INDEX)
 			port->rcvdTcn = false;
 		portTree->rcvdTc = false;
@@ -207,7 +204,7 @@ static void InitState (STP_BRIDGE* bridge, PortAndTree pt, TopologyChange::State
 		{
 			FLUSH_LOG (bridge);
 
-			bridge->callbacks.flushFdb (bridge, givenPort, givenTree, rstpVersion (bridge) ? STP_FLUSH_FDB_TYPE_IMMEDIATE : STP_FLUSH_FDB_TYPE_RAPID_AGEING);
+			bridge->callbacks.flushFdb (bridge, givenPort, givenTree, rstpVersion (bridge) ? STP_FLUSH_FDB_TYPE_IMMEDIATE : STP_FLUSH_FDB_TYPE_RAPID_AGEING, timestamp);
 		}
 
 		portTree->tcProp = false;

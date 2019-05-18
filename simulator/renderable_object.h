@@ -22,6 +22,7 @@ struct drawing_resources
 	edge::com_ptr<ID2D1StrokeStyle> _strokeStyleNoForwardingWire;
 	edge::com_ptr<IDWriteTextFormat> _regularTextFormat;
 	edge::com_ptr<IDWriteTextFormat> _smallTextFormat;
+	edge::com_ptr<IDWriteTextFormat> _smallBoldTextFormat;
 	edge::com_ptr<ID2D1StrokeStyle> _strokeStyleSelectionRect;
 };
 

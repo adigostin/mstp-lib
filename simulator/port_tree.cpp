@@ -48,35 +48,58 @@ port_tree::port_tree (port* port, size_t tree_index)
 	// No need to call remove_handler since a bridge and its bridge_trees are deleted at the same time.
 	_port->bridge()->property_changing().add_handler(&on_bridge_property_changing, this);
 	_port->bridge()->property_changed().add_handler(&on_bridge_property_changed, this);
+	_port->bridge()->GetLinkPulseEvent().add_handler(&on_link_pulse, this);
 }
 
 void port_tree::on_bridge_property_changing (void* arg, object* obj, const property_change_args& args)
 {
-	auto bt = static_cast<port_tree*>(arg);
+	auto this_ = static_cast<port_tree*>(arg);
 
 	if (args.property == &bridge::stp_enabled_property)
 	{
-		bt->on_property_changing(&learning_property);
-		bt->on_property_changing(&forwarding_property);
-		bt->on_property_changing(&role_property);
+		this_->on_property_changing(&learning_property);
+		this_->on_property_changing(&forwarding_property);
+		this_->on_property_changing(&role_property);
+
+		this_->fdb_flush_timestamp = 0;
+		this_->fdb_flush_text_visible = false;
+		this_->_port->invalidate();
 	}
-	
-	if (args.property == &bridge::uptime_property)
-		bt->on_property_changing(&tcWhile_property);
 }
 
 void port_tree::on_bridge_property_changed (void* arg, object* obj, const property_change_args& args)
 {
-	auto bt = static_cast<port_tree*>(arg);
-
-	if (args.property == &bridge::uptime_property)
-		bt->on_property_changed(&tcWhile_property);
+	auto this_ = static_cast<port_tree*>(arg);
 
 	if (args.property == &bridge::stp_enabled_property)
 	{
-		bt->on_property_changed(&role_property);
-		bt->on_property_changed(&forwarding_property);
-		bt->on_property_changed(&learning_property);
+		this_->on_property_changed(&role_property);
+		this_->on_property_changed(&forwarding_property);
+		this_->on_property_changed(&learning_property);
+	}
+}
+
+void port_tree::on_link_pulse (void* arg, bridge* b, size_t port_index, unsigned int timestamp)
+{
+	auto this_ = static_cast<port_tree*>(arg);
+	
+	if (port_index != this_->_port->port_index())
+		return;
+
+	if (this_->fdb_flush_text_visible && (timestamp - this_->fdb_flush_timestamp >= 2000))
+	{
+		this_->fdb_flush_text_visible = false;
+		this_->_port->invalidate();
+	}
+}
+
+void port_tree::flush_fdb (unsigned int timestamp)
+{
+	fdb_flush_timestamp = timestamp;
+	if (!fdb_flush_text_visible)
+	{
+		fdb_flush_text_visible = true;
+		_port->invalidate();
 	}
 }
 
@@ -114,13 +137,6 @@ STP_PORT_ROLE port_tree::role() const
 	if (!STP_IsBridgeStarted(_port->bridge()->stp_bridge()))
 		throw std::logic_error(stp_disabled_text);
 	return STP_GetPortRole (_port->bridge()->stp_bridge(), (unsigned int)_port->port_index(), (unsigned int)_tree_index);
-}
-
-uint32_t port_tree::tcWhile() const
-{
-	if (!STP_IsBridgeStarted(_port->bridge()->stp_bridge()))
-		throw std::logic_error(stp_disabled_text);
-	return STP_GetTcWhile(_port->bridge()->stp_bridge(), (unsigned int)_port->port_index(), (unsigned int)_tree_index);
 }
 
 const edge::size_p port_tree::tree_index_property {
@@ -171,14 +187,7 @@ const port_role_p port_tree::role_property {
 	std::nullopt,
 };
 
-const uint32_p port_tree::tcWhile_property {
-	"tcWhile", nullptr, nullptr, ui_visible::yes,
-	static_cast<uint32_p::member_getter_t>(&tcWhile),
-	nullptr,
-	std::nullopt,
-};
-
-const edge::property* const port_tree::_properties[] = { &tree_index_property, &priority_property, &learning_property, &forwarding_property, &role_property, &tcWhile_property };
+const edge::property* const port_tree::_properties[] = { &tree_index_property, &priority_property, &learning_property, &forwarding_property, &role_property };
 
 const xtype<port_tree> port_tree::_type = {
 	"PortTree",

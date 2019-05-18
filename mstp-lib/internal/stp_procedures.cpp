@@ -1447,35 +1447,3 @@ void updtRolesDisabledTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 	for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
 		bridge->ports [portIndex]->trees [givenTree]->selectedRole = STP_PORT_ROLE_DISABLED;
 }
-
-// Aside from the topology changes occurring locally, the application also needs to know about topology changes
-// occurring in distant bridges, because, after such a a distant topology change, some MAC address might
-// be reachable through a different local port.
-//
-// When a distant topology change occurs, all bridges in the network will get a notification about it.
-// When such a notification is received, the bridge should either:
-//   1. clear the filtering databases (=learning tables) for all ports, or
-//   2. quickly age-out the filtering databases.
-// Cisco recomments the second approach, which is an optimization that reduces the broadcast traffic somewhat.
-//
-// This _is_ a matter of reliability. Fortunately, it's also simple to get this right:
-// just hook into the entry block of the NOTIFIED_TC state in the Topology Change state machine,
-// and call the "onNotifiedTopologyChange callback". This covers for topology changes originating in
-// distant bridges, while the "flushFdb" callback covers for topology changes originating in this bridge.
-//
-// Note that the code in setTcFlags() takes care of propagating to MSTIs the topology change flags of the CIST.
-// So we don't have to take here special precautions for MSTIs.
-
-// Function not from the the standard. It is meant to be called from the entry block of NOTIFIED_TC.
-void CallNotifiedTcCallback (STP_BRIDGE* bridge, TreeIndex treeIndex, unsigned int timestamp)
-{
-	for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
-	{
-		PORT* port = bridge->ports [portIndex];
-		if (!port->operEdge)
-		{
-			bridge->callbacks.onNotifiedTopologyChange (bridge, portIndex, treeIndex, timestamp);
-		}
-	}
-}
-

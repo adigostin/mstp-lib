@@ -39,10 +39,9 @@ typedef void  (*STP_CALLBACK_ENABLE_LEARNING)               (const struct STP_BR
 typedef void  (*STP_CALLBACK_ENABLE_FORWARDING)             (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable, unsigned int timestamp);
 typedef void* (*STP_CALLBACK_TRANSMIT_GET_BUFFER)           (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int bpduSize, unsigned int timestamp);
 typedef void  (*STP_CALLBACK_TRANSMIT_RELEASE_BUFFER)       (const struct STP_BRIDGE* bridge, void* bufferReturnedByGetBuffer);
-typedef void  (*STP_CALLBACK_FLUSH_FDB)                     (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType);
+typedef void  (*STP_CALLBACK_FLUSH_FDB)                     (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType, unsigned int timestamp);
 typedef void  (*STP_CALLBACK_DEBUG_STR_OUT)                 (const struct STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, unsigned int flush);
 typedef void  (*STP_CALLBACK_ON_TOPOLOGY_CHANGE)            (const struct STP_BRIDGE* bridge, unsigned int treeIndex, unsigned int timestamp);
-typedef void  (*STP_CALLBACK_ON_NOTIFIED_TOPOLOGY_CHANGE)   (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp);
 typedef void  (*STP_CALLBACK_PORT_ROLE_CHANGED)             (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_PORT_ROLE role, unsigned int timestamp);
 typedef void* (*STP_CALLBACK_ALLOC_AND_ZERO_MEMORY) (unsigned int size);
 typedef void  (*STP_CALLBACK_FREE_MEMORY) (void* p);
@@ -57,7 +56,6 @@ struct STP_CALLBACKS
 	STP_CALLBACK_FLUSH_FDB                   flushFdb;
 	STP_CALLBACK_DEBUG_STR_OUT               debugStrOut;
 	STP_CALLBACK_ON_TOPOLOGY_CHANGE          onTopologyChange;
-	STP_CALLBACK_ON_NOTIFIED_TOPOLOGY_CHANGE onNotifiedTopologyChange;
 	STP_CALLBACK_PORT_ROLE_CHANGED           onPortRoleChanged;
 	STP_CALLBACK_ALLOC_AND_ZERO_MEMORY       allocAndZeroMemory;
 	STP_CALLBACK_FREE_MEMORY                 freeMemory;
@@ -202,8 +200,6 @@ enum STP_PORT_ROLE STP_GetPortRole  (const struct STP_BRIDGE* bridge, unsigned i
 bool STP_GetPortLearning            (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
 bool STP_GetPortForwarding          (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
 bool STP_GetPortOperEdge            (const struct STP_BRIDGE* bridge, unsigned int portIndex);
-
-unsigned short STP_GetTcWhile (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
 
 void STP_GetDefaultMstConfigName (const unsigned char bridgeAddress[6], char nameOut[18]);
 void STP_SetMstConfigName (struct STP_BRIDGE* bridge, const char* name, unsigned int timestamp);

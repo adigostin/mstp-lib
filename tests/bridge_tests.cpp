@@ -41,7 +41,7 @@ TEST_CLASS(bridge_tests)
 	{
 	}
 
-	static void StpCallback_FlushFdb (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType)
+	static void StpCallback_FlushFdb (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType, unsigned int timestamp)
 	{
 	}
 
@@ -50,10 +50,6 @@ TEST_CLASS(bridge_tests)
 	}
 
 	static void StpCallback_OnTopologyChange (const STP_BRIDGE* bridge, unsigned int treeIndex, unsigned int timestamp)
-	{
-	}
-
-	static void StpCallback_OnNotifiedTopologyChange (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp)
 	{
 	}
 
@@ -71,7 +67,6 @@ TEST_CLASS(bridge_tests)
 		callbacks.enableLearning     = &StpCallback_EnableLearning;
 		callbacks.enableForwarding   = &StpCallback_EnableForwarding;
 		callbacks.onTopologyChange   = &StpCallback_OnTopologyChange;
-		callbacks.onNotifiedTopologyChange = &StpCallback_OnNotifiedTopologyChange;
 		callbacks.flushFdb           = &StpCallback_FlushFdb;
 		callbacks.onPortRoleChanged  = &StpCallback_OnPortRoleChanged;
 		callbacks.debugStrOut        = &StpCallback_DebugStrOut;

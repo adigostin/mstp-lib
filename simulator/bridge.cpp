@@ -106,25 +106,19 @@ LRESULT CALLBACK bridge::HelperWindow::SubclassProc (HWND hWnd, UINT uMsg, WPARA
 	if (uMsg == WM_LINK_PULSE_TIMER)
 	{
 		// We use a timer on a single thread for pulses because we want to avoid links going down due to delays on some threads but not on others.
-		hw->_bridge->OnLinkPulseTick();
+		if (!hw->_bridge->project()->simulation_paused())
+			hw->_bridge->OnLinkPulseTick();
 		return 0;
 	}
 	else if (uMsg == WM_ONE_SECOND_TIMER)
 	{
 		if (!hw->_bridge->project()->simulation_paused())
-		{
-			STP_OnOneSecondTick (hw->_bridge->_stpBridge, GetMessageTime());
-			hw->_bridge->on_property_changing({ &bridge::uptime_property });
-			hw->_bridge->_uptime++;
-			hw->_bridge->on_property_changed({ &bridge::uptime_property });
-			hw->_bridge->event_invoker<invalidate_e>()(hw->_bridge);
-		}
+			STP_OnOneSecondTick (hw->_bridge->_stpBridge, ::GetMessageTime());
 		return 0;
 	}
 	else if (uMsg == WM_PACKET_RECEIVED)
 	{
-		if (!hw->_bridge->project()->simulation_paused())
-			hw->_bridge->ProcessReceivedPackets();
+		hw->_bridge->ProcessReceivedPackets();
 		return 0;
 	}
 
@@ -189,9 +183,6 @@ void bridge::OnPortInvalidate (void* callbackArg, renderable_object* object)
 // Checks the wires and computes macOperational for each port on this bridge.
 void bridge::OnLinkPulseTick()
 {
-	if (project()->simulation_paused())
-		return;
-
 	bool invalidate = false;
 	for (size_t portIndex = 0; portIndex < _ports.size(); portIndex++)
 	{
@@ -297,7 +288,7 @@ void bridge::SetLocation(float x, float y)
 	}
 }
 
-void bridge::Render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsigned int vlanNumber, const D2D1_COLOR_F& configIdColor) const
+void bridge::render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsigned int vlanNumber, const D2D1_COLOR_F& configIdColor) const
 {
 	auto treeIndex = STP_GetTreeIndexFromVlanNumber (_stpBridge, vlanNumber);
 
@@ -340,7 +331,7 @@ void bridge::Render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsign
 	dc->DrawTextLayout ({ _x + OutlineWidth * 2 + 3, _y + OutlineWidth * 2 + 3}, tl.layout, dos._brushWindowText);
 
 	for (auto& port : _ports)
-		port->Render (dc, dos, vlanNumber);
+		port->render (dc, dos, vlanNumber);
 }
 
 void bridge::render_selection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const
@@ -780,13 +771,6 @@ const float_p bridge::height_property {
 	std::nullopt
 };
 
-const uint32_p bridge::uptime_property {
-	"Uptime", nullptr, "Code in this class changes this property every time it calls STP_OnOneSecondTick", ui_visible::no,
-	static_cast<uint32_p::member_var_t>(&bridge::_uptime),
-	nullptr,
-	std::nullopt
-};
-
 const typed_object_collection_property<bridge, bridge_tree> bridge::trees_property {
 	"BridgeTrees", nullptr, nullptr, ui_visible::no,
 	&tree_count, &tree
@@ -815,7 +799,6 @@ const edge::property* const bridge::_properties[] = {
 	&tx_hold_count_property,
 	&max_hops_property,
 	&x_property, &y_property, &width_property, &height_property,
-	&uptime_property,
 	&trees_property,
 	&ports_property,
 };
@@ -842,7 +825,6 @@ const STP_CALLBACKS bridge::StpCallbacks =
 	&StpCallback_FlushFdb,
 	&StpCallback_DebugStrOut,
 	&StpCallback_OnTopologyChange,
-	&StpCallback_OnNotifiedTopologyChange,
 	&StpCallback_OnPortRoleChanged,
 	&StpCallback_AllocAndZeroMemory,
 	&StpCallback_FreeMemory,
@@ -901,9 +883,10 @@ void bridge::StpCallback_EnableForwarding (const STP_BRIDGE* bridge, unsigned in
 	b->event_invoker<invalidate_e>()(b);
 }
 
-void bridge::StpCallback_FlushFdb (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType)
+void bridge::StpCallback_FlushFdb (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType, unsigned int timestamp)
 {
 	auto b = static_cast<class bridge*>(STP_GetApplicationContext(bridge));
+	b->_ports[portIndex]->_trees[treeIndex]->flush_fdb(timestamp);
 }
 
 void bridge::StpCallback_DebugStrOut (const STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, unsigned int flush)
@@ -947,10 +930,6 @@ void bridge::StpCallback_OnTopologyChange (const STP_BRIDGE* bridge, unsigned in
 {
 	auto b = static_cast<class bridge*>(STP_GetApplicationContext(bridge));
 	b->_trees[treeIndex]->on_topology_change(timestamp);
-}
-
-void bridge::StpCallback_OnNotifiedTopologyChange (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp)
-{
 }
 
 void bridge::StpCallback_OnPortRoleChanged (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role, unsigned int timestamp)

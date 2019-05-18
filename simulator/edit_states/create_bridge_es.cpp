@@ -105,7 +105,7 @@ class create_bridge_es : public edit_state
 			dc->GetTransform(&oldtr);
 			dc->SetTransform (_ew->GetZoomTransform() * oldtr);
 
-			_bridge->Render (dc, _ew->drawing_resources(), _pw->selected_vlan_number(), D2D1::ColorF(D2D1::ColorF::LightGreen));
+			_bridge->render (dc, _ew->drawing_resources(), _pw->selected_vlan_number(), D2D1::ColorF(D2D1::ColorF::LightGreen));
 
 			dc->SetTransform(&oldtr);
 

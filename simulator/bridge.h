@@ -51,7 +51,6 @@ class bridge : public project_child
 	float _y;
 	float _width;
 	float _height;
-	uint32_t _uptime = 0;
 	std::vector<std::unique_ptr<port>> _ports;
 	STP_BRIDGE* _stpBridge = nullptr;
 	bool _bpdu_trapping_enabled = false;
@@ -75,7 +74,7 @@ class bridge : public project_child
 		static LRESULT CALLBACK SubclassProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 	};
 
-	friend struct HelperWindow;
+	friend HelperWindow;
 
 	std::unique_ptr<HelperWindow> _helper_window = nullptr;
 
@@ -111,7 +110,7 @@ public:
 	const std::vector<std::unique_ptr<bridge_tree>>& trees() const { return _trees; }
 	const std::vector<std::unique_ptr<port>>& ports() const { return _ports; }
 
-	void Render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsigned int vlanNumber, const D2D1_COLOR_F& configIdColor) const;
+	void render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsigned int vlanNumber, const D2D1_COLOR_F& configIdColor) const;
 
 	virtual void render_selection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const override final;
 	virtual HTResult hit_test (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
@@ -171,10 +170,9 @@ private:
 	static void  StpCallback_EnableBpduTrapping       (const STP_BRIDGE* bridge, bool enable, unsigned int timestamp);
 	static void  StpCallback_EnableLearning           (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable, unsigned int timestamp);
 	static void  StpCallback_EnableForwarding         (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable, unsigned int timestamp);
-	static void  StpCallback_FlushFdb                 (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType);
+	static void  StpCallback_FlushFdb                 (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType, unsigned int timestamp);
 	static void  StpCallback_DebugStrOut              (const STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, unsigned int flush);
 	static void  StpCallback_OnTopologyChange         (const STP_BRIDGE* bridge, unsigned int treeIndex, unsigned int timestamp);
-	static void  StpCallback_OnNotifiedTopologyChange (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int timestamp);
 	static void  StpCallback_OnPortRoleChanged        (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role, unsigned int timestamp);
 
 	float x() const { return _x; }
@@ -215,7 +213,6 @@ public:
 	static const float_p y_property;
 	static const float_p width_property;
 	static const float_p height_property;
-	static const uint32_p uptime_property;
 	static const typed_object_collection_property<bridge, bridge_tree> trees_property;
 	static const typed_object_collection_property<bridge, class port> ports_property;
 

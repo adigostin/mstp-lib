@@ -41,6 +41,4 @@ void updtRcvdInfoWhile     (STP_BRIDGE*, PortIndex portIndex, TreeIndex treeInde
 void updtRolesTree         (STP_BRIDGE*, TreeIndex treeIndex);
 void updtRolesDisabledTree (STP_BRIDGE*, TreeIndex treeIndex);
 
-void CallNotifiedTcCallback (STP_BRIDGE* bridge, TreeIndex, unsigned int timestamp);
-
 #endif

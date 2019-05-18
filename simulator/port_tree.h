@@ -3,6 +3,7 @@
 #include "win32/com_ptr.h"
 #include "stp.h"
 
+class bridge;
 class port;
 
 using edge::size_p;
@@ -32,11 +33,16 @@ class port_tree : public edge::object
 {
 	using base = edge::object;
 
+	friend port;
+
 	port* const _port;
 	size_t const _tree_index;
+	LONG fdb_flush_timestamp = 0;
+	bool fdb_flush_text_visible = false;
 	
 	static void on_bridge_property_changing (void* arg, object* obj, const property_change_args& args);
 	static void on_bridge_property_changed (void* arg, object* obj, const property_change_args& args);
+	static void on_link_pulse (void* arg, bridge* b, size_t port_index, unsigned int timestamp);
 
 public:
 	port_tree (port* port, size_t tree_index);
@@ -47,7 +53,8 @@ public:
 	bool learning() const;
 	bool forwarding() const;
 	STP_PORT_ROLE role() const;
-	uint32_t tcWhile() const;
+
+	void flush_fdb (unsigned int timestamp);
 
 	size_t tree_index() const { return _tree_index; }
 
@@ -56,7 +63,6 @@ public:
 	static const bool_p learning_property;
 	static const bool_p forwarding_property;
 	static const port_role_p role_property;
-	static const uint32_p tcWhile_property;
 	static const property* const _properties[];
 	static const xtype<port_tree> _type;
 	const struct type* type() const;
