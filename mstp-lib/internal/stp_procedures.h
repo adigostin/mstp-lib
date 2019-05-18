@@ -20,6 +20,7 @@ void newTcWhile            (STP_BRIDGE*, PortIndex portIndex, TreeIndex treeInde
 void pseudoRcvMsgs         (STP_BRIDGE*, PortIndex portIndex);
 RCVD_INFO rcvInfo          (STP_BRIDGE*, PortIndex portIndex, TreeIndex treeIndex);
 void rcvMsgs               (STP_BRIDGE*, PortIndex portIndex);
+void rcvAgreements         (STP_BRIDGE*, PortIndex portIndex);
 void recordAgreement       (STP_BRIDGE*, PortIndex portIndex, TreeIndex treeIndex);
 void recordDispute         (STP_BRIDGE*, PortIndex portIndex, TreeIndex treeIndex);
 void recordMastered        (STP_BRIDGE*, PortIndex portIndex, TreeIndex treeIndex);

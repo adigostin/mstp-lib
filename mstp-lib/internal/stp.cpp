@@ -407,12 +407,14 @@ void STP_OnBpduReceived (STP_BRIDGE* bridge, unsigned int portIndex, const unsig
 
 				bridge->receivedBpduContent = (MSTP_BPDU*) bpdu;
 				bridge->receivedBpduType = type;
+				bridge->receivedBpduPort = bridge->ports[portIndex];
 				bridge->ports [portIndex]->rcvdBpdu = true;
 
 				RunStateMachines (bridge, timestamp);
 
 				bridge->receivedBpduContent = NULL; // to cause an exception on access
 				bridge->receivedBpduType = VALIDATED_BPDU_TYPE_UNKNOWN; // to cause asserts on access
+				bridge->receivedBpduPort = NULL;
 
 				// Check that the state machines did process the BPDU.
 				assert (bridge->ports [portIndex]->rcvdBpdu == false);

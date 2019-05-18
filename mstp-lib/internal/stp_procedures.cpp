@@ -434,6 +434,9 @@ void rcvMsgs (STP_BRIDGE* bridge, PortIndex givenPort)
 
 			portTree->rcvdMsg = true;
 		}
+
+		// Note AG: what are we supposed to do when the sender sends us _fewer_ MSTI messages than we have trees?
+		// Various state machine procedures check the message flags of all trees, and in this case there are no such flags for some of our trees.
 	}
 	else
 	{
@@ -443,11 +446,17 @@ void rcvMsgs (STP_BRIDGE* bridge, PortIndex givenPort)
 }
 
 // ============================================================================
-// 13.27.n) - 13.27.14
+// 13.29.14 in 802.1Q-2018
+void rcvAgreements (STP_BRIDGE*, PortIndex portIndex)
+{
+	assert(false); // SPB not yet implemented
+}
 
+// ============================================================================
+// 13.29.n) - 13.29.15 in 802.1Q-2018
 void recordAgreement (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 {
-	// we're accessing msgFlags below, which is valid only when a received BPDU is being handled
+	// We're accessing msgFlags below, which is valid only when a received BPDU is being handled.
 	assert (bridge->receivedBpduContent != NULL);
 
 	PORT* port = bridge->ports [givenPort];
@@ -456,15 +465,15 @@ void recordAgreement (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTr
 
 	if (givenTree == CIST_INDEX)
 	{
-		// For the CIST and a given port, if rstpVersion is TRUE, operPointToPointMAC (6.6.3) is TRUE, and the
-		// received CIST Message has the Agreement flag set, then the CIST agreed flag is set and the CIST proposing
-		// flag is cleared. Otherwise the CIST agreed flag is cleared. Additionally, if the CIST message was received
-		// from a bridge in a different MST Region, i.e., the rcvdInternal flag is clear, the agreed and proposing flags
-		// for this port for all MSTIs are set or cleared to the same value as the CIST agreed and proposing flags. If the
-		// CIST message was received from a bridge in the same MST Region, the MSTI agreed and proposing flags
-		// are not changed.
+		// For the CIST and a given port, if rstpVersion is TRUE, operPointToPointMAC (IEEE Std 802.1AC) is
+		// TRUE, and the received CIST Message has the Agreement flag set, then the CIST agreed flag is set and the
+		// CIST proposing flag is cleared. Otherwise, the CIST agreed flag is cleared. Additionally, if the CIST
+		// message was received from a Bridge in a different MST Region, i.e., the rcvdInternal flag is clear, the agreed
+		// and proposing flags for this port for all MSTIs are set or cleared to the same value as the CIST agreed and
+		// proposing flags. If the CIST message was received from a Bridge in the same MST Region, the MSTI
+		// agreed and proposing flags are not changed.
 
-		if (rstpVersion (bridge) && port->operPointToPointMAC && portTree->msgFlagsAgreement)
+		if (rstpVersion(bridge) && port->operPointToPointMAC && portTree->msgFlagsAgreement)
 		{
 			portTree->agreed = true;
 			portTree->proposing = false;
@@ -485,7 +494,7 @@ void recordAgreement (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTr
 	}
 	else
 	{
-		// For a given MSTI and port, if operPointToPointMAC (6.6.3) is TRUE, and
+		// For a given MSTI and port, if operPointToPointMAC (IEEE Std 802.1AC) is TRUE, and
 		//
 		// a) The message priority vector of the CIST Message accompanying the received MSTI Message (i.e.,
 		//    received in the same BPDU) has the same CIST Root Identifier, CIST External Root Path Cost, and
@@ -498,8 +507,7 @@ void recordAgreement (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTr
 		// NOTE-MSTI Messages received from bridges external to the MST Region are discarded and not processed by
 		// recordAgreeement() or recordProposal().
 
-		// Note AG about the NOTE above: Passive constructs are bad bad bad. By whom are they discarded? Are we supposed to discard them here?
-		assert (port->rcvdInternal); // Let's assume they're discarded outside of this function, and that this function is not called.
+		assert (port->rcvdInternal);
 
 		if (   port->operPointToPointMAC
 			&& (cistPortTree->msgPriority.RootId               == cistPortTree->portPriority.RootId)
@@ -516,7 +524,7 @@ void recordAgreement (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTr
 }
 
 // ============================================================================
-// 13.27.o) - 13.27.15
+// 13.29.o) - 13.29.16 in 802.1Q-2018
 // For the CIST and a given port, if the CIST message has the learning flag set:
 // a) The disputed variable is set; and
 // b) The agreed variable is cleared.
@@ -537,9 +545,9 @@ void recordDispute (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree
 	PORT* port = bridge->ports [givenPort];
 	PORT_TREE* portTree = port->trees [givenTree];
 
-	// Not clear: The condition for c/d is a sub-condition of the condition for a/b? Or the two conditions are independent?
-	// We'll consider it a sub-condition in the code below,
-	// cause the text for independent conditions could / would have been expressed in a much simpler way.
+	// Note AG: Not clear: The condition for c/d is a sub-condition of the condition for a/b?
+	// Or the two conditions are independent? Let's consider it a sub-condition in the code below;
+	// the wording for independent conditions would probably have been simpler.
 
 	if (givenTree == CIST_INDEX)
 	{
@@ -548,7 +556,7 @@ void recordDispute (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree
 			portTree->disputed = true;
 			portTree->agreed = false;
 
-			if (port->rcvdInternal == 0)
+			if (!port->rcvdInternal)
 			{
 				for (unsigned int treeIndex = 1; treeIndex < bridge->treeCount(); treeIndex++)
 				{
@@ -569,7 +577,7 @@ void recordDispute (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree
 }
 
 // ============================================================================
-// 13.27.p) - 13.27.16
+// 13.29.p) - 13.29.17 in 802.1Q-2018
 // For the CIST and a given port, if the CIST message was received from a bridge in a different MST Region,
 // i.e. the rcvdInternal flag is clear, the mastered variable for this port is cleared for all MSTIs.
 //
@@ -593,7 +601,7 @@ void recordMastered (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTre
 	}
 	else
 	{
-		if (port->operPointToPointMAC && port->trees [givenTree]->msgFlagsTcAckOrMaster)
+		if (bridge->receivedBpduPort->operPointToPointMAC && port->trees[givenTree]->msgFlagsTcAckOrMaster)
 			port->mastered = true;
 		else
 			port->mastered = false;
@@ -603,7 +611,7 @@ void recordMastered (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTre
 }
 
 // ============================================================================
-// 13.27.q) - 13.27.17
+// 13.29.q) - 13.29.18 in 802.1Q-2018
 // Sets the components of the portPriority variable to the values of the corresponding msgPriority components.
 void recordPriority (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 {
@@ -619,7 +627,7 @@ void recordPriority (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTre
 }
 
 // ============================================================================
-// 13.27.r) - 13.27.18
+// 13.29.r) - 13.27.19 in 802.1Q-2018
 // For the CIST and a given port, if the received CIST Message conveys a Designated Port Role, and has the
 // Proposal flag set, the CIST proposed flag is set. Otherwise the CIST proposed flag is not changed.
 // Additionally, if the CIST Message was received from a bridge in a different MST Region, i.e., the
@@ -641,9 +649,9 @@ void recordProposal (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTre
 	{
 		if ((portTree->msgFlagsPortRole == BPDU_PORT_ROLE_DESIGNATED) && portTree->msgFlagsProposal)
 		{
-			portTree->proposed = 1;
+			portTree->proposed = true;
 
-			if (port->rcvdInternal == 0)
+			if (!port->rcvdInternal)
 			{
 				for (unsigned int mstiIndex = 1; mstiIndex < bridge->treeCount(); mstiIndex++)
 					port->trees [mstiIndex]->proposed = port->trees [CIST_INDEX]->proposed;
@@ -653,12 +661,12 @@ void recordProposal (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTre
 	else
 	{
 		if ((portTree->msgFlagsPortRole == BPDU_PORT_ROLE_DESIGNATED) && portTree->msgFlagsProposal)
-			portTree->proposed = 1;
+			portTree->proposed = true;
 	}
 }
 
 // ============================================================================
-// 13.27.s) - 13.27.19
+// 13.29.s) - 13.29.20 in 802.1Q-2018
 // For the CIST and a given port, sets portTimes' Message Age, Max Age, Forward Delay, and remainingHops
 // to the received values held in msgTimes and portTimes' Hello Time to the default specified in Table 13-5.
 //
@@ -686,7 +694,7 @@ void recordTimes (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 }
 
 // ============================================================================
-// 13.27.t) - 13.27.20
+// 13.29.t) - 13.29.21 in 802.1Q-2018
 // Sets reRoot TRUE for this tree (the CIST or a given MSTI) for all ports of the bridge.
 void setReRootTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 {
@@ -695,12 +703,12 @@ void setReRootTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 }
 
 // ============================================================================
-// 13.27.u) - 13.27.21
+// 13.29.u) - 13.29.22 in 802.1Q-2018
 // Sets selected TRUE for this tree (the CIST or a given MSTI) for all ports of the bridge if reselect is FALSE
 // for all ports in this tree. If reselect is TRUE for any port in this tree, this procedure takes no action.
 void setSelectedTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 {
-	for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
+	for (unsigned int portIndex = 0;  portIndex < bridge->portCount; portIndex++)
 	{
 		if (bridge->ports [portIndex]->trees [givenTree]->reselect)
 			return;
@@ -711,7 +719,7 @@ void setSelectedTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 }
 
 // ============================================================================
-// 13.27.v) - 13.27.22
+// 13.29.v) - 13.29.23 in 802.1Q-2018
 // Sets sync TRUE for this tree (the CIST or a given MSTI) for all ports of the bridge.
 void setSyncTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 {
@@ -720,7 +728,7 @@ void setSyncTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 }
 
 // ============================================================================
-// 13.27.w) - 13.27.23
+// 13.29.w) - 13.29.24 in 802.1Q-2018
 // For the CIST and a given port:
 // a) If the Topology Change Acknowledgment flag is set for the CIST in the received BPDU, sets
 //    rcvdTcAck TRUE.
@@ -767,7 +775,7 @@ void setTcFlags (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 }
 
 // ============================================================================
-// 13.27.x) - 13.27.24
+// 13.29.x) - 13.29.25 in 802.1Q-2018
 // If and only if restrictedTcn is FALSE for the port that invoked the procedure, sets tcProp TRUE for the given
 // tree (the CIST or a given MSTI) for all other ports.
 void setTcPropTree (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
@@ -783,7 +791,7 @@ void setTcPropTree (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree
 }
 
 // ============================================================================
-// 13.27.y) - 13.27.25
+// 13.29.y) - 13.29.26 in 802.1Q-2018
 // For all MSTIs, for each port that has infoInternal set:
 // a) Clears the agree, agreed, and synced variables; and
 // b) Sets the sync variable.
@@ -808,15 +816,15 @@ void syncMaster (STP_BRIDGE* bridge)
 }
 
 // ============================================================================
-// 13.27.z) - 13.27.26
-// Transmits a Configuration BPDU. The first four components of the message priority vector (13.25.26)
+// 13.29.z) - 13.29.27 in 802.1Q-2018
+// Transmits a Configuration BPDU. The first four components of the message priority vector (13.27.39)
 // conveyed in the BPDU are set to the value of the CIST Root Identifier, External Root Path Cost, Bridge
-// Identifier, and Port Identifier components of the CIST's designatedPriority parameter (13.25.7) for this port.
-// The topology change flag is set if (tcWhile != 0) for the port. The topology change acknowledgment flag is
-// set to the value of tcAck for the port. The remaining flags are set to zero. The value of the Message Age, Max
-// Age, and Fwd Delay parameters conveyed in the BPDU are set to the values held in the CIST's
-// designatedTimes parameter (13.25.8) for the port. The value of the Hello Time parameter conveyed in the
-// BPDU is set to the value held in the CIST's portTimes parameter (13.25.34) for the port.
+// Identifier, and Port Identifier components of the CIST’s designatedPriority parameter (13.27.20) for this
+// port. The topology change flag is set if (tcWhile != 0) for the port. The topology change acknowledgment
+// flag is set to the value of tcAck for the port. The remaining flags are set to zero. The value of the Message
+// Age, Max Age, and Fwd Delay parameters conveyed in the BPDU are set to the values held in the CIST’s
+// designatedTimes parameter (13.27.21) for the port. The value of the Hello Time parameter conveyed in the
+// BPDU is set to the value held in the CIST’s portTimes parameter (13.27.48) for the port.
 void txConfig (STP_BRIDGE* bridge, PortIndex givenPort, unsigned int timestamp)
 {
 	PORT* port = bridge->ports [givenPort];
@@ -829,15 +837,16 @@ void txConfig (STP_BRIDGE* bridge, PortIndex givenPort, unsigned int timestamp)
 	MSTP_BPDU* bpdu = (MSTP_BPDU*) bridge->callbacks.transmitGetBuffer (bridge, givenPort, bpduSize, timestamp);
 	if (bpdu != NULL)
 	{
-		// 9.3.1 in 802.1D-2004 (not 2011!)
+		// 14.3.a) in 802.1Q-2018
 		bpdu->protocolId = 0;
 		bpdu->protocolVersionId = 0;
 		bpdu->bpduType = 0;
 
-		bpdu->cistRootId           = cistTree->designatedPriority.RootId;
-		bpdu->cistExternalPathCost = cistTree->designatedPriority.ExternalRootPathCost;
-		bpdu->cistRegionalRootId   = cistTree->designatedPriority.DesignatedBridgeId;
-		bpdu->cistPortId           = cistTree->designatedPriority.DesignatedPortId;
+		// 14.4 in 802.1Q-2018
+		bpdu->cistRootId           = cistTree->designatedPriority.RootId;               // h)
+		bpdu->cistExternalPathCost = cistTree->designatedPriority.ExternalRootPathCost; // i)
+		bpdu->cistRegionalRootId   = cistTree->designatedPriority.DesignatedBridgeId;   // j)
+		bpdu->cistPortId           = cistTree->designatedPriority.DesignatedPortId;     // k)
 
 		bpdu->cistFlags = 0;
 

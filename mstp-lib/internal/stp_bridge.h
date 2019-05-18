@@ -122,6 +122,7 @@ struct STP_BRIDGE
 	//  readable/writeable, that's why we also have asserts all around the place).
 	const MSTP_BPDU*		receivedBpduContent;
 	VALIDATED_BPDU_TYPE		receivedBpduType;
+	PORT*                   receivedBpduPort;
 };
 
 
