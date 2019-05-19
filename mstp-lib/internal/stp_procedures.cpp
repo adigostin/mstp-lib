@@ -1031,30 +1031,37 @@ void txRstp (STP_BRIDGE* bridge, PortIndex givenPort, unsigned int timestamp)
 }
 
 // ============================================================================
-// 13.27.ab) - 13.27.28
+// 13.29.ab) - 13.29.29 in 802.1Q-2018
 void txTcn (STP_BRIDGE* bridge, PortIndex givenPort, unsigned int timestamp)
 {
 	FLUSH_LOG (bridge);
-
 	BPDU_HEADER* bpdu = (BPDU_HEADER*) bridge->callbacks.transmitGetBuffer (bridge, givenPort, sizeof (BPDU_HEADER), timestamp);
-	if (bpdu != NULL)
-	{
-		// 9.3.2 in 802.1D-2004 (not 2011!)
-		bpdu->protocolId = 0;
-		bpdu->protocolVersionId = 0;
-		bpdu->bpduType = 0x80;
+	if (bpdu == NULL)
+		return;
 
-		LOG (bridge, givenPort, -1, "TX TCN BPDU to port {D}:\r\n", 1 + givenPort);
-		FLUSH_LOG (bridge);
+	// 9.3.2 in 802.1D-2004 (not 2011!)
+	bpdu->protocolId = 0;
+	bpdu->protocolVersionId = 0;
+	bpdu->bpduType = 0x80;
 
-		bridge->callbacks.transmitReleaseBuffer (bridge, bpdu);
-	}
+	LOG (bridge, givenPort, -1, "TX TCN BPDU to port {D}:\r\n", 1 + givenPort);
+
+	FLUSH_LOG (bridge);
+	bridge->callbacks.transmitReleaseBuffer (bridge, bpdu);
 }
 
 // ============================================================================
-// 13.27.ac) - 13.27.29
+// 13.29.30 in 802.1Q-2018
+void updtAgreement (STP_BRIDGE*, PortIndex, TreeIndex)
+{
+	assert(false); // SPT not yet implemented
+}
+
+// ============================================================================
+// 13.29.ac) - 13.29.31 in 802.1Q-2018
 // Sets rcvdSTP TRUE if the BPDU received is a version 0 or version 1 TCN or a Config BPDU. Sets
 // rcvdRSTP TRUE if the received BPDU is a RST BPDU or a MST BPDU.
+// Note AG: we'll set rcvdRSTP also for a received SPT BPDU.
 void updtBPDUVersion (STP_BRIDGE* bridge, PortIndex givenPort)
 {
 	switch (bridge->receivedBpduType)
@@ -1066,6 +1073,7 @@ void updtBPDUVersion (STP_BRIDGE* bridge, PortIndex givenPort)
 
 		case VALIDATED_BPDU_TYPE_MST:
 		case VALIDATED_BPDU_TYPE_RST:
+		case VALIDATED_BPDU_TYPE_SPT:
 			bridge->ports [givenPort]->rcvdRSTP = true;
 			break;
 
@@ -1075,21 +1083,24 @@ void updtBPDUVersion (STP_BRIDGE* bridge, PortIndex givenPort)
 }
 
 // ============================================================================
-// 13.27.ad) - 13.27.30
-// Updates rcvdInfoWhile (13.23). The value assigned to rcvdInfoWhile is three times the Hello Time, if either:
-//
+// 13.29.32 in 802.1Q-2018
+void updtDigest (STP_BRIDGE* bridge, PortIndex givenPort)
+{
+	assert(false); // SPT not yet implemented
+}
+
+// ============================================================================
+// 13.29.ad) - 13.29.33 in 802.1Q-2018
+// Updates rcvdInfoWhile (13.25). The value assigned to rcvdInfoWhile is three times the Hello Time, if either:
 // a) Message Age, incremented by 1 second and rounded to the nearest whole second, does not exceed
 //    Max Age and the information was received from a bridge external to the MST Region (rcvdInternal
-//    FALSE);
-// or
-//
+//    FALSE); or
 // b) remainingHops, decremented by one, is greater than zero and the information was received from a
 //    bridge internal to the MST Region (rcvdInternal TRUE);
-//
 // and is zero otherwise.
 //
 // The values of Message Age, Max Age, remainingHops, and Hello Time used in these calculations are taken
-// from the CIST's portTimes parameter (13.25.34) and are not changed by this procedure.
+// from the CIST's portTimes parameter (13.27.48) and are not changed by this procedure.
 void updtRcvdInfoWhile	(STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 {
 	PORT* port = bridge->ports [givenPort];
@@ -1098,7 +1109,7 @@ void updtRcvdInfoWhile	(STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex given
 	const TIMES* cistTimes = &port->trees [CIST_INDEX]->portTimes;
 
 	if (((cistTimes->MessageAge + 1 <= cistTimes->MaxAge) && (port->rcvdInternal == false))
-		|| ((cistTimes->remainingHops > 1) && port->rcvdInternal))
+		|| (((int)cistTimes->remainingHops - 1 > 0) && port->rcvdInternal))
 	{
 		portTree->rcvdInfoWhile = 3 * cistTimes->HelloTime;
 	}
