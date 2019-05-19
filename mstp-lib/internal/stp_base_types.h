@@ -113,7 +113,7 @@ public:
 
 	void SetPriority (unsigned short settablePriorityComponent, unsigned short mstid)
 	{
-		assert ((settablePriorityComponent % 4096) == 0);
+		assert ((settablePriorityComponent & 0x0FFF) == 0);
 
 		_priority = settablePriorityComponent | mstid;
 	}
@@ -134,9 +134,9 @@ public:
 		SetAddress (address);
 	}
 
-	unsigned short GetPriority () const
+	unsigned short GetPriority() const
 	{
-		return _priority.GetValue ();
+		return _priority.GetValue() & 0xF000;
 	}
 
 	const STP_BRIDGE_ADDRESS& GetAddress() const

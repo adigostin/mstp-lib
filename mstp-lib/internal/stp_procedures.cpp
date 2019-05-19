@@ -874,7 +874,7 @@ void txConfig (STP_BRIDGE* bridge, PortIndex givenPort, unsigned int timestamp)
 }
 
 // ============================================================================
-// 13.27.aa) - 13.27.27
+// 13.29.aa) - 13.29.28
 void txRstp (STP_BRIDGE* bridge, PortIndex givenPort, unsigned int timestamp)
 {
 	PORT* port = bridge->ports [givenPort];
@@ -889,145 +889,145 @@ void txRstp (STP_BRIDGE* bridge, PortIndex givenPort, unsigned int timestamp)
 	FLUSH_LOG (bridge);
 
 	MSTP_BPDU* bpdu = (MSTP_BPDU*) bridge->callbacks.transmitGetBuffer (bridge, givenPort, bpduSize, timestamp);
-	if (bpdu != NULL)
-	{
-		// octets 1 and 2 - 14.5 in 802.1Q
-		bpdu->protocolId = 0;
+	if (bpdu == NULL)
+		return;
 
-		// octets 3 and 4
+	// octets 1 and 2 - 14.3 in 802.1Q-2018
+	bpdu->protocolId = 0;
+
+	// octets 3 and 4
+	bpdu->bpduType = 2;
+	if (bridge->ForceProtocolVersion < 3)
+		bpdu->protocolVersionId = 2; // 14.3.c)
+	else if (bridge->ForceProtocolVersion == 3)
+		bpdu->protocolVersionId = 3; // 14.3.d)
+	else
+		assert(false); // SPT not yet implemented by this function
+
+	// octet 5 - 14.4.a) to 14.4.g) in 802.1Q-2018
+	bpdu->cistFlags = GetBpduPortRole(cistTree->role) << 2;
+	if (cistTree->agree)
+		bpdu->cistFlags |= (unsigned char) 0x40;
+
+	if (cistTree->proposing)
+		bpdu->cistFlags |= (unsigned char) 2;
+
+	if (cistTree->tcWhile != 0)
+		bpdu->cistFlags |= (unsigned char) 1;
+
+	if (cistTree->learning)
+		bpdu->cistFlags |= (unsigned char) 0x10;
+
+	if (cistTree->forwarding)
+		bpdu->cistFlags |= (unsigned char) 0x20;
+
+	// octets 6 to 13 - 14.4.h) in 802.1Q-2018
+	bpdu->cistRootId = cistTree->designatedPriority.RootId;
+
+	// octets 14 to 17 - 14.4.i) in 802.1Q-2018
+	bpdu->cistExternalPathCost = cistTree->designatedPriority.ExternalRootPathCost;
+
+	// octets 18 to 25 - 14.4.j) in 802.1Q-2018
+	bpdu->cistRegionalRootId = cistTree->designatedPriority.RegionalRootId;
+
+	// octets 26 to 27 - 14.4.k) in 802.1Q-2018
+	bpdu->cistPortId = cistTree->designatedPriority.DesignatedPortId;
+
+	// octets 28 to 29 - 14.4.l) in 802.1Q-2018
+	bpdu->MessageAge = cistTree->designatedTimes.MessageAge * 256;
+
+	// octets 30 to 31 - 14.4.m) in 802.1Q-2018
+	bpdu->MaxAge = cistTree->designatedTimes.MaxAge * 256;
+
+	// octets 32 to 33 - 14.4.n) in 802.1Q-2018
+	bpdu->HelloTime = cistTree->portTimes.HelloTime * 256;
+
+	// octets 34 to 35 - 14.4.o) in 802.1Q-2018
+	bpdu->ForwardDelay = cistTree->designatedTimes.ForwardDelay * 256;
+
+	// octet 36 - 14.4.p) in 802.1Q-2018
+	bpdu->Version1Length = 0;
+
+	if (bridge->ForceProtocolVersion >= 3)
+	{
+		// octet 37 to 38 - 14.4.q) in 802.1Q-2018
+		bpdu->Version3Length = (unsigned short) (bpduSize - 38);
+
+		// octet 39 to 89 - 14.4.r) in 802.1Q-2018
+		bpdu->mstConfigId = bridge->MstConfigId;
+
+		// octet 90 to 93 - 14.4.s) in 802.1Q-2018
+		bpdu->cistInternalRootPathCost = cistTree->designatedPriority.InternalRootPathCost;
+
+		// octet 94 to 101 - 14.4.t) in 802.1Q-2018
+		bpdu->cistBridgeId = cistTree->designatedPriority.DesignatedBridgeId;
+		bpdu->cistBridgeId.SetPriority (bpdu->cistBridgeId.GetPriority(), 0);
+
+		// octet 102 - 14.4.u) in 802.1Q-2018
+		bpdu->cistRemainingHops = cistTree->designatedTimes.remainingHops;
+
+		MSTI_CONFIG_MESSAGE* mstiMessage = reinterpret_cast<MSTI_CONFIG_MESSAGE*>(bpdu + 1);
+
+		// 14.4.1 in 802.1Q-2018
+		for (unsigned int mstiIndex = 0; mstiIndex < bridge->mstiCount; mstiIndex++)
+		{
+			const PORT_TREE* tree = port->trees [1 + mstiIndex];
+
+			// a)
+			mstiMessage->flags = GetBpduPortRole (tree->role) << 2;
+
+			if (tree->agree)
+				mstiMessage->flags |= (unsigned char) 0x40;
+
+			if (tree->proposing)
+				mstiMessage->flags |= (unsigned char) 2;
+
+			if (tree->tcWhile != 0)
+				mstiMessage->flags |= (unsigned char) 1;
+
+			if (port->master)
+				mstiMessage->flags |= (unsigned char) 0x80;
+
+			if (tree->learning)
+				mstiMessage->flags |= (unsigned char) 0x10;
+
+			if (tree->forwarding)
+				mstiMessage->flags |= (unsigned char) 0x20;
+
+			// b) to e)
+			mstiMessage->RegionalRootId       = tree->designatedPriority.RegionalRootId;
+			mstiMessage->InternalRootPathCost = tree->designatedPriority.InternalRootPathCost;
+			mstiMessage->BridgePriority       = bridge->trees[1 + mstiIndex]->GetBridgeIdentifier().GetPriority() >> 8;
+			mstiMessage->PortPriority         = tree->portId.GetPriority();
+			// f)
+			mstiMessage->RemainingHops        = tree->designatedTimes.remainingHops;
+
+			mstiMessage++;
+		}
+	}
+
+	#if STP_USE_LOG
 		if (bridge->ForceProtocolVersion < 3)
 		{
-			// 14.5.c)
-			bpdu->protocolVersionId = 2;
-			bpdu->bpduType = 2;
+			LOG (bridge, givenPort, -1, "TX RSTP BPDU to port {D}:\r\n", 1 + givenPort);
+			LOG_INDENT (bridge);
+			DumpRstpBpdu (bridge, givenPort, -1, bpdu);
+			LOG_UNINDENT (bridge);
+		}
+		else if (bridge->ForceProtocolVersion == 3)
+		{
+			LOG (bridge, givenPort, -1, "TX MSTP BPDU to port {D}:\r\n", 1 + givenPort);
+			LOG_INDENT (bridge);
+			DumpMstpBpdu (bridge, givenPort, -1, bpdu);
+			LOG_UNINDENT (bridge);
 		}
 		else
-		{
-			// 14.5.d)
-			bpdu->protocolVersionId = 3;
-			bpdu->bpduType = 2;
-		}
+			assert(false); // not yet implemented for SPT
 
-		// octet 5 - 14.6.a) to 14.6.h)
-		bpdu->cistFlags = GetBpduPortRole (cistTree->role) << 2;
-		if (cistTree->agree)
-			bpdu->cistFlags |= (unsigned char) 0x40;
+		FLUSH_LOG (bridge);
+	#endif
 
-		if (cistTree->proposing)
-			bpdu->cistFlags |= (unsigned char) 2;
-
-		if (cistTree->tcWhile != 0)
-			bpdu->cistFlags |= (unsigned char) 1;
-
-		if (cistTree->learning)
-			bpdu->cistFlags |= (unsigned char) 0x10;
-
-		if (cistTree->forwarding)
-			bpdu->cistFlags |= (unsigned char) 0x20;
-
-		// octets 6 to 13 - 14.6.h)
-		bpdu->cistRootId = cistTree->designatedPriority.RootId;
-
-		// octets 14 to 17 - 14.6.i)
-		bpdu->cistExternalPathCost = cistTree->designatedPriority.ExternalRootPathCost;
-
-		// octets 18 to 25 - 14.6.j)
-		bpdu->cistRegionalRootId = cistTree->designatedPriority.RegionalRootId;
-
-		// octets 26 to 27 - 14.6.k)
-		bpdu->cistPortId = cistTree->designatedPriority.DesignatedPortId;
-
-		// octets 28 to 29 - 14.6.l)
-		bpdu->MessageAge = cistTree->designatedTimes.MessageAge * 256;
-
-		// octets 30 to 31 - 14.6.m)
-		bpdu->MaxAge = cistTree->designatedTimes.MaxAge * 256;
-
-		// octets 32 to 33 - 14.6.n)
-		bpdu->HelloTime = cistTree->portTimes.HelloTime * 256;
-
-		// octets 34 to 35 - 14.6.o)
-		bpdu->ForwardDelay = cistTree->designatedTimes.ForwardDelay * 256;
-
-		// octet 36 - 14.6.p)
-		bpdu->Version1Length = 0;
-
-		if (bridge->ForceProtocolVersion >= 3)
-		{
-			// octet 37 to 38 - 14.6.q)
-			bpdu->Version3Length = (unsigned short) (bpduSize - 38);
-
-			// octet 39 to 89 - 14.6.r)
-			bpdu->mstConfigId = bridge->MstConfigId;
-
-			// octet 90 to 93 - 14.6.s)
-			bpdu->cistInternalRootPathCost	= cistTree->designatedPriority.InternalRootPathCost;
-
-			// octet 94 to 101 - 14.6.t)
-			bpdu->cistBridgeId				= cistTree->designatedPriority.DesignatedBridgeId;
-
-			// octet 102 - 14.6.u)
-			bpdu->cistRemainingHops			= cistTree->designatedTimes.remainingHops;
-
-			MSTI_CONFIG_MESSAGE* mstiMessage = (MSTI_CONFIG_MESSAGE*) (bpdu + 1);
-
-			for (unsigned int mstiIndex = 0; mstiIndex < bridge->mstiCount; mstiIndex++)
-			{
-				const PORT_TREE* tree = port->trees [1 + mstiIndex];
-
-				mstiMessage->flags = GetBpduPortRole (tree->role) << 2;
-
-				if (tree->agree)
-					mstiMessage->flags |= (unsigned char) 0x40;
-
-				if (tree->proposing)
-					mstiMessage->flags |= (unsigned char) 2;
-
-				if (tree->tcWhile != 0)
-					mstiMessage->flags |= (unsigned char) 1;
-
-				// 13.25.23
-				if (port->master)
-					mstiMessage->flags |= (unsigned char) 0x80;
-
-				if (tree->learning)
-					mstiMessage->flags |= (unsigned char) 0x10;
-
-				if (tree->forwarding)
-					mstiMessage->flags |= (unsigned char) 0x20;
-
-				mstiMessage->RegionalRootId			= tree->designatedPriority.RegionalRootId;
-				mstiMessage->InternalRootPathCost	= tree->designatedPriority.InternalRootPathCost;
-				mstiMessage->BridgePriority			= (bridge->trees [1 + mstiIndex]->GetBridgeIdentifier().GetPriority() & 0xF000) >> 8;
-				mstiMessage->PortPriority			= tree->portId.GetPriority ();
-
-				mstiMessage->RemainingHops		= tree->designatedTimes.remainingHops;
-
-				mstiMessage++;
-			}
-		}
-
-		#if STP_USE_LOG
-			if (bridge->ForceProtocolVersion < 3)
-			{
-				LOG (bridge, givenPort, -1, "TX RSTP BPDU to port {D}:\r\n", 1 + givenPort);
-				LOG_INDENT (bridge);
-				DumpRstpBpdu (bridge, givenPort, -1, bpdu);
-				LOG_UNINDENT (bridge);
-			}
-			else
-			{
-				LOG (bridge, givenPort, -1, "TX MSTP BPDU to port {D}:\r\n", 1 + givenPort);
-				LOG_INDENT (bridge);
-				DumpMstpBpdu (bridge, givenPort, -1, bpdu);
-				LOG_UNINDENT (bridge);
-			}
-
-			FLUSH_LOG (bridge);
-		#endif
-
-		bridge->callbacks.transmitReleaseBuffer (bridge, bpdu);
-	}
+	bridge->callbacks.transmitReleaseBuffer (bridge, bpdu);
 }
 
 // ============================================================================

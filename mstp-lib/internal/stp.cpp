@@ -27,20 +27,21 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	// These really should use static_assert, but I'm not sure all compilers support static_assert.
 	// If you get one of these asserts, you should reset your compiler options to their defaults,
 	// at least those options related to structure layouts, at least for the files belonging to the STP library.
-	assert (sizeof (unsigned short) == 2);
-	assert (sizeof (unsigned int) == 4);
-	assert (sizeof (INV_UINT2) == 2);
-	assert (sizeof (INV_UINT4) == 4);
-	assert (sizeof (STP_BRIDGE_ADDRESS) == 6);
-	assert (sizeof (BRIDGE_ID) == 8);
-	assert (sizeof (PORT_ID) == 2);
-	assert (sizeof (PRIORITY_VECTOR) == 34);
-	assert (sizeof (MSTP_BPDU) == 102);
+	assert (sizeof(unsigned short) == 2);
+	assert (sizeof(unsigned int) == 4);
+	assert (sizeof(INV_UINT2) == 2);
+	assert (sizeof(INV_UINT4) == 4);
+	assert (sizeof(STP_BRIDGE_ADDRESS) == 6);
+	assert (sizeof(BRIDGE_ID) == 8);
+	assert (sizeof(PORT_ID) == 2);
+	assert (sizeof(PRIORITY_VECTOR) == 34);
+	assert (sizeof(MSTP_BPDU) == 102);
 	assert (sizeof(MSTI_CONFIG_MESSAGE) == 16);
 
-	// Upper limit for number of MSTIs is defined in 802.1Q-2011, page 342, top paragraph:
-	//		"No more than 64 MSTI Configuration Messages shall be encoded in an MST
-	//		BPDU, and no more than 64 MSTIs shall be supported by an MST Bridge."
+	// Upper limit for number of MSTIs is defined in 13.29.28 in 802.1Q-2018:
+	// NOTE—No more than 64 MSTIs may be supported. The parameter sets for all of these can be encoded in a
+	// standard-sized Ethernet frame. The number of MSTIs supported can be zero: an SPT Bridge, for example,
+	// is not obliged to have MSTIs configured in order to support SPB.
 	assert (mstiCount <= 64);
 
 	// As specified in 12.3.i) in 802.1Q-2011, valid port numbers are 1..4095, so our valid port indexes will be 0..4094.
