@@ -7,7 +7,7 @@
 #include "stp_bridge.h"
 #include <assert.h>
 
-// See §13.32 in 802.1Q-2011
+// This file implements 13.34 from 802.1Q-2018.
 
 using namespace PortTransmit;
 

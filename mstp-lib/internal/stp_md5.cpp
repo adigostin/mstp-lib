@@ -76,7 +76,7 @@ static void MD5Init (MD5_CTX* mdContext)
 {
 	mdContext->i[0] = mdContext->i[1] = 0;
 
-	// Constant from table 13-1, page 333 in 802.1Q-2011
+	// Constant from table 13-1, page 482 in 802.1Q-2018.
 	mdContext->buf[0] = 0x67452301u;
 	mdContext->buf[1] = 0xefcdab89u;
 	mdContext->buf[2] = 0x98badcfeu;

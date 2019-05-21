@@ -2,7 +2,7 @@
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
 // Copyright (c) 2011-2019 Adi Gostin, distributed under Apache License v2.0.
 
-// This file implements §13.33 from 802.1Q-2018.
+// This file implements 13.33 from 802.1Q-2018.
 
 #include "stp_procedures.h"
 #include "stp_bridge.h"

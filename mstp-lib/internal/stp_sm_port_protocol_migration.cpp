@@ -7,7 +7,7 @@
 #include "stp_bridge.h"
 #include <assert.h>
 
-// This file implements §13.32 from 802.1Q-2018
+// This file implements 13.32 from 802.1Q-2018
 
 using namespace PortProtocolMigration;
 
