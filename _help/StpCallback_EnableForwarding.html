@@ -14,7 +14,8 @@ void StpCallback_EnableForwarding
     const STP_BRIDGE* bridge,
     unsigned int      portIndex,
     unsigned int      treeIndex,
-    bool              enable
+    bool              enable,
+    unsigned int      timestamp
 );
 </pre>
 	<h4>
@@ -40,6 +41,10 @@ void StpCallback_EnableForwarding
 		<dt>enable</dt>
 		<dd>The application receives in this parameter <code>true</code> if forwarding is to be enabled,
 			<code>false</code> if the forwarding is to be disabled.</dd>
+		<dt>timestamp</dt>
+		<dd>The application receives in this parameter the timestamp that it passed to the function
+			that called this callback (STP_OnBpduReceived, STP_OnPortEnabled etc.)
+			Useful for debugging and troubleshooting.</dd>
 	</dl>
 	<h4>
 		Remarks</h4>

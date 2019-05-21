@@ -35,7 +35,9 @@ void StpCallback_OnPortRoleChanged
 		<dt>role</dt>
 		<dd>The new port role.</dd>
 		<dt>timestamp</dt>
-		<dd>The application receives in this parameter the timestamp that it passed to the function that caused the role change (i.e., STP_OnBpduReceived, STP_OnPortEnabled etc.) Useful for debugging and troubleshooting.</dd>
+		<dd>The application receives in this parameter the timestamp that it passed to the function
+			that called this callback (STP_OnBpduReceived, STP_OnPortEnabled etc.)
+			Useful for debugging and troubleshooting.</dd>
 	</dl>
 	<h4>
 		Remarks</h4>

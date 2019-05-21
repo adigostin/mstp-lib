@@ -35,7 +35,9 @@ void StpCallback_OnTopologyChange
 		<dd>The application receives in this parameter the zero-based index of the spanning tree on which the topology change ocurred. For STP or RSTP, this is always zero. For
 			MSTP, this is zero for CIST, or 1..64 for a MSTI.</dd>
 		<dt>timestamp</dt>
-		<dd>The application receives in this parameter the timestamp that it passed to the function that caused the topology change (i.e., STP_OnBpduReceived, STP_OnPortEnabled etc.) Useful for debugging and troubleshooting.</dd>
+		<dd>The application receives in this parameter the timestamp that it passed to the function
+			that called this callback (STP_OnBpduReceived, STP_OnPortEnabled etc.)
+			Useful for debugging and troubleshooting.</dd>
 	</dl>
 	<h4>
 		Remarks</h4>

@@ -13,7 +13,8 @@ void* StpCallback_TransmitGetBuffer
 (
     const STP_BRIDGE* bridge,
     unsigned int      portIndex,
-    unsigned int      bpduSize
+    unsigned int      bpduSize,
+    unsigned int      timestamp
 );
 </pre>
 	<h4>
@@ -33,6 +34,10 @@ void* StpCallback_TransmitGetBuffer
 		<dt>bpduSize</dt>
 		<dd>The size of the BPDU packet, excluding non-STP headers. See the Remarks section for more
 			information.</dd>
+		<dt>timestamp</dt>
+		<dd>The application receives in this parameter the timestamp that it passed to the function
+			that called this callback (STP_OnBpduReceived, STP_OnPortEnabled etc.)
+			Useful for debugging and troubleshooting.</dd>
 	</dl>
 	<h4>Return Value</h4>
 		<p>The application must return either:</p>
