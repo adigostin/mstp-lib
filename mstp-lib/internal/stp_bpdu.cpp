@@ -101,7 +101,7 @@ static bool IsWellFormedSptBpdu (const unsigned char* bpdu, size_t bpduSize)
 	return auxiliaryMcid->ConfigurationIdentifierFormatSelector == 1;
 }
 
-// §14.5 in 802.1Q-2018: Validation of received BPDUs
+// 14.5 in 802.1Q-2018: Validation of received BPDUs
 //
 // The receiving protocol entity shall examine Octets 1 and 2 (conveying the Protocol Identifier), Octet 3
 // (conveying the Protocol Version Identifier encoded as a number), Octet 4 (conveying the BPDU Type) and
@@ -135,7 +135,7 @@ enum VALIDATED_BPDU_TYPE STP_GetValidatedBpduType (enum STP_VERSION bridgeStpVer
 
 	// Note AG:
 	// When we receive a BPDU from a bridge running MSTP or SPT (BPDU's Protocol Version Identifier >= 3) and
-	// we are running RSTP or LegacySTP (our ForceProtocolVersion is <= 2), none of the conditions in §14.5 is
+	// we are running RSTP or LegacySTP (our ForceProtocolVersion is <= 2), none of the conditions in 14.5 is
 	// satisfied and if we stick to the wording of the standard we'd have to discard the BPDU. This behavior,
 	// however, would make us a malfunctioning bridge. The behavior is also against the principle described in
 	// the very next paragraph "14.6 Validation and interoperability". Here I choose to depart from the

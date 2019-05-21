@@ -89,7 +89,7 @@ struct MSTP_BPDU : public BPDU_HEADER
 };
 
 // ============================================================================
-// §14.5 in 802.1Q-2018
+// 14.5 in 802.1Q-2018
 enum VALIDATED_BPDU_TYPE
 {
 	VALIDATED_BPDU_TYPE_UNKNOWN,

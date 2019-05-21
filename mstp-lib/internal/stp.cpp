@@ -39,7 +39,7 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	assert (sizeof(MSTI_CONFIG_MESSAGE) == 16);
 
 	// Upper limit for number of MSTIs is defined in 13.29.28 in 802.1Q-2018:
-	// NOTE—No more than 64 MSTIs may be supported. The parameter sets for all of these can be encoded in a
+	// NOTE-No more than 64 MSTIs may be supported. The parameter sets for all of these can be encoded in a
 	// standard-sized Ethernet frame. The number of MSTIs supported can be zero: an SPT Bridge, for example,
 	// is not obliged to have MSTIs configured in order to support SPB.
 	assert (mstiCount <= 64);

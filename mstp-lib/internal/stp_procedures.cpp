@@ -819,12 +819,12 @@ void syncMaster (STP_BRIDGE* bridge)
 // 13.29.z) - 13.29.27 in 802.1Q-2018
 // Transmits a Configuration BPDU. The first four components of the message priority vector (13.27.39)
 // conveyed in the BPDU are set to the value of the CIST Root Identifier, External Root Path Cost, Bridge
-// Identifier, and Port Identifier components of the CIST’s designatedPriority parameter (13.27.20) for this
+// Identifier, and Port Identifier components of the CIST's designatedPriority parameter (13.27.20) for this
 // port. The topology change flag is set if (tcWhile != 0) for the port. The topology change acknowledgment
 // flag is set to the value of tcAck for the port. The remaining flags are set to zero. The value of the Message
-// Age, Max Age, and Fwd Delay parameters conveyed in the BPDU are set to the values held in the CIST’s
+// Age, Max Age, and Fwd Delay parameters conveyed in the BPDU are set to the values held in the CIST's
 // designatedTimes parameter (13.27.21) for the port. The value of the Hello Time parameter conveyed in the
-// BPDU is set to the value held in the CIST’s portTimes parameter (13.27.48) for the port.
+// BPDU is set to the value held in the CIST's portTimes parameter (13.27.48) for the port.
 void txConfig (STP_BRIDGE* bridge, PortIndex givenPort, unsigned int timestamp)
 {
 	PORT* port = bridge->ports [givenPort];
@@ -1359,7 +1359,7 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 
 			// k) If the port priority vector was derived from another port on the Bridge or from the Bridge itself as
 			//    the Root Bridge (infoIs = Mine), selectedRole is set to DesignatedPort. Additionally, updtInfo is set if
-			//    the port priority vector differs from the designated priority vector or the port’s associated timer
+			//    the port priority vector differs from the designated priority vector or the port's associated timer
 			//    parameter(s) differ(s) from the Root Port's associated timer parameters.
 			//
 			// Note AG: see the note at condition i) above.

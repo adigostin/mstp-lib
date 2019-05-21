@@ -2,7 +2,7 @@
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
 // Copyright (c) 2011-2019 Adi Gostin, distributed under Apache License v2.0.
 
-// This file implemented §13.28 from 802.1Q-2018.
+// This file implements 13.28 from 802.1Q-2018.
 
 #include "stp_conditions_and_params.h"
 #include "stp_bridge.h"
@@ -27,7 +27,7 @@ bool allSptAgree (const STP_BRIDGE* bridge)
 //       Root Port; or
 //    2) Designated Port and synced is TRUE for all ports for the given tree other than the given port; or
 //    3) Designated Port, and the tree is an SPT or the IST, and the Root Port of the tree and the given
-//       port are both within the Bridge’s SPT Region, and both learning and forwarding are FALSE for
+//       port are both within the Bridge's SPT Region, and both learning and forwarding are FALSE for
 //       the given port; or
 //    4) Master Port and synced is TRUE for all ports for the given tree other than the given port.
 bool allSynced (const STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
@@ -347,7 +347,7 @@ bool updtCistInfo (const STP_BRIDGE* bridge, PortIndex givenPort)
 // TRUE for a given port and MSTI if and only if updtInfo is TRUE for the MSTI for that port or updtInfo is
 // TRUE for the CIST for that port.
 //
-// NOTE—The dependency of rcvdMstiMsg and updtMstiInfo on CIST variables for the port reflects the fact that MSTIs
+// NOTE-The dependency of rcvdMstiMsg and updtMstiInfo on CIST variables for the port reflects the fact that MSTIs
 // exist in a context of CST parameters. The state machines ensure that the CIST parameters from received BPDUs are
 // processed and updated prior to processing MSTI information.
 bool updtMstiInfo (const STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
