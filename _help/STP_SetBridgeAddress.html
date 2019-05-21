@@ -19,23 +19,21 @@ void STP_SetBridgeAddress
 	<h4>
 		Summary</h4>
 	<p>
-		Function which the application must call every time the bridge&#39;s MAC address changes.</p>
+		Function which the application must call every time the bridge&#39;s MAC address 
+		changes while STP is running.</p>
 	<h4>
 		Parameters</h4>
 	<dl>
 			<dt>bridge</dt>
-		<dd>Pointer to a STP_BRIDGE object, obtained from <a href="STP_CreateBridge.html">
+		<dd>Pointer to an STP_BRIDGE object, obtained from <a href="STP_CreateBridge.html">
 			STP_CreateBridge</a>.</dd>
 		<dt>address</dt>
-		<dd>The new MAC address of the STP bridge. See the Remarks section for important information 
-			about this MAC address.</dd>
+		<dd>The new MAC address of the STP bridge.</dd>
 		<dt>timestamp</dt>
 		<dd>A timestamp used for the debug log. </dd>
 	</dl>
 	<h4>
 		Remarks</h4>
-	<p>
-			The MAC address of the bridge is allowed to be different from the MAC address used by other Ethernet protocols running on the same device.</p>
 	<p>
 			Execution of this function is a potentially lengthy process. 
 			It may call various callbacks multiple times.</p>

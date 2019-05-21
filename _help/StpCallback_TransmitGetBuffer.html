@@ -65,35 +65,36 @@ void* StpCallback_TransmitGetBuffer
 			buffer must be large enough to contain the non-STP headers and the largest BPDU
 			that the STP library might request (see below).</p>
 	<p>
-			An embedded application will usually have to prepend non-STP headers to the BPDU, and
-			these headers <em>usually</em> have a length of 21 bytes. So unless your Ethernet driver prepends
-			some of these headers itself, this function should allocate a buffer whose length is <code>bpduSize+21</code>, construct the non-STP headers in the first 21 bytes, and return the address of the 22nd byte of this buffer
-			(<code>&buffer[21]</code>). </p>
+			An embedded application must prepend a non-STP header to the BPDU (see below). So unless your 
+			particular Ethernet driver prepends
+			part of this header itself, this function should obtain a longer buffer, construct the non-STP header in the first bytes, and return 
+			a pointer that points just after the non-STP header.</p>
 	<p>
-			The non-STP headers <em>usually</em> have the following format:</p>
+			The non-STP header has the following format:</p>
 	<ul>
 		<li>6 bytes for the destination MAC address, which for BPDU packets is always 01-80-C2-00-00-00.</li>
-		<li>6 bytes for the source MAC address, which should be the MAC address of the
+		<li>6 bytes for the MAC address of the
 			port from which this BPDU should be sent. The application can generate this MAC
 			address, for example, by <a href="STP_GetBridgeAddress.html">getting the bridge&#39;s MAC address</a> and adding <code>1+portIndex</code>
 			to its last byte.</li>
-		<li>4 bytes for a hardware-specific header, which tells the switch IC which
-			port to transmit this BPDU from. Refer to the datasheet of the switch IC for
-			information about the format of this header. Also read about the port mapping in
-			the Remarks section of the <a href="STP_OnPortEnabled.html">STP_OnPortEnabled</a> function.<br />
-			<br />
-			Examples: For the IP175C switch IC, this header could be
-			<code style="white-space:nowrap">0x81,&nbsp;(1 &lt;&lt; portIndex),&nbsp;0x00,&nbsp;0x00</code>.
-			For the AR8328 switch IC, this header could be
-			<code style="white-space:nowrap">0xAA,&nbsp;0xAA,&nbsp;0x80,&nbsp;0x80&nbsp;|&nbsp;(1&nbsp;&lt;&lt;&nbsp;(1&nbsp;+&nbsp;portIndex))</code>.</li>
+		<li>A hardware-specific structure (typically 4 or 8 bytes), which tells the switch IC which
+			port to transmit this BPDU out of. Refer to the datasheet of the switch IC for
+			information about the format of this structure. Also read about the port mapping in
+			the Remarks section of the <a href="STP_OnPortEnabled.html">STP_OnPortEnabled</a> function.
+			Examples:<ul>
+				<li>For the <strong>IP175C</strong> switch IC, this header could be
+					<code style="white-space:nowrap">0x81,&nbsp;(1 &lt;&lt; portIndex),&nbsp;0x00,&nbsp;0x00</code>.</li>
+				<li>For the <strong>AR8328</strong> switch IC, this header could be
+					<code style="white-space:nowrap">0xAA,&nbsp;0xAA,&nbsp;0x80,&nbsp;0x80&nbsp;|&nbsp;(1&nbsp;&lt;&lt;&nbsp;(1&nbsp;+&nbsp;portIndex))</code>.</li>
+				<li>For the <strong>88E6352</strong> switch IC, this header could be <code>0x91, 0x00, 0x00, 0x00, 0x40, 
+			portIndex &lt;&lt; 3, 0x00, 0x00</code>.</li>
+			</ul>
+		</li>
 		<li>2 bytes for EtherType/Size field. This should be <code>3&nbsp;+&nbsp;bpduSize</code>. (3
 			is the size of the following LLC field.) This field must be written in network byte order: MS byte, then LS byte.</li>
 		<li>3 bytes for the LLC field, which normally are 0x42, 0x42, 0x03.</li>
 	</ul>
 
-	<p>
-			Again, these is the <em>usual</em> format, and it might be slightly different/longer on your
-			particular combination of hardware and software.</p>
 	<p>
 			The largest <code>bpduSize</code> that the STP library requests can be calculated from §14.4 in
 			802.1Q-2018:</p>
