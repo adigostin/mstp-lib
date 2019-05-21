@@ -160,7 +160,7 @@ enum VALIDATED_BPDU_TYPE STP_GetValidatedBpduType (enum STP_VERSION bridgeStpVer
 	// Moreover, such a BPDU would satify both the d) and e) conditions, and without an evaluation
 	// order imposed by the standard the limit of 103 octets would leave room for interpretation to
 	// implementors (bad). Also here I choose to depart from the standard and use 102 instead of 103;
-	// this way conditions d) and e) become mutually exclusive (good).
+	// this way conditions d) and e) become mutually exclusive (good i.m.o.)
 	if ((bpduHeader->protocolVersionId >= 3) && (bpduHeader->bpduType == 2) && (bridgeStpVersion >= STP_VERSION_MSTP)
 		&& (((bpduSize >= 35) && (bpduSize < 102))
 			|| (ContainsVersion1LengthField(bpduSize) && (GetVersion1Length(bpdu) != 0))

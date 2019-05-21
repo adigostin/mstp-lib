@@ -1128,26 +1128,26 @@ static void CalculateRootPathPriorityForPort (STP_BRIDGE* bridge, unsigned int g
 
 	if (givenTree == CIST_INDEX)
 	{
-		// 13.9, page 337 in 802.1Q-2011
+		// 13.10, page 486 in 802.1Q-2018
 		// A root path priority vector for a Port can be calculated from a port priority vector that contains information
 		// from a message priority vector, as follows:
 
-		// Note AG: The standard references 13.27.8 (fromSameRegion), but that function tries to read the received BPDU
+		// Note AG: The standard references 13.29.8 (fromSameRegion), but that function tries to read the received BPDU
 		// outside of STP_OnBpduReceived. I replaced fromSameRegion with rcvdInternal in the "if" below.
 		if (port->rcvdInternal == false)
 		{
-			// If the port priority vector was received from a bridge in a different region (13.27.8), the External Port Path
+			// If the port priority vector was received from a Bridge in a different region (13.29.8), the External Port Path
 			// Cost EPCPB is added to the External Root Path Cost component, and the Regional Root Identifier is set to
-			// the value of the Bridge Identifier for the receiving bridge. The Internal Root Path Cost component will have
+			// the value of the Bridge Identifier for the receiving Bridge. The Internal Root Path Cost component will have
 			// been set to zero on reception.
 			//		root path priority vector = {RD : ERCD + EPCPB : B : 0 : D : PD : PB}
 			rootPathPriorityOut->ExternalRootPathCost += port->ExternalPortPathCost;
-			rootPathPriorityOut->RegionalRootId = bridge->trees [givenTree]->GetBridgeIdentifier ();
-			assert (portTree->portPriority.InternalRootPathCost.GetValue () == 0);
+			rootPathPriorityOut->RegionalRootId = bridge->trees [givenTree]->GetBridgeIdentifier();
+			assert (portTree->portPriority.InternalRootPathCost.GetValue() == 0);
 		}
 		else
 		{
-			// If the port priority vector was received from a bridge in the same region (13.27.8), the Internal Port Path
+			// If the port priority vector was received from a Bridge in the same region (13.29.8), the Internal Port Path
 			// Cost IPCPB is added to the Internal Root Path Cost component.
 			//		root path priority vector = {RD : ERCD : RRD : IRCD + IPCPB : D : PD : PB)
 			rootPathPriorityOut->InternalRootPathCost += portTree->InternalPortPathCost;
@@ -1155,19 +1155,18 @@ static void CalculateRootPathPriorityForPort (STP_BRIDGE* bridge, unsigned int g
 	}
 	else
 	{
-		// MSTI - 13.10, page 338 in 802.1Q-2011
+		// MSTI - 13.11, page 488 in 802.1Q-2018
 		// A root path priority vector for a given MSTI can be calculated for a port that has received a port priority
 		// vector from a bridge in the same region by adding the Internal Port Path Cost IPCPB to the Internal Root
 		// Path Cost component.
 		//			root path priority vector = {RRD : IRCD + IPCPB : D : PD : PB)
-
 		assert (port->rcvdInternal);
 		rootPathPriorityOut->InternalRootPathCost += portTree->InternalPortPathCost;
 	}
 }
 
-// 13.25.7
-static void CalculateDesignatedPriorityForPort (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
+// 13.27.20 in 802.1Q-2018
+static void CalculateDesignatedPriorityForPort (STP_BRIDGE* bridge, unsigned int givenPort, TreeIndex givenTree)
 {
 	BRIDGE_TREE* bridgeTree = bridge->trees [givenTree];
 	PORT* port = bridge->ports [givenPort];
@@ -1203,15 +1202,16 @@ static void CalculateDesignatedPriorityForPort (STP_BRIDGE* bridge, PortIndex gi
 }
 
 // ============================================================================
-// 13.27.ae) - 13.27.31
+// 13.29.ae) - 13.29.34
 void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 {
+	assert (bridge->ForceProtocolVersion <= STP_VERSION_MSTP); // the SPT stuff is not implemented by this function
+
 	BRIDGE_TREE* bridgeTree = bridge->trees [givenTree];
 
 	LOG (bridge, -1, givenTree, "Tree {D}:\r\n", givenTree);
-	LOG (bridge, -1, givenTree, "  BridgeID: {BID}\r\n", &bridgeTree->GetBridgeIdentifier ());
+	LOG (bridge, -1, givenTree, "  BridgeID: {BID}\r\n", &bridgeTree->GetBridgeIdentifier());
 
-	// these two variables are accessed only after "if ((givenTree == CIST_INDEX)"
 	BRIDGE_ID previousCistRegionalRootIdentifier = bridgeTree->rootPriority.RegionalRootId;
 	INV_UINT4 previousCistExternalRootPathCost   = bridgeTree->rootPriority.ExternalRootPathCost;
 
@@ -1235,7 +1235,7 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 
 			LOG (bridge, -1, givenTree, "  Port {D} root path priority  : {PVS}\r\n", 1 + portIndex, &rootPathPriority);
 
-			// b)
+			// c)
 			if ((rootPathPriority.DesignatedBridgeId.GetAddress () != bridgeTree->GetBridgePriority ().DesignatedBridgeId.GetAddress ())
 				&& (port->restrictedRole == false))
 			{
@@ -1247,6 +1247,7 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 					bridgeTree->rootPriority = rootPathPriority;
 					bridgeTree->rootPortId   = portTree->portId;
 
+					// d)
 					bridgeTree->rootTimes = portTree->portTimes;
 					if (port->rcvdInternal == false)
 						bridgeTree->rootTimes.MessageAge++;
@@ -1263,27 +1264,23 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 	LOG (bridge, -1, givenTree, "  bridge root priority : {PVS}\r\n", &bridgeTree->rootPriority);
 	LOG (bridge, -1, givenTree, "  root port = {PID}\r\n", &bridgeTree->rootPortId);
 
-	// ------------------------------------------------------------------------
-
-	for (PortIndex portIndex = (PortIndex)0; portIndex < (PortIndex)bridge->portCount; portIndex++)
+	for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
 	{
 		PORT* port = bridge->ports [portIndex];
 		PORT_TREE* portTree = port->trees [givenTree];
 
-		// d)
+		// e)
 		CalculateDesignatedPriorityForPort (bridge, portIndex, givenTree);
 
-		// e)
+		// f)
 		portTree->designatedTimes = bridgeTree->rootTimes;
 
 		LOG (bridge, -1, givenTree, "  Port {D} designated priority : {PVS}\r\n", 1 + portIndex, &portTree->designatedPriority);
 	}
 
-	// ------------------------------------------------------------------------
-
 	// If the root priority vector for the CIST is recalculated, and has a different Regional Root Identifier than that
 	// previously selected, and has or had a nonzero CIST External Root Path Cost, the syncMaster() procedure
-	// (13.27.25) is invoked.
+	// (13.29.26) is invoked.
 	if ((givenTree == CIST_INDEX)
 		&& (previousCistRegionalRootIdentifier != bridgeTree->rootPriority.RegionalRootId)
 		&& ((bridgeTree->rootPriority.ExternalRootPathCost.GetValue() != 0) || (previousCistExternalRootPathCost.GetValue() != 0)))
@@ -1292,7 +1289,7 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 	}
 
 	// The CIST, or MSTI Port Role for each port is assigned, and its port priority vector and timer information are
-	// updated as specified in the remainder of this clause (13.39.2).
+	// updated as specified in the remainder of this clause (13.41.2).
 
 	for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
 	{
@@ -1306,22 +1303,22 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 			portTree->selectedRole = STP_PORT_ROLE_DISABLED;
 		}
 
-		// Otherwise, if this procedure was invoked for an MSTI, for a port that is not Disabled, and that has CIST port
-		// priority information that was received from a bridge external to its bridge's Region (infoIs == Received and
-		// infoInternal == FALSE), then:
+		// Otherwise, if this procedure was invoked for an MSTI or an SPT, for a port that is not Disabled, and that has
+		// CIST port priority information that was received from a Bridge external to its Bridge's Region
+		// (infoIs == Received and infoInternal == FALSE), then
 		else if (  (givenTree != CIST_INDEX)
-				&& ((cistPortTree->infoIs == INFO_IS_RECEIVED) && (port->infoInternal == false)))
+				&& ((cistPortTree->infoIs == INFO_IS_RECEIVED) && !port->infoInternal))
 		{
-			// f) If the selected CIST Port Role (calculated for the CIST prior to invoking this procedure for an
-			//    MSTI) is RootPort, selectedRole is set to MasterPort.
+			// g) If the selected CIST Port Role (calculated for the CIST prior to invoking this procedure for an MSTI
+			//    or SPT) is RootPort, selectedRole is set to MasterPort
 			if (cistPortTree->selectedRole == STP_PORT_ROLE_ROOT)
 				portTree->selectedRole = STP_PORT_ROLE_MASTER;
 
-			// g) If selected CIST Port Role is AlternatePort, selectedRole is set to AlternatePort.
+			// h) If selected CIST Port Role is AlternatePort, selectedRole is set to AlternatePort.
 			if (cistPortTree->selectedRole == STP_PORT_ROLE_ALTERNATE)
 				portTree->selectedRole = STP_PORT_ROLE_ALTERNATE;
 
-			// h) Additionally, updtInfo is set if the port priority vector differs from the designated priority vector or
+			// i) Additionally, updtInfo is set if the port priority vector differs from the designated priority vector or
 			//    the port's associated timer parameter differs from the one for the Root Port.
 			//
 			// Note AG: Problem in the standard: If we are the root bridge, we don't have a root port, so how are we
@@ -1341,32 +1338,31 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 			}
 		}
 
-		// Otherwise, for the CIST for a port that is not Disabled, or for an MSTI for a port that is not Disabled and
-		// whose CIST port priority information was not received from a bridge external to the Region (infoIs !=
-		// Received or infoInternal == TRUE), the CIST or MSTI port role is assigned, and the port priority vector and
-		// timer information updated as follows:
+		// Otherwise, for the CIST for a port that is not Disabled and not internal to an SPT Region, or for an MSTI for
+		// a port of that is not Disabled and whose CIST port priority information was not received from a Bridge
+		// external to the Region (infoIs != Received or infoInternal == TRUE), the CIST or MSTI port role is assigned,
+		// and the port priority vector and timer information updated as follows:
 		//
-		// Note AG: this "else if" could be replaced with an "else", as the condition is the exact opposite of the condition in the "else if" above.
-		else if (   (givenTree == CIST_INDEX)
-				||  ((cistPortTree->infoIs != INFO_IS_RECEIVED) || (port->infoInternal == true)))
+		// "and not internal to an SPT Region" is not yet implemented.
+		else if (((givenTree == CIST_INDEX)
+					&& (cistPortTree->infoIs != INFO_IS_DISABLED))
+				|| ((givenTree != CIST_INDEX)
+					&& (cistPortTree->infoIs != INFO_IS_DISABLED) && ((cistPortTree->infoIs != INFO_IS_RECEIVED) || port->infoInternal)))
 		{
-			// Note AG: Let's use if / else if / else if... because each branch assigns a different port role, and it doesn't
-			// make sense to assign it multiple times in the same run of this function. We'll end with "else assert (false);"
-
-			// i) If the port priority vector information was aged (infoIs = Aged), updtInfo is set and selectedRole is
-			//    set to DesignatedPort;
+			// j) If the port priority vector information was aged (infoIs = Aged), updtInfo is set and selectedRole is
+			//    set to DesignatedPort.
 			if (portTree->infoIs == INFO_IS_AGED)
 			{
 				portTree->updtInfo = true;
 				portTree->selectedRole = STP_PORT_ROLE_DESIGNATED;
 			}
 
-			// j) If the port priority vector was derived from another port on the bridge or from the bridge itself as the
-			//    Root Bridge (infoIs = Mine), selectedRole is set to DesignatedPort. Additionally, updtInfo is set if the
-			//    port priority vector differs from the designated priority vector or the port's associated timer
-			//    parameter(s) differ(s) from the Root Port's associated timer parameters;
+			// k) If the port priority vector was derived from another port on the Bridge or from the Bridge itself as
+			//    the Root Bridge (infoIs = Mine), selectedRole is set to DesignatedPort. Additionally, updtInfo is set if
+			//    the port priority vector differs from the designated priority vector or the port’s associated timer
+			//    parameter(s) differ(s) from the Root Port's associated timer parameters.
 			//
-			// See the note at condition h) above.
+			// Note AG: see the note at condition i) above.
 			else if (portTree->infoIs == INFO_IS_MINE)
 			{
 				portTree->selectedRole = STP_PORT_ROLE_DESIGNATED;
@@ -1385,7 +1381,7 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 				}
 			}
 
-			// k) If the port priority vector was received in a Configuration Message and is not aged
+			// l) If the port priority vector was received in a Configuration Message and is not aged
 			//    (infoIs == Received), and the root priority vector is now derived from it, selectedRole is set to
 			//    RootPort, and updtInfo is reset;
 			else if ((portTree->infoIs == INFO_IS_RECEIVED) && (rootPortTree == portTree))
@@ -1394,13 +1390,13 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 				portTree->updtInfo = false;
 			}
 
-			// l) If the port priority vector was received in a Configuration Message and is not aged
+			// m) If the port priority vector was received in a Configuration Message and is not aged
 			//    (infoIs == Received), the root priority vector is not now derived from it, the designated priority
 			//    vector is not better than the port priority vector, and the designated bridge and designated port
 			//    components of the port priority vector do not reflect another port on this bridge, selectedRole is set
-			//    to AlternatePort, and updtInfo is reset;
+			//    to AlternatePort, and updtInfo is reset.
 			//
-			// TODO: Question AG: What exactly is this supposed to mean?
+			// Note AG: What exactly is this supposed to mean?
 			// "the designated bridge and designated port components of the port priority vector do not reflect another port on this bridge"
 			// Answer: Let's look at the DesignatedBridgeId component, but only at the _address field, not at _priority too,
 			// to account for the case when the bridge priority was just changed by the user (for instance from 0x8000 to 0x9000)
@@ -1408,13 +1404,13 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 			else if ((portTree->infoIs == INFO_IS_RECEIVED)
 				&& (rootPortTree != portTree)
 				&& (portTree->designatedPriority.IsNotBetterThan (portTree->portPriority))
-				&& (portTree->portPriority.DesignatedBridgeId.GetAddress () != bridgeTree->GetBridgeIdentifier ().GetAddress ()))
+				&& (portTree->portPriority.DesignatedBridgeId.GetAddress() != bridgeTree->GetBridgeIdentifier().GetAddress()))
 			{
 				portTree->selectedRole = STP_PORT_ROLE_ALTERNATE;
 				portTree->updtInfo = false;
 			}
 
-			// m) If the port priority vector was received in a Configuration Message and is not aged
+			// n) If the port priority vector was received in a Configuration Message and is not aged
 			//    (infoIs == Received), the root priority vector is not now derived from it, the designated priority
 			//    vector is not better than the port priority vector, and the designated bridge and designated port
 			//    components of the port priority vector reflect another port on this bridge, selectedRole is set to
@@ -1422,13 +1418,13 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 			else if ((portTree->infoIs == INFO_IS_RECEIVED)
 				&& (rootPortTree != portTree)
 				&& (portTree->designatedPriority.IsNotBetterThan (portTree->portPriority))
-				&& (portTree->portPriority.DesignatedBridgeId.GetAddress () == bridgeTree->GetBridgeIdentifier ().GetAddress ()))
+				&& (portTree->portPriority.DesignatedBridgeId.GetAddress() == bridgeTree->GetBridgeIdentifier ().GetAddress()))
 			{
 				portTree->selectedRole = STP_PORT_ROLE_BACKUP;
 				portTree->updtInfo = false;
 			}
 
-			// n) If the port priority vector was received in a Configuration Message and is not aged
+			// o) If the port priority vector was received in a Configuration Message and is not aged
 			//    (infoIs == Received), the root priority vector is not now derived from it, the designated priority
 			//    vector is better than the port priority vector, selectedRole is set to DesignatedPort, and updtInfo is
 			//    set.
@@ -1451,7 +1447,7 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 }
 
 // ============================================================================
-// 13.27.af) - 13.27.32
+// 13.29.af) - 13.29.35
 // This procedure sets selectedRole to DisabledPort for all ports of the bridge for a given tree (CIST, or MSTI).
 void updtRolesDisabledTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 {
