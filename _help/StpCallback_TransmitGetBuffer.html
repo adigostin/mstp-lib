@@ -40,8 +40,9 @@ void* StpCallback_TransmitGetBuffer
 		<li>a pointer to a buffer where the STP library will construct the BPDU to be sent, or</li>
 		<li>NULL, if the application wants to discard the BPDU.</li>
 	</ul>
-	<p>The application might want to discard a BPDU, for instance, when it knows that a port is hardwired to a non-STP device and wants to save bandwidth by
-		not sending BPDUs to that port.</p>
+	<p>The application might want to discard a BPDU, for instance, when it knows that a 
+		port is hardwired to a non-STP device and wants to save bandwidth by not sending 
+		BPDUs to that port.</p>
 	<h4>
 		Remarks</h4>
 		<p>
@@ -60,11 +61,11 @@ void* StpCallback_TransmitGetBuffer
 			that the STP library might request (see below).</p>
 	<p>
 			An embedded application will usually have to prepend non-STP headers to the BPDU, and
-			these headers usually have a length of 21 bytes. So unless your Ethernet driver prepends
+			these headers <em>usually</em> have a length of 21 bytes. So unless your Ethernet driver prepends
 			some of these headers itself, this function should allocate a buffer whose length is <code>bpduSize+21</code>, construct the non-STP headers in the first 21 bytes, and return the address of the 22nd byte of this buffer
 			(<code>&buffer[21]</code>). </p>
 	<p>
-			The non-STP headers usually have the following format:</p>
+			The non-STP headers <em>usually</em> have the following format:</p>
 	<ul>
 		<li>6 bytes for the destination MAC address, which for BPDU packets is always 01-80-C2-00-00-00.</li>
 		<li>6 bytes for the source MAC address, which should be the MAC address of the
@@ -89,12 +90,12 @@ void* StpCallback_TransmitGetBuffer
 			Again, these is the <em>usual</em> format, and it might be slightly different/longer on your
 			particular combination of hardware and software.</p>
 	<p>
-			The largest <code>bpduSize</code> that the STP library can request is as follows:</p>
+			The largest <code>bpduSize</code> that the STP library requests can be calculated from §14.4 in
+			802.1Q-2018:</p>
 	<ul>
-		<li>For Legacy STP mode: 35 bytes (§9.3 in the 802.1w-2001 standard).</li>
-		<li>For RSTP mode: 36 bytes. (§9.3.3 in the 802.1D-2004 standard).</li>
-		<li>For MSTP mode: <code>103 + 16 * numberOfTrees</code>, so up to 1143 bytes for 65 trees (§14.6 in
-			the 802.1Q-2011 standard).</li>
+		<li>for Legacy STP mode: 35 bytes;</li>
+		<li>for RSTP mode: 36 bytes;</li>
+		<li>for MSTP mode: <code>102 + 16 * <a href="STP_CreateBridge.html">mstiCount</a></code>, so up to 1126 bytes in case of 64 MSTIs.</li>
 	</ul>
 	<p>
 		If this callback returns an address other than NULL, the STP library will construct

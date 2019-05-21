@@ -61,7 +61,7 @@ struct STP_CALLBACKS
 	STP_CALLBACK_FREE_MEMORY                 freeMemory;
 };
 
-// 6.6.3 Point-to-point parameters (values correspond to ieee8021BridgeBasePortAdminPointToPoint)
+// 11.3 Point-to-point parameters in 802.1AC-2016 (values correspond to ieee8021BridgeBasePortAdminPointToPoint)
 enum STP_ADMIN_P2P
 {
 	STP_ADMIN_P2P_FORCE_TRUE = 1,
@@ -135,7 +135,7 @@ void STP_OnBpduReceived (struct STP_BRIDGE* bridge, unsigned int portIndex, cons
 void STP_SetBridgeAddress (struct STP_BRIDGE* bridge, const unsigned char* address, unsigned int timestamp);
 const struct STP_BRIDGE_ADDRESS* STP_GetBridgeAddress (const struct STP_BRIDGE* bridge);
 
-// Call these whenever one of the ports changes state. See 13.25.31 portEnabled in 802.1Q-2011 for details.
+// Call these whenever one of the ports changes state (link up/down).
 void STP_OnPortEnabled (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int speedMegabitsPerSecond, bool detectedPointToPointMAC, unsigned int timestamp);
 void STP_OnPortDisabled (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int timestamp);
 

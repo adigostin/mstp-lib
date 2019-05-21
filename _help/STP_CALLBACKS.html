@@ -43,7 +43,9 @@ struct STP_CALLBACKS
 		first the application calls some library function, then that function calls application&#39;s
 		STP callbacks to do hardware-specific work, and then the function returns.</p>
 	<p>
-			The application is allowed to call only &quot;Get&quot; library functions from these callbacks.</p>
+			The application is allowed to call from within these callbacks only Get-type library functions. 
+			Set-type library functions (those that alter the STP operation) must not be 
+			called from within these callbacks.</p>
 
 </body>
 </html>
