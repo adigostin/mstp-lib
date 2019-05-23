@@ -97,7 +97,7 @@ struct STP_BRIDGE
 
 	BRIDGE_TREE** trees;
 	PORT** ports;
-	INV_UINT2* mstConfigTable;
+	uint16_nbo* mstConfigTable;
 
 	// 13.26 Per bridge variables
 	// There is one instance per bridge component of the following variable(s):

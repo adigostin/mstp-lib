@@ -1143,7 +1143,7 @@ static void CalculateRootPathPriorityForPort (STP_BRIDGE* bridge, unsigned int g
 			//		root path priority vector = {RD : ERCD + EPCPB : B : 0 : D : PD : PB}
 			rootPathPriorityOut->ExternalRootPathCost += port->ExternalPortPathCost;
 			rootPathPriorityOut->RegionalRootId = bridge->trees [givenTree]->GetBridgeIdentifier();
-			assert (portTree->portPriority.InternalRootPathCost.GetValue() == 0);
+			assert (portTree->portPriority.InternalRootPathCost == 0);
 		}
 		else
 		{
@@ -1213,7 +1213,7 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 	LOG (bridge, -1, givenTree, "  BridgeID: {BID}\r\n", &bridgeTree->GetBridgeIdentifier());
 
 	BRIDGE_ID previousCistRegionalRootIdentifier = bridgeTree->rootPriority.RegionalRootId;
-	INV_UINT4 previousCistExternalRootPathCost   = bridgeTree->rootPriority.ExternalRootPathCost;
+	uint32_nbo previousCistExternalRootPathCost   = bridgeTree->rootPriority.ExternalRootPathCost;
 
 	// initialize this to our bridge priority
 	bridgeTree->rootPriority = bridgeTree->GetBridgePriority ();
@@ -1283,7 +1283,7 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 	// (13.29.26) is invoked.
 	if ((givenTree == CIST_INDEX)
 		&& (previousCistRegionalRootIdentifier != bridgeTree->rootPriority.RegionalRootId)
-		&& ((bridgeTree->rootPriority.ExternalRootPathCost.GetValue() != 0) || (previousCistExternalRootPathCost.GetValue() != 0)))
+		&& ((bridgeTree->rootPriority.ExternalRootPathCost != 0) || (previousCistExternalRootPathCost != 0)))
 	{
 		syncMaster (bridge);
 	}

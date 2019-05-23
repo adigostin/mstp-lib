@@ -31,7 +31,7 @@ struct MSTI_CONFIG_MESSAGE
 {
 	unsigned char flags; // a)
 	BRIDGE_ID     RegionalRootId; // b)
-	INV_UINT4     InternalRootPathCost; // c)
+	uint32_nbo    InternalRootPathCost; // c)
 
 	// d) Bits 5 through 8 of Octet 14 convey the value of the Bridge Identifier Priority for this MSTI.
 	// Bits 1 through 4 of Octet 14 shall be transmitted as 0, and ignored on receipt.
@@ -50,7 +50,7 @@ struct MSTI_CONFIG_MESSAGE
 // 14.1.2 in 802.1Q-2018
 struct BPDU_HEADER
 {
-	INV_UINT2 protocolId;
+	uint16_nbo    protocolId;
 	unsigned char protocolVersionId;
 	unsigned char bpduType;
 };
@@ -66,21 +66,21 @@ struct MSTP_BPDU : public BPDU_HEADER
 	unsigned char cistFlags;			// octet 5
 
 	BRIDGE_ID	cistRootId;				// octets 6 to 13
-	INV_UINT4	cistExternalPathCost;	// octets 14 to 17
+	uint32_nbo	cistExternalPathCost;	// octets 14 to 17
 	BRIDGE_ID	cistRegionalRootId;		// octets 18 to 25 - called Bridge Identifier pre-MSTP, referred to also as Designated Bridge
 	PORT_ID		cistPortId;				// octets 26 to 27 - called Port Identifier pre-MSTP, referred to also as Designated Port
 
-	INV_UINT2	MessageAge;		// octets 28 to 29
-	INV_UINT2	MaxAge;			// octets 30 to 31
-	INV_UINT2	HelloTime;		// octets 32 to 33
-	INV_UINT2	ForwardDelay;	// octets 34 to 35
+	uint16_nbo	MessageAge;		// octets 28 to 29
+	uint16_nbo	MaxAge;			// octets 30 to 31
+	uint16_nbo	HelloTime;		// octets 32 to 33
+	uint16_nbo	ForwardDelay;	// octets 34 to 35
 
 	unsigned char Version1Length;
-	INV_UINT2 Version3Length;
+	uint16_nbo    Version3Length;
 
 	STP_MST_CONFIG_ID	mstConfigId;
 
-	INV_UINT4		cistInternalRootPathCost;
+	uint32_nbo		cistInternalRootPathCost;
 	BRIDGE_ID		cistBridgeId;
 
 	unsigned char	cistRemainingHops;

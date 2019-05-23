@@ -154,9 +154,9 @@ void STP_Log (STP_BRIDGE* bridge, int port, int tree, const char* format, ...)
 			const PRIORITY_VECTOR* pv = va_arg (ap, PRIORITY_VECTOR*);
 			STP_Log (bridge, port, tree, "{BID}-{D7}-{BID}-{D7}-{BID}-{PID}",
 					 &pv->RootId,
-					 (int) pv->ExternalRootPathCost.GetValue (),
+					 (int) pv->ExternalRootPathCost,
 					 &pv->RegionalRootId,
-					 (int) pv->InternalRootPathCost.GetValue (),
+					 (int) pv->InternalRootPathCost,
 					 &pv->DesignatedBridgeId,
 					 &pv->DesignatedPortId);
 			format += 5;

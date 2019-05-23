@@ -8,6 +8,7 @@
 #include "../stp.h"
 #include <assert.h>
 #include <string.h>
+#include <stdint.h>
 
 enum PortIndex { };
 inline PortIndex operator++(PortIndex& x, int) { PortIndex res = x; x = (PortIndex) (x + 1); return res; }
@@ -21,31 +22,26 @@ struct STP_BRIDGE;
 
 // ============================================================================
 
-// Two-byte value in network byte order (big-endian), not aligned in memory.
-struct INV_UINT2
+// 16-bit value in network byte order (big-endian); since it consists of chars only, the compiler should give it byte alignment.
+struct uint16_nbo
 {
 private:
 	unsigned char vh;
 	unsigned char vl;
 
 public:
-	unsigned short GetValue() const
-	{
-		return (vh << 8) | vl;
-	}
-
 	void operator= (unsigned short value)
 	{
 		vh = value >> 8;
 		vl = (unsigned char) value;
 	}
 
-	bool operator== (const INV_UINT2& rhs) const
+	bool operator== (const uint16_nbo& rhs) const
 	{
 		return ((this->vh == rhs.vh) && (this->vl == rhs.vl));
 	}
 
-	operator unsigned short() const
+	operator uint16_t() const
 	{
 		return (vh << 8) | vl;
 	}
@@ -53,8 +49,8 @@ public:
 
 // ============================================================================
 
-// Four-byte value in network byte order (big-endian), not aligned in memory.
-struct INV_UINT4
+// 32-bit value in network byte order (big-endian); since it consists of chars only, the compiler should give it byte alignment.
+struct uint32_nbo
 {
 private:
 	unsigned char vhh;
@@ -63,7 +59,7 @@ private:
 	unsigned char vll;
 
 public:
-	unsigned int GetValue () const
+	operator uint32_t() const
 	{
 		return (vhh << 24) | (vhl << 16) | (vlh << 8) | vll;
 	}
@@ -76,13 +72,13 @@ public:
 		vll = (unsigned char) newValue;
 	}
 
-	const INV_UINT4& operator += (unsigned int rhs)
+	const uint32_nbo& operator += (unsigned int rhs)
 	{
-		*this = this->GetValue () + rhs;
+		*this = *this + rhs;
 		return *this;
 	}
 
-	bool operator== (const INV_UINT4& rhs) const
+	bool operator== (const uint32_nbo& rhs) const
 	{
 		return (this->vhh == rhs.vhh)
 			&& (this->vhl == rhs.vhl)
@@ -97,7 +93,7 @@ public:
 struct BRIDGE_ID
 {
 private:
-	INV_UINT2          _priority;
+	uint16_nbo         _priority;
 	STP_BRIDGE_ADDRESS _address;
 
 public:
@@ -136,7 +132,7 @@ public:
 
 	unsigned short GetPriority() const
 	{
-		return _priority.GetValue() & 0xF000;
+		return _priority & 0xF000;
 	}
 
 	const STP_BRIDGE_ADDRESS& GetAddress() const
@@ -171,9 +167,9 @@ public:
 struct PRIORITY_VECTOR
 {
 	BRIDGE_ID	RootId;					// a) - used for CIST, zero for MSTIs
-	INV_UINT4	ExternalRootPathCost;	// b) - used for CIST, zero for MSTIs
+	uint32_nbo	ExternalRootPathCost;	// b) - used for CIST, zero for MSTIs
 	BRIDGE_ID	RegionalRootId;			// c)
-	INV_UINT4	InternalRootPathCost;	// d)
+	uint32_nbo	InternalRootPathCost;	// d)
 	BRIDGE_ID	DesignatedBridgeId;		// e)
 	PORT_ID		DesignatedPortId;		// f)
 

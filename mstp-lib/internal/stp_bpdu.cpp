@@ -92,7 +92,7 @@ static bool IsWellFormedSptBpdu (const unsigned char* bpdu, size_t bpduSize)
 	if (bpduSize < version3Offset + version3Length + 6)
 		return false;
 
-	size_t version4Length = reinterpret_cast<const INV_UINT2*>(bpdu + version3Offset + version3Length)->GetValue();
+	size_t version4Length = *reinterpret_cast<const uint16_nbo*>(bpdu + version3Offset + version3Length);
 	if (version4Length < 55)
 		return false;
 
@@ -123,7 +123,7 @@ enum VALIDATED_BPDU_TYPE STP_GetValidatedBpduType (enum STP_VERSION bridgeStpVer
 
 	// b) If the Protocol Identifier is 0000 0000 0000 0000, the BPDU Type is 1000 0000 (where bit 8 is
 	// shown at the left of the sequence), and the BPDU contains 4 or more octets, it shall be decoded as an
-	//STP TCN BPDU (9.3.2 of IEEE Std 802.1D-2004 [B17]).
+	// STP TCN BPDU (9.3.2 of IEEE Std 802.1D-2004 [B17]).
 	if ((bpduHeader->bpduType == 0x80) && (bpduSize >= 4))
 		return VALIDATED_BPDU_TYPE_STP_TCN;
 
@@ -248,25 +248,24 @@ void DumpMstpBpdu (STP_BRIDGE* bridge, int port, int tree, const MSTP_BPDU* bpdu
 			(int) GetBpduFlagForwarding (bpdu->cistFlags),
 			(int) GetBpduFlagAgreement (bpdu->cistFlags));
 	LOG (bridge, port, tree, "CIST Root ID                 : {BID}\r\n", &bpdu->cistRootId);
-	LOG (bridge, port, tree, "CIST External Path Cost      : {D7}\r\n",  (int) bpdu->cistExternalPathCost.GetValue ());
+	LOG (bridge, port, tree, "CIST External Path Cost      : {D7}\r\n",  (int) bpdu->cistExternalPathCost);
 	LOG (bridge, port, tree, "CIST Regional Root ID        : {BID}\r\n", &bpdu->cistRegionalRootId);
-	LOG (bridge, port, tree, "CIST Internal Root Path Cost : {D7}\r\n",  (int) bpdu->cistInternalRootPathCost.GetValue ());
+	LOG (bridge, port, tree, "CIST Internal Root Path Cost : {D7}\r\n",  (int) bpdu->cistInternalRootPathCost);
 	LOG (bridge, port, tree, "CIST Bridge ID               : {BID}\r\n", &bpdu->cistBridgeId);
 	LOG (bridge, port, tree, "CIST Port ID                 : {PID}\r\n", &bpdu->cistPortId);
 	LOG (bridge, port, tree, "CIST MessageAge={D}, MaxAge={D}, HelloTime={D}, ForwardDelay={D}, remainingHops={D}\r\n",
-		 bpdu->MessageAge.GetValue () / 256,
-		 bpdu->MaxAge.GetValue () / 256,
-		 bpdu->HelloTime.GetValue () / 256,
-		 bpdu->ForwardDelay.GetValue () / 256,
+		 (int) bpdu->MessageAge / 256,
+		 (int) bpdu->MaxAge / 256,
+		 (int) bpdu->HelloTime / 256,
+		 (int) bpdu->ForwardDelay / 256,
 		 (int) bpdu->cistRemainingHops);
 
 	bpdu->mstConfigId.Dump (bridge, port, tree);
 
-	unsigned short v3Length = bpdu->Version3Length.GetValue ();
 	unsigned short headerRemainder = (unsigned short) sizeof (MSTP_BPDU) - (unsigned short) offsetof (struct MSTP_BPDU, mstConfigId);
-	assert (v3Length >= headerRemainder);
-	assert (((v3Length - headerRemainder) % 16) == 0);
-	unsigned short mstiCount = (v3Length - headerRemainder) / 16;
+	assert (bpdu->Version3Length >= headerRemainder);
+	assert (((bpdu->Version3Length - headerRemainder) % 16) == 0);
+	unsigned short mstiCount = (bpdu->Version3Length - headerRemainder) / 16;
 
 	MSTI_CONFIG_MESSAGE* mstis = (MSTI_CONFIG_MESSAGE*) &bpdu [1];
 	for (int mstiIndex = 0; mstiIndex < mstiCount; mstiIndex++)
@@ -290,14 +289,14 @@ void DumpRstpBpdu (STP_BRIDGE* bridge, int port, int tree, const MSTP_BPDU* bpdu
 			(int) GetBpduFlagForwarding (bpdu->cistFlags),
 			(int) GetBpduFlagAgreement (bpdu->cistFlags));
 	LOG (bridge, port, tree, "  Root ID        : {BID}\r\n", &bpdu->cistRootId);
-	LOG (bridge, port, tree, "  Root Path Cost : {D7}\r\n",   (int) bpdu->cistExternalPathCost.GetValue ());
+	LOG (bridge, port, tree, "  Root Path Cost : {D7}\r\n", (int) bpdu->cistExternalPathCost);
 	LOG (bridge, port, tree, "  Bridge ID      : {BID}\r\n", &bpdu->cistRegionalRootId);
 	LOG (bridge, port, tree, "  Port ID        : {PID}\r\n", &bpdu->cistPortId);
 	LOG (bridge, port, tree, "  MessageAge={D}, MaxAge={D}, HelloTime={D}, ForwardDelay={D}\r\n",
-		 bpdu->MessageAge.GetValue () / 256,
-		 bpdu->MaxAge.GetValue () / 256,
-		 bpdu->HelloTime.GetValue () / 256,
-		 bpdu->ForwardDelay.GetValue () / 256);
+		 (int) bpdu->MessageAge / 256,
+		 (int) bpdu->MaxAge / 256,
+		 (int) bpdu->HelloTime / 256,
+		 (int) bpdu->ForwardDelay / 256);
 }
 
 void DumpConfigBpdu (STP_BRIDGE* bridge, int port, int tree, const MSTP_BPDU* bpdu)
@@ -306,14 +305,14 @@ void DumpConfigBpdu (STP_BRIDGE* bridge, int port, int tree, const MSTP_BPDU* bp
 			(int) GetBpduFlagTc    (bpdu->cistFlags),
 			(int) GetBpduFlagTcAck (bpdu->cistFlags));
 	LOG (bridge, port, tree, "  Root ID        : {BID}\r\n", &bpdu->cistRootId);
-	LOG (bridge, port, tree, "  Root Path Cost : {D7}\r\n",   (int) bpdu->cistExternalPathCost.GetValue ());
+	LOG (bridge, port, tree, "  Root Path Cost : {D7}\r\n", (int) bpdu->cistExternalPathCost);
 	LOG (bridge, port, tree, "  Bridge ID      : {BID}\r\n", &bpdu->cistRegionalRootId);
 	LOG (bridge, port, tree, "  Port ID        : {PID}\r\n", &bpdu->cistPortId);
 	LOG (bridge, port, tree, "  MessageAge={D}, MaxAge={D}, HelloTime={D}, ForwardDelay={D}\r\n",
-		 bpdu->MessageAge.GetValue () / 256,
-		 bpdu->MaxAge.GetValue () / 256,
-		 bpdu->HelloTime.GetValue () / 256,
-		 bpdu->ForwardDelay.GetValue () / 256);
+		 (int) bpdu->MessageAge / 256,
+		 (int) bpdu->MaxAge / 256,
+		 (int) bpdu->HelloTime / 256,
+		 (int) bpdu->ForwardDelay / 256);
 }
 
 // ============================================================================
@@ -329,7 +328,7 @@ void MSTI_CONFIG_MESSAGE::Dump (STP_BRIDGE* bridge, int port, int tree) const
 			(int) GetBpduFlagAgreement (flags),
 			(int) GetBpduFlagMaster (flags));
 	LOG (bridge, port, tree, "RegionalRootId       : {BID}\r\n", &RegionalRootId);
-	LOG (bridge, port, tree, "InternalRootPathCost : {D}\r\n", InternalRootPathCost.GetValue ());
+	LOG (bridge, port, tree, "InternalRootPathCost : {D}\r\n", (int)InternalRootPathCost);
 	LOG (bridge, port, tree, "BridgePriority       : 0x{X2}\r\n", BridgePriority);
 	LOG (bridge, port, tree, "PortPriority         : 0x{X2}\r\n", PortPriority);
 	LOG (bridge, port, tree, "RemainingHops        : {D}\r\n", RemainingHops);

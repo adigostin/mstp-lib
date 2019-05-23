@@ -29,8 +29,8 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	// at least those options related to structure layouts, at least for the files belonging to the STP library.
 	assert (sizeof(unsigned short) == 2);
 	assert (sizeof(unsigned int) == 4);
-	assert (sizeof(INV_UINT2) == 2);
-	assert (sizeof(INV_UINT4) == 4);
+	assert (sizeof(uint16_nbo) == 2);
+	assert (sizeof(uint32_nbo) == 4);
 	assert (sizeof(STP_BRIDGE_ADDRESS) == 6);
 	assert (sizeof(BRIDGE_ID) == 8);
 	assert (sizeof(PORT_ID) == 2);
@@ -136,7 +136,7 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	// Let's set a default name for the MST Config.
 	STP_GetDefaultMstConfigName (bridgeAddress, bridge->MstConfigId.ConfigurationName);
 
-	bridge->mstConfigTable = (INV_UINT2*) callbacks->allocAndZeroMemory ((1 + maxVlanNumber) * 2);
+	bridge->mstConfigTable = (uint16_nbo*) callbacks->allocAndZeroMemory ((1 + maxVlanNumber) * 2);
 	assert (bridge->mstConfigTable != NULL);
 
 	// The config table is all zeroes now, so all VIDs map to the CIST, no VID mapped to any MSTI.
@@ -892,7 +892,7 @@ void STP_SetMstConfigTableEntry (struct STP_BRIDGE* bridge, unsigned int vlanNum
 
 	LOG (bridge, -1, -1, "{T}: Setting MST Config Table... ", timestamp);
 
-	if (bridge->mstConfigTable[vlanNumber].GetValue() == treeIndex)
+	if (bridge->mstConfigTable[vlanNumber] == treeIndex)
 	{
 		LOG (bridge, -1, -1, "... nothing changed.\r\n");
 	}
@@ -1014,7 +1014,7 @@ unsigned int STP_GetTreeIndexFromVlanNumber (const STP_BRIDGE* bridge, unsigned 
 			return 0;
 
 		case STP_VERSION_MSTP:
-			return bridge->mstConfigTable[vlanNumber].GetValue();
+			return bridge->mstConfigTable[vlanNumber];
 
 		default:
 			assert(false); return 0;
