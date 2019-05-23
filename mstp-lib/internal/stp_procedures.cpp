@@ -1039,7 +1039,7 @@ void txTcn (STP_BRIDGE* bridge, PortIndex givenPort, unsigned int timestamp)
 	if (bpdu == NULL)
 		return;
 
-	// 9.3.2 in 802.1D-2004 (not 2011!)
+	// 14.3.b) in 802.1Q-2018.
 	bpdu->protocolId = 0;
 	bpdu->protocolVersionId = 0;
 	bpdu->bpduType = 0x80;

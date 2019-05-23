@@ -44,7 +44,7 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	// is not obliged to have MSTIs configured in order to support SPB.
 	assert (mstiCount <= 64);
 
-	// As specified in 12.3.i) in 802.1Q-2011, valid port numbers are 1..4095, so our valid port indexes will be 0..4094.
+	// As specified in 12.3.i) in 802.1Q-2018, valid port numbers are 1..4095, so our valid port indexes will be 0..4094.
 	// This means a maximum of 4095 ports.
 	assert ((portCount >= 1) && (portCount < 4096));
 
@@ -83,7 +83,7 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	bridge->trees [CIST_INDEX] = (BRIDGE_TREE*) callbacks->allocAndZeroMemory (sizeof (BRIDGE_TREE));
 	assert (bridge->trees [CIST_INDEX] != NULL);
 	bridge->trees [CIST_INDEX]->SetBridgeIdentifier (0x8000, CIST_INDEX, bridgeAddress);
-	// 13.24.3 in 802.1Q-2011
+	// 13.26.4 in 802.1Q-2018
 	// Defaults from Table 13-5 on page 510 in 802.1Q-2018
 	bridge->trees [CIST_INDEX]->BridgeTimes.HelloTime     = 2;
 	bridge->trees [CIST_INDEX]->BridgeTimes.remainingHops = 20;
@@ -243,7 +243,7 @@ const struct STP_BRIDGE_ADDRESS* STP_GetBridgeAddress (const struct STP_BRIDGE* 
 
 // ============================================================================
 
-// Table 13-4 on page 348 of 802.1Q-2011
+// Table 13-4 on page 502 of 802.1Q-2018
 static unsigned int GetDefaultPortPathCost (unsigned int speedMegabitsPerSecond)
 {
 	if (speedMegabitsPerSecond == 0)
@@ -738,8 +738,8 @@ unsigned short STP_GetBridgePriority (const STP_BRIDGE* bridge, unsigned int tre
 
 void STP_SetPortPriority (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned char portPriority, unsigned int timestamp)
 {
-	// See table 13-3 on page 348 of 802.1Q-2011
-	// See 13.25.32 in 802.1Q-2011
+	// See table 13-3 on page 501 of 802.1Q-2018.
+	// See 13.27.46 in 802.1Q-2018.
 
 	assert ((portPriority % 16) == 0);
 	assert (portIndex < bridge->portCount);
@@ -765,7 +765,7 @@ void STP_SetPortPriority (STP_BRIDGE* bridge, unsigned int portIndex, unsigned i
 
 unsigned char STP_GetPortPriority (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)
 {
-	// See 13.25.32 in 802.1Q-2011
+	// See 13.27.46 in 802.1Q-2018.
 
 	assert (portIndex < bridge->portCount);
 	assert (treeIndex <= bridge->mstiCount);
@@ -1212,10 +1212,10 @@ unsigned int STP_GetExternalPortPathCost (const struct STP_BRIDGE* bridge, unsig
 
 // ============================================================================
 
-void STP_SetBridgeHelloTime (struct STP_BRIDGE* bridge, unsigned int helloTime, unsigned int timestamp)
+extern "C" void STP_SetBridgeHelloTime (struct STP_BRIDGE* bridge, unsigned int helloTime, unsigned int timestamp)
 {
-	// Note AG: As of 2011, the standard fixes this to two seconds (Table 13-5 on page 510 in 802.1Q-2018),
-	// and it even requires ignoring any HelloTime value received and using two seconds instead (13.29.20 in 802.1Q-2018).
+	// Note AG: In recent versions of the standard this is fixed to two seconds (Table 13-5 on page 510 in 802.1Q-2018),
+	// and it's even required to ignore any HelloTime value received and to use two seconds instead (13.29.20 in 802.1Q-2018).
 	// I wrote this function only as a placeholder for this comment, so people won't wonder about "missing" functionality.
 	assert(helloTime == 2);
 }

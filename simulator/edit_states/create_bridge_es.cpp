@@ -66,7 +66,7 @@ class create_bridge_es : public edit_state
 
 			if ((virtualKey == VK_SUBTRACT) || (virtualKey == VK_OEM_MINUS) || (virtualKey == VK_LEFT))
 			{
-				if (new_port_count > 2)
+				if (new_port_count > 1)
 					new_port_count--;
 			}
 			else if ((virtualKey == VK_ADD) || (virtualKey == VK_OEM_PLUS) || (virtualKey == VK_RIGHT))

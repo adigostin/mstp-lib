@@ -167,7 +167,7 @@ public:
 };
 
 // ============================================================================
-// 13.9 and 13.10 in 802.1Q-2011
+// 13.10 and 13.11 in 802.1Q-2018
 struct PRIORITY_VECTOR
 {
 	BRIDGE_ID	RootId;					// a) - used for CIST, zero for MSTIs
@@ -212,13 +212,13 @@ struct PRIORITY_VECTOR
 		return this->IsWorseThanOrSameAs (rhs);
 	}
 
-	// 13.9, page 336 in 802.1Q-2011:
+	// 13.10, page 486 in 802.1Q-2018:
 	// A received CIST message priority vector is superior to the port priority vector if, and only if, the message
 	// priority vector is better than the port priority vector, or the Designated Bridge Identifier Bridge Address and
 	// Designated Port Identifier Port Number components are the same; in which case, the message has been
 	// transmitted from the same Designated Port as a previously received superior message
 	//
-	// 13.10, page 338 in 802.1Q-2011: wording is identical for MSTI priority vectors.
+	// 13.11, page 488 in 802.1Q-2018: wording is identical for MSTI priority vectors.
 	bool IsSuperiorTo (const PRIORITY_VECTOR& rhs) const
 	{
 		if (this->IsBetterThan (rhs))
