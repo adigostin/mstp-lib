@@ -84,7 +84,7 @@ struct STP_BRIDGE
 	int logCurrentTree;
 #endif
 
-	bool BEGIN; // Defined in 13.23.1 in 802.1Q-2005. Widely used but definition was removed in 2011 and 2018...
+	bool BEGIN; // Defined in 13.23.1 in 802.1Q-2005. Widely used but definition was removed subsequent versions of the standard.
 	bool started; // Added by me. STP_StartBridge sets it, STP_StopBridge clears it.
 
 	STP_CALLBACKS callbacks;
