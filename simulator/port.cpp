@@ -342,7 +342,7 @@ bool port::HitTestInnerOuter (const edge::zoomable_i* zoomable, D2D1_POINT_2F dL
 	return (dLocation.x >= lt.x) && (dLocation.y >= lt.y) && (dLocation.x < rb.x) && (dLocation.y < rb.y);
 }
 
-renderable_object::HTResult port::hit_test (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance)
+renderable_object::ht_result port::hit_test (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance)
 {
 	if (HitTestCP (zoomable, dLocation, tolerance))
 		return { this, HTCodeCP };

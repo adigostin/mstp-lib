@@ -29,19 +29,19 @@ struct drawing_resources
 class renderable_object : public edge::object
 {
 public:
-	struct HTResult
+	struct ht_result
 	{
 		renderable_object* object;
 		int code;
-		bool operator==(const HTResult& other) const { return (this->object == other.object) && (this->code == other.code); }
-		bool operator!=(const HTResult& other) const { return (this->object != other.object) || (this->code != other.code); }
+		bool operator==(const ht_result& other) const { return (this->object == other.object) && (this->code == other.code); }
+		bool operator!=(const ht_result& other) const { return (this->object != other.object) || (this->code != other.code); }
 	};
 
 	struct invalidate_e : public edge::event<invalidate_e, renderable_object*> { };
 	invalidate_e::subscriber GetInvalidateEvent() { return invalidate_e::subscriber(this); }
 
 	virtual void render_selection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const = 0;
-	virtual HTResult hit_test (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) = 0;
+	virtual ht_result hit_test (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) = 0;
 
 protected:
 	template<typename tpd_>

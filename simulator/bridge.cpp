@@ -346,7 +346,7 @@ void bridge::render_selection (const edge::zoomable_i* zoomable, ID2D1RenderTarg
 	rt->SetAntialiasMode(oldaa);
 }
 
-renderable_object::HTResult bridge::hit_test (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance)
+renderable_object::ht_result bridge::hit_test (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance)
 {
 	for (auto& p : _ports)
 	{

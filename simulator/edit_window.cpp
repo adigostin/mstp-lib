@@ -31,7 +31,7 @@ class edit_window : public zoomable_window, public edit_window_i
 {
 	typedef zoomable_window base;
 
-	using HTResult = renderable_object::HTResult;
+	using ht_result = renderable_object::ht_result;
 
 	simulator_app_i*  const _app;
 	project_window_i* const _pw;
@@ -40,7 +40,7 @@ class edit_window : public zoomable_window, public edit_window_i
 	com_ptr<IDWriteTextFormat> _legendFont;
 	struct drawing_resources _drawing_resources;
 	unique_ptr<edit_state> _state;
-	HTResult _htResult = { nullptr, 0 };
+	ht_result _htResult = { nullptr, 0 };
 
 public:
 	edit_window (const edit_window_create_params& cps)
@@ -630,7 +630,7 @@ public:
 		return nullptr;
 	}
 
-	HTResult HitTestObjects (D2D1_POINT_2F dLocation, float tolerance) const
+	ht_result HitTestObjects (D2D1_POINT_2F dLocation, float tolerance) const
 	{
 		auto& wires = _project->wires();
 		for (auto it = wires.rbegin(); it != wires.rend(); it++)
