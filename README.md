@@ -1,4 +1,4 @@
-#### mstp-lib
+### mstp-lib
 A library that implements the Multiple / Rapid Spanning Tree
 Protocol as defined in 802.1Q-2018.
 
@@ -9,14 +9,14 @@ various OEMs (ship automation, tactical networking, in-flight
 entertainment) and I helped others integrate it in plenty other
 devices.
 
-#### Simulator
+### Simulator
 A Simulator application for Windows is provided - both
 sources and [binaries](https://github.com/adigostin/mstp-lib/releases).
 The Simulator lets you create networks and see the library
 in action. See the screenshot below. This is a project for
 Visual Studio 2017.
 
-#### Embedded Application Example
+### Embedded Application Example
 The repository includes sources for a sample RSTP implementation
 on an embedded device: a project for IAR Embedded Workbench 7.x,
 for a device with an LPC2000 microcontroller and an IP175C
@@ -31,7 +31,7 @@ Drop me a message at
 [adigostin@gmail.com](mailto:adigostin@gmail.com)
 and I'll try to help.
 
-#### API Help
+### API Help
 The repository also includes
 [help files](https://github.com/adigostin/mstp-lib/tree/master/_help)
 for most of the library APIs -
@@ -39,5 +39,5 @@ for most of the library APIs -
 [quite](http://htmlpreview.github.io/?https://github.com/adigostin/mstp-lib/blob/master/_help/StpCallback_TransmitGetBuffer.html)
 [extensive](http://htmlpreview.github.io/?https://github.com/adigostin/mstp-lib/blob/master/_help/STP_OnPortEnabled.html).
 
-#### Screenshot of the Windows Simulator
+### Screenshot of the Windows Simulator
 ![screenshot](./Screenshot-v2.2.png "Logo Title Text 1")
