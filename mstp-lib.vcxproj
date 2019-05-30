@@ -19,67 +19,66 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_procedures.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_BridgeDetection.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_L2GPReceive.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortInformation.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortProtocolMigration.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortReceive.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortRoleSelection.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortRoleTransitions.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortStateTransition.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortTimers.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_PortTransmit.cpp" />
-    <ClCompile Include="mstp-lib\802.1Q-2011\802_1Q_2011_SM_TopologyChange.cpp" />
-    <ClCompile Include="mstp-lib\stp.cpp" />
-    <ClCompile Include="mstp-lib\stp_base_types.cpp" />
-    <ClCompile Include="mstp-lib\stp_bpdu.cpp" />
-    <ClCompile Include="mstp-lib\stp_log.cpp" />
-    <ClCompile Include="mstp-lib\stp_md5.cpp" />
+    <ClInclude Include="mstp-lib\internal\stp_base_types.h" />
+    <ClInclude Include="mstp-lib\internal\stp_bpdu.h" />
+    <ClInclude Include="mstp-lib\internal\stp_bridge.h" />
+    <ClInclude Include="mstp-lib\internal\stp_conditions_and_params.h" />
+    <ClInclude Include="mstp-lib\internal\stp_log.h" />
+    <ClInclude Include="mstp-lib\internal\stp_md5.h" />
+    <ClInclude Include="mstp-lib\internal\stp_port.h" />
+    <ClInclude Include="mstp-lib\internal\stp_procedures.h" />
+    <ClInclude Include="mstp-lib\internal\stp_sm.h" />
+    <ClInclude Include="mstp-lib\stp.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="mstp-lib\802.1Q-2011\802_1Q_2011_procedures.h" />
-    <ClInclude Include="mstp-lib\stp.h" />
-    <ClInclude Include="mstp-lib\stp_base_types.h" />
-    <ClInclude Include="mstp-lib\stp_bpdu.h" />
-    <ClInclude Include="mstp-lib\stp_bridge.h" />
-    <ClInclude Include="mstp-lib\stp_log.h" />
-    <ClInclude Include="mstp-lib\stp_md5.h" />
-    <ClInclude Include="mstp-lib\stp_port.h" />
+    <ClCompile Include="mstp-lib\internal\stp.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_base_types.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_bpdu.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_conditions_and_params.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_log.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_md5.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_procedures.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm_bridge_detection.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm_l2g_port_receive.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm_port_information.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm_port_protocol_migration.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm_port_receive.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm_port_role_selection.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm_port_role_transitions.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm_port_state_transition.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm_port_timers.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm_port_transmit.cpp" />
+    <ClCompile Include="mstp-lib\internal\stp_sm_topology_change.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{1DC9DD21-A2C5-46FC-B13E-C3382471BED2}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>mstplib</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -108,13 +107,17 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <MinimalRebuild>false</MinimalRebuild>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AdditionalIncludeDirectories>$(SolutionDir)win32_lib\edge;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
     </Link>
+    <Lib>
+      <AdditionalOptions>/ignore:4221 %(AdditionalOptions)</AdditionalOptions>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -124,13 +127,17 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <MinimalRebuild>false</MinimalRebuild>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AdditionalIncludeDirectories>$(SolutionDir)win32_lib\edge;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
     </Link>
+    <Lib>
+      <AdditionalOptions>/ignore:4221 %(AdditionalOptions)</AdditionalOptions>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -138,17 +145,21 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <Optimization>Full</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalIncludeDirectories>$(SolutionDir)win32_lib\edge;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
+    <Lib>
+      <AdditionalOptions>/ignore:4221 %(AdditionalOptions)</AdditionalOptions>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -156,17 +167,21 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <Optimization>Full</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalIncludeDirectories>$(SolutionDir)win32_lib\edge;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
+    <Lib>
+      <AdditionalOptions>/ignore:4221 %(AdditionalOptions)</AdditionalOptions>
+    </Lib>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

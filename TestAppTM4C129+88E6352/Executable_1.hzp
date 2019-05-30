@@ -1,0 +1,138 @@
+<!DOCTYPE CrossStudio_Project_File>
+<solution Name="Executable_1" target="8" version="2">
+  <project Name="Executable_1">
+    <configuration
+      CMSIS_CORE="Yes"
+      Name="Common"
+      Placement="Flash"
+      Target="TM4C1294KCPDT"
+      arm_architecture="v7EM"
+      arm_core_type="Cortex-M4"
+      arm_fp_abi="Hard"
+      arm_fpu_type="FPv4-SP-D16"
+      arm_gcc_target="arm-unknown-eabi"
+      arm_linker_heap_size="0"
+      arm_linker_process_stack_size="0"
+      arm_linker_stack_size="4096"
+      arm_simulator_memory_simulation_filename="$(TargetsDir)/TIVA/TIVASimulatorMemory.dll"
+      arm_simulator_memory_simulation_parameter="TM4C1294KCPDT;0x80000;0x40000"
+      arm_supply_absolute_file_path="No"
+      arm_target_debug_interface_type="ADIv5"
+      arm_target_loader_applicable_loaders="Flash"
+      arm_target_loader_default_loader="Flash"
+      arm_target_restrict_memory_accesses="Yes"
+      c_preprocessor_definitions="PART_TM4C1294KCPDT"
+      c_user_include_directories="$(ProjectDir);$(TargetsDir)/TIVA/Include"
+      debug_initial_breakpoint=""
+      debug_register_definition_file="$(TargetsDir)/TIVA/TM4C1294KCPDT.svd_Peripherals.xml"
+      gcc_c_language_standard="c11"
+      gcc_cplusplus_language_standard="c++11"
+      linker_memory_map_file="$(TargetsDir)/TIVA/TM4C1294KCPDT_MemoryMap.xml"
+      linker_output_format="bin"
+      linker_printf_fmt_level="long"
+      linker_printf_fp_enabled="Float"
+      linker_scanf_character_group_matching_enabled="No"
+      linker_scanf_fmt_level="long"
+      linker_scanf_fp_enabled="No"
+      linker_section_placement_file="$(StudioDir)/targets/Cortex_M/flash_placement.xml"
+      macros="FAMILY=TM4C129"
+      project_directory=""
+      project_type="Executable"
+      property_groups_file_path="$(TargetsDir)/TIVA/propertyGroups.xml"
+      target_get_partname_script="GetPartName()"
+      target_match_partname_script="MatchPartName(&quot;$(Target)&quot;)"
+      target_reset_script="Reset()"
+      target_script_file="$(TargetsDir)/TIVA/TIVA_Target.js" />
+    <configuration
+      Name="Flash"
+      arm_target_flash_loader_file_path="$(TargetsDir)/TIVA/Release/Loader.elf"
+      target_reset_script="FLASHReset()" />
+    <folder Name="System Files">
+      <file file_name="$(StudioDir)/source/thumb_crt0.s">
+        <configuration
+          Name="Common"
+          c_preprocessor_definitions="INITIALIZE_STACK" />
+      </file>
+      <file file_name="$(TargetsDir)/TIVA/TIVA_Startup.s">
+        <configuration
+          Name="Common"
+          c_preprocessor_definitions="STARTUP_FROM_RESET" />
+      </file>
+      <file file_name="$(TargetsDir)/TIVA/Source/system_$(FAMILY).c" />
+      <file file_name="$(TargetsDir)/TIVA/TM4C129.vec" />
+      <file file_name="$(TargetsDir)/TIVA/Include/TM4C1294KCPDT.h" />
+    </folder>
+    <file file_name="stp_hw_specific.cpp">
+      <configuration Name="Common" build_exclude_from_build="Yes" />
+    </file>
+    <file file_name="main.cpp" />
+    <file file_name="ethernet.cpp" />
+    <file file_name="ethernet.h" />
+    <file file_name="switch.cpp" />
+    <file file_name="switch.h" />
+    <file file_name="clock.cpp" />
+    <file file_name="clock.h" />
+    <folder Name="mstp-lib">
+      <file file_name="../mstp-lib/stp.h" />
+      <folder Name="internal">
+        <file file_name="../mstp-lib/internal/stp.cpp" />
+        <file file_name="../mstp-lib/internal/stp_base_types.cpp" />
+        <file file_name="../mstp-lib/internal/stp_base_types.h" />
+        <file file_name="../mstp-lib/internal/stp_bpdu.cpp" />
+        <file file_name="../mstp-lib/internal/stp_bpdu.h" />
+        <file file_name="../mstp-lib/internal/stp_bridge.h" />
+        <file file_name="../mstp-lib/internal/stp_log.cpp" />
+        <file file_name="../mstp-lib/internal/stp_log.h" />
+        <file file_name="../mstp-lib/internal/stp_md5.cpp" />
+        <file file_name="../mstp-lib/internal/stp_md5.h" />
+        <file file_name="../mstp-lib/internal/stp_port.h" />
+        <file file_name="../mstp-lib/internal/stp_procedures.cpp" />
+        <file file_name="../mstp-lib/internal/stp_procedures.h" />
+        <file file_name="../mstp-lib/internal/stp_sm_bridge_detection.cpp" />
+        <file file_name="../mstp-lib/internal/stp_sm_l2g_port_receive.cpp" />
+        <file file_name="../mstp-lib/internal/stp_sm_port_information.cpp" />
+        <file file_name="../mstp-lib/internal/stp_sm_port_protocol_migration.cpp" />
+        <file file_name="../mstp-lib/internal/stp_sm_port_receive.cpp" />
+        <file file_name="../mstp-lib/internal/stp_sm_port_role_selection.cpp" />
+        <file file_name="../mstp-lib/internal/stp_sm_port_role_transitions.cpp" />
+        <file file_name="../mstp-lib/internal/stp_sm_port_state_transition.cpp" />
+        <file file_name="../mstp-lib/internal/stp_sm_port_timers.cpp" />
+        <file file_name="../mstp-lib/internal/stp_sm_port_transmit.cpp" />
+        <file file_name="../mstp-lib/internal/stp_sm_topology_change.cpp" />
+        <file file_name="../mstp-lib/internal/stp_sm.h" />
+        <file file_name="../mstp-lib/internal/stp_conditions_and_params.cpp" />
+        <file file_name="../mstp-lib/internal/stp_conditions_and_params.h" />
+      </folder>
+    </folder>
+    <file file_name="smi.cpp" />
+    <file file_name="smi.h" />
+    <file file_name="test.c" />
+    <configuration
+      Name="clang"
+      arm_assembler_variant="clang"
+      arm_compiler_variant="clang" />
+    <configuration Name="Release" gcc_optimization_level="Optimize For Size" />
+    <configuration Name="Debug" gcc_optimization_level="Debug" />
+  </project>
+  <configuration Name="gcc Debug" inherited_configurations="Debug;gcc" />
+  <configuration
+    Name="Debug"
+    c_preprocessor_definitions="DEBUG"
+    gcc_debugging_level="Level 3"
+    gcc_omit_frame_pointer="Yes"
+    gcc_optimization_level="None"
+    hidden="Yes" />
+  <configuration
+    Name="Common"
+    arm_instruction_set="Thumb"
+    arm_library_instruction_set="Thumb"
+    c_preprocessor_definitions="_THUMB" />
+  <configuration Name="clang Debug" inherited_configurations="Debug;clang" />
+  <configuration Name="Release" hidden="Yes" />
+  <configuration
+    Name="clang Release"
+    inherited_configurations="Release;clang" />
+  <configuration Name="clang" hidden="Yes" />
+  <configuration Name="gcc" hidden="Yes" />
+  <configuration Name="gcc Release" inherited_configurations="gcc;Release" />
+</solution>

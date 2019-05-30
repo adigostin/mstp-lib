@@ -14,7 +14,8 @@ void StpCallback_FlushFdb
     const STP_BRIDGE*        bridge,
     unsigned int             portIndex,
     unsigned int             treeIndex,
-    enum STP_FLUSH_FDB_TYPE  flushType
+    enum STP_FLUSH_FDB_TYPE  flushType,
+    unsigned int             timestamp
 );
 </pre>
 	<h4>
@@ -40,6 +41,10 @@ void StpCallback_FlushFdb
 		<dt>flushType</dt>
 		<dd>The application receives in this parameter a value representing the type of flushing it
 			must perform. See the Remarks section for more information.</dd>
+		<dt>timestamp</dt>
+		<dd>The application receives in this parameter the timestamp that it passed to the function
+			that called this callback (STP_OnBpduReceived, STP_OnPortEnabled etc.)
+			Useful for debugging and troubleshooting.</dd>
 	</dl>
 	<h4>Remarks</h4>
 	<p>In complex networks, and especially in MSTP mode, the STP library can call

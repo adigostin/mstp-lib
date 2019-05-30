@@ -18,20 +18,20 @@ void STP_SetStpVersion
 	<h4>
 		Summary</h4>
 	<p>
-		Sets the STP version of the bridge, referenced to as &quot;ForceProtocolVersion&quot; in the STP 
+		Sets the STP version of the bridge, referred to as <em>ForceProtocolVersion</em> in the STP 
 		standard.</p>
 	<h4>
 		Parameters</h4>
 	<dl>
 		<dt>bridge</dt>
-		<dd>Pointer to a STP_BRIDGE object.</dd>
+		<dd>Pointer to an STP_BRIDGE object.</dd>
 		<dt>protocolVersion</dt>
 		<dd>One of the <a href="STP_VERSION.html">STP_VERSION</a> values.</dd>
 	</dl>
 	<h4>
 		Remarks</h4>
 	<p>
-		See §13.22.e) in 801.1Q-2011 for more information.</p>
+		See §13.7.2 in 801.1Q-2018 for more information.</p>
 	<p>
 			Execution of this function is a potentially lengthy process. 
 			It may call various callbacks multiple times.</p>

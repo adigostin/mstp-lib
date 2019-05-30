@@ -1,0 +1,53 @@
+﻿{
+  "configurations": [
+    {
+      "name": "IoT-Debug",
+      "generator": "Ninja",
+      "configurationType": "Debug",
+      "inheritEnvironments": [ "gcc-arm" ],
+      "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\build\\${name}",
+      "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "-v",
+      "ctestCommandArgs": "",
+      "intelliSenseMode": "linux-gcc-arm",
+      "variables": [
+        {
+          "name": "CMAKE_C_COMPILER",
+          "value": "arm-none-eabi-gcc.exe",
+          "type": "STRING"
+        },
+        {
+          "name": "CMAKE_CXX_COMPILER",
+          "value": "arm-none-eabi-g++.exe",
+          "type": "STRING"
+        },
+        {
+          "name": "CMAKE_C_FLAGS",
+          "value": "-nostartfiles",
+          "type": "STRING"
+        },
+        {
+          "name": "CMAKE_CXX_FLAGS",
+          "value": "-nostartfiles -fno-rtti -fno-exceptions",
+          "type": "STRING"
+        },
+        {
+          "name": "CMAKE_SYSTEM_NAME",
+          "value": "Generic",
+          "type": "STRING"
+        },
+        {
+          "name": "CMAKE_SYSTEM_PROCESSOR",
+          "value": "arm",
+          "type": "STRING"
+        },
+        {
+          "name": "CMAKE_CXX_STANDARD",
+          "value": "98",
+          "type": "STRING"
+        }
+      ]
+    }
+  ]
+}

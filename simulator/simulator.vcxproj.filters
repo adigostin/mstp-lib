@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="edit_states">
+      <UniqueIdentifier>{44c75b95-8381-4205-bb9c-ff949707452e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="wire.h" />
+    <ClInclude Include="edit_states\edit_state.h">
+      <Filter>edit_states</Filter>
+    </ClInclude>
+    <ClInclude Include="simulator.h" />
+    <ClInclude Include="renderable_object.h" />
+    <ClInclude Include="bridge.h" />
+    <ClInclude Include="bridge_tree.h" />
+    <ClInclude Include="port.h" />
+    <ClInclude Include="port_tree.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="pch.cpp" />
+    <ClCompile Include="project_window.cpp" />
+    <ClCompile Include="project.cpp" />
+    <ClCompile Include="edit_window.cpp" />
+    <ClCompile Include="simulator.cpp" />
+    <ClCompile Include="wire.cpp" />
+    <ClCompile Include="edit_states\beginning_drag_es.cpp">
+      <Filter>edit_states</Filter>
+    </ClCompile>
+    <ClCompile Include="edit_states\create_bridge_es.cpp">
+      <Filter>edit_states</Filter>
+    </ClCompile>
+    <ClCompile Include="log_window.cpp" />
+    <ClCompile Include="edit_states\create_wire_es.cpp">
+      <Filter>edit_states</Filter>
+    </ClCompile>
+    <ClCompile Include="edit_states\move_bridges_es.cpp">
+      <Filter>edit_states</Filter>
+    </ClCompile>
+    <ClCompile Include="mst_config_id_editor.cpp" />
+    <ClCompile Include="test.c" />
+    <ClCompile Include="edit_states\move_port_es.cpp">
+      <Filter>edit_states</Filter>
+    </ClCompile>
+    <ClCompile Include="edit_states\move_wire_point_es.cpp">
+      <Filter>edit_states</Filter>
+    </ClCompile>
+    <ClCompile Include="selection.cpp" />
+    <ClCompile Include="vlan_window.cpp" />
+    <ClCompile Include="bridge.cpp" />
+    <ClCompile Include="bridge_tree.cpp" />
+    <ClCompile Include="port.cpp" />
+    <ClCompile Include="port_tree.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="simulator.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="simulator.ico" />
+  </ItemGroup>
+</Project>
