@@ -577,6 +577,29 @@ static void RunStateMachines (STP_BRIDGE* bridge, unsigned int timestamp)
 
 static void RestartStateMachines (STP_BRIDGE* bridge, unsigned int timestamp)
 {
+	for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
+	{
+		PORT* port = bridge->ports[portIndex];
+		port->portTimersState            = (PortTimers::State)0;
+		port->portProtocolMigrationState = (PortProtocolMigration::State)0;
+		port->portReceiveState           = (PortReceive::State)0;
+		port->bridgeDetectionState       = (BridgeDetection::State)0;
+		port->l2gpState                  = (L2GPortReceive::State)0;
+		port->portTransmitState          = (PortTransmit::State)0;
+
+		for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount(); treeIndex++)
+		{
+			PORT_TREE* tree = port->trees[treeIndex];
+			tree->portInformationState     = (PortInformation::State)0;
+			tree->portRoleTransitionsState = (PortRoleTransitions::State)0;
+			tree->portStateTransitionState = (PortStateTransition::State)0;
+			tree->topologyChangeState      = (TopologyChange::State)0;
+		}
+	}
+
+	for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount(); treeIndex++)
+		bridge->trees[treeIndex]->portRoleSelectionState = (PortRoleSelection::State)0;
+
 	bridge->BEGIN = true;
 	RunStateMachines (bridge, timestamp);
 	bridge->BEGIN = false;

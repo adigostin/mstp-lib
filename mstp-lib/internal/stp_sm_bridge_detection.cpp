@@ -60,7 +60,7 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, Sta
 
 	if (state == NOT_EDGE)
 	{
-		// I changed this condition slightly because it was looping endlessly between EDGE and NOT_EDGE when disconnecting
+		// Note AG: I changed this condition slightly because it was looping endlessly between EDGE and NOT_EDGE when disconnecting
 		// from the root bridge a port that was connected to a non-stp device and already forwarding and whose AutoEdge was true.
 		// The condition specified in 802.1Q-2018 was:
 		//
@@ -83,7 +83,7 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, Sta
 
 	if (state == EDGE)
 	{
-		// I changed this condition slightly because it was looping endlessly between EDGE and NOT_EDGE when disconnecting
+		// Note AG: I changed this condition slightly because it was looping endlessly between EDGE and NOT_EDGE when disconnecting
 		// from the root bridge a port that was connected to a non-stp device and already forwarding and whose AutoEdge was true.
 		// The condition specified in 802.1Q-2018 was:
 		//
