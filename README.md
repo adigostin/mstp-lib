@@ -23,7 +23,7 @@ for a device with an LPC2000 microcontroller and an IP175C
 switch chip.
 
 This sample highlights the platform-specific
-code required by the library -- mostly code that writes to
+code required by STP -- mostly code that writes to
 a few hardware registers of the switch chip. To integrate
 the library in your embedded application, you'll need to
 write platform-specific code for your particular switch IC.
