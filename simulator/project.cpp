@@ -37,7 +37,7 @@ public:
 		static_cast<project_child*>(b)->on_added_to_project(this);
 		this->on_property_changed(args);
 
-		b->GetInvalidateEvent().add_handler (&OnObjectInvalidate, this);
+		b->invalidated().add_handler (&OnObjectInvalidate, this);
 		b->GetPacketTransmitEvent().add_handler (&OnPacketTransmit, this);
 		b->GetLinkPulseEvent().add_handler (&OnLinkPulse, this);
 		this->event_invoker<invalidate_e>()(this);
@@ -58,7 +58,7 @@ public:
 
 		b->GetLinkPulseEvent().remove_handler (&OnLinkPulse, this);
 		b->GetPacketTransmitEvent().remove_handler (&OnPacketTransmit, this);
-		b->GetInvalidateEvent().remove_handler (&OnObjectInvalidate, this);
+		b->invalidated().remove_handler (&OnObjectInvalidate, this);
 
 		property_change_args args = { &bridges_property, index, collection_property_change_type::remove };
 		this->on_property_changing(args);
@@ -85,7 +85,7 @@ public:
 		static_cast<project_child*>(w)->on_added_to_project(this);
 		this->on_property_changed(args);
 
-		w->GetInvalidateEvent().add_handler (&OnObjectInvalidate, this);
+		w->invalidated().add_handler (&OnObjectInvalidate, this);
 		this->event_invoker<invalidate_e>()(this);
 	}
 
@@ -95,7 +95,7 @@ public:
 		wire* w = _wires[index].get();
 		assert(w->_project == this);
 
-		_wires[index]->GetInvalidateEvent().remove_handler (&OnObjectInvalidate, this);
+		_wires[index]->invalidated().remove_handler (&OnObjectInvalidate, this);
 
 		property_change_args args = { &wires_property, index, collection_property_change_type::remove };
 		this->on_property_changing (args);
@@ -135,9 +135,9 @@ public:
 		project->event_invoker<invalidate_e>()(project);
 	}
 
-	virtual invalidate_e::subscriber GetInvalidateEvent() override final { return invalidate_e::subscriber(this); }
+	virtual invalidate_e::subscriber invalidated() override final { return invalidate_e::subscriber(this); }
 
-	virtual LoadedEvent::subscriber GetLoadedEvent() override final { return LoadedEvent::subscriber(this); }
+	virtual loaded_e::subscriber GetLoadedEvent() override final { return loaded_e::subscriber(this); }
 
 	virtual bool IsWireForwarding (wire* wire, unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const override final
 	{
@@ -191,7 +191,7 @@ public:
 		return true;
 	}
 
-	virtual mac_address AllocMacAddressRange (size_t count) override final
+	virtual mac_address alloc_mac_address_range (size_t count) override final
 	{
 		if (count >= 128)
 			throw range_error("count must be lower than 128.");
@@ -208,7 +208,7 @@ public:
 		return result;
 	}
 
-	virtual const std::wstring& GetFilePath() const override final { return _path; }
+	virtual const std::wstring& file_path() const override final { return _path; }
 
 	virtual HRESULT save (const wchar_t* filePath) override final
 	{
@@ -310,7 +310,7 @@ public:
 		deserialize_to (projectElement, this);
 
 		_path = filePath;
-		this->event_invoker<LoadedEvent>()(this);
+		this->event_invoker<loaded_e>()(this);
 		return S_OK;
 	}
 

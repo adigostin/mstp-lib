@@ -28,7 +28,7 @@ class create_bridge_es : public edit_state
 		if (_bridge != nullptr)
 		{
 			size_t number_of_addresses_to_reserve = (_bridge->port_count() + 15) / 16 * 16;
-			auto bridge_address = _project->AllocMacAddressRange(number_of_addresses_to_reserve);
+			auto bridge_address = _project->alloc_mac_address_range(number_of_addresses_to_reserve);
 			auto b = std::make_unique<bridge>(_bridge->port_count(), _bridge->msti_count(), bridge_address);
 			b->set_stp_enabled(true);
 			b->SetLocation(_bridge->GetLocation());

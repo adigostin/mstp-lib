@@ -150,13 +150,13 @@ bridge::bridge (size_t port_count, size_t msti_count, mac_address macAddress)
 	STP_SetApplicationContext (_stpBridge, this);
 
 	for (auto& port : _ports)
-		port->GetInvalidateEvent().add_handler(&OnPortInvalidate, this);
+		port->invalidated().add_handler(&OnPortInvalidate, this);
 }
 
 bridge::~bridge()
 {
 	for (auto& port : _ports)
-		port->GetInvalidateEvent().remove_handler(&OnPortInvalidate, this);
+		port->invalidated().remove_handler(&OnPortInvalidate, this);
 	STP_DestroyBridge (_stpBridge);
 }
 
