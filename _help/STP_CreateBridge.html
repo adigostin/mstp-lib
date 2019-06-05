@@ -23,14 +23,14 @@
 	<h4>Parameters</h4>
 	<dl>
 		<dt>portCount</dt>
-		<dd>The maximum number of ports this bridge will have. Usually equal to the number of physical ports
-			present on the device.<br /><br />
+		<dd>The maximum number of ports this bridge will have. Usually equal to the number 
+			of physical ports present on the device, minus the management port.<br /><br />
 			See the Remarks section for information about changing the number
 			of ports at runtime.</dd>
 		<dt>mstiCount</dt>
 		<dd>Maximum number of MSTIs for when the device runs MSTP (this is in addition to the CIST, which is always present).
-			Should be zero if your device supports only STP/RSTP, or 2..64 if your device supports also MSTP 
-			(See Annex A.18, Item MSTP-1 in 802.1Q-2018). Passing an invalid value will cause an assertion failure in the function.
+			Should be zero if your device supports only STP/RSTP, or 0..64 if your device supports also MSTP.
+			Passing an invalid value will cause an assertion failure in the function.
 		</dd>
         <dt>maxVlanNumber</dt>
         <dd>The maximum VLAN number your device supports, or otherwise zero. The library uses this to determine the size of an&nbsp;
@@ -84,7 +84,7 @@
 	</p>
 	<p>
 		Logging of debug text is disabled when this function returns.
-		The application can explicitly enable it
+		The application can enable it
 		with <a href="STP_EnableLogging.html">STP_EnableLogging</a>.</p>
 	<p>
 		This function creates a default MST Configuration Identifier as
@@ -94,8 +94,7 @@
 		<li><em>ConfigurationName</em> is generated from the <code>bridgeAddress</code> parameter and has the
 			format aa:bb:cc:dd:ee:ff. The library will <em>not</em> update this default name if the
 			application later changes the MAC address of the bridge with <a href="STP_SetBridgeAddress.html">STP_SetBridgeAddress</a>.
-			If the application needs MSTP functionality, it should change this default name to
-			something meaningful by calling
+			The application can later change this name by calling
 			<a href="STP_SetMstConfigName.html">STP_SetMstConfigName</a>.&nbsp; </li>
 		<li><em>RevisionLevel</em> is zero.</li>
 		<li><em>ConfigurationDigest</em> is 0xAC36177F50283CD4B83821D8AB26DE62, which corresponds to
