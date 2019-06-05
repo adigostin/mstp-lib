@@ -180,7 +180,9 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="bridge_tests.cpp" />
+    <ClCompile Include="port_tests.cpp" />
     <ClCompile Include="project_tests.cpp" />
+    <ClCompile Include="test_helpers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="test_helpers.h" />
