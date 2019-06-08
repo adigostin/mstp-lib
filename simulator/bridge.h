@@ -61,7 +61,7 @@ class bridge : public project_child
 	std::vector<std::unique_ptr<bridge_tree>> _trees;
 
 	// Let's keep things simple and do everything on the GUI thread.
-	struct HelperWindow : edge::event_manager
+	struct HelperWindow
 	{
 		bridge* const _bridge;
 		HWND _hwnd;
