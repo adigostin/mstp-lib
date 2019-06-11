@@ -289,7 +289,7 @@ void port::render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned
 	hr = layout->GetLineMetrics(&lineMetrics, 1, &actualLineCount); assert(SUCCEEDED(hr));
 	rt->DrawTextLayout ({ -metrics.width / 2, -lineMetrics.baseline - OutlineWidth * 2 - 1}, layout, dos._brushWindowText);
 	
-	if (_trees[treeIndex]->fdb_flush_text_visible)
+	if (_trees[treeIndex]->fdb_flush_text_visible())
 	{
 		hr = dos._dWriteFactory->CreateTextLayout (L"Flush", 5, dos._smallBoldTextFormat, 10000, 10000, &layout); assert(SUCCEEDED(hr));
 		hr = layout->GetMetrics(&metrics); assert(SUCCEEDED(hr));
