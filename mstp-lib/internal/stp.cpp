@@ -733,11 +733,11 @@ void STP_SetBridgePriority (STP_BRIDGE* bridge, unsigned int treeIndex, unsigned
 	LOG (bridge, -1, -1, "{T}: Setting bridge priority: tree {TN} prio = {D}...\r\n", timestamp, treeIndex, bridgePriority);
 
 	BRIDGE_ID bid = bridge->trees[treeIndex]->GetBridgeIdentifier();
-	if (bid.GetPriority() != bridgePriority)
+	if (bid.GetPriorityWithoutMstid() != bridgePriority)
 	{
 		LOG (bridge, -1, -1, "\r\n");
 
-		bid.SetPriority(bridgePriority, treeIndex);
+		bid.SetPriorityAndMstid(bridgePriority, treeIndex);
 		bridge->trees[treeIndex]->SetBridgeIdentifier(bid);
 
 		if (bridge->started && (treeIndex < bridge->treeCount()))
@@ -754,7 +754,7 @@ unsigned short STP_GetBridgePriority (const STP_BRIDGE* bridge, unsigned int tre
 {
 	assert (treeIndex <= bridge->mstiCount);
 
-	return bridge->trees [treeIndex]->GetBridgeIdentifier ().GetPriority () & 0xF000;
+	return bridge->trees [treeIndex]->GetBridgeIdentifier().GetPriorityWithoutMstid();
 }
 
 // ============================================================================

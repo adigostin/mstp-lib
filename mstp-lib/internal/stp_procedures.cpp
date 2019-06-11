@@ -418,7 +418,7 @@ void rcvMsgs (STP_BRIDGE* bridge, PortIndex givenPort)
 			// portTree->msgPriority.ExternalRootPathCost
 			portTree->msgPriority.RegionalRootId		= message->RegionalRootId;
 			portTree->msgPriority.InternalRootPathCost	= message->InternalRootPathCost;
-			portTree->msgPriority.DesignatedBridgeId.SetPriority (message->BridgePriority << 8, (unsigned short)mstid); // 14.2.5 in 802.1Q-2018
+			portTree->msgPriority.DesignatedBridgeId.SetPriorityAndMstid (message->BridgePriority << 8, (unsigned short)mstid); // 14.2.5 in 802.1Q-2018
 			portTree->msgPriority.DesignatedBridgeId.SetAddress (bridge->receivedBpduContent->cistBridgeId.GetAddress().bytes);
 			portTree->msgPriority.DesignatedPortId.Set (message->PortPriority & 0xF0, bridge->receivedBpduContent->cistPortId.GetPortNumber());
 
@@ -961,7 +961,7 @@ void txRstp (STP_BRIDGE* bridge, PortIndex givenPort, unsigned int timestamp)
 
 		// octet 94 to 101 - 14.4.t) in 802.1Q-2018
 		bpdu->cistBridgeId = cistTree->designatedPriority.DesignatedBridgeId;
-		bpdu->cistBridgeId.SetPriority (bpdu->cistBridgeId.GetPriority(), 0);
+		bpdu->cistBridgeId.SetPriorityAndMstid (bpdu->cistBridgeId.GetPriorityWithoutMstid(), 0);
 
 		// octet 102 - 14.4.u) in 802.1Q-2018
 		bpdu->cistRemainingHops = cistTree->designatedTimes.remainingHops;
@@ -997,7 +997,7 @@ void txRstp (STP_BRIDGE* bridge, PortIndex givenPort, unsigned int timestamp)
 			// b) to e)
 			mstiMessage->RegionalRootId       = tree->designatedPriority.RegionalRootId;
 			mstiMessage->InternalRootPathCost = tree->designatedPriority.InternalRootPathCost;
-			mstiMessage->BridgePriority       = bridge->trees[1 + mstiIndex]->GetBridgeIdentifier().GetPriority() >> 8;
+			mstiMessage->BridgePriority       = bridge->trees[1 + mstiIndex]->GetBridgeIdentifier().GetPriorityWithoutMstid() >> 8;
 			mstiMessage->PortPriority         = tree->portId.GetPriority();
 			// f)
 			mstiMessage->RemainingHops        = tree->designatedTimes.remainingHops;

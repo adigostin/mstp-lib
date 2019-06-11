@@ -128,7 +128,7 @@ void STP_Log (STP_BRIDGE* bridge, int port, int tree, const char* format, ...)
 		if (strncmp (format, "{BID}", 5) == 0)
 		{
 			const BRIDGE_ID* bid = va_arg (ap, BRIDGE_ID*);
-			STP_Log (bridge, port, tree, "{X4}.{BA}", bid->GetPriority (), &bid->GetAddress ());
+			STP_Log (bridge, port, tree, "{X4}.{BA}", bid->GetPriorityAndMstid(), &bid->GetAddress());
 			format += 5;
 		}
 		else if (strncmp (format, "{PID}", 5) == 0)

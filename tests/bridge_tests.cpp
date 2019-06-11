@@ -165,4 +165,21 @@ public:
 		STP_DestroyBridge (bridge0);
 		STP_DestroyBridge (bridge1);
 	}
+
+	TEST_METHOD(test_designated_bridge_priority_on_msti)
+	{
+		auto callbacks = default_callbacks();
+		uint8_t address[] = { 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 };
+		auto bridge = STP_CreateBridge (4, 4, 16, &callbacks, address, 2);
+		STP_SetStpVersion (bridge, STP_VERSION_MSTP, 0);
+		STP_SetBridgePriority (bridge, 1, 0x6000, 0);
+		STP_StartBridge (bridge, 0);
+
+		// First 8 bytes are RootId and for MSTIs must always be zero (see definition of PRIORITY_VECTOR in stp_base_types.h)
+		unsigned char rpv[36];
+		STP_GetRootPriorityVector(bridge, 1, rpv);
+		uint64_t root_id;
+		memcpy (&root_id, rpv, 8);
+		Assert::AreEqual (0ull, root_id);
+	}
 };

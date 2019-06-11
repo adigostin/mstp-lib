@@ -24,12 +24,12 @@ public:
 	TIMES					rootTimes;			// 13.26.j) - 13.26.11
 
 private:
-	void UpdateBridgePriorityFromBridgeIdentifier ()
+	void UpdateBridgePriorityFromBridgeIdentifier()
 	{
 		// Note: ExternalRootPathCost, InternalRootPathCost and DesignatedPortId are always zero
 		// in the BridgePriority field, so there's no need to assign them.
 
-		TreeIndex treeIndex = (TreeIndex) (BridgeIdentifier.GetPriority() & 0x0FFF);
+		uint16_t treeIndex = BridgeIdentifier.GetMstid();
 		if (treeIndex == CIST_INDEX)
 		{
 			BridgePriority.RootId = BridgeIdentifier;
@@ -56,7 +56,8 @@ public:
 
 	void SetBridgeIdentifier (unsigned short settablePriorityComponent, unsigned short treeIndex, const unsigned char address[6])
 	{
-		BridgeIdentifier.Set (settablePriorityComponent, treeIndex, address);
+		BridgeIdentifier.SetPriorityAndMstid (settablePriorityComponent, treeIndex);
+		BridgeIdentifier.SetAddress (address);
 		UpdateBridgePriorityFromBridgeIdentifier();
 	}
 
