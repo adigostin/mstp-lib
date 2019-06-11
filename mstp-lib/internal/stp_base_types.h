@@ -93,13 +93,13 @@ public:
 struct BRIDGE_ID
 {
 private:
-	uint16_nbo         _priority;
+	uint16_nbo         _priorityAndMstid;
 	STP_BRIDGE_ADDRESS _address;
 
 public:
 	bool operator== (const BRIDGE_ID& rhs) const
 	{
-		return ((this->_priority == rhs._priority) && (this->_address == rhs._address));
+		return ((this->_priorityAndMstid == rhs._priorityAndMstid) && (this->_address == rhs._address));
 	}
 
 	bool operator != (const BRIDGE_ID& rhs) const
@@ -107,11 +107,11 @@ public:
 		return !this->operator== (rhs);
 	}
 
-	void SetPriority (unsigned short settablePriorityComponent, unsigned short mstid)
+	void SetPriorityAndMstid (uint16_t settablePriorityComponent, uint16_t mstid)
 	{
 		assert ((settablePriorityComponent & 0x0FFF) == 0);
 
-		_priority = settablePriorityComponent | mstid;
+		_priorityAndMstid = settablePriorityComponent | mstid;
 	}
 
 	void SetAddress (const unsigned char address[6])
@@ -124,21 +124,13 @@ public:
 		_address.bytes[5] = address[5];
 	}
 
-	void Set (unsigned short settablePriorityComponent, unsigned short mstid, const unsigned char address[6])
-	{
-		SetPriority (settablePriorityComponent, mstid);
-		SetAddress (address);
-	}
+	uint16_t GetPriorityAndMstid() const { return _priorityAndMstid; }
 
-	unsigned short GetPriority() const
-	{
-		return _priority & 0xF000;
-	}
+	uint16_t GetPriorityWithoutMstid() const { return _priorityAndMstid & 0xF000; }
 
-	const STP_BRIDGE_ADDRESS& GetAddress() const
-	{
-		return _address;
-	}
+	uint16_t GetMstid() const { return _priorityAndMstid & 0x0FFF; }
+
+	const STP_BRIDGE_ADDRESS& GetAddress() const { return _address; }
 };
 
 // ============================================================================
