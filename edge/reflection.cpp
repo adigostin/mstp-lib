@@ -98,4 +98,6 @@ namespace edge
 		to = value;
 		return true;
 	}
+
+	const char unknown_enum_value_str[] = "(unknown)";
 }

@@ -19,7 +19,6 @@ static inline const edge::NVP stp_version_nvps[] =  {
 static constexpr char stp_version_type_name[] = "stp_version";
 using stp_version_p = edge::enum_property<STP_VERSION, stp_version_type_name, stp_version_nvps>;
 
-using mac_address = std::array<uint8_t, 6>;
 std::string mac_address_to_string (mac_address from);
 template<typename char_type> bool mac_address_from_string (std::basic_string_view<char_type> from, mac_address& to);
 struct mac_address_property_traits
@@ -57,26 +56,15 @@ class bridge : public project_child
 	static const STP_CALLBACKS StpCallbacks;
 	std::vector<std::unique_ptr<BridgeLogLine>> _logLines;
 	BridgeLogLine _currentLogLine;
-	std::queue<std::pair<size_t, PacketInfo>> _rxQueue;
+	std::queue<std::pair<size_t, packet_t>> _rxQueue;
 	std::vector<std::unique_ptr<bridge_tree>> _trees;
 
 	// Let's keep things simple and do everything on the GUI thread.
-	struct HelperWindow
-	{
-		bridge* const _bridge;
-		HWND _hwnd;
-		HANDLE _linkPulseTimerHandle;
-		HANDLE _oneSecondTimerHandle;
-
-		HelperWindow (bridge* bridge);
-		~HelperWindow();
-
-		static LRESULT CALLBACK SubclassProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
-	};
-
-	friend HelperWindow;
-
-	std::unique_ptr<HelperWindow> _helper_window = nullptr;
+	static HINSTANCE _hinstance;
+	static UINT_PTR _link_pulse_timer_id;
+	static UINT_PTR _one_second_timer_id;
+	static std::unordered_set<bridge*> _created_bridges;
+	HWND _helper_window = nullptr;
 
 	// variables used by TransmitGetBuffer/ReleaseBuffer
 	std::vector<uint8_t> _txPacketData;
@@ -119,16 +107,13 @@ public:
 
 	struct LogLineGenerated : public edge::event<LogLineGenerated, bridge*, const BridgeLogLine*> { };
 	struct log_cleared_e : public edge::event<log_cleared_e, bridge*> { };
-	struct LinkPulseEvent : public edge::event<LinkPulseEvent, bridge*, size_t, unsigned int> { };
-	struct PacketTransmitEvent : public edge::event<PacketTransmitEvent, bridge*, size_t, PacketInfo&&> { };
+	struct packet_transmit_e : public edge::event<packet_transmit_e, bridge*, size_t, packet_t&&> { };
 
 	LogLineGenerated::subscriber GetLogLineGeneratedEvent() { return LogLineGenerated::subscriber(this); }
 	log_cleared_e::subscriber log_cleared() { return log_cleared_e::subscriber(this); }
-	LinkPulseEvent::subscriber GetLinkPulseEvent() { return LinkPulseEvent::subscriber(this); }
-	PacketTransmitEvent::subscriber GetPacketTransmitEvent() { return PacketTransmitEvent::subscriber(this); }
+	packet_transmit_e::subscriber packet_transmit() { return packet_transmit_e::subscriber(this); }
 
-	void ProcessLinkPulse (size_t rxPortIndex, unsigned int timestamp);
-	void EnqueuePacket (PacketInfo&& packet, size_t rxPortIndex);
+	void enqueue_received_packet (packet_t&& packet, size_t rxPortIndex);
 
 	const std::vector<std::unique_ptr<BridgeLogLine>>& GetLogLines() const { return _logLines; }
 	void clear_log();
@@ -156,9 +141,6 @@ public:
 	uint32_t tx_hold_count() const { return STP_GetTxHoldCount(_stpBridge); }
 	void set_tx_hold_count (uint32_t value);
 private:
-	virtual void on_added_to_project(project_i* project) override;
-	virtual void on_removing_from_project(project_i* project) override;
-
 	static void OnPortInvalidate (void* callbackArg, renderable_object* object);
 	void OnLinkPulseTick();
 	void ProcessReceivedPackets();

@@ -29,6 +29,16 @@ const edge::NVP admin_p2p_nvps[] =
 	{ 0, 0 },
 };
 
+const char port_speed_type_name[] = "port_speed";
+const char port_speed_unknown_str[] = "(none)";
+const edge::NVP port_speed_nvps[] = {
+	{  "10M",    10 },
+	{ "100M",   100 },
+	{   "1G",  1000 },
+	{  "10G", 10000 },
+	{ 0, 0 },
+};
+
 port::port (class bridge* bridge, size_t port_index, enum side side, float offset)
 	: _bridge(bridge), _port_index(port_index), _side(side), _offset(offset)
 {
@@ -270,12 +280,12 @@ void port::render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned
 			interiorPortOutlineWidth *= 2;
 	}
 	else
-		RenderExteriorNonStpPort(rt, dos, GetMacOperational());
+		RenderExteriorNonStpPort(rt, dos, mac_operational());
 
 	// Draw the interior of the port.
 	auto portRect = D2D1_RECT_F { -InteriorWidth / 2, -InteriorDepth, InteriorWidth / 2, 0 };
 	InflateRect (&portRect, -interiorPortOutlineWidth / 2);
-	rt->FillRectangle (&portRect, GetMacOperational() ? dos._poweredFillBrush : dos._unpoweredBrush);
+	rt->FillRectangle (&portRect, mac_operational() ? dos._poweredFillBrush : dos._unpoweredBrush);
 	rt->DrawRectangle (&portRect, dos._brushWindowText, interiorPortOutlineWidth);
 
 	com_ptr<IDWriteTextLayout> layout;
@@ -378,10 +388,7 @@ void port::SetSideAndOffset (enum side side, float offset)
 	}
 }
 
-bool port::GetMacOperational() const
-{
-	return _missedLinkPulseCounter < MissedLinkPulseCounterMax;
-}
+bool port::mac_operational() const { return _actual_speed > 0; }
 
 bool port::auto_edge() const
 {
@@ -438,6 +445,32 @@ STP_ADMIN_P2P port::admin_p2p() const
 	return STP_GetAdminPointToPointMAC(_bridge->stp_bridge(), (unsigned int)_port_index);
 }
 
+void port::set_supported_speed (uint32_t value)
+{
+	if (_supported_speed != value)
+	{
+		this->on_property_changing (&supported_speed_property);
+		_supported_speed = value;
+		this->on_property_changed (&supported_speed_property);
+	};
+}
+
+void port::set_actual_speed (uint32_t value)
+{
+	if (_actual_speed != value)
+	{
+		// The actual speed should either be transitioning from zero to non-zero (MAC_Operational becoming True),
+		// or it should be transitioning from non-zero to zero (MAC_Operational becoming False).
+		assert (_actual_speed ^ value);
+
+		this->on_property_changing (&actual_speed_property);
+		this->on_property_changing (&mac_operational_property);
+		_actual_speed = value;
+		this->on_property_changed (&mac_operational_property);
+		this->on_property_changed (&actual_speed_property);
+	}
+}
+
 void port::set_admin_p2p (STP_ADMIN_P2P admin_p2p)
 {
 	this->on_property_changing (&admin_p2p_property);
@@ -464,6 +497,22 @@ const edge::float_p port::offset_property {
 	static_cast<float_p::member_getter_t>(&offset),
 	static_cast<float_p::member_setter_t>(&set_offset),
 	std::nullopt,
+};
+
+static const edge::property_group link_group = { -1, "Link" };
+
+const port_speed_p port::supported_speed_property {
+	"SupportedSpeed", &link_group, "Maximum supported speed. The Simulator reads this at the instant the link is established (cable connected).", ui_visible::yes,
+	static_cast<port_speed_p::member_getter_t>(&port::supported_speed),
+	static_cast<port_speed_p::member_setter_t>(&port::set_supported_speed),
+	100
+};
+
+const port_speed_p port::actual_speed_property {
+	"ActualSpeed", &link_group, "Actual speed in megabits per second, calculated when a link is established as a minimum between this port's and remote port's SupportedSpeed properties, and passed to STP for port path cost calculation.", ui_visible::yes,
+	static_cast<port_speed_p::member_var_t>(&port::_actual_speed),
+	nullptr,
+	std::nullopt
 };
 
 const bool_p port::auto_edge_property {
@@ -495,12 +544,12 @@ const bool_p port::admin_edge_property {
 	false,
 };
 
-const bool_p port::MacOperational {
+const bool_p port::mac_operational_property {
 	"MAC_Operational",
-	nullptr,
+	&link_group,
 	nullptr,
 	ui_visible::yes,
-	static_cast<bool_p::member_getter_t>(&GetMacOperational),
+	static_cast<bool_p::member_getter_t>(&mac_operational),
 	nullptr,
 	false,
 };
@@ -537,11 +586,9 @@ const uint32_p port::ExternalPortPathCost {
 	0,
 };
 
-static const edge::property_group p2p_group = { 4, "Point to Point" };
-
 const bool_p port::detected_p2p_property {
 	"detectedPointToPointMAC",
-	&p2p_group,
+	&link_group,
 	nullptr,
 	ui_visible::yes,
 	static_cast<bool_p::member_getter_t>(&detected_p2p),
@@ -551,7 +598,7 @@ const bool_p port::detected_p2p_property {
 
 const admin_p2p_p port::admin_p2p_property {
 	"adminPointToPointMAC",
-	&p2p_group,
+	&link_group,
 	nullptr,
 	ui_visible::yes,
 	static_cast<admin_p2p_p::member_getter_t>(&admin_p2p),
@@ -561,7 +608,7 @@ const admin_p2p_p port::admin_p2p_property {
 
 const edge::bool_p port::oper_p2p_property {
 	"operPointToPointMAC",
-	&p2p_group,
+	&link_group,
 	nullptr,
 	ui_visible::yes,
 	static_cast<bool_p::member_getter_t>(&oper_p2p),
@@ -578,9 +625,11 @@ const edge::property* const port::_properties[] =
 {
 	&side_property,
 	&offset_property,
+	&supported_speed_property,
+	&actual_speed_property,
 	&auto_edge_property,
 	&admin_edge_property,
-	&MacOperational,
+	&mac_operational_property,
 	&DetectedPortPathCost,
 	&AdminExternalPortPathCost,
 	&ExternalPortPathCost,

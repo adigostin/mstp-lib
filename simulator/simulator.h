@@ -175,7 +175,7 @@ struct __declspec(novtable) project_i
 	virtual property_changed_e::subscriber property_changed() = 0;
 
 	std::pair<wire*, size_t> GetWireConnectedToPort (const port* port) const;
-	port* FindConnectedPort (port* txPort) const;
+	port* find_connected_port (port* txPort) const;
 	std::unique_ptr<wire> remove_wire (wire* w);
 	std::unique_ptr<bridge> remove_bridge (bridge* b);
 };
