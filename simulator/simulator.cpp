@@ -324,3 +324,11 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 
 	return processExitValue;
 }
+
+namespace natvis
+{
+	struct hex_dummy_low { unsigned char c; };
+	struct hex_dummy_high { unsigned char c; };	
+	static volatile hex_dummy_low dummylo;
+	static volatile hex_dummy_high dummyhi;
+}
