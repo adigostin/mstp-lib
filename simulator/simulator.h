@@ -145,7 +145,7 @@ struct __declspec(novtable) project_i
 	virtual ~project_i() { }
 
 	struct invalidate_e : public edge::event<invalidate_e, project_i*> { };
-	struct LoadedEvent : public edge::event<LoadedEvent, project_i*> { };
+	struct loaded_e : public edge::event<loaded_e, project_i*> { };
 	struct ChangedFlagChangedEvent : public edge::event<ChangedFlagChangedEvent, project_i*> { };
 	struct ChangedEvent : public edge::event<ChangedEvent, project_i*> { };
 
@@ -155,10 +155,10 @@ struct __declspec(novtable) project_i
 	virtual const std::vector<std::unique_ptr<wire>>& wires() const = 0;
 	virtual void insert_wire (size_t index, std::unique_ptr<wire>&& wire) = 0;
 	virtual std::unique_ptr<wire> remove_wire (size_t index) = 0;
-	virtual invalidate_e::subscriber GetInvalidateEvent() = 0;
-	virtual LoadedEvent::subscriber GetLoadedEvent() = 0;
-	virtual mac_address AllocMacAddressRange (size_t count) = 0;
-	virtual const std::wstring& GetFilePath() const = 0;
+	virtual invalidate_e::subscriber invalidated() = 0;
+	virtual loaded_e::subscriber GetLoadedEvent() = 0;
+	virtual mac_address alloc_mac_address_range (size_t count) = 0;
+	virtual const std::wstring& file_path() const = 0;
 	virtual HRESULT save (const wchar_t* filePath) = 0;
 	virtual HRESULT load (const wchar_t* filePath) = 0;
 	virtual bool IsWireForwarding (wire* wire, uint32_t vlanNumber, _Out_opt_ bool* hasLoop) const = 0;
@@ -175,7 +175,7 @@ struct __declspec(novtable) project_i
 	virtual property_changed_e::subscriber property_changed() = 0;
 
 	std::pair<wire*, size_t> GetWireConnectedToPort (const port* port) const;
-	port* FindConnectedPort (port* txPort) const;
+	port* find_connected_port (port* txPort) const;
 	std::unique_ptr<wire> remove_wire (wire* w);
 	std::unique_ptr<bridge> remove_bridge (bridge* b);
 };

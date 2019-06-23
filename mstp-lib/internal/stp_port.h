@@ -79,6 +79,9 @@ struct PORT_TREE
 	unsigned short rcvdInfoWhile;	// i) - 13.25.6
 	unsigned short tcDetected;		// j) - 13.25.8
 
+	// Not in the standard. Used by STP_Get/SetAdminInternalPortPathCost.
+	unsigned int adminInternalPortPathCost;
+
 	PortInformation::State     portInformationState;
 	PortRoleTransitions::State portRoleTransitionsState;
 	PortStateTransition::State portStateTransitionState;
@@ -173,7 +176,7 @@ struct PORT
 	// See also detectedPointToPointMAC.
 	unsigned int detectedPortPathCost;
 
-	// Not in the standard. Stores ieee8021SpanningTreeRstpPortAdminPathCost / ieee8021MstpCistPortAdminPathCost
+	// Not in the standard. Used by STP_Get/SetAdminExternalPortPathCost.
 	unsigned int adminExternalPortPathCost;
 
 	PortTimers::State            portTimersState;

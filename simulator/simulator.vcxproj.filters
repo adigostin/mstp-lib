@@ -61,4 +61,7 @@
   <ItemGroup>
     <Image Include="simulator.ico" />
   </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="simulator.natvis" />
+  </ItemGroup>
 </Project>

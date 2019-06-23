@@ -37,9 +37,8 @@ public:
 		static_cast<project_child*>(b)->on_added_to_project(this);
 		this->on_property_changed(args);
 
-		b->GetInvalidateEvent().add_handler (&OnObjectInvalidate, this);
-		b->GetPacketTransmitEvent().add_handler (&OnPacketTransmit, this);
-		b->GetLinkPulseEvent().add_handler (&OnLinkPulse, this);
+		b->invalidated().add_handler (&on_project_child_invalidated, this);
+		b->packet_transmit().add_handler (&on_packet_transmit, this);
 		this->event_invoker<invalidate_e>()(this);
 	}
 
@@ -56,9 +55,8 @@ public:
 		}))
 			assert(false); // can't remove a connected bridge
 
-		b->GetLinkPulseEvent().remove_handler (&OnLinkPulse, this);
-		b->GetPacketTransmitEvent().remove_handler (&OnPacketTransmit, this);
-		b->GetInvalidateEvent().remove_handler (&OnObjectInvalidate, this);
+		b->packet_transmit().remove_handler (&on_packet_transmit, this);
+		b->invalidated().remove_handler (&on_project_child_invalidated, this);
 
 		property_change_args args = { &bridges_property, index, collection_property_change_type::remove };
 		this->on_property_changing(args);
@@ -85,7 +83,7 @@ public:
 		static_cast<project_child*>(w)->on_added_to_project(this);
 		this->on_property_changed(args);
 
-		w->GetInvalidateEvent().add_handler (&OnObjectInvalidate, this);
+		w->invalidated().add_handler (&on_project_child_invalidated, this);
 		this->event_invoker<invalidate_e>()(this);
 	}
 
@@ -95,7 +93,7 @@ public:
 		wire* w = _wires[index].get();
 		assert(w->_project == this);
 
-		_wires[index]->GetInvalidateEvent().remove_handler (&OnObjectInvalidate, this);
+		_wires[index]->invalidated().remove_handler (&on_project_child_invalidated, this);
 
 		property_change_args args = { &wires_property, index, collection_property_change_type::remove };
 		this->on_property_changing (args);
@@ -108,36 +106,24 @@ public:
 		return result;
 	}
 
-	static void OnPacketTransmit (void* callbackArg, bridge* bridge, size_t txPortIndex, PacketInfo&& pi)
+	static void on_packet_transmit (void* callbackArg, bridge* bridge, size_t txPortIndex, packet_t&& pi)
 	{
 		auto project = static_cast<class project*>(callbackArg);
-		auto txPort = bridge->ports().at(txPortIndex).get();
-		auto rxPort = project->FindConnectedPort(txPort);
-		if (rxPort != nullptr)
-		{
-			pi.txPortPath.push_back (bridge->GetPortAddress(txPortIndex));
-			rxPort->bridge()->EnqueuePacket(move(pi), rxPort->port_index());
-		}
+		auto tx_port = bridge->ports().at(txPortIndex).get();
+		auto rx_port = project->find_connected_port(tx_port);
+		if (rx_port != nullptr)
+			rx_port->bridge()->enqueue_received_packet(std::move(pi), rx_port->port_index());
 	}
 
-	static void OnLinkPulse (void* callbackArg, bridge* bridge, size_t txPortIndex, unsigned int timestamp)
-	{
-		auto project = static_cast<class project*>(callbackArg);
-		auto txPort = bridge->ports().at(txPortIndex).get();
-		auto rxPort = project->FindConnectedPort(txPort);
-		if (rxPort != nullptr)
-			rxPort->bridge()->ProcessLinkPulse(rxPort->port_index(), timestamp);
-	}
-
-	static void OnObjectInvalidate (void* callbackArg, renderable_object* object)
+	static void on_project_child_invalidated (void* callbackArg, renderable_object* object)
 	{
 		auto project = static_cast<class project*>(callbackArg);
 		project->event_invoker<invalidate_e>()(project);
 	}
 
-	virtual invalidate_e::subscriber GetInvalidateEvent() override final { return invalidate_e::subscriber(this); }
+	virtual invalidate_e::subscriber invalidated() override final { return invalidate_e::subscriber(this); }
 
-	virtual LoadedEvent::subscriber GetLoadedEvent() override final { return LoadedEvent::subscriber(this); }
+	virtual loaded_e::subscriber GetLoadedEvent() override final { return loaded_e::subscriber(this); }
 
 	virtual bool IsWireForwarding (wire* wire, unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const override final
 	{
@@ -159,7 +145,7 @@ public:
 			{
 				if (txPort->IsForwarding(vlanNumber))
 				{
-					auto rx = FindConnectedPort(txPort);
+					auto rx = find_connected_port(txPort);
 					if ((rx != nullptr) && rx->IsForwarding(vlanNumber))
 					{
 						txPorts.insert(txPort);
@@ -191,7 +177,7 @@ public:
 		return true;
 	}
 
-	virtual mac_address AllocMacAddressRange (size_t count) override final
+	virtual mac_address alloc_mac_address_range (size_t count) override final
 	{
 		if (count >= 128)
 			throw range_error("count must be lower than 128.");
@@ -208,7 +194,7 @@ public:
 		return result;
 	}
 
-	virtual const std::wstring& GetFilePath() const override final { return _path; }
+	virtual const std::wstring& file_path() const override final { return _path; }
 
 	virtual HRESULT save (const wchar_t* filePath) override final
 	{
@@ -310,7 +296,7 @@ public:
 		deserialize_to (projectElement, this);
 
 		_path = filePath;
-		this->event_invoker<LoadedEvent>()(this);
+		this->event_invoker<loaded_e>()(this);
 		return S_OK;
 	}
 

@@ -5,6 +5,8 @@
     <ClCompile Include="bridge_tests.cpp" />
     <ClCompile Include="project_tests.cpp" />
     <ClCompile Include="bpdu_tests.cpp" />
+    <ClCompile Include="test_helpers.cpp" />
+    <ClCompile Include="port_tests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />

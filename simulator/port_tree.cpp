@@ -42,13 +42,26 @@ const edge::NVP port_role_nvps[] =
 
 const char stp_disabled_text[] = "(STP disabled)";
 
+UINT_PTR                       port_tree::_flush_timer;
+std::unordered_set<port_tree*> port_tree::_trees;
+
 port_tree::port_tree (port* port, size_t tree_index)
 	: _port(port), _tree_index(tree_index)
 {
 	// No need to call remove_handler since a bridge and its bridge_trees are deleted at the same time.
 	_port->bridge()->property_changing().add_handler(&on_bridge_property_changing, this);
 	_port->bridge()->property_changed().add_handler(&on_bridge_property_changed, this);
-	_port->bridge()->GetLinkPulseEvent().add_handler(&on_link_pulse, this);
+
+	if (_trees.empty())
+		_flush_timer = ::SetTimer (nullptr, 0, 100, flush_timer_proc);
+	_trees.insert(this);
+}
+
+port_tree::~port_tree()
+{
+	_trees.erase(this);
+	if (_trees.empty())
+		::KillTimer (nullptr, _flush_timer);
 }
 
 void port_tree::on_bridge_property_changing (void* arg, object* obj, const property_change_args& args)
@@ -60,10 +73,6 @@ void port_tree::on_bridge_property_changing (void* arg, object* obj, const prope
 		this_->on_property_changing(&learning_property);
 		this_->on_property_changing(&forwarding_property);
 		this_->on_property_changing(&role_property);
-
-		this_->fdb_flush_timestamp = 0;
-		this_->fdb_flush_text_visible = false;
-		this_->_port->invalidate();
 	}
 }
 
@@ -76,29 +85,32 @@ void port_tree::on_bridge_property_changed (void* arg, object* obj, const proper
 		this_->on_property_changed(&role_property);
 		this_->on_property_changed(&forwarding_property);
 		this_->on_property_changed(&learning_property);
+		this_->_port->invalidate();
 	}
 }
 
-void port_tree::on_link_pulse (void* arg, bridge* b, size_t port_index, unsigned int timestamp)
+void port_tree::flush_timer_proc (HWND hwnd, UINT, UINT_PTR timer_id, DWORD)
 {
-	auto this_ = static_cast<port_tree*>(arg);
-	
-	if (port_index != this_->_port->port_index())
-		return;
+	auto now = ::GetTickCount64();
 
-	if (this_->fdb_flush_text_visible && (timestamp - this_->fdb_flush_timestamp >= 2000))
+	for (port_tree* tree : _trees)
 	{
-		this_->fdb_flush_text_visible = false;
-		this_->_port->invalidate();
+		auto time_since_last_flush = now - tree->_flush_tick_count;
+		bool text_visible = time_since_last_flush < 2000;
+		if (tree->_flush_text_visible != text_visible)
+		{
+			tree->_flush_text_visible = text_visible;
+			tree->_port->invalidate();
+		}
 	}
 }
 
 void port_tree::flush_fdb (unsigned int timestamp)
 {
-	fdb_flush_timestamp = timestamp;
-	if (!fdb_flush_text_visible)
+	_flush_tick_count = ::GetTickCount64();
+	if (!_flush_text_visible)
 	{
-		fdb_flush_text_visible = true;
+		_flush_text_visible = true;
 		_port->invalidate();
 	}
 }
@@ -115,6 +127,28 @@ void port_tree::set_priority (uint32_t priority)
 		this->on_property_changing(&priority_property);
 		STP_SetPortPriority (_port->bridge()->stp_bridge(), (unsigned int)_port->port_index(), (unsigned int)_tree_index, (unsigned char) priority, GetMessageTime());
 		this->on_property_changed(&priority_property);
+	}
+}
+
+uint32_t port_tree::internal_port_path_cost() const
+{
+	return STP_GetInternalPortPathCost(_port->bridge()->stp_bridge(), _port->port_index(), _tree_index);
+}
+
+uint32_t port_tree::admin_internal_port_path_cost() const
+{
+	return STP_GetAdminInternalPortPathCost(_port->bridge()->stp_bridge(), _port->port_index(), _tree_index);
+}
+
+void port_tree::set_admin_internal_port_path_cost (uint32_t value)
+{
+	if (STP_GetAdminInternalPortPathCost (_port->bridge()->stp_bridge(), _port->port_index(), _tree_index) != value)
+	{
+		this->on_property_changing (&admin_internal_port_path_cost_property);
+		this->on_property_changing (&internal_port_path_cost_property);
+		STP_SetAdminInternalPortPathCost (_port->bridge()->stp_bridge(), _port->port_index(), _tree_index, value, ::GetMessageTime());
+		this->on_property_changed (&internal_port_path_cost_property);
+		this->on_property_changed (&admin_internal_port_path_cost_property);
 	}
 }
 
@@ -187,7 +221,37 @@ const port_role_p port_tree::role_property {
 	std::nullopt,
 };
 
-const edge::property* const port_tree::_properties[] = { &tree_index_property, &priority_property, &learning_property, &forwarding_property, &role_property };
+static const edge::property_group port_path_cost_group = { 5, "Port Path Cost" };
+
+const uint32_p port_tree::admin_internal_port_path_cost_property {
+	"AdminInternalPortPathCost",
+	&port_path_cost_group,
+	nullptr,
+	ui_visible::yes,
+	static_cast<uint32_p::member_getter_t>(&admin_internal_port_path_cost),
+	static_cast<uint32_p::member_setter_t>(&set_admin_internal_port_path_cost),
+	0,
+};
+
+const uint32_p port_tree::internal_port_path_cost_property {
+	"InternalPortPathCost",
+	&port_path_cost_group,
+	nullptr,
+	ui_visible::yes,
+	static_cast<uint32_p::member_getter_t>(&internal_port_path_cost),
+	nullptr,
+	0,
+};
+
+const edge::property* const port_tree::_properties[] = {
+	&tree_index_property,
+	&priority_property,
+	&learning_property,
+	&forwarding_property,
+	&role_property,
+	&admin_internal_port_path_cost_property,
+	&internal_port_path_cost_property,
+};
 
 const xtype<port_tree> port_tree::_type = {
 	"PortTree",

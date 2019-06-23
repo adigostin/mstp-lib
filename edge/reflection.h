@@ -164,7 +164,7 @@ namespace edge
 		}
 	};
 
-	template<typename enum_t, const char* type_name_, const NVP* nvps, bool serialize_as_integer = false>
+	template<typename enum_t, const char* type_name_, const NVP* nvps, bool serialize_as_integer, const char* unknown_str>
 	struct enum_property_traits
 	{
 		static constexpr const char* type_name = type_name_;
@@ -183,7 +183,7 @@ namespace edge
 					return nvp->first;
 			}
 
-			return "(unknown)";
+			return unknown_str;
 		}
 
 		static bool from_string (std::string_view from, enum_t& to, const object* obj)
@@ -212,8 +212,10 @@ namespace edge
 		}
 	};
 
-	template<typename enum_t, const char* type_name, const NVP* nvps, bool serialize_as_integer = false>
-	using enum_property = typed_property<enum_property_traits<enum_t, type_name, nvps, serialize_as_integer>, nvps>;
+	extern const char unknown_enum_value_str[];
+
+	template<typename enum_t, const char* type_name, const NVP* nvps, bool serialize_as_integer = false, const char* unknown_str = unknown_enum_value_str>
+	using enum_property = typed_property<enum_property_traits<enum_t, type_name, nvps, serialize_as_integer, unknown_str>, nvps>;
 
 	// ===========================================
 

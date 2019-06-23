@@ -171,24 +171,28 @@ bool STP_GetOperPointToPointMAC (const struct STP_BRIDGE* bridge, unsigned int p
 
 // ----------------------------------------------------------------------------
 
-// dot1dStpPortAdminPathCost / ieee8021SpanningTreeRstpPortAdminPathCost / ieee8021MstpCistPortAdminPathCost (ExternalPortPathCost)
-void STP_SetAdminExternalPortPathCost (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int adminPortPathCost, unsigned int debugTimestamp);
-unsigned int STP_GetAdminExternalPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex);
-
-// ieee8021MstpPortAdminPathCost (13.27.33 in 802.1Q-2018)
-//void STP_SetAdminInternalPortPathCost (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int adminPortPathCost, unsigned int debugTimestamp);
-
+// Returns the port path cost calculated from the link speed passed to STP_OnPortEnabled,
+// which the library uses for path cost calculations while the admin cost is not set or
+// after it is reset back to zero. Useful for troubleshooting.
 unsigned int STP_GetDetectedPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
 // dot1dStpPortPathCost / ieee8021SpanningTreePortPathCost / ieee8021MstpCistPortCistPathCost (ExternalPortPathCost)
+// Returns the port path cost currently used for calculations (AdminExternalPortPathCost if non-zero, otherwise DetectedPortPathCost).
 unsigned int STP_GetExternalPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
-// ieee8021MstpPortPathCost (13.27.33 in 802.1Q-2018)
-//unsigned int STP_GetInternalPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned treeIndex);
+// dot1dStpPortAdminPathCost / ieee8021SpanningTreeRstpPortAdminPathCost / ieee8021MstpCistPortAdminPathCost
+void STP_SetAdminExternalPortPathCost (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int adminPortPathCost, unsigned int debugTimestamp);
+unsigned int STP_GetAdminExternalPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
-// for treeIndex = 0: ieee8021MstpCistPathCost - path cost to CIST Regional Root (13.9 d) CIST Internal Root Path Cost)
-// for treeIndex > 0: ieee8021MstpRootPathCost - path cost to Root Bridge for the MSTI (13.27.20 designatedPriority)
-//unsigned int STP_GetPathCostToRootBridge (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
+// ieee8021MstpPortPathCost (13.27.33 in 802.1Q-2018)
+// Returns the port path cost currently used for calculations (AdminInternalPortPathCost if non-zero, otherwise DetectedPortPathCost).
+unsigned int STP_GetInternalPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned treeIndex);
+
+// ieee8021MstpPortAdminPathCost (13.27.33 in 802.1Q-2018)
+void STP_SetAdminInternalPortPathCost (struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, unsigned int adminInternalPortPathCost, unsigned int debugTimestamp);
+unsigned int STP_GetAdminInternalPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex);
+
+// TODO: ieee8021MstpCistPathCost, ieee8021MstpRootPathCost (path costs to the root bridge)
 
 // ----------------------------------------------------------------------------
 

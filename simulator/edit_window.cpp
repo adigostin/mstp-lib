@@ -65,14 +65,14 @@ public:
 
 		_selection->changed().add_handler (&OnSelectionChanged, this);
 		_project->property_changing().add_handler(&on_project_property_changing, this);
-		_project->GetInvalidateEvent().add_handler (&OnProjectInvalidate, this);
+		_project->invalidated().add_handler (&OnProjectInvalidate, this);
 		_pw->selected_vlan_number_changed().add_handler (&on_selected_vlan_changed, this);
 	}
 
 	virtual ~edit_window()
 	{
 		_pw->selected_vlan_number_changed().remove_handler (&on_selected_vlan_changed, this);
-		_project->GetInvalidateEvent().remove_handler (&OnProjectInvalidate, this);
+		_project->invalidated().remove_handler (&OnProjectInvalidate, this);
 		_project->property_changing().remove_handler(&on_project_property_changing, this);
 		_selection->changed().remove_handler (&OnSelectionChanged, this);
 	}

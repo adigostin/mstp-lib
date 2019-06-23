@@ -263,7 +263,7 @@ public:
 	{
 		wstringstream windowTitle;
 
-		const auto& filePath = _project->GetFilePath();
+		const auto& filePath = _project->file_path();
 		if (!filePath.empty())
 		{
 			const wchar_t* fileName = PathFindFileName (filePath.c_str());
@@ -604,7 +604,7 @@ public:
 	{
 		for (auto& pw : _app->project_windows())
 		{
-			if (_wcsicmp (pw->project()->GetFilePath().c_str(), openPath) == 0)
+			if (_wcsicmp (pw->project()->file_path().c_str(), openPath) == 0)
 			{
 				::BringWindowToTop (pw->hwnd());
 				::FlashWindow (pw->hwnd(), FALSE);
@@ -640,7 +640,7 @@ public:
 	{
 		HRESULT hr;
 
-		auto savePath = _project->GetFilePath();
+		auto savePath = _project->file_path();
 		if (savePath.empty())
 		{
 			hr = TryChooseFilePath (OpenOrSave::Save, hwnd(), L"", savePath);
