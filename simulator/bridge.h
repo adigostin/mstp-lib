@@ -2,6 +2,7 @@
 #pragma once
 #include "bridge_tree.h"
 #include "port.h"
+#include "win32/xml_serializer.h"
 
 struct BridgeLogLine
 {
@@ -42,7 +43,7 @@ using edge::uint32_property_traits;
 
 struct project_i;
 
-class bridge : public project_child
+class bridge : public project_child, public edge::deserialize_i
 {
 	using base = project_child;
 
@@ -58,6 +59,8 @@ class bridge : public project_child
 	BridgeLogLine _currentLogLine;
 	std::queue<std::pair<size_t, packet_t>> _rxQueue;
 	std::vector<std::unique_ptr<bridge_tree>> _trees;
+	bool _deserializing = false;
+	bool _enable_stp_after_deserialize;
 
 	// Let's keep things simple and do everything on the GUI thread.
 	static HINSTANCE _hinstance;
@@ -174,6 +177,10 @@ private:
 	size_t tree_count() const { return _trees.size(); }
 	bridge_tree* tree (size_t index) const { return _trees[index].get(); }
 	port* port (size_t index) const { return _ports[index].get(); }
+
+	// deserialize_i
+	virtual void on_deserializing() override final;
+	virtual void on_deserialized() override final;
 
 public:
 	static const mac_address_p bridge_address_property;

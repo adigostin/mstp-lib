@@ -543,6 +543,12 @@ void bridge::SetMstConfigTable (const STP_CONFIG_TABLE_ENTRY* entries, size_t en
 
 void bridge::set_stp_enabled (bool value)
 {
+	if (_deserializing)
+	{
+		_enable_stp_after_deserialize = value;
+		return;
+	}
+
 	if (value && !STP_IsBridgeStarted(_stpBridge))
 	{
 		this->on_property_changing(&stp_enabled_property);
@@ -642,6 +648,19 @@ bool bridge::mst_config_table_changed() const
 	}
 
 	return false; // not changed
+}
+
+void bridge::on_deserializing()
+{
+	_deserializing = true;
+	_enable_stp_after_deserialize = stp_enabled_property._default_value.value();
+}
+
+void bridge::on_deserialized()
+{
+	if (_enable_stp_after_deserialize)
+		STP_StartBridge (_stpBridge, ::GetMessageTime());
+	_deserializing = false;
 }
 
 static const edge::property_group bridge_times_group = { 5, "Timer Params (Table 13-5)" };
