@@ -941,7 +941,7 @@ void bridge::StpCallback_DebugStrOut (const STP_BRIDGE* bridge, int portIndex, i
 			if ((b->_currentLogLine.portIndex != portIndex) || (b->_currentLogLine.treeIndex != treeIndex))
 			{
 				b->_logLines.push_back(std::make_unique<BridgeLogLine>(std::move(b->_currentLogLine)));
-				b->event_invoker<LogLineGenerated>()(b, b->_logLines.back().get());
+				b->event_invoker<log_line_generated_e>()(b, b->_logLines.back().get());
 			}
 
 			b->_currentLogLine.text.append (nullTerminatedString, (size_t) stringLength);
@@ -950,14 +950,14 @@ void bridge::StpCallback_DebugStrOut (const STP_BRIDGE* bridge, int portIndex, i
 		if (!b->_currentLogLine.text.empty() && (b->_currentLogLine.text.back() == L'\n'))
 		{
 			b->_logLines.push_back(std::make_unique<BridgeLogLine>(std::move(b->_currentLogLine)));
-			b->event_invoker<LogLineGenerated>()(b, b->_logLines.back().get());
+			b->event_invoker<log_line_generated_e>()(b, b->_logLines.back().get());
 		}
 	}
 
 	if (flush && !b->_currentLogLine.text.empty())
 	{
 		b->_logLines.push_back(std::make_unique<BridgeLogLine>(std::move(b->_currentLogLine)));
-		b->event_invoker<LogLineGenerated>()(b, b->_logLines.back().get());
+		b->event_invoker<log_line_generated_e>()(b, b->_logLines.back().get());
 	}
 }
 

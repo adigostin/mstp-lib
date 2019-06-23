@@ -108,11 +108,11 @@ public:
 
 	STP_BRIDGE* stp_bridge() const { return _stpBridge; }
 
-	struct LogLineGenerated : public edge::event<LogLineGenerated, bridge*, const BridgeLogLine*> { };
+	struct log_line_generated_e : public edge::event<log_line_generated_e, bridge*, const BridgeLogLine*> { };
 	struct log_cleared_e : public edge::event<log_cleared_e, bridge*> { };
 	struct packet_transmit_e : public edge::event<packet_transmit_e, bridge*, size_t, packet_t&&> { };
 
-	LogLineGenerated::subscriber GetLogLineGeneratedEvent() { return LogLineGenerated::subscriber(this); }
+	log_line_generated_e::subscriber log_line_generated() { return log_line_generated_e::subscriber(this); }
 	log_cleared_e::subscriber log_cleared() { return log_cleared_e::subscriber(this); }
 	packet_transmit_e::subscriber packet_transmit() { return packet_transmit_e::subscriber(this); }
 

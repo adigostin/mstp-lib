@@ -51,7 +51,7 @@ public:
 	{
 		_selection->changed().remove_handler(&OnSelectionChanged, this);
 		if (_bridge != nullptr)
-			_bridge->GetLogLineGeneratedEvent().remove_handler(OnLogLineGeneratedStatic, this);
+			_bridge->log_line_generated().remove_handler(OnLogLineGeneratedStatic, this);
 	}
 
 	static void OnSelectionChanged (void* callbackArg, selection_i* selection)
@@ -212,7 +212,7 @@ public:
 
 				_lines.clear();
 				_bridge->log_cleared().remove_handler (on_log_cleared, this);
-				_bridge->GetLogLineGeneratedEvent().remove_handler (OnLogLineGeneratedStatic, this);
+				_bridge->log_line_generated().remove_handler (OnLogLineGeneratedStatic, this);
 				_bridge = nullptr;
 			}
 
@@ -229,7 +229,7 @@ public:
 					}
 				}
 
-				_bridge->GetLogLineGeneratedEvent().add_handler (OnLogLineGeneratedStatic, this);
+				_bridge->log_line_generated().add_handler (OnLogLineGeneratedStatic, this);
 				_bridge->log_cleared().add_handler (on_log_cleared, this);
 			}
 
