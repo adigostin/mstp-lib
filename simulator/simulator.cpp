@@ -216,7 +216,7 @@ static void RegisterApplicationAndFileTypes()
 	ss << L"SOFTWARE\\Classes\\" << ProgID << L"\\shell\\open\\command";
 	auto progIdKeyName = ss.str();
 	ss.str(L"");
-	ss << L"\"" << exePath.get() << L"\" \"%%1\"";
+	ss << L"\"" << exePath.get() << L"\" \"%1\"";
 	auto progIdKeyValue = ss.str();
 	cbData = MAX_PATH;
 	ls = RegGetValue (HKEY_CURRENT_USER, progIdKeyName.c_str(), nullptr, RRF_RT_REG_SZ, nullptr, buffer.get(), &cbData);
