@@ -54,4 +54,7 @@
 	<Type Name="PORT_ID">
 		<DisplayString>{*(uint16_nbo*)this}</DisplayString>
 	</Type>
+	<Type Name="PRIORITY_VECTOR">
+		<DisplayString>{RootId}-{ExternalRootPathCost}-{RegionalRootId}-{InternalRootPathCost}-{DesignatedBridgeId}-{DesignatedPortId}</DisplayString>
+	</Type>
 </AutoVisualizer>
