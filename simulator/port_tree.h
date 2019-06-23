@@ -54,6 +54,10 @@ public:
 	uint32_t priority() const;
 	void set_priority (uint32_t priority);
 
+	uint32_t internal_port_path_cost() const;
+	uint32_t admin_internal_port_path_cost() const;
+	void set_admin_internal_port_path_cost (uint32_t value);
+
 	bool learning() const;
 	bool forwarding() const;
 	STP_PORT_ROLE role() const;
@@ -69,6 +73,8 @@ public:
 	static const bool_p learning_property;
 	static const bool_p forwarding_property;
 	static const port_role_p role_property;
+	static const uint32_p admin_internal_port_path_cost_property;
+	static const uint32_p internal_port_path_cost_property;
 	static const property* const _properties[];
 	static const xtype<port_tree> _type;
 	const struct type* type() const;

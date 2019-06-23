@@ -127,9 +127,9 @@ private:
 	static const bool_p auto_edge_property;
 	static const bool_p admin_edge_property;
 	static const bool_p mac_operational_property;
-	static const uint32_p AdminExternalPortPathCost;
-	static const uint32_p DetectedPortPathCost;
-	static const uint32_p ExternalPortPathCost;
+	static const uint32_p admin_external_port_path_cost_property;
+	static const uint32_p detected_port_path_cost_property;
+	static const uint32_p external_port_path_cost_property;
 	static const admin_p2p_p admin_p2p_property;
 	static const bool_p detected_p2p_property;
 	static const bool_p oper_p2p_property;

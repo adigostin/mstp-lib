@@ -130,6 +130,28 @@ void port_tree::set_priority (uint32_t priority)
 	}
 }
 
+uint32_t port_tree::internal_port_path_cost() const
+{
+	return STP_GetInternalPortPathCost(_port->bridge()->stp_bridge(), _port->port_index(), _tree_index);
+}
+
+uint32_t port_tree::admin_internal_port_path_cost() const
+{
+	return STP_GetAdminInternalPortPathCost(_port->bridge()->stp_bridge(), _port->port_index(), _tree_index);
+}
+
+void port_tree::set_admin_internal_port_path_cost (uint32_t value)
+{
+	if (STP_GetAdminInternalPortPathCost (_port->bridge()->stp_bridge(), _port->port_index(), _tree_index) != value)
+	{
+		this->on_property_changing (&admin_internal_port_path_cost_property);
+		this->on_property_changing (&internal_port_path_cost_property);
+		STP_SetAdminInternalPortPathCost (_port->bridge()->stp_bridge(), _port->port_index(), _tree_index, value, ::GetMessageTime());
+		this->on_property_changed (&internal_port_path_cost_property);
+		this->on_property_changed (&admin_internal_port_path_cost_property);
+	}
+}
+
 bool port_tree::learning() const
 {
 	if (!STP_IsBridgeStarted(_port->bridge()->stp_bridge()))
@@ -199,7 +221,37 @@ const port_role_p port_tree::role_property {
 	std::nullopt,
 };
 
-const edge::property* const port_tree::_properties[] = { &tree_index_property, &priority_property, &learning_property, &forwarding_property, &role_property };
+static const edge::property_group port_path_cost_group = { 5, "Port Path Cost" };
+
+const uint32_p port_tree::admin_internal_port_path_cost_property {
+	"AdminInternalPortPathCost",
+	&port_path_cost_group,
+	nullptr,
+	ui_visible::yes,
+	static_cast<uint32_p::member_getter_t>(&admin_internal_port_path_cost),
+	static_cast<uint32_p::member_setter_t>(&set_admin_internal_port_path_cost),
+	0,
+};
+
+const uint32_p port_tree::internal_port_path_cost_property {
+	"InternalPortPathCost",
+	&port_path_cost_group,
+	nullptr,
+	ui_visible::yes,
+	static_cast<uint32_p::member_getter_t>(&internal_port_path_cost),
+	nullptr,
+	0,
+};
+
+const edge::property* const port_tree::_properties[] = {
+	&tree_index_property,
+	&priority_property,
+	&learning_property,
+	&forwarding_property,
+	&role_property,
+	&admin_internal_port_path_cost_property,
+	&internal_port_path_cost_property,
+};
 
 const xtype<port_tree> port_tree::_type = {
 	"PortTree",

@@ -64,10 +64,10 @@ TEST_CLASS(port_tests)
 		while (exchange_bpdus(bridge0, 0, bridge1, 0) || exchange_bpdus(bridge0, 1, bridge1, 1))
 			;
 		// And check the port roles.
-		Assert::AreEqual (STP_PORT_ROLE_DESIGNATED, STP_GetPortRole(bridge0, 0, 0));
-		Assert::AreEqual (STP_PORT_ROLE_DESIGNATED, STP_GetPortRole(bridge0, 1, 0));
-		Assert::AreEqual (STP_PORT_ROLE_ROOT,       STP_GetPortRole(bridge1, 0, 0));
-		Assert::AreEqual (STP_PORT_ROLE_ALTERNATE,  STP_GetPortRole(bridge1, 1, 0));
+		Assert::AreEqual (STP_PORT_ROLE_DESIGNATED, STP_GetPortRole(bridge0, 0, CIST_INDEX));
+		Assert::AreEqual (STP_PORT_ROLE_DESIGNATED, STP_GetPortRole(bridge0, 1, CIST_INDEX));
+		Assert::AreEqual (STP_PORT_ROLE_ROOT,       STP_GetPortRole(bridge1, 0, CIST_INDEX));
+		Assert::AreEqual (STP_PORT_ROLE_ALTERNATE,  STP_GetPortRole(bridge1, 1, CIST_INDEX));
 
 		// ----------------------------------------------------------------
 		// Take out the second cable and check the port roles.
@@ -75,10 +75,10 @@ TEST_CLASS(port_tests)
 		STP_OnPortDisabled (bridge1, 1, 0);
 		while (exchange_bpdus(bridge0, 0, bridge1, 0))
 			;
-		Assert::AreEqual (STP_PORT_ROLE_DESIGNATED, STP_GetPortRole(bridge0, 0, 0));
-		Assert::AreEqual (STP_PORT_ROLE_DISABLED,   STP_GetPortRole(bridge0, 1, 0));
-		Assert::AreEqual (STP_PORT_ROLE_ROOT,       STP_GetPortRole(bridge1, 0, 0));
-		Assert::AreEqual (STP_PORT_ROLE_DISABLED,   STP_GetPortRole(bridge1, 1, 0));
+		Assert::AreEqual (STP_PORT_ROLE_DESIGNATED, STP_GetPortRole(bridge0, 0, CIST_INDEX));
+		Assert::AreEqual (STP_PORT_ROLE_DISABLED,   STP_GetPortRole(bridge0, 1, CIST_INDEX));
+		Assert::AreEqual (STP_PORT_ROLE_ROOT,       STP_GetPortRole(bridge1, 0, CIST_INDEX));
+		Assert::AreEqual (STP_PORT_ROLE_DISABLED,   STP_GetPortRole(bridge1, 1, CIST_INDEX));
 
 		// ----------------------------------------------------------------
 		// And put back a 1Gbit cable. Now we have 100Mbps between ports 0, and 1Gbit between ports 1.
@@ -87,16 +87,17 @@ TEST_CLASS(port_tests)
 		while (exchange_bpdus(bridge0, 0, bridge1, 0) || exchange_bpdus(bridge0, 1, bridge1, 1))
 			;
 		// Now the second cable should be forwarding since it's faster.
-		Assert::AreEqual (STP_PORT_ROLE_DESIGNATED, STP_GetPortRole(bridge0, 0, 0));
-		Assert::AreEqual (STP_PORT_ROLE_DESIGNATED, STP_GetPortRole(bridge0, 1, 0));
-		Assert::AreEqual (STP_PORT_ROLE_ALTERNATE,  STP_GetPortRole(bridge1, 0, 0));
-		Assert::AreEqual (STP_PORT_ROLE_ROOT,       STP_GetPortRole(bridge1, 1, 0));
+		Assert::AreEqual (STP_PORT_ROLE_DESIGNATED, STP_GetPortRole(bridge0, 0, CIST_INDEX));
+		Assert::AreEqual (STP_PORT_ROLE_DESIGNATED, STP_GetPortRole(bridge0, 1, CIST_INDEX));
+		Assert::AreEqual (STP_PORT_ROLE_ALTERNATE,  STP_GetPortRole(bridge1, 0, CIST_INDEX));
+		Assert::AreEqual (STP_PORT_ROLE_ROOT,       STP_GetPortRole(bridge1, 1, CIST_INDEX));
 
 		// ----------------------------------------------------------------
 		// On the first port of second bridge, force the port path cost to half of that at 1GB; the port should become a Root Port.
 		if (internal)
 		{
-			Assert::Fail (L"Setting the Admin Internal Port Path Cost is not yet implemented by the library.");
+			auto cost_at_1gbit = STP_GetInternalPortPathCost (bridge1, 1, CIST_INDEX);
+			STP_SetAdminInternalPortPathCost (bridge1, 0, CIST_INDEX, cost_at_1gbit / 2, 0);
 		}
 		else
 		{
@@ -107,10 +108,10 @@ TEST_CLASS(port_tests)
 		while (exchange_bpdus(bridge0, 0, bridge1, 0) || exchange_bpdus(bridge0, 1, bridge1, 1))
 			;
 		// Now the first cable should be forwarding since the first port of second bridge has the lowest cost.
-		Assert::AreEqual (STP_PORT_ROLE_DESIGNATED, STP_GetPortRole(bridge0, 0, 0));
-		Assert::AreEqual (STP_PORT_ROLE_DESIGNATED, STP_GetPortRole(bridge0, 1, 0));
-		Assert::AreEqual (STP_PORT_ROLE_ROOT,       STP_GetPortRole(bridge1, 0, 0));
-		Assert::AreEqual (STP_PORT_ROLE_ALTERNATE,  STP_GetPortRole(bridge1, 1, 0));
+		Assert::AreEqual (STP_PORT_ROLE_DESIGNATED, STP_GetPortRole(bridge0, 0, CIST_INDEX));
+		Assert::AreEqual (STP_PORT_ROLE_DESIGNATED, STP_GetPortRole(bridge0, 1, CIST_INDEX));
+		Assert::AreEqual (STP_PORT_ROLE_ROOT,       STP_GetPortRole(bridge1, 0, CIST_INDEX));
+		Assert::AreEqual (STP_PORT_ROLE_ALTERNATE,  STP_GetPortRole(bridge1, 1, CIST_INDEX));
 
 		// ----------------------------------------------------------------
 

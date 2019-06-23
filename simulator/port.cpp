@@ -422,11 +422,11 @@ unsigned int port::GetAdminExternalPortPathCost() const
 
 void port::SetAdminExternalPortPathCost(unsigned int adminExternalPortPathCost)
 {
-	this->on_property_changing (&AdminExternalPortPathCost);
-	this->on_property_changing (&ExternalPortPathCost);
+	this->on_property_changing (&admin_external_port_path_cost_property);
+	this->on_property_changing (&external_port_path_cost_property);
 	STP_SetAdminExternalPortPathCost (_bridge->stp_bridge(), (unsigned int)_port_index, adminExternalPortPathCost, GetMessageTime());
-	this->on_property_changed (&ExternalPortPathCost);
-	this->on_property_changed (&AdminExternalPortPathCost);
+	this->on_property_changed (&external_port_path_cost_property);
+	this->on_property_changed (&admin_external_port_path_cost_property);
 }
 
 unsigned int port::GetExternalPortPathCost() const
@@ -554,19 +554,19 @@ const bool_p port::mac_operational_property {
 	false,
 };
 
-static const edge::property_group port_path_cost_group = { 5, "Port Path Costs" };
+static const edge::property_group port_path_cost_group = { 5, "Port Path Cost" };
 
-const uint32_p port::DetectedPortPathCost {
+const uint32_p port::detected_port_path_cost_property {
 	"DetectedPortPathCost",
 	&port_path_cost_group,
-	nullptr,
+	"The Port Path Cost calculated from ActualSpeed, which STP uses for path cost calculation while AdminExternalPortPathCost is zero.",
 	ui_visible::yes,
 	static_cast<uint32_p::member_getter_t>(&GetDetectedPortPathCost),
 	nullptr,
 	0,
 };
 
-const uint32_p port::AdminExternalPortPathCost {
+const uint32_p port::admin_external_port_path_cost_property {
 	"AdminExternalPortPathCost",
 	&port_path_cost_group,
 	nullptr,
@@ -576,7 +576,7 @@ const uint32_p port::AdminExternalPortPathCost {
 	0,
 };
 
-const uint32_p port::ExternalPortPathCost {
+const uint32_p port::external_port_path_cost_property {
 	"ExternalPortPathCost",
 	&port_path_cost_group,
 	nullptr,
@@ -630,9 +630,9 @@ const edge::property* const port::_properties[] =
 	&auto_edge_property,
 	&admin_edge_property,
 	&mac_operational_property,
-	&DetectedPortPathCost,
-	&AdminExternalPortPathCost,
-	&ExternalPortPathCost,
+	&detected_port_path_cost_property,
+	&admin_external_port_path_cost_property,
+	&external_port_path_cost_property,
 	&detected_p2p_property,
 	&admin_p2p_property,
 	&oper_p2p_property,
