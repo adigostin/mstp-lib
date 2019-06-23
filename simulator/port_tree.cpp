@@ -132,21 +132,21 @@ void port_tree::set_priority (uint32_t priority)
 
 uint32_t port_tree::internal_port_path_cost() const
 {
-	return STP_GetInternalPortPathCost(_port->bridge()->stp_bridge(), _port->port_index(), _tree_index);
+	return STP_GetInternalPortPathCost(_port->bridge()->stp_bridge(), (unsigned int)_port->port_index(), (unsigned int)_tree_index);
 }
 
 uint32_t port_tree::admin_internal_port_path_cost() const
 {
-	return STP_GetAdminInternalPortPathCost(_port->bridge()->stp_bridge(), _port->port_index(), _tree_index);
+	return STP_GetAdminInternalPortPathCost(_port->bridge()->stp_bridge(), (unsigned int)_port->port_index(), (unsigned int)_tree_index);
 }
 
 void port_tree::set_admin_internal_port_path_cost (uint32_t value)
 {
-	if (STP_GetAdminInternalPortPathCost (_port->bridge()->stp_bridge(), _port->port_index(), _tree_index) != value)
+	if (STP_GetAdminInternalPortPathCost (_port->bridge()->stp_bridge(), (unsigned int)_port->port_index(), (unsigned int)_tree_index) != value)
 	{
 		this->on_property_changing (&admin_internal_port_path_cost_property);
 		this->on_property_changing (&internal_port_path_cost_property);
-		STP_SetAdminInternalPortPathCost (_port->bridge()->stp_bridge(), _port->port_index(), _tree_index, value, ::GetMessageTime());
+		STP_SetAdminInternalPortPathCost (_port->bridge()->stp_bridge(), (unsigned int)_port->port_index(), (unsigned int)_tree_index, value, ::GetMessageTime());
 		this->on_property_changed (&internal_port_path_cost_property);
 		this->on_property_changed (&admin_internal_port_path_cost_property);
 	}
