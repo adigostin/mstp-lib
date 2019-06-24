@@ -343,8 +343,8 @@ void bridge::render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsign
 	dc->DrawRoundedRectangle (&rr, dos._brushWindowText, bridgeOutlineWidth);
 
 	// Draw bridge text.
-	auto tl = text_layout::create (dos._dWriteFactory, dos._regularTextFormat, text.str().c_str());
-	dc->DrawTextLayout ({ _x + OutlineWidth * 2 + 3, _y + OutlineWidth * 2 + 3}, tl.layout, dos._brushWindowText);
+	auto tl = edge::text_layout (dos._dWriteFactory, dos._regularTextFormat, text.str().c_str());
+	dc->DrawTextLayout ({ _x + OutlineWidth * 2 + 3, _y + OutlineWidth * 2 + 3}, tl, dos._brushWindowText);
 
 	for (auto& port : _ports)
 		port->render (dc, dos, vlanNumber);

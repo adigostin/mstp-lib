@@ -85,23 +85,21 @@ public:
 
 		if ((_bridge == nullptr) || _lines.empty())
 		{
-			static constexpr wchar_t TextNoBridge[] = L"The STP activity log is shown here.\r\nSelect a bridge to see its log.";
-			static constexpr wchar_t TextNoEntries[] = L"No log text generated yet.\r\nYou may want to enable STP on the selected bridge.";
+			static constexpr char TextNoBridge[] = "The STP activity log is shown here.\r\nSelect a bridge to see its log.";
+			static constexpr char TextNoEntries[] = "No log text generated yet.\r\nYou may want to enable STP on the selected bridge.";
 
 			auto oldta = _textFormat->GetTextAlignment();
 			_textFormat->SetTextAlignment (DWRITE_TEXT_ALIGNMENT_CENTER);
-			com_ptr<IDWriteTextLayout> tl;
 			auto text = (_bridge == nullptr) ? TextNoBridge : TextNoEntries;
-			auto hr = dwrite_factory()->CreateTextLayout (text, (UINT32) wcslen(text), _textFormat, client_width(), 10000, &tl); assert(SUCCEEDED(hr));
+			auto tl = edge::text_layout_with_metrics (dwrite_factory(), _textFormat, text, client_width());
 			_textFormat->SetTextAlignment(oldta);
-			DWRITE_TEXT_METRICS metrics;
-			tl->GetMetrics (&metrics);
-			dc->DrawTextLayout ({ client_width() / 2 - metrics.width / 2 - metrics.left, client_height() / 2 }, tl, text_brush);
+			D2D1_POINT_2F origin = { client_width() / 2 - tl.width() / 2 - tl.left(), client_height() / 2 };
+			dc->DrawTextLayout (origin, tl, text_brush);
 		}
 		else
 		{
 			float y = 0;
-			float lineHeight = 0;
+			float lineHeight = text_layout_with_metrics(dwrite_factory(), _textFormat, L"A").height();
 			for (int lineIndex = _topLineIndex; (lineIndex < _animationCurrentLineCount) && (y < client_height()); lineIndex++)
 			{
 				wstring line (_lines[lineIndex]->text.begin(), _lines[lineIndex]->text.end());
@@ -109,16 +107,7 @@ public:
 				if ((line.length() >= 2) && (line[line.length() - 2] == '\r') && (line[line.length() - 1] == '\n'))
 					line.resize (line.length() - 2);
 
-				com_ptr<IDWriteTextLayout> tl;
-				auto hr = dwrite_factory()->CreateTextLayout (line.c_str(), (UINT32) line.length(), _textFormat, 10000, 10000, &tl); assert(SUCCEEDED(hr));
-
-				if (lineHeight == 0)
-				{
-					DWRITE_TEXT_METRICS metrics;
-					tl->GetMetrics (&metrics);
-					lineHeight = metrics.height;
-				}
-
+				auto tl = text_layout (dwrite_factory(), _textFormat, line);
 				dc->DrawTextLayout ({ 0, y }, tl, text_brush, D2D1_DRAW_TEXT_OPTIONS_NO_SNAP);
 				y += lineHeight;
 
@@ -344,12 +333,8 @@ public:
 
 	static int CalcNumberOfLinesFitting (IDWriteTextFormat* textFormat, float clientHeightDips, IDWriteFactory* dWriteFactory)
 	{
-		com_ptr<IDWriteTextLayout> tl;
-		auto hr = dWriteFactory->CreateTextLayout (L"A", 1, textFormat, 1000, 1000, &tl); assert(SUCCEEDED(hr));
-		DWRITE_TEXT_METRICS metrics;
-		hr = tl->GetMetrics(&metrics);
-		int numberOfLinesFitting = (int) floor(clientHeightDips / metrics.height);
-		return numberOfLinesFitting;
+		auto tl = edge::text_layout_with_metrics (dWriteFactory, textFormat, "A");
+		return (int) floor(clientHeightDips / tl.height());
 	}
 
 	void ProcessWmSize (WPARAM wParam, LPARAM lParam)

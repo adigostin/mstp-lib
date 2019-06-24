@@ -160,18 +160,18 @@ void group_item::create_text_layouts (IDWriteFactory* factory, IDWriteTextFormat
 	auto hr = factory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL,
 										 DWRITE_FONT_STRETCH_NORMAL, font_size, L"en-US", &tf);
 	float layout_width = std::max (0.0f, l.x_right -l.x_name - 2 * title_lr_padding);
-	_layout = text_layout::create (factory, tf, _group->name, layout_width);
+	_layout = text_layout_with_metrics (factory, tf, _group->name, layout_width);
 }
 
 void group_item::render (const render_context& rc, const item_layout& l, float line_thickness, bool selected, bool focused) const
 {
 	rc.dc->FillRectangle ({ l.x_left, l.y_top, l.x_right, l.y_bottom }, rc.back_brush);
-	rc.dc->DrawTextLayout ({ l.x_name + text_lr_padding, l.y_top }, _layout.layout, rc.fore_brush);
+	rc.dc->DrawTextLayout ({ l.x_name + text_lr_padding, l.y_top }, _layout, rc.fore_brush);
 }
 
 float group_item::content_height() const
 {
-	return _layout.metrics.height;
+	return _layout.height();
 }
 #pragma endregion
 
@@ -189,7 +189,7 @@ void root_item::create_text_layouts (IDWriteFactory* factory, IDWriteTextFormat*
 	auto hr = factory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL,
 	                                     DWRITE_FONT_STRETCH_NORMAL, font_size, L"en-US", &tf);
 	float layout_width = std::max (0.0f, l.x_right -l.x_left - 2 * title_lr_padding);
-	_text_layout = text_layout::create (factory, tf, _heading, layout_width);
+	_text_layout = text_layout_with_metrics (factory, tf, _heading, layout_width);
 }
 
 void root_item::render (const render_context& rc, const item_layout& l, float line_thickness, bool selected, bool focused) const
@@ -199,12 +199,12 @@ void root_item::render (const render_context& rc, const item_layout& l, float li
 	D2D1_RECT_F rect = { l.x_left, l.y_top, l.x_right, l.y_bottom };
 	rc.dc->FillRectangle (&rect, brush);
 	brush->SetColor (GetD2DSystemColor(COLOR_CAPTIONTEXT));
-	rc.dc->DrawTextLayout ({ l.x_left + title_lr_padding, l.y_top + title_ud_padding }, _text_layout.layout, brush);
+	rc.dc->DrawTextLayout ({ l.x_left + title_lr_padding, l.y_top + title_ud_padding }, _text_layout, brush);
 }
 
 float root_item::content_height() const
 {
-	return _text_layout.metrics.height + 2 * title_ud_padding;
+	return _text_layout.height() + 2 * title_ud_padding;
 }
 #pragma endregion
 
@@ -232,19 +232,19 @@ bool value_pgitem::can_edit() const
 
 void value_pgitem::create_value_layout_internal (IDWriteFactory* factory, IDWriteTextFormat* format, float width)
 {
-	text_layout tl;
+	text_layout_with_metrics tl;
 	bool readable;
 	try
 	{
 		if (multiple_values())
-			tl = text_layout::create (factory, format, "(multiple values)", width);
+			tl = text_layout_with_metrics (factory, format, "(multiple values)", width);
 		else
-			tl = text_layout::create (factory, format, _prop->get_to_string(parent()->parent()->objects().front()), width);
+			tl = text_layout_with_metrics (factory, format, _prop->get_to_string(parent()->parent()->objects().front()), width);
 		readable = true;
 	}
 	catch (const std::exception& ex)
 	{
-		tl = text_layout::create (factory, format, ex.what(), width);
+		tl = text_layout_with_metrics (factory, format, ex.what(), width);
 		readable = false;
 	}
 
@@ -253,7 +253,7 @@ void value_pgitem::create_value_layout_internal (IDWriteFactory* factory, IDWrit
 
 void value_pgitem::create_text_layouts (IDWriteFactory* factory, IDWriteTextFormat* format, const item_layout_horz& l, float line_thickness)
 {
-	_name = text_layout::create (factory, format, _prop->_name, l.x_value - l.x_name - line_thickness - 2 * text_lr_padding);
+	_name = text_layout_with_metrics (factory, format, _prop->_name, l.x_value - l.x_name - line_thickness - 2 * text_lr_padding);
 	float value_layout_width = std::max (0.0f, l.x_right - l.x_value - line_thickness - 2 * text_lr_padding);
 	create_value_layout_internal (factory, format, value_layout_width);
 }
@@ -261,7 +261,7 @@ void value_pgitem::create_text_layouts (IDWriteFactory* factory, IDWriteTextForm
 void value_pgitem::recreate_value_text_layout()
 {
 	auto grid = root()->_grid;
-	create_value_layout_internal (grid->dwrite_factory(), grid->text_format(), _value.tl.metrics.layoutWidth);
+	create_value_layout_internal (grid->dwrite_factory(), grid->text_format(), _value.tl.layout_width());
 	grid->invalidate();
 }
 
@@ -276,17 +276,17 @@ void value_pgitem::render (const render_context& rc, const item_layout& l, float
 	float name_line_x = l.x_name + line_thickness / 2;
 	rc.dc->DrawLine ({ name_line_x, l.y_top }, { name_line_x, l.y_bottom }, rc.disabled_fore_brush, line_thickness);
 	auto fore = selected ? rc.selected_fore_brush.get() : rc.fore_brush.get();
-	rc.dc->DrawTextLayout ({ l.x_name + line_thickness + text_lr_padding, l.y_top }, _name.layout, fore);
+	rc.dc->DrawTextLayout ({ l.x_name + line_thickness + text_lr_padding, l.y_top }, _name, fore);
 
 	float linex = l.x_value + line_thickness / 2;
 	rc.dc->DrawLine ({ linex, l.y_top }, { linex, l.y_bottom }, rc.disabled_fore_brush, line_thickness);
 	fore = !can_edit() ? rc.disabled_fore_brush.get() : (selected ? rc.selected_fore_brush.get() : rc.fore_brush.get());
-	rc.dc->DrawTextLayout ({ l.x_value + line_thickness + text_lr_padding, l.y_top }, _value.tl.layout, fore);
+	rc.dc->DrawTextLayout ({ l.x_value + line_thickness + text_lr_padding, l.y_top }, _value.tl, fore);
 }
 
 float value_pgitem::content_height() const
 {
-	return std::max (_name.metrics.height, _value.tl.metrics.height);
+	return std::max (_name.height(), _value.tl.height());
 }
 
 HCURSOR value_pgitem::cursor() const

@@ -344,17 +344,13 @@ namespace edge
 			com_ptr<ID2D1SolidColorBrush> foreBrush;
 			_d2dDeviceContext->CreateSolidColorBrush (ColorF::ColorF (ColorF::Black), &foreBrush);
 
-			wchar_t text[50];
-			auto text_len = swprintf_s (text, L"%4d FPS\r\n %3d ms", (int)round(GetFPS()), (int)round(GetAverageRenderDuration()));
-			com_ptr<IDWriteTextLayout> tl;
-			hr = _dwrite_factory->CreateTextLayout (text, (UINT32)wcslen(text), _debugTextFormat, 10000, 10000, &tl); assert(SUCCEEDED(hr));
-
-			DWRITE_TEXT_METRICS metrics;
-			hr = tl->GetMetrics (&metrics); assert(SUCCEEDED(hr));
+			std::wstringstream ss;
+			ss << std::setw(4) << (int)round(GetFPS()) << L" FPS\r\n " << std::setw(3) << (int)round(GetAverageRenderDuration()) << L" ms";
+			auto tl = text_layout_with_metrics (_dwrite_factory, _debugTextFormat, ss.str());
 
 			D2D1_POINT_2F origin;
-			origin.x = frameDurationAndFpsRect.right - 4 - metrics.width;
-			origin.y = (frameDurationAndFpsRect.top + frameDurationAndFpsRect.bottom) / 2 - metrics.height / 2;
+			origin.x = frameDurationAndFpsRect.right - 4 - tl.width();
+			origin.y = (frameDurationAndFpsRect.top + frameDurationAndFpsRect.bottom) / 2 - tl.height() / 2;
 			_d2dDeviceContext->DrawTextLayout (origin, tl, foreBrush);
 		}
 		/*
@@ -557,19 +553,16 @@ namespace edge
 
 	#pragma endregion
 
-	text_layout text_layout::create (IDWriteFactory* dWriteFactory, IDWriteTextFormat* format, std::string_view str, float maxWidth)
+	text_layout::text_layout (IDWriteFactory* dwrite_factory, IDWriteTextFormat* format, std::string_view str, float maxWidth)
 	{
 		assert (maxWidth >= 0);
-
-		HRESULT hr;
-
 		if (maxWidth == 0)
 			maxWidth = 100'000;
 
-		com_ptr<IDWriteTextLayout> tl;
+		HRESULT hr;
 		if (str.empty())
 		{
-			hr = dWriteFactory->CreateTextLayout (L"", 0, format, maxWidth, 100'000, &tl);
+			hr = dwrite_factory->CreateTextLayout (L"", 0, format, maxWidth, 100'000, &_layout);
 			assert(SUCCEEDED(hr));
 		}
 		else
@@ -580,13 +573,39 @@ namespace edge
 			auto buffer = std::make_unique<wchar_t[]>(utf16_char_count);
 			MultiByteToWideChar (CP_UTF8, 0, str.data(), (int)str.length(), buffer.get(), utf16_char_count);
 
-			hr = dWriteFactory->CreateTextLayout (buffer.get(), (UINT32) utf16_char_count, format, (maxWidth != 0) ? maxWidth : 10000, 10000, &tl);
+			hr = dwrite_factory->CreateTextLayout (buffer.get(), (UINT32) utf16_char_count, format, std::min(maxWidth, 100'000.0f), 100'000, &_layout);
 			assert(SUCCEEDED(hr));
 		}
+	}
 
-		DWRITE_TEXT_METRICS metrics;
-		hr = tl->GetMetrics(&metrics); assert(SUCCEEDED(hr));
+	text_layout::text_layout (IDWriteFactory* dwrite_factory, IDWriteTextFormat* format, std::wstring_view str, float maxWidth)
+	{
+		assert (maxWidth >= 0);
+		if (maxWidth == 0)
+			maxWidth = 100'000;
 
-		return text_layout { std::move(tl), metrics };
+		HRESULT hr;
+		if (str.empty())
+		{
+			hr = dwrite_factory->CreateTextLayout (L"", 0, format, maxWidth, 100'000, &_layout);
+			assert(SUCCEEDED(hr));
+		}
+		else
+		{
+			hr = dwrite_factory->CreateTextLayout (str.data(), (UINT32) str.size(), format, std::min(maxWidth, 100'000.0f), 100'000, &_layout);
+			assert(SUCCEEDED(hr));
+		}
+	}
+
+	text_layout_with_metrics::text_layout_with_metrics (IDWriteFactory* dwrite_factory, IDWriteTextFormat* format, std::string_view str, float maxWidth)
+		: text_layout (dwrite_factory, format, str, maxWidth)
+	{
+		auto hr = this->operator->()->GetMetrics(&_metrics); assert(SUCCEEDED(hr));
+	}
+
+	text_layout_with_metrics::text_layout_with_metrics (IDWriteFactory* dwrite_factory, IDWriteTextFormat* format, std::wstring_view str, float maxWidth)
+		: text_layout (dwrite_factory, format, str, maxWidth)
+	{
+		auto hr = this->operator->()->GetMetrics(&_metrics); assert(SUCCEEDED(hr));
 	}
 }

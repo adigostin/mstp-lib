@@ -148,11 +148,10 @@ public:
 	{
 		float maxLineWidth = 0;
 		float maxLineHeight = 0;
-		vector<com_ptr<IDWriteTextLayout>> layouts;
+		vector<text_layout> layouts;
 		for (auto& info : LegendInfo)
 		{
-			com_ptr<IDWriteTextLayout> tl;
-			auto hr = dwrite_factory()->CreateTextLayout (info.text, (UINT32) wcslen(info.text), _legendFont, 1000, 1000, &tl); assert(SUCCEEDED(hr));
+			auto tl = text_layout (dwrite_factory(), _legendFont, info.text);
 
 			DWRITE_TEXT_METRICS metrics;
 			tl->GetMetrics (&metrics);
@@ -163,7 +162,7 @@ public:
 			if (metrics.height > maxLineHeight)
 				maxLineHeight = metrics.height;
 
-			layouts.push_back(move(tl));
+			layouts.push_back(std::move(tl));
 		}
 
 		float textX = client_width() - (5 + maxLineWidth + 5 + port::ExteriorHeight + 5);
@@ -222,13 +221,13 @@ public:
 				<< setw(2) << (int)configId.ConfigurationDigest[0] << setw(2) << (int)configId.ConfigurationDigest[1] << ".."
 				<< setw(2) << (int)configId.ConfigurationDigest[14] << setw(2) << (int)configId.ConfigurationDigest[15];
 			string line = ss.str();
-			auto tl = text_layout::create (dwrite_factory(), _legendFont, line.c_str());
+			auto tl = text_layout_with_metrics (dwrite_factory(), _legendFont, line.c_str());
 
-			if (tl.metrics.width > maxLineWidth)
-				maxLineWidth = tl.metrics.width;
+			if (tl.width() > maxLineWidth)
+				maxLineWidth = tl.width();
 
-			if (tl.metrics.height > lineHeight)
-				lineHeight = tl.metrics.height;
+			if (tl.height() > lineHeight)
+				lineHeight = tl.height();
 
 			lines.push_back ({ move(tl), RegionColors[colorIndex] });
 			colorIndex = (colorIndex + 1) % _countof(RegionColors);
@@ -238,9 +237,9 @@ public:
 		float UpDownPadding = 2;
 		float coloredRectWidth = lineHeight * 2;
 
-		auto title = text_layout::create (dwrite_factory(), _legendFont, "MST Regions:");
+		auto title = text_layout_with_metrics (dwrite_factory(), _legendFont, "MST Regions:");
 
-		float y = client_height() - lines.size() * (lineHeight + 2 * UpDownPadding) - title.metrics.height - 2 * UpDownPadding;
+		float y = client_height() - lines.size() * (lineHeight + 2 * UpDownPadding) - title.height() - 2 * UpDownPadding;
 
 		auto oldaa = dc->GetAntialiasMode();
 		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
@@ -254,8 +253,8 @@ public:
 		dc->DrawLine ({ lineX, y }, { lineX, client_height() }, _drawing_resources._brushWindowText, lineWidth);
 		dc->SetAntialiasMode(oldaa);
 
-		dc->DrawTextLayout ({ LeftRightPadding, y + UpDownPadding }, title.layout, _drawing_resources._brushWindowText);
-		y += (title.metrics.height + 2 * UpDownPadding);
+		dc->DrawTextLayout ({ LeftRightPadding, y + UpDownPadding }, title, _drawing_resources._brushWindowText);
+		y += (title.height() + 2 * UpDownPadding);
 
 		for (auto& p : lines)
 		{
@@ -264,7 +263,7 @@ public:
 			D2D1_RECT_F rect = { LeftRightPadding, y + UpDownPadding, LeftRightPadding + coloredRectWidth, y + UpDownPadding + lineHeight };
 			dc->FillRectangle (&rect, brush);
 			D2D1_POINT_2F pt = { LeftRightPadding + coloredRectWidth + LeftRightPadding, y + UpDownPadding };
-			dc->DrawTextLayout (pt, p.first.layout, _drawing_resources._brushWindowText);
+			dc->DrawTextLayout (pt, p.first, _drawing_resources._brushWindowText);
 			y += (lineHeight + 2 * UpDownPadding);
 		}
 	}
@@ -291,25 +290,25 @@ public:
 		float leftRightPadding = 3;
 		float topBottomPadding = 1.5f;
 		auto textFormat = smallFont ? _drawing_resources._smallTextFormat.get() : _drawing_resources._regularTextFormat.get();
-		auto tl = edge::text_layout::create (_drawing_resources._dWriteFactory, textFormat, text);
+		auto tl = edge::text_layout_with_metrics (_drawing_resources._dWriteFactory, textFormat, text);
 
 		float pixelWidthDips = GetDipSizeFromPixelSize ({ 1, 0 }).width;
 		float lineWidthDips = roundf(1.0f / pixelWidthDips) * pixelWidthDips;
 
 		float left = dLocation.x - leftRightPadding;
 		if (ha == DWRITE_TEXT_ALIGNMENT_CENTER)
-			left -= tl.metrics.width / 2;
+			left -= tl.width() / 2;
 		else if (ha == DWRITE_TEXT_ALIGNMENT_TRAILING)
-			left -= tl.metrics.width;
+			left -= tl.width();
 
 		float top = dLocation.y;
 		if (va == DWRITE_PARAGRAPH_ALIGNMENT_FAR)
-			top -= (topBottomPadding * 2 + tl.metrics.height + lineWidthDips * 2);
+			top -= (topBottomPadding * 2 + tl.height() + lineWidthDips * 2);
 		else if (va == DWRITE_PARAGRAPH_ALIGNMENT_CENTER)
-			top -= (topBottomPadding + tl.metrics.height + lineWidthDips);
+			top -= (topBottomPadding + tl.height() + lineWidthDips);
 		
-		float right = left + 2 * leftRightPadding + tl.metrics.width;
-		float bottom = top + 2 * topBottomPadding + tl.metrics.height;
+		float right = left + 2 * leftRightPadding + tl.width();
+		float bottom = top + 2 * topBottomPadding + tl.height();
 		left   = roundf (left   / pixelWidthDips) * pixelWidthDips - lineWidthDips / 2;
 		top    = roundf (top    / pixelWidthDips) * pixelWidthDips - lineWidthDips / 2;
 		right  = roundf (right  / pixelWidthDips) * pixelWidthDips + lineWidthDips / 2;
@@ -323,7 +322,7 @@ public:
 		brush->SetColor (GetD2DSystemColor(COLOR_INFOTEXT));
 		rt->DrawRoundedRectangle (&rr, brush, lineWidthDips);
 
-		rt->DrawTextLayout ({ rr.rect.left + leftRightPadding, rr.rect.top + topBottomPadding }, tl.layout, brush);
+		rt->DrawTextLayout ({ rr.rect.left + leftRightPadding, rr.rect.top + topBottomPadding }, tl, brush);
 	}
 
 	void render_bridges (ID2D1RenderTarget* dc, const std::set<STP_MST_CONFIG_ID>& configIds) const

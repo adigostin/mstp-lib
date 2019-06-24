@@ -268,11 +268,11 @@ void port::render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned
 
 		if (STP_GetTxCount(b, (unsigned int)_port_index) == STP_GetTxHoldCount(b))
 		{
-			auto layout = edge::text_layout::create (dos._dWriteFactory, dos._smallTextFormat, "txCount=TxHoldCount");
+			auto layout = edge::text_layout_with_metrics (dos._dWriteFactory, dos._smallTextFormat, "txCount=TxHoldCount");
 			D2D1_MATRIX_3X2_F old;
 			rt->GetTransform(&old);
 			rt->SetTransform (Matrix3x2F::Rotation(-90) * old);
-			rt->DrawTextLayout ({ -layout.metrics.width - 3, 2 }, layout.layout, dos._brushWindowText);
+			rt->DrawTextLayout ({ -layout.width() - 3, 2 }, layout, dos._brushWindowText);
 			rt->SetTransform(&old);
 		}
 
@@ -288,23 +288,19 @@ void port::render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned
 	rt->FillRectangle (&portRect, mac_operational() ? dos._poweredFillBrush : dos._unpoweredBrush);
 	rt->DrawRectangle (&portRect, dos._brushWindowText, interiorPortOutlineWidth);
 
-	com_ptr<IDWriteTextLayout> layout;
-	wstringstream ss;
+	std::wstringstream ss;
 	ss << setfill(L'0') << setw(4) << hex << STP_GetPortIdentifier(b, (unsigned int)_port_index, treeIndex);
-	auto hr = dos._dWriteFactory->CreateTextLayout (ss.str().c_str(), (UINT32) ss.tellp(), dos._smallTextFormat, 10000, 10000, &layout); assert(SUCCEEDED(hr));
-	DWRITE_TEXT_METRICS metrics;
-	hr = layout->GetMetrics(&metrics); assert(SUCCEEDED(hr));
+	auto layout = text_layout_with_metrics (dos._dWriteFactory, dos._smallTextFormat, ss.str().c_str());
 	DWRITE_LINE_METRICS lineMetrics;
 	UINT32 actualLineCount;
-	hr = layout->GetLineMetrics(&lineMetrics, 1, &actualLineCount); assert(SUCCEEDED(hr));
-	rt->DrawTextLayout ({ -metrics.width / 2, -lineMetrics.baseline - OutlineWidth * 2 - 1}, layout, dos._brushWindowText);
+	auto hr = layout->GetLineMetrics(&lineMetrics, 1, &actualLineCount); assert(SUCCEEDED(hr));
+	rt->DrawTextLayout ({ -layout.width() / 2, -lineMetrics.baseline - OutlineWidth * 2 - 1}, layout, dos._brushWindowText);
 	
 	if (_trees[treeIndex]->fdb_flush_text_visible())
 	{
-		hr = dos._dWriteFactory->CreateTextLayout (L"Flush", 5, dos._smallBoldTextFormat, 10000, 10000, &layout); assert(SUCCEEDED(hr));
-		hr = layout->GetMetrics(&metrics); assert(SUCCEEDED(hr));
+		layout = text_layout_with_metrics (dos._dWriteFactory, dos._smallBoldTextFormat, L"Flush");
 		hr = layout->GetLineMetrics(&lineMetrics, 1, &actualLineCount); assert(SUCCEEDED(hr));
-		D2D1_POINT_2F l = { -metrics.width / 2, -InteriorDepth - lineMetrics.baseline - lineMetrics.height * 0.2f };
+		D2D1_POINT_2F l = { -layout.width() / 2, -InteriorDepth - lineMetrics.baseline - lineMetrics.height * 0.2f };
 		rt->DrawTextLayout (l, layout, dos._brushWindowText);
 	}
 

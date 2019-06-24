@@ -313,11 +313,11 @@ public:
 
 		if (_root_items.empty())
 		{
-			auto tl = text_layout::create (dwrite_factory(), _textFormat, "(no selection)");
-			D2D1_POINT_2F p = { client_width() / 2 - tl.metrics.width / 2, client_height() / 2 - tl.metrics.height / 2};
+			auto tl = text_layout_with_metrics (dwrite_factory(), _textFormat, "(no selection)");
+			D2D1_POINT_2F p = { client_width() / 2 - tl.width() / 2, client_height() / 2 - tl.height() / 2};
 			com_ptr<ID2D1SolidColorBrush> brush;
 			dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOWTEXT), &brush);
-			dc->DrawTextLayout (p, tl.layout, brush);
+			dc->DrawTextLayout (p, tl, brush);
 			return;
 		}
 
@@ -363,13 +363,13 @@ public:
 				float lr_padding = 3;
 				std::stringstream ss;
 				ss << value_item->_prop->_name << " (" << value_item->_prop->type_name() << ")";
-				auto title_layout = text_layout::create(dwrite_factory(), _boldTextFormat, ss.str(), client_width() - 2 * lr_padding);
-				dc->DrawTextLayout({ desc_rect.left + lr_padding, desc_rect.top }, title_layout.layout, rc.fore_brush);
+				auto title_layout = text_layout_with_metrics (dwrite_factory(), _boldTextFormat, ss.str(), client_width() - 2 * lr_padding);
+				dc->DrawTextLayout({ desc_rect.left + lr_padding, desc_rect.top }, title_layout, rc.fore_brush);
 
 				if (value_item->_prop->_description)
 				{
-					auto desc_layout = text_layout::create(dwrite_factory(), _textFormat, value_item->_prop->_description, client_width() - 2 * lr_padding);
-					dc->DrawTextLayout({ desc_rect.left + lr_padding, desc_rect.top + title_layout.metrics.height }, desc_layout.layout, rc.fore_brush);
+					auto desc_layout = text_layout(dwrite_factory(), _textFormat, value_item->_prop->_description, client_width() - 2 * lr_padding);
+					dc->DrawTextLayout({ desc_rect.left + lr_padding, desc_rect.top + title_layout.height() }, desc_layout, rc.fore_brush);
 				}
 			}
 		}

@@ -107,7 +107,7 @@ namespace edge
 	{
 		using base = expandable_item;
 
-		text_layout _layout;
+		text_layout_with_metrics _layout;
 
 	public:
 		const property_group* const _group;
@@ -129,7 +129,7 @@ namespace edge
 		using base = object_item;
 
 		std::string _heading;
-		text_layout _text_layout;
+		text_layout_with_metrics _text_layout;
 
 	public:
 		property_grid_i* const _grid;
@@ -170,11 +170,11 @@ namespace edge
 		bool multiple_values() const;
 		bool can_edit() const;
 
-		text_layout _name;
+		text_layout_with_metrics _name;
 
 		struct
 		{
-			text_layout tl;
+			text_layout_with_metrics tl;
 			bool readable;
 		} _value;
 	};
