@@ -5,7 +5,6 @@
 #include "bridge.h"
 #include "win32/utility_functions.h"
 
-using namespace std;
 using namespace edge;
 
 static constexpr UINT WM_SHOWN = WM_APP + 1;
@@ -237,13 +236,13 @@ public:
 		{
 			lvi.iItem = vlanNumber;
 
-			wstring text = to_wstring(vlanNumber);
+			std::wstring text = std::to_wstring(vlanNumber);
 			lvi.iSubItem = 0;
 			lvi.pszText = const_cast<wchar_t*>(text.c_str());
 			ListView_InsertItem (list, &lvi);
 
 			auto treeIndex = entries[vlanNumber].treeIndex;
-			text = to_wstring (treeIndex);
+			text = std::to_wstring (treeIndex);
 			lvi.iSubItem = 1;
 			lvi.pszText = const_cast<wchar_t*>(text.c_str());
 			ListView_SetItem (list, &lvi);
@@ -252,7 +251,7 @@ public:
 
 	void LoadDefaultConfig()
 	{
-		vector<STP_CONFIG_TABLE_ENTRY> entries;
+		std::vector<STP_CONFIG_TABLE_ENTRY> entries;
 		entries.resize(1 + max_vlan_number);
 
 		for (auto b : _bridges)
@@ -269,7 +268,7 @@ public:
 		{
 			auto treeCount = 1 + STP_GetMstiCount(b->stp_bridge());
 
-			vector<STP_CONFIG_TABLE_ENTRY> entries;
+			std::vector<STP_CONFIG_TABLE_ENTRY> entries;
 			entries.resize(1 + max_vlan_number);
 
 			entries[0] = { 0, 0 }; // VLAN0 does not exist.

@@ -6,7 +6,6 @@
 #include "port.h"
 #include "win32/xml_serializer.h"
 
-using namespace std;
 using namespace edge;
 
 static const _bstr_t NextMacAddressString = "NextMacAddress";
@@ -15,17 +14,17 @@ class project : public edge::object, public project_i
 {
 	using base = edge::object;
 
-	wstring _path;
-	vector<unique_ptr<bridge>> _bridges;
-	vector<unique_ptr<wire>> _wires;
+	std::wstring _path;
+	std::vector<std::unique_ptr<bridge>> _bridges;
+	std::vector<std::unique_ptr<wire>> _wires;
 	mac_address _next_mac_address = next_mac_address_property._default_value.value();
 	bool _simulationPaused = false;
 	bool _changedFlag = false;
 
 public:
-	virtual const vector<unique_ptr<bridge>>& bridges() const override final { return _bridges; }
+	virtual const std::vector<std::unique_ptr<bridge>>& bridges() const override final { return _bridges; }
 
-	virtual void insert_bridge (size_t index, unique_ptr<bridge>&& bridge) override final
+	virtual void insert_bridge (size_t index, std::unique_ptr<bridge>&& bridge) override final
 	{
 		assert (index <= _bridges.size());
 		assert (bridge->_project == nullptr);
@@ -42,13 +41,13 @@ public:
 		this->event_invoker<invalidate_e>()(this);
 	}
 
-	virtual unique_ptr<bridge> remove_bridge(size_t index) override final
+	virtual std::unique_ptr<bridge> remove_bridge(size_t index) override final
 	{
 		assert (index < _bridges.size());
 		bridge* b = _bridges[index].get();
 		assert (b->_project == this);
 
-		if (any_of (_wires.begin(), _wires.end(), [b, this](const unique_ptr<wire>& w) {
+		if (std::any_of (_wires.begin(), _wires.end(), [b, this](const std::unique_ptr<wire>& w) {
 			return any_of (w->points().begin(), w->points().end(), [b, this] (wire_end p) {
 				return std::holds_alternative<connected_wire_end>(p) && (std::get<connected_wire_end>(p)->bridge() == b);
 			});
@@ -69,9 +68,9 @@ public:
 		return result;
 	}
 
-	virtual const vector<unique_ptr<wire>>& wires() const override final { return _wires; }
+	virtual const std::vector<std::unique_ptr<wire>>& wires() const override final { return _wires; }
 
-	virtual void insert_wire (size_t index, unique_ptr<wire>&& wire) override final
+	virtual void insert_wire (size_t index, std::unique_ptr<wire>&& wire) override final
 	{
 		assert (index <= _wires.size());
 		assert (wire->_project == nullptr);
@@ -87,7 +86,7 @@ public:
 		this->event_invoker<invalidate_e>()(this);
 	}
 
-	virtual unique_ptr<wire> remove_wire (size_t index) override final
+	virtual std::unique_ptr<wire> remove_wire (size_t index) override final
 	{
 		assert (index < _wires.size());
 		wire* w = _wires[index].get();
@@ -127,7 +126,7 @@ public:
 
 	virtual bool IsWireForwarding (wire* wire, unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const override final
 	{
-		if (!holds_alternative<connected_wire_end>(wire->p0()) || !holds_alternative<connected_wire_end>(wire->p1()))
+		if (!std::holds_alternative<connected_wire_end>(wire->p0()) || !std::holds_alternative<connected_wire_end>(wire->p1()))
 			return false;
 
 		auto portA = std::get<connected_wire_end>(wire->p0());
@@ -139,9 +138,9 @@ public:
 
 		if (hasLoop != nullptr)
 		{
-			unordered_set<port*> txPorts;
+			std::unordered_set<port*> txPorts;
 
-			function<bool(port* txPort)> transmitsTo = [this, vlanNumber, &txPorts, &transmitsTo, targetPort=portA](port* txPort) -> bool
+			std::function<bool(port* txPort)> transmitsTo = [this, vlanNumber, &txPorts, &transmitsTo, targetPort=portA](port* txPort) -> bool
 			{
 				if (txPort->IsForwarding(vlanNumber))
 				{
@@ -180,7 +179,7 @@ public:
 	virtual mac_address alloc_mac_address_range (size_t count) override final
 	{
 		if (count >= 128)
-			throw range_error("count must be lower than 128.");
+			throw std::range_error("count must be lower than 128.");
 
 		auto result = _next_mac_address;
 		_next_mac_address[5] += (uint8_t)count;

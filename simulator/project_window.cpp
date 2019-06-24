@@ -6,7 +6,6 @@
 #include "wire.h"
 #include "win32/property_grid.h"
 
-using namespace std;
 using namespace edge;
 
 static constexpr wchar_t ProjectWindowWndClassName[] = L"project_window-{24B42526-2970-4B3C-A753-2DABD22C4BB0}";
@@ -261,14 +260,14 @@ public:
 
 	void SetWindowTitle()
 	{
-		wstringstream windowTitle;
+		std::wstringstream windowTitle;
 
 		const auto& filePath = _project->file_path();
 		if (!filePath.empty())
 		{
 			const wchar_t* fileName = PathFindFileName (filePath.c_str());
 			const wchar_t* fileExt = PathFindExtension (filePath.c_str());
-			windowTitle << setw(fileExt - fileName) << fileName;
+			windowTitle << std::setw(fileExt - fileName) << fileName;
 		}
 		else
 			windowTitle << L"Untitled";
@@ -508,7 +507,7 @@ public:
 		EndPaint(hwnd(), &ps);
 	}
 
-	optional<LRESULT> ProcessWmCommand (WPARAM wParam, LPARAM lParam)
+	std::optional<LRESULT> ProcessWmCommand (WPARAM wParam, LPARAM lParam)
 	{
 		if (wParam == ID_VIEW_PROPERTIES)
 		{
@@ -544,7 +543,7 @@ public:
 
 		if (((HIWORD(wParam) == 0) || (HIWORD(wParam) == 1)) && (LOWORD(wParam) == ID_FILE_OPEN))
 		{
-			wstring openPath;
+			std::wstring openPath;
 			HRESULT hr = TryChooseFilePath (OpenOrSave::Open, hwnd(), nullptr, openPath);
 			if (SUCCEEDED(hr))
 				Open(openPath.c_str());
@@ -584,7 +583,7 @@ public:
 			int charCount = ::GetMenuString (fileMenu, (UINT)wParam, nullptr, 0, MF_BYCOMMAND);
 			if (charCount > 0)
 			{
-				auto path = make_unique<wchar_t[]>(charCount + 1);
+				auto path = std::make_unique<wchar_t[]>(charCount + 1);
 				::GetMenuString (fileMenu, (UINT)wParam, path.get(), charCount + 1, MF_BYCOMMAND);
 				Open(path.get());
 			}
@@ -597,7 +596,7 @@ public:
 			return 0;
 		}
 
-		return nullopt;
+		return std::nullopt;
 	}
 
 	void Open (const wchar_t* openPath)
@@ -696,7 +695,7 @@ public:
 
 	enum class OpenOrSave { Open, Save };
 
-	static HRESULT TryChooseFilePath (OpenOrSave which, HWND fileDialogParentHWnd, const wchar_t* pathToInitializeDialogTo, wstring& sbOut)
+	static HRESULT TryChooseFilePath (OpenOrSave which, HWND fileDialogParentHWnd, const wchar_t* pathToInitializeDialogTo, std::wstring& sbOut)
 	{
 		com_ptr<IFileDialog> dialog;
 		HRESULT hr = CoCreateInstance ((which == OpenOrSave::Save) ? CLSID_FileSaveDialog : CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, __uuidof(dialog), (void**) &dialog);
@@ -719,7 +718,7 @@ public:
 			auto filePtr = PathFindFileName(pathToInitializeDialogTo);
 			dialog->SetFileName(filePtr);
 
-			wstring dir (pathToInitializeDialogTo, filePtr - pathToInitializeDialogTo);
+			std::wstring dir (pathToInitializeDialogTo, filePtr - pathToInitializeDialogTo);
 			com_ptr<IShellItem> si;
 			hr = SHCreateItemFromParsingName (dir.c_str(), nullptr, IID_PPV_ARGS(&si));
 			if (SUCCEEDED(hr))
@@ -884,11 +883,11 @@ public:
 
 	virtual project_i* project() const override final { return _project.get(); }
 
-	static vector<wstring> GetRecentFileList()
+	static std::vector<std::wstring> GetRecentFileList()
 	{
 		// We ignore errors in this particular function.
 
-		vector<wstring> fileList;
+		std::vector<std::wstring> fileList;
 
 		com_ptr<IApplicationDocumentLists> docList;
 		auto hr = CoCreateInstance (CLSID_ApplicationDocumentLists, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IApplicationDocumentLists), (void**) &docList);
@@ -938,7 +937,7 @@ public:
 		return -1;
 	}
 
-	void AddRecentFileMenuItems (const vector<wstring>& recentFiles)
+	void AddRecentFileMenuItems (const std::vector<std::wstring>& recentFiles)
 	{
 		auto mainMenu = ::GetMenu(hwnd());
 		auto fileMenu = ::GetSubMenu (mainMenu, 0);
@@ -1018,7 +1017,7 @@ public:
 					all_same_tree_index = false;
 			}
 
-			stringstream ss;
+			std::stringstream ss;
 			ss << "VLAN " << _selectedVlanNumber << " Properties";
 			if (all_same_tree_index && (first_tree_index == 0))
 				ss << " (CIST)";

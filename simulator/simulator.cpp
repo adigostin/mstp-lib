@@ -17,7 +17,6 @@
 
 #pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
-using namespace std;
 using namespace D2D1;
 using namespace edge;
 
@@ -31,7 +30,7 @@ extern const project_window_factory_t project_window_factory;
 extern const project_factory_t project_factory;
 
 #pragma region project_i
-pair<wire*, size_t> project_i::GetWireConnectedToPort (const class port* port) const
+std::pair<wire*, size_t> project_i::GetWireConnectedToPort (const class port* port) const
 {
 	for (auto& w : wires())
 	{
@@ -93,14 +92,14 @@ std::unique_ptr<bridge> project_i::remove_bridge (bridge* b)
 class SimulatorApp : public event_manager, public simulator_app_i
 {
 	HINSTANCE const _hInstance;
-	wstring _regKeyPath;
-	vector<std::unique_ptr<project_window_i>> _projectWindows;
+	std::wstring _regKeyPath;
+	std::vector<std::unique_ptr<project_window_i>> _projectWindows;
 
 public:
 	SimulatorApp (HINSTANCE hInstance)
 		: _hInstance(hInstance)
 	{
-		wstringstream ss;
+		std::wstringstream ss;
 		ss << L"SOFTWARE\\" << company_name << L"\\" << ::app_name << L"\\" << ::app_version_string;
 		_regKeyPath = ss.str();
 	}
@@ -195,14 +194,14 @@ public:
 
 static void RegisterApplicationAndFileTypes()
 {
-	auto exePath = make_unique<wchar_t[]>(MAX_PATH);
+	auto exePath = std::make_unique<wchar_t[]>(MAX_PATH);
 	DWORD dwRes = GetModuleFileName (nullptr, exePath.get(), MAX_PATH); assert(dwRes);
-	wstringstream ss;
+	std::wstringstream ss;
 	ss << L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\" << PathFindFileName(exePath.get());
 	auto appPathKeyName = ss.str();
 
 	bool notifyShell = false;
-	auto buffer = make_unique<wchar_t[]>(MAX_PATH);
+	auto buffer = std::make_unique<wchar_t[]>(MAX_PATH);
 	DWORD cbData = MAX_PATH;
 	auto ls = RegGetValue (HKEY_CURRENT_USER, appPathKeyName.c_str(), nullptr, RRF_RT_REG_SZ, nullptr, buffer.get(), &cbData);
 	if ((ls != ERROR_SUCCESS) || (_wcsicmp (buffer.get(), exePath.get()) != 0))

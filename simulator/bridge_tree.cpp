@@ -3,7 +3,6 @@
 #include "bridge_tree.h"
 #include "bridge.h"
 
-using namespace std;
 using namespace edge;
 
 bridge_tree::bridge_tree (bridge* parent, size_t tree_index)
@@ -64,9 +63,9 @@ void bridge_tree::set_bridge_priority (uint32_t priority)
 	}
 }
 
-array<unsigned char, 36> bridge_tree::root_priorty_vector() const
+std::array<unsigned char, 36> bridge_tree::root_priorty_vector() const
 {
-	array<unsigned char, 36> prioVector;
+	std::array<unsigned char, 36> prioVector;
 	STP_GetRootPriorityVector(_parent->stp_bridge(), (unsigned int)_tree_index, prioVector.data());
 	return prioVector;
 }
@@ -77,11 +76,11 @@ std::string bridge_tree::root_bridge_id() const
 		throw std::logic_error(stp_disabled_text);
 
 	auto rpv = root_priorty_vector();
-	stringstream ss;
-	ss << uppercase << setfill('0') << hex
-		<< setw(2) << (int)rpv[0] << setw(2) << (int)rpv[1] << "."
-		<< setw(2) << (int)rpv[2] << setw(2) << (int)rpv[3] << setw(2) << (int)rpv[4]
-		<< setw(2) << (int)rpv[5] << setw(2) << (int)rpv[6] << setw(2) << (int)rpv[7];
+	std::stringstream ss;
+	ss << std::uppercase << std::setfill('0') << std::hex
+		<< std::setw(2) << (int)rpv[0] << std::setw(2) << (int)rpv[1] << "."
+		<< std::setw(2) << (int)rpv[2] << std::setw(2) << (int)rpv[3] << std::setw(2) << (int)rpv[4]
+		<< std::setw(2) << (int)rpv[5] << std::setw(2) << (int)rpv[6] << std::setw(2) << (int)rpv[7];
 	return ss.str();
 }
 
@@ -101,11 +100,11 @@ std::string bridge_tree::regional_root_id() const
 		throw std::logic_error(stp_disabled_text);
 
 	auto rpv = root_priorty_vector();
-	stringstream ss;
-	ss << uppercase << setfill('0') << hex
-		<< setw(2) << (int)rpv[12] << setw(2) << (int)rpv[13] << "."
-		<< setw(2) << (int)rpv[14] << setw(2) << (int)rpv[15] << setw(2) << (int)rpv[16]
-		<< setw(2) << (int)rpv[17] << setw(2) << (int)rpv[18] << setw(2) << (int)rpv[19];
+	std::stringstream ss;
+	ss << std::uppercase << std::setfill('0') << std::hex
+		<< std::setw(2) << (int)rpv[12] << std::setw(2) << (int)rpv[13] << "."
+		<< std::setw(2) << (int)rpv[14] << std::setw(2) << (int)rpv[15] << std::setw(2) << (int)rpv[16]
+		<< std::setw(2) << (int)rpv[17] << std::setw(2) << (int)rpv[18] << std::setw(2) << (int)rpv[19];
 	return ss.str();
 }
 
@@ -125,11 +124,11 @@ std::string bridge_tree::designated_bridge_id() const
 		throw std::logic_error(stp_disabled_text);
 
 	auto rpv = root_priorty_vector();
-	stringstream ss;
-	ss << uppercase << setfill('0') << hex
-		<< setw(2) << (int)rpv[24] << setw(2) << (int)rpv[25] << "."
-		<< setw(2) << (int)rpv[26] << setw(2) << (int)rpv[27] << setw(2) << (int)rpv[28]
-		<< setw(2) << (int)rpv[29] << setw(2) << (int)rpv[30] << setw(2) << (int)rpv[31];
+	std::stringstream ss;
+	ss << std::uppercase << std::setfill('0') << std::hex
+		<< std::setw(2) << (int)rpv[24] << std::setw(2) << (int)rpv[25] << "."
+		<< std::setw(2) << (int)rpv[26] << std::setw(2) << (int)rpv[27] << std::setw(2) << (int)rpv[28]
+		<< std::setw(2) << (int)rpv[29] << std::setw(2) << (int)rpv[30] << std::setw(2) << (int)rpv[31];
 	return ss.str();
 }
 
@@ -139,8 +138,8 @@ std::string bridge_tree::designated_port_id() const
 		throw std::logic_error(stp_disabled_text);
 
 	auto rpv = root_priorty_vector();
-	stringstream ss;
-	ss << uppercase << setfill('0') << hex << setw(2) << (int)rpv[32] << setw(2) << (int)rpv[33];
+	std::stringstream ss;
+	ss << std::uppercase << std::setfill('0') << std::hex << std::setw(2) << (int)rpv[32] << std::setw(2) << (int)rpv[33];
 	return ss.str();
 }
 
@@ -150,8 +149,8 @@ std::string bridge_tree::receiving_port_id() const
 		throw std::logic_error(stp_disabled_text);
 
 	auto rpv = root_priorty_vector();
-	stringstream ss;
-	ss << uppercase << setfill('0') << hex << setw(2) << (int)rpv[34] << setw(2) << (int)rpv[35];
+	std::stringstream ss;
+	ss << std::uppercase << std::setfill('0') << std::hex << std::setw(2) << (int)rpv[34] << std::setw(2) << (int)rpv[35];
 	return ss.str();
 }
 

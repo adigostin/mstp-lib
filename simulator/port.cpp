@@ -5,7 +5,6 @@
 #include "win32/utility_functions.h"
 #include "win32/d2d_window.h"
 
-using namespace std;
 using namespace D2D1;
 using namespace edge;
 
@@ -48,8 +47,8 @@ port::port (class bridge* bridge, size_t port_index, enum side side, float offse
 
 	for (size_t treeIndex = 0; treeIndex < bridge->trees().size(); treeIndex++)
 	{
-		auto tree = unique_ptr<port_tree>(new port_tree(this, treeIndex));
-		_trees.push_back (move(tree));
+		auto tree = std::unique_ptr<port_tree>(new port_tree(this, treeIndex));
+		_trees.push_back (std::move(tree));
 	}
 }
 
@@ -121,7 +120,7 @@ void port::RenderExteriorNonStpPort (ID2D1RenderTarget* dc, const drawing_resour
 // static
 void port::RenderExteriorStpPort (ID2D1RenderTarget* dc, const drawing_resources& dos, STP_PORT_ROLE role, bool learning, bool forwarding, bool operEdge)
 {
-	static constexpr float circleDiameter = min (ExteriorHeight / 2, ExteriorWidth);
+	static constexpr float circleDiameter = std::min (ExteriorHeight / 2, ExteriorWidth);
 
 	static constexpr float edw = ExteriorWidth;
 	static constexpr float edh = ExteriorHeight;
@@ -289,7 +288,7 @@ void port::render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned
 	rt->DrawRectangle (&portRect, dos._brushWindowText, interiorPortOutlineWidth);
 
 	std::wstringstream ss;
-	ss << setfill(L'0') << setw(4) << hex << STP_GetPortIdentifier(b, (unsigned int)_port_index, treeIndex);
+	ss << std::setfill(L'0') << std::setw(4) << std::hex << STP_GetPortIdentifier(b, (unsigned int)_port_index, treeIndex);
 	auto layout = text_layout_with_metrics (dos._dWriteFactory, dos._smallTextFormat, ss.str().c_str());
 	DWRITE_LINE_METRICS lineMetrics;
 	UINT32 actualLineCount;
@@ -314,7 +313,7 @@ D2D1_RECT_F port::GetInnerOuterRect() const
 	auto tr = GetPortTransform();
 	tl = tr.TransformPoint(tl);
 	br = tr.TransformPoint(br);
-	return { min(tl.x, br.x), min (tl.y, br.y), max(tl.x, br.x), max(tl.y, br.y) };
+	return { std::min(tl.x, br.x), std::min (tl.y, br.y), std::max(tl.x, br.x), std::max(tl.y, br.y) };
 }
 
 void port::render_selection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const

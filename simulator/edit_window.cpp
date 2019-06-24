@@ -9,7 +9,6 @@
 #include "win32/zoomable_window.h"
 #include "win32/utility_functions.h"
 
-using namespace std;
 using namespace D2D1;
 using namespace edge;
 
@@ -39,7 +38,7 @@ class edit_window : public zoomable_window, public edit_window_i
 	selection_i*      const _selection;
 	com_ptr<IDWriteTextFormat> _legendFont;
 	struct drawing_resources _drawing_resources;
-	unique_ptr<edit_state> _state;
+	std::unique_ptr<edit_state> _state;
 	ht_result _htResult = { nullptr, 0 };
 
 public:
@@ -148,7 +147,7 @@ public:
 	{
 		float maxLineWidth = 0;
 		float maxLineHeight = 0;
-		vector<text_layout> layouts;
+		std::vector<text_layout> layouts;
 		for (auto& info : LegendInfo)
 		{
 			auto tl = text_layout (dwrite_factory(), _legendFont, info.text);
@@ -168,7 +167,7 @@ public:
 		float textX = client_width() - (5 + maxLineWidth + 5 + port::ExteriorHeight + 5);
 		float lineX = textX - 3;
 		float bitmapX = client_width() - (5 + port::ExteriorHeight + 5);
-		float rowHeight = 2 + max (maxLineHeight, port::ExteriorWidth);
+		float rowHeight = 2 + std::max (maxLineHeight, port::ExteriorWidth);
 		float y = client_height() - _countof(LegendInfo) * rowHeight;
 
 		auto lineWidth = GetDipSizeFromPixelSize({ 0, 1 }).height;
@@ -212,16 +211,15 @@ public:
 
 		float maxLineWidth = 0;
 		float lineHeight = 0;
-		vector<pair<text_layout, D2D1_COLOR_F>> lines;
+		std::vector<std::pair<text_layout, D2D1_COLOR_F>> lines;
 		for (const STP_MST_CONFIG_ID& configId : configIds)
 		{
-			stringstream ss;
+			std::stringstream ss;
 			ss << configId.ConfigurationName << " -- " << (configId.RevisionLevelLow | (configId.RevisionLevelHigh << 8)) << " -- "
-				<< uppercase << setfill('0') << hex
-				<< setw(2) << (int)configId.ConfigurationDigest[0] << setw(2) << (int)configId.ConfigurationDigest[1] << ".."
-				<< setw(2) << (int)configId.ConfigurationDigest[14] << setw(2) << (int)configId.ConfigurationDigest[15];
-			string line = ss.str();
-			auto tl = text_layout_with_metrics (dwrite_factory(), _legendFont, line.c_str());
+				<< std::uppercase << std::setfill('0') << std::hex
+				<< std::setw(2) << (int)configId.ConfigurationDigest[0] << std::setw(2) << (int)configId.ConfigurationDigest[1] << ".."
+				<< std::setw(2) << (int)configId.ConfigurationDigest[14] << std::setw(2) << (int)configId.ConfigurationDigest[15];
+			auto tl = text_layout_with_metrics (dwrite_factory(), _legendFont, ss.str());
 
 			if (tl.width() > maxLineWidth)
 				maxLineWidth = tl.width();
@@ -229,7 +227,7 @@ public:
 			if (tl.height() > lineHeight)
 				lineHeight = tl.height();
 
-			lines.push_back ({ move(tl), RegionColors[colorIndex] });
+			lines.push_back ({ std::move(tl), RegionColors[colorIndex] });
 			colorIndex = (colorIndex + 1) % _countof(RegionColors);
 		}
 
@@ -331,7 +329,7 @@ public:
 		dc->GetTransform(&oldtr);
 		dc->SetTransform (GetZoomTransform() * oldtr);
 
-		for (const unique_ptr<bridge>& bridge : _project->bridges())
+		for (auto& bridge : _project->bridges())
 		{
 			D2D1_COLOR_F color = ColorF(ColorF::LightGreen);
 			if (STP_GetStpVersion(bridge->stp_bridge()) >= STP_VERSION_MSTP)
@@ -356,7 +354,7 @@ public:
 		dc->GetTransform(&oldtr);
 		dc->SetTransform (GetZoomTransform() * oldtr);
 
-		for (const unique_ptr<wire>& w : _project->wires())
+		for (auto& w : _project->wires())
 		{
 			bool hasLoop;
 			bool forwarding = _project->IsWireForwarding(w.get(), _pw->selected_vlan_number(), &hasLoop);
@@ -378,7 +376,7 @@ public:
 			bool anyPortConnected = false;
 			for (auto& b : _project->bridges())
 				anyPortConnected |= any_of (b->ports().begin(), b->ports().end(),
-											[this](const unique_ptr<port>& p) { return _project->GetWireConnectedToPort(p.get()).first != nullptr; });
+											[this](const std::unique_ptr<port>& p) { return _project->GetWireConnectedToPort(p.get()).first != nullptr; });
 
 			if (!anyPortConnected)
 			{
@@ -556,7 +554,7 @@ public:
 				}
 			}
 
-			return nullopt;
+			return std::nullopt;
 		}
 		else if (uMsg == WM_MOUSEMOVE)
 		{
@@ -744,7 +742,7 @@ public:
 			return 0;
 		}
 
-		return nullopt;
+		return std::nullopt;
 	}
 
 	std::optional<LRESULT> ProcessKeyOrSysKeyUp (UINT virtualKey, UINT modifierKeys)
@@ -761,7 +759,7 @@ public:
 			return res;
 		}
 
-		return nullopt;
+		return std::nullopt;
 	}
 
 	std::optional<LRESULT> ProcessMouseButtonDown (mouse_button button, UINT modifierKeysDown, POINT pt)
@@ -769,7 +767,7 @@ public:
 		::SetFocus(hwnd());
 		if (::GetFocus() != hwnd())
 			// Some validation code (maybe in the Properties Window) must have failed and taken focus back.
-			return nullopt;
+			return std::nullopt;
 
 		mouse_location ml;
 		ml.pt = pt;
@@ -816,8 +814,8 @@ public:
 		}
 		else
 		{
-			unique_ptr<edit_state> stateMoveThreshold;
-			unique_ptr<edit_state> stateButtonUp;
+			std::unique_ptr<edit_state> stateMoveThreshold;
+			std::unique_ptr<edit_state> stateButtonUp;
 
 			if (dynamic_cast<bridge*>(ht.object) != nullptr)
 			{
@@ -876,7 +874,7 @@ public:
 		}
 
 		if (button == mouse_button::right)
-			return nullopt; // return "not handled", to cause our called to pass the message to DefWindowProc, which will generate WM_CONTEXTMENU
+			return std::nullopt; // return "not handled", to cause our called to pass the message to DefWindowProc, which will generate WM_CONTEXTMENU
 
 		return 0;
 	}

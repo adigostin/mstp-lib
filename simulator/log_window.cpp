@@ -7,7 +7,6 @@
 #include "bridge.h"
 #include "port.h"
 
-using namespace std;
 using namespace D2D1;
 using namespace edge;
 
@@ -23,7 +22,7 @@ class log_window : public d2d_window, public log_window_i
 	bridge* _bridge = nullptr;
 	int _selectedPort = -1;
 	int _selectedTree = -1;
-	vector<const BridgeLogLine*> _lines;
+	std::vector<const BridgeLogLine*> _lines;
 	UINT_PTR _timerId = 0;
 	int _animationCurrentLineCount = 0;
 	int _animationEndLineCount = 0;
@@ -102,7 +101,7 @@ public:
 			float lineHeight = text_layout_with_metrics(dwrite_factory(), _textFormat, L"A").height();
 			for (int lineIndex = _topLineIndex; (lineIndex < _animationCurrentLineCount) && (y < client_height()); lineIndex++)
 			{
-				wstring line (_lines[lineIndex]->text.begin(), _lines[lineIndex]->text.end());
+				std::wstring line (_lines[lineIndex]->text.begin(), _lines[lineIndex]->text.end());
 
 				if ((line.length() >= 2) && (line[line.length() - 2] == '\r') && (line[line.length() - 1] == '\n'))
 					line.resize (line.length() - 2);
@@ -222,7 +221,7 @@ public:
 				_bridge->log_cleared().add_handler (on_log_cleared, this);
 			}
 
-			_topLineIndex = max (0, (int) _lines.size() - _numberOfLinesFitting);
+			_topLineIndex = std::max (0, (int) _lines.size() - _numberOfLinesFitting);
 			_animationCurrentLineCount = (int) _lines.size();
 			_animationEndLineCount     = (int) _lines.size();
 
@@ -238,7 +237,7 @@ public:
 		}
 	}
 
-	optional<LRESULT> window_proc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) final
+	std::optional<LRESULT> window_proc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) final
 	{
 		if (msg == WM_SIZE)
 		{
@@ -418,19 +417,19 @@ public:
 		switch (LOWORD(wParam))
 		{
 			case SB_LINEUP:
-				newTopLineIndex = max (_topLineIndex - 1, 0);
+				newTopLineIndex = std::max (_topLineIndex - 1, 0);
 				break;
 
 			case SB_PAGEUP:
-				newTopLineIndex = max (_topLineIndex - _numberOfLinesFitting, 0);
+				newTopLineIndex = std::max (_topLineIndex - _numberOfLinesFitting, 0);
 				break;
 
 			case SB_LINEDOWN:
-				newTopLineIndex = _topLineIndex + min(_animationEndLineCount - (_topLineIndex + _numberOfLinesFitting), 1);
+				newTopLineIndex = _topLineIndex + std::min(_animationEndLineCount - (_topLineIndex + _numberOfLinesFitting), 1);
 				break;
 
 			case SB_PAGEDOWN:
-				newTopLineIndex = _topLineIndex + min(_animationEndLineCount - (_topLineIndex + _numberOfLinesFitting), _numberOfLinesFitting);
+				newTopLineIndex = _topLineIndex + std::min(_animationEndLineCount - (_topLineIndex + _numberOfLinesFitting), _numberOfLinesFitting);
 				break;
 
 			case SB_THUMBTRACK:
@@ -457,9 +456,9 @@ public:
 
 		int newTopLineIndex;
 		if (linesToScroll < 0)
-			newTopLineIndex = max (_topLineIndex + linesToScroll, 0);
+			newTopLineIndex = std::max (_topLineIndex + linesToScroll, 0);
 		else
-			newTopLineIndex = _topLineIndex + min(_animationEndLineCount - (_topLineIndex + _numberOfLinesFitting), linesToScroll);
+			newTopLineIndex = _topLineIndex + std::min(_animationEndLineCount - (_topLineIndex + _numberOfLinesFitting), linesToScroll);
 
 		ProcessUserScroll (newTopLineIndex);
 	}
