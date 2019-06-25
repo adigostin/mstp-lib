@@ -262,7 +262,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 
 	bool tryDebugFirst = false;
 #ifdef _DEBUG
-	tryDebugFirst = true;
+	tryDebugFirst = (LoadLibraryA("dxgidebug.dll") != nullptr);
 #endif
 
 	com_ptr<ID3D11Device> d3d_device;
@@ -275,9 +275,9 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 		if (tryDebugFirst)
 		{
 			hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
-								   D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_DEBUG,
-								   &d3dFeatureLevel, 1,
-								   D3D11_SDK_VERSION, &d3d_device, nullptr, &deviceContext);
+			                       D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_DEBUG,
+			                       &d3dFeatureLevel, 1,
+			                       D3D11_SDK_VERSION, &d3d_device, nullptr, &deviceContext);
 		}
 
 		if (!tryDebugFirst || FAILED(hr))
