@@ -44,14 +44,14 @@ pair<wire*, size_t> project_i::GetWireConnectedToPort (const class port* port) c
 	return { };
 }
 
-port* project_i::FindConnectedPort (port* txPort) const
+port* project_i::find_connected_port (port* tx_port) const
 {
 	for (auto& w : wires())
 	{
 		for (size_t i = 0; i < 2; i++)
 		{
 			auto& thisEnd = w->points()[i];
-			if (std::holds_alternative<connected_wire_end>(thisEnd) && (std::get<connected_wire_end>(thisEnd) == txPort))
+			if (std::holds_alternative<connected_wire_end>(thisEnd) && (std::get<connected_wire_end>(thisEnd) == tx_port))
 			{
 				auto& otherEnd = w->points()[1 - i];
 				if (std::holds_alternative<connected_wire_end>(otherEnd))
@@ -323,4 +323,12 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 	CoUninitialize();
 
 	return processExitValue;
+}
+
+namespace natvis
+{
+	struct hex_dummy_low { unsigned char c; };
+	struct hex_dummy_high { unsigned char c; };	
+	static volatile hex_dummy_low dummylo;
+	static volatile hex_dummy_high dummyhi;
 }

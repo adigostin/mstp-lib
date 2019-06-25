@@ -95,14 +95,14 @@ bool exchange_bpdus (test_bridge& one, size_t one_port, test_bridge& other, size
 		{
 			auto bpdu = std::move(one.tx_queues[one_port].back());
 			one.tx_queues[one_port].pop();
-			STP_OnBpduReceived (other, other_port, bpdu.data(), (unsigned int) bpdu.size(), 0);
+			STP_OnBpduReceived (other, (unsigned int)other_port, bpdu.data(), (unsigned int) bpdu.size(), 0);
 			exchanged = true;
 		}
 		else if (!other.tx_queues[other_port].empty())
 		{
 			auto bpdu = std::move(other.tx_queues[other_port].back());
 			other.tx_queues[other_port].pop();
-			STP_OnBpduReceived (one, one_port, bpdu.data(), (unsigned int) bpdu.size(), 0);
+			STP_OnBpduReceived (one, (unsigned int)one_port, bpdu.data(), (unsigned int) bpdu.size(), 0);
 			exchanged = true;
 		}
 		else

@@ -265,6 +265,10 @@ namespace edge
 
 	static void deserialize_to_internal (IXMLDOMElement* element, object* obj, bool ignore_index_attribute)
 	{
+		auto deserializable = dynamic_cast<deserialize_i*>(obj);
+		if (deserializable != nullptr)
+			deserializable->on_deserializing();
+
 		com_ptr<IXMLDOMNamedNodeMap> attrs;
 		auto hr = element->get_attributes (&attrs); assert(SUCCEEDED(hr));
 		long attr_count;
@@ -332,6 +336,9 @@ namespace edge
 
 			hr = child_node->get_nextSibling(&child_node); assert(SUCCEEDED(hr));
 		}
+
+		if (deserializable != nullptr)
+			deserializable->on_deserialized();
 	}
 
 	void deserialize_to (IXMLDOMElement* element, object* obj)

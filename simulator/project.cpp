@@ -37,9 +37,8 @@ public:
 		static_cast<project_child*>(b)->on_added_to_project(this);
 		this->on_property_changed(args);
 
-		b->invalidated().add_handler (&OnObjectInvalidate, this);
-		b->GetPacketTransmitEvent().add_handler (&OnPacketTransmit, this);
-		b->GetLinkPulseEvent().add_handler (&OnLinkPulse, this);
+		b->invalidated().add_handler (&on_project_child_invalidated, this);
+		b->packet_transmit().add_handler (&on_packet_transmit, this);
 		this->event_invoker<invalidate_e>()(this);
 	}
 
@@ -56,9 +55,8 @@ public:
 		}))
 			assert(false); // can't remove a connected bridge
 
-		b->GetLinkPulseEvent().remove_handler (&OnLinkPulse, this);
-		b->GetPacketTransmitEvent().remove_handler (&OnPacketTransmit, this);
-		b->invalidated().remove_handler (&OnObjectInvalidate, this);
+		b->packet_transmit().remove_handler (&on_packet_transmit, this);
+		b->invalidated().remove_handler (&on_project_child_invalidated, this);
 
 		property_change_args args = { &bridges_property, index, collection_property_change_type::remove };
 		this->on_property_changing(args);
@@ -85,7 +83,7 @@ public:
 		static_cast<project_child*>(w)->on_added_to_project(this);
 		this->on_property_changed(args);
 
-		w->invalidated().add_handler (&OnObjectInvalidate, this);
+		w->invalidated().add_handler (&on_project_child_invalidated, this);
 		this->event_invoker<invalidate_e>()(this);
 	}
 
@@ -95,7 +93,7 @@ public:
 		wire* w = _wires[index].get();
 		assert(w->_project == this);
 
-		_wires[index]->invalidated().remove_handler (&OnObjectInvalidate, this);
+		_wires[index]->invalidated().remove_handler (&on_project_child_invalidated, this);
 
 		property_change_args args = { &wires_property, index, collection_property_change_type::remove };
 		this->on_property_changing (args);
@@ -108,28 +106,16 @@ public:
 		return result;
 	}
 
-	static void OnPacketTransmit (void* callbackArg, bridge* bridge, size_t txPortIndex, PacketInfo&& pi)
+	static void on_packet_transmit (void* callbackArg, bridge* bridge, size_t txPortIndex, packet_t&& pi)
 	{
 		auto project = static_cast<class project*>(callbackArg);
-		auto txPort = bridge->ports().at(txPortIndex).get();
-		auto rxPort = project->FindConnectedPort(txPort);
-		if (rxPort != nullptr)
-		{
-			pi.txPortPath.push_back (bridge->GetPortAddress(txPortIndex));
-			rxPort->bridge()->EnqueuePacket(move(pi), rxPort->port_index());
-		}
+		auto tx_port = bridge->ports().at(txPortIndex).get();
+		auto rx_port = project->find_connected_port(tx_port);
+		if (rx_port != nullptr)
+			rx_port->bridge()->enqueue_received_packet(std::move(pi), rx_port->port_index());
 	}
 
-	static void OnLinkPulse (void* callbackArg, bridge* bridge, size_t txPortIndex, unsigned int timestamp)
-	{
-		auto project = static_cast<class project*>(callbackArg);
-		auto txPort = bridge->ports().at(txPortIndex).get();
-		auto rxPort = project->FindConnectedPort(txPort);
-		if (rxPort != nullptr)
-			rxPort->bridge()->ProcessLinkPulse(rxPort->port_index(), timestamp);
-	}
-
-	static void OnObjectInvalidate (void* callbackArg, renderable_object* object)
+	static void on_project_child_invalidated (void* callbackArg, renderable_object* object)
 	{
 		auto project = static_cast<class project*>(callbackArg);
 		project->event_invoker<invalidate_e>()(project);
@@ -159,7 +145,7 @@ public:
 			{
 				if (txPort->IsForwarding(vlanNumber))
 				{
-					auto rx = FindConnectedPort(txPort);
+					auto rx = find_connected_port(txPort);
 					if ((rx != nullptr) && rx->IsForwarding(vlanNumber))
 					{
 						txPorts.insert(txPort);

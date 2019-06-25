@@ -4,22 +4,19 @@
 #include "simulator.h"
 #include "win32/d2d_window.h"
 
-using namespace std;
 using namespace D2D1;
 using namespace edge;
 
-static constexpr UINT WM_ONE_SECOND_TIMER  = WM_APP + 1;
-static constexpr UINT WM_LINK_PULSE_TIMER  = WM_APP + 2;
-static constexpr UINT WM_PACKET_RECEIVED   = WM_APP + 3;
+static constexpr UINT WM_PACKET_RECEIVED = WM_APP + 1;
 
 static constexpr uint8_t BpduDestAddress[6] = { 1, 0x80, 0xC2, 0, 0, 0 };
 
 std::string mac_address_to_string (mac_address address)
 {
-	stringstream ss;
-	ss << uppercase << setfill('0') << hex
-		<< setw(2) << (int) address[0] << setw(2) << (int) address[1] << setw(2) << (int) address[2]
-		<< setw(2) << (int) address[3] << setw(2) << (int) address[4] << setw(2) << (int) address[5];
+	std::stringstream ss;
+	ss << std::uppercase << std::setfill('0') << std::hex
+		<< std::setw(2) << (int) address[0] << std::setw(2) << (int) address[1] << std::setw(2) << (int) address[2]
+		<< std::setw(2) << (int) address[3] << std::setw(2) << (int) address[4] << std::setw(2) << (int) address[5];
 	return ss.str();
 }
 
@@ -61,88 +58,29 @@ template<typename char_type> bool mac_address_from_string (std::basic_string_vie
 template bool mac_address_from_string (std::basic_string_view<char> from, mac_address& to);
 template bool mac_address_from_string (std::basic_string_view<wchar_t> from, mac_address& to);
 
-#pragma region bridge::HelperWindow
-bridge::HelperWindow::HelperWindow (bridge* bridge)
-	: _bridge(bridge)
-{
-	HINSTANCE hInstance;
-	BOOL bRes = ::GetModuleHandleExW (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &SubclassProc, &hInstance); assert(bRes);
-
-	_hwnd = ::CreateWindowExW (0, L"STATIC", L"", 0, 0, 0, 0, 0, HWND_MESSAGE, 0, hInstance, 0); assert (_hwnd != nullptr);
-
-	bRes = ::SetWindowSubclass (_hwnd, SubclassProc, 0, (DWORD_PTR) this); assert (bRes);
-
-	auto link_pulse_callback = [](void* lpParameter, BOOLEAN TimerOrWaitFired)
-	{
-		// We're on a worker thread. Let's post this message and continue processing on the GUI thread.
-		auto helperWindow = static_cast<HelperWindow*>(lpParameter);
-		::PostMessage (helperWindow->_hwnd, WM_LINK_PULSE_TIMER, 0, 0);
-	};
-	bRes = ::CreateTimerQueueTimer (&_linkPulseTimerHandle, nullptr, link_pulse_callback, this, 16, 16, 0); assert(bRes);
-
-	DWORD period = 950 + (std::random_device()() % 100);
-	auto one_second_callback = [](void* lpParameter, BOOLEAN TimerOrWaitFired)
-	{
-		// We're on a worker thread. Let's post this message and continue processing on the GUI thread.
-		auto helperWindow = static_cast<HelperWindow*>(lpParameter);
-		::PostMessage (helperWindow->_hwnd, WM_ONE_SECOND_TIMER, 0, 0);
-	};
-	bRes = ::CreateTimerQueueTimer (&_oneSecondTimerHandle, nullptr, one_second_callback, this, period, period, 0); assert(bRes);
-}
-
-bridge::HelperWindow::~HelperWindow()
-{
-	::DeleteTimerQueueTimer (nullptr, _oneSecondTimerHandle, INVALID_HANDLE_VALUE);
-	::DeleteTimerQueueTimer (nullptr, _linkPulseTimerHandle, INVALID_HANDLE_VALUE);
-	::RemoveWindowSubclass (_hwnd, SubclassProc, 0);
-	::DestroyWindow (_hwnd);
-}
-
-//static
-LRESULT CALLBACK bridge::HelperWindow::SubclassProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
-{
-	auto hw = (HelperWindow*) dwRefData;
-
-	if (uMsg == WM_LINK_PULSE_TIMER)
-	{
-		// We use a timer on a single thread for pulses because we want to avoid links going down due to delays on some threads but not on others.
-		if (!hw->_bridge->project()->simulation_paused())
-			hw->_bridge->OnLinkPulseTick();
-		return 0;
-	}
-	else if (uMsg == WM_ONE_SECOND_TIMER)
-	{
-		if (!hw->_bridge->project()->simulation_paused())
-			STP_OnOneSecondTick (hw->_bridge->_stpBridge, ::GetMessageTime());
-		return 0;
-	}
-	else if (uMsg == WM_PACKET_RECEIVED)
-	{
-		hw->_bridge->ProcessReceivedPackets();
-		return 0;
-	}
-
-	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
-}
-#pragma endregion
+static constexpr wchar_t helper_window_class_name[] = L"{C2A14267-93FD-44FD-89A3-809FBB66A20B}";
+HINSTANCE bridge::_hinstance;
+UINT_PTR bridge::_link_pulse_timer_id;
+UINT_PTR bridge::_one_second_timer_id;
+std::unordered_set<bridge*> bridge::_created_bridges;
 
 bridge::bridge (size_t port_count, size_t msti_count, mac_address macAddress)
 {
 	for (size_t i = 0; i < 1 + msti_count; i++)
-		_trees.push_back (make_unique<bridge_tree>(this, i));
+		_trees.push_back (std::make_unique<bridge_tree>(this, i));
 
 	float offset = 0;
 	for (size_t portIndex = 0; portIndex < port_count; portIndex++)
 	{
 		offset += (port::PortToPortSpacing / 2 + port::InteriorWidth / 2);
-		auto port = unique_ptr<class port>(new class port(this, portIndex, side::bottom, offset));
-		_ports.push_back (move(port));
+		auto port = std::unique_ptr<class port>(new class port(this, portIndex, side::bottom, offset));
+		_ports.push_back (std::move(port));
 		offset += (port::InteriorWidth / 2 + port::PortToPortSpacing / 2);
 	}
 
 	_x = 0;
 	_y = 0;
-	_width = max (offset, MinWidth);
+	_width = std::max (offset, MinWidth);
 	_height = DefaultHeight;
 
 	_stpBridge = STP_CreateBridge ((unsigned int)port_count, (unsigned int)msti_count, max_vlan_number, &StpCallbacks, macAddress.data(), 256);
@@ -151,26 +89,82 @@ bridge::bridge (size_t port_count, size_t msti_count, mac_address macAddress)
 
 	for (auto& port : _ports)
 		port->invalidated().add_handler(&OnPortInvalidate, this);
+
+	// ----------------------------------------------------------------------------
+
+	if (_created_bridges.empty())
+	{
+		static constexpr auto link_pulse_callback = [](HWND, UINT, UINT_PTR, DWORD)
+		{
+			for (auto bridge : _created_bridges)
+			{
+				if (bridge->project())
+					bridge->OnLinkPulseTick();
+			}
+		};
+		_link_pulse_timer_id = ::SetTimer (nullptr, 0, 16, link_pulse_callback); assert(_link_pulse_timer_id);
+
+		DWORD period = 950 + (std::random_device()() % 100);
+		static constexpr auto one_second_callback = [](HWND, UINT, UINT_PTR, DWORD)
+		{
+			for (auto bridge : _created_bridges)
+			{
+				if (bridge->project() && !bridge->project()->simulation_paused())
+					STP_OnOneSecondTick (bridge->_stpBridge, ::GetMessageTime());
+			}
+		};
+		_one_second_timer_id = ::SetTimer (nullptr, 0, 1000, one_second_callback); assert(_one_second_timer_id);
+
+		static constexpr WNDPROC helper_window_proc = [](HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) -> LRESULT
+		{
+			if (msg == WM_PACKET_RECEIVED)
+			{
+				auto bridge = (class bridge*) ::GetWindowLongPtr (hwnd, GWLP_USERDATA);
+				bridge->ProcessReceivedPackets();
+				return 0;
+			}
+
+			return ::DefWindowProc (hwnd, msg, wparam, lparam);
+		};
+		BOOL bRes = ::GetModuleHandleExW (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR)helper_window_proc, &_hinstance); assert(bRes);
+
+		WNDCLASS wc = { sizeof(WNDCLASS) };
+		wc.hInstance = _hinstance;
+		wc.lpfnWndProc = helper_window_proc;
+		wc.lpszClassName = helper_window_class_name;
+		ATOM atom = ::RegisterClass(&wc);
+	}
+
+	assert (_helper_window == nullptr);
+	_helper_window = ::CreateWindow (helper_window_class_name, L"", 0, 0, 0, 0, 0, HWND_MESSAGE, 0, _hinstance, 0); assert (_helper_window != nullptr);
+	::SetWindowLongPtr (_helper_window, GWLP_USERDATA, (LONG_PTR)this);
+
+	_created_bridges.insert(this);
 }
 
 bridge::~bridge()
 {
+	_created_bridges.erase(this);
+
+	::DestroyWindow (_helper_window);
+	_helper_window = nullptr;
+
+	if (_created_bridges.empty())
+	{
+		::UnregisterClass (helper_window_class_name, _hinstance);
+
+		BOOL bres = ::KillTimer (nullptr, _one_second_timer_id); assert(bres);
+		_one_second_timer_id = 0;
+
+		bres = ::KillTimer (nullptr, _link_pulse_timer_id); assert(bres);
+		_link_pulse_timer_id = 0;
+	}
+
+	// ----------------------------------------------------------------
+
 	for (auto& port : _ports)
 		port->invalidated().remove_handler(&OnPortInvalidate, this);
 	STP_DestroyBridge (_stpBridge);
-}
-
-void bridge::on_added_to_project(project_i* project)
-{
-	base::on_added_to_project(project);
-	assert (_helper_window == nullptr);
-	_helper_window = std::make_unique<HelperWindow>(this);
-}
-
-void bridge::on_removing_from_project(project_i* project)
-{
-	_helper_window = nullptr;
-	base::on_removing_from_project(project);
 }
 
 //static
@@ -183,6 +177,8 @@ void bridge::OnPortInvalidate (void* callbackArg, renderable_object* object)
 // Checks the wires and computes macOperational for each port on this bridge.
 void bridge::OnLinkPulseTick()
 {
+	uint32_t now = (uint32_t) ::GetMessageTime();
+
 	bool invalidate = false;
 	for (size_t portIndex = 0; portIndex < _ports.size(); portIndex++)
 	{
@@ -192,34 +188,23 @@ void bridge::OnLinkPulseTick()
 			port->_missedLinkPulseCounter++;
 			if (port->_missedLinkPulseCounter == port::MissedLinkPulseCounterMax)
 			{
-				STP_OnPortDisabled (_stpBridge, (unsigned int) portIndex, ::GetMessageTime());
+				port->set_actual_speed(0);
+				STP_OnPortDisabled (_stpBridge, (unsigned int) portIndex, now);
 				invalidate = true;
 			}
 		}
 
-		this->event_invoker<LinkPulseEvent>()(this, portIndex, ::GetMessageTime());
+		this->event_invoker<packet_transmit_e>()(this, portIndex, link_pulse_t { now, port->supported_speed() });
 	}
 
 	if (invalidate)
 		this->event_invoker<invalidate_e>()(this);
 }
 
-void bridge::ProcessLinkPulse (size_t rxPortIndex, unsigned int timestamp)
+void bridge::enqueue_received_packet (packet_t&& packet, size_t rxPortIndex)
 {
-	auto port = _ports.at(rxPortIndex).get();
-	bool oldMacOperational = port->_missedLinkPulseCounter < port::MissedLinkPulseCounterMax;
-	port->_missedLinkPulseCounter = 0;
-	if (oldMacOperational == false)
-	{
-		STP_OnPortEnabled (_stpBridge, (unsigned int) rxPortIndex, 100, true, timestamp);
-		this->event_invoker<invalidate_e>()(this);
-	}
-}
-
-void bridge::EnqueuePacket (PacketInfo&& packet, size_t rxPortIndex)
-{
-	_rxQueue.push ({ rxPortIndex, move(packet) });
-	::PostMessage (_helper_window->_hwnd, WM_PACKET_RECEIVED, (WPARAM)(void*)this, 0);
+	_rxQueue.push ({ rxPortIndex, std::move(packet) });
+	::PostMessage (_helper_window, WM_PACKET_RECEIVED, 0, 0);
 }
 
 void bridge::ProcessReceivedPackets()
@@ -229,49 +214,80 @@ void bridge::ProcessReceivedPackets()
 	while (!_rxQueue.empty())
 	{
 		size_t rxPortIndex = _rxQueue.front().first;
-		auto port = _ports.at(rxPortIndex).get();
-		auto rp = move(_rxQueue.front().second);
+		auto port = _ports[rxPortIndex].get();
+		auto sd = std::move(_rxQueue.front().second);
 		_rxQueue.pop();
 
-		bool oldMacOperational = port->_missedLinkPulseCounter < port::MissedLinkPulseCounterMax;
-		port->_missedLinkPulseCounter = 0;
-		if (oldMacOperational == false)
+		if (std::holds_alternative<link_pulse_t>(sd))
 		{
-			STP_OnPortEnabled (_stpBridge, (unsigned int) rxPortIndex, 100, true, rp.timestamp);
-			invalidate = true;
-		}
-
-		if ((rp.data.size() >= 6) && (memcmp (&rp.data[0], BpduDestAddress, 6) == 0))
-		{
-			// It's a BPDU.
-			if (_bpdu_trapping_enabled)
+			auto lpsd = std::get<link_pulse_t>(sd);
+			bool oldMacOperational = port->_missedLinkPulseCounter < port::MissedLinkPulseCounterMax;
+			port->_missedLinkPulseCounter = 0;
+			if (oldMacOperational == false)
 			{
-				STP_OnBpduReceived (_stpBridge, (unsigned int) rxPortIndex, &rp.data[21], (unsigned int) (rp.data.size() - 21), rp.timestamp);
+				// Send a link pulse right away, to make sure the other port goes up before we send it any frame.
+				this->event_invoker<packet_transmit_e>()(this, rxPortIndex, link_pulse_t { lpsd.timestamp, port->supported_speed() });
+
+				auto actual_speed = std::min (lpsd.sender_supported_speed, port->supported_speed());
+				port->set_actual_speed(actual_speed);
+
+				STP_OnPortEnabled (_stpBridge, (unsigned int) rxPortIndex, actual_speed, true, lpsd.timestamp);
+				invalidate = true;
+			}
+		}
+		else if (std::holds_alternative<frame_t>(sd))
+		{
+			auto fsd = std::get<frame_t>(sd);
+
+			if (!port->mac_operational())
+			{
+				// The sender must be misbehaving (forgot to send link pulses). Currently the simulator is single-threaded so this shouldn't happen.
+				assert(false);
 			}
 			else
 			{
-				// broadcast it to the other ports.
-				for (size_t txPortIndex = 0; txPortIndex < _ports.size(); txPortIndex++)
+				if ((fsd.data.size() >= 6) && (memcmp (&fsd.data[0], BpduDestAddress, 6) == 0))
 				{
-					if (txPortIndex == rxPortIndex)
-						continue;
-
-					auto txPortAddress = GetPortAddress(txPortIndex);
-
-					// If it already went through this port, we have a loop that would hang our UI.
-					if (find (rp.txPortPath.begin(), rp.txPortPath.end(), txPortAddress) != rp.txPortPath.end())
+					// It's a BPDU.
+					if (_bpdu_trapping_enabled)
 					{
-						// We don't do anything here; we have code in wire.cpp that shows loops to the user - as thick red wires.
+						STP_OnBpduReceived (_stpBridge, (unsigned int) rxPortIndex, &fsd.data[21], (unsigned int) (fsd.data.size() - 21), fsd.timestamp);
 					}
 					else
 					{
-						this->event_invoker<PacketTransmitEvent>()(this, txPortIndex, PacketInfo(rp));
+						// broadcast it to the other ports.
+						for (size_t txPortIndex = 0; txPortIndex < _ports.size(); txPortIndex++)
+						{
+							if (txPortIndex == rxPortIndex)
+								continue;
+
+							auto txPortAddress = GetPortAddress(txPortIndex);
+
+							// If it already went through this port, we have a loop that would hang our UI.
+							if (std::find (fsd.tx_path_taken.begin(), fsd.tx_path_taken.end(), txPortAddress) != fsd.tx_path_taken.end())
+							{
+								// We don't do anything here; we have code in wire.cpp that shows loops to the user - as thick red wires.
+								//volatile int a = 0;
+							}
+							else
+							{
+								frame_t f;
+								f.timestamp = fsd.timestamp;
+								f.data = fsd.data;
+								f.tx_path_taken = fsd.tx_path_taken;
+								f.tx_path_taken.push_back (txPortAddress);
+								
+								this->event_invoker<packet_transmit_e>()(this, txPortIndex, std::move(f));
+							}
+						}
 					}
 				}
+				else
+					assert(false); // not implemented
 			}
 		}
 		else
-			assert(false); // not implemented
+			assert(false);
 	}
 
 	if (invalidate)
@@ -292,7 +308,7 @@ void bridge::render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsign
 {
 	auto treeIndex = STP_GetTreeIndexFromVlanNumber (_stpBridge, vlanNumber);
 
-	stringstream text;
+	std::stringstream text;
 	float bridgeOutlineWidth = OutlineWidth;
 	if (STP_IsBridgeStarted(_stpBridge))
 	{
@@ -304,18 +320,18 @@ void bridge::render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsign
 		if ((treeIndex == 0) ? isCistRoot : isRegionalRoot)
 			bridgeOutlineWidth *= 2;
 
-		text << uppercase << setfill('0') << setw(4) << hex << STP_GetBridgePriority(_stpBridge, treeIndex) << '.' << mac_address_to_string(bridge_address()) << endl;
-		text << "STP enabled (" << STP_GetVersionString(stpVersion) << ")" << endl;
+		text << std::uppercase << std::setfill('0') << std::setw(4) << std::hex << STP_GetBridgePriority(_stpBridge, treeIndex) << '.' << mac_address_to_string(bridge_address()) << std::endl;
+		text << "STP enabled (" << STP_GetVersionString(stpVersion) << ")" << std::endl;
 		text << (isCistRoot ? "CIST Root Bridge\r\n" : "");
 		if (stpVersion >= STP_VERSION_MSTP)
 		{
-			text << "VLAN " << dec << vlanNumber << ". Spanning tree: " << ((treeIndex == 0) ? "CIST(0)" : (string("MSTI") + to_string(treeIndex)).c_str()) << endl;
+			text << "VLAN " << std::dec << vlanNumber << ". Spanning tree: " << ((treeIndex == 0) ? "CIST(0)" : (std::string("MSTI") + std::to_string(treeIndex)).c_str()) << std::endl;
 			text << (isRegionalRoot ? "Regional Root\r\n" : "");
 		}
 	}
 	else
 	{
-		text << uppercase << setfill('0') << hex << mac_address_to_string(bridge_address()) << endl << "STP disabled\r\n(right-click to enable)";
+		text << std::uppercase << std::setfill('0') << std::hex << mac_address_to_string(bridge_address()) << std::endl << "STP disabled\r\n(right-click to enable)";
 	}
 
 	// Draw bridge outline.
@@ -479,7 +495,7 @@ std::string bridge::mst_config_id_name() const
 void bridge::set_mst_config_id_name (std::string_view value)
 {
 	if (value.length() > 32)
-		throw invalid_argument("Invalid MST Config Name: more than 32 characters.");
+		throw std::invalid_argument("Invalid MST Config Name: more than 32 characters.");
 
 	char null_terminated[33];
 	memcpy (null_terminated, value.data(), value.size());
@@ -509,12 +525,12 @@ void bridge::SetMstConfigIdRevLevel (uint32_t revLevel)
 std::string bridge::GetMstConfigIdDigest() const
 {
 	const unsigned char* digest = STP_GetMstConfigId(_stpBridge)->ConfigurationDigest;
-	stringstream ss;
-	ss << uppercase << setfill('0') << hex
-		<< setw(2) << (int) digest[0]  << setw(2) << (int) digest[1]  << setw(2) << (int) digest[2]  << setw(2) << (int) digest[3]
-		<< setw(2) << (int) digest[4]  << setw(2) << (int) digest[5]  << setw(2) << (int) digest[6]  << setw(2) << (int) digest[7]
-		<< setw(2) << (int) digest[8]  << setw(2) << (int) digest[9]  << setw(2) << (int) digest[10] << setw(2) << (int) digest[11]
-		<< setw(2) << (int) digest[12] << setw(2) << (int) digest[13] << setw(2) << (int) digest[14] << setw(2) << (int) digest[15];
+	std::stringstream ss;
+	ss << std::uppercase << std::setfill('0') << std::hex
+		<< std::setw(2) << (int) digest[0]  << std::setw(2) << (int) digest[1]  << std::setw(2) << (int) digest[2]  << std::setw(2) << (int) digest[3]
+		<< std::setw(2) << (int) digest[4]  << std::setw(2) << (int) digest[5]  << std::setw(2) << (int) digest[6]  << std::setw(2) << (int) digest[7]
+		<< std::setw(2) << (int) digest[8]  << std::setw(2) << (int) digest[9]  << std::setw(2) << (int) digest[10] << std::setw(2) << (int) digest[11]
+		<< std::setw(2) << (int) digest[12] << std::setw(2) << (int) digest[13] << std::setw(2) << (int) digest[14] << std::setw(2) << (int) digest[15];
 	return ss.str();
 }
 
@@ -527,6 +543,12 @@ void bridge::SetMstConfigTable (const STP_CONFIG_TABLE_ENTRY* entries, size_t en
 
 void bridge::set_stp_enabled (bool value)
 {
+	if (_deserializing)
+	{
+		_enable_stp_after_deserialize = value;
+		return;
+	}
+
 	if (value && !STP_IsBridgeStarted(_stpBridge))
 	{
 		this->on_property_changing(&stp_enabled_property);
@@ -626,6 +648,19 @@ bool bridge::mst_config_table_changed() const
 	}
 
 	return false; // not changed
+}
+
+void bridge::on_deserializing()
+{
+	_deserializing = true;
+	_enable_stp_after_deserialize = stp_enabled_property._default_value.value();
+}
+
+void bridge::on_deserialized()
+{
+	if (_enable_stp_after_deserialize)
+		STP_StartBridge (_stpBridge, ::GetMessageTime());
+	_deserializing = false;
 }
 
 static const edge::property_group bridge_times_group = { 5, "Timer Params (Table 13-5)" };
@@ -859,10 +894,10 @@ void bridge::StpCallback_TransmitReleaseBuffer (const STP_BRIDGE* bridge, void* 
 {
 	auto b = static_cast<class bridge*>(STP_GetApplicationContext(bridge));
 
-	PacketInfo info;
+	frame_t info;
 	info.data = move(b->_txPacketData);
 	info.timestamp = b->_txTimestamp;
-	b->event_invoker<PacketTransmitEvent>()(b, b->_txTransmittingPort->port_index(), move(info));
+	b->event_invoker<packet_transmit_e>()(b, b->_txTransmittingPort->port_index(), std::move(info));
 }
 
 void bridge::StpCallback_EnableBpduTrapping (const STP_BRIDGE* bridge, bool enable, unsigned int timestamp)
@@ -905,7 +940,7 @@ void bridge::StpCallback_DebugStrOut (const STP_BRIDGE* bridge, int portIndex, i
 		{
 			if ((b->_currentLogLine.portIndex != portIndex) || (b->_currentLogLine.treeIndex != treeIndex))
 			{
-				b->_logLines.push_back(make_unique<BridgeLogLine>(move(b->_currentLogLine)));
+				b->_logLines.push_back(std::make_unique<BridgeLogLine>(std::move(b->_currentLogLine)));
 				b->event_invoker<LogLineGenerated>()(b, b->_logLines.back().get());
 			}
 
@@ -914,14 +949,14 @@ void bridge::StpCallback_DebugStrOut (const STP_BRIDGE* bridge, int portIndex, i
 
 		if (!b->_currentLogLine.text.empty() && (b->_currentLogLine.text.back() == L'\n'))
 		{
-			b->_logLines.push_back(make_unique<BridgeLogLine>(move(b->_currentLogLine)));
+			b->_logLines.push_back(std::make_unique<BridgeLogLine>(std::move(b->_currentLogLine)));
 			b->event_invoker<LogLineGenerated>()(b, b->_logLines.back().get());
 		}
 	}
 
 	if (flush && !b->_currentLogLine.text.empty())
 	{
-		b->_logLines.push_back(make_unique<BridgeLogLine>(move(b->_currentLogLine)));
+		b->_logLines.push_back(std::make_unique<BridgeLogLine>(std::move(b->_currentLogLine)));
 		b->event_invoker<LogLineGenerated>()(b, b->_logLines.back().get());
 	}
 }

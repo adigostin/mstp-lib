@@ -72,9 +72,7 @@ TEST_CLASS(bridge_tests)
 
 	TEST_METHOD(test_designated_bridge_priority_on_msti)
 	{
-		auto callbacks = default_callbacks();
-		uint8_t address[] = { 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 };
-		auto bridge = STP_CreateBridge (4, 4, 16, &callbacks, address, 2);
+		test_bridge bridge (4, 4, 16, { 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
 		STP_SetStpVersion (bridge, STP_VERSION_MSTP, 0);
 		STP_SetBridgePriority (bridge, 1, 0x6000, 0);
 		STP_StartBridge (bridge, 0);

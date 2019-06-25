@@ -1119,7 +1119,7 @@ void updtRcvdInfoWhile	(STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex given
 
 // ============================================================================
 
-static void CalculateRootPathPriorityForPort (STP_BRIDGE* bridge, unsigned int givenPort, TreeIndex givenTree, PRIORITY_VECTOR* rootPathPriorityOut)
+static void CalculateRootPathPriorityForPort (const STP_BRIDGE* bridge, unsigned int givenPort, TreeIndex givenTree, PRIORITY_VECTOR* rootPathPriorityOut)
 {
 	PORT* port = bridge->ports [givenPort];
 	PORT_TREE* portTree = port->trees [givenTree];
@@ -1134,7 +1134,7 @@ static void CalculateRootPathPriorityForPort (STP_BRIDGE* bridge, unsigned int g
 
 		// Note AG: The standard references 13.29.8 (fromSameRegion), but that function tries to read the received BPDU
 		// outside of STP_OnBpduReceived. I replaced fromSameRegion with rcvdInternal in the "if" below.
-		if (port->rcvdInternal == false)
+		if (!port->rcvdInternal)
 		{
 			// If the port priority vector was received from a Bridge in a different region (13.29.8), the External Port Path
 			// Cost EPCPB is added to the External Root Path Cost component, and the Regional Root Identifier is set to
@@ -1160,7 +1160,6 @@ static void CalculateRootPathPriorityForPort (STP_BRIDGE* bridge, unsigned int g
 		// vector from a bridge in the same region by adding the Internal Port Path Cost IPCPB to the Internal Root
 		// Path Cost component.
 		//			root path priority vector = {RRD : IRCD + IPCPB : D : PD : PB)
-		assert (port->rcvdInternal);
 		rootPathPriorityOut->InternalRootPathCost += portTree->InternalPortPathCost;
 	}
 }

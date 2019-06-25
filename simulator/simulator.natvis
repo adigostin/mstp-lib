@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+	
+	<Type Name="natvis::hex_dummy_low">
+		<DisplayString Condition="((c &amp; 0x0f) == 0x00)">0</DisplayString>
+		<DisplayString Condition="((c &amp; 0x0f) == 0x01)">1</DisplayString>
+		<DisplayString Condition="((c &amp; 0x0f) == 0x02)">2</DisplayString>
+		<DisplayString Condition="((c &amp; 0x0f) == 0x03)">3</DisplayString>
+		<DisplayString Condition="((c &amp; 0x0f) == 0x04)">4</DisplayString>
+		<DisplayString Condition="((c &amp; 0x0f) == 0x05)">5</DisplayString>
+		<DisplayString Condition="((c &amp; 0x0f) == 0x06)">6</DisplayString>
+		<DisplayString Condition="((c &amp; 0x0f) == 0x07)">7</DisplayString>
+		<DisplayString Condition="((c &amp; 0x0f) == 0x08)">8</DisplayString>
+		<DisplayString Condition="((c &amp; 0x0f) == 0x09)">9</DisplayString>
+		<DisplayString Condition="((c &amp; 0x0f) == 0x0a)">A</DisplayString>
+		<DisplayString Condition="((c &amp; 0x0f) == 0x0b)">B</DisplayString>
+		<DisplayString Condition="((c &amp; 0x0f) == 0x0c)">C</DisplayString>
+		<DisplayString Condition="((c &amp; 0x0f) == 0x0d)">D</DisplayString>
+		<DisplayString Condition="((c &amp; 0x0f) == 0x0e)">E</DisplayString>
+		<DisplayString Condition="((c &amp; 0x0f) == 0x0f)">F</DisplayString>
+	</Type>
+
+	<Type Name="natvis::hex_dummy_high">
+		<DisplayString Condition="((c >> 4) == 0x00)">0</DisplayString>
+		<DisplayString Condition="((c >> 4) == 0x01)">1</DisplayString>
+		<DisplayString Condition="((c >> 4) == 0x02)">2</DisplayString>
+		<DisplayString Condition="((c >> 4) == 0x03)">3</DisplayString>
+		<DisplayString Condition="((c >> 4) == 0x04)">4</DisplayString>
+		<DisplayString Condition="((c >> 4) == 0x05)">5</DisplayString>
+		<DisplayString Condition="((c >> 4) == 0x06)">6</DisplayString>
+		<DisplayString Condition="((c >> 4) == 0x07)">7</DisplayString>
+		<DisplayString Condition="((c >> 4) == 0x08)">8</DisplayString>
+		<DisplayString Condition="((c >> 4) == 0x09)">9</DisplayString>
+		<DisplayString Condition="((c >> 4) == 0x0a)">A</DisplayString>
+		<DisplayString Condition="((c >> 4) == 0x0b)">B</DisplayString>
+		<DisplayString Condition="((c >> 4) == 0x0c)">C</DisplayString>
+		<DisplayString Condition="((c >> 4) == 0x0d)">D</DisplayString>
+		<DisplayString Condition="((c >> 4) == 0x0e)">E</DisplayString>
+		<DisplayString Condition="((c >> 4) == 0x0f)">F</DisplayString>
+	</Type>
+	
+	<Type Name="uint16_nbo">
+		<DisplayString>{*(natvis::hex_dummy_high*)(&amp;vh)}{*(natvis::hex_dummy_low*)(&amp;vh)}{*(natvis::hex_dummy_high*)(&amp;vl)}{*(natvis::hex_dummy_low*)(&amp;vl)}</DisplayString>
+	</Type>
+	<Type Name="STP_BRIDGE_ADDRESS">
+		<DisplayString>{*(uint16_nbo*)(&amp;bytes[0])}{*(uint16_nbo*)(&amp;bytes[2])}{*(uint16_nbo*)(&amp;bytes[4])}</DisplayString>
+	</Type>
+	<Type Name="BRIDGE_ID">
+		<DisplayString>{_priorityAndMstid}.{_address}</DisplayString>
+	</Type>
+	<Type Name="uint32_nbo">
+		<DisplayString>{(vhh &lt;&lt; 24) | (vhl &lt;&lt; 16) | (vlh &lt;&lt; 8) | vll}</DisplayString>
+	</Type>
+	<Type Name="PORT_ID">
+		<DisplayString>{*(uint16_nbo*)this}</DisplayString>
+	</Type>
+	<Type Name="PRIORITY_VECTOR">
+		<DisplayString>{RootId}-{ExternalRootPathCost}-{RegionalRootId}-{InternalRootPathCost}-{DesignatedBridgeId}-{DesignatedPortId}</DisplayString>
+	</Type>
+</AutoVisualizer>
