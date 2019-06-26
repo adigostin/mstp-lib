@@ -40,10 +40,10 @@ namespace edge
 			_horzAlignment = (e->GetHorzAlignmentPD() != nullptr) ? e->GetHorzAlignmentPD()->Get(e) : HorzAlignmentLeft;
 			_vertAlignment = (e->GetVertAlignmentPD() != nullptr) ? e->GetVertAlignmentPD()->Get(e) : VertAlignmentTop;
 			*/
-			CalculateTextAndEditorBounds();
+			extend_editor_bounds();
 
 			set_caret_pos (_text.size(), true);
-			SetCaretScreenLocationFromCaretIndex();
+			set_caret_screen_location_from_caret_pos();
 
 			//_control->GetZoomOrOriginChanged().AddHandler (&TextEditor::OnZoomOrOriginChanged, this);
 
@@ -83,9 +83,9 @@ namespace edge
 			}
 		}
 
-		void SetCaretScreenLocationFromCaretIndex()
+		void set_caret_screen_location_from_caret_pos()
 		{
-			auto offset = GetTextOffset();
+			auto offset = get_text_location();
 
 			float x = 0;
 			if (_caret_pos > 0)
@@ -109,13 +109,13 @@ namespace edge
 		{
 			window;  // Avoid Reporting unreferenced formal parameter
 			auto editor = static_cast<TextEditor*>(callbackArg);
-			editor->SetCaretScreenLocationFromCaretIndex();
+			editor->set_caret_screen_location_from_caret_pos();
 		}
 		*/
 		// TODO: rename to get_byte_index_at
 		size_t GetPosAtDLocation (D2D1_POINT_2F dLocation, bool* isInside)
 		{
-			auto textOffset = GetTextOffset();
+			auto textOffset = get_text_location();
 	
 			auto locationInEditorCoords = dLocation - textOffset;
 	
@@ -148,7 +148,7 @@ namespace edge
 				bool keepSelectionOrigin = ((modifier_keys & MK_SHIFT) != 0);
 
 				set_caret_pos (byte_index, keepSelectionOrigin);
-				SetCaretScreenLocationFromCaretIndex ();
+				set_caret_screen_location_from_caret_pos ();
 			}
 		}
 
@@ -162,7 +162,7 @@ namespace edge
 			{
 				size_t pos = GetPosAtDLocation (dip, nullptr);
 				set_caret_pos (pos, true);
-				SetCaretScreenLocationFromCaretIndex();
+				set_caret_screen_location_from_caret_pos();
 			}
 		}
 		
@@ -175,7 +175,7 @@ namespace edge
 				{
 					bool keepSelectionOrigin = (modifierKeysDown == MK_SHIFT);
 					set_caret_pos ((_caret_pos > 0) ? (_caret_pos - 1) : 0, keepSelectionOrigin);
-					SetCaretScreenLocationFromCaretIndex ();
+					set_caret_screen_location_from_caret_pos ();
 					return handled::yes;
 				}
 			}
@@ -187,7 +187,7 @@ namespace edge
 				{
 					bool keepSelectionOrigin = (modifierKeysDown == MK_SHIFT);
 					set_caret_pos ((_caret_pos < _text.length()) ? (_caret_pos + 1) : _text.length(), keepSelectionOrigin);
-					SetCaretScreenLocationFromCaretIndex ();
+					set_caret_screen_location_from_caret_pos ();
 					return handled::yes;
 				}
 			}
@@ -206,7 +206,7 @@ namespace edge
 				{
 					bool keepSelectionOrigin = (modifierKeysDown == MK_SHIFT);
 					set_caret_pos (0, keepSelectionOrigin);
-					SetCaretScreenLocationFromCaretIndex ();
+					set_caret_screen_location_from_caret_pos ();
 					return handled::yes;
 				}
 			}
@@ -218,7 +218,7 @@ namespace edge
 				{
 					bool keepSelectionOrigin = (modifierKeysDown == MK_SHIFT);
 					set_caret_pos (_text.length(), keepSelectionOrigin);
-					SetCaretScreenLocationFromCaretIndex ();
+					set_caret_screen_location_from_caret_pos ();
 					return handled::yes;
 				}
 			}
@@ -234,8 +234,8 @@ namespace edge
 						_text.erase (_caret_pos, 1);
 						_text_layout = text_layout_with_metrics (_dwrite_factory, _format, _text);
 						set_caret_pos (_caret_pos, false);
-						CalculateTextAndEditorBounds ();
-						SetCaretScreenLocationFromCaretIndex ();
+						extend_editor_bounds ();
+						set_caret_screen_location_from_caret_pos ();
 						invalidate();
 					}
 				}
@@ -247,8 +247,8 @@ namespace edge
 					_text.erase (selectionStart, selectionEnd - selectionStart);
 					_text_layout = text_layout_with_metrics (_dwrite_factory, _format, _text);
 					set_caret_pos (selectionStart, false);
-					CalculateTextAndEditorBounds ();
-					SetCaretScreenLocationFromCaretIndex ();
+					extend_editor_bounds ();
+					set_caret_screen_location_from_caret_pos ();
 					invalidate();
 				}
 
@@ -266,8 +266,8 @@ namespace edge
 						_text.erase (_caret_pos - 1, 1);
 						_text_layout = text_layout_with_metrics (_dwrite_factory, _format, _text);
 						set_caret_pos (_caret_pos - 1, false);
-						CalculateTextAndEditorBounds ();
-						SetCaretScreenLocationFromCaretIndex ();
+						extend_editor_bounds ();
+						set_caret_screen_location_from_caret_pos ();
 						invalidate();
 					}
 				}
@@ -279,8 +279,8 @@ namespace edge
 					_text.erase (selectionStart, selectionEnd - selectionStart);
 					_text_layout = text_layout_with_metrics (_dwrite_factory, _format, _text);
 					set_caret_pos (selectionStart, false);
-					CalculateTextAndEditorBounds();
-					SetCaretScreenLocationFromCaretIndex ();
+					extend_editor_bounds();
+					set_caret_screen_location_from_caret_pos ();
 					invalidate();
 				}
 
@@ -298,11 +298,11 @@ namespace edge
 					size_t selectionStart = std::min (_caret_pos, _selection_origin_pos);
 					size_t charCount = abs((int) _caret_pos - (int) _selection_origin_pos);
 
-					auto hMem = GlobalAlloc (GMEM_MOVEABLE, 2 * (charCount + 1)); assert(hMem);
-					wchar_t* mem = (wchar_t*) GlobalLock(hMem); assert(mem);
+					auto hMem = ::GlobalAlloc (GMEM_MOVEABLE, 2 * (charCount + 1)); assert(hMem);
+					wchar_t* mem = (wchar_t*) ::GlobalLock(hMem); assert(mem);
 					wcsncpy_s (mem, charCount + 1, _text.data() + selectionStart, charCount);
 					mem[charCount] = 0;
-					BOOL bRes = GlobalUnlock(hMem); assert (bRes || (GetLastError() == NO_ERROR));
+					BOOL bRes = ::GlobalUnlock(hMem); assert (bRes || (GetLastError() == NO_ERROR));
 
 					bool putToClipboard = false;
 					if (::OpenClipboard(_control->hwnd()))
@@ -324,8 +324,8 @@ namespace edge
 						set_caret_pos (selectionStart, false);
 						_text.erase (selectionStart, charCount);
 						_text_layout = text_layout_with_metrics (_dwrite_factory, _format, _text);
-						CalculateTextAndEditorBounds();
-						SetCaretScreenLocationFromCaretIndex();
+						extend_editor_bounds();
+						set_caret_screen_location_from_caret_pos();
 						invalidate();
 					}
 				}
@@ -342,11 +342,11 @@ namespace edge
 					auto h = GetClipboardData(CF_UNICODETEXT);
 					if (h != nullptr)
 					{
-						wchar_t* mem = (wchar_t*) GlobalLock(h);
+						wchar_t* mem = (wchar_t*) ::GlobalLock(h);
 						if (mem)
 						{
-							InsertTextOverwritingSelection(mem, wcslen(mem));
-							GlobalUnlock(h);
+							insert_text_over_selection(mem, wcslen(mem));
+							::GlobalUnlock(h);
 						}
 					}
 
@@ -365,7 +365,7 @@ namespace edge
 			return handled::no;
 		}
 		
-		void InsertTextOverwritingSelection (const wchar_t* textToInsert, size_t textToInsertCharCount)
+		void insert_text_over_selection (const wchar_t* textToInsert, size_t textToInsertCharCount)
 		{
 			if (_selection_origin_pos != _caret_pos)
 			{
@@ -385,8 +385,8 @@ namespace edge
 				set_caret_pos (_caret_pos + textToInsertCharCount, false);
 			}
 
-			CalculateTextAndEditorBounds ();
-			SetCaretScreenLocationFromCaretIndex ();
+			extend_editor_bounds ();
+			set_caret_screen_location_from_caret_pos ();
 			invalidate();
 		}
 
@@ -398,12 +398,13 @@ namespace edge
 					assert(false); // not implemented
 
 				wchar_t c = (wchar_t) ch;
-				InsertTextOverwritingSelection (&c, 1);
+				insert_text_over_selection (&c, 1);
 				return handled::yes;
 			}
 
 			return handled::no;
 		}
+
 		void invalidate()
 		{
 			auto poly = corners(_editorBounds);
@@ -412,7 +413,7 @@ namespace edge
 			_control->invalidate(bounds);
 		}
 
-		void CalculateTextAndEditorBounds()
+		void extend_editor_bounds()
 		{
 			auto newEditorBounds = _editorBounds;
 
@@ -474,7 +475,7 @@ namespace edge
 			}
 		}
 
-		D2D1_POINT_2F GetTextOffset() const
+		D2D1_POINT_2F get_text_location() const
 		{
 			return { _editorBounds.left + _lr_padding, _editorBounds.top };
 			/*
@@ -506,7 +507,7 @@ namespace edge
 			dc->CreateSolidColorBrush (D2D1::ColorF(_fill_argb & 0xFFFFFF, (_fill_argb >> 24) / 255.0f), &fill_brush);
 			dc->FillRectangle (_editorBounds, fill_brush);
 
-			auto textOffset = GetTextOffset();
+			auto textOffset = get_text_location();
 
 			size_t selectionStartIndex = std::min (_selection_origin_pos, _caret_pos);
 			size_t selectionEndIndex   = std::max (_selection_origin_pos, _caret_pos);
@@ -550,7 +551,7 @@ namespace edge
 			{
 				_selection_origin_pos = 0;
 				set_caret_pos (_text.length(), true);
-				SetCaretScreenLocationFromCaretIndex ();
+				set_caret_screen_location_from_caret_pos ();
 				invalidate();
 			}
 		}
