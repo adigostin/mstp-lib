@@ -316,12 +316,14 @@ namespace edge
 						::CloseClipboard();
 					}
 
-					bool pressedCut = ((modifierKeysDown == MK_CONTROL) && (virtualKey == 'X')) || ((modifierKeysDown == MK_SHIFT) && (virtualKey == VK_DELETE));
-					if (pressedCut && putToClipboard)
+					bool cut = ((modifierKeysDown == MK_CONTROL) && (virtualKey == 'X'))
+						|| ((modifierKeysDown == MK_SHIFT) && (virtualKey == VK_DELETE));
+					if (cut && putToClipboard)
 					{
 						// delete selection
-						_text.erase (selectionStart, charCount);
 						set_caret_pos (selectionStart, false);
+						_text.erase (selectionStart, charCount);
+						_text_layout = text_layout_with_metrics (_dwrite_factory, _format, _text);
 						CalculateTextAndEditorBounds();
 						SetCaretScreenLocationFromCaretIndex();
 						invalidate();

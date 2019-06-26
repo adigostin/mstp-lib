@@ -126,13 +126,13 @@ UINT window::GetModifierKeys()
 	UINT keys = 0;
 
 	if (GetKeyState (VK_SHIFT) < 0)
-		keys |= VK_SHIFT;
+		keys |= MK_SHIFT;
 
 	if (GetKeyState (VK_CONTROL) < 0)
-		keys |= VK_CONTROL;
+		keys |= MK_CONTROL;
 
 	if (GetKeyState (VK_MENU) < 0)
-		keys |= VK_MENU;
+		keys |= MK_ALT;
 
 	return keys;
 }
