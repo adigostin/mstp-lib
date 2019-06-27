@@ -10,7 +10,6 @@ namespace edge
 		virtual ~text_editor_i() { }
 
 		virtual void render (ID2D1DeviceContext* dc) const = 0;
-		virtual std::string u8str() const = 0;
 		virtual std::wstring_view wstr() const = 0;
 		virtual void select_all() = 0;
 		virtual const D2D1_RECT_F& rect() const = 0;

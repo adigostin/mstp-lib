@@ -533,16 +533,6 @@ namespace edge
 			dc->DrawTextLayout (textOffset, _text_layout, text_brush, D2D1_DRAW_TEXT_OPTIONS_NO_SNAP);
 		}
 
-		virtual std::string u8str() const override final
-		{
-			int char_count = WideCharToMultiByte (CP_UTF8, 0, _text.data(), (int)_text.size(), nullptr, 0, nullptr, nullptr);
-			std::string str;
-			str.resize (char_count);
-			WideCharToMultiByte (CP_UTF8, 0, _text.data(), (int)_text.size(), str.data(), char_count, 0, nullptr);
-			str.resize (str.size());
-			return str;
-		}
-
 		virtual std::wstring_view wstr() const override final { return _text; }
 
 		virtual void select_all() override
@@ -555,7 +545,6 @@ namespace edge
 				invalidate();
 			}
 		}
-
 
 		virtual const D2D1_RECT_F& rect() const override { return _editorBounds; }
 	};
