@@ -40,7 +40,7 @@ class edge::zoomable_window abstract : public d2d_window, public zoomable_i
 public:
 	using base::base;
 
-	D2D1::Matrix3x2F GetZoomTransform() const;
+	D2D1::Matrix3x2F zoom_transform() const;
 	float GetZoom() const { return _zoom; }
 	D2D1_POINT_2F GetWorkspaceOrigin() const { return _workspaceOrigin; }
 	float GetWorkspaceOriginX() const { return _workspaceOrigin.x; }

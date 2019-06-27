@@ -8,17 +8,6 @@
 using namespace D2D1;
 using namespace edge;
 
-const char side_type_name[] = "side";
-
-const edge::NVP side_nvps[] =
-{
-	{ "Left",   (int) side::left },
-	{ "Top",    (int) side::top },
-	{ "Right",  (int) side::right },
-	{ "Bottom", (int) side::bottom },
-	{ 0, 0 },
-};
-
 const char admin_p2p_type_name[] = "admin_p2p";
 const edge::NVP admin_p2p_nvps[] =
 {
@@ -38,7 +27,7 @@ const edge::NVP port_speed_nvps[] = {
 	{ 0, 0 },
 };
 
-port::port (class bridge* bridge, size_t port_index, enum side side, float offset)
+port::port (class bridge* bridge, size_t port_index, edge::side side, float offset)
 	: _bridge(bridge), _port_index(port_index), _side(side), _offset(offset)
 {
 	// No need to call remove_handler since a bridge and its bridge_trees are deleted at the same time.

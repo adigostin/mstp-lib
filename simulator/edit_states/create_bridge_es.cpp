@@ -103,7 +103,7 @@ class create_bridge_es : public edit_state
 		{
 			D2D1::Matrix3x2F oldtr;
 			dc->GetTransform(&oldtr);
-			dc->SetTransform (_ew->GetZoomTransform() * oldtr);
+			dc->SetTransform (_ew->zoom_transform() * oldtr);
 
 			_bridge->render (dc, _ew->drawing_resources(), _pw->selected_vlan_number(), D2D1::ColorF(D2D1::ColorF::LightGreen));
 
@@ -111,7 +111,7 @@ class create_bridge_es : public edit_state
 
 			auto x = _bridge->GetLeft() + _bridge->GetWidth() / 2;
 			auto y = _bridge->GetBottom() + port::ExteriorHeight * 1.1f;
-			auto centerD = _ew->GetZoomTransform().TransformPoint({ x, y });
+			auto centerD = _ew->zoom_transform().TransformPoint({ x, y });
 			std::stringstream ss;
 			ss << "Port Count = " << _bridge->port_count() << ", MSTI Count = " << _bridge->msti_count() << "\r\n"
 				<< "Press Arrow Left / Right to change the number of ports.\r\n"
