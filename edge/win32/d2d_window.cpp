@@ -45,7 +45,7 @@ namespace edge
 		hr = _dxgiFactory->CreateSwapChainForHwnd (_d3dDevice, hwnd(), &desc, nullptr, nullptr, &_swapChain); assert(SUCCEEDED(hr));
 		_forceFullPresentation = true;
 
-		CreateD2DDeviceContext();
+		create_d2d_dc();
 
 		if (auto proc_addr = GetProcAddress(GetModuleHandleA("User32.dll"), "GetDpiForWindow"))
 		{
@@ -67,7 +67,7 @@ namespace edge
 		hr = dwrite_factory->CreateTextFormat (L"Courier New", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_CONDENSED, 11.0f * 96 / _dpi, L"en-US", &_debugTextFormat); assert(SUCCEEDED(hr));
 	}
 
-	void d2d_window::CreateD2DDeviceContext()
+	void d2d_window::create_d2d_dc()
 	{
 		assert (_d2dDeviceContext == nullptr);
 		assert (_d2dFactory       == nullptr);
@@ -87,7 +87,7 @@ namespace edge
 		_d2dDeviceContext->SetTextAntialiasMode (D2D1_TEXT_ANTIALIAS_MODE_CLEARTYPE);
 	}
 
-	void d2d_window::ReleaseD2DDeviceContext()
+	void d2d_window::release_d2d_dc()
 	{
 		assert (_d2dDeviceContext != nullptr);
 		assert (_d2dFactory != nullptr);
@@ -103,9 +103,9 @@ namespace edge
 		{
 			if (_swapChain != nullptr)
 			{
-				ReleaseD2DDeviceContext();
+				release_d2d_dc();
 				auto hr = _swapChain->ResizeBuffers (0, 0, 0, DXGI_FORMAT_UNKNOWN, 0); assert(SUCCEEDED(hr));
-				CreateD2DDeviceContext();
+				create_d2d_dc();
 			}
 
 			_clientSizeDips.width = client_width_pixels() * 96.0f / _dpi;
@@ -361,7 +361,7 @@ namespace edge
 		}
 		*/
 
-		if ((_caret_blink_timer != nullptr) && (::GetFocus() == hwnd()) && _caret_blink_on)
+		if (_caret_blink_timer && (::GetFocus() == hwnd()) && _caret_blink_on)
 		{
 			_d2dDeviceContext->SetTransform(dpi_transform() * _caret_bounds.second);
 			com_ptr<ID2D1SolidColorBrush> b;
@@ -482,13 +482,13 @@ namespace edge
 	#pragma region Caret methods
 	void d2d_window::process_wm_set_focus()
 	{
-		if ((_caret_blink_timer != nullptr) && _caret_blink_on)
+		if (_caret_blink_timer && _caret_blink_on)
 			invalidate_caret();
 	}
 
 	void d2d_window::process_wm_kill_focus()
 	{
-		if ((_caret_blink_timer != nullptr) && _caret_blink_on)
+		if (_caret_blink_timer && _caret_blink_on)
 			invalidate_caret();
 	}
 
@@ -534,7 +534,7 @@ namespace edge
 	{
 		assert (!_painting); // "This function may not be called during paiting.
 
-		assert (_caret_blink_timer != nullptr); // ShowCaret() was not called.
+		assert (_caret_blink_timer); // ShowCaret() was not called.
 
 		_caret_blink_timer = nullptr;
 
@@ -544,7 +544,7 @@ namespace edge
 
 	void d2d_window::process_wm_blink()
 	{
-		if (_caret_blink_timer != nullptr)
+		if (_caret_blink_timer)
 		{
 			_caret_blink_on = !_caret_blink_on;
 			invalidate_caret();

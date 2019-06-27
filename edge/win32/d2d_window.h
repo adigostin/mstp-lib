@@ -92,8 +92,8 @@ namespace edge
 	private:
 		void invalidate_caret();
 		void process_wm_blink();
-		void CreateD2DDeviceContext();
-		void ReleaseD2DDeviceContext();
+		void create_d2d_dc();
+		void release_d2d_dc();
 		void process_wm_paint();
 		void process_wm_set_focus();
 		void process_wm_kill_focus();
