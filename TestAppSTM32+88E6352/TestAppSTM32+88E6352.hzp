@@ -1,0 +1,106 @@
+<!DOCTYPE CrossStudio_Project_File>
+<solution Name="TestAppSTM32+8836352" target="8" version="2">
+  <project Name="TestAppSTM32+8836352">
+    <configuration
+      CMSIS_CORE="Yes"
+      CMSIS_DSP="Cortex-M7 Little Endian With FPU"
+      Name="Common"
+      Target="STM32F769BI"
+      arm_linker_heap_size="0"
+      arm_linker_jtag_pad_pre_dr="1"
+      arm_linker_jtag_pad_pre_ir="5"
+      arm_linker_process_stack_size="0"
+      arm_linker_stack_size="4096"
+      arm_simulator_memory_simulation_filename="$(TargetsDir)/STM32/STM32SimulatorMemory$(HostDLL)"
+      arm_simulator_memory_simulation_parameter="STM32F769BI;0x200000;0x80000"
+      arm_target_loader_applicable_loaders="Flash"
+      arm_target_loader_default_loader="Flash"
+      c_preprocessor_definitions="STM32F769xx;ARM_MATH_CM7;__FPU_PRESENT=1"
+      c_user_include_directories="$(TargetsDir)/STM32/include;$(ProjectDir);$(ProjectDir)/..;$(ProjectDir)/../lwIP/src/include"
+      debug_initial_breakpoint_set_option="Never"
+      debug_register_definition_file="$(TargetsDir)/STM32/STM32F7x9_Peripherals.xml"
+      debug_type_file="$(StudioDir)/bin/STLport.xml"
+      linker_memory_map_file="$(TargetsDir)/STM32/STM32F769BI_MemoryMap.xml"
+      linker_output_format="bin"
+      linker_section_placement_file="$(ProjectDir)/section_placement.xml"
+      macros="DeviceVectorsFile=STM32F769xx.vec"
+      project_type="Executable"
+      property_groups_file_path="$(TargetsDir)/STM32/propertyGroups.xml"
+      target_get_partname_script="GetPartName()"
+      target_match_partname_script="MatchPartName(&quot;$(Target)&quot;)"
+      target_reset_script="TargetInterface.resetAndStop(100)"
+      target_script_file="$(TargetsDir)/STM32/STM32_Target.js"
+      target_trace_initialize_script="EnableTrace(&quot;$(TraceInterfaceType)&quot;)" />
+    <configuration
+      Name="Flash"
+      arm_target_flash_loader_file_path="$(LOADER:$(TargetsDir)/STM32/Release/STM32F2xx_Loader_rpc.elf)"
+      arm_target_loader_can_erase_all="Yes"
+      arm_target_loader_can_lock_all="No"
+      arm_target_loader_can_lock_range="No"
+      arm_target_loader_can_unlock_all="No"
+      arm_target_loader_can_unlock_range="No"
+      target_reset_script="FLASHReset()" />
+    <configuration Name="RAM" target_reset_script="Reset()" />
+    <folder Name="System Files">
+      <file file_name="$(StudioDir)/source/thumb_crt0.s">
+        <configuration
+          Name="Common"
+          c_preprocessor_definitions="INITIALIZE_STACK" />
+      </file>
+      <file file_name="$(TargetsDir)/STM32/STM32_Startup.s">
+        <configuration
+          Name="Common"
+          c_preprocessor_definitions="STARTUP_FROM_RESET;__NO_SYSTEM_INIT" />
+      </file>
+      <file file_name="$(TargetsDir)/STM32/$(DeviceVectorsFile)" />
+      <file file_name="$(TargetsDir)/STM32/include/stm32f769xx.h" />
+      <folder Name="CMSIS">
+        <file file_name="C:/Users/stefan.tripac/AppData/Local/Rowley Associates Limited/CrossWorks for ARM/packages/CMSIS_5/CMSIS/Core/Include/core_cm7.h" />
+      </folder>
+    </folder>
+    <file file_name="section_placement.xml" />
+    <folder Name="drivers">
+      <file file_name="drivers/assert.cpp" />
+      <file file_name="drivers/assert.h" />
+      <file file_name="drivers/clock.cpp" />
+      <file file_name="drivers/clock.h" />
+      <file file_name="drivers/ethernet.cpp" />
+      <file file_name="drivers/ethernet.h" />
+      <file file_name="drivers/event_queue.cpp" />
+      <file file_name="drivers/event_queue.h" />
+      <file file_name="drivers/gpio.cpp" />
+      <file file_name="drivers/gpio.h" />
+      <file file_name="drivers/mpu.cpp" />
+      <file file_name="drivers/mpu.h" />
+      <file file_name="drivers/scheduler.cpp" />
+      <file file_name="drivers/scheduler.h" />
+      <file file_name="drivers/serial_console.cpp" />
+      <file file_name="drivers/serial_console.h" />
+      <file file_name="drivers/timer.cpp" />
+      <file file_name="drivers/timer.h" />
+      <file file_name="drivers/uart.cpp" />
+      <file file_name="drivers/uart.h" />
+    </folder>
+    <file file_name="main.cpp" />
+    <file file_name="serial_commands.cpp" />
+    <file file_name="8836352.cpp" />
+    <file file_name="8836352.h" />
+  </project>
+  <configuration Name="Debug" inherited_configurations="THUMB;Debug" />
+  <configuration
+    Name="Common"
+    arm_architecture="v7EM"
+    arm_core_type="Cortex-M7"
+    arm_fp_abi="Hard"
+    arm_fpu_type="FPv5-D16"
+    arm_library_optimization="Small"
+    arm_supply_absolute_file_path="No"
+    c_preprocessor_definitions="LWIP_DEBUG"
+    gcc_c_language_standard="c11"
+    gcc_cplusplus_language_standard="c++1z"
+    gcc_optimization_level="Debug"
+    gcc_wchar_size="16-Bit"
+    linker_printf_fmt_level="int"
+    linker_scanf_character_group_matching_enabled="No"
+    linker_scanf_fmt_level="int" />
+</solution>
