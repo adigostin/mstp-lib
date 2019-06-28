@@ -2,11 +2,14 @@
 #include "drivers/ethernet.h"
 #include "drivers/serial_console.h"
 #include "drivers/scheduler.h"
+#include "../mstp-lib/stp.h"
 #include "8836352.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+
+extern STP_BRIDGE* bridge;
 
 static void get_mac_address()
 {
@@ -214,6 +217,15 @@ static void process_smi_test_command (const char*)
 	}
 }
 
+static void process_stp_command (const char* params)
+{
+	if (*params == 0)
+	{
+		printf ("STP is %s.\r\n", STP_IsBridgeStarted(bridge) ? "on" : "off");
+		return;
+	}
+}
+
 extern const serial_command ta_commands[] =
 {
 	{ "mac",       "mac [aa:bb:cc:dd:ee:ff] - show or set the MAC adress", process_mac_command },
@@ -221,5 +233,6 @@ extern const serial_command ta_commands[] =
 //	{ "lwipstats", "", process_lwipstats_command },
 	{ "phy",       "\"phy devaddr, regaddr[, hex_value]\" - reads/writes a PHY register", process_phy_command },
 	{ "smitest",   "", process_smi_test_command },
+	{ "stp",       "stp [on|off] - shows the stp state, or turns it on or off", process_stp_command },
 	{ nullptr, nullptr, nullptr }
 };

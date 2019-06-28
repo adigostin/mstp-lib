@@ -7,6 +7,7 @@
 #include "drivers/serial_console.h"
 #include "drivers/ethernet.h"
 #include "8836352.h"
+#include "../mstp-lib/stp.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,6 +28,8 @@ static constexpr struct ethernet_pins ethernet_pins
 	.rmii_txd1    = { {GPIOB, 13 }, 11 },
 };
 
+STP_BRIDGE* bridge;
+
 // ============================================================================
 
 static void on_enet_frame_received (uint8_t* frame, size_t frame_len)
@@ -36,7 +39,34 @@ static void on_enet_frame_received (uint8_t* frame, size_t frame_len)
 
 // ============================================================================
 
-// ============================================================================
+static void* StpCallback_AllocAndZeroMemory (unsigned int size)
+{
+	//printf ("STP: allocating %u bytes.\r\n", size);
+	auto res = malloc(size);
+	assert(res);
+	memset (res, 0, size);
+	return res;
+}
+
+static void StpCallback_FreeMemory (void* p)
+{
+	free(p);
+}
+
+static const STP_CALLBACKS stp_callbacks =
+{
+	.enableBpduTrapping    = [](auto...) { assert(false); },
+	.enableLearning        = [](auto...) { assert(false); },
+	.enableForwarding      = [](auto...) { assert(false); },
+	.transmitGetBuffer     = [](auto...) { assert(false); return (void*)nullptr; },
+	.transmitReleaseBuffer = [](auto...) { assert(false); },
+	.flushFdb              = [](auto...) { assert(false); },
+	.debugStrOut           = [](auto...) { assert(false); },
+	.onTopologyChange      = [](auto...) { assert(false); },
+	.onPortRoleChanged     = [](auto...) { assert(false); },
+	.allocAndZeroMemory    = &StpCallback_AllocAndZeroMemory,
+	.freeMemory            = &StpCallback_FreeMemory,
+};
 
 int main()
 {
@@ -119,18 +149,7 @@ int main()
 	static constexpr pin_t fault_led = { GPIOJ, 5 };
 	gpio_make_output (fault_led, pin_output_speed_t::low, false);
 
-	if (!enet_is_init())
-	{
-		static constexpr auto toggle_led = []
-		{
-			if (gpio_is_output(fault_led))
-				gpio_make_input(fault_led, pin_pull::none);
-			else
-				gpio_make_output(fault_led, pin_output_speed_t::low, false);
-		};
-
-		scheduler_schedule_event_timer(toggle_led, "enet_fail_led_toggle", 75, true);
-	}
+	bridge = STP_CreateBridge (5, 4, 16, &stp_callbacks, mac_address, 100);
 
 	while(true)
 	{
