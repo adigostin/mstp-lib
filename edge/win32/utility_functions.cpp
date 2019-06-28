@@ -160,12 +160,17 @@ namespace edge
 		return result;
 	}
 
+	std::string utf16_to_utf8 (std::wstring_view str_utf16)
+	{
+		int size_bytes = WideCharToMultiByte (CP_UTF8, 0, str_utf16.data(), (int) str_utf16.size(), nullptr, 0, nullptr, nullptr);
+		auto str = std::string (size_bytes, 0);
+		WideCharToMultiByte (CP_UTF8, 0, str_utf16.data(), (int) str_utf16.size(), str.data(), size_bytes, nullptr, nullptr);
+		return str;
+	}
+
 	std::string bstr_to_utf8 (BSTR bstr)
 	{
-		UINT char_count = SysStringLen(bstr);
-		int size_bytes = WideCharToMultiByte (CP_UTF8, 0, bstr, (int) char_count, nullptr, 0, nullptr, nullptr);
-		auto str = std::string (size_bytes, 0);
-		WideCharToMultiByte (CP_UTF8, 0, bstr, (int) char_count, str.data(), size_bytes, nullptr, nullptr);
-		return str;
+		size_t char_count = SysStringLen(bstr);
+		return utf16_to_utf8 ({ bstr, char_count });
 	}
 }

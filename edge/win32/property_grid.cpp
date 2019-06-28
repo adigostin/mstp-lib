@@ -654,7 +654,9 @@ public:
 			return;
 
 		auto prop_item = dynamic_cast<value_pgitem*>(_selected_item); assert(prop_item);
-		bool changed = try_change_property (prop_item->parent()->parent()->objects(), prop_item->_prop, _text_editor->u8str().c_str());
+		auto text_utf16 = _text_editor->wstr();
+		auto text_utf8 = utf16_to_utf8(text_utf16);
+		bool changed = try_change_property (prop_item->parent()->parent()->objects(), prop_item->_prop, text_utf8);
 		if (!changed)
 		{
 			std::wstringstream ss;
