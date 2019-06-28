@@ -85,6 +85,38 @@
     <file file_name="serial_commands.cpp" />
     <file file_name="8836352.cpp" />
     <file file_name="8836352.h" />
+    <folder Name="mstp-lib">
+      <folder Name="internal">
+        <file file_name="../mstp-lib/internal/stp.cpp" />
+        <file file_name="../mstp-lib/internal/stp_base_types.cpp" />
+        <file file_name="../mstp-lib/internal/stp_base_types.h" />
+        <file file_name="../mstp-lib/internal/stp_bpdu.cpp" />
+        <file file_name="../mstp-lib/internal/stp_bpdu.h" />
+        <file file_name="../mstp-lib/internal/stp_bridge.h" />
+        <file file_name="../mstp-lib/internal/stp_conditions_and_params.cpp" />
+        <file file_name="../mstp-lib/internal/stp_conditions_and_params.h" />
+        <file file_name="../mstp-lib/internal/stp_log.cpp" />
+        <file file_name="../mstp-lib/internal/stp_log.h" />
+        <file file_name="../mstp-lib/internal/stp_md5.cpp" />
+        <file file_name="../mstp-lib/internal/stp_md5.h" />
+        <file file_name="../mstp-lib/internal/stp_port.h" />
+        <file file_name="../mstp-lib/internal/stp_procedures.cpp" />
+        <file file_name="../mstp-lib/internal/stp_procedures.h" />
+        <file file_name="../mstp-lib/internal/stp_sm.h" />
+        <file file_name="../mstp-lib/internal/stp_sm_bridge_detection.cpp" />
+        <file file_name="../mstp-lib/internal/stp_sm_l2g_port_receive.cpp" />
+        <file file_name="../mstp-lib/internal/stp_sm_port_information.cpp" />
+        <file file_name="../mstp-lib/internal/stp_sm_port_protocol_migration.cpp" />
+        <file file_name="../mstp-lib/internal/stp_sm_port_receive.cpp" />
+        <file file_name="../mstp-lib/internal/stp_sm_port_role_selection.cpp" />
+        <file file_name="../mstp-lib/internal/stp_sm_port_role_transitions.cpp" />
+        <file file_name="../mstp-lib/internal/stp_sm_port_state_transition.cpp" />
+        <file file_name="../mstp-lib/internal/stp_sm_port_timers.cpp" />
+        <file file_name="../mstp-lib/internal/stp_sm_port_transmit.cpp" />
+        <file file_name="../mstp-lib/internal/stp_sm_topology_change.cpp" />
+      </folder>
+      <file file_name="../mstp-lib/stp.h" />
+    </folder>
   </project>
   <configuration Name="Debug" inherited_configurations="THUMB;Debug" />
   <configuration
