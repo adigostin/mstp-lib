@@ -45,7 +45,6 @@
     <ClInclude Include="win32\xml_serializer.h">
       <Filter>win32</Filter>
     </ClInclude>
-    <ClInclude Include="edge.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="object.cpp" />
@@ -83,7 +82,6 @@
     <ClCompile Include="win32\xml_serializer.cpp">
       <Filter>win32</Filter>
     </ClCompile>
-    <ClCompile Include="edge.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="win32">

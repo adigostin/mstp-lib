@@ -73,7 +73,7 @@ bridge::bridge (size_t port_count, size_t msti_count, mac_address macAddress)
 	for (size_t portIndex = 0; portIndex < port_count; portIndex++)
 	{
 		offset += (port::PortToPortSpacing / 2 + port::InteriorWidth / 2);
-		auto port = std::unique_ptr<class port>(new class port(this, portIndex, side::bottom, offset));
+		auto port = std::unique_ptr<class port>(new class port(this, portIndex, side_t::bottom, offset));
 		_ports.push_back (std::move(port));
 		offset += (port::InteriorWidth / 2 + port::PortToPortSpacing / 2);
 	}
@@ -426,7 +426,7 @@ void bridge::SetCoordsForInteriorPort (class port* _port, D2D1_POINT_2F proposed
 	// top side
 	if ((mouseX > mouseY * wh) && (_width - mouseX) > mouseY * wh)
 	{
-		_port->_side = side::top;
+		_port->_side = side_t::top;
 
 		if (mouseX < port::InteriorWidth / 2)
 			_port->_offset = port::InteriorWidth / 2;
@@ -439,7 +439,7 @@ void bridge::SetCoordsForInteriorPort (class port* _port, D2D1_POINT_2F proposed
 	// bottom side
 	else if ((mouseX <= mouseY * wh) && (_width - mouseX) <= mouseY * wh)
 	{
-		_port->_side = side::bottom;
+		_port->_side = side_t::bottom;
 
 		if (mouseX < port::InteriorWidth / 2 + 1)
 			_port->_offset = port::InteriorWidth / 2 + 1;
@@ -452,7 +452,7 @@ void bridge::SetCoordsForInteriorPort (class port* _port, D2D1_POINT_2F proposed
 	// left side
 	if ((mouseX <= mouseY * wh) && (_width - mouseX) > mouseY * wh)
 	{
-		_port->_side = side::left;
+		_port->_side = side_t::left;
 
 		if (mouseY < port::InteriorWidth / 2)
 			_port->_offset = port::InteriorWidth / 2;
@@ -465,7 +465,7 @@ void bridge::SetCoordsForInteriorPort (class port* _port, D2D1_POINT_2F proposed
 	// right side
 	if ((mouseX > mouseY * wh) && (_width - mouseX) <= mouseY * wh)
 	{
-		_port->_side = side::right;
+		_port->_side = side_t::right;
 
 		if (mouseY < port::InteriorWidth / 2)
 			_port->_offset = port::InteriorWidth / 2;

@@ -3,7 +3,6 @@
 #include "renderable_object.h"
 #include "port_tree.h"
 #include "stp.h"
-#include "edge.h"
 
 using mac_address = std::array<uint8_t, 6>;
 
@@ -39,7 +38,7 @@ class port : public renderable_object
 
 	bridge* const _bridge;
 	size_t  const _port_index;
-	edge::side _side = side_property._default_value.value();
+	edge::side_t _side = side_property._default_value.value();
 	float _offset;
 	uint32_t _supported_speed = supported_speed_property._default_value.value();
 	uint32_t _actual_speed = 0;
@@ -52,7 +51,7 @@ class port : public renderable_object
 	static void on_bridge_property_changed (void* arg, object* obj, const property_change_args& args);
 
 public:
-	port (class bridge* bridge, size_t port_index, edge::side side, float offset);
+	port (class bridge* bridge, size_t port_index, edge::side_t side, float offset);
 
 	static constexpr int HTCodeInnerOuter = 1;
 	static constexpr int HTCodeCP = 2;
@@ -67,14 +66,14 @@ public:
 	const bridge* bridge() const { return _bridge; }
 	class bridge* bridge() { return _bridge; }
 	size_t port_index() const { return _port_index; }
-	edge::side side() const { return _side; }
+	edge::side_t side() const { return _side; }
 	float offset() const { return _offset; }
 	D2D1_POINT_2F GetCPLocation() const;
 	bool mac_operational() const;
 	D2D1::Matrix3x2F GetPortTransform() const;
 	D2D1_RECT_F GetInnerOuterRect() const;
 	bool IsForwarding (unsigned int vlanNumber) const;
-	void SetSideAndOffset (edge::side side, float offset);
+	void SetSideAndOffset (edge::side_t side, float offset);
 	const std::vector<std::unique_ptr<port_tree>>& trees() const { return _trees; }
 
 	static void RenderExteriorNonStpPort (ID2D1RenderTarget* dc, const drawing_resources& dos, bool macOperational);
@@ -111,7 +110,7 @@ public:
 
 private:
 	void set_actual_speed (uint32_t value);
-	void set_side (edge::side side) { _side = side; }
+	void set_side (edge::side_t side) { _side = side; }
 	void set_offset (float offset) { _offset = offset; }
 	size_t tree_count() const { return _trees.size(); }
 	port_tree* tree (size_t index) const { return _trees[index].get(); }
