@@ -28,5 +28,5 @@ bool enet_is_init();
 void enet_get_mac_address (uint8_t mac_address[6]);
 void enet_send_blocking (const uint8_t* buffer, size_t len); // TODO: zero-copy
 void enet_dump_frame (const uint8_t* frame, size_t frame_len);
-uint16_t enet_read_smi  (uint16_t phy_address, uint16_t reg_number);
-void     enet_write_smi (uint16_t phy_address, uint16_t reg_number, uint16_t value);
+uint16_t enet_read_smi  (uint16_t dev_addr, uint16_t reg_number);
+void     enet_write_smi (uint16_t dev_addr, uint16_t reg_number, uint16_t value);

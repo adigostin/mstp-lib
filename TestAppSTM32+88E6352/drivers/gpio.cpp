@@ -14,7 +14,7 @@ void gpio_make_input (const pin_t& pin, pin_pull pull)
 	pin.port->PUPDR = pin.port->PUPDR & ~(3u << (pin.bit * 2)) | ((uint32_t) pull << (pin.bit * 2));
 }
 
-void gpio_make_output (const pin_t& pin, pin_output_speed_t output_speed, bool initial_level)
+void gpio_make_output (const pin_t& pin, pin_output_speed_t output_speed, bool initial_level, bool open_drain)
 {
 	assert (pin.bit < 16);
 
@@ -26,9 +26,8 @@ void gpio_make_output (const pin_t& pin, pin_output_speed_t output_speed, bool i
 	else
 		pin.port->BSRR = (1u << (pin.bit + 16));
 
+	pin.port->OTYPER  = pin.port->OTYPER  & ~(1u << pin.bit) | (open_drain ? (1u << pin.bit) : 0);
 	pin.port->OSPEEDR = pin.port->OSPEEDR & ~(3u << (pin.bit * 2)) | ((uint32_t) output_speed << (pin.bit * 2));
-	// TODO: port->PUPDR
-	// TODO: port->OTYPER
 	pin.port->MODER   = pin.port->MODER   & ~(3u << (pin.bit * 2)) | (1 << (pin.bit * 2));
 }
 

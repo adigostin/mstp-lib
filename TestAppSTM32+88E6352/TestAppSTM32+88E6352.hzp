@@ -83,7 +83,6 @@
     </folder>
     <file file_name="main.cpp" />
     <file file_name="serial_commands.cpp" />
-    <file file_name="8836352.cpp" />
     <file file_name="8836352.h" />
     <folder Name="mstp-lib">
       <folder Name="internal">

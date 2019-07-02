@@ -621,7 +621,7 @@ extern "C" void ETH_IRQHandler()
 
 uint16_t enet_read_smi (uint16_t phy_address, uint16_t reg_number)
 {
-	//assert_param(IS_ETH_PHY_ADDRESS(heth->Init.PhyAddress));
+	assert (enet_initialized);
 
 	uint32_t tmpreg = ETH->MACMIIAR;
 
@@ -649,7 +649,7 @@ uint16_t enet_read_smi (uint16_t phy_address, uint16_t reg_number)
 
 void enet_write_smi (uint16_t phy_address, uint16_t reg_number, uint16_t value)
 {
-	//assert_param(IS_ETH_PHY_ADDRESS(heth->Init.PhyAddress));
+	assert (enet_initialized);
 
 	auto tmpreg = ETH->MACMIIAR;
 

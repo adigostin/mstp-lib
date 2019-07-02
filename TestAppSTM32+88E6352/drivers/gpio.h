@@ -19,7 +19,7 @@ enum class pin_output_speed_t { low = 0, medium = 1, high = 2, very_high = 3 };
 enum class pin_pull { none = 0, up = 1, down = 2 };
 
 void gpio_make_input     (const pin_t& pin, pin_pull pull);
-void gpio_make_output    (const pin_t& pin, pin_output_speed_t output_speed, bool initial_level);
+void gpio_make_output    (const pin_t& pin, pin_output_speed_t output_speed, bool initial_level, bool open_drain = false);
 void gpio_make_alternate (const pin_and_af_t& pinaf, pin_output_speed_t output_speed, bool open_drain = false);
 bool gpio_is_output      (const pin_t& pin);
 bool gpio_get            (const pin_t& pin);
