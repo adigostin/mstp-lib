@@ -327,7 +327,7 @@ public:
 	{
 		Matrix3x2F oldtr;
 		dc->GetTransform(&oldtr);
-		dc->SetTransform (GetZoomTransform() * oldtr);
+		dc->SetTransform (zoom_transform() * oldtr);
 
 		for (auto& bridge : _project->bridges())
 		{
@@ -352,7 +352,7 @@ public:
 	{
 		Matrix3x2F oldtr;
 		dc->GetTransform(&oldtr);
-		dc->SetTransform (GetZoomTransform() * oldtr);
+		dc->SetTransform (zoom_transform() * oldtr);
 
 		for (auto& w : _project->wires())
 		{
@@ -974,7 +974,7 @@ public:
 
 	virtual const struct drawing_resources& drawing_resources() const override final { return _drawing_resources; }
 
-	virtual D2D1::Matrix3x2F GetZoomTransform() const override final { return base::GetZoomTransform(); }
+	virtual D2D1::Matrix3x2F zoom_transform() const override final { return base::zoom_transform(); }
 
 	edit_state_deps make_edit_state_deps()
 	{

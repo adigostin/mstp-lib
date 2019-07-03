@@ -87,7 +87,7 @@ namespace edge
 		}
 	}
 
-	Matrix3x2F zoomable_window::GetZoomTransform() const
+	Matrix3x2F zoomable_window::zoom_transform() const
 	{
 		return Matrix3x2F(_zoom, 0, 0, _zoom, _workspaceOrigin.x, _workspaceOrigin.y);
 	}

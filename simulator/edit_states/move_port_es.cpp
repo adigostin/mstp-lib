@@ -8,7 +8,7 @@ class move_port_es : public edit_state
 {
 	typedef edit_state base;
 	port* _port;
-	side _initialSide;
+	edge::side_t _initialSide;
 	float _initialOffset;
 	bool _completed = false;
 
