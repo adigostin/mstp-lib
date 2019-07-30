@@ -368,7 +368,7 @@ public:
 
 	static const typed_object_collection_property<class project, bridge> bridges_property;
 	static const typed_object_collection_property<class project, wire> wires_property;
-	static const property* _properties[];
+	static const property* const _properties[];
 	static const xtype<class project> _type;
 	virtual const struct type* type() const { return &_type; }
 };
@@ -383,7 +383,7 @@ const typed_object_collection_property<project, wire> project::wires_property {
 	&wire_count, &wire_at, &insert_wire, &remove_wire
 };
 
-const property* project::_properties[] = { &next_mac_address_property, &bridges_property, &wires_property };
+const property* const project::_properties[] = { &next_mac_address_property, &bridges_property, &wires_property };
 
 const xtype<project> project::_type = { "Project", &base::_type, _properties, [] { return new project(); } };
 
