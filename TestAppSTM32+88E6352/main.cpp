@@ -168,14 +168,12 @@ static void on_enet_frame_received (uint8_t* frame, size_t frame_len)
 
 static void StpCallback_EnableBpduTrapping (const struct STP_BRIDGE* bridge, bool enable, unsigned int timestamp)
 {
-	uint16_t value;
-
 	if (enable)
 	{
 		// Tell the switch IC to forward to the CPU port the reserved multicast frames (DA of 01:80:C2:00:00:0x).
 		// See bit 3 in Table 133 on page 297 in 88E6352_Functional_Specification-Rev0-08.pdf.
 		// After setting this, the switch no longer floods these frames across ports.
-		value = enet_read_smi (switch_dev_addr_global2, 0x05);
+		uint16_t value = enet_read_smi (switch_dev_addr_global2, 0x05);
 		value |= (1 << 3);
 		enet_write_smi (switch_dev_addr_global2, 0x05, value);
 
@@ -187,9 +185,13 @@ static void StpCallback_EnableBpduTrapping (const struct STP_BRIDGE* bridge, boo
 	}
 	else
 	{
-		assert(false); // TODO: undo
+		// Put back default (power-up) values in the fields we set above.
+		uint16_t value = enet_read_smi (switch_dev_addr_port6, 0x04);
+		value = (value & 0xFCFF) | (0b11 << 8);
+		value = (value & 0xCFFF) | (0b00 << 12);
+		enet_write_smi (switch_dev_addr_port6, 0x04, value);
 
-		uint16_t value = enet_read_smi (switch_dev_addr_global2, 0x05);
+		value = enet_read_smi (switch_dev_addr_global2, 0x05);
 		value &= ~(1 << 3);
 		enet_write_smi (switch_dev_addr_global2, 0x05, value);
 	}
@@ -225,13 +227,13 @@ static void write_port_state_register (size_t port_index, bool learning, bool fo
 static void StpCallback_EnableLearning (const struct STP_BRIDGE* bridge, unsigned int port_index, unsigned int treeIndex, bool enable, unsigned int timestamp)
 {
 	bool forwarding = STP_GetPortForwarding (bridge, port_index, treeIndex);
-	write_port_state_register (enable, forwarding, port_index);
+	write_port_state_register (port_index, enable, forwarding);
 }
 
 static void StpCallback_EnableForwarding (const struct STP_BRIDGE* bridge, unsigned int port_index, unsigned int treeIndex, bool enable, unsigned int timestamp)
 {
 	bool learning = STP_GetPortLearning (bridge, port_index, treeIndex);
-	write_port_state_register (learning, enable, port_index);
+	write_port_state_register (port_index, learning, enable);
 }
 
 static uint8_t tx_bpdu_buffer[128];
