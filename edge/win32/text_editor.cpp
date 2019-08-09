@@ -138,27 +138,27 @@ namespace edge
 			return pos;
 		}
 	
-		virtual void process_mouse_button_down (mouse_button button, UINT modifier_keys, POINT pixel, D2D1_POINT_2F dip) override
+		virtual void process_mouse_button_down (mouse_button button, modifier_key mks, POINT pixel, D2D1_POINT_2F dip) override
 		{
 			if (button == mouse_button::left)
 			{
 				bool isInside;
 				size_t byte_index = GetPosAtDLocation (dip, &isInside);
 
-				bool keepSelectionOrigin = ((modifier_keys & MK_SHIFT) != 0);
+				bool keepSelectionOrigin = ((mks & modifier_key::shift) != 0);
 
 				set_caret_pos (byte_index, keepSelectionOrigin);
 				set_caret_screen_location_from_caret_pos ();
 			}
 		}
 
-		virtual void process_mouse_button_up (mouse_button button, UINT modifier_keys, POINT pixel, D2D1_POINT_2F dip) override
+		virtual void process_mouse_button_up (mouse_button button, modifier_key mks, POINT pixel, D2D1_POINT_2F dip) override
 		{
 		}
 
-		virtual void process_mouse_move (UINT modifier_keys, POINT pixel, D2D1_POINT_2F dip) override
+		virtual void process_mouse_move (modifier_key mks, POINT pixel, D2D1_POINT_2F dip) override
 		{
-			if ((modifier_keys & MK_LBUTTON) != 0)
+			if ((mks & modifier_key::lbutton) != 0)
 			{
 				size_t pos = GetPosAtDLocation (dip, nullptr);
 				set_caret_pos (pos, true);
@@ -166,14 +166,14 @@ namespace edge
 			}
 		}
 		
-		virtual handled process_virtual_key_down (uint32_t virtualKey, UINT modifierKeysDown) override
+		virtual handled process_virtual_key_down (uint32_t virtualKey, modifier_key mks) override
 		{
 			#pragma region Left
 			if (virtualKey == VK_LEFT)
 			{
-				if ((modifierKeysDown == 0) || (modifierKeysDown == MK_SHIFT))
+				if ((mks == modifier_key::none) || (mks == modifier_key::shift))
 				{
-					bool keepSelectionOrigin = (modifierKeysDown == MK_SHIFT);
+					bool keepSelectionOrigin = (mks == modifier_key::shift);
 					set_caret_pos ((_caret_pos > 0) ? (_caret_pos - 1) : 0, keepSelectionOrigin);
 					set_caret_screen_location_from_caret_pos ();
 					return handled::yes;
@@ -183,9 +183,9 @@ namespace edge
 			#pragma region Right
 			else if (virtualKey == VK_RIGHT)
 			{
-				if ((modifierKeysDown == 0) || (modifierKeysDown == MK_SHIFT))
+				if ((mks == modifier_key::none) || (mks == modifier_key::shift))
 				{
-					bool keepSelectionOrigin = (modifierKeysDown == MK_SHIFT);
+					bool keepSelectionOrigin = (mks == modifier_key::shift);
 					set_caret_pos ((_caret_pos < _text.length()) ? (_caret_pos + 1) : _text.length(), keepSelectionOrigin);
 					set_caret_screen_location_from_caret_pos ();
 					return handled::yes;
@@ -193,7 +193,7 @@ namespace edge
 			}
 			#pragma endregion
 			#pragma region Control + A
-			else if ((modifierKeysDown == MK_CONTROL) && (virtualKey == 'A'))
+			else if ((mks == modifier_key::control) && (virtualKey == 'A'))
 			{
 				select_all();
 				return handled::yes;
@@ -202,9 +202,9 @@ namespace edge
 			#pragma region Home
 			else if (virtualKey == VK_HOME)
 			{
-				if ((modifierKeysDown == 0) || (modifierKeysDown == MK_SHIFT))
+				if ((mks == modifier_key::none) || (mks == modifier_key::shift))
 				{
-					bool keepSelectionOrigin = (modifierKeysDown == MK_SHIFT);
+					bool keepSelectionOrigin = (mks == modifier_key::shift);
 					set_caret_pos (0, keepSelectionOrigin);
 					set_caret_screen_location_from_caret_pos ();
 					return handled::yes;
@@ -214,9 +214,9 @@ namespace edge
 			#pragma region End
 			else if (virtualKey == VK_END)
 			{
-				if ((modifierKeysDown == 0) || (modifierKeysDown == MK_SHIFT))
+				if ((mks == modifier_key::none) || (mks == modifier_key::shift))
 				{
-					bool keepSelectionOrigin = (modifierKeysDown == MK_SHIFT);
+					bool keepSelectionOrigin = (mks == modifier_key::shift);
 					set_caret_pos (_text.length(), keepSelectionOrigin);
 					set_caret_screen_location_from_caret_pos ();
 					return handled::yes;
@@ -224,7 +224,7 @@ namespace edge
 			}
 			#pragma endregion
 			#pragma region Del
-			else if ((modifierKeysDown == 0) && (virtualKey == VK_DELETE))
+			else if ((mks == modifier_key::none) && (virtualKey == VK_DELETE))
 			{
 				if (_selection_origin_pos == _caret_pos)
 				{
@@ -256,7 +256,7 @@ namespace edge
 			}
 			#pragma endregion
 			#pragma region Back
-			else if ((modifierKeysDown == 0) && (virtualKey == VK_BACK))
+			else if ((mks == modifier_key::none) && (virtualKey == VK_BACK))
 			{
 				if (_selection_origin_pos == _caret_pos)
 				{
@@ -288,10 +288,10 @@ namespace edge
 			}
 			#pragma endregion
 			#pragma region Control + X / Shift + Del (Cut)   OR   Control + C / Control + Ins (Copy)
-			else if (((modifierKeysDown == MK_CONTROL) && (virtualKey == 'X'))
-				|| ((modifierKeysDown == MK_SHIFT) && (virtualKey == VK_DELETE))
-				|| ((modifierKeysDown == MK_CONTROL) && (virtualKey == 'C'))
-				|| ((modifierKeysDown == MK_CONTROL) && (virtualKey == VK_INSERT)))
+			else if (((mks == modifier_key::control) && (virtualKey == 'X'))
+				|| ((mks == modifier_key::shift) && (virtualKey == VK_DELETE))
+				|| ((mks == modifier_key::control) && (virtualKey == 'C'))
+				|| ((mks == modifier_key::control) && (virtualKey == VK_INSERT)))
 			{
 				if (_caret_pos != _selection_origin_pos)
 				{
@@ -316,8 +316,8 @@ namespace edge
 						::CloseClipboard();
 					}
 
-					bool cut = ((modifierKeysDown == MK_CONTROL) && (virtualKey == 'X'))
-						|| ((modifierKeysDown == MK_SHIFT) && (virtualKey == VK_DELETE));
+					bool cut = ((mks == modifier_key::control) && (virtualKey == 'X'))
+						|| ((mks == modifier_key::shift) && (virtualKey == VK_DELETE));
 					if (cut && putToClipboard)
 					{
 						// delete selection
@@ -334,8 +334,8 @@ namespace edge
 			}
 			#pragma endregion
 			#pragma region Control + V / Shift + Ins (Paste)
-			else if (((modifierKeysDown == MK_CONTROL) && (virtualKey == 'V'))
-				|| ((modifierKeysDown == MK_SHIFT) && (virtualKey == VK_INSERT)))
+			else if (((mks == modifier_key::control) && (virtualKey == 'V'))
+				|| ((mks == modifier_key::shift) && (virtualKey == VK_INSERT)))
 			{
 				if (::OpenClipboard(_control->hwnd()))
 				{
@@ -360,7 +360,7 @@ namespace edge
 			return handled::no;
 		}
 
-		virtual handled process_virtual_key_up (uint32_t key, UINT modifier_keys) override
+		virtual handled process_virtual_key_up (uint32_t key, modifier_key mks) override
 		{
 			return handled::no;
 		}

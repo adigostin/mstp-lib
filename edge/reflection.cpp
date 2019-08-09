@@ -10,7 +10,7 @@ namespace edge
 		return from ? "true" : "false";
 	}
 
-	bool bool_property_traits::from_string (std::string_view from, bool& to, const object* obj)
+	bool bool_property_traits::from_string (std::string_view from, bool& to)
 	{
 		if ((from.size() == 4) && ((*(uint32_t*)from.data() & ~0x20202020u) == 'EURT'))
 		{
@@ -26,7 +26,7 @@ namespace edge
 			return false;
 	}
 
-	bool int32_property_traits::from_string (std::string_view from, int32_t& to, const object* obj)
+	bool int32_property_traits::from_string (std::string_view from, int32_t& to)
 	{
 		if (from.empty())
 			return false;
@@ -41,7 +41,7 @@ namespace edge
 		return true;
 	}
 
-	bool uint32_property_traits::from_string (std::string_view from, uint32_t& to, const object* obj)
+	bool uint32_property_traits::from_string (std::string_view from, uint32_t& to)
 	{
 		if (from.empty())
 			return false;
@@ -56,7 +56,7 @@ namespace edge
 		return true;
 	}
 
-	bool uint64_property_traits::from_string (std::string_view from, uint64_t& to, const object* obj)
+	bool uint64_property_traits::from_string (std::string_view from, uint64_t& to)
 	{
 		if (from.empty())
 			return false;
@@ -71,20 +71,20 @@ namespace edge
 		return true;
 	}
 
-	bool size_property_traits::from_string (std::string_view from, size_t&to, const object* obj)
+	bool size_property_traits::from_string (std::string_view from, size_t&to)
 	{
 	#if defined(_WIN32) || defined(_WIN64)
 		#ifdef _WIN64
-			return uint64_property_traits::from_string(from, to, obj);
+			return uint64_property_traits::from_string(from, to);
 		#else
-			return uint32_property_traits::from_string(from, to, obj);
+			return uint32_property_traits::from_string(from, to);
 		#endif
 	#else
 		#error
 	#endif
 	}
 
-	bool float_property_traits::from_string (std::string_view from, float& to, const object* obj)
+	bool float_property_traits::from_string (std::string_view from, float& to)
 	{
 		if (from.empty())
 			return false;

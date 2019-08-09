@@ -220,7 +220,7 @@ namespace edge
 			hr = child_elem->getAttribute(index_attr_name, index_attr_value.GetAddress());
 			if (hr == S_OK)
 			{
-				bool converted = size_property_traits::from_string(bstr_to_utf8(index_attr_value.bstrVal), index, obj);
+				bool converted = size_property_traits::from_string(bstr_to_utf8(index_attr_value.bstrVal), index);
 				assert(converted);
 			}
 
@@ -242,7 +242,7 @@ namespace edge
 			_variant_t index_attr_value;
 			hr = entry_elem->getAttribute(index_attr_name, index_attr_value.GetAddress()); assert(SUCCEEDED(hr));
 			size_t index;
-			bool converted = size_property_traits::from_string(bstr_to_utf8(index_attr_value.bstrVal), index, obj); assert(converted);
+			bool converted = size_property_traits::from_string(bstr_to_utf8(index_attr_value.bstrVal), index); assert(converted);
 
 			_variant_t value_attr_value;
 			hr = entry_elem->getAttribute(value_attr_name, value_attr_value.GetAddress()); assert(SUCCEEDED(hr));

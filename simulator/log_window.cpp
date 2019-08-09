@@ -53,6 +53,12 @@ public:
 			_bridge->log_line_generated().remove_handler(OnLogLineGeneratedStatic, this);
 	}
 
+	virtual HWND hwnd() const override { return base::hwnd(); }
+
+	virtual destroying_event::subscriber destroying() override { return base::destroying(); }
+
+	using base::invalidate;
+
 	static void OnSelectionChanged (void* callbackArg, selection_i* selection)
 	{
 		auto logArea = static_cast<log_window*>(callbackArg);

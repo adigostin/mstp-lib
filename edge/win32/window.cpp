@@ -121,18 +121,18 @@ std::optional<LRESULT> window::window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, 
 }
 
 // static
-UINT window::GetModifierKeys()
+modifier_key window::GetModifierKeys()
 {
-	UINT keys = 0;
+	modifier_key keys = modifier_key::none;
 
 	if (GetKeyState (VK_SHIFT) < 0)
-		keys |= MK_SHIFT;
+		keys |= modifier_key::shift;
 
 	if (GetKeyState (VK_CONTROL) < 0)
-		keys |= MK_CONTROL;
+		keys |= modifier_key::control;
 
 	if (GetKeyState (VK_MENU) < 0)
-		keys |= MK_ALT;
+		keys |= modifier_key::alt;
 
 	return keys;
 }

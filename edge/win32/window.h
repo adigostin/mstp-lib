@@ -8,6 +8,22 @@ namespace edge
 
 	enum class mouse_button { left, right, middle, };
 
+	enum class modifier_key
+	{
+		none    = 0,
+		shift   = 4,    // MK_SHIFT
+		control = 8,    // MK_CONTROL
+		alt     = 0x20, // MK_ALT
+		lbutton = 1,    // MK_LBUTTON
+		rbutton = 2,    // MK_RBUTTON
+		mbutton = 0x10, // MK_MBUTTON
+	};
+	//DEFINE_ENUM_FLAG_OPERATORS(modifier_key);
+	inline constexpr modifier_key operator& (modifier_key a, modifier_key b) noexcept { return (modifier_key) ((std::underlying_type_t<modifier_key>)a & (std::underlying_type_t<modifier_key>)b); }
+	inline constexpr modifier_key& operator |= (modifier_key& a, modifier_key b) noexcept { return (modifier_key&) ((std::underlying_type_t<modifier_key>&)a |= (std::underlying_type_t<modifier_key>)b); }
+	inline constexpr bool operator== (modifier_key a, std::underlying_type_t<modifier_key> b) noexcept { return (std::underlying_type_t<modifier_key>)a == b; }
+	inline constexpr bool operator!= (modifier_key a, std::underlying_type_t<modifier_key> b) noexcept { return (std::underlying_type_t<modifier_key>)a != b; }
+
 	struct wnd_class_params
 	{
 		LPCWSTR lpszClassName;
@@ -17,7 +33,7 @@ namespace edge
 		LPCWSTR lpIconSmName;
 	};
 
-	class window : public event_manager, public virtual win32_window_i
+	class window : public event_manager, public win32_window_i
 	{
 		void register_class (HINSTANCE hInstance, const wnd_class_params& class_params);
 
@@ -29,7 +45,7 @@ namespace edge
 
 		virtual std::optional<LRESULT> window_proc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-		static UINT GetModifierKeys();
+		static modifier_key GetModifierKeys();
 
 		static constexpr UINT WM_NEXT = WM_APP;
 

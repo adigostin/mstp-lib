@@ -6,7 +6,7 @@
 
 namespace edge
 {
-	struct __declspec(novtable) property_grid_i : public virtual win32_window_i, public property_editor_parent_i
+	struct __declspec(novtable) property_grid_i : public win32_window_i, public property_editor_parent_i
 	{
 		virtual ~property_grid_i() { }
 		virtual void clear() = 0;
@@ -20,6 +20,7 @@ namespace edge
 			std::string new_value;
 		};
 
+		// TODO: rename to property_edited_e
 		struct property_changed_e : event<property_changed_e, property_changed_args&&> { };
 		virtual property_changed_e::subscriber property_changed() = 0;
 

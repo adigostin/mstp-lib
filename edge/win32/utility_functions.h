@@ -7,8 +7,6 @@ inline bool operator== (D2D1_POINT_2F p0, D2D1_POINT_2F p1) { return (p0.x == p1
 inline bool operator!= (D2D1_POINT_2F p0, D2D1_POINT_2F p1) { return (p0.x != p1.x) || (p0.y != p1.y); }
 bool operator== (const D2D1_RECT_F& a, const D2D1_RECT_F& b);
 bool operator!= (const D2D1_RECT_F& a, const D2D1_RECT_F& b);
-inline POINT location (const RECT& r) { return { r.left, r.top }; }
-inline SIZE size (const RECT& r) { return { r.right - r.left, r.bottom - r.top }; }
 inline bool operator== (POINT a, POINT b) { return (a.x == b.x) && (a.y == b.y); }
 inline bool operator!= (POINT a, POINT b) { return (a.x != b.x) || (a.y != b.y); }
 inline bool operator== (SIZE a, SIZE b) { return (a.cx == b.cx) && (a.cy == b.cy); }

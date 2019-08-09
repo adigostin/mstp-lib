@@ -61,8 +61,8 @@ namespace edge
 		virtual float content_height() const = 0;
 		virtual HCURSOR cursor() const { return nullptr; }
 		virtual bool selectable() const = 0;
-		virtual void process_mouse_button_down (mouse_button button, UINT modifiers, POINT pt, D2D1_POINT_2F dip, const item_layout& layout) { }
-		virtual void process_mouse_button_up   (mouse_button button, UINT modifiers, POINT pt, D2D1_POINT_2F dip, const item_layout& layout) { }
+		virtual void process_mouse_button_down (mouse_button button, modifier_key mks, POINT pt, D2D1_POINT_2F dip, const item_layout& layout) { }
+		virtual void process_mouse_button_up   (mouse_button button, modifier_key mks, POINT pt, D2D1_POINT_2F dip, const item_layout& layout) { }
 	};
 
 	class expandable_item : public pgitem
@@ -163,8 +163,8 @@ namespace edge
 		virtual float content_height() const override;
 		virtual HCURSOR cursor() const override final;
 		virtual bool selectable() const override final { return true; }
-		virtual void process_mouse_button_down (mouse_button button, UINT modifiers, POINT pt, D2D1_POINT_2F dip, const item_layout& layout) override;
-		virtual void process_mouse_button_up   (mouse_button button, UINT modifiers, POINT pt, D2D1_POINT_2F dip, const item_layout& layout) override;
+		virtual void process_mouse_button_down (mouse_button button, modifier_key mks, POINT pt, D2D1_POINT_2F dip, const item_layout& layout) override;
+		virtual void process_mouse_button_up   (mouse_button button, modifier_key mks, POINT pt, D2D1_POINT_2F dip, const item_layout& layout) override;
 
 		void create_value_layout_internal (IDWriteFactory* factory, IDWriteTextFormat* format, float width);
 		bool multiple_values() const;

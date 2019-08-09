@@ -29,7 +29,7 @@ struct mac_address_property_traits
 	using param_t = mac_address;
 	using return_t = mac_address;
 	static std::string to_string (mac_address from) { return mac_address_to_string(from); }
-	static bool from_string (std::string_view from, mac_address& to, const object* obj) { return mac_address_from_string(from, to); }
+	static bool from_string (std::string_view from, mac_address& to) { return mac_address_from_string(from, to); }
 };
 using mac_address_p = edge::typed_property<mac_address_property_traits>;
 

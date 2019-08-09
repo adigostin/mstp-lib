@@ -121,20 +121,20 @@ public:
 			auto pt = POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 			auto dip = pointp_to_pointd(pt) + D2D1_SIZE_F{ _pixel_width / 2, _pixel_width / 2 };
 			if ((msg == WM_LBUTTONDOWN) || (msg == WM_RBUTTONDOWN))
-				process_mouse_button_down (button, (UINT)wParam, pt, dip);
+				process_mouse_button_down (button, (modifier_key)wParam, pt, dip);
 			else
-				process_mouse_button_up (button, (UINT)wParam, pt, dip);
+				process_mouse_button_up (button, (modifier_key)wParam, pt, dip);
 			return 0;
 		}
 
 		if (msg == WM_MOUSEMOVE)
 		{
-			UINT modifiers = (UINT)wParam;
+			modifier_key mks = (modifier_key)wParam;
 			if (::GetKeyState(VK_MENU) < 0)
-				modifiers |= MK_ALT;
+				mks |= modifier_key::alt;
 			auto pt = POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 			auto dip = pointp_to_pointd(pt) + D2D1_SIZE_F{ _pixel_width / 2, _pixel_width / 2 };
-			process_mouse_move (modifiers, pt, dip);
+			process_mouse_move (mks, pt, dip);
 		}
 
 		if ((msg == WM_KEYDOWN) || (msg == WM_SYSKEYDOWN))
@@ -303,6 +303,10 @@ public:
 
 		invalidate();
 	}
+
+	virtual destroying_event::subscriber destroying() override { return base::destroying(); }
+
+	virtual HWND hwnd() const override { return base::hwnd(); }
 
 	virtual void render (ID2D1DeviceContext* dc) const override
 	{
@@ -582,7 +586,7 @@ public:
 		return result;
 	}
 	
-	void process_mouse_button_down (mouse_button button, UINT modifier_keys, POINT pixel, D2D1_POINT_2F dip)
+	void process_mouse_button_down (mouse_button button, modifier_key mks, POINT pixel, D2D1_POINT_2F dip)
 	{
 		::SetFocus (hwnd());
 
@@ -601,7 +605,7 @@ public:
 		}
 
 		if (_text_editor && point_in_rect(_text_editor->rect(), dip))
-			return _text_editor->process_mouse_button_down(button, modifier_keys, pixel, dip);
+			return _text_editor->process_mouse_button_down(button, mks, pixel, dip);
 
 		auto clicked_item = item_at(dip);
 
@@ -614,10 +618,10 @@ public:
 		}
 
 		if (clicked_item.first != nullptr)
-			clicked_item.first->process_mouse_button_down (button, modifier_keys, pixel, dip, clicked_item.second);
+			clicked_item.first->process_mouse_button_down (button, mks, pixel, dip, clicked_item.second);
 	}
 
-	void process_mouse_button_up (mouse_button button, UINT modifier_keys, POINT pixel, D2D1_POINT_2F dip)
+	void process_mouse_button_up (mouse_button button, modifier_key mks, POINT pixel, D2D1_POINT_2F dip)
 	{
 		if (_description_resize_offset)
 		{
@@ -627,14 +631,14 @@ public:
 		}
 
 		if (_text_editor && point_in_rect(_text_editor->rect(), dip))
-			return _text_editor->process_mouse_button_up (button, modifier_keys, pixel, dip);
+			return _text_editor->process_mouse_button_up (button, mks, pixel, dip);
 
 		auto clicked_item = item_at(dip);
 		if (clicked_item.first != nullptr)
-			clicked_item.first->process_mouse_button_up (button, modifier_keys, pixel, dip, clicked_item.second);
+			clicked_item.first->process_mouse_button_up (button, mks, pixel, dip, clicked_item.second);
 	}
 
-	void process_mouse_move (UINT modifier_keys, POINT pixel, D2D1_POINT_2F dip)
+	void process_mouse_move (modifier_key mks, POINT pixel, D2D1_POINT_2F dip)
 	{
 		if (_description_resize_offset)
 		{
@@ -645,7 +649,7 @@ public:
 		}
 
 		if (_text_editor && point_in_rect(_text_editor->rect(), dip))
-			return _text_editor->process_mouse_move (modifier_keys, pixel, dip);
+			return _text_editor->process_mouse_move (mks, pixel, dip);
 	}
 
 	void try_commit_editor()
@@ -697,7 +701,7 @@ public:
 
 	virtual float line_thickness() const override final { return _line_thickness; }
 
-	handled process_virtual_key_down (UINT key, UINT modifier_keys)
+	handled process_virtual_key_down (UINT key, modifier_key mks)
 	{
 		if ((key == VK_RETURN) || (key == VK_UP) || (key == VK_DOWN))
 		{
@@ -722,15 +726,15 @@ public:
 		}
 
 		if (_text_editor)
-			return _text_editor->process_virtual_key_down (key, modifier_keys);
+			return _text_editor->process_virtual_key_down (key, mks);
 
 		return handled::no;
 	}
 
-	handled process_virtual_key_up (UINT key, UINT modifier_keys)
+	handled process_virtual_key_up (UINT key, modifier_key mks)
 	{
 		if (_text_editor)
-			return _text_editor->process_virtual_key_up (key, modifier_keys);
+			return _text_editor->process_virtual_key_up (key, mks);
 
 		return handled::no;
 	}

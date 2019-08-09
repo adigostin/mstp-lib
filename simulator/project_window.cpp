@@ -135,6 +135,12 @@ public:
 			destroy_property_grid();
 	}
 
+	virtual HWND hwnd() const override { return base::hwnd(); }
+
+	virtual destroying_event::subscriber destroying() override { return base::destroying(); }
+
+	using base::client_rect_pixels;
+
 	LONG splitter_width_pixels() const
 	{
 		static constexpr float splitter_width_dips = 4;

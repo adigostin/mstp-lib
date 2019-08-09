@@ -309,7 +309,7 @@ static const NVP bool_nvps[] = {
 	{ nullptr, -1 },
 };
 
-void value_pgitem::process_mouse_button_down (mouse_button button, UINT modifiers, POINT pt, D2D1_POINT_2F dip, const item_layout& layout)
+void value_pgitem::process_mouse_button_down (mouse_button button, modifier_key mks, POINT pt, D2D1_POINT_2F dip, const item_layout& layout)
 {
 	if (dip.x < layout.x_value)
 		return;
@@ -342,11 +342,11 @@ void value_pgitem::process_mouse_button_down (mouse_button button, UINT modifier
 		auto lt = root()->_grid->line_thickness();
 		D2D1_RECT_F editor_rect = { layout.x_value + lt, layout.y_top, layout.x_right, layout.y_bottom };
 		auto editor = root()->_grid->show_text_editor (editor_rect, text_lr_padding, multiple_values() ? "" : _prop->get_to_string(parent()->parent()->objects().front()));
-		editor->process_mouse_button_down (button, modifiers, pt, dip);
+		editor->process_mouse_button_down (button, mks, pt, dip);
 	}
 }
 
-void value_pgitem::process_mouse_button_up (mouse_button button, UINT modifiers, POINT pt, D2D1_POINT_2F dip, const item_layout& layout)
+void value_pgitem::process_mouse_button_up (mouse_button button, modifier_key mks, POINT pt, D2D1_POINT_2F dip, const item_layout& layout)
 {
 }
 #pragma endregion

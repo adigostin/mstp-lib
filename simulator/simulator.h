@@ -57,7 +57,7 @@ using selection_factory_t = std::unique_ptr<selection_i>(*)(project_i* project);
 
 // ============================================================================
 
-struct __declspec(novtable) log_window_i abstract : virtual edge::win32_window_i
+struct __declspec(novtable) log_window_i abstract : edge::win32_window_i
 {
 	virtual ~log_window_i() { }
 };
@@ -83,7 +83,7 @@ struct mouse_location
 	D2D1_POINT_2F w;
 };
 
-struct __declspec(novtable) edit_window_i : virtual edge::win32_window_i
+struct __declspec(novtable) edit_window_i : edge::win32_window_i
 {
 	virtual const struct drawing_resources& drawing_resources() const = 0;
 	virtual void EnterState (std::unique_ptr<edit_state>&& state) = 0;

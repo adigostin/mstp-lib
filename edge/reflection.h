@@ -128,10 +128,20 @@ namespace edge
 			return property_traits::to_string(get(obj));
 		}
 
+	private:
+		template<typename t = property_traits>
+		std::enable_if_t<std::is_same_v<decltype(t::from_string), bool(std::string_view, value_t&)>, bool>
+			static from_string_internal (std::string_view in, value_t& out, object* obj) { return property_traits::from_string(in, out); }
+
+		template<typename t = property_traits>
+		std::enable_if_t<std::is_same_v<decltype(t::from_string), bool(std::string_view, value_t&, const object*)>, bool>
+			static from_string_internal (std::string_view in, value_t& out, const object* obj) { return property_traits::from_string(in, out, obj); }
+
+	public:
 		virtual bool try_set_from_string (object* obj, std::string_view str_in) const override final
 		{
 			value_t value;
-			bool ok = property_traits::from_string(str_in, value, obj);
+			bool ok = from_string_internal(str_in, value, obj);
 			if (ok)
 			{
 				if (std::holds_alternative<member_setter_t>(_setter))
@@ -186,12 +196,12 @@ namespace edge
 			return unknown_str;
 		}
 
-		static bool from_string (std::string_view from, enum_t& to, const object* obj)
+		static bool from_string (std::string_view from, enum_t& to)
 		{
 			if (serialize_as_integer)
 			{
 				int32_t val;
-				bool ok = int32_property_traits::from_string(from, val, obj);
+				bool ok = int32_property_traits::from_string(from, val);
 				if (ok)
 				{
 					to = (enum_t)val;
@@ -226,7 +236,7 @@ namespace edge
 		using param_t = bool;
 		using return_t = bool;
 		static std::string to_string (bool from) { return from ? "True" : "False"; }
-		static bool from_string (std::string_view from, bool& to, const object* obj);
+		static bool from_string (std::string_view from, bool& to);
 	};
 	using bool_p = typed_property<bool_property_traits>;
 
@@ -239,7 +249,7 @@ namespace edge
 		using param_t = t_;
 		using return_t = t_;
 		static std::string to_string (t_ from) { return std::to_string(from); }
-		static bool from_string (std::string_view from, t_& to, const object* obj);
+		static bool from_string (std::string_view from, t_& to);
 	};
 
 	static inline const char int32_type_name[] = "int32";
@@ -270,7 +280,7 @@ namespace edge
 		using param_t = std::string_view;
 		using return_t = std::conditional_t<backed, const std::string&, std::string>;
 		static std::string to_string (std::string_view from) { return std::string(from); }
-		static bool from_string (std::string_view from, std::string& to, const object* obj) { to = from; return true; }
+		static bool from_string (std::string_view from, std::string& to) { to = from; return true; }
 	};
 	using temp_string_property_traits = string_property_traits<false>;
 	using temp_string_p = typed_property<temp_string_property_traits>;
@@ -437,7 +447,7 @@ namespace edge
 		virtual bool set_value (object* obj, size_t index, std::string_view from) const override
 		{
 			typename property_traits::value_t value;
-			bool converted = property_traits::from_string(from, value, obj);
+			bool converted = property_traits::from_string(from, value);
 			if (!converted)
 				return false;
 			(static_cast<object_t*>(obj)->*_set_value) (index, value);
@@ -447,7 +457,7 @@ namespace edge
 		virtual bool insert_value (object* obj, size_t index, std::string_view from) const override
 		{
 			typename property_traits::value_t value;
-			bool converted = property_traits::from_string(from, value, obj);
+			bool converted = property_traits::from_string(from, value);
 			if (!converted)
 				return false;
 			(static_cast<object_t*>(obj)->*_insert_value) (index, value);
