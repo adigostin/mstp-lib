@@ -2,7 +2,7 @@
 #pragma once
 #include "object.h"
 #include "win32/com_ptr.h"
-#include "win32/win32_lib.h"
+#include "win32/zoomable_window.h"
 
 struct drawing_resources
 {

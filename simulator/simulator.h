@@ -1,6 +1,5 @@
 #pragma once
 #include "object.h"
-#include "win32/win32_lib.h"
 #include "renderable_object.h"
 #include "stp.h"
 #include "bridge.h"

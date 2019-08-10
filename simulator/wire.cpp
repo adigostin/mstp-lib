@@ -141,7 +141,7 @@ renderable_object::ht_result wire::hit_test (const edge::zoomable_i* zoomable, D
 			return { this, (int) i };
 	}
 
-	if (HitTestLine (zoomable, dLocation, tolerance, point_coords(0), point_coords(1), thickness))
+	if (zoomable->hit_test_line (dLocation, tolerance, point_coords(0), point_coords(1), thickness))
 		return { this, -1 };
 
 	return { };
