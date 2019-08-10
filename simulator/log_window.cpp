@@ -55,8 +55,6 @@ public:
 
 	virtual HWND hwnd() const override { return base::hwnd(); }
 
-	virtual destroying_event::subscriber destroying() override { return base::destroying(); }
-
 	using base::invalidate;
 
 	static void OnSelectionChanged (void* callbackArg, selection_i* selection)

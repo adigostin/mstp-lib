@@ -69,11 +69,6 @@ public:
 			::DestroyWindow(_hwnd);
 	}
 
-	virtual destroying_event::subscriber destroying() final
-	{
-		assert(false); return nullptr;
-	}
-
 	virtual HWND hwnd() const override final { return _hwnd; }
 
 	virtual SIZE preferred_size() const override final

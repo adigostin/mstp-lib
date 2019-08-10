@@ -137,8 +137,6 @@ public:
 
 	virtual HWND hwnd() const override { return base::hwnd(); }
 
-	virtual destroying_event::subscriber destroying() override { return base::destroying(); }
-
 	using base::client_rect_pixels;
 
 	LONG splitter_width_pixels() const
@@ -309,6 +307,12 @@ public:
 				auto r = (RECT*) lParam;
 				::SetWindowPos (hwnd, nullptr, r->left, r->top, r->right - r->left, r->bottom - r->top, SWP_NOZORDER | SWP_NOACTIVATE);
 			}
+			return 0;
+		}
+
+		if (msg == WM_DESTROY)
+		{
+			this->event_invoker<destroying_e>()(this);
 			return 0;
 		}
 
@@ -888,6 +892,8 @@ public:
 	virtual selected_vlan_number_changed_e::subscriber selected_vlan_number_changed() override final { return selected_vlan_number_changed_e::subscriber(this); }
 
 	virtual project_i* project() const override final { return _project.get(); }
+
+	virtual destroying_e::subscriber destroying() override final { return destroying_e::subscriber(this); }
 
 	static std::vector<std::wstring> GetRecentFileList()
 	{

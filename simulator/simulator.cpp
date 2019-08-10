@@ -108,17 +108,16 @@ public:
 
 	virtual void add_project_window (std::unique_ptr<project_window_i>&& pw) override final
 	{
-		pw->destroying().add_handler(&OnProjectWindowDestroying, this);
+		pw->destroying().add_handler(&on_project_window_destroying, this);
 		_projectWindows.push_back(std::move(pw));
 		this->event_invoker<project_window_added_e>()(_projectWindows.back().get());
 	}
 
-	static void OnProjectWindowDestroying (void* callbackArg, edge::win32_window_i* w)
+	static void on_project_window_destroying (void* callbackArg, project_window_i* pw)
 	{
-		auto pw = dynamic_cast<project_window_i*>(w);
 		auto app = static_cast<SimulatorApp*>(callbackArg);
 
-		pw->destroying().remove_handler (&OnProjectWindowDestroying, app);
+		pw->destroying().remove_handler (&on_project_window_destroying, app);
 
 		auto it = find_if (app->_projectWindows.begin(), app->_projectWindows.end(), [pw](auto& p) { return p.get() == pw; });
 		assert (it != app->_projectWindows.end());

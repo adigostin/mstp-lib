@@ -78,8 +78,6 @@ public:
 
 	virtual HWND hwnd() const override { return base::hwnd(); }
 
-	virtual destroying_event::subscriber destroying() override { return base::destroying(); }
-
 	using base::invalidate;
 	
 	static void on_selected_vlan_changed (void* callbackArg, project_window_i* pw, unsigned int vlanNumber)
