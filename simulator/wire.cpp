@@ -147,6 +147,22 @@ renderable_object::ht_result wire::hit_test (const edge::zoomable_i* zoomable, D
 	return { };
 }
 
+D2D1_RECT_F wire::extent() const
+{
+	auto tl = point_coords(0);
+	auto br = point_coords(0);
+	for (size_t i = 1; i < _points.size(); i++)
+	{
+		auto c = point_coords(i);
+		tl.x = std::min (tl.x, c.x);
+		tl.y = std::min (tl.y, c.y);
+		br.x = std::max (br.x, c.x);
+		br.y = std::max (br.y, c.y);
+	}
+
+	return { tl.x, tl.y, br.x, br.y };
+}
+
 const wire_end_p wire::p0_property = {
 	"P0", nullptr, nullptr, ui_visible::no,
 	static_cast<wire_end_p::member_getter_t>(&p0),

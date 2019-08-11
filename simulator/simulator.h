@@ -95,6 +95,7 @@ struct __declspec(novtable) edit_window_i : edge::win32_window_i
 							 DWRITE_PARAGRAPH_ALIGNMENT va,
 							 bool smallFont = false) const = 0;
 	virtual D2D1::Matrix3x2F zoom_transform() const = 0;
+	virtual void zoom_all() = 0;
 };
 struct edit_window_create_params
 {

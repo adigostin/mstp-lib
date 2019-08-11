@@ -562,7 +562,7 @@ public:
 		}
 		else if (uMsg == WM_MOUSEMOVE)
 		{
-			ProcessWmMouseMove (POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
+			process_wm_mousemove (POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
 			base::window_proc (hwnd, uMsg, wParam, lParam);
 			return 0;
 		}
@@ -928,7 +928,7 @@ public:
 		}
 	}
 
-	void ProcessWmMouseMove (POINT pt)
+	void process_wm_mousemove (POINT pt)
 	{
 		auto dLocation = pointp_to_pointd(pt);
 		auto wLocation = pointd_to_pointw(dLocation);
@@ -979,6 +979,20 @@ public:
 	virtual const struct drawing_resources& drawing_resources() const override final { return _drawing_resources; }
 
 	virtual D2D1::Matrix3x2F zoom_transform() const override final { return base::zoom_transform(); }
+
+	virtual void zoom_all() override
+	{
+		if (!_project->bridges().empty() || !_project->wires().empty())
+		{
+			auto r = _project->bridges().empty() ? _project->wires()[0]->extent() : _project->bridges()[0]->extent();
+			for (auto& b : _project->bridges())
+				r = union_rect(r, b->extent());
+			for (auto& w : _project->wires())
+				r = union_rect(r, w->extent());
+
+			this->zoom_to (r, 20, 0, 1.5f, false);
+		}
+	}
 
 	edit_state_deps make_edit_state_deps()
 	{

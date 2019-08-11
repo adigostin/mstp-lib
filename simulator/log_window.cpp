@@ -246,7 +246,7 @@ public:
 		if (msg == WM_SIZE)
 		{
 			base::window_proc (hwnd, msg, wParam, lParam); // Pass it to the base class first, which stores the client size.
-			ProcessWmSize (wParam, lParam);
+			process_wm_size (wParam, lParam);
 			return 0;
 		}
 
@@ -340,7 +340,7 @@ public:
 		return (int) floor(clientHeightDips / tl.height());
 	}
 
-	void ProcessWmSize (WPARAM wParam, LPARAM lParam)
+	void process_wm_size (WPARAM wParam, LPARAM lParam)
 	{
 		bool isLastLineVisible = (_topLineIndex + _numberOfLinesFitting >= _animationCurrentLineCount);
 

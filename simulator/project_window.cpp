@@ -113,6 +113,7 @@ public:
 
 		edit_window_create_params cps = { _app, this, _project.get(), _selection.get(), hwnd(), edit_window_rect(), create_params.d3d_dc, create_params.dwrite_factory };
 		_edit_window = _app->edit_window_factory()(cps);
+		_edit_window->zoom_all();
 
 		if (auto recentFiles = GetRecentFileList(); !recentFiles.empty())
 			AddRecentFileMenuItems(recentFiles);
@@ -201,6 +202,7 @@ public:
 	{
 		auto pw = static_cast<project_window*>(callbackArg);
 		pw->SetWindowTitle();
+		pw->_edit_window->zoom_all();
 	}
 
 	static void OnProjectWindowAdded (void* callbackArg, project_window_i* pw)
@@ -324,7 +326,7 @@ public:
 
 		if (msg == WM_SIZE)
 		{
-			ProcessWmSize (hwnd, wParam, { LOWORD(lParam), HIWORD(lParam) });
+			process_wm_size (hwnd, wParam, { LOWORD(lParam), HIWORD(lParam) });
 			return 0;
 		}
 
@@ -377,7 +379,7 @@ public:
 
 		if (msg == WM_MOUSEMOVE)
 		{
-			ProcessWmMouseMove (POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) }, (UINT) wParam);
+			process_wm_mousemove (POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) }, (UINT) wParam);
 			return 0;
 		}
 
@@ -390,7 +392,7 @@ public:
 		return base_class_result;
 	}
 
-	void ProcessWmSize (HWND hwnd, WPARAM wParam, SIZE newClientSize)
+	void process_wm_size (HWND hwnd, WPARAM wParam, SIZE newClientSize)
 	{
 		if (wParam == SIZE_RESTORED)
 			::GetWindowRect(hwnd, &_restoreBounds);
@@ -429,7 +431,7 @@ public:
 		}
 	}
 
-	void ProcessWmMouseMove (POINT pt, UINT modifierKeysDown)
+	void process_wm_mousemove (POINT pt, UINT modifierKeysDown)
 	{
 		if (_windowBeingResized == tool_window::props)
 		{
