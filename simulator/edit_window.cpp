@@ -8,6 +8,7 @@
 #include "wire.h"
 #include "win32/zoomable_window.h"
 #include "win32/utility_functions.h"
+#include "win32/text_layout.h"
 
 using namespace D2D1;
 using namespace edge;
@@ -986,9 +987,9 @@ public:
 		{
 			auto r = _project->bridges().empty() ? _project->wires()[0]->extent() : _project->bridges()[0]->extent();
 			for (auto& b : _project->bridges())
-				r = union_rect(r, b->extent());
+				r = union_rects(r, b->extent());
 			for (auto& w : _project->wires())
-				r = union_rect(r, w->extent());
+				r = union_rects(r, w->extent());
 
 			this->zoom_to (r, 20, 0, 1.5f, false);
 		}

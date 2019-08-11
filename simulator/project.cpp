@@ -208,63 +208,14 @@ public:
 		if (FAILED(hr))
 			return hr;
 
-		hr = FormatAndSaveToFile (doc, filePath);
+		hr = format_and_save_to_file (doc, filePath);
 		if (FAILED(hr))
 			return hr;
 
 		_path = filePath;
 		return S_OK;
 	}
-
-	HRESULT FormatAndSaveToFile (IXMLDOMDocument3* doc, const wchar_t* path) const
-	{
-		com_ptr<IStream> stream;
-		auto hr = SHCreateStreamOnFileEx (path, STGM_WRITE | STGM_SHARE_DENY_WRITE | STGM_CREATE, FILE_ATTRIBUTE_NORMAL, FALSE, nullptr, &stream);
-		if (FAILED(hr))
-			return hr;
-
-		com_ptr<IMXWriter> writer;
-		hr = CoCreateInstance (CLSID_MXXMLWriter60, nullptr, CLSCTX_ALL, IID_PPV_ARGS(&writer));
-		if (FAILED(hr))
-			return hr;
-
-		hr = writer->put_encoding (_bstr_t("utf-8"));
-		if (FAILED(hr))
-			return hr;
-
-		hr = writer->put_indent (_variant_t(true));
-		if (FAILED(hr))
-			return hr;
-
-		hr = writer->put_standalone (_variant_t(true));
-		if (FAILED(hr))
-			return hr;
-
-		hr = writer->put_output (_variant_t(stream));
-		if (FAILED(hr))
-			return hr;
-
-		com_ptr<ISAXXMLReader> saxReader;
-		hr = CoCreateInstance (CLSID_SAXXMLReader60, nullptr, CLSCTX_ALL, IID_PPV_ARGS(&saxReader));
-		if (FAILED(hr))
-			return hr;
-
-		hr = saxReader->putContentHandler(com_ptr<ISAXContentHandler>(writer));
-		if (FAILED(hr))
-			return hr;
-
-		hr = saxReader->putProperty(L"http://xml.org/sax/properties/lexical-handler", _variant_t(writer));
-		if (FAILED(hr))
-			return hr;
-
-		hr = saxReader->parse(_variant_t(doc));
-		if (FAILED(hr))
-			return hr;
-
-		hr = stream->Commit(STGC_DEFAULT);
-		return hr;
-	}
-
+	
 	virtual HRESULT load (const wchar_t* filePath) override final
 	{
 		com_ptr<IXMLDOMDocument3> doc;

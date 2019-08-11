@@ -6,7 +6,7 @@
 class bridge;
 class port;
 
-using edge::size_p;
+using edge::size_t_p;
 using edge::uint32_p;
 using edge::bool_p;
 using edge::float_p;
@@ -68,7 +68,7 @@ public:
 
 	size_t tree_index() const { return _tree_index; }
 
-	static const size_p tree_index_property;
+	static const size_t_p tree_index_property;
 	static const port_priority_p priority_property;
 	static const bool_p learning_property;
 	static const bool_p forwarding_property;

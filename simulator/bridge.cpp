@@ -3,6 +3,7 @@
 #include "wire.h"
 #include "simulator.h"
 #include "win32/d2d_window.h"
+#include "win32/text_layout.h"
 
 using namespace D2D1;
 using namespace edge;
@@ -687,16 +688,16 @@ const stp_version_p bridge::stp_version_property {
 	STP_VERSION_RSTP,
 };
 
-const size_p bridge::port_count_property {
+const size_t_p bridge::port_count_property {
 	"PortCount", nullptr, nullptr, ui_visible::yes,
-	static_cast<size_p::member_getter_t>(&port_count),
+	static_cast<size_t_p::member_getter_t>(&port_count),
 	nullptr,
 	std::nullopt,
 };
 
-const size_p bridge::msti_count_property {
+const size_t_p bridge::msti_count_property {
 	"MstiCount", nullptr, nullptr, ui_visible::yes,
-	static_cast<size_p::member_getter_t>(&msti_count),
+	static_cast<size_t_p::member_getter_t>(&msti_count),
 	nullptr,
 	std::nullopt,
 };
@@ -838,7 +839,7 @@ const edge::property* const bridge::_properties[] = {
 	&ports_property,
 };
 
-const xtype<bridge, size_p, size_p, mac_address_p>  bridge::_type = {
+const xtype<bridge, size_t_p, size_t_p, mac_address_p>  bridge::_type = {
 	"Bridge",
 	&base::_type,
 	_properties,

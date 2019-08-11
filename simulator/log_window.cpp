@@ -4,8 +4,7 @@
 #include "resource.h"
 #include "win32/d2d_window.h"
 #include "win32/utility_functions.h"
-#include "bridge.h"
-#include "port.h"
+#include "win32/text_layout.h"
 
 using namespace D2D1;
 using namespace edge;

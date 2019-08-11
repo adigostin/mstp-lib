@@ -187,8 +187,8 @@ public:
 	static const mac_address_p bridge_address_property;
 	static const bool_p        stp_enabled_property;
 	static const stp_version_p stp_version_property;
-	static const size_p        port_count_property;
-	static const size_p        msti_count_property;
+	static const size_t_p      port_count_property;
+	static const size_t_p      msti_count_property;
 	static const temp_string_p mst_config_id_name_property;
 	static const typed_value_collection_property<bridge, uint32_property_traits> mst_config_table_property;
 	static const uint32_p      mst_config_id_rev_level;
@@ -207,6 +207,6 @@ public:
 	static const typed_object_collection_property<bridge, class port> ports_property;
 
 	static const property* const _properties[];
-	static const xtype<bridge, size_p, size_p, mac_address_p> _type;
+	static const xtype<bridge, size_t_p, size_t_p, mac_address_p> _type;
 	const struct type* type() const override { return &_type; }
 };

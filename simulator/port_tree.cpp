@@ -173,9 +173,9 @@ STP_PORT_ROLE port_tree::role() const
 	return STP_GetPortRole (_port->bridge()->stp_bridge(), (unsigned int)_port->port_index(), (unsigned int)_tree_index);
 }
 
-const edge::size_p port_tree::tree_index_property {
+const edge::size_t_p port_tree::tree_index_property {
 	"TreeIndex", nullptr, nullptr, edge::ui_visible::no,
-	static_cast<const edge::size_p::member_getter_t>(&tree_index),
+	static_cast<size_t_p::member_getter_t>(&tree_index),
 	nullptr,
 	std::nullopt,
 };
