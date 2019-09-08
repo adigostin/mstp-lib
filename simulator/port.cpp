@@ -63,16 +63,16 @@ void port::on_bridge_property_changed (void* arg, object* obj, const property_ch
 D2D1_POINT_2F port::GetCPLocation() const
 {
 	if (_side == side_t::left)
-		return { _bridge->GetLeft() - ExteriorHeight, _bridge->GetTop() + _offset };
+		return { _bridge->left() - ExteriorHeight, _bridge->top() + _offset };
 
 	if (_side == side_t::right)
-		return { _bridge->GetRight() + ExteriorHeight, _bridge->GetTop() + _offset };
+		return { _bridge->right() + ExteriorHeight, _bridge->top() + _offset };
 
 	if (_side == side_t::top)
-		return { _bridge->GetLeft() + _offset, _bridge->GetTop() - ExteriorHeight };
+		return { _bridge->left() + _offset, _bridge->top() - ExteriorHeight };
 
 	// _side == side_t::bottom
-	return { _bridge->GetLeft() + _offset, _bridge->GetBottom() + ExteriorHeight };
+	return { _bridge->left() + _offset, _bridge->bottom() + ExteriorHeight };
 }
 
 Matrix3x2F port::GetPortTransform() const
@@ -81,22 +81,22 @@ Matrix3x2F port::GetPortTransform() const
 	{
 		//portTransform = Matrix3x2F::Rotation (90, Point2F (0, 0)) * Matrix3x2F::Translation (bridgeRect.left, bridgeRect.top + port->GetOffset ());
 		// The above calculation is correct but slow. Let's assign the matrix members directly.
-		return { 0, 1, -1, 0, _bridge->GetLeft(), _bridge->GetTop() + _offset};
+		return { 0, 1, -1, 0, _bridge->left(), _bridge->top() + _offset};
 	}
 	else if (_side == side_t::right)
 	{
 		//portTransform = Matrix3x2F::Rotation (270, Point2F (0, 0)) * Matrix3x2F::Translation (bridgeRect.right, bridgeRect.top + port->GetOffset ());
-		return { 0, -1, 1, 0, _bridge->GetRight(), _bridge->GetTop() + _offset };
+		return { 0, -1, 1, 0, _bridge->right(), _bridge->top() + _offset };
 	}
 	else if (_side == side_t::top)
 	{
 		//portTransform = Matrix3x2F::Rotation (180, Point2F (0, 0)) * Matrix3x2F::Translation (bridgeRect.left + port->GetOffset (), bridgeRect.top);
-		return { -1, 0, 0, -1, _bridge->GetLeft() + _offset, _bridge->GetTop() };
+		return { -1, 0, 0, -1, _bridge->left() + _offset, _bridge->top() };
 	}
 	else //if (_side == side_t::bottom)
 	{
 		//portTransform = Matrix3x2F::Translation (bridgeRect.left + port->GetOffset (), bridgeRect.bottom);
-		return { 1, 0, 0, 1, _bridge->GetLeft() + _offset, _bridge->GetBottom() };
+		return { 1, 0, 0, 1, _bridge->left() + _offset, _bridge->bottom() };
 	}
 }
 

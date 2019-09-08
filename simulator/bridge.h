@@ -85,15 +85,13 @@ public:
 	static constexpr float MinWidth = 180;
 	static constexpr float RoundRadius = 8;
 
-	float GetLeft() const { return _x; }
-	float GetRight() const { return _x + _width; }
-	float GetTop() const { return _y; }
-	float GetBottom() const { return _y + _height; }
-	float GetWidth() const { return _width; }
-	float GetHeight() const { return _height; }
-	D2D1_POINT_2F GetLocation() const { return { _x, _y }; }
-	void SetLocation (float x, float y);
-	void SetLocation (D2D1_POINT_2F location) { SetLocation (location.x, location.y); }
+	float left() const { return _x; }
+	float right() const { return _x + _width; }
+	float top() const { return _y; }
+	float bottom() const { return _y + _height; }
+	D2D1_POINT_2F location() const { return { _x, _y }; }
+	void set_location (float x, float y);
+	void set_location (D2D1_POINT_2F location) { set_location (location.x, location.y); }
 	D2D1_RECT_F bounds() const { return { _x, _y, _x + _width, _y + _height }; }
 
 	void SetCoordsForInteriorPort (port* port, D2D1_POINT_2F proposedLocation);
@@ -161,6 +159,11 @@ private:
 	static void  StpCallback_OnTopologyChange         (const STP_BRIDGE* bridge, unsigned int treeIndex, unsigned int timestamp);
 	static void  StpCallback_OnPortRoleChanged        (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role, unsigned int timestamp);
 
+	// deserialize_i
+	virtual void on_deserializing() override final;
+	virtual void on_deserialized() override final;
+
+public:
 	float x() const { return _x; }
 	void set_x (float x) { base::set_and_invalidate(&x_property, _x, x); }
 	float y() const { return _y; }
@@ -178,10 +181,6 @@ private:
 	size_t tree_count() const { return _trees.size(); }
 	bridge_tree* tree (size_t index) const { return _trees[index].get(); }
 	port* port (size_t index) const { return _ports[index].get(); }
-
-	// deserialize_i
-	virtual void on_deserializing() override final;
-	virtual void on_deserialized() override final;
 
 public:
 	static const mac_address_p bridge_address_property;

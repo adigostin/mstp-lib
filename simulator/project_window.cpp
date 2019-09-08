@@ -49,7 +49,7 @@ class project_window : public window, public virtual project_window_i
 	std::unique_ptr<property_grid_i>    _pg;
 	std::unique_ptr<log_window_i>       _log_window;
 	std::unique_ptr<vlan_window_i>      _vlanWindow;
-	RECT _restoreBounds;
+	RECT _restore_bounds;
 	uint32_t _selectedVlanNumber = 1;
 	uint32_t _dpi;
 	float _pg_desired_width_dips;
@@ -74,13 +74,15 @@ public:
 		assert (create_params.selectedVlan >= 1);
 
 		int nCmdShow = create_params.nCmdShow;
-		bool read = TryGetSavedWindowLocation (&_restoreBounds, &nCmdShow);
+		bool read = TryGetSavedWindowLocation (&_restore_bounds, &nCmdShow);
 		if (!read)
-			::GetWindowRect(hwnd(), &_restoreBounds);
+			::GetWindowRect(hwnd(), &_restore_bounds);
 		else
 		{
 			_restoring_size_from_registry = true;
-			::MoveWindow(hwnd(), _restoreBounds.left, _restoreBounds.top, width(_restoreBounds), height(_restoreBounds), TRUE);
+			auto width = _restore_bounds.right - _restore_bounds.left;
+			auto height = _restore_bounds.bottom - _restore_bounds.top;
+			::MoveWindow(hwnd(), _restore_bounds.left, _restore_bounds.top, width, height, TRUE);
 			_restoring_size_from_registry = false;
 		}
 		::ShowWindow (hwnd(), nCmdShow);
@@ -335,7 +337,7 @@ public:
 			WINDOWPLACEMENT wp = { sizeof(wp) };
 			::GetWindowPlacement (hwnd, &wp);
 			if (wp.showCmd == SW_NORMAL)
-				::GetWindowRect (hwnd, &_restoreBounds);
+				::GetWindowRect (hwnd, &_restore_bounds);
 			return 0;
 		}
 
@@ -395,7 +397,7 @@ public:
 	void process_wm_size (HWND hwnd, WPARAM wParam, SIZE newClientSize)
 	{
 		if (wParam == SIZE_RESTORED)
-			::GetWindowRect(hwnd, &_restoreBounds);
+			::GetWindowRect(hwnd, &_restore_bounds);
 
 		ResizeChildWindows();
 	}
@@ -864,10 +866,10 @@ public:
 			auto lstatus = RegCreateKeyEx(HKEY_CURRENT_USER, _app->GetRegKeyPath(), 0, NULL, 0, KEY_WRITE, NULL, &key, NULL);
 			if (lstatus == ERROR_SUCCESS)
 			{
-				RegSetValueEx(key, RegValueNameWindowLeft, 0, REG_DWORD, (BYTE*)&_restoreBounds.left, 4);
-				RegSetValueEx(key, RegValueNameWindowTop, 0, REG_DWORD, (BYTE*)&_restoreBounds.top, 4);
-				RegSetValueEx(key, RegValueNameWindowRight, 0, REG_DWORD, (BYTE*)&_restoreBounds.right, 4);
-				RegSetValueEx(key, RegValueNameWindowBottom, 0, REG_DWORD, (BYTE*)&_restoreBounds.bottom, 4);
+				RegSetValueEx(key, RegValueNameWindowLeft, 0, REG_DWORD, (BYTE*)&_restore_bounds.left, 4);
+				RegSetValueEx(key, RegValueNameWindowTop, 0, REG_DWORD, (BYTE*)&_restore_bounds.top, 4);
+				RegSetValueEx(key, RegValueNameWindowRight, 0, REG_DWORD, (BYTE*)&_restore_bounds.right, 4);
+				RegSetValueEx(key, RegValueNameWindowBottom, 0, REG_DWORD, (BYTE*)&_restore_bounds.bottom, 4);
 				RegSetValueEx(key, RegValueNameShowCmd, 0, REG_DWORD, (BYTE*)&wp.showCmd, 4);
 				RegCloseKey(key);
 			}

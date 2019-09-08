@@ -19,7 +19,7 @@ class create_bridge_es : public edit_state
 		if (_bridge == nullptr)
 			_bridge = make_temp_bridge(4, 4, ml.w);
 
-		_bridge->SetLocation (ml.w.x - _bridge->GetWidth() / 2, ml.w.y - _bridge->GetHeight() / 2);
+		_bridge->set_location (ml.w.x - _bridge->width() / 2, ml.w.y - _bridge->height() / 2);
 		::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
 	}
 
@@ -31,7 +31,7 @@ class create_bridge_es : public edit_state
 			auto bridge_address = _project->alloc_mac_address_range(number_of_addresses_to_reserve);
 			auto b = std::make_unique<bridge>(_bridge->port_count(), _bridge->msti_count(), bridge_address);
 			b->set_stp_enabled(true);
-			b->SetLocation(_bridge->GetLocation());
+			b->set_location(_bridge->location());
 
 			size_t insert_index = _project->bridges().size();
 			_project->insert_bridge(insert_index, std::move(b));
@@ -45,7 +45,7 @@ class create_bridge_es : public edit_state
 	static std::unique_ptr<bridge> make_temp_bridge (size_t port_count, size_t msti_count, D2D1_POINT_2F center)
 	{
 		auto new_bridge = std::make_unique<bridge>(port_count, msti_count, null_address);
-		new_bridge->SetLocation (center.x - new_bridge->GetWidth() / 2, center.y - new_bridge->GetHeight() / 2);
+		new_bridge->set_location (center.x - new_bridge->width() / 2, center.y - new_bridge->height() / 2);
 		return new_bridge;
 	}
 
@@ -87,7 +87,8 @@ class create_bridge_es : public edit_state
 
 			if ((new_port_count != _bridge->port_count()) || (new_msti_count != _bridge->msti_count()))
 			{
-				_bridge = make_temp_bridge (new_port_count, new_msti_count, edge::center(_bridge->bounds()));
+				D2D1_POINT_2F center = { _bridge->left() + _bridge->width() / 2, _bridge->top() + _bridge->height() / 2 };
+				_bridge = make_temp_bridge (new_port_count, new_msti_count, center);
 				_ew->invalidate();
 			}
 
@@ -109,8 +110,8 @@ class create_bridge_es : public edit_state
 
 			dc->SetTransform(&oldtr);
 
-			auto x = _bridge->GetLeft() + _bridge->GetWidth() / 2;
-			auto y = _bridge->GetBottom() + port::ExteriorHeight * 1.1f;
+			auto x = _bridge->left() + _bridge->width() / 2;
+			auto y = _bridge->bottom() + port::ExteriorHeight * 1.1f;
 			auto centerD = _ew->zoom_transform().TransformPoint({ x, y });
 			std::stringstream ss;
 			ss << "Port Count = " << _bridge->port_count() << ", MSTI Count = " << _bridge->msti_count() << "\r\n"

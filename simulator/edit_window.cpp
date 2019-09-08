@@ -387,7 +387,7 @@ public:
 			{
 				bridge* b = _project->bridges().front().get();
 				auto text = "No port connected. You can connect\r\nports by drawing wires with the mouse.";
-				auto wl = D2D1_POINT_2F { b->GetLeft() + b->GetWidth() / 2, b->GetBottom() + port::ExteriorHeight * 1.5f };
+				auto wl = D2D1_POINT_2F { b->left() + b->width() / 2, b->bottom() + port::ExteriorHeight * 1.5f };
 				auto dl = pointw_to_pointd(wl);
 				render_hint (dc, { dl.x, dl.y }, text, DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, false);
 			}

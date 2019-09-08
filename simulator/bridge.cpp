@@ -295,7 +295,7 @@ void bridge::ProcessReceivedPackets()
 		this->event_invoker<invalidate_e>()(this);
 }
 
-void bridge::SetLocation(float x, float y)
+void bridge::set_location(float x, float y)
 {
 	if ((_x != x) || (_y != y))
 	{
