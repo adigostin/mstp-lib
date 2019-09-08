@@ -18,6 +18,7 @@ using edge::xtype;
 using edge::value_property;
 using edge::typed_object_collection_property;
 using edge::property_change_args;
+using edge::side;
 
 extern const edge::NVP port_priority_nvps[];
 extern const char port_priority_type_name[];

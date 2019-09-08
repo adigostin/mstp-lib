@@ -28,7 +28,7 @@ const edge::NVP port_speed_nvps[] = {
 	{ 0, 0 },
 };
 
-port::port (class bridge* bridge, size_t port_index, edge::side_t side, float offset)
+port::port (class bridge* bridge, size_t port_index, edge::side side, float offset)
 	: _bridge(bridge), _port_index(port_index), _side(side), _offset(offset)
 {
 	// No need to call remove_handler since a bridge and its bridge_trees are deleted at the same time.
@@ -62,38 +62,38 @@ void port::on_bridge_property_changed (void* arg, object* obj, const property_ch
 
 D2D1_POINT_2F port::GetCPLocation() const
 {
-	if (_side == side_t::left)
+	if (_side == side::left)
 		return { _bridge->left() - ExteriorHeight, _bridge->top() + _offset };
 
-	if (_side == side_t::right)
+	if (_side == side::right)
 		return { _bridge->right() + ExteriorHeight, _bridge->top() + _offset };
 
-	if (_side == side_t::top)
+	if (_side == side::top)
 		return { _bridge->left() + _offset, _bridge->top() - ExteriorHeight };
 
-	// _side == side_t::bottom
+	// _side == side::bottom
 	return { _bridge->left() + _offset, _bridge->bottom() + ExteriorHeight };
 }
 
 Matrix3x2F port::GetPortTransform() const
 {
-	if (_side == side_t::left)
+	if (_side == side::left)
 	{
 		//portTransform = Matrix3x2F::Rotation (90, Point2F (0, 0)) * Matrix3x2F::Translation (bridgeRect.left, bridgeRect.top + port->GetOffset ());
 		// The above calculation is correct but slow. Let's assign the matrix members directly.
 		return { 0, 1, -1, 0, _bridge->left(), _bridge->top() + _offset};
 	}
-	else if (_side == side_t::right)
+	else if (_side == side::right)
 	{
 		//portTransform = Matrix3x2F::Rotation (270, Point2F (0, 0)) * Matrix3x2F::Translation (bridgeRect.right, bridgeRect.top + port->GetOffset ());
 		return { 0, -1, 1, 0, _bridge->right(), _bridge->top() + _offset };
 	}
-	else if (_side == side_t::top)
+	else if (_side == side::top)
 	{
 		//portTransform = Matrix3x2F::Rotation (180, Point2F (0, 0)) * Matrix3x2F::Translation (bridgeRect.left + port->GetOffset (), bridgeRect.top);
 		return { -1, 0, 0, -1, _bridge->left() + _offset, _bridge->top() };
 	}
-	else //if (_side == side_t::bottom)
+	else //if (_side == side::bottom)
 	{
 		//portTransform = Matrix3x2F::Translation (bridgeRect.left + port->GetOffset (), bridgeRect.bottom);
 		return { 1, 0, 0, 1, _bridge->left() + _offset, _bridge->bottom() };
@@ -363,7 +363,7 @@ bool port::IsForwarding (unsigned int vlanNumber) const
 	return STP_GetPortForwarding (stpb, (unsigned int)_port_index, treeIndex);
 }
 
-void port::SetSideAndOffset (side_t side, float offset)
+void port::SetSideAndOffset (edge::side side, float offset)
 {
 	if ((_side != side) || (_offset != offset))
 	{
@@ -474,7 +474,7 @@ const side_p port::side_property {
 	"Side", nullptr, nullptr, ui_visible::no,
 	static_cast<side_p::member_getter_t>(&side),
 	static_cast<side_p::member_setter_t>(&set_side),
-	side_t::bottom
+	side::bottom
 };
 
 const edge::float_p port::offset_property {
