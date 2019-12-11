@@ -287,7 +287,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 			assert(SUCCEEDED(hr));
 		}
 
-		d3d_dc = deviceContext.get();
+		d3d_dc = deviceContext;
 	}
 
 	com_ptr<IDWriteFactory> dwrite_factory;
