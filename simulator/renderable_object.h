@@ -1,6 +1,6 @@
 
 #pragma once
-#include "object.h"
+#include "collection.h"
 #include "win32/com_ptr.h"
 #include "win32/zoomable_window.h"
 
@@ -26,7 +26,7 @@ struct drawing_resources
 	edge::com_ptr<ID2D1StrokeStyle> _strokeStyleSelectionRect;
 };
 
-class renderable_object : public edge::object
+class renderable_object : public edge::owned_object
 {
 public:
 	struct ht_result
