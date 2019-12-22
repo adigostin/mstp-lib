@@ -337,7 +337,7 @@ void bridge::render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsign
 
 	// Draw bridge outline.
 	D2D1_ROUNDED_RECT rr = RoundedRect (bounds(), RoundRadius, RoundRadius);
-	InflateRoundedRect (&rr, -bridgeOutlineWidth / 2);
+	edge::inflate (&rr, -bridgeOutlineWidth / 2);
 	com_ptr<ID2D1SolidColorBrush> brush;
 	dc->CreateSolidColorBrush (configIdColor, &brush);
 	dc->FillRoundedRectangle (&rr, brush/*_powered ? dos._poweredFillBrush : dos._unpoweredBrush*/);
@@ -671,42 +671,38 @@ const mac_address_p bridge::bridge_address_property {
 	"Address", nullptr, nullptr, ui_visible::yes,
 	static_cast<mac_address_p::member_getter_t>(&bridge_address),
 	static_cast<mac_address_p::member_setter_t>(&set_bridge_address),
-	std::nullopt,
 };
 
 const bool_p bridge::stp_enabled_property {
 	"STPEnabled", nullptr, nullptr, ui_visible::yes,
 	static_cast<bool_p::member_getter_t>(&stp_enabled),
 	static_cast<bool_p::member_setter_t>(&set_stp_enabled),
-	false,
+	false, // default_value
 };
 
 const stp_version_p bridge::stp_version_property {
 	"StpVersion", nullptr, nullptr, ui_visible::yes,
 	static_cast<stp_version_p::member_getter_t>(&stp_version),
 	static_cast<stp_version_p::member_setter_t>(&set_stp_version),
-	STP_VERSION_RSTP,
+	STP_VERSION_RSTP, // default_value
 };
 
 const size_t_p bridge::port_count_property {
 	"PortCount", nullptr, nullptr, ui_visible::yes,
 	static_cast<size_t_p::member_getter_t>(&port_count),
 	nullptr,
-	std::nullopt,
 };
 
 const size_t_p bridge::msti_count_property {
 	"MstiCount", nullptr, nullptr, ui_visible::yes,
 	static_cast<size_t_p::member_getter_t>(&msti_count),
 	nullptr,
-	std::nullopt,
 };
 
 const temp_string_p bridge::mst_config_id_name_property {
 	"MstConfigName", &mst_group, nullptr, ui_visible::yes,
 	static_cast<temp_string_p::member_getter_t>(&mst_config_id_name),
 	static_cast<temp_string_p::member_setter_t>(&set_mst_config_id_name),
-	std::nullopt,
 };
 
 const typed_value_collection_property<bridge, uint32_property_traits> bridge::mst_config_table_property {
@@ -730,7 +726,6 @@ const config_id_digest_p bridge::mst_config_id_digest {
 	"MstConfigDigest", &mst_group, nullptr, ui_visible::yes,
 	static_cast<temp_string_p::member_getter_t>(&bridge::GetMstConfigIdDigest),
 	nullptr,
-	std::nullopt,
 };
 
 #pragma region Timer and related parameters from Table 13-5
@@ -738,35 +733,35 @@ const uint32_p bridge::migrate_time_property {
 	"MigrateTime", &bridge_times_group, nullptr, ui_visible::yes,
 	[](const object* o) { return 3u; },
 	nullptr,
-	3,
+	3, // default_value
 };
 
 const uint32_p bridge::bridge_hello_time_property {
 	"BridgeHelloTime", &bridge_times_group, nullptr, ui_visible::yes,
 	[](const object* o) { return 2u; },
 	nullptr,
-	2,
+	2, // default_value
 };
 
 const uint32_p bridge::bridge_max_age_property {
 	"BridgeMaxAge", &bridge_times_group, nullptr, ui_visible::yes,
 	static_cast<uint32_p::member_getter_t>(&bridge_max_age),
 	static_cast<uint32_p::member_setter_t>(&set_bridge_max_age),
-	20,
+	20, // default_value
 };
 
 const uint32_p bridge::bridge_forward_delay_property {
 	"BridgeForwardDelay", &bridge_times_group, nullptr, ui_visible::yes,
 	static_cast<uint32_p::member_getter_t>(&bridge_forward_delay),
 	static_cast<uint32_p::member_setter_t>(&set_bridge_forward_delay),
-	15,
+	15, // default_value
 };
 
 const uint32_p bridge::tx_hold_count_property {
 	"TxHoldCount", &bridge_times_group, nullptr, ui_visible::yes,
 	static_cast<uint32_p::member_getter_t>(&tx_hold_count),
 	static_cast<uint32_p::member_setter_t>(&set_tx_hold_count),
-	6
+	6 // default_value
 };
 
 const uint32_p bridge::max_hops_property {
@@ -776,35 +771,31 @@ const uint32_p bridge::max_hops_property {
 	ui_visible::yes,
 	[](const object* o) { return 20u; },
 	nullptr,
-	20
+	20 // default_value
 };
 
 const float_p bridge::x_property {
 	"X", nullptr, nullptr, ui_visible::no,
 	static_cast<float_p::member_getter_t>(&x),
 	static_cast<float_p::member_setter_t>(&set_x),
-	std::nullopt
 };
 
 const float_p bridge::y_property {
 	"Y", nullptr, nullptr, ui_visible::no,
 	static_cast<float_p::member_getter_t>(&y),
 	static_cast<float_p::member_setter_t>(&set_y),
-	std::nullopt
 };
 
 const float_p bridge::width_property {
 	"Width", nullptr, nullptr, ui_visible::no,
 	static_cast<float_p::member_getter_t>(&width),
 	static_cast<float_p::member_setter_t>(&set_width),
-	std::nullopt
 };
 
 const float_p bridge::height_property {
 	"Height", nullptr, nullptr, ui_visible::no,
 	static_cast<float_p::member_getter_t>(&height),
 	static_cast<float_p::member_setter_t>(&set_height),
-	std::nullopt
 };
 
 const typed_object_collection_property<bridge, bridge_tree> bridge::trees_property {

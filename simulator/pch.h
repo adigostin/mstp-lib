@@ -50,4 +50,3 @@
 #undef DrawText
 
 #include "assert.h"
-#include "span.hpp"

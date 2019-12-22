@@ -16,7 +16,7 @@ class mst_config_id_editor : public property_editor_i
 	HWND _hwnd = nullptr;
 
 public:
-	mst_config_id_editor (const std::vector<object*>& objects)
+	mst_config_id_editor (span<object* const> objects)
 	{
 		assert (!objects.empty());
 
@@ -289,7 +289,7 @@ public:
 	}
 };
 
-std::unique_ptr<property_editor_i> config_id_editor_factory (const std::vector<object*>& objects)
+std::unique_ptr<property_editor_i> config_id_editor_factory (span<object* const> objects)
 {
 	return std::make_unique<mst_config_id_editor>(objects);
 }

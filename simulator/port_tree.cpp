@@ -177,7 +177,6 @@ const edge::size_t_p port_tree::tree_index_property {
 	"TreeIndex", nullptr, nullptr, edge::ui_visible::no,
 	static_cast<size_t_p::member_getter_t>(&tree_index),
 	nullptr,
-	std::nullopt,
 };
 
 const port_priority_p port_tree::priority_property {
@@ -198,7 +197,6 @@ const edge::bool_p port_tree::learning_property {
 	ui_visible::yes,
 	static_cast<edge::bool_p::member_getter_t>(&learning),
 	nullptr,
-	std::nullopt,
 };
 
 const edge::bool_p port_tree::forwarding_property {
@@ -208,7 +206,6 @@ const edge::bool_p port_tree::forwarding_property {
 	ui_visible::yes,
 	static_cast<edge::bool_p::member_getter_t>(&forwarding),
 	nullptr,
-	std::nullopt,
 };
 
 const port_role_p port_tree::role_property {
@@ -218,7 +215,6 @@ const port_role_p port_tree::role_property {
 	ui_visible::yes,
 	static_cast<port_role_p::member_getter_t>(&role),
 	nullptr,
-	std::nullopt,
 };
 
 static const edge::property_group port_path_cost_group = { 5, "Port Path Cost" };

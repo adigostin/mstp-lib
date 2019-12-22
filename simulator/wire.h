@@ -1,13 +1,15 @@
 #pragma once
 #include "renderable_object.h"
 #include "win32/utility_functions.h"
+#include "win32/xml_serializer.h"
 
 class port;
 struct project_i;
 
-using connected_wire_end = port*;
 using loose_wire_end = D2D1_POINT_2F;
-using wire_end = std::variant<loose_wire_end, connected_wire_end>;
+using connected_wire_end = port*;
+using serialized_connected_end = std::pair<size_t, size_t>;
+using wire_end = std::variant<loose_wire_end, connected_wire_end, serialized_connected_end>;
 
 using edge::xtype;
 using edge::com_ptr;
@@ -25,11 +27,11 @@ struct wire_end_property_traits
 	using param_t = wire_end;
 	using return_t = wire_end;
 	static std::string to_string (wire_end from);
-	static bool from_string (std::string_view from, wire_end& to, const object* obj);
+	static bool from_string (std::string_view from, wire_end& to);
 };
 using wire_end_p = typed_property<wire_end_property_traits>;
 
-class wire : public project_child
+class wire : public project_child, public edge::deserialize_i
 {
 	using base = project_child;
 
@@ -38,6 +40,10 @@ class wire : public project_child
 public:
 	wire() = default;
 	wire (wire_end firstEnd, wire_end secondEnd);
+
+	// deserialize_i
+	virtual void on_deserializing() override;
+	virtual void on_deserialized() override;
 
 	const std::array<wire_end, 2>& points() const { return _points; }
 	wire_end point (size_t i) const { return _points[i]; }
@@ -60,7 +66,7 @@ public:
 
 	static const wire_end_p p0_property;
 	static const wire_end_p p1_property;
-	static const property* _properties[];
+	static const property* const _properties[];
 	static const xtype<wire> _type;
 	virtual const struct type* type() const override { return &_type; }
 };

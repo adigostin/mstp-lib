@@ -273,7 +273,7 @@ void port::render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned
 
 	// Draw the interior of the port.
 	auto portRect = D2D1_RECT_F { -InteriorWidth / 2, -InteriorDepth, InteriorWidth / 2, 0 };
-	InflateRect (&portRect, -interiorPortOutlineWidth / 2);
+	inflate (&portRect, -interiorPortOutlineWidth / 2);
 	rt->FillRectangle (&portRect, mac_operational() ? dos._poweredFillBrush : dos._unpoweredBrush);
 	rt->DrawRectangle (&portRect, dos._brushWindowText, interiorPortOutlineWidth);
 
@@ -481,7 +481,6 @@ const edge::float_p port::offset_property {
 	"Offset", nullptr, nullptr, ui_visible::no,
 	static_cast<float_p::member_getter_t>(&offset),
 	static_cast<float_p::member_setter_t>(&set_offset),
-	std::nullopt,
 };
 
 static const edge::property_group link_group = { -1, "Link" };
@@ -497,7 +496,6 @@ const port_speed_p port::actual_speed_property {
 	"ActualSpeed", &link_group, "Actual speed in megabits per second, calculated when a link is established as a minimum between this port's and remote port's SupportedSpeed properties, and passed to STP for port path cost calculation.", ui_visible::yes,
 	static_cast<port_speed_p::member_var_t>(&port::_actual_speed),
 	nullptr,
-	std::nullopt
 };
 
 const bool_p port::auto_edge_property {
@@ -578,7 +576,6 @@ const bool_p port::detected_p2p_property {
 	ui_visible::yes,
 	static_cast<bool_p::member_getter_t>(&detected_p2p),
 	nullptr,
-	std::nullopt,
 };
 
 const admin_p2p_p port::admin_p2p_property {
@@ -598,7 +595,6 @@ const edge::bool_p port::oper_p2p_property {
 	ui_visible::yes,
 	static_cast<bool_p::member_getter_t>(&oper_p2p),
 	nullptr,
-	std::nullopt,
 };
 
 const typed_object_collection_property<port, port_tree> port::trees_property {
