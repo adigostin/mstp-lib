@@ -6,8 +6,6 @@
 #include "port.h"
 #include "win32/xml_serializer.h"
 
-using namespace edge;
-
 static const _bstr_t NextMacAddressString = "NextMacAddress";
 
 class project : public edge::object, public project_i
@@ -305,7 +303,7 @@ public:
 		}
 	}
 
-	static inline mac_address_p next_mac_address_property = {
+	static constexpr mac_address_p next_mac_address_property = {
 		"NextMacAddress", nullptr, nullptr, ui_visible::yes,
 		static_cast<mac_address_p::member_getter_t>(&next_mac_address),
 		static_cast<mac_address_p::member_setter_t>(&set_next_mac_address),

@@ -856,8 +856,8 @@ public:
 				}
 			}
 
-			auto state = CreateStateBeginningDrag(make_edit_state_deps(), ht.object, button, modifierKeysDown, ml, ::GetCursor(), move(stateMoveThreshold), move(stateButtonUp));
-			EnterState(move(state));
+			auto state = CreateStateBeginningDrag(make_edit_state_deps(), ht.object, button, modifierKeysDown, ml, ::GetCursor(), std::move(stateMoveThreshold), std::move(stateButtonUp));
+			EnterState(std::move(state));
 		}
 
 		return 0;
@@ -886,7 +886,7 @@ public:
 
 	virtual void EnterState (std::unique_ptr<edit_state>&& state) override final
 	{
-		_state = move(state);
+		_state = std::move(state);
 		_htResult = { nullptr };
 	}
 

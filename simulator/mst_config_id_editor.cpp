@@ -64,9 +64,9 @@ public:
 		}
 	}
 
-	virtual bool show (property_editor_parent_i* parent) override
+	virtual bool show (property_editor_parent parent) override
 	{
-		auto parent_window = dynamic_cast<win32_window_i*>(parent);
+		auto parent_window = static_cast<win32_window_i*>(parent);
 		assert (parent_window != nullptr);
 		INT_PTR dr = DialogBoxParam (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDD_DIALOG_MST_CONFIG_ID), parent_window->hwnd(), &DialogProcStatic, (LPARAM) this);
 		return (dr == IDOK);

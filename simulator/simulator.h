@@ -17,6 +17,7 @@ class wire;
 using edge::property_changing_e;
 using edge::property_changed_e;
 using edge::property_change_args;
+using edge::collection_property_change_type;
 
 static constexpr unsigned char DefaultConfigTableDigest[16] = { 0xAC, 0x36, 0x17, 0x7F, 0x50, 0x28, 0x3C, 0xD4, 0xB8, 0x38, 0x21, 0xD8, 0xAB, 0x26, 0xDE, 0x62 };
 

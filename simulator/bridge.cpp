@@ -21,7 +21,7 @@ std::string mac_address_to_string (mac_address address)
 	return ss.str();
 }
 
-template<typename char_type> bool mac_address_from_string (std::basic_string_view<char_type> str, mac_address& to)
+bool mac_address_from_string (string_view str, mac_address& to)
 {
 //	static constexpr char FormatErrorMessage[] = u8"Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX or XXXXXXXXXXXX (6 hex bytes).";
 
@@ -55,9 +55,6 @@ template<typename char_type> bool mac_address_from_string (std::basic_string_vie
 
 	return true;
 }
-
-template bool mac_address_from_string (std::basic_string_view<char> from, mac_address& to);
-template bool mac_address_from_string (std::basic_string_view<wchar_t> from, mac_address& to);
 
 static constexpr wchar_t helper_window_class_name[] = L"{C2A14267-93FD-44FD-89A3-809FBB66A20B}";
 HINSTANCE bridge::_hinstance;
@@ -493,9 +490,9 @@ std::string bridge::mst_config_id_name() const
 	return std::string(std::begin(configId->ConfigurationName), std::begin(configId->ConfigurationName) + len);
 }
 
-void bridge::set_mst_config_id_name (std::string_view value)
+void bridge::set_mst_config_id_name (edge::string_view value)
 {
-	if (value.length() > 32)
+	if (value.size() > 32)
 		throw std::invalid_argument("Invalid MST Config Name: more than 32 characters.");
 
 	char null_terminated[33];
@@ -669,40 +666,40 @@ static const edge::property_group mst_group = { 10, "MST Config Id" };
 
 const mac_address_p bridge::bridge_address_property {
 	"Address", nullptr, nullptr, ui_visible::yes,
-	static_cast<mac_address_p::member_getter_t>(&bridge_address),
-	static_cast<mac_address_p::member_setter_t>(&set_bridge_address),
+	&bridge_address,
+	&set_bridge_address,
 };
 
 const bool_p bridge::stp_enabled_property {
 	"STPEnabled", nullptr, nullptr, ui_visible::yes,
-	static_cast<bool_p::member_getter_t>(&stp_enabled),
-	static_cast<bool_p::member_setter_t>(&set_stp_enabled),
+	&stp_enabled,
+	&set_stp_enabled,
 	false, // default_value
 };
 
 const stp_version_p bridge::stp_version_property {
 	"StpVersion", nullptr, nullptr, ui_visible::yes,
-	static_cast<stp_version_p::member_getter_t>(&stp_version),
-	static_cast<stp_version_p::member_setter_t>(&set_stp_version),
+	&stp_version,
+	&set_stp_version,
 	STP_VERSION_RSTP, // default_value
 };
 
 const size_t_p bridge::port_count_property {
 	"PortCount", nullptr, nullptr, ui_visible::yes,
-	static_cast<size_t_p::member_getter_t>(&port_count),
+	&port_count,
 	nullptr,
 };
 
 const size_t_p bridge::msti_count_property {
 	"MstiCount", nullptr, nullptr, ui_visible::yes,
-	static_cast<size_t_p::member_getter_t>(&msti_count),
+	&msti_count,
 	nullptr,
 };
 
 const temp_string_p bridge::mst_config_id_name_property {
 	"MstConfigName", &mst_group, nullptr, ui_visible::yes,
-	static_cast<temp_string_p::member_getter_t>(&mst_config_id_name),
-	static_cast<temp_string_p::member_setter_t>(&set_mst_config_id_name),
+	&mst_config_id_name,
+	&set_mst_config_id_name,
 };
 
 const typed_value_collection_property<bridge, uint32_property_traits> bridge::mst_config_table_property {
@@ -717,14 +714,14 @@ const typed_value_collection_property<bridge, uint32_property_traits> bridge::ms
 
 const edge::uint32_p bridge::mst_config_id_rev_level {
 	"MstConfigRevLevel", &mst_group, nullptr, ui_visible::yes,
-	static_cast<uint32_p::member_getter_t>(&bridge::GetMstConfigIdRevLevel),
-	static_cast<uint32_p::member_setter_t>(&bridge::SetMstConfigIdRevLevel),
+	&GetMstConfigIdRevLevel,
+	&SetMstConfigIdRevLevel,
 	0,
 };
 
 const config_id_digest_p bridge::mst_config_id_digest {
 	"MstConfigDigest", &mst_group, nullptr, ui_visible::yes,
-	static_cast<temp_string_p::member_getter_t>(&bridge::GetMstConfigIdDigest),
+	&GetMstConfigIdDigest,
 	nullptr,
 };
 
@@ -745,22 +742,22 @@ const uint32_p bridge::bridge_hello_time_property {
 
 const uint32_p bridge::bridge_max_age_property {
 	"BridgeMaxAge", &bridge_times_group, nullptr, ui_visible::yes,
-	static_cast<uint32_p::member_getter_t>(&bridge_max_age),
-	static_cast<uint32_p::member_setter_t>(&set_bridge_max_age),
+	&bridge_max_age,
+	&set_bridge_max_age,
 	20, // default_value
 };
 
 const uint32_p bridge::bridge_forward_delay_property {
 	"BridgeForwardDelay", &bridge_times_group, nullptr, ui_visible::yes,
-	static_cast<uint32_p::member_getter_t>(&bridge_forward_delay),
-	static_cast<uint32_p::member_setter_t>(&set_bridge_forward_delay),
+	&bridge_forward_delay,
+	&set_bridge_forward_delay,
 	15, // default_value
 };
 
 const uint32_p bridge::tx_hold_count_property {
 	"TxHoldCount", &bridge_times_group, nullptr, ui_visible::yes,
-	static_cast<uint32_p::member_getter_t>(&tx_hold_count),
-	static_cast<uint32_p::member_setter_t>(&set_tx_hold_count),
+	&tx_hold_count,
+	&set_tx_hold_count,
 	6 // default_value
 };
 
@@ -774,29 +771,11 @@ const uint32_p bridge::max_hops_property {
 	20 // default_value
 };
 
-const float_p bridge::x_property {
-	"X", nullptr, nullptr, ui_visible::no,
-	static_cast<float_p::member_getter_t>(&x),
-	static_cast<float_p::member_setter_t>(&set_x),
-};
+const float_p bridge::x_property { "X", nullptr, nullptr, ui_visible::no, &x, &set_x };
+const float_p bridge::y_property { "Y", nullptr, nullptr, ui_visible::no, &y, &set_y };
 
-const float_p bridge::y_property {
-	"Y", nullptr, nullptr, ui_visible::no,
-	static_cast<float_p::member_getter_t>(&y),
-	static_cast<float_p::member_setter_t>(&set_y),
-};
-
-const float_p bridge::width_property {
-	"Width", nullptr, nullptr, ui_visible::no,
-	static_cast<float_p::member_getter_t>(&width),
-	static_cast<float_p::member_setter_t>(&set_width),
-};
-
-const float_p bridge::height_property {
-	"Height", nullptr, nullptr, ui_visible::no,
-	static_cast<float_p::member_getter_t>(&height),
-	static_cast<float_p::member_setter_t>(&set_height),
-};
+const float_p bridge::width_property  { "Width",  nullptr, nullptr, ui_visible::no, &width,  &set_width };
+const float_p bridge::height_property { "Height", nullptr, nullptr, ui_visible::no, &height, &set_height };
 
 const typed_object_collection_property<bridge, bridge_tree> bridge::trees_property {
 	"BridgeTrees", nullptr, nullptr, ui_visible::no,
@@ -887,7 +866,7 @@ void bridge::StpCallback_TransmitReleaseBuffer (const STP_BRIDGE* bridge, void* 
 	auto b = static_cast<class bridge*>(STP_GetApplicationContext(bridge));
 
 	frame_t info;
-	info.data = move(b->_txPacketData);
+	info.data = std::move(b->_txPacketData);
 	info.timestamp = b->_txTimestamp;
 	b->event_invoker<packet_transmit_e>()(b, b->_txTransmittingPort->port_index(), std::move(info));
 }

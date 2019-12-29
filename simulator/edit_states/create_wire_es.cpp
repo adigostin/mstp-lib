@@ -39,7 +39,7 @@ public:
 				newWire->set_p0 (fromPort);
 				newWire->set_p1 (fromPort->GetCPLocation());
 				_wire = newWire.get();
-				_project->insert_wire(_project->wires().size(), move(newWire));
+				_project->insert_wire(_project->wires().size(), std::move(newWire));
 				_substate  = waiting_first_up;
 			}
 		}

@@ -37,7 +37,7 @@ std::string wire_end_property_traits::to_string (wire_end from)
 	}
 }
 
-bool wire_end_property_traits::from_string (std::string_view from, wire_end& to)
+bool wire_end_property_traits::from_string (edge::string_view from, wire_end& to)
 {
 	size_t s1 = from.find(';');
 	size_t s2 = from.rfind(';');

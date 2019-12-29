@@ -304,7 +304,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 		};
 
 		auto projectWindow = project_window_factory (params);
-		app.add_project_window(move(projectWindow));
+		app.add_project_window(std::move(projectWindow));
 
 		processExitValue = (int)app.RunMessageLoop();
 	}
