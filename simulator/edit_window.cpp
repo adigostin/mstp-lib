@@ -653,9 +653,9 @@ public:
 		return { };
 	}
 
-	void DeleteSelection()
+	void delete_selection()
 	{
-		if (any_of(_selection->objects().begin(), _selection->objects().end(), [](object* o) { return o->is<port>(); }))
+		if (any_of(_selection->objects().begin(), _selection->objects().end(), [](object* o) { return o->type() == &port::_type; }))
 		{
 			MessageBoxA (hwnd(), "Ports cannot be deleted.", _app->app_name(), 0);
 			return;
@@ -743,7 +743,7 @@ public:
 
 		if (virtualKey == VK_DELETE)
 		{
-			DeleteSelection();
+			delete_selection();
 			return 0;
 		}
 

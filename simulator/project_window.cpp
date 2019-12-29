@@ -988,13 +988,13 @@ public:
 		if (objs.empty())
 			return;
 
-		if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<bridge>(); })
-			|| all_of (objs.begin(), objs.end(), [](object* o) { return o->is<port>(); }))
+		if (all_of (objs.begin(), objs.end(), [](object* o) { return o->type() == &bridge::_type; })
+			|| all_of (objs.begin(), objs.end(), [](object* o) { return o->type() == &port::_type; }))
 		{
 			const char* first_section_name;
 			std::function<std::pair<object*, unsigned int>(object* o)> tree_selector;
 
-			if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<bridge>(); }))
+			if (all_of (objs.begin(), objs.end(), [](object* o) { return o->type() == &bridge::_type; }))
 			{
 				first_section_name = "Bridge Properties";
 
@@ -1044,7 +1044,7 @@ public:
 
 			_pg->add_section (ss.str().c_str(), trees.data(), trees.size());
 		}
-		else if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<wire>(); }))
+		else if (all_of (objs.begin(), objs.end(), [](object* o) { return o->type() == &wire::_type; }))
 		{
 			_pg->add_section("Wire Properties", objs.data(), objs.size());
 		}

@@ -177,12 +177,12 @@ public:
 
 			if ((HIWORD(wParam) == BN_CLICKED) && (LOWORD(wParam) == IDC_BUTTON_EDIT_MST_CONFIG_TABLE))
 			{
-				if (std::all_of (_selection->objects().begin(), _selection->objects().end(), [](edge::object* o) { return o->is<bridge>(); }))
+				if (std::all_of (_selection->objects().begin(), _selection->objects().end(), [](edge::object* o) { return o->type() == &bridge::_type; }))
 				{
 					auto editor = config_id_editor_factory(_selection->objects());
 					editor->show(static_cast<win32_window_i*>(this));
 				}
-				else if (std::all_of (_selection->objects().begin(), _selection->objects().end(), [](edge::object* o) { return o->is<port>(); }))
+				else if (std::all_of (_selection->objects().begin(), _selection->objects().end(), [](edge::object* o) { return o->type() == &port::_type; }))
 				{
 					std::vector<edge::object*> objects;
 					std::transform (_selection->objects().begin(), _selection->objects().end(), std::back_inserter(objects),
@@ -271,7 +271,7 @@ public:
 		auto tableButton = GetDlgItem (_hwnd, IDC_BUTTON_EDIT_MST_CONFIG_TABLE); assert (tableButton != nullptr);
 		auto& objects = _selection->objects();
 
-		if (objects.empty() || std::any_of (objects.begin(), objects.end(), [](edge::object* o) { return !o->is<bridge>() && !o->is<port>(); }))
+		if (objects.empty() || std::any_of (objects.begin(), objects.end(), [](edge::object* o) { return (o->type() != &bridge::_type) && (o->type() != &port::_type); }))
 		{
 			::SetWindowText (edit, L"(no bridge selected)");
 			::EnableWindow (edit, FALSE);

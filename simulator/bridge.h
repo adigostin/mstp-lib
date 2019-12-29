@@ -207,5 +207,5 @@ public:
 
 	static const property* const _properties[];
 	static const xtype<bridge, size_t_p, size_t_p, mac_address_p> _type;
-	const struct type* type() const override { return &_type; }
+	virtual const struct type* type() const override { return &_type; }
 };

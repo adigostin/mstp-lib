@@ -116,6 +116,7 @@ private:
 	size_t tree_count() const { return _trees.size(); }
 	port_tree* tree (size_t index) const { return _trees[index].get(); }
 
+public:
 	static const edge::side_p side_property;
 	static const float_p offset_property;
 	static const port_speed_p supported_speed_property;
