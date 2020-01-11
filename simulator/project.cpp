@@ -214,6 +214,11 @@ public:
 		return S_OK;
 	}
 	
+	static constexpr const edge::type* const known_types[] = 
+	{
+		&project::_type, &bridge::_type, &bridge_tree::_type, &port::_type, &port_tree::_type, &wire::_type
+	};
+
 	virtual HRESULT load (const wchar_t* filePath) override final
 	{
 		com_ptr<IXMLDOMDocument3> doc;
@@ -241,7 +246,7 @@ public:
 			return E_FAIL;
 		com_ptr<IXMLDOMElement> projectElement = projectNode;
 
-		deserialize_to (projectElement, this);
+		deserialize_to (projectElement, this, known_types);
 
 		_path = filePath;
 		this->event_invoker<loaded_e>()(this);

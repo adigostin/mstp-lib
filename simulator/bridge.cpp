@@ -6,7 +6,6 @@
 #include "win32/text_layout.h"
 
 using namespace D2D1;
-using namespace edge;
 
 static constexpr UINT WM_PACKET_RECEIVED = WM_APP + 1;
 
@@ -21,7 +20,7 @@ std::string mac_address_to_string (mac_address address)
 	return ss.str();
 }
 
-bool mac_address_from_string (string_view str, mac_address& to)
+bool mac_address_from_string (std::string_view str, mac_address& to)
 {
 //	static constexpr char FormatErrorMessage[] = u8"Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX or XXXXXXXXXXXX (6 hex bytes).";
 
@@ -490,7 +489,7 @@ std::string bridge::mst_config_id_name() const
 	return std::string(std::begin(configId->ConfigurationName), std::begin(configId->ConfigurationName) + len);
 }
 
-void bridge::set_mst_config_id_name (edge::string_view value)
+void bridge::set_mst_config_id_name (std::string_view value)
 {
 	if (value.size() > 32)
 		throw std::invalid_argument("Invalid MST Config Name: more than 32 characters.");

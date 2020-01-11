@@ -14,8 +14,8 @@ class bridge;
 class port;
 class wire;
 
-using edge::property_changing_e;
-using edge::property_changed_e;
+using property_changing_e = edge::object::property_changing_e;
+using property_changed_e = edge::object::property_changed_e;
 using edge::property_change_args;
 using edge::collection_property_change_type;
 

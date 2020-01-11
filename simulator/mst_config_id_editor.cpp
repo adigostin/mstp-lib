@@ -5,18 +5,16 @@
 #include "bridge.h"
 #include "win32/utility_functions.h"
 
-using namespace edge;
-
 static constexpr UINT WM_SHOWN = WM_APP + 1;
 
-class mst_config_id_editor : public property_editor_i
+class mst_config_id_editor : public edge::property_editor_i
 {
 	project_i* _project;
 	std::unordered_set<bridge*> _bridges;
 	HWND _hwnd = nullptr;
 
 public:
-	mst_config_id_editor (span<object* const> objects)
+	mst_config_id_editor (std::span<object* const> objects)
 	{
 		assert (!objects.empty());
 
@@ -64,9 +62,9 @@ public:
 		}
 	}
 
-	virtual bool show (property_editor_parent parent) override
+	virtual bool show (edge::property_editor_parent parent) override
 	{
-		auto parent_window = static_cast<win32_window_i*>(parent);
+		auto parent_window = static_cast<edge::win32_window_i*>(parent);
 		assert (parent_window != nullptr);
 		INT_PTR dr = DialogBoxParam (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDD_DIALOG_MST_CONFIG_ID), parent_window->hwnd(), &DialogProcStatic, (LPARAM) this);
 		return (dr == IDOK);
@@ -289,7 +287,7 @@ public:
 	}
 };
 
-std::unique_ptr<property_editor_i> config_id_editor_factory (span<object* const> objects)
+std::unique_ptr<edge::property_editor_i> config_id_editor_factory (std::span<object* const> objects)
 {
 	return std::make_unique<mst_config_id_editor>(objects);
 }

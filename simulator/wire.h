@@ -27,7 +27,7 @@ struct wire_end_property_traits
 	using param_t = wire_end;
 	using return_t = wire_end;
 	static std::string to_string (wire_end from);
-	static bool from_string (edge::string_view from, wire_end& to);
+	static bool from_string (std::string_view from, wire_end& to);
 };
 using wire_end_p = typed_property<wire_end_property_traits>;
 

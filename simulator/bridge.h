@@ -21,7 +21,7 @@ static constexpr char stp_version_type_name[] = "stp_version";
 using stp_version_p = edge::enum_property<STP_VERSION, stp_version_type_name, stp_version_nvps>;
 
 std::string mac_address_to_string (mac_address from);
-bool mac_address_from_string (edge::string_view from, mac_address& to);
+bool mac_address_from_string (std::string_view from, mac_address& to);
 struct mac_address_property_traits
 {
 	static constexpr char type_name[] = "mac_address";
@@ -29,7 +29,7 @@ struct mac_address_property_traits
 	using param_t = mac_address;
 	using return_t = mac_address;
 	static std::string to_string (mac_address from) { return mac_address_to_string(from); }
-	static bool from_string (edge::string_view from, mac_address& to) { return mac_address_from_string(from, to); }
+	static bool from_string (std::string_view from, mac_address& to) { return mac_address_from_string(from, to); }
 };
 using mac_address_p = edge::typed_property<mac_address_property_traits>;
 
@@ -131,7 +131,7 @@ public:
 	size_t port_count() const { return STP_GetPortCount(_stpBridge); }
 	size_t msti_count() const { return STP_GetMstiCount(_stpBridge); }
 	std::string mst_config_id_name() const;
-	void set_mst_config_id_name (edge::string_view mst_config_id_name);
+	void set_mst_config_id_name (std::string_view mst_config_id_name);
 	uint32_t GetMstConfigIdRevLevel() const;
 	void SetMstConfigIdRevLevel (uint32_t revLevel);
 	std::string GetMstConfigIdDigest() const;
