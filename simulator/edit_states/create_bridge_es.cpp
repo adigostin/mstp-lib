@@ -54,7 +54,7 @@ class create_bridge_es : public edit_state
 		if (virtualKey == VK_ESCAPE)
 		{
 			_completed = true;
-			_ew->invalidate();
+			::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
 			return 0;
 		}
 
@@ -89,7 +89,7 @@ class create_bridge_es : public edit_state
 			{
 				D2D1_POINT_2F center = { _bridge->left() + _bridge->width() / 2, _bridge->top() + _bridge->height() / 2 };
 				_bridge = make_temp_bridge (new_port_count, new_msti_count, center);
-				_ew->invalidate();
+				::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
 			}
 
 			return 0;

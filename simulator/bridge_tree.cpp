@@ -319,11 +319,6 @@ const edge::property* const bridge_tree::_properties[] =
 	&remaining_hops_property
 };
 
-const edge::xtype<bridge_tree> bridge_tree::_type = {
-	"BridgeTree",
-	&base::_type,
-	_properties,
-	nullptr,
-};
+const edge::xtype<bridge_tree> bridge_tree::_type = { "BridgeTree", &base::_type, _properties, nullptr };
 
 const edge::type* bridge_tree::type() const { return &_type; }

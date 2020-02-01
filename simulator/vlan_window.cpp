@@ -179,7 +179,7 @@ public:
 			{
 				if (std::all_of (_selection->objects().begin(), _selection->objects().end(), [](edge::object* o) { return o->type() == &bridge::_type; }))
 				{
-					auto editor = config_id_editor_factory(_selection->objects());
+					auto editor = create_config_id_editor(_selection->objects());
 					editor->show(static_cast<win32_window_i*>(this));
 				}
 				else if (std::all_of (_selection->objects().begin(), _selection->objects().end(), [](edge::object* o) { return o->type() == &port::_type; }))
@@ -187,7 +187,7 @@ public:
 					std::vector<edge::object*> objects;
 					std::transform (_selection->objects().begin(), _selection->objects().end(), std::back_inserter(objects),
 									[](edge::object* o) { return (edge::object*) static_cast<port*>(o)->bridge(); });
-					auto editor = config_id_editor_factory(objects);
+					auto editor = create_config_id_editor(objects);
 					editor->show(static_cast<win32_window_i*>(this));
 				}
 				else

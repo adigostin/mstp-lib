@@ -62,11 +62,9 @@ public:
 		}
 	}
 
-	virtual bool show (edge::property_editor_parent parent) override
+	virtual bool show (edge::win32_window_i* parent) override
 	{
-		auto parent_window = static_cast<edge::win32_window_i*>(parent);
-		assert (parent_window != nullptr);
-		INT_PTR dr = DialogBoxParam (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDD_DIALOG_MST_CONFIG_ID), parent_window->hwnd(), &DialogProcStatic, (LPARAM) this);
+		INT_PTR dr = DialogBoxParam (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDD_DIALOG_MST_CONFIG_ID), parent->hwnd(), &DialogProcStatic, (LPARAM) this);
 		return (dr == IDOK);
 	}
 
@@ -287,7 +285,7 @@ public:
 	}
 };
 
-std::unique_ptr<edge::property_editor_i> config_id_editor_factory (std::span<object* const> objects)
+std::unique_ptr<edge::property_editor_i> create_config_id_editor (std::span<object* const> objects)
 {
 	return std::make_unique<mst_config_id_editor>(objects);
 }

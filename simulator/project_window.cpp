@@ -237,7 +237,7 @@ public:
 	LONG GetVlanWindowLeft() const
 	{
 		if (_pg != nullptr)
-			return _pg->GetWidth() + splitter_width_pixels();
+			return _pg->width_pixels() + splitter_width_pixels();
 		else
 			return 0;
 	}
@@ -245,7 +245,7 @@ public:
 	LONG GetVlanWindowRight() const
 	{
 		if (_log_window != nullptr)
-			return client_width_pixels() - _log_window->GetWidth() - splitter_width_pixels();
+			return client_width_pixels() - _log_window->width_pixels() - splitter_width_pixels();
 		else
 			return client_width_pixels();
 	}
@@ -255,13 +255,13 @@ public:
 		auto rect = client_rect_pixels();
 
 		if (_pg != nullptr)
-			rect.left += _pg->GetWidth() + splitter_width_pixels();
+			rect.left += _pg->width_pixels() + splitter_width_pixels();
 
 		if (_log_window != nullptr)
-			rect.right -= _log_window->GetWidth() + splitter_width_pixels();
+			rect.right -= _log_window->width_pixels() + splitter_width_pixels();
 
 		if (_vlanWindow != nullptr)
-			rect.top += _vlanWindow->GetHeight();
+			rect.top += _vlanWindow->height_pixels();
 
 		return rect;
 	}
@@ -405,24 +405,24 @@ public:
 	void ResizeChildWindows()
 	{
 		if (_pg != nullptr)
-			_pg->SetRect (pg_restricted_rect());
+			_pg->move_window (pg_restricted_rect());
 
 		if (_log_window != nullptr)
-			_log_window->SetRect (log_restricted_rect());
+			_log_window->move_window (log_restricted_rect());
 
 		if (_vlanWindow != nullptr)
-			_vlanWindow->SetRect ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->preferred_size().cy });
+			_vlanWindow->move_window ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->preferred_size().cy });
 
 		if (_edit_window != nullptr)
-			_edit_window->SetRect (edit_window_rect());
+			_edit_window->move_window (edit_window_rect());
 	}
 
 	void ProcessWmLButtonDown (POINT pt, UINT modifierKeysDown)
 	{
-		if ((_pg != nullptr) && (pt.x >= _pg->GetWidth()) && (pt.x < _pg->GetWidth() + splitter_width_pixels()))
+		if ((_pg != nullptr) && (pt.x >= _pg->width_pixels()) && (pt.x < _pg->width_pixels() + splitter_width_pixels()))
 		{
 			_windowBeingResized = tool_window::props;
-			_resize_offset = pt.x - _pg->GetWidth();
+			_resize_offset = pt.x - _pg->width_pixels();
 			::SetCapture(hwnd());
 		}
 		else if ((_log_window != nullptr) && (pt.x >= _log_window->GetX() - splitter_width_pixels()) && (pt.x < _log_window->GetX()))
@@ -441,9 +441,9 @@ public:
 			pg_desired_width_pixels = std::max (pg_desired_width_pixels, 0l);
 			pg_desired_width_pixels = std::min (pg_desired_width_pixels, client_width_pixels());
 			_pg_desired_width_dips = pg_desired_width_pixels * 96.0f / _dpi;
-			_pg->SetRect (pg_restricted_rect());
-			_vlanWindow->SetRect ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->GetHeight() });
-			_edit_window->SetRect (edit_window_rect());
+			_pg->move_window (pg_restricted_rect());
+			_vlanWindow->move_window ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->height_pixels() });
+			_edit_window->move_window (edit_window_rect());
 			::UpdateWindow (_pg->hwnd());
 			::UpdateWindow (_edit_window->hwnd());
 			::UpdateWindow (_vlanWindow->hwnd());
@@ -454,9 +454,9 @@ public:
 			log_desired_width_pixels = std::max (log_desired_width_pixels, 0l);
 			log_desired_width_pixels = std::min (log_desired_width_pixels, client_width_pixels());
 			_log_desired_width_dips = log_desired_width_pixels * 96.0f / _dpi;
-			_log_window->SetRect (log_restricted_rect());
-			_vlanWindow->SetRect ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->GetHeight() });
-			_edit_window->SetRect (edit_window_rect());
+			_log_window->move_window (log_restricted_rect());
+			_vlanWindow->move_window ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->height_pixels() });
+			_edit_window->move_window (edit_window_rect());
 			::UpdateWindow (_log_window->hwnd());
 			::UpdateWindow (_edit_window->hwnd());
 			::UpdateWindow (_vlanWindow->hwnd());
@@ -481,7 +481,7 @@ public:
 
 	void SetCursor (POINT pt)
 	{
-		if ((_pg != nullptr) && (pt.x >= _pg->GetWidth()) && (pt.x < _pg->GetWidth() + splitter_width_pixels()))
+		if ((_pg != nullptr) && (pt.x >= _pg->width_pixels()) && (pt.x < _pg->width_pixels() + splitter_width_pixels()))
 		{
 			::SetCursor (LoadCursor(nullptr, IDC_SIZEWE));
 		}
@@ -502,7 +502,7 @@ public:
 
 		if (_pg != nullptr)
 		{
-			rect.left = _pg->GetWidth();
+			rect.left = _pg->width_pixels();
 			rect.top = 0;
 			rect.right = rect.left + splitter_width_pixels();
 			rect.bottom = client_height_pixels();

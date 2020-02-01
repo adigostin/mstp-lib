@@ -84,7 +84,7 @@ public:
 	static void on_selected_vlan_changed (void* callbackArg, project_window_i* pw, unsigned int vlanNumber)
 	{
 		auto window = static_cast<edit_window*>(callbackArg);
-		window->invalidate();
+		::InvalidateRect (window->hwnd(), nullptr, FALSE);
 	}
 
 	static void on_project_property_changing (void* callback_arg, object* project_obj, const property_change_args& args)
@@ -97,27 +97,27 @@ public:
 			&& (window->_htResult.object == project->bridges()[args.index].get()))
 		{
 			window->_htResult = { nullptr, 0 };
-			window->invalidate();
+			::InvalidateRect (window->hwnd(), nullptr, FALSE);
 		}
 		else if ((args.property == project->wires_prop())
 			&& (args.type == collection_property_change_type::remove)
 			&& (window->_htResult.object == project->wires()[args.index].get()))
 		{
 			window->_htResult = { nullptr, 0 };
-			window->invalidate();
+			::InvalidateRect (window->hwnd(), nullptr, FALSE);
 		}
 	}
 
 	static void OnProjectInvalidate (void* callbackArg, project_i*)
 	{
 		auto window = static_cast<edit_window*>(callbackArg);
-		window->invalidate();
+		::InvalidateRect (window->hwnd(), nullptr, FALSE);
 	}
 
 	static void OnSelectionChanged (void* callbackArg, selection_i* selection)
 	{
 		auto window = static_cast<edit_window*>(callbackArg);
-		window->invalidate();
+		::InvalidateRect (window->hwnd(), nullptr, FALSE);
 	}
 
 	struct LegendInfoEntry

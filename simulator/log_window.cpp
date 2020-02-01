@@ -189,7 +189,7 @@ public:
 		si.nPage = lw->_numberOfLinesFitting;
 		SetScrollInfo (lw->hwnd(), SB_VERT, &si, TRUE);
 
-		lw->invalidate();
+		::InvalidateRect (lw->hwnd(), nullptr, FALSE);
 	}
 
 	void SelectBridge (bridge* b)

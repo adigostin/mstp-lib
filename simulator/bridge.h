@@ -3,6 +3,7 @@
 #include "bridge_tree.h"
 #include "port.h"
 #include "win32/xml_serializer.h"
+#include "win32/property_grid.h"
 
 struct BridgeLogLine
 {
@@ -33,8 +34,18 @@ struct mac_address_property_traits
 };
 using mac_address_p = edge::typed_property<mac_address_property_traits>;
 
-extern edge::property_editor_factory_t config_id_editor_factory;
-using config_id_digest_p = edge::typed_property<edge::temp_string_property_traits, config_id_editor_factory>;
+extern std::unique_ptr<edge::property_editor_i> create_config_id_editor (std::span<object* const> objects);
+
+struct config_id_digest_p : edge::typed_property<edge::temp_string_property_traits>, edge::custom_editor_property_i
+{
+	using base = edge::typed_property<edge::temp_string_property_traits>;
+	using base::base;
+
+	virtual std::unique_ptr<edge::property_editor_i> create_editor (std::span<object* const> objects) const override
+	{
+		return create_config_id_editor(objects);
+	}
+};
 
 using edge::object_collection_property;
 using edge::typed_object_collection_property;

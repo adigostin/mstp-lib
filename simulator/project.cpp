@@ -310,8 +310,8 @@ public:
 
 	static constexpr mac_address_p next_mac_address_property = {
 		"NextMacAddress", nullptr, nullptr, ui_visible::yes,
-		static_cast<mac_address_p::member_getter_t>(&next_mac_address),
-		static_cast<mac_address_p::member_setter_t>(&set_next_mac_address),
+		&next_mac_address,
+		&set_next_mac_address,
 		mac_address{ 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x80 },
 	};
 
@@ -323,7 +323,7 @@ public:
 	static const typed_object_collection_property<class project, bridge> bridges_property;
 	static const typed_object_collection_property<class project, wire> wires_property;
 	static const property* const _properties[];
-	static const xtype<class project> _type;
+	static const xtype<project> _type;
 	virtual const struct type* type() const { return &_type; }
 };
 
@@ -339,6 +339,6 @@ const typed_object_collection_property<project, wire> project::wires_property {
 
 const property* const project::_properties[] = { &next_mac_address_property, &bridges_property, &wires_property };
 
-const xtype<project> project::_type = { "Project", &base::_type, _properties, [] { return new project(); } };
+const xtype<project> project::_type = { "Project", &base::_type, _properties, nullptr };
 
 extern const project_factory_t project_factory = []() -> std::shared_ptr<project_i> { return std::make_shared<project>(); };

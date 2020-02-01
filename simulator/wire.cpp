@@ -193,4 +193,4 @@ const wire_end_p wire::p1_property = {
 
 const property* const wire::_properties[] = { &p0_property, &p1_property };
 
-const xtype<wire> wire::_type = { "Wire", &base::_type, _properties, [] { return new wire(); } };
+const xtype<wire> wire::_type = { "Wire", &base::_type, _properties, [] { return std::make_unique<wire>(); } };
