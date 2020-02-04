@@ -7,6 +7,7 @@ class bridge;
 class port;
 
 using edge::size_t_p;
+using edge::size_t_property_traits;
 using edge::uint32_p;
 using edge::bool_p;
 using edge::float_p;
@@ -19,6 +20,8 @@ using edge::value_property;
 using edge::typed_object_collection_property;
 using edge::property_change_args;
 using edge::side;
+using edge::binary_reader;
+using edge::out_stream_i;
 
 extern const edge::NVP port_priority_nvps[];
 extern const char port_priority_type_name[];

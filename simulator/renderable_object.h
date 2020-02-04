@@ -46,7 +46,7 @@ public:
 
 protected:
 	template<typename tpd_>
-	void set_and_invalidate (const tpd_* pd, typename tpd_::value_t& field, typename tpd_::param_t value)
+	void set_and_invalidate (const tpd_* pd, typename tpd_::value_t& field, typename tpd_::value_t value)
 	{
 		this->on_property_changing(pd);
 		field = value;

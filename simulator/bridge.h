@@ -22,15 +22,15 @@ static constexpr char stp_version_type_name[] = "stp_version";
 using stp_version_p = edge::enum_property<STP_VERSION, stp_version_type_name, stp_version_nvps>;
 
 std::string mac_address_to_string (mac_address from);
-bool mac_address_from_string (std::string_view from, mac_address& to);
+void mac_address_from_string (std::string_view from, mac_address& to);
 struct mac_address_property_traits
 {
 	static constexpr char type_name[] = "mac_address";
 	using value_t = mac_address;
-	using param_t = mac_address;
-	using return_t = mac_address;
-	static std::string to_string (mac_address from) { return mac_address_to_string(from); }
-	static bool from_string (std::string_view from, mac_address& to) { return mac_address_from_string(from, to); }
+	static void to_string (value_t from, std::string& to) { to = mac_address_to_string(from); }
+	static void from_string (std::string_view from, mac_address& to) { mac_address_from_string(from, to); }
+	static void serialize (value_t from, out_stream_i* to) { assert(false); }
+	static void deserialize (binary_reader& from, value_t& to) { assert(false); }
 };
 using mac_address_p = edge::typed_property<mac_address_property_traits>;
 
@@ -142,7 +142,7 @@ public:
 	size_t port_count() const { return STP_GetPortCount(_stpBridge); }
 	size_t msti_count() const { return STP_GetMstiCount(_stpBridge); }
 	std::string mst_config_id_name() const;
-	void set_mst_config_id_name (std::string_view mst_config_id_name);
+	void set_mst_config_id_name (std::string mst_config_id_name);
 	uint32_t GetMstConfigIdRevLevel() const;
 	void SetMstConfigIdRevLevel (uint32_t revLevel);
 	std::string GetMstConfigIdDigest() const;
@@ -217,6 +217,6 @@ public:
 	static const typed_object_collection_property<bridge, class port> ports_property;
 
 	static const property* const _properties[];
-	static const xtype<bridge, size_t_p, size_t_p, mac_address_p> _type;
+	static const xtype<bridge, size_t_property_traits, size_t_property_traits, mac_address_property_traits> _type;
 	virtual const struct type* type() const override { return &_type; }
 };

@@ -19,15 +19,17 @@ using edge::typed_property;
 using edge::uint32_p;
 using edge::ui_visible;
 using edge::object;
+using edge::out_stream_i;
+using edge::binary_reader;
 
 struct wire_end_property_traits
 {
 	static constexpr char type_name[] = "wire_end";
 	using value_t = wire_end;
-	using param_t = wire_end;
-	using return_t = wire_end;
-	static std::string to_string (wire_end from);
-	static bool from_string (std::string_view from, wire_end& to);
+	static void to_string (value_t from, std::string& to);
+	static void from_string (std::string_view from, value_t& to);
+	static void serialize (value_t from, out_stream_i* to) { assert(false); }
+	static void deserialize (binary_reader& from, value_t& to) { assert(false); }
 };
 using wire_end_p = typed_property<wire_end_property_traits>;
 

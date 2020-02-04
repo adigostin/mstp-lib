@@ -8,7 +8,7 @@
 
 static constexpr float thickness = 2;
 
-std::string wire_end_property_traits::to_string (wire_end from)
+void wire_end_property_traits::to_string (value_t from, std::string& to)
 {
 	std::stringstream ss;
 	if (std::holds_alternative<connected_wire_end>(from))
@@ -22,22 +22,23 @@ std::string wire_end_property_traits::to_string (wire_end from)
 				if (b->ports()[pi].get() == p)
 				{
 					ss << "Connected;" << bi << ";" << pi;
-					return ss.str();
+					to = ss.str();
+					return;
 				}
 			}
 		}
 
-		assert(false); return { };
+		assert(false);
 	}
 	else
 	{
 		auto location = std::get<loose_wire_end>(from);
 		ss << "Loose;" << location.x << ";" << location.y;
-		return ss.str();
+		to = ss.str();
 	}
 }
 
-bool wire_end_property_traits::from_string (std::string_view from, wire_end& to)
+void wire_end_property_traits::from_string (std::string_view from, value_t& to)
 {
 	size_t s1 = from.find(';');
 	size_t s2 = from.rfind(';');
@@ -48,7 +49,7 @@ bool wire_end_property_traits::from_string (std::string_view from, wire_end& to)
 		std::from_chars (from.data() + s1 + 1, from.data() + s2, bridge_index);
 		std::from_chars (from.data() + s2 + 1, from.data() + from.size(), port_index);
 		to = serialized_connected_end(bridge_index, port_index);
-		return true;
+		return;
 	}
 
 	if (std::string_view(from.data(), s1) == "Loose")
@@ -57,10 +58,10 @@ bool wire_end_property_traits::from_string (std::string_view from, wire_end& to)
 		std::from_chars (from.data() + s1 + 1, from.data() + s2, end.x);
 		std::from_chars (from.data() + s2 + 1, from.data() + from.size(), end.y);
 		to = end;
-		return true;
+		return;
 	}
 
-	return false;
+	throw edge::string_convert_exception(from, type_name);
 }
 
 wire::wire (wire_end firstEnd, wire_end secondEnd)

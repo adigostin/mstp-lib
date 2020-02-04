@@ -20,9 +20,9 @@ std::string mac_address_to_string (mac_address address)
 	return ss.str();
 }
 
-bool mac_address_from_string (std::string_view str, mac_address& to)
+void mac_address_from_string (std::string_view str, mac_address& to)
 {
-//	static constexpr char FormatErrorMessage[] = u8"Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX or XXXXXXXXXXXX (6 hex bytes).";
+	static constexpr char FormatErrorMessage[] = "Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX or XXXXXXXXXXXX (6 hex bytes).";
 
 	int offsetMultiplier;
 	if (str.size() == 12)
@@ -32,12 +32,12 @@ bool mac_address_from_string (std::string_view str, mac_address& to)
 	else if (str.size() == 17)
 	{
 		if ((str[2] != ':') || (str[5] != ':') || (str[8] != ':') || (str[11] != ':') || (str[14] != ':'))
-			return false;
+			throw edge::string_convert_exception(FormatErrorMessage);
 
 		offsetMultiplier = 3;
 	}
 	else
-		return false;
+		throw edge::string_convert_exception(FormatErrorMessage);
 
 	for (size_t i = 0; i < 6; i++)
 	{
@@ -45,14 +45,12 @@ bool mac_address_from_string (std::string_view str, mac_address& to)
 		wchar_t ch1 = str[i * offsetMultiplier + 1];
 
 		if (!iswxdigit(ch0) || !iswxdigit(ch1))
-			return false;
+			throw edge::string_convert_exception(FormatErrorMessage);
 
 		auto hn = (ch0 <= '9') ? (ch0 - '0') : ((ch0 >= 'a') ? (ch0 - 'a' + 10) : (ch0 - 'A' + 10));
 		auto ln = (ch1 <= '9') ? (ch1 - '0') : ((ch1 >= 'a') ? (ch1 - 'a' + 10) : (ch1 - 'A' + 10));
 		to[i] = (hn << 4) | ln;
 	}
-
-	return true;
 }
 
 static constexpr wchar_t helper_window_class_name[] = L"{C2A14267-93FD-44FD-89A3-809FBB66A20B}";
@@ -489,7 +487,7 @@ std::string bridge::mst_config_id_name() const
 	return std::string(std::begin(configId->ConfigurationName), std::begin(configId->ConfigurationName) + len);
 }
 
-void bridge::set_mst_config_id_name (std::string_view value)
+void bridge::set_mst_config_id_name (std::string value)
 {
 	if (value.size() > 32)
 		throw std::invalid_argument("Invalid MST Config Name: more than 32 characters.");
@@ -574,6 +572,9 @@ void bridge::set_stp_version (STP_VERSION stp_version)
 
 void bridge::set_bridge_max_age (uint32_t value)
 {
+	if ((value < 6) || (value > 40))
+		throw std::invalid_argument("MaxAge must be in the range 6..40.\r\nThe default value, also recommended by the standard, is 20.");
+
 	if (bridge_max_age() != value)
 	{
 		this->on_property_changing (&bridge_max_age_property);
@@ -808,7 +809,7 @@ const edge::property* const bridge::_properties[] = {
 	&ports_property,
 };
 
-const xtype<bridge, size_t_p, size_t_p, mac_address_p> bridge::_type = {
+const xtype<bridge, size_t_property_traits, size_t_property_traits, mac_address_property_traits> bridge::_type = {
 	"Bridge",
 	&base::_type,
 	_properties,
