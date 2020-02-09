@@ -11,9 +11,9 @@ using connected_wire_end = port*;
 using serialized_connected_end = std::pair<size_t, size_t>;
 using wire_end = std::variant<loose_wire_end, connected_wire_end, serialized_connected_end>;
 
-using edge::xtype;
-using edge::com_ptr;
 using edge::type;
+using edge::concrete_type;
+using edge::xtype;
 using edge::property;
 using edge::typed_property;
 using edge::uint32_p;
@@ -21,6 +21,7 @@ using edge::ui_visible;
 using edge::object;
 using edge::out_stream_i;
 using edge::binary_reader;
+using edge::com_ptr;
 
 struct wire_end_property_traits
 {
@@ -70,5 +71,5 @@ public:
 	static const wire_end_p p1_property;
 	static const property* const _properties[];
 	static const xtype<wire> _type;
-	virtual const struct type* type() const override { return &_type; }
+	virtual const concrete_type* type() const override { return &_type; }
 };

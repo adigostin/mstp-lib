@@ -9,8 +9,10 @@ using edge::object;
 using edge::uint32_p;
 using edge::temp_string_p;
 using edge::property_change_args;
+using edge::nvp;
+using edge::concrete_type;
 
-extern const edge::NVP bridge_priority_nvps[];
+extern const nvp bridge_priority_nvps[];
 extern const char bridge_priority_type_name[];
 using bridge_priority_p = edge::enum_property<uint32_t, bridge_priority_type_name, bridge_priority_nvps, true>;
 
@@ -69,6 +71,6 @@ public:
 	static const uint32_p      topology_change_count_property;
 	static const edge::property* const _properties[];
 	static const edge::xtype<bridge_tree> _type;
-	const edge::type* type() const override;
+	const concrete_type* type() const override final { return &_type; }
 };
 

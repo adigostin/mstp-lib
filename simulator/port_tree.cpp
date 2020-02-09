@@ -9,7 +9,7 @@
 using namespace edge;
 
 const char port_priority_type_name[] = "PortPriority";
-const edge::NVP port_priority_nvps[] {
+const nvp port_priority_nvps[] {
 	{ "10 (16 dec)",  0x10 },
 	{ "20 (32 dec)",  0x20 },
 	{ "30 (48 dec)",  0x30 },
@@ -29,7 +29,7 @@ const edge::NVP port_priority_nvps[] {
 };
 
 const char port_role_type_name[] = "port_role";
-const edge::NVP port_role_nvps[] =
+const nvp port_role_nvps[] =
 {
 	{ STP_GetPortRoleString(STP_PORT_ROLE_DISABLED),   (int) STP_PORT_ROLE_DISABLED },
 	{ STP_GetPortRoleString(STP_PORT_ROLE_ROOT),       (int) STP_PORT_ROLE_ROOT },
@@ -250,5 +250,3 @@ const edge::property* const port_tree::_properties[] = {
 };
 
 const xtype<port_tree> port_tree::_type = { "PortTree", &base::_type, _properties, nullptr };
-
-const edge::type* port_tree::type() const { return &_type; }

@@ -15,7 +15,7 @@ class project : public edge::object, public project_i
 	std::wstring _path;
 	std::vector<std::unique_ptr<bridge>> _bridges;
 	std::vector<std::unique_ptr<wire>> _wires;
-	mac_address _next_mac_address = next_mac_address_property._default_value.value();
+	mac_address _next_mac_address = next_mac_address_property.default_value.value();
 	bool _simulationPaused = false;
 	bool _changedFlag = false;
 
@@ -213,11 +213,8 @@ public:
 		_path = filePath;
 		return S_OK;
 	}
-	
-	static constexpr const edge::type* const known_types[] = 
-	{
-		&project::_type, &bridge::_type, &bridge_tree::_type, &port::_type, &port_tree::_type, &wire::_type
-	};
+
+	static std::span<const concrete_type* const> known_types();
 
 	virtual HRESULT load (const wchar_t* filePath) override final
 	{
@@ -246,7 +243,7 @@ public:
 			return E_FAIL;
 		com_ptr<IXMLDOMElement> projectElement = projectNode;
 
-		deserialize_to (projectElement, this, known_types);
+		deserialize_to (projectElement, this, known_types());
 
 		_path = filePath;
 		this->event_invoker<loaded_e>()(this);
@@ -289,7 +286,7 @@ public:
 	virtual ChangedEvent::subscriber GetChangedEvent() override final { return ChangedEvent::subscriber(this); }
 
 	virtual const object_collection_property* bridges_prop() const override final { return &bridges_property; }
-	
+
 	virtual const object_collection_property* wires_prop() const override final { return &wires_property; }
 
 	virtual property_changing_e::subscriber property_changing() override final { return property_changing_e::subscriber(this); }
@@ -297,7 +294,7 @@ public:
 	virtual property_changed_e::subscriber property_changed() override final { return property_changed_e::subscriber(this); }
 
 	mac_address next_mac_address() const { return _next_mac_address; }
-	
+
 	void set_next_mac_address (mac_address value)
 	{
 		if (_next_mac_address != value)
@@ -324,8 +321,16 @@ public:
 	static const typed_object_collection_property<class project, wire> wires_property;
 	static const property* const _properties[];
 	static const xtype<project> _type;
-	virtual const struct type* type() const { return &_type; }
+	virtual const concrete_type* type() const { return &_type; }
 };
+
+//static
+std::span<const concrete_type* const> project::known_types()
+{
+	static const concrete_type* const types[] =
+		{ &project::_type, &bridge::_type, &bridge_tree::_type, &port::_type, &port_tree::_type, &wire::_type };
+	return types;
+}
 
 const typed_object_collection_property<project, bridge> project::bridges_property = {
 	"Bridges", nullptr, nullptr, ui_visible::no,

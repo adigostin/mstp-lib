@@ -68,8 +68,8 @@ bridge::bridge (size_t port_count, size_t msti_count, mac_address macAddress)
 	for (size_t portIndex = 0; portIndex < port_count; portIndex++)
 	{
 		offset += (port::PortToPortSpacing / 2 + port::InteriorWidth / 2);
-		auto port = std::unique_ptr<class port>(new class port(this, portIndex, side::bottom, offset));
-		_ports.push_back (std::move(port));
+		auto p = std::unique_ptr<port>(new port(this, portIndex, side::bottom, offset));
+		_ports.push_back (std::move(p));
 		offset += (port::InteriorWidth / 2 + port::PortToPortSpacing / 2);
 	}
 
@@ -271,7 +271,7 @@ void bridge::ProcessReceivedPackets()
 								f.data = fsd.data;
 								f.tx_path_taken = fsd.tx_path_taken;
 								f.tx_path_taken.push_back (txPortAddress);
-								
+
 								this->event_invoker<packet_transmit_e>()(this, txPortIndex, std::move(f));
 							}
 						}
@@ -651,7 +651,7 @@ bool bridge::mst_config_table_changed() const
 void bridge::on_deserializing()
 {
 	_deserializing = true;
-	_enable_stp_after_deserialize = stp_enabled_property._default_value.value();
+	_enable_stp_after_deserialize = stp_enabled_property.default_value.value();
 }
 
 void bridge::on_deserialized()
@@ -784,7 +784,7 @@ const typed_object_collection_property<bridge, bridge_tree> bridge::trees_proper
 
 const typed_object_collection_property<bridge, port> bridge::ports_property {
 	"Ports", nullptr, nullptr, ui_visible::no,
-	&port_count, &port
+	&port_count, &port_at
 };
 #pragma endregion
 

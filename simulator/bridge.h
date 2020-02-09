@@ -12,7 +12,7 @@ struct BridgeLogLine
 	int treeIndex;
 };
 
-static inline const edge::NVP stp_version_nvps[] =  {
+static inline const nvp stp_version_nvps[] =  {
 	{ STP_GetVersionString(STP_VERSION_LEGACY_STP), STP_VERSION_LEGACY_STP },
 	{ STP_GetVersionString(STP_VERSION_RSTP), STP_VERSION_RSTP },
 	{ STP_GetVersionString(STP_VERSION_MSTP), STP_VERSION_MSTP },
@@ -191,7 +191,7 @@ public:
 
 	size_t tree_count() const { return _trees.size(); }
 	bridge_tree* tree (size_t index) const { return _trees[index].get(); }
-	port* port (size_t index) const { return _ports[index].get(); }
+	port* port_at (size_t index) const { return _ports[index].get(); }
 
 public:
 	static const mac_address_p bridge_address_property;
@@ -218,5 +218,5 @@ public:
 
 	static const property* const _properties[];
 	static const xtype<bridge, size_t_property_traits, size_t_property_traits, mac_address_property_traits> _type;
-	virtual const struct type* type() const override { return &_type; }
+	virtual const concrete_type* type() const override { return &_type; }
 };

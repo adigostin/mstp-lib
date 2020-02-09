@@ -10,7 +10,7 @@ using namespace D2D1;
 using namespace edge;
 
 const char admin_p2p_type_name[] = "admin_p2p";
-const edge::NVP admin_p2p_nvps[] =
+const nvp admin_p2p_nvps[] =
 {
 	{ "ForceTrue", (int)STP_ADMIN_P2P_FORCE_TRUE },
 	{ "ForceFalse", (int)STP_ADMIN_P2P_FORCE_FALSE },
@@ -20,7 +20,7 @@ const edge::NVP admin_p2p_nvps[] =
 
 const char port_speed_type_name[] = "port_speed";
 const char port_speed_unknown_str[] = "(none)";
-const edge::NVP port_speed_nvps[] = {
+const nvp port_speed_nvps[] = {
 	{  "10M",    10 },
 	{ "100M",   100 },
 	{   "1G",  1000 },
@@ -284,7 +284,7 @@ void port::render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned
 	UINT32 actualLineCount;
 	auto hr = layout->GetLineMetrics(&lineMetrics, 1, &actualLineCount); assert(SUCCEEDED(hr));
 	rt->DrawTextLayout ({ -layout.width() / 2, -lineMetrics.baseline - OutlineWidth * 2 - 1}, layout, dos._brushWindowText);
-	
+
 	if (_trees[treeIndex]->fdb_flush_text_visible())
 	{
 		layout = text_layout_with_metrics (dos._dWriteFactory, dos._smallBoldTextFormat, L"Flush");

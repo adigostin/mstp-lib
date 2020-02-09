@@ -22,12 +22,12 @@ struct link_pulse_t
 using packet_t = std::variant<link_pulse_t, frame_t>;
 
 extern const char admin_p2p_type_name[];
-extern const edge::NVP admin_p2p_nvps[];
+extern const nvp admin_p2p_nvps[];
 using admin_p2p_p = edge::enum_property<STP_ADMIN_P2P, admin_p2p_type_name, admin_p2p_nvps>;
 
 extern const char port_speed_type_name[];
 extern const char port_speed_unknown_str[];
-extern const edge::NVP port_speed_nvps[];
+extern const nvp port_speed_nvps[];
 using port_speed_p = edge::enum_property<uint32_t, port_speed_type_name, port_speed_nvps, false, port_speed_unknown_str>;
 
 class port : public renderable_object
@@ -38,9 +38,9 @@ class port : public renderable_object
 
 	bridge* const _bridge;
 	size_t  const _port_index;
-	side _side = side_property._default_value.value();
+	side _side = side_property.default_value.value();
 	float _offset;
-	uint32_t _supported_speed = supported_speed_property._default_value.value();
+	uint32_t _supported_speed = supported_speed_property.default_value.value();
 	uint32_t _actual_speed = 0;
 	std::vector<std::unique_ptr<port_tree>> _trees;
 
@@ -134,5 +134,5 @@ public:
 
 	static const property* const port::_properties[];
 	static const xtype<port> _type;
-	virtual const struct type* type() const { return &_type; }
+	virtual const concrete_type* type() const { return &_type; }
 };
