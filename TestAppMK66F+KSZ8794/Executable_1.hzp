@@ -73,6 +73,8 @@
       <file file_name="drivers/spi.cpp" />
       <file file_name="drivers/spi.h" />
     </folder>
+    <file file_name="switch.cpp" />
+    <file file_name="switch.h" />
   </project>
   <configuration Name="THUMB Debug" inherited_configurations="THUMB;Debug" />
   <configuration

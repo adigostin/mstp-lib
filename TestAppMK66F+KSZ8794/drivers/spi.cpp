@@ -22,12 +22,10 @@ void spi_init (SPI_Type* spi, const spi_pins& pins, const pin_and_af* cs_pins, s
 
 	// TODO: maybe disable the FIFOs by setting MCR[DIS_TXF] and MCR[DIS_RXF]
 	spi->CTAR[0] = (7u << SPI_CTAR_FMSZ_SHIFT);
-	spi->MCR = spi->MCR & ~(SPI_MCR_MDIS_MASK | SPI_MCR_HALT_MASK) | SPI_MCR_MSTR_MASK;
-	//spi->CR2 = spi->CR2 & ~SPI_CR2_DS_Msk | (15 << SPI_CR2_DS_Pos) | SPI_CR2_SSOE | SPI_CR2_NSSP;
-	//spi->CR1 = SPI_CR1_SPE | (6 << SPI_CR1_BR_Pos) | SPI_CR1_MSTR;
+	spi->MCR = spi->MCR & ~(SPI_MCR_MDIS_MASK | SPI_MCR_HALT_MASK) | SPI_MCR_MSTR_MASK | SPI_MCR_PCSIS_MASK;
 }
 
-void spi_transfer_blocking (SPI_Type* spi, const uint8_t* out_data, uint8_t* in_data, size_t size)
+void spi_transfer_blocking (SPI_Type* spi, uint32_t cs, const uint8_t* out_data, uint8_t* in_data, size_t size)
 {
 	for (size_t i = 0; i < size; i++)
 	{
@@ -42,6 +40,7 @@ void spi_transfer_blocking (SPI_Type* spi, const uint8_t* out_data, uint8_t* in_
 		if (last)
 			pushr |= SPI_PUSHR_EOQ_MASK;
 
+		pushr |= (cs << SPI_PUSHR_PCS_SHIFT);
 		pushr |= out_data[i];
 		spi->PUSHR = pushr;
 

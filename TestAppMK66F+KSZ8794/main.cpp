@@ -3,7 +3,7 @@
 #include "drivers/gpio.h"
 #include "drivers/pit.h"
 #include "drivers/ethernet.h"
-#include "drivers/spi.h"
+#include "switch.h"
 #include <CMSIS/MK66F18.h>
 #include <__cross_studio_io.h>
 
@@ -141,31 +141,6 @@ static constexpr ethernet_pins eth_pins =
 	.rmii_txd1;
 };
 */
-static const struct spi_pins spi_pins =
-{
-	.clk  = { { PTB, 11 }, 2 },
-	.mosi = { { PTB, 16 }, 2 },
-	.miso = { { PTB, 17 }, 2 },
-};
-
-static void write_switch_reg (uint16_t reg, uint8_t value)
-{
-	const uint8_t tx[3] = { (uint8_t)(0x40 | (reg >> 7)), (uint8_t)(reg << 1), value };
-	uint8_t rx[3];
-	gpio_set(PTB, 10, false);
-	spi_transfer_blocking(SPI1, tx, rx, 3);
-	gpio_set(PTB, 10, true);
-}
-
-static uint8_t read_switch_reg (uint16_t reg)
-{
-	const uint8_t tx[3] = { (uint8_t)(0x60 | (reg >> 7)), (uint8_t)(reg << 1), 0 };
-	uint8_t rx[3];
-	gpio_set (PTB, 10, false);
-	spi_transfer_blocking (SPI1, tx, rx, 3);
-	gpio_set (PTB, 10, true);
-	return rx[2];
-}
 
 int main()
 {
@@ -197,16 +172,13 @@ int main()
 	gpio_make_output (PTA, 10, true);
 	gpio_make_output (PTA, 11, true);
 
-	gpio_make_output(PTB, 10, true);
-
 	static constexpr auto pit_callback = [] { gpio_toggle(PTA, 8); };
 
 	pit_init(0, 21000000, pit_callback);
 
-	// TODO: Raise the SPI speed. Switch chip can go up to 50 MHz.
-	spi_init (SPI1, spi_pins, nullptr, 0, 1000000);
+	switch_init();
 
-	volatile auto r = read_switch_reg(1);
+	volatile auto r = switch_read_reg(1);
 
     debug_printf("hello world\n");
 
