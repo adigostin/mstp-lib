@@ -7,13 +7,10 @@
 #include <CMSIS/MK66F18.h>
 #include <__cross_studio_io.h>
 
-#undef DEFAULT_SYSTEM_CLOCK
 #undef SYSTEM_MCG_C5_VALUE
 #undef SYSTEM_MCG_C6_VALUE
 #undef SYSTEM_MCG_C9_VALUE
 #undef SYSTEM_SIM_CLKDIV2_VALUE
-
-#define DEFAULT_SYSTEM_CLOCK 168000000U /* Default System clock value */
 
 /* MCG_C1: CLKS=0,FRDIV=4,IREFS=0,IRCLKEN=1,IREFSTEN=0 */
 #define SYSTEM_MCG_C1_VALUE 0x22U /* MCG_C1 */
@@ -35,8 +32,6 @@
 #define SYSTEM_MCG_C11_VALUE 0x00U /* MCG_C11 */
 /* OSC_CR: ERCLKEN=1,EREFSTEN=0,SC2P=0,SC4P=0,SC8P=0,SC16P=0 */
 #define SYSTEM_OSC_CR_VALUE 0x80U /* OSC_CR */
-/* SMC_PMCTRL: RUNM=3,STOPA=0,STOPM=0 */
-#define SYSTEM_SMC_PMCTRL_VALUE 0x60U /* SMC_PMCTRL */
 /* SIM_CLKDIV2: USBDIV=6,USBFRAC=1 */
 #define SYSTEM_SIM_CLKDIV2_VALUE 0x0DU /* SIM_CLKDIV2 */
 /* SIM_CLKDIV3: PLLFLLDIV=0,PLLFLLFRAC=0 */
@@ -155,10 +150,21 @@ static const struct spi_pins spi_pins =
 
 static void write_switch_reg (uint16_t reg, uint8_t value)
 {
-	uint8_t cmd[3] = { (uint8_t)(0x40 | (reg >> 7)), (uint8_t)(reg << 1), value };
+	const uint8_t tx[3] = { (uint8_t)(0x40 | (reg >> 7)), (uint8_t)(reg << 1), value };
+	uint8_t rx[3];
 	gpio_set(PTB, 10, false);
-	spi_send_blocking (SPI1, cmd, sizeof(cmd));
+	spi_transfer_blocking(SPI1, tx, rx, 3);
 	gpio_set(PTB, 10, true);
+}
+
+static uint8_t read_switch_reg (uint16_t reg)
+{
+	const uint8_t tx[3] = { (uint8_t)(0x60 | (reg >> 7)), (uint8_t)(reg << 1), 0 };
+	uint8_t rx[3];
+	gpio_set (PTB, 10, false);
+	spi_transfer_blocking (SPI1, tx, rx, 3);
+	gpio_set (PTB, 10, true);
+	return rx[2];
 }
 
 int main()
@@ -193,16 +199,14 @@ int main()
 
 	gpio_make_output(PTB, 10, true);
 
-	static constexpr auto pit_callback = []
-	{
-		gpio_toggle(PTA, 8);
-		write_switch_reg (2, 0x40);
-	};
+	static constexpr auto pit_callback = [] { gpio_toggle(PTA, 8); };
 
 	pit_init(0, 21000000, pit_callback);
 
 	// TODO: Raise the SPI speed. Switch chip can go up to 50 MHz.
 	spi_init (SPI1, spi_pins, nullptr, 0, 1000000);
+
+	volatile auto r = read_switch_reg(1);
 
     debug_printf("hello world\n");
 

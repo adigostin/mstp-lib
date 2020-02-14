@@ -27,32 +27,32 @@ void spi_init (SPI_Type* spi, const spi_pins& pins, const pin_and_af* cs_pins, s
 	//spi->CR1 = SPI_CR1_SPE | (6 << SPI_CR1_BR_Pos) | SPI_CR1_MSTR;
 }
 
-void spi_send_blocking (SPI_Type* spi, const uint8_t* data, size_t size)
+void spi_transfer_blocking (SPI_Type* spi, const uint8_t* out_data, uint8_t* in_data, size_t size)
 {
 	for (size_t i = 0; i < size; i++)
 	{
 		while ((spi->SR & SPI_SR_TFFF_MASK) == 0)
 			;
 
-		uint32_t eoq = (i == size - 1) ? SPI_PUSHR_EOQ_MASK : 0;
-		spi->PUSHR = spi->PUSHR & ~(SPI_PUSHR_EOQ_MASK | SPI_PUSHR_PCS_MASK) | eoq | (1 << SPI_PUSHR_PCS_SHIFT) | data[i];
-	}
+		bool last = (i == size - 1);
+		uint32_t pushr = spi->PUSHR & 0x03C00000u; // retain the reserved bits
+		if (!last)
+			pushr |= SPI_PUSHR_CONT_MASK;
 
-	while (spi->SR & SPI_SR_TCF_MASK == 0)
-		;
-	spi->SR = SPI_SR_TCF_MASK;
-}
+		if (last)
+			pushr |= SPI_PUSHR_EOQ_MASK;
 
-/*
-void spi_receive_blocking (SPI_Type* spi, uint8_t* data, size_t size)
-{
-	for (size_t i = 0; i < size; i++)
-	{
+		pushr |= out_data[i];
+		spi->PUSHR = pushr;
+
 		while ((spi->SR & SPI_SR_RFDF_MASK) == 0)
 			;
-
-		uint32_t eoq = (i == size - 1) ? SPI_PUSHR_EOQ_MASK : 0;
-		spi->PUSHR = spi->PUSHR & ~(SPI_PUSHR_EOQ_MASK | SPI_PUSHR_PCS_MASK) | eoq | (1 << SPI_PUSHR_PCS_SHIFT) | data[i];
+		uint32_t popr = spi->POPR;
+		spi->SR = SPI_SR_RFDF_MASK;
+		in_data[i] = (uint8_t)popr;
 	}
+
+	while ((spi->SR & SPI_SR_TCF_MASK) == 0)
+		;
+	spi->SR = (SPI_SR_TCF_MASK | SPI_SR_EOQF_MASK);
 }
-*/
