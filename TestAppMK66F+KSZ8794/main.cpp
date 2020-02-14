@@ -2,6 +2,8 @@
 #include "drivers/clock.h"
 #include "drivers/gpio.h"
 #include "drivers/pit.h"
+#include "drivers/ethernet.h"
+#include "drivers/spi.h"
 #include <CMSIS/MK66F18.h>
 #include <__cross_studio_io.h>
 
@@ -12,7 +14,7 @@
 #undef SYSTEM_SIM_CLKDIV2_VALUE
 
 #define DEFAULT_SYSTEM_CLOCK 168000000U /* Default System clock value */
-#define MCG_MODE MCG_MODE_PEE           /* Clock generator mode */
+
 /* MCG_C1: CLKS=0,FRDIV=4,IREFS=0,IRCLKEN=1,IREFSTEN=0 */
 #define SYSTEM_MCG_C1_VALUE 0x22U /* MCG_C1 */
 /* MCG_C2: LOCRE0=0,FCFTRIM=0,RANGE=2,HGO=0,EREFS=1,LP=0,IRCS=0 */
@@ -41,31 +43,27 @@
 #define SYSTEM_SIM_CLKDIV3_VALUE 0x00U /* SIM_CLKDIV3 */
 /* SIM_SOPT1: USBREGEN=0,USBSSTBY=0,USBVSTBY=0,OSC32KSEL=3,RAMSIZE=0 */
 
-/* SIM_SOPT2: SDHCSRC=0,LPUARTSRC=0,TPMSRC=1,TIMESRC=0,RMIISRC=0,USBSRC=0,PLLFLLSEL=1,TRACECLKSEL=0,FBSL=0,CLKOUTSEL=0,RTCCLKOUTSEL=0,USBREGEN=0,USBSLSRC=0 */
-#define SYSTEM_SIM_SOPT2_VALUE 0x01010000U /* SIM_SOPT2 */
-/* USBPHY_ANACTRL: PFD_STABLE=0,EMPH_CUR_CTRL=0,EMPH_EN=0,EMPH_PULSE_CTRL=0,DEV_PULLDOWN=0,PFD_FRAC=0x18,PFD_CLK_SEL=2,PFD_CLKGATE=1,TESTCLK_SEL=0 */
-#define SYSTEM_USBPHY_ANACTRL_VALUE 0x018AU /* USBPHY_ANACTRL */
-
 extern "C" void SystemInit()
 {
-    SCB->CPACR |= ((3UL << 10 * 2) | (3UL << 11 * 2)); // set CP10, CP11 Full Access
+	// Disable the watchdog
+	WDOG->UNLOCK = 0xC520;
+	WDOG->UNLOCK = 0xD928;
+	WDOG->STCTRLH = 0x1D2;
 
-    //SCB->VTOR = FLASH_BASE; // Vector Table Relocation in Internal FLASH
+	//MPU_CESR = 0; // Disable the MPU. All accesses from all bus masters are allowed.
 
-    SMC->PMPROT = 0xAA; // allow entering all power modes
+	SMC->PMPROT = 0xAA; // allow entering all power modes
 
     // Enable HSRUN mode
     SMC->PMCTRL = 0x60;
-    // Wait until the system is in HSRUN mode
-    while (SMC->PMSTAT != 0x80U)
+    while (SMC->PMSTAT != 0x80)
         ;
 
     SIM->CLKDIV1 = (0 << 28)  // OUTDIV1=0, divide MCGOUTCLK by 1 to get the core/system clock
 	             | (7 << 24)  // OUTDIV2=7, divide MCGOUTCLK by 8 to get the bus clock
 	             | (2 << 20)  // OUTDIV3=
 	             | (5 << 16); // OUTDIV4=
-    SIM->SOPT2 = (SIM->SOPT2 & ~SIM_SOPT2_PLLFLLSEL_MASK) | (SYSTEM_SIM_SOPT2_VALUE & SIM_SOPT2_PLLFLLSEL_MASK); /* Selects the high frequency clock for various peripheral clocking options. */
-    SIM->SOPT2 = (SIM->SOPT2 & ~SIM_SOPT2_TPMSRC_MASK)    | (SYSTEM_SIM_SOPT2_VALUE & SIM_SOPT2_TPMSRC_MASK);    /* Selects the clock source for the TPM counter clock. */
+    SIM->SOPT2 = SIM->SOPT2 & ~SIM_SOPT2_PLLFLLSEL_MASK | (1 << SIM_SOPT2_PLLFLLSEL_SHIFT); // PLL/FLL clock select: MCGPLLCLK clock
 
     SIM_SCGC5 |= SIM_SCGC5_PORTA_MASK;
     /* PORTA_PCR18: ISF=0,MUX=0 */
@@ -114,13 +112,11 @@ extern "C" void SystemInit()
     MCG_C11 = SYSTEM_MCG_C11_VALUE; /* Set C11 (Select PLL used to derive MCGOUT */
     MCG->C6 |= (MCG_C6_PLLS_MASK);  /* Set C6 (PLL select, VCO divider etc.) */
 
+	// Wait until PLL is locked
     while ((MCG->S & MCG_S_LOCK0_MASK) == 0x00U)
-    { /* Wait until PLL is locked*/
-    }
+		;
 
-#if (MCG_MODE == MCG_MODE_PEE)
     MCG->C1 &= (uint8_t) ~(MCG_C1_CLKS_MASK);
-#endif
 
 	// Wait until output of the PLL is selected.
     while ((MCG->S & MCG_S_CLKST_MASK) != 0x0CU)
@@ -130,34 +126,40 @@ extern "C" void SystemInit()
 	while (MCG->S2 != SYSTEM_MCG_C11_VALUE)
 		;
 
-#if defined(SYSTEM_SIM_CLKDIV2_VALUE)
     SIM->CLKDIV2 = ((SIM->CLKDIV2) & (uint32_t)(~(SIM_CLKDIV2_USBFRAC_MASK | SIM_CLKDIV2_USBDIV_MASK))) | ((SYSTEM_SIM_CLKDIV2_VALUE) & (SIM_CLKDIV2_USBFRAC_MASK | SIM_CLKDIV2_USBDIV_MASK)); /* Selects the USB clock divider. */
-#endif
-#if defined(SYSTEM_SIM_CLKDIV3_VALUE)
     SIM->CLKDIV3 = ((SIM->CLKDIV3) & (uint32_t)(~(SIM_CLKDIV3_PLLFLLFRAC_MASK | SIM_CLKDIV3_PLLFLLDIV_MASK))) | ((SYSTEM_SIM_CLKDIV3_VALUE) & (SIM_CLKDIV3_PLLFLLFRAC_MASK | SIM_CLKDIV3_PLLFLLDIV_MASK)); /* Selects the PLLFLL clock divider. */
-#endif
-
-    /* PLL loss of lock interrupt request initialization */
-    if (((SYSTEM_MCG_C6_VALUE)&MCG_C6_LOLIE0_MASK) != 0U)
-    {
-        NVIC_EnableIRQ(MCG_IRQn); /* Enable PLL loss of lock interrupt request */
-    }
 }
 
 #define ETHER_RESET_PIN               (24)
 
-typedef struct _PORT_INFO {
-  int PortPin;
-} _PORT_INFO;
-
-static const _PORT_INFO _aLEDInfo[] = {
-  { 8},  // LED0 RED
-  { 9},  // LED1 GREEN
-  {10},  // LED2 RED
-  {11},  // LED3 GREEN
+/*
+static constexpr ethernet_pins eth_pins =
+{
+	.rmii_ref_clk = { { PTE, 26 }, 2 },
+	.rmii_mdio    = { { PTB,  0 },
+	.rmii_mdc;
+	.rmii_crs_dv;
+	.rmii_rxd0;
+	.rmii_rxd1;
+	.rmii_tx_en;
+	.rmii_txd0;
+	.rmii_txd1;
+};
+*/
+static const struct spi_pins spi_pins =
+{
+	.clk  = { { PTB, 11 }, 2 },
+	.mosi = { { PTB, 16 }, 2 },
+	.miso = { { PTB, 17 }, 2 },
 };
 
-#define SEGGER_COUNTOF(a)          (sizeof((a))/sizeof((a)[0]))
+static void write_switch_reg (uint16_t reg, uint8_t value)
+{
+	uint8_t cmd[3] = { (uint8_t)(0x40 | (reg >> 7)), (uint8_t)(reg << 1), value };
+	gpio_set(PTB, 10, false);
+	spi_send_blocking (SPI1, cmd, sizeof(cmd));
+	gpio_set(PTB, 10, true);
+}
 
 int main()
 {
@@ -171,33 +173,36 @@ int main()
             |  SIM_SCGC5_PORTB_MASK  // turn on clock to Port B
             |  SIM_SCGC5_PORTC_MASK  // turn on clock to Port C
             ;
-  //
-  // PTA24 is used for reset output to the external Ethernet PHY.
-  // In order to reset those device, we setup this pin to GPIO output
-  // and do a reset to this device.
-  //
-  PORTA_PCR24  = 0x0100UL;                   // Set PTA24 as GPIO mode
-  GPIOA_PDDR  |= (1 << ETHER_RESET_PIN);     // Set PTA24 as output
-  GPIOA_PSOR   = (1 << ETHER_RESET_PIN);     // Set PTA24 to 1
-  for (int i = 0; i < 10; i++) {
-    GPIOA_PCOR   = (1 << ETHER_RESET_PIN);   // Set PTA24 to 0
-  }
-  GPIOA_PSOR     = (1 << ETHER_RESET_PIN);   // Set PTA24 to 1
-
+	//
+	// PTA24 is used for reset output to the external Ethernet PHY.
+	// In order to reset those device, we setup this pin to GPIO output
+	// and do a reset to this device.
+	//
+	PORTA_PCR24  = 0x0100UL;                   // Set PTA24 as GPIO mode
+	GPIOA_PDDR  |= (1 << ETHER_RESET_PIN);     // Set PTA24 as output
+	GPIOA_PSOR   = (1 << ETHER_RESET_PIN);     // Set PTA24 to 1
+	for (int i = 0; i < 10; i++) {
+		GPIOA_PCOR   = (1 << ETHER_RESET_PIN);   // Set PTA24 to 0
+	}
+	GPIOA_PSOR     = (1 << ETHER_RESET_PIN);   // Set PTA24 to 1
 
 	gpio_make_output (PTA, 8, true);
 	gpio_make_output (PTA, 9, true);
 	gpio_make_output (PTA, 10, true);
 	gpio_make_output (PTA, 11, true);
 
-	//gpio_set (PTA, 9, false);
+	gpio_make_output(PTB, 10, true);
 
 	static constexpr auto pit_callback = []
 	{
 		gpio_toggle(PTA, 8);
+		write_switch_reg (2, 0x40);
 	};
 
 	pit_init(0, 21000000, pit_callback);
+
+	// TODO: Raise the SPI speed. Switch chip can go up to 50 MHz.
+	spi_init (SPI1, spi_pins, nullptr, 0, 1000000);
 
     debug_printf("hello world\n");
 

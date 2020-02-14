@@ -40,6 +40,15 @@ void gpio_make_output (const struct pin& pin, bool initial_level)
 	gpio_make_output(pin.port, pin.bit, initial_level);
 }
 
+void gpio_make_alternate (const pin_and_af& pinaf)
+{
+	auto port = port_from_gpio(pinaf.pin.port);
+	if (!clock_enabled(port))
+		clock_enable(port);
+
+	port->PCR[pinaf.pin.bit] = (pinaf.af << 8);
+}
+
 void gpio_set (GPIO_Type* gpio_port, uint32_t bit, bool level)
 {
 	if (level)

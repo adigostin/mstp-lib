@@ -51,7 +51,11 @@
       arm_target_loader_parameter="4" />
     <folder Name="System Files">
       <file file_name="$(StudioDir)/source/thumb_crt0.s" />
-      <file file_name="$(TargetsDir)/Kinetis/Kinetis_Startup.s" />
+      <file file_name="$(TargetsDir)/Kinetis/Kinetis_Startup.s">
+        <configuration
+          Name="Common"
+          c_preprocessor_definitions="STARTUP_FROM_RESET" />
+      </file>
       <file file_name="$(TargetsDir)/Kinetis/$(DeviceVectorsFile)" />
     </folder>
     <file file_name="main.cpp" />
@@ -64,6 +68,10 @@
       <file file_name="drivers/gpio.h" />
       <file file_name="drivers/pit.cpp" />
       <file file_name="drivers/pit.h" />
+      <file file_name="drivers/ethernet.cpp" />
+      <file file_name="drivers/ethernet.h" />
+      <file file_name="drivers/spi.cpp" />
+      <file file_name="drivers/spi.h" />
     </folder>
   </project>
   <configuration Name="THUMB Debug" inherited_configurations="THUMB;Debug" />
