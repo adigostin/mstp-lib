@@ -1,6 +1,6 @@
 <!DOCTYPE CrossStudio_Project_File>
-<solution Name="Executable_1" target="8" version="2">
-  <project Name="Executable_1">
+<solution Name="TestAppMK66F+KSZ8794" target="8" version="2">
+  <project Name="TestAppMK66F+KSZ8794">
     <configuration
       CMSIS_CORE="Yes"
       Name="Common"
