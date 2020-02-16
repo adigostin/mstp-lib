@@ -6,6 +6,13 @@
 #include "switch.h"
 #include <CMSIS/MK66F18.h>
 #include <__cross_studio_io.h>
+#include <assert.h>
+
+extern "C" void __assert(const char *__expression, const char *__filename, int __line)
+{
+	debug_printf("Assertion failure.\n");
+	__BKPT();
+}
 
 #undef SYSTEM_MCG_C5_VALUE
 #undef SYSTEM_MCG_C6_VALUE
@@ -127,27 +134,33 @@ extern "C" void SystemInit()
 
 #define ETHER_RESET_PIN               (24)
 
-/*
-static constexpr ethernet_pins eth_pins =
+static const ethernet_pins eth_pins =
 {
 	.rmii_ref_clk = { { PTE, 26 }, 2 },
-	.rmii_mdio    = { { PTB,  0 },
-	.rmii_mdc;
-	.rmii_crs_dv;
-	.rmii_rxd0;
-	.rmii_rxd1;
-	.rmii_tx_en;
-	.rmii_txd0;
-	.rmii_txd1;
+	.rmii_crs_dv  = { { PTA, 14 }, 4 },
+	.rmii_rxd0    = { { PTA, 13 }, 4 },
+	.rmii_rxd1    = { { PTA, 12 }, 4 },
+	.rmii_tx_en   = { { PTA, 15 }, 4 },
+	.rmii_txd0    = { { PTA, 16 }, 4 },
+	.rmii_txd1    = { { PTA, 17 }, 4 },
+	.rmii_mdio    = { },
+	.rmii_mdc     = { },
 };
-*/
+
+static const uint8_t default_mac_address[] = { 0x10, 0x20, 0x30, 0x40, 0x50, 0xA0 };
+
+static void on_ethernet_frame_received (uint8_t* packet, size_t len)
+{
+	assert(false); // not implemented
+}
 
 int main()
 {
     //	clock_init (12);
 
 
-  MPU_CESR   = 0;                    // MPU is disabled. All accesses from all bus masters are allowed
+	MPU_CESR = 0; // Disable MPU. All accesses from all bus masters are allowed. The Ethernet peripheral needs this.
+
   SIM_SOPT2 |= SIM_SOPT2_TPMSRC(1);  // Select TPM clock source
   SIM_SCGC2 |= SIM_SCGC2_TPM2_MASK;  // turn on clock to TPM2
   SIM_SCGC5 |= SIM_SCGC5_PORTA_MASK  // turn on clock to Port A
@@ -177,6 +190,12 @@ int main()
 	pit_init(0, 21000000, pit_callback);
 
 	switch_init();
+
+	SIM->SOPT2 |= SIM_SOPT2_RMIISRC_MASK; // Tell the Ethernet peripheral to take its clock from ENET_1588_CLKIN (not EXTAL)
+	gpio_make_alternate(PTE, 26, 2);
+	PORTE_PCR26 = PORT_PCR_MUX(0x02) |  PORT_PCR_ODE_MASK; // Set PTE26 as ENET_1588_CLKIN
+	// TODO: read mac address from Flash
+	enet_init (eth_pins, default_mac_address, on_ethernet_frame_received);
 
 	volatile auto r = switch_read_reg(1);
 
