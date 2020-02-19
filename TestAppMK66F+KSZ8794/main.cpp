@@ -5,7 +5,7 @@
 #include "drivers/ethernet.h"
 #include "switch.h"
 #include <CMSIS/MK66F18.h>
-#include <__cross_studio_io.h>
+#include <debugio.h>
 #include <assert.h>
 
 extern "C" void __assert(const char *__expression, const char *__filename, int __line)
@@ -132,8 +132,6 @@ extern "C" void SystemInit()
     SIM->CLKDIV3 = ((SIM->CLKDIV3) & (uint32_t)(~(SIM_CLKDIV3_PLLFLLFRAC_MASK | SIM_CLKDIV3_PLLFLLDIV_MASK))) | ((SYSTEM_SIM_CLKDIV3_VALUE) & (SIM_CLKDIV3_PLLFLLFRAC_MASK | SIM_CLKDIV3_PLLFLLDIV_MASK)); /* Selects the PLLFLL clock divider. */
 }
 
-#define ETHER_RESET_PIN               (24)
-
 static const ethernet_pins eth_pins =
 {
 	.rmii_ref_clk = { { PTE, 26 }, 2 },
@@ -149,45 +147,35 @@ static const ethernet_pins eth_pins =
 
 static const uint8_t default_mac_address[] = { 0x10, 0x20, 0x30, 0x40, 0x50, 0xA0 };
 
-static void on_ethernet_frame_received (uint8_t* packet, size_t len)
+static uint32_t time_ms;
+
+static void pit_callback()
 {
-	assert(false); // not implemented
+	time_ms++;
+	if ((time_ms % 1000) == 0)
+		gpio_toggle (PTA, 9);
 }
 
 int main()
 {
     //	clock_init (12);
 
-
 	MPU_CESR = 0; // Disable MPU. All accesses from all bus masters are allowed. The Ethernet peripheral needs this.
 
-  SIM_SOPT2 |= SIM_SOPT2_TPMSRC(1);  // Select TPM clock source
-  SIM_SCGC2 |= SIM_SCGC2_TPM2_MASK;  // turn on clock to TPM2
-  SIM_SCGC5 |= SIM_SCGC5_PORTA_MASK  // turn on clock to Port A
-            |  SIM_SCGC5_PORTB_MASK  // turn on clock to Port B
-            |  SIM_SCGC5_PORTC_MASK  // turn on clock to Port C
-            ;
-	//
-	// PTA24 is used for reset output to the external Ethernet PHY.
-	// In order to reset those device, we setup this pin to GPIO output
-	// and do a reset to this device.
-	//
-	PORTA_PCR24  = 0x0100UL;                   // Set PTA24 as GPIO mode
-	GPIOA_PDDR  |= (1 << ETHER_RESET_PIN);     // Set PTA24 as output
-	GPIOA_PSOR   = (1 << ETHER_RESET_PIN);     // Set PTA24 to 1
-	for (int i = 0; i < 10; i++) {
-		GPIOA_PCOR   = (1 << ETHER_RESET_PIN);   // Set PTA24 to 0
-	}
-	GPIOA_PSOR     = (1 << ETHER_RESET_PIN);   // Set PTA24 to 1
+	pit_init(0, 21000, pit_callback);
 
+	// Reset the switch
+	gpio_make_output(PTA, 24, false);
+	auto start_time = time_ms;
+	while (time_ms - start_time < 3)
+		;
+	gpio_set (PTA, 24, true);
+
+	// initialize the led pins (leds off)
 	gpio_make_output (PTA, 8, true);
 	gpio_make_output (PTA, 9, true);
 	gpio_make_output (PTA, 10, true);
 	gpio_make_output (PTA, 11, true);
-
-	static constexpr auto pit_callback = [] { gpio_toggle(PTA, 8); };
-
-	pit_init(0, 21000000, pit_callback);
 
 	switch_init();
 
@@ -195,13 +183,27 @@ int main()
 	gpio_make_alternate(PTE, 26, 2);
 	PORTE_PCR26 = PORT_PCR_MUX(0x02) |  PORT_PCR_ODE_MASK; // Set PTE26 as ENET_1588_CLKIN
 	// TODO: read mac address from Flash
-	enet_init (eth_pins, default_mac_address, on_ethernet_frame_received);
+	enet_init (eth_pins, default_mac_address);
 
 	volatile auto r = switch_read_reg(1);
 
-    debug_printf("hello world\n");
-
 	while(1)
+	{
 		__WFI();
-    //debug_exit(0);
+
+		if (ENET->RDAR == 0)
+			__BKPT();
+
+		size_t frame_size;
+		if (uint8_t* frame = enet_read_get_buffer(&frame_size))
+		{
+			debug_printf ("%02X%02X%02X%02X%02X%02X %02X%02X%02X%02X%02X%02X %02X%02X ...(%d bytes)\r\n",
+				frame[0], frame[1], frame[2], frame[3], frame[4], frame[5],
+				frame[6], frame[7], frame[8], frame[9], frame[10], frame[11],
+				frame[12], frame[13], frame_size);
+
+			enet_read_release_buffer(frame);
+		}
+
+	}
 }

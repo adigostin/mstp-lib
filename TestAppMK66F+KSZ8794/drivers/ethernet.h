@@ -15,9 +15,12 @@ struct ethernet_pins
 	pin_and_af  rmii_mdc; // optional
 };
 
-using ethernet_frame_received_t = void(*)(uint8_t* packet, size_t len);
-
-void enet_init (const ethernet_pins& pins, const uint8_t mac_address[6], ethernet_frame_received_t frame_received);
+void enet_init (const ethernet_pins& pins, const uint8_t mac_address[6]);
 bool enet_is_init();
 void enet_get_mac_address (uint8_t mac_address[6]);
-void enet_send_blocking (const uint8_t* buffer, size_t len); // TODO: zero-copy
+
+uint8_t* enet_read_get_buffer (size_t* size);
+void     enet_read_release_buffer (uint8_t* data);
+
+uint8_t* enet_write_get_buffer (size_t len);
+void     enet_write_release_buffer (uint8_t* data);

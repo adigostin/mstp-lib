@@ -3,25 +3,23 @@
 #include "clock.h"
 #include <string.h>
 #include <assert.h>
-
-namespace std
-{
-	template <class T, size_t N> constexpr size_t size(const T (&)[N]) noexcept { return N; }
-}
+#include <debugio.h>
 
 struct alignas(8) rx_descriptor
 {
 	uint16_t size;
-	uint16_t flags;
+	uint16_t status;
 	volatile uint8_t* data;
 };
 
-static constexpr uint32_t rx_buffer_count = 20;
-static constexpr uint32_t rx_buffer_size = 256;
+static constexpr size_t rx_buffer_count = 5;
+static constexpr size_t rx_buffer_size = 1536;
 static volatile rx_descriptor rx_descriptors[rx_buffer_count];
-static volatile uint8_t rx_buffers[rx_buffer_count * rx_buffer_size];
+using rx_buffer = uint8_t[rx_buffer_size];
+static volatile rx_buffer rx_buffers[rx_buffer_count];
+static size_t rx_consume_index;
 
-void enet_init (const ethernet_pins& pins, const uint8_t mac_address[6], ethernet_frame_received_t frame_received)
+void enet_init (const ethernet_pins& pins, const uint8_t mac_address[6])
 {
 	clock_enable(ENET);
 
@@ -41,16 +39,17 @@ void enet_init (const ethernet_pins& pins, const uint8_t mac_address[6], etherne
 	ENET->ECR = ENET_ECR_DBSWP_MASK;
 
 	memset ((void*)&rx_descriptors[0], 0, sizeof(rx_descriptors));
-	for (size_t i = 0; i < std::size(rx_descriptors); i++)
+	for (size_t i = 0; i < rx_buffer_count; i++)
 	{
-		rx_descriptors[i].data = &rx_buffers[i * rx_buffer_size];
-		rx_descriptors[i].flags = (1u << 15); // E - empty, ready to receive
+		rx_descriptors[i].data = rx_buffers[i];
+		rx_descriptors[i].status = (1u << 15); // E - empty, ready to receive
 	}
-	rx_descriptors[std::size(rx_descriptors) - 1].flags |= (1u << 13); // W - wrap
+	rx_descriptors[rx_buffer_count - 1].status |= (1u << 13); // W - wrap
+    __DSB();
+	rx_consume_index = 0;
 	static_assert ((rx_buffer_size & 0xF) == 0);
 	ENET->MRBR = rx_buffer_size;
 	ENET->RDSR = (uint32_t)&rx_descriptors[0];
-    __DSB();
 
 	// TODO: init TX descriptors
 
@@ -72,17 +71,27 @@ void enet_init (const ethernet_pins& pins, const uint8_t mac_address[6], etherne
 
     ENET->PALR = (mac_address[0] << 24) | (mac_address[1] << 16) | (mac_address[2] << 8) | mac_address[3];
     ENET->PAUR = (mac_address[4] << 24) | (mac_address[5] << 16);
+/*
+	if (rx_callback_irql)
+	{
+		ENET->EIMR |= ENET_EIMR_RXF_MASK;
+		NVIC_EnableIRQ(ENET_Receive_IRQn);
+	}
 
-	ENET->EIMR |= ENET_EIMR_RXF_MASK | ENET_EIMR_TXF_MASK | ENET_EIMR_EBERR_MASK;
-	//NVIC_EnableIRQ(ENET_1588_Timer_IRQn);
-	//NVIC_EnableIRQ(ENET_Transmit_IRQn);
-	NVIC_EnableIRQ(ENET_Receive_IRQn);
+	if (tx_callback_irql)
+	{
+		ENET->EIMR |= ENET_EIMR_TXF_MASK;
+		NVIC_EnableIRQ(ENET_Transmit_IRQn);
+	}
+*/
+	ENET->EIMR |= ENET_EIMR_EBERR_MASK;
 	NVIC_EnableIRQ(ENET_Error_IRQn);
 
 	ENET->ECR |= ENET_ECR_ETHEREN_MASK;
 
-	// It seems setting RDAR has effect only after we enable the peripheral by setting ETHEREN
+	// It seems setting RDAR has effect only after we enable the peripheral by setting ETHEREN (maybe same with TDAR)
 	ENET->RDAR = ENET_RDAR_RDAR_MASK;
+	//ENET->TDAR = ENET_TDAR_TDAR_MASK;
 }
 
 extern "C" void ENET_1588_Timer_IRQHandler()
@@ -103,4 +112,52 @@ extern "C" void ENET_Receive_IRQHandler()
 extern "C" void ENET_Error_IRQHandler()
 {
 	assert(false); // not implemented
+}
+
+static bool read_get_buffer_called;
+
+uint8_t* enet_read_get_buffer (size_t* size)
+{
+	assert (!read_get_buffer_called);
+
+scan:
+	auto desc = &rx_descriptors[rx_consume_index];
+	if (desc->status & (1u << 15)) // E
+		return nullptr;
+
+	bool last = (rx_consume_index == rx_buffer_count - 1);
+
+	// The L flag should be set, as for now we use descriptors with large buffers (1500+ bytes) that should fully contain any received frame.
+	assert (desc->status & (1u << 11));
+
+	static constexpr uint16_t error_flags = (1 << 4) | (1 << 2) || (1 << 1) | (1 << 0);
+	if (desc->status & error_flags)
+	{
+		// Ignore it and mark it as empty (E flag) and if needed also as last (W flag).
+		desc->status = (1u << 15) | (last ? (1u << 13) : 0);
+		__DSB();
+		rx_consume_index = last ? 0 : (rx_consume_index + 1);
+		ENET->RDAR = ENET_RDAR_RDAR_MASK;
+		goto scan;
+	}
+
+	*size = desc->size;
+	::read_get_buffer_called = true;
+	return (uint8_t*) desc->data;
+}
+
+void enet_read_release_buffer(uint8_t* data)
+{
+	assert (read_get_buffer_called);
+
+	auto desc = &rx_descriptors[rx_consume_index];
+	bool last = (rx_consume_index == rx_buffer_count - 1);
+
+	// Mark it as empty (E flag) and if needed also as last (W flag).
+	desc->status = (1u << 15) | (last ? (1u << 13) : 0);
+	__DSB();
+	rx_consume_index = last ? 0 : (rx_consume_index + 1);
+	ENET->RDAR = ENET_RDAR_RDAR_MASK;
+
+	read_get_buffer_called = false;
 }
