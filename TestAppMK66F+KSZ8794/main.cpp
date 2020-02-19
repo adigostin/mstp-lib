@@ -4,6 +4,7 @@
 #include "drivers/pit.h"
 #include "drivers/ethernet.h"
 #include "switch.h"
+#include "stp.h"
 #include <CMSIS/MK66F18.h>
 #include <debugio.h>
 #include <assert.h>
@@ -52,7 +53,7 @@ extern "C" void SystemInit()
 	WDOG->UNLOCK = 0xD928;
 	WDOG->STCTRLH = 0x1D2;
 
-	//MPU_CESR = 0; // Disable the MPU. All accesses from all bus masters are allowed.
+	MPU_CESR = 0; // Disable MPU. All accesses from all bus masters are allowed. The Ethernet peripheral needs this.
 
 	SMC->PMPROT = 0xAA; // allow entering all power modes
 
@@ -88,18 +89,16 @@ extern "C" void SystemInit()
         { /* Check that the oscillator is running */
         }
     }
-    /* Check that the source of the FLL reference clock is the requested one. */
-    if (((SYSTEM_MCG_C1_VALUE)&MCG_C1_IREFS_MASK) != 0x00U)
+    // Check that the source of the FLL reference clock is the requested one.
+    if (SYSTEM_MCG_C1_VALUE & MCG_C1_IREFS_MASK)
     {
         while ((MCG->S & MCG_S_IREFST_MASK) == 0x00U)
-        {
-        }
+			;
     }
     else
     {
         while ((MCG->S & MCG_S_IREFST_MASK) != 0x00U)
-        {
-        }
+			;
     }
     MCG->C4 = ((SYSTEM_MCG_C4_VALUE) & (uint8_t)(~(MCG_C4_FCTRIM_MASK | MCG_C4_SCFTRIM_MASK))) | (MCG->C4 & (MCG_C4_FCTRIM_MASK | MCG_C4_SCFTRIM_MASK)); /* Set C4 (FLL output; trim values not changed) */
 
@@ -147,7 +146,7 @@ static const ethernet_pins eth_pins =
 
 static const uint8_t default_mac_address[] = { 0x10, 0x20, 0x30, 0x40, 0x50, 0xA0 };
 
-static uint32_t time_ms;
+uint32_t time_ms = 0;
 
 static void pit_callback()
 {
@@ -160,16 +159,7 @@ int main()
 {
     //	clock_init (12);
 
-	MPU_CESR = 0; // Disable MPU. All accesses from all bus masters are allowed. The Ethernet peripheral needs this.
-
 	pit_init(0, 21000, pit_callback);
-
-	// Reset the switch
-	gpio_make_output(PTA, 24, false);
-	auto start_time = time_ms;
-	while (time_ms - start_time < 3)
-		;
-	gpio_set (PTA, 24, true);
 
 	// initialize the led pins (leds off)
 	gpio_make_output (PTA, 8, true);
@@ -185,14 +175,9 @@ int main()
 	// TODO: read mac address from Flash
 	enet_init (eth_pins, default_mac_address);
 
-	volatile auto r = switch_read_reg(1);
-
 	while(1)
 	{
 		__WFI();
-
-		if (ENET->RDAR == 0)
-			__BKPT();
 
 		size_t frame_size;
 		if (uint8_t* frame = enet_read_get_buffer(&frame_size))

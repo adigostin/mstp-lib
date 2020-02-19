@@ -2,6 +2,8 @@
 #include "switch.h"
 #include "drivers/spi.h"
 
+extern uint32_t time_ms;
+
 static constexpr uint32_t switch_spi_chip_select = 1;
 
 void switch_init()
@@ -10,6 +12,27 @@ void switch_init()
 	static const struct spi_pins spi_pins = { .clk  = { { PTB, 11 }, 2 }, .mosi = { { PTB, 16 }, 2 }, .miso = { { PTB, 17 }, 2 } };
 	static const pin_and_af spi_cs_pins[] = { { { PTB, 10 }, 2 } };
 	spi_init (SPI1, spi_pins, spi_cs_pins, sizeof(spi_cs_pins) / sizeof(spi_cs_pins[0]), 1000000);
+
+	// Reset the switch IC, needed in case firmware restarts.
+	gpio_make_output (PTA, 24, false);
+	auto start_time = time_ms;
+	while (time_ms - start_time < 3)
+		;
+	gpio_set (PTA, 24, true);
+	start_time = time_ms;
+	while (time_ms - start_time < 3)
+		;
+
+	// Now keep reading from the switch the Chip ID registers until we get some known values.
+	// The dev board has a large capacitor on the switch reset pin and we have to wait quite
+	// a bit after power up before we can talk to the switch.
+	while (true)
+	{
+		auto chip_id0 = switch_read_reg(0);
+		auto chip_id1 = switch_read_reg(1);
+		if ((chip_id0 == 0x87) && ((chip_id1 & 0xF0) == 0x60))
+			break;
+	}
 }
 
 void switch_write_reg (uint16_t reg, uint8_t value)
