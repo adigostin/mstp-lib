@@ -15,7 +15,14 @@ struct ethernet_pins
 	pin_and_af  rmii_mdc; // optional
 };
 
-void enet_init (const ethernet_pins& pins, const uint8_t mac_address[6]);
+struct enet_callbacks
+{
+	void(*rx)();
+	void(*tx)();
+	void(*error)();
+};
+
+void enet_init (const ethernet_pins& pins, const uint8_t mac_address[6], const enet_callbacks* irql_callbacks);
 bool enet_is_init();
 void enet_get_mac_address (uint8_t mac_address[6]);
 

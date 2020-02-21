@@ -5,6 +5,8 @@
 #include <assert.h>
 #include <debugio.h>
 
+static const enet_callbacks* callbacks;
+
 struct alignas(8) rx_descriptor
 {
 	uint16_t size;
@@ -19,8 +21,10 @@ using rx_buffer = uint8_t[rx_buffer_size];
 static volatile rx_buffer rx_buffers[rx_buffer_count];
 static size_t rx_consume_index;
 
-void enet_init (const ethernet_pins& pins, const uint8_t mac_address[6])
+void enet_init (const ethernet_pins& pins, const uint8_t mac_address[6], const enet_callbacks* irql_callbacks)
 {
+	::callbacks = irql_callbacks;
+
 	clock_enable(ENET);
 
 	gpio_make_alternate(pins.rmii_ref_clk);
@@ -71,21 +75,24 @@ void enet_init (const ethernet_pins& pins, const uint8_t mac_address[6])
 
     ENET->PALR = (mac_address[0] << 24) | (mac_address[1] << 16) | (mac_address[2] << 8) | mac_address[3];
     ENET->PAUR = (mac_address[4] << 24) | (mac_address[5] << 16);
-/*
-	if (rx_callback_irql)
+
+	if (callbacks && callbacks->rx)
 	{
 		ENET->EIMR |= ENET_EIMR_RXF_MASK;
 		NVIC_EnableIRQ(ENET_Receive_IRQn);
 	}
 
-	if (tx_callback_irql)
+	if (callbacks && callbacks->tx)
 	{
 		ENET->EIMR |= ENET_EIMR_TXF_MASK;
 		NVIC_EnableIRQ(ENET_Transmit_IRQn);
 	}
-*/
-	ENET->EIMR |= ENET_EIMR_EBERR_MASK;
-	NVIC_EnableIRQ(ENET_Error_IRQn);
+
+	if (callbacks && callbacks->error)
+	{
+		ENET->EIMR |= ENET_EIMR_EBERR_MASK;
+		NVIC_EnableIRQ(ENET_Error_IRQn);
+	}
 
 	ENET->ECR |= ENET_ECR_ETHEREN_MASK;
 
@@ -101,12 +108,14 @@ extern "C" void ENET_1588_Timer_IRQHandler()
 
 extern "C" void ENET_Transmit_IRQHandler()
 {
-	assert(false); // not implemented
+	ENET->EIR = ENET_EIR_TXF_MASK;
+	callbacks->tx();
 }
 
 extern "C" void ENET_Receive_IRQHandler()
 {
-	assert(false); // not implemented
+	ENET->EIR = ENET_EIR_RXF_MASK;
+	callbacks->rx();
 }
 
 extern "C" void ENET_Error_IRQHandler()

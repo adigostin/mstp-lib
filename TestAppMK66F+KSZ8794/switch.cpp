@@ -1,8 +1,7 @@
 
 #include "switch.h"
 #include "drivers/spi.h"
-
-extern uint32_t time_ms;
+#include "drivers/scheduler.h"
 
 static constexpr uint32_t switch_spi_chip_select = 1;
 
@@ -15,13 +14,9 @@ void switch_init()
 
 	// Reset the switch IC, needed in case firmware restarts.
 	gpio_make_output (PTA, 24, false);
-	auto start_time = time_ms;
-	while (time_ms - start_time < 3)
-		;
+	scheduler_wait(2);
 	gpio_set (PTA, 24, true);
-	start_time = time_ms;
-	while (time_ms - start_time < 3)
-		;
+	scheduler_wait(2);
 
 	// Now keep reading from the switch the Chip ID registers until we get some known values.
 	// The dev board has a large capacitor on the switch reset pin and we have to wait quite

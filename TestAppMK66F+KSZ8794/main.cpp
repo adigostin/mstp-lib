@@ -3,6 +3,8 @@
 #include "drivers/gpio.h"
 #include "drivers/pit.h"
 #include "drivers/ethernet.h"
+#include "drivers/event_queue.h"
+#include "drivers/scheduler.h"
 #include "switch.h"
 #include "stp.h"
 #include <CMSIS/MK66F18.h>
@@ -146,20 +148,48 @@ static const ethernet_pins eth_pins =
 
 static const uint8_t default_mac_address[] = { 0x10, 0x20, 0x30, 0x40, 0x50, 0xA0 };
 
-uint32_t time_ms = 0;
+static bool dump_received_packets = true;
 
-static void pit_callback()
+static void process_received_frames()
 {
-	time_ms++;
-	if ((time_ms % 1000) == 0)
-		gpio_toggle (PTA, 9);
+	size_t frame_size;
+	uint8_t* frame;
+	while ((frame = enet_read_get_buffer (&frame_size)) != nullptr)
+	{
+		if (dump_received_packets)
+		{
+			if (debug_enabled())
+			{
+				gpio_set(PTA, 10, false);
+				debug_printf ("%02X%02X%02X%02X%02X%02X %02X%02X%02X%02X%02X%02X %02X%02X ...(%d bytes)\r\n",
+					frame[0], frame[1], frame[2], frame[3], frame[4], frame[5],
+					frame[6], frame[7], frame[8], frame[9], frame[10], frame[11],
+					frame[12], frame[13], frame_size);
+				gpio_set(PTA, 10, true);
+			}
+		}
+
+		// TODO: process it
+
+		enet_read_release_buffer(frame);
+	}
 }
+
+static volatile bool rx_pending = false;
+static constexpr struct enet_callbacks enet_callbacks = { .rx = []{ rx_pending = true; }, .tx = nullptr, .error = nullptr };
 
 int main()
 {
     //	clock_init (12);
 
-	pit_init(0, 21000, pit_callback);
+	debug_printf ("\r\n\r\nTest App MK66F+KSZ8794.\r\n");
+
+	static uint8_t event_queue_buffer[1024] __attribute__((section (".non_init")));
+	event_queue_init (event_queue_buffer, sizeof(event_queue_buffer));
+
+	scheduler_init();
+
+	pit_init(0, 21000, scheduler_process_tick_irql);
 
 	// initialize the led pins (leds off)
 	gpio_make_output (PTA, 8, true);
@@ -167,28 +197,27 @@ int main()
 	gpio_make_output (PTA, 10, true);
 	gpio_make_output (PTA, 11, true);
 
+	scheduler_schedule_event_timer([]{ gpio_toggle(PTA, 9); }, nullptr, 1000, true);
+
 	switch_init();
 
 	SIM->SOPT2 |= SIM_SOPT2_RMIISRC_MASK; // Tell the Ethernet peripheral to take its clock from ENET_1588_CLKIN (not EXTAL)
 	gpio_make_alternate(PTE, 26, 2);
 	PORTE_PCR26 = PORT_PCR_MUX(0x02) |  PORT_PCR_ODE_MASK; // Set PTE26 as ENET_1588_CLKIN
 	// TODO: read mac address from Flash
-	enet_init (eth_pins, default_mac_address);
+	enet_init (eth_pins, default_mac_address, &enet_callbacks);
 
 	while(1)
 	{
 		__WFI();
 
-		size_t frame_size;
-		if (uint8_t* frame = enet_read_get_buffer(&frame_size))
+		event_queue_pop_all();
+
+		if (rx_pending)
 		{
-			debug_printf ("%02X%02X%02X%02X%02X%02X %02X%02X%02X%02X%02X%02X %02X%02X ...(%d bytes)\r\n",
-				frame[0], frame[1], frame[2], frame[3], frame[4], frame[5],
-				frame[6], frame[7], frame[8], frame[9], frame[10], frame[11],
-				frame[12], frame[13], frame_size);
-
-			enet_read_release_buffer(frame);
+			bool pushed = event_queue_try_push (process_received_frames, "process_received_frames");
+			if (pushed)
+				rx_pending = false;
 		}
-
 	}
 }

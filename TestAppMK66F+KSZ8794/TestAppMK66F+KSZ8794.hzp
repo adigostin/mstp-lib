@@ -22,6 +22,7 @@
       c_user_include_directories="$(TargetsDir)/Kinetis.;$(SolutionDir)/../mstp-lib"
       debug_initial_breakpoint_set_option="Never"
       debug_register_definition_file="$(TargetsDir)/Kinetis/MK66F18_Peripherals.xml"
+      debug_startup_completion_point="main"
       gcc_c_language_standard="c11"
       gcc_cplusplus_language_standard="c++1z"
       linker_memory_map_file="$(TargetsDir)/Kinetis/MK66FN2M0xxx18_MemoryMap.xml"
@@ -71,6 +72,10 @@
       <file file_name="drivers/ethernet.h" />
       <file file_name="drivers/spi.cpp" />
       <file file_name="drivers/spi.h" />
+      <file file_name="drivers/event_queue.cpp" />
+      <file file_name="drivers/event_queue.h" />
+      <file file_name="drivers/scheduler.cpp" />
+      <file file_name="drivers/scheduler.h" />
     </folder>
     <file file_name="switch.cpp" />
     <file file_name="switch.h" />
@@ -108,13 +113,6 @@
     </folder>
   </project>
   <configuration Name="THUMB Debug" inherited_configurations="THUMB;Debug" />
-  <configuration
-    Name="THUMB"
-    Platform="ARM"
-    arm_instruction_set="Thumb"
-    arm_library_instruction_set="Thumb"
-    c_preprocessor_definitions="__THUMB"
-    hidden="Yes" />
   <configuration
     Name="Debug"
     c_preprocessor_definitions="DEBUG"
