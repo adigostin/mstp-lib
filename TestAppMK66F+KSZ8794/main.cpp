@@ -10,6 +10,7 @@
 #include <CMSIS/MK66F18.h>
 #include <debugio.h>
 #include <assert.h>
+#include <string.h>
 
 extern "C" void __assert(const char *__expression, const char *__filename, int __line)
 {
@@ -133,6 +134,104 @@ extern "C" void SystemInit()
     SIM->CLKDIV3 = ((SIM->CLKDIV3) & (uint32_t)(~(SIM_CLKDIV3_PLLFLLFRAC_MASK | SIM_CLKDIV3_PLLFLLDIV_MASK))) | ((SYSTEM_SIM_CLKDIV3_VALUE) & (SIM_CLKDIV3_PLLFLLFRAC_MASK | SIM_CLKDIV3_PLLFLLDIV_MASK)); /* Selects the PLLFLL clock divider. */
 }
 
+// ============================================================================
+
+static void StpCallback_EnableBpduTrapping (const STP_BRIDGE* bridge, bool enable, unsigned int timestamp)
+{
+	assert(false); // not implemented
+}
+
+static void StpCallback_EnableLearning (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable, unsigned int timestamp)
+{
+	assert(false); // not implemented
+}
+
+static void StpCallback_EnableForwarding (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable, unsigned int timestamp)
+{
+	assert(false); // not implemented
+}
+
+static void* StpCallback_TransmitGetBuffer (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int bpduSize, unsigned int timestamp)
+{
+	assert(false); return nullptr; // not implemented
+}
+
+static void StpCallback_TransmitReleaseBuffer (const STP_BRIDGE* bridge, void* bufferReturnedByGetBuffer)
+{
+	assert(false); // not implemented
+}
+
+static void StpCallback_FlushFdb (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType, unsigned int timestamp)
+{
+	assert(false); // not implemented
+}
+
+static void StpCallback_DebugStrOut (const STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, unsigned int flush)
+{
+	assert(false); // not implemented
+}
+
+static void StpCallback_OnTopologyChange (const STP_BRIDGE* bridge, unsigned int treeIndex, unsigned int timestamp)
+{
+	assert(false); // not implemented
+}
+
+static void StpCallback_OnPortRoleChanged (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_PORT_ROLE role, unsigned int timestamp)
+{
+	assert(false); // not implemented
+}
+
+static uint8_t stp_heap[1500];
+static size_t stp_heap_used_size = 0;
+
+static void* StpCallback_AllocAndZeroMemory (unsigned int size)
+{
+	assert (stp_heap_used_size + size <= sizeof(stp_heap));
+	void* res = &stp_heap[stp_heap_used_size];
+	stp_heap_used_size += size;
+	return res;
+}
+
+static void StpCallback_FreeMemory (void* p)
+{
+	assert(false); // not implemented
+}
+
+static const STP_CALLBACKS stp_callbacks =
+{
+	&StpCallback_EnableBpduTrapping,
+	&StpCallback_EnableLearning,
+	&StpCallback_EnableForwarding,
+	&StpCallback_TransmitGetBuffer,
+	&StpCallback_TransmitReleaseBuffer,
+	&StpCallback_FlushFdb,
+	&StpCallback_DebugStrOut,
+	&StpCallback_OnTopologyChange,
+	&StpCallback_OnPortRoleChanged,
+	&StpCallback_AllocAndZeroMemory,
+	&StpCallback_FreeMemory
+};
+
+static STP_BRIDGE* bridge;
+
+// ============================================================================
+
+static void make_mac_address (uint8_t address[6])
+{
+	const uint8_t* uid = (uint8_t*)&SIM->UIDH;
+
+	uint64_t v0 = SIM->UIDH;
+	uint64_t v1 = ((uint64_t)SIM->UIDMH << 16) | ((uint64_t)SIM->UIDML >> 16);
+	uint64_t v2 = ((uint64_t)(SIM->UIDML & 0xFFFF) << 32) | SIM->UIDL;
+	uint64_t sum = v0 + v1 + v2;
+	address[0] = (sum >> 40);
+	address[1] = (sum >> 32);
+	address[2] = (sum >> 24);
+	address[3] = (sum >> 16);
+	address[4] = (sum >> 8);
+	address[5] = sum;
+}
+
 static const ethernet_pins eth_pins =
 {
 	.rmii_ref_clk = { { PTE, 26 }, 2 },
@@ -145,8 +244,6 @@ static const ethernet_pins eth_pins =
 	.rmii_mdio    = { },
 	.rmii_mdc     = { },
 };
-
-static const uint8_t default_mac_address[] = { 0x10, 0x20, 0x30, 0x40, 0x50, 0xA0 };
 
 static bool dump_received_packets = true;
 
@@ -178,6 +275,8 @@ static void process_received_frames()
 static volatile bool rx_pending = false;
 static constexpr struct enet_callbacks enet_callbacks = { .rx = []{ rx_pending = true; }, .tx = nullptr, .error = nullptr };
 
+// ============================================================================
+
 int main()
 {
     //	clock_init (12);
@@ -204,8 +303,11 @@ int main()
 	SIM->SOPT2 |= SIM_SOPT2_RMIISRC_MASK; // Tell the Ethernet peripheral to take its clock from ENET_1588_CLKIN (not EXTAL)
 	gpio_make_alternate(PTE, 26, 2);
 	PORTE_PCR26 = PORT_PCR_MUX(0x02) |  PORT_PCR_ODE_MASK; // Set PTE26 as ENET_1588_CLKIN
-	// TODO: read mac address from Flash
-	enet_init (eth_pins, default_mac_address, &enet_callbacks);
+	uint8_t mac_address[6];
+	make_mac_address(mac_address);
+	enet_init (eth_pins, mac_address, &enet_callbacks);
+
+	::bridge = STP_CreateBridge (3, 0, 0, &stp_callbacks, mac_address, 128);
 
 	while(1)
 	{
