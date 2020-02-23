@@ -19,6 +19,7 @@
       arm_target_loader_default_loader="Flash"
       arm_target_restrict_memory_accesses="Yes"
       c_additional_options="-fms-extensions"
+      c_preprocessor_definitions="STP_USE_LOG=0"
       c_user_include_directories="$(TargetsDir)/Kinetis.;$(SolutionDir)/../mstp-lib"
       debug_initial_breakpoint_set_option="Never"
       debug_register_definition_file="$(TargetsDir)/Kinetis/MK66F18_Peripherals.xml"

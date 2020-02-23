@@ -1,4 +1,7 @@
 
+// This is a limited ("very" limited) Ethernet driver that contains
+// only what's needed to demonstrate the STP library on this platform.
+
 #include "ethernet.h"
 #include "clock.h"
 #include <string.h>
@@ -7,7 +10,7 @@
 
 static const enet_callbacks* callbacks;
 
-struct alignas(8) rx_descriptor
+struct alignas(8) descriptor
 {
 	uint16_t size;
 	uint16_t status;
@@ -16,10 +19,17 @@ struct alignas(8) rx_descriptor
 
 static constexpr size_t rx_buffer_count = 5;
 static constexpr size_t rx_buffer_size = 1536;
-static volatile rx_descriptor rx_descriptors[rx_buffer_count];
+static volatile descriptor rx_descriptors[rx_buffer_count];
 using rx_buffer = uint8_t[rx_buffer_size];
 static volatile rx_buffer rx_buffers[rx_buffer_count];
 static size_t rx_consume_index;
+
+static constexpr size_t tx_buffer_count = 5;
+static constexpr size_t tx_buffer_size = 1536;
+static volatile descriptor tx_descriptors[tx_buffer_count];
+using tx_buffer = uint8_t[tx_buffer_size];
+static volatile tx_buffer tx_buffers[tx_buffer_count];
+static size_t tx_produce_index;
 
 void enet_init (const ethernet_pins& pins, const uint8_t mac_address[6], const enet_callbacks* irql_callbacks)
 {
@@ -42,7 +52,6 @@ void enet_init (const ethernet_pins& pins, const uint8_t mac_address[6], const e
 	//ENET->ECR |= ENET_ECR_RESET_MASK;
 	ENET->ECR = ENET_ECR_DBSWP_MASK;
 
-	memset ((void*)&rx_descriptors[0], 0, sizeof(rx_descriptors));
 	for (size_t i = 0; i < rx_buffer_count; i++)
 	{
 		rx_descriptors[i].data = rx_buffers[i];
@@ -54,21 +63,19 @@ void enet_init (const ethernet_pins& pins, const uint8_t mac_address[6], const e
 	static_assert ((rx_buffer_size & 0xF) == 0);
 	ENET->MRBR = rx_buffer_size;
 	ENET->RDSR = (uint32_t)&rx_descriptors[0];
+	ENET->RCR = (1536 << ENET_RCR_MAX_FL_SHIFT) | ENET_RCR_CRCFWD_MASK | ENET_RCR_FCE_MASK | ENET_RCR_MII_MODE_MASK | ENET_RCR_RMII_MODE_MASK;
 
-	// TODO: init TX descriptors
-
-	ENET->RCR = (1536 << ENET_RCR_MAX_FL_SHIFT)
-		| ENET_RCR_CRCFWD_MASK
-| ENET_RCR_PROM_MASK
-| ENET_RCR_FCE_MASK
-		| ENET_RCR_MII_MODE_MASK | ENET_RCR_RMII_MODE_MASK;
-
-	// Configures MAC transmit controller: duplex mode, mac address insertion.
-//	tcr = base->TCR & ~(ENET_TCR_FDEN_MASK | ENET_TCR_ADDINS_MASK);
-//	tcr |= ((kENET_MiiHalfDuplex != config->miiDuplex) ? (uint32_t)ENET_TCR_FDEN_MASK : 0U) |
-//		   ((0U != (macSpecialConfig & (uint32_t)kENET_ControlMacAddrInsert)) ? (uint32_t)ENET_TCR_ADDINS_MASK : 0U);
-//	base->TCR = tcr;
-//	base->TDSR      = (uint32_t)bufferConfig->txBdStartAddrAlign;
+	for (size_t i = 0; i < tx_buffer_count; i++)
+	{
+		tx_descriptors[i].data = tx_buffers[i];
+		tx_descriptors[i].status = 0;
+	}
+	tx_descriptors[tx_buffer_count - 1].status |= (1u << 13); // W - wrap
+    __DSB();
+	tx_produce_index = 0;
+	static_assert ((tx_buffer_size & 0xF) == 0);
+	ENET->TDSR = (uint32_t)&tx_descriptors[0];
+	ENET->TCR = ENET_TCR_FDEN_MASK;
 
 	ENET->TFWR = ENET_TFWR_STRFWD_MASK;
 	ENET->RSFL = 0;
@@ -98,7 +105,6 @@ void enet_init (const ethernet_pins& pins, const uint8_t mac_address[6], const e
 
 	// It seems setting RDAR has effect only after we enable the peripheral by setting ETHEREN (maybe same with TDAR)
 	ENET->RDAR = ENET_RDAR_RDAR_MASK;
-	//ENET->TDAR = ENET_TDAR_TDAR_MASK;
 }
 
 extern "C" void ENET_1588_Timer_IRQHandler()
@@ -169,4 +175,29 @@ void enet_read_release_buffer(uint8_t* data)
 	ENET->RDAR = ENET_RDAR_RDAR_MASK;
 
 	read_get_buffer_called = false;
+}
+
+uint8_t* enet_write_get_buffer (size_t len)
+{
+	auto desc = &tx_descriptors[tx_produce_index];
+	if (desc->status & (1u << 14)) // TO1
+		return nullptr;
+
+	desc->status |= (1u << 14); // set TO1 to mark the descriptor as "currently written to"
+	desc->size = len;
+	return (uint8_t*)desc->data;
+}
+
+void enet_write_release_buffer (uint8_t* data)
+{
+	auto desc = &tx_descriptors[tx_produce_index];
+	assert (desc->status & (1u << 14)); // TO1
+	assert (desc->data == data);
+
+	bool last = (tx_produce_index == tx_buffer_count - 1);
+
+	desc->status = (1u << 15) | (last ? (1u << 13) : 0) | (1u << 11); // R, optionally W, L
+	__DSB();
+	tx_produce_index = last ? 0 : (tx_produce_index + 1);
+	ENET->TDAR = ENET_TDAR_TDAR_MASK;
 }

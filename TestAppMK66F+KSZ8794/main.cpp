@@ -136,49 +136,178 @@ extern "C" void SystemInit()
 
 // ============================================================================
 
+static const uint8_t bpdu_dest_address[6] = { 0x01, 0x80, 0xC2, 0, 0, 0 };
+static const uint8_t bpdu_llc_field[3] = { 0x42, 0x42, 0x03 };
+
+static void print_port_info (size_t port_index, STP_PORT_ROLE role, bool learning, bool forwarding)
+{
+	const char* role_string = STP_GetPortRoleString(role);
+	const char* state = (!learning && !forwarding) ? "Blocking" : (forwarding ? "Forwarding" : "Learning");
+	debug_printf("Port %d: %s %s\n", port_index + 1, role_string, state);
+}
+
 static void StpCallback_EnableBpduTrapping (const STP_BRIDGE* bridge, bool enable, unsigned int timestamp)
 {
-	assert(false); // not implemented
+	uint8_t val;
+
+	if (enable)
+	{
+		// Write 8 bytes containing an entry in the static MAC address table.
+		switch_write_reg (113, 0);          // bits 63..56 = 0 (filter by MAC, not by FID)
+		switch_write_reg (114, 0b01110000); // bits 55..48 (override, valid, forward to port 4)
+		switch_write_reg (115, bpdu_dest_address[0]); // bits 47..40
+		switch_write_reg (116, bpdu_dest_address[1]); // bits 39..32
+		switch_write_reg (117, bpdu_dest_address[2]); // bits 31..24
+		switch_write_reg (118, bpdu_dest_address[3]); // bits 23..16
+		switch_write_reg (119, bpdu_dest_address[4]); // bits 15..8
+		switch_write_reg (120, bpdu_dest_address[5]); // bits 7..0
+		// Write reg 110 to say that next operation is a write to the static MAC address table.
+		switch_write_reg (110, 0);
+		// Write the index into the table; writing initiates the operation.
+		switch_write_reg (111, 0);
+
+		// Enable tail tagging.
+		val = switch_read_reg (12);
+		switch_write_reg (12, val | (1u << 1));
+	}
+	else
+	{
+		val = switch_read_reg (12);
+		switch_write_reg (12, val & ~(1u << 1));
+
+		switch_write_reg (114, 0); // bits 55..48 (not valid)
+		switch_write_reg (110, 0);
+		switch_write_reg (111, 0);
+	}
+
+	// We've just changed tail tagging mode. The switch IC offers no way to tell between
+	// tagged and non-tagged frames, so if there's traffic going on rigth now, some frames
+	// will be received or transmitted malformed. Let's ignore this problem in this demo app.
 }
 
 static void StpCallback_EnableLearning (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable, unsigned int timestamp)
 {
-	assert(false); // not implemented
+	uint16_t reg = 0x12 + (portIndex << 4);
+	auto val = switch_read_reg (reg);
+	if (enable)
+	{
+		if (val & 1)
+			switch_write_reg (reg, val & 0xFE);
+	}
+	else
+	{
+		if ((val & 1) == 0)
+			switch_write_reg (reg, val | 1);
+	}
+
+	if (debug_enabled())
+	{
+		auto role = STP_GetPortRole(bridge, portIndex, treeIndex);
+		bool learning = enable;
+		bool forwarding = STP_GetPortForwarding(bridge, portIndex, treeIndex);
+		print_port_info (portIndex, role, learning, forwarding);
+	}
 }
 
 static void StpCallback_EnableForwarding (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable, unsigned int timestamp)
 {
-	assert(false); // not implemented
+	uint16_t reg = 0x12 + (portIndex << 4);
+	auto val = switch_read_reg (reg);
+	if (enable)
+	{
+		if ((val & 0b110) != 0b110)
+			switch_write_reg (reg, val | 0b110);
+	}
+	else
+	{
+		if (val & 0b110)
+			switch_write_reg (reg, val & ~0b110);
+	}
+
+	if (debug_enabled())
+	{
+		auto role = STP_GetPortRole(bridge, portIndex, treeIndex);
+		bool learning = STP_GetPortLearning(bridge, portIndex, treeIndex);
+		bool forwarding = enable;
+		print_port_info (portIndex, role, learning, forwarding);
+	}
 }
 
 static void* StpCallback_TransmitGetBuffer (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int bpduSize, unsigned int timestamp)
 {
-	assert(false); return nullptr; // not implemented
+	size_t frame_size = 14 + 3 + bpduSize + 1;
+	uint8_t* frame = enet_write_get_buffer(frame_size);
+	if (!frame)
+		return nullptr;
+
+	memcpy (frame, bpdu_dest_address, 6);
+	memcpy (&frame[6], STP_GetBridgeAddress(bridge)->bytes, 6);
+	bool wrap = (uint32_t) frame[11] + 1 + portIndex >= 256;
+	frame[11] += (1 + portIndex);
+	if (wrap)
+		frame[10]++;
+
+	uint16_t etherTypeOrSize = 3 + bpduSize;
+	frame[12] = uint8_t (etherTypeOrSize >> 8);
+	frame[13] = uint8_t (etherTypeOrSize & 0xFF);
+
+	memcpy (&frame[14], bpdu_llc_field, 3);
+
+	// Tail tag field that tells the switch IC which port to send this bpdu out of.
+	frame[frame_size - 1] = portIndex;
+
+	return &frame[17];
 }
 
 static void StpCallback_TransmitReleaseBuffer (const STP_BRIDGE* bridge, void* bufferReturnedByGetBuffer)
 {
-	assert(false); // not implemented
+	uint8_t* data = (uint8_t*)bufferReturnedByGetBuffer - 17;
+	enet_write_release_buffer(data);
 }
 
 static void StpCallback_FlushFdb (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType, unsigned int timestamp)
 {
-	assert(false); // not implemented
+	// The KSZ8794 switch doesn't offer a straightforward way of flushing the table
+	// for a given port; see description of Bit 5 in Register 2 in its datasheet.
+	//
+	// Let's implement this callback by forcing learning to 'disabled' for our port,
+	// then flushing the table, then restoring the learning state to whatever it was.
+	// This might flush more ports than necessary, and this in turn might lead
+	// to slightly increased traffic for a short time; we're ok with that in this demo app.
+
+	uint16_t reg = 0x12 + (portIndex << 4);
+	uint8_t val = switch_read_reg(reg);
+
+	if ((val & 1) == 0)
+		switch_write_reg (reg, val | 1);
+
+	uint8_t reg2val = switch_read_reg(2);
+	switch_write_reg (2, reg2val | (1 << 5));
+
+	if ((val & 1) == 0)
+		switch_write_reg (reg, val);
 }
 
 static void StpCallback_DebugStrOut (const STP_BRIDGE* bridge, int portIndex, int treeIndex, const char* nullTerminatedString, unsigned int stringLength, unsigned int flush)
 {
-	assert(false); // not implemented
+	if (debug_enabled())
+		debug_printf("%s", nullTerminatedString);
 }
 
 static void StpCallback_OnTopologyChange (const STP_BRIDGE* bridge, unsigned int treeIndex, unsigned int timestamp)
 {
-	assert(false); // not implemented
+	if (debug_enabled())
+		debug_printf("TC\n");
 }
 
-static void StpCallback_OnPortRoleChanged (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_PORT_ROLE role, unsigned int timestamp)
+static void StpCallback_OnPortRoleChanged (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role, unsigned int timestamp)
 {
-	assert(false); // not implemented
+	if (debug_enabled())
+	{
+		bool learning = STP_GetPortLearning(bridge, portIndex, treeIndex);
+		bool forwarding = STP_GetPortForwarding(bridge, portIndex, treeIndex);
+		print_port_info (portIndex, role, learning, forwarding);
+	}
 }
 
 static uint8_t stp_heap[1500];
@@ -245,7 +374,7 @@ static const ethernet_pins eth_pins =
 	.rmii_mdc     = { },
 };
 
-static bool dump_received_packets = true;
+static bool dump_received_packets = false;
 
 static void process_received_frames()
 {
@@ -253,6 +382,8 @@ static void process_received_frames()
 	uint8_t* frame;
 	while ((frame = enet_read_get_buffer (&frame_size)) != nullptr)
 	{
+		uint32_t timestamp = scheduler_get_time_ms32();
+
 		if (dump_received_packets)
 		{
 			if (debug_enabled())
@@ -266,7 +397,35 @@ static void process_received_frames()
 			}
 		}
 
-		// TODO: process it
+		size_t rx_port_index;
+		if (STP_IsBridgeStarted(bridge))
+		{
+			// We have enabled tail tagging in StpCallback_EnableBpduTrapping.
+			rx_port_index = frame[frame_size - 1];
+			frame_size--;
+		}
+
+		if (memcmp (frame, bpdu_dest_address, 6) == 0)
+		{
+			if ((frame_size > 14 + 3)
+				&& (memcmp(&frame[14], bpdu_llc_field, 3) == 0)
+				&& STP_IsBridgeStarted(bridge))
+			{
+				if (!STP_GetPortEnabled(bridge, rx_port_index))
+				{
+					uint8_t val = switch_read_reg (0x19 + (rx_port_index << 4));
+					unsigned int speed = (val & (1u << 2)) ? 100 : 10;
+					bool full_duplex = (val & (1u << 1));
+					STP_OnPortEnabled(bridge, rx_port_index, speed, full_duplex, timestamp);
+				}
+
+				STP_OnBpduReceived(bridge, rx_port_index, &frame[17], frame_size - 17, timestamp);
+			}
+		}
+		else
+		{
+			// TODO: process non-STP frame
+		}
 
 		enet_read_release_buffer(frame);
 	}
@@ -307,7 +466,12 @@ int main()
 	make_mac_address(mac_address);
 	enet_init (eth_pins, mac_address, &enet_callbacks);
 
-	::bridge = STP_CreateBridge (3, 0, 0, &stp_callbacks, mac_address, 128);
+	// Enable promiscuous mode in the Ethernet peripheral, to let incoming BPDUs through.
+	// That's good enough for this STP demo app.
+	ENET->RCR |= ENET_RCR_PROM_MASK;
+
+	bridge = STP_CreateBridge (3, 0, 0, &stp_callbacks, mac_address, 128);
+	STP_StartBridge(bridge, scheduler_get_time_ms32());
 
 	while(1)
 	{
