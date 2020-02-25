@@ -235,7 +235,21 @@ static void StpCallback_EnableForwarding (const STP_BRIDGE* bridge, unsigned int
 
 static void* StpCallback_TransmitGetBuffer (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int bpduSize, unsigned int timestamp)
 {
-	size_t frame_size = 14 + 3 + bpduSize + 1;
+	// 6 bytes for DA
+	// 6 bytes for SA
+	// 2 bytes for EtherType Or Size
+	// 3 bytes for LLC
+	// then the BPDU content
+	// 1 byte for the Microchip tail tag
+	size_t frame_size = 6 + 6 + 2 + 3 + bpduSize + 1;
+
+	// The Ethernet peripheral makes sure to transmit frames at least 64 bytes long, as required by the standard.
+	// Since we ask it to append 4 bytes of CRC, it will extend to 60 bytes all our small frames.
+	// We must take this into account when we append the tail tag, because the tag must be in the byte
+	// just before the CRC in the frame received by the switch IC from our Ethernet peripheral.
+	if (frame_size < 60)
+		frame_size = 60;
+
 	uint8_t* frame = enet_write_get_buffer(frame_size);
 	if (!frame)
 		return nullptr;
@@ -254,7 +268,7 @@ static void* StpCallback_TransmitGetBuffer (const STP_BRIDGE* bridge, unsigned i
 	memcpy (&frame[14], bpdu_llc_field, 3);
 
 	// Tail tag field that tells the switch IC which port to send this bpdu out of.
-	frame[frame_size - 1] = portIndex;
+	frame[frame_size - 1] = 1 << portIndex;
 
 	return &frame[17];
 }
@@ -274,6 +288,8 @@ static void StpCallback_FlushFdb (const STP_BRIDGE* bridge, unsigned int portInd
 	// then flushing the table, then restoring the learning state to whatever it was.
 	// This might flush more ports than necessary, and this in turn might lead
 	// to slightly increased traffic for a short time; we're ok with that in this demo app.
+
+	// TODO: see what the spec has to say about flushing in TABLE 3-13 section "Disabled State".
 
 	uint16_t reg = 0x12 + (portIndex << 4);
 	uint8_t val = switch_read_reg(reg);
@@ -353,7 +369,7 @@ static void make_mac_address (uint8_t address[6])
 	uint64_t v1 = ((uint64_t)SIM->UIDMH << 16) | ((uint64_t)SIM->UIDML >> 16);
 	uint64_t v2 = ((uint64_t)(SIM->UIDML & 0xFFFF) << 32) | SIM->UIDL;
 	uint64_t sum = v0 + v1 + v2;
-	address[0] = (sum >> 40);
+	address[0] = (sum >> 40) & 0xFE;
 	address[1] = (sum >> 32);
 	address[2] = (sum >> 24);
 	address[3] = (sum >> 16);
@@ -374,7 +390,14 @@ static const ethernet_pins eth_pins =
 	.rmii_mdc     = { },
 };
 
-static bool dump_received_packets = false;
+static bool dump_received_packets = true;
+
+static void read_port_speed_and_duplex (size_t port_index, uint32_t& speed, bool& duplex)
+{
+	uint8_t val = switch_read_reg (0x19 + (port_index << 4));
+	speed = (val & (1u << 2)) ? 100 : 10;
+	duplex = (val & (1u << 1));
+}
 
 static void process_received_frames()
 {
@@ -397,11 +420,11 @@ static void process_received_frames()
 			}
 		}
 
-		size_t rx_port_index;
+		size_t port_index;
 		if (STP_IsBridgeStarted(bridge))
 		{
 			// We have enabled tail tagging in StpCallback_EnableBpduTrapping.
-			rx_port_index = frame[frame_size - 1];
+			port_index = frame[frame_size - 1];
 			frame_size--;
 		}
 
@@ -411,15 +434,15 @@ static void process_received_frames()
 				&& (memcmp(&frame[14], bpdu_llc_field, 3) == 0)
 				&& STP_IsBridgeStarted(bridge))
 			{
-				if (!STP_GetPortEnabled(bridge, rx_port_index))
+				if (!STP_GetPortEnabled(bridge, port_index))
 				{
-					uint8_t val = switch_read_reg (0x19 + (rx_port_index << 4));
-					unsigned int speed = (val & (1u << 2)) ? 100 : 10;
-					bool full_duplex = (val & (1u << 1));
-					STP_OnPortEnabled(bridge, rx_port_index, speed, full_duplex, timestamp);
+					uint32_t speed;
+					bool duplex;
+					read_port_speed_and_duplex (port_index, speed, duplex);
+					STP_OnPortEnabled(bridge, port_index, speed, duplex, timestamp);
 				}
 
-				STP_OnBpduReceived(bridge, rx_port_index, &frame[17], frame_size - 17, timestamp);
+				STP_OnBpduReceived(bridge, port_index, &frame[17], frame_size - 17, timestamp);
 			}
 		}
 		else
@@ -431,8 +454,48 @@ static void process_received_frames()
 	}
 }
 
+static void poll_port_state()
+{
+	uint32_t timestamp = scheduler_get_time_ms32();
+
+	for (size_t port_index = 0; port_index < 3; port_index++)
+	{
+		uint16_t reg = 0x1E + (port_index << 4);
+		uint8_t val = switch_read_reg(reg);
+		bool link_up = val & (1u << 5);
+
+		if (link_up)
+		{
+			if (!STP_GetPortEnabled(bridge, port_index))
+			{
+				uint32_t speed;
+				bool duplex;
+				read_port_speed_and_duplex (port_index, speed, duplex);
+				STP_OnPortEnabled (bridge, port_index, speed, duplex, timestamp);
+			}
+		}
+		else
+		{
+			if (STP_GetPortEnabled(bridge, port_index))
+				STP_OnPortDisabled(bridge, port_index, timestamp);
+		}
+	}
+}
+
 static volatile bool rx_pending = false;
-static constexpr struct enet_callbacks enet_callbacks = { .rx = []{ rx_pending = true; }, .tx = nullptr, .error = nullptr };
+
+static void rx_isr()
+{
+	rx_pending = true;
+}
+
+static constexpr struct enet_callbacks enet_callbacks = { .rx = rx_isr, .tx = nullptr, .error = nullptr };
+
+static void on_one_second_tick()
+{
+	uint32_t timestamp = scheduler_get_time_ms32();
+	STP_OnOneSecondTick (bridge, timestamp);
+}
 
 // ============================================================================
 
@@ -472,6 +535,13 @@ int main()
 
 	bridge = STP_CreateBridge (3, 0, 0, &stp_callbacks, mac_address, 128);
 	STP_StartBridge(bridge, scheduler_get_time_ms32());
+
+	// Let's read the link states right now, and then set up polling every 100 ms.
+	// A real application would use interrupts; for this demo app polling is good enough.
+	poll_port_state();
+	scheduler_schedule_event_timer (poll_port_state, "poll_port_state", 100, true);
+
+	scheduler_schedule_event_timer(on_one_second_tick, "on_one_second_tick", 1000, true);
 
 	while(1)
 	{

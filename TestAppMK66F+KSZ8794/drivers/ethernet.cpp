@@ -19,16 +19,16 @@ struct alignas(8) descriptor
 
 static constexpr size_t rx_buffer_count = 5;
 static constexpr size_t rx_buffer_size = 1536;
-static volatile descriptor rx_descriptors[rx_buffer_count];
+static volatile descriptor rx_descriptors[rx_buffer_count] __attribute__((section (".non_init")));
 using rx_buffer = uint8_t[rx_buffer_size];
-static volatile rx_buffer rx_buffers[rx_buffer_count];
+static volatile rx_buffer rx_buffers[rx_buffer_count] __attribute__((section (".non_init")));
 static size_t rx_consume_index;
 
 static constexpr size_t tx_buffer_count = 5;
 static constexpr size_t tx_buffer_size = 1536;
-static volatile descriptor tx_descriptors[tx_buffer_count];
+static volatile descriptor tx_descriptors[tx_buffer_count] __attribute__((section (".non_init")));
 using tx_buffer = uint8_t[tx_buffer_size];
-static volatile tx_buffer tx_buffers[tx_buffer_count];
+static volatile tx_buffer tx_buffers[tx_buffer_count] __attribute__((section (".non_init")));
 static size_t tx_produce_index;
 
 void enet_init (const ethernet_pins& pins, const uint8_t mac_address[6], const enet_callbacks* irql_callbacks)
@@ -63,7 +63,7 @@ void enet_init (const ethernet_pins& pins, const uint8_t mac_address[6], const e
 	static_assert ((rx_buffer_size & 0xF) == 0);
 	ENET->MRBR = rx_buffer_size;
 	ENET->RDSR = (uint32_t)&rx_descriptors[0];
-	ENET->RCR = (1536 << ENET_RCR_MAX_FL_SHIFT) | ENET_RCR_CRCFWD_MASK | ENET_RCR_FCE_MASK | ENET_RCR_MII_MODE_MASK | ENET_RCR_RMII_MODE_MASK;
+	ENET->RCR = ((rx_buffer_size - 4) << ENET_RCR_MAX_FL_SHIFT) | ENET_RCR_CRCFWD_MASK | ENET_RCR_FCE_MASK | ENET_RCR_MII_MODE_MASK | ENET_RCR_RMII_MODE_MASK;
 
 	for (size_t i = 0; i < tx_buffer_count; i++)
 	{
@@ -105,6 +105,16 @@ void enet_init (const ethernet_pins& pins, const uint8_t mac_address[6], const e
 
 	// It seems setting RDAR has effect only after we enable the peripheral by setting ETHEREN (maybe same with TDAR)
 	ENET->RDAR = ENET_RDAR_RDAR_MASK;
+}
+
+void enet_get_mac_address (uint8_t mac_address[6])
+{
+	mac_address[0] = ENET->PALR >> 24;
+	mac_address[1] = ENET->PALR >> 16;
+	mac_address[2] = ENET->PALR >> 8;
+	mac_address[3] = ENET->PALR;
+	mac_address[4] = ENET->PAUR >> 24;
+	mac_address[5] = ENET->PAUR >> 16;
 }
 
 extern "C" void ENET_1588_Timer_IRQHandler()
@@ -196,7 +206,7 @@ void enet_write_release_buffer (uint8_t* data)
 
 	bool last = (tx_produce_index == tx_buffer_count - 1);
 
-	desc->status = (1u << 15) | (last ? (1u << 13) : 0) | (1u << 11); // R, optionally W, L
+	desc->status = (1u << 15) | (last ? (1u << 13) : 0) | (1u << 11) | (1u << 10); // R, optionally W, L, TC
 	__DSB();
 	tx_produce_index = last ? 0 : (tx_produce_index + 1);
 	ENET->TDAR = ENET_TDAR_TDAR_MASK;
