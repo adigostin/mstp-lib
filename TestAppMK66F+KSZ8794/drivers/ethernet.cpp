@@ -17,15 +17,17 @@ struct alignas(8) descriptor
 	volatile uint8_t* data;
 };
 
+static constexpr size_t max_frame_size = 1518; // as recommended in ENET_RCR field MAX_FL
+
 static constexpr size_t rx_buffer_count = 5;
-static constexpr size_t rx_buffer_size = 1536;
+static constexpr size_t rx_buffer_size = (max_frame_size + 0xF) & ~0xFu;
 static volatile descriptor rx_descriptors[rx_buffer_count] __attribute__((section (".non_init")));
 using rx_buffer = uint8_t[rx_buffer_size];
 static volatile rx_buffer rx_buffers[rx_buffer_count] __attribute__((section (".non_init")));
 static size_t rx_consume_index;
 
 static constexpr size_t tx_buffer_count = 5;
-static constexpr size_t tx_buffer_size = 1536;
+static constexpr size_t tx_buffer_size = (max_frame_size + 0xF) & ~0xFu;
 static volatile descriptor tx_descriptors[tx_buffer_count] __attribute__((section (".non_init")));
 using tx_buffer = uint8_t[tx_buffer_size];
 static volatile tx_buffer tx_buffers[tx_buffer_count] __attribute__((section (".non_init")));
@@ -63,7 +65,7 @@ void enet_init (const ethernet_pins& pins, const uint8_t mac_address[6], const e
 	static_assert ((rx_buffer_size & 0xF) == 0);
 	ENET->MRBR = rx_buffer_size;
 	ENET->RDSR = (uint32_t)&rx_descriptors[0];
-	ENET->RCR = ((rx_buffer_size - 4) << ENET_RCR_MAX_FL_SHIFT) | ENET_RCR_CRCFWD_MASK | ENET_RCR_FCE_MASK | ENET_RCR_MII_MODE_MASK | ENET_RCR_RMII_MODE_MASK;
+	ENET->RCR = (rx_buffer_size << ENET_RCR_MAX_FL_SHIFT) | ENET_RCR_CRCFWD_MASK | ENET_RCR_FCE_MASK | ENET_RCR_MII_MODE_MASK | ENET_RCR_RMII_MODE_MASK;
 
 	for (size_t i = 0; i < tx_buffer_count; i++)
 	{
@@ -76,6 +78,8 @@ void enet_init (const ethernet_pins& pins, const uint8_t mac_address[6], const e
 	static_assert ((tx_buffer_size & 0xF) == 0);
 	ENET->TDSR = (uint32_t)&tx_descriptors[0];
 	ENET->TCR = ENET_TCR_FDEN_MASK;
+
+	ENET->FTRL = max_frame_size;
 
 	ENET->TFWR = ENET_TFWR_STRFWD_MASK;
 	ENET->RSFL = 0;
@@ -145,6 +149,8 @@ uint8_t* enet_read_get_buffer (size_t* size)
 {
 	assert (!read_get_buffer_called);
 
+	__DSB(); // bring latest descriptor data from memory to processor's cache
+
 scan:
 	auto desc = &rx_descriptors[rx_consume_index];
 	if (desc->status & (1u << 15)) // E
@@ -160,7 +166,7 @@ scan:
 	{
 		// Ignore it and mark it as empty (E flag) and if needed also as last (W flag).
 		desc->status = (1u << 15) | (last ? (1u << 13) : 0);
-		__DSB();
+		__DSB(); // push new descriptor data from processor's cache to memory
 		rx_consume_index = last ? 0 : (rx_consume_index + 1);
 		ENET->RDAR = ENET_RDAR_RDAR_MASK;
 		goto scan;
@@ -180,7 +186,7 @@ void enet_read_release_buffer(uint8_t* data)
 
 	// Mark it as empty (E flag) and if needed also as last (W flag).
 	desc->status = (1u << 15) | (last ? (1u << 13) : 0);
-	__DSB();
+	__DSB(); // push new descriptor data from processor's cache to memory
 	rx_consume_index = last ? 0 : (rx_consume_index + 1);
 	ENET->RDAR = ENET_RDAR_RDAR_MASK;
 
@@ -189,6 +195,8 @@ void enet_read_release_buffer(uint8_t* data)
 
 uint8_t* enet_write_get_buffer (size_t len)
 {
+	__DSB(); // bring latest descriptor data from memory to processor's cache
+
 	auto desc = &tx_descriptors[tx_produce_index];
 	if (desc->status & (1u << 14)) // TO1
 		return nullptr;
@@ -207,7 +215,7 @@ void enet_write_release_buffer (uint8_t* data)
 	bool last = (tx_produce_index == tx_buffer_count - 1);
 
 	desc->status = (1u << 15) | (last ? (1u << 13) : 0) | (1u << 11) | (1u << 10); // R, optionally W, L, TC
-	__DSB();
+	__DSB(); // push new descriptor data from processor's cache to memory
 	tx_produce_index = last ? 0 : (tx_produce_index + 1);
 	ENET->TDAR = ENET_TDAR_TDAR_MASK;
 }
