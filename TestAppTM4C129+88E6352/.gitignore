@@ -1,0 +1,5 @@
+/Executable_1 clang Debug
+/Executable_1 gcc Debug
+/Executable_1 clang Release
+/Executable_1 gcc Release
+*.hzs
