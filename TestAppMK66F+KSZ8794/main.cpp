@@ -14,7 +14,8 @@
 
 extern "C" void __assert(const char *__expression, const char *__filename, int __line)
 {
-	debug_printf("Assertion failure.\n");
+	if (debug_enabled())
+		debug_printf("Assertion failure.\n");
 	__BKPT();
 }
 
@@ -42,6 +43,7 @@ static const uint8_t bpdu_llc_field[3] = { 0x42, 0x42, 0x03 };
 
 static void print_port_info (size_t port_index, STP_PORT_ROLE role, bool learning, bool forwarding)
 {
+	assert (debug_enabled());
 	const char* role_string = STP_GetPortRoleString(role);
 	const char* state = (!learning && !forwarding) ? "Blocking" : (forwarding ? "Forwarding" : "Learning");
 	debug_printf("Port %d: %s %s\n", port_index + 1, role_string, state);
@@ -407,7 +409,8 @@ int main()
 {
     clock_init (12);
 
-	debug_printf ("\r\n\r\nTest App MK66F+KSZ8794.\r\n");
+	if (debug_enabled())
+		debug_printf ("\r\n\r\nTest App MK66F+KSZ8794.\r\n");
 
 	static uint8_t event_queue_buffer[1024] __attribute__((section (".non_init")));
 	event_queue_init (event_queue_buffer, sizeof(event_queue_buffer));
