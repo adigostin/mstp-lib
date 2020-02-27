@@ -61,7 +61,7 @@ struct BPDU_HEADER
 //  - STP Config BPDUs use members up to and including ForwardDelay.
 //  - RSTP BPDUs use members up to and including Version1Length.
 //  - MSTP BPDUs use members up to and including mstiConfigMessages (the array length can be zero or more)
-struct MSTP_BPDU : public BPDU_HEADER
+struct MSTP_BPDU : BPDU_HEADER
 {
 	unsigned char cistFlags;			// octet 5
 
