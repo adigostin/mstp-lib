@@ -1,5 +1,5 @@
-/Executable_1 clang Debug
-/Executable_1 gcc Debug
-/Executable_1 clang Release
-/Executable_1 gcc Release
+/TestAppTM4C129+88E6352 clang Debug
+/TestAppTM4C129+88E6352 gcc Debug
+/TestAppTM4C129+88E6352 clang Release
+/TestAppTM4C129+88E6352 gcc Release
 *.hzs
