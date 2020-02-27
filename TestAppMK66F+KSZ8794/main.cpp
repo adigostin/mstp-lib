@@ -413,11 +413,15 @@ static void serial_console_output (char ch)
 
 static void serial_console_poll_input()
 {
-	while (debug_kbhit())
+	gpio_set(PTA, 8, false);
+
+	while (debug_enabled() && debug_kbhit())
 	{
 		char ch = (char)debug_getch();
 		serial_console_process_input(ch);
 	}
+
+	gpio_set(PTA, 8, true);
 }
 
 static void process_stp_command (const char* params)
@@ -465,7 +469,7 @@ int main()
 
 	serial_console_init (serial_console_output, false, false);
 	printf ("Test App MK66F+KSZ8794.\r\n");
-	scheduler_schedule_event_timer (serial_console_poll_input, "serial_console_poll_input", 10, true);
+	scheduler_schedule_event_timer (serial_console_poll_input, "serial_console_poll_input", 100, true);
 
 	pit_init(0, 21000, scheduler_process_tick_irql);
 
