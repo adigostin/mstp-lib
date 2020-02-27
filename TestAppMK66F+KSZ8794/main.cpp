@@ -5,12 +5,14 @@
 #include "drivers/ethernet.h"
 #include "drivers/event_queue.h"
 #include "drivers/scheduler.h"
+#include "drivers/serial_console.h"
 #include "switch.h"
 #include "stp.h"
 #include <CMSIS/MK66F18.h>
 #include <debugio.h>
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
 
 extern "C" void __assert(const char *__expression, const char *__filename, int __line)
 {
@@ -403,19 +405,67 @@ static void on_one_second_tick()
 	STP_OnOneSecondTick (bridge, timestamp);
 }
 
+static void serial_console_output (char ch)
+{
+	if (debug_enabled())
+		debug_putchar(ch);
+}
+
+static void serial_console_poll_input()
+{
+	while (debug_kbhit())
+	{
+		char ch = (char)debug_getch();
+		serial_console_process_input(ch);
+	}
+}
+
+static void process_stp_command (const char* params)
+{
+	uint32_t timestamp = scheduler_get_time_ms32();
+
+	if (strcmp(params, "on") == 0)
+	{
+		if (STP_IsBridgeStarted(bridge))
+			printf ("STP already started.\r\n");
+		else
+			STP_StartBridge(bridge, timestamp);
+	}
+	else if (strcmp(params, "off") == 0)
+	{
+		if (!STP_IsBridgeStarted(bridge))
+			printf ("STP already stopped.\r\n");
+		else
+			STP_StopBridge(bridge, timestamp);
+	}
+	else if (*params == 0)
+	{
+		printf ("STP is %s.\r\n", STP_IsBridgeStarted(bridge) ? "started" : "stopped");
+	}
+	else
+		printf ("Invalid params.\r\n");
+}
+
+static const serial_command commands[] =
+{
+	{ "stp",       "stp [on|off]", process_stp_command },
+	{ nullptr, nullptr, nullptr }
+};
+
 // ============================================================================
 
 int main()
 {
     clock_init (12);
 
-	if (debug_enabled())
-		debug_printf ("\r\n\r\nTest App MK66F+KSZ8794.\r\n");
-
 	static uint8_t event_queue_buffer[1024] __attribute__((section (".non_init")));
 	event_queue_init (event_queue_buffer, sizeof(event_queue_buffer));
 
 	scheduler_init();
+
+	serial_console_init (serial_console_output, false, false);
+	printf ("Test App MK66F+KSZ8794.\r\n");
+	scheduler_schedule_event_timer (serial_console_poll_input, "serial_console_poll_input", 10, true);
 
 	pit_init(0, 21000, scheduler_process_tick_irql);
 
@@ -449,6 +499,8 @@ int main()
 	scheduler_schedule_event_timer (poll_port_state, "poll_port_state", 100, true);
 
 	scheduler_schedule_event_timer(on_one_second_tick, "on_one_second_tick", 1000, true);
+
+	serial_console_register_command_set(commands);
 
 	while(1)
 	{
