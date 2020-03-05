@@ -7,23 +7,22 @@
 #include <stdio.h>
 
 // Multi-Switch Register values
-#define SMI_BUSY (1<<15)
-#define SMI_22 (1<<12)
-#define SMI_READ (0b10<<10)
-#define SMI_WRITE (0b01<<10)
-#define DEVADDR 5
-#define REGADDR 0
+#define SMI_BUSY  (1u << 15)
+#define SMI_22    (1u << 12)
+#define SMI_READ  (0b10u << 10)
+#define SMI_WRITE (0b01u << 10)
+#define DEVADDR 5u
+#define REGADDR 0u
 
 static constexpr uint32_t smi_command_reg = 0;
 static constexpr uint32_t smi_data_reg = 1;
 static constexpr uint32_t global2_command_reg = 0x18;
 static constexpr uint32_t global2_data_reg = 0x19;
-static constexpr uint32_t port_control_reg = 4;
 
 uint32_t switch_read_register (uint32_t mdio_addr, switch_dev_addr dev_addr, uint32_t reg_addr)
 {
 	// PHY registers cannot be accessed directly; use switch_read_phy_register instead. (See Chapter 11 in the 88E6352 FS.)
-	assert (dev_addr >= 0x10); 
+	assert (dev_addr >= 0x10);
 
 	// command is for multichip addressing mode (See "SMI Command Register" in the 88E6352 spec).
 	uint32_t command = (1 << 15) | (1 << 12) | (0b10 << 10) | (dev_addr << 5) | reg_addr;
@@ -40,7 +39,7 @@ uint32_t switch_read_register (uint32_t mdio_addr, switch_dev_addr dev_addr, uin
 void switch_write_register (uint32_t mdio_addr, switch_dev_addr dev_addr, uint32_t reg_addr, uint32_t value)
 {
 	// PHY registers cannot be accessed directly; use switch_read_phy_register instead. (See Chapter 11 in the 88E6352 FS.)
-	assert (dev_addr >= 0x10); 
+	assert (dev_addr >= 0x10);
 
 	smi_write (mdio_addr, smi_data_reg, value);
 
@@ -100,10 +99,4 @@ void switch_init (uint32_t mdio_addr)
 	switch_write_phy_register (mdio_addr, switch_dev_addr_serdes, 22, 1);
 	power_up_phy (mdio_addr, switch_dev_addr_serdes);
 	switch_write_phy_register (mdio_addr, switch_dev_addr_serdes, 22, 0);
-
-	for (uint32_t port = 0x10; port < 0x16; port++)
-	{
-        uint32_t original = switch_read_register (mdio_addr, (switch_dev_addr)port, port_control_reg);
-		switch_write_register (mdio_addr, (switch_dev_addr)port, port_control_reg, ((original & ~(0b11)) | (0b11)));
-	}
 }

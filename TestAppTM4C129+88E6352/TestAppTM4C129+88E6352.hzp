@@ -23,7 +23,7 @@
       arm_target_restrict_memory_accesses="Yes"
       c_preprocessor_definitions="PART_TM4C1294KCPDT"
       c_user_include_directories="$(ProjectDir);$(TargetsDir)/TIVA/Include"
-      debug_initial_breakpoint=""
+      debug_initial_breakpoint_set_option="Never"
       debug_register_definition_file="$(TargetsDir)/TIVA/TM4C1294KCPDT.svd_Peripherals.xml"
       gcc_c_language_standard="c11"
       gcc_cplusplus_language_standard="c++11"
@@ -62,9 +62,6 @@
       <file file_name="$(TargetsDir)/TIVA/TM4C129.vec" />
       <file file_name="$(TargetsDir)/TIVA/Include/TM4C1294KCPDT.h" />
     </folder>
-    <file file_name="stp_hw_specific.cpp">
-      <configuration Name="Common" build_exclude_from_build="Yes" />
-    </file>
     <file file_name="main.cpp" />
     <file file_name="ethernet.cpp" />
     <file file_name="ethernet.h" />
@@ -111,7 +108,9 @@
       Name="clang"
       arm_assembler_variant="clang"
       arm_compiler_variant="clang" />
-    <configuration Name="Release" gcc_optimization_level="Optimize For Size" />
+    <configuration
+      Name="Release"
+      gcc_optimization_level="Optimize For Size" />
     <configuration Name="Debug" gcc_optimization_level="Debug" />
   </project>
   <configuration Name="gcc Debug" inherited_configurations="Debug;gcc" />
