@@ -54,14 +54,6 @@ void write_phy_register (uint8_t phy_addr, uint8_t reg_addr, uint16_t value)
 
 static void poll_port_status_and_call_library (size_t pi, unsigned int now)
 {
-	struct link_speed_and_duplex
-	{
-		uint32_t speed_megabits_per_second;
-		bool     full_duplex;
-	};
-
-	static link_speed_and_duplex link_states[2];
-
 	// See Table 59 on page 213 in 88E6352_Functional_Specification-Rev0-08.pdf.
 	uint16_t reg = read_phy_register (pi, 17);
 	if (reg & (1u << 10))
@@ -70,13 +62,11 @@ static void poll_port_status_and_call_library (size_t pi, unsigned int now)
 		if (reg & (1u << 11))
 		{
 			// speed and duplex resolved (or auto-negotiation disabled)
-			static constexpr uint32_t speeds[] = { 10, 100, 1000, (uint32_t)-1 };
-			uint32_t speed = speeds[(reg >> 14) & 3];
-			bool duplex = reg & (1u << 13);
-			if ((link_states[pi].speed_megabits_per_second != speed) || (link_states[pi].full_duplex != duplex))
+			if (!STP_GetPortEnabled(bridge, pi))
 			{
-				link_states[pi].speed_megabits_per_second = speed;
-				link_states[pi].full_duplex = duplex;
+				static constexpr uint32_t speeds[] = { 10, 100, 1000, (uint32_t)-1 };
+				uint32_t speed = speeds[(reg >> 14) & 3];
+				bool duplex = reg & (1u << 13);
 				printf ("Port %d Link Up   (", pi);
 				print_binary(reg);
 				printf (") Speed %d, %s-duplex.\r\n", speed, duplex ? "Full" : "Half");
@@ -87,9 +77,8 @@ static void poll_port_status_and_call_library (size_t pi, unsigned int now)
 	else
 	{
 		// link down
-		if (link_states[pi].speed_megabits_per_second)
+		if (STP_GetPortEnabled(bridge, pi))
 		{
-			link_states[pi].speed_megabits_per_second = 0;
 			printf ("Port %d Link Down (", pi);
 			print_binary(reg);
 			printf (").\r\n", pi);
@@ -462,6 +451,9 @@ int main()
 	value |= 1;
 	enet_write_smi (switch_dev_addr_global2, 0x03, value);
 
+	// Enable forwarding on the management port.
+	write_port_state_register(6, true, true);
+
 	for (size_t pi = 0; pi < 2; pi++)
 	{
 		// Disable advertising 1Gbit to make auto-negotiation faster (our hardware doesn't support 1Gbit).
@@ -477,47 +469,18 @@ int main()
 
 	// ========================================================================
 
-	/*
-	// primary netif for DHCP
-	ip_addr_t ip_addr = { (ram_config.ip_addr != 0xFFFF'FFFF) ? ram_config.ip_addr : PP_HTONL(LWIP_MAKEU32(192, 168, 0, 10)) };
-	ip_addr_t netmask = { (ram_config.netmask != 0xFFFF'FFFF) ? ram_config.netmask : PP_HTONL(LWIP_MAKEU32(255, 255, 255, 0)) };
-	ip_addr_t gateway = { (ram_config.gateway != 0xFFFF'FFFF) ? ram_config.gateway : PP_HTONL(LWIP_MAKEU32(192, 168, 0, 1)) };
-	if(ram_config.hostname_len != 0xFFFF)
-		gnetif.hostname = (const char *)ram_config.hostname;
-	else
-		gnetif.hostname = SNMP_LWIP_MIB2_SYSNAME;
-	netif_add (&gnetif, &ip_addr, &netmask, &gateway, nullptr, &netif_init, &netif_input);
-	netif_set_up(&gnetif);
-	netif_set_default (&gnetif);
-
-	// On the TA board we have an RMII link which, if we manage to initialize our Ethernet driver, is always good.
-	netif_set_link_up (&gnetif);
-
-	print_ip_config (nullptr);
-	netif_set_status_callback (&gnetif, on_netif_status_changed);
-
-	dhcp_start (&gnetif);
-
-	scheduler_schedule_event_timer ([] { dhcp_coarse_tmr(); }, "dhcp_coarse_tmr", DHCP_COARSE_TIMER_MSECS, true);
-	scheduler_schedule_event_timer ([] { dhcp_fine_tmr(); }, "dhcp_fine_tmr", DHCP_FINE_TIMER_MSECS, true);
-	*/
-	// ========================================================================
-
 	bridge = STP_CreateBridge (5, 0, 16, &stp_callbacks, mac_address, 100);
 
 //	STP_EnableLogging (bridge, true);
 
-	bool stp_enabled_in_config = false; // TODO
-	if (stp_enabled_in_config)
-	{
-		STP_StartBridge (bridge, scheduler_get_time_ms32());
-	}
-	else
+	// comment this line to disable STP
+	STP_StartBridge (bridge, scheduler_get_time_ms32());
+
+	if (!STP_IsBridgeStarted(bridge))
 	{
 		// Enable forwarding on ports. Forwarding starts disabled because we have a pull-down on the NO_CPU pin.
 		for (size_t pi = 0; pi < 2; pi++)
 			write_port_state_register(pi, true, true);
-		write_port_state_register(6, true, true);
 	}
 
 	scheduler_schedule_event_timer([] { STP_OnOneSecondTick(bridge, scheduler_get_time_ms32()); }, "STP Tick", 1000, true);
