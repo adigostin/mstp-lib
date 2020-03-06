@@ -117,8 +117,8 @@ static switch_dev_addr get_dev_addr_from_stp_port (size_t stp_port_index)
 		case 0: return switch_dev_addr_port1; // EA1
 		case 1: return switch_dev_addr_port2; // EA2
 		case 2: return switch_dev_addr_port3; // EA3
-		case 3: return switch_dev_addr_port3; // EA4
-		case 4: return switch_dev_addr_port4; // SERDES-A
+		case 3: return switch_dev_addr_port4; // EA4
+		case 4: return switch_dev_addr_port5; // SERDES-A
 		default: assert(false); return switch_dev_addr_port0;
 	}
 }
