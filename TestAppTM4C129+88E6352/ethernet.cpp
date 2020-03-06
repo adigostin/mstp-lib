@@ -172,8 +172,8 @@ void ethernet_init (const uint8_t *mac_address)
 
 	// Program the hardware with its MAC address (for filtering). Note that we must set
 	// the registers in this order since the address is latched internally on the write to EMAC_O_ADDRL.
-	EMAC0->ADDR0H = mac_address[4] | (mac_address[5] << 8);
-	EMAC0->ADDR0L = mac_address[0] | (mac_address[1] << 8) | (mac_address[2] << 16) | (mac_address[3] << 24);
+	EMAC0->ADDR0H = (mac_address[0] << 8) | mac_address[1];
+	EMAC0->ADDR0L = (mac_address[2] << 24) | (mac_address[3] << 16) | (mac_address[4] << 8) | mac_address[5];
 
 	// Set MAC filtering options.  We receive all broadcast and multicast
 	// packets along with those addressed specifically for us.
@@ -199,10 +199,10 @@ void ethernet_init (const uint8_t *mac_address)
 
 void ethernet_get_device_address (uint8_t addr[6])
 {
-	addr[0] = EMAC0->ADDR0L;
-	addr[1] = EMAC0->ADDR0L >> 8;
-    addr[2] = EMAC0->ADDR0L >> 16;
-	addr[3] = EMAC0->ADDR0L >> 24;
-	addr[4] = EMAC0->ADDR0H;
-	addr[5] = EMAC0->ADDR0H >> 8;
+	addr[0] = EMAC0->ADDR0H >> 8;
+	addr[1] = EMAC0->ADDR0H;
+    addr[2] = EMAC0->ADDR0L >> 24;
+	addr[3] = EMAC0->ADDR0L >> 16;
+	addr[4] = EMAC0->ADDR0L >> 8;
+	addr[5] = EMAC0->ADDR0L;
 }

@@ -13,8 +13,6 @@
 static const uint8_t bpdu_dest_address[] = { 0x01, 0x80, 0xC2, 0x00, 0x00, 0x00 };
 static const uint8_t bpdu_llc[3] = { 0x42, 0x42, 0x03 };
 
-static const uint8_t mac_address[6] = { 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0x00 };
-
 extern "C" void __assert (const char* expression, const char *file, int line)
 {
 	__disable_irq();
@@ -98,7 +96,7 @@ static constexpr uint32_t atu_mac_bytes45 = 0x0F;
 
 static STP_BRIDGE* stp_bridge;
 
-static const char* get_port_name_ (uint32_t switch_port_index)
+static const char* get_port_name_ (size_t switch_port_index)
 {
 	switch (switch_port_index)
 	{
@@ -112,7 +110,7 @@ static const char* get_port_name_ (uint32_t switch_port_index)
 	}
 }
 
-static switch_dev_addr get_dev_addr_from_stp_port (unsigned int stp_port_index)
+static switch_dev_addr get_dev_addr_from_stp_port (size_t stp_port_index)
 {
 	switch (stp_port_index)
 	{
@@ -126,13 +124,13 @@ static switch_dev_addr get_dev_addr_from_stp_port (unsigned int stp_port_index)
 }
 
 
-static uint32_t get_switch_port_from_stp_port (uint32_t stp_port_index)
+static size_t get_switch_port_from_stp_port (uint32_t stp_port_index)
 {
 	assert (stp_port_index <= 4);
 	return stp_port_index + 1;
 }
 
-static uint32_t get_stp_port_from_switch_port (uint32_t switch_port_index)
+static size_t get_stp_port_from_switch_port (size_t switch_port_index)
 {
 	assert (switch_port_index >= 1 && switch_port_index <= 5);
 	return switch_port_index - 1;
@@ -190,29 +188,31 @@ static void dump_atu()
 // 88E6352 does not have distinct bits for learning and forwarding, but instead a bitfield that controls
 // both at once. This function writes the bitfield value out of the distinct bits that STP works with.
 // See page 227 in 88E6352_Functional_Specification-Rev0-08.pdf.
-static void write_port_state_register (bool learning, bool forwarding, unsigned int stp_port_index)
+static void write_port_state_register (size_t port_index, bool learning, bool forwarding)
 {
+	assert (port_index <= 6); // The switching core has 7 ports: Port 0 to Port 6
+
+	auto dev_addr = (switch_dev_addr)(switch_dev_addr_port0 + port_index);
+
 	uint32_t reg_addr = 4; // Port Control register, page 227 of 88E6352_Functional_Specification-Rev0-08.pdf.
 
-	auto dev_addr = get_dev_addr_from_stp_port(stp_port_index);
 	auto value = switch_read_register (stp_switch_mdio_address, dev_addr, reg_addr);
 	value &= 0xFFFC;
 
-	auto switch_port_index = get_switch_port_from_stp_port(stp_port_index);
 	if (forwarding)
 	{
 		value |= 3;
-		printf ("Port No. : %d (%s)\tPort State: FORWARDING\r\n", stp_port_index, get_port_name_(switch_port_index));
+		printf ("Switch Port %d (%s): FORWARDING\r\n", port_index, get_port_name_(port_index));
 	}
 	else if (learning)
 	{
 		value |= 2;
-		printf ("Port No. : %d (%s)\tPort State: LEARNING\r\n", stp_port_index, get_port_name_(switch_port_index));
+		printf ("Switch Port %d (%s): LEARNING\r\n", port_index, get_port_name_(port_index));
 	}
 	else
 	{
 		value |= 1;
-		printf ("Port No. : %d (%s)\tPort State: BLOCKING\r\n", stp_port_index, get_port_name_(switch_port_index));
+		printf ("Switch Port %d (%s): BLOCKING\r\n", port_index, get_port_name_(port_index));
 	}
 
 	switch_write_register (stp_switch_mdio_address, dev_addr, reg_addr, value);
@@ -260,13 +260,15 @@ static void StpCallback_EnableBpduTrapping (const STP_BRIDGE* bridge, bool enabl
 static void StpCallback_EnableLearning (const STP_BRIDGE* bridge, unsigned int stp_port_index, unsigned int treeIndex, bool enable, unsigned int timestamp)
 {
 	bool forwarding = STP_GetPortForwarding (bridge, stp_port_index, treeIndex);
-	write_port_state_register (enable, forwarding, stp_port_index);
+   	size_t switch_port_index = get_switch_port_from_stp_port(stp_port_index);
+	write_port_state_register (switch_port_index, enable, forwarding);
 }
 
 static void StpCallback_EnableForwarding (const STP_BRIDGE* bridge, unsigned int stp_port_index, unsigned int treeIndex, bool enable, unsigned int timestamp)
 {
 	bool learning = STP_GetPortLearning (bridge, stp_port_index, treeIndex);
-	write_port_state_register (learning, enable, stp_port_index);
+   	size_t switch_port_index = get_switch_port_from_stp_port(stp_port_index);
+	write_port_state_register (switch_port_index, learning, enable);
 }
 
 // See StpCallback_TransmitGetBuffer.html in the _help directory of the STP library.
@@ -380,11 +382,11 @@ static const STP_CALLBACKS stp_callbacks =
 	StpCallback_FreeMemory,
 };
 
-static bool read_port_status (uint32_t stp_port_index, uint32_t& speed, bool& duplex)
+static bool read_port_status (size_t stp_port_index, uint32_t& speed, bool& duplex)
 {
-	auto devAddr = get_dev_addr_from_stp_port(stp_port_index);
+	auto dev_addr = get_dev_addr_from_stp_port(stp_port_index);
 	uint32_t reg_addr = 0; // Port Status register, page 227 of 88E6352_Functional_Specification-Rev0-08.pdf.
-	auto status = switch_read_register(stp_switch_mdio_address, devAddr, reg_addr);
+	auto status = switch_read_register (stp_switch_mdio_address, dev_addr, reg_addr);
     if ((status & (1 << 11)) == 0)
 		return false;
 
@@ -474,9 +476,9 @@ static void validate_and_process_bpdu (const uint8_t* data, size_t size)
 	}
 
 	const uint8_t* bpdu = &data[25];
-	unsigned int bpdu_size = etherTypeOrSize - 3;
-	unsigned int switch_port_index = tag[1] >> 3;
-	unsigned int stp_port_index = get_stp_port_from_switch_port(switch_port_index);
+	size_t bpdu_size = etherTypeOrSize - 3;
+	size_t switch_port_index = tag[1] >> 3;
+	size_t stp_port_index = get_stp_port_from_switch_port(switch_port_index);
 
 	if (!STP_GetPortEnabled(stp_bridge, stp_port_index))
 	{
@@ -496,6 +498,23 @@ static void process_received_frame (const uint8_t* data, size_t size)
 		return validate_and_process_bpdu(data, size);
 }
 
+static void make_mac_address (uint8_t address[6])
+{
+	// // UNIQUEID0/1/2/3 registers, not defined in TM4C1294KCPDT.h at the time of this writing
+	const volatile uint32_t* uid = (uint32_t*)0x400FEF20;
+
+	uint64_t v0 =  uid[0];
+	uint64_t v1 = ((uint64_t)uid[1] << 16) | ((uint64_t)uid[2] >> 16);
+	uint64_t v2 = ((uint64_t)(uid[2] & 0xFFFF) << 32) | uid[3];
+	uint64_t sum = v0 + v1 + v2;
+	address[0] = (sum >> 40) & 0xFE;
+	address[1] = (sum >> 32);
+	address[2] = (sum >> 24);
+	address[3] = (sum >> 16);
+	address[4] = (sum >> 8);
+	address[5] = sum;
+}
+
 int main()
 {
 	clock_init();
@@ -510,37 +529,35 @@ int main()
 		;
 
 	smi_init();
-	switch_init(stp_switch_mdio_address);
-	switch_init(other_switch_mdio_address);
+   	assert ((switch_read_register (stp_switch_mdio_address, switch_dev_addr_port0, 3) & 0xFFF0) == 0x3520);
+   	assert ((switch_read_register (other_switch_mdio_address, switch_dev_addr_port0, 3) & 0xFFF0) == 0x3520);
+	switch_power_up_phys (stp_switch_mdio_address);
+	switch_power_up_phys (other_switch_mdio_address);
 
-	// Tell the switch IC that our CPU is wired to port 0.
+	// Tell the switch IC that our CPU is wired to Port 0 (i.e., make Port 0 the management port)
 	// Table 122 on page 283.
 	auto value = switch_read_register (stp_switch_mdio_address, switch_dev_addr_global1, 0x1A);
 	value &= 0xFF0F;
 	switch_write_register (stp_switch_mdio_address, switch_dev_addr_global1, 0x1A, value);
 
+	// ... and enable forwarding on Port 0
+	write_port_state_register(0, true, true);
+
+	uint8_t mac_address[6];
+	make_mac_address(mac_address);
 	ethernet_init(mac_address);
 
 	auto now = clock_get_time_ms();
 
 	stp_bridge = STP_CreateBridge (stp_port_count, 0, 0, &stp_callbacks, mac_address, 100);
 //	STP_EnableLogging (stp_bridge, 1);
+	STP_StartBridge (stp_bridge, now); // comment this out to disable stp
 
-	static bool stp_enabled_in_config = true;
-	if (stp_enabled_in_config)
-	{
-		STP_StartBridge (stp_bridge, now);
-	}
-	else
+	if (!STP_IsBridgeStarted(stp_bridge))
 	{
 		// STP disabled in config; enable forwarding on all ports.
-		for (uint32_t dev_addr = switch_dev_addr_port0; dev_addr <= switch_dev_addr_port4; dev_addr++)
-		{
-			uint32_t reg_addr = 4; // Port Control register, page 227 of 88E6352_Functional_Specification-Rev0-08.pdf.
-        	auto value = switch_read_register (stp_switch_mdio_address, (switch_dev_addr)dev_addr, reg_addr);
-			value |= 3;
-			switch_write_register (stp_switch_mdio_address, (switch_dev_addr)dev_addr, reg_addr, value);
-		}
+		for (size_t port_index = 1; port_index <= 5; port_index++)
+			write_port_state_register (port_index, true, true);
 	}
 
 	uint32_t next_stp_1s_tick = now + 1000;
@@ -554,14 +571,14 @@ int main()
 
 		if (clock_get_time_ms() >= next_port_poll)
 		{
-			if (stp_enabled_in_config)
+			if (STP_IsBridgeStarted(stp_bridge))
 				poll_port_status_and_call_library (now);
 			next_port_poll += 100;
 		}
 
 		if (clock_get_time_ms() >= next_stp_1s_tick)
 		{
-			if (stp_enabled_in_config)
+			if (STP_IsBridgeStarted(stp_bridge))
 				STP_OnOneSecondTick (stp_bridge, now);
 			else
 			{
