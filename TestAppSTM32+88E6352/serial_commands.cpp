@@ -14,148 +14,19 @@ extern STP_BRIDGE* bridge;
 extern uint16_t read_phy_register (uint8_t phy_addr, uint8_t reg_addr);
 extern void write_phy_register (uint8_t phy_addr, uint8_t reg_addr, uint16_t value);
 
-static void get_mac_address()
+static void process_mac_command (const char *params)
 {
-/*
-	uint8_t fma[6];
-    app.get_mac_address(fma);
-
-	uint8_t cma[6];
-	enet_get_mac_address(cma);
-
-    if (memcmp(fma, cma, 6) == 0)
+	if (*params == 0)
 	{
+		uint8_t cma[6];
+		enet_get_mac_address(cma);
 		printf("%02X:%02X:%02X:%02X:%02X:%02X \r\n", cma[0], cma[1], cma[2], cma[3], cma[4], cma[5]);
-	}
-	else if (fma[0] == 0xff && fma[1] == 0xff && fma[2] == 0xff && fma[3] == 0xff && fma[4] == 0xff && fma[5] == 0xff)
-	{
-		printf("No MAC address has been set on this device.\r\n");
-		printf("MAC address currently in use = %02X:%02X:%02X:%02X:%02X:%02X \r\n", cma[0], cma[1], cma[2], cma[3], cma[4], cma[5]);
-	}
-    else
-	{
-		printf("MAC address currently in use = %02X:%02X:%02X:%02X:%02X:%02X \r\n", cma[0], cma[1], cma[2], cma[3], cma[4], cma[5]);
-		printf("MAC address after restart    = %02X:%02X:%02X:%02X:%02X:%02X \r\n", fma[0], fma[1], fma[2], fma[3], fma[4], fma[5]);
-    }
-	*/
-}
-
-static void process_mac_command(const char *params)
-{
-	if (*params == 0)
-		return get_mac_address();
-
-	if (strlen(params) != 17)
-	{
-		printf("The address must have the format 11:22:33:44:55:66\r\n");
 		return;
 	}
 
-	int ints[6];
-	int parsed = sscanf(params, "%02X:%02X:%02X:%02X:%02X:%02X", &ints[0], &ints[1], &ints[2], &ints[3], &ints[4], &ints[5]);
-	if (parsed != 6)
-	{
-		printf("Address not valid.\r\n");
-		return;
-	}
-
-	uint8_t mac_addr[6] = { (uint8_t)ints[0], (uint8_t)ints[1], (uint8_t)ints[2], (uint8_t)ints[3], (uint8_t)ints[4], (uint8_t)ints[5] };
-	//app.set_mac_address (mac_addr);
-	//printf ("The MAC address has been set. You need to restart the device for this change to take effect.\r\n");
-}
-/*
-void print_ip_config (const char* text_before)
-{
-	if (text_before != nullptr)
-		printf ("%s\r\n", text_before);
-
-	indent();
-
-	uint32_t ip = netif_ip_addr4(&gnetif)->addr;
-	printf ("ip addr: %s\r\n", ipaddr_ntoa(&gnetif.ip_addr));
-
-	uint32_t mask = netif_ip_netmask4(&gnetif)->addr;
-	printf ("netmask: %s\r\n", ipaddr_ntoa(&gnetif.netmask));
-
-	uint32_t gw = netif_ip_gw4(&gnetif)->addr;
-	printf ("gateway: %s\r\n",ipaddr_ntoa(&gnetif.gw));
-
-	printf ("DHCP Client is %s.\r\n", ram_config.use_dhcp_client ? "enabled" : "disabled");
-
-	printf ("Secondary IP for FCS communication hardcoded to ");
-	printf ("%s", ipaddr_ntoa(&elbit_netif.ip_addr));
-	printf (" // %s\r\n", ipaddr_ntoa(&elbit_netif.netmask));
-
-	unindent();
+	printf ("Setting not yet implemented.\r\n");
 }
 
-
-static void process_ip_command (const char* params)
-{
-	while (*params == 0x20 || *params == 0x09)
-		params++;
-
-	if (*params == 0)
-		return print_ip_config(nullptr);
-
-	if (strcmp (params, "auto") == 0)
-	{
-		if (ram_config.use_dhcp_client)
-			printf ("DHCP Client was already enabled. Restarting negotiation.\r\n");
-		else
-		{
-			ram_config.use_dhcp_client = 1;
-			write_config_to_flash();
-			printf ("DHCP Client is now enabled and will remain enabled at power-up.\r\n");
-		}
-
-		dhcp_start(&gnetif);
-		return;
-	}
-
-	ip4_addr_t address;
-	if (!ip4addr_aton(params, &address))
-		goto err;
-	while (isdigit(*params) || (*params == '.'))
-		params++;
-	while (*params == 0x20)
-		params++;
-
-	ip4_addr_t netmask;
-	if (!ip4addr_aton(params, &netmask) || !ip4_addr_netmask_valid(ip4_addr_get_u32(&netmask)))
-		goto err;
-	while (isdigit(*params) || (*params == '.'))
-		params++;
-	while (*params == 0x20)
-		params++;
-
-	ip4_addr_t gateway;
-	gateway = IPADDR4_INIT(IPADDR_ANY);
-	if (*params != 0)
-	{
-		if (!ip4addr_aton(params, &gateway))
-			goto err;
-	}
-
-	set_manual_ip_config (&gnetif, &address, &netmask, &gateway);
-
-	printf ("DHCP client was disabled and will remain disabled at power-up. ");
-	printf ("To use DHCP again, type \"ip auto\". ");
-	print_ip_config ("Active IP configuration:");
-
-	return;
-
-err:
-	printf ("Wrong arguments.\r\n");
-}
-
-static void process_lwipstats_command (const char*)
-{
-	serial_console_enable_insert_cr_before_lf(true);
-	stats_display();
-	serial_console_enable_insert_cr_before_lf(false);
-}
-*/
 static void process_phy_command (const char* params)
 {
 	uint32_t addr, reg, value;
@@ -291,8 +162,6 @@ static void process_stp_command (const char* params)
 extern const serial_command ta_commands[] =
 {
 	{ "mac",       "mac [aa:bb:cc:dd:ee:ff] - show or set the MAC adress", process_mac_command },
-//	{ "ip",        "Shows or sets the IP configuration: ip [auto | [addr mask [gateway]]]", process_ip_command },
-//	{ "lwipstats", "", process_lwipstats_command },
 	{ "phy",       "\"phy devaddr, regaddr[, hex_value]\" - reads/writes a PHY register", process_phy_command },
 	{ "smitest",   "", process_smi_test_command },
 	{ "phytest",   "", process_phy_test_command },

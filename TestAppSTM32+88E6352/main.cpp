@@ -402,7 +402,7 @@ int main()
 	static uint8_t event_queue_buffer[1024] __attribute__((section (".non_init")));
 	event_queue_init (event_queue_buffer, sizeof(event_queue_buffer));
 
-	serial_console_init (USART3, { GPIOC, 10, 7 }, { GPIOC, 11, 7 });
+	serial_console_init (USART1, { GPIOA, 10, 7 }, { GPIOA, 9, 7 });
 	printf (ANSI_CLEAR_SCREEN ANSI_WHITEONBLACK "\r\n\r\nTest App STM32+88E6352.\r\n");
 
 	extern const serial_command ta_commands[];
