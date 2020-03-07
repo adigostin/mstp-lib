@@ -23,30 +23,32 @@
 	<h4>Parameters</h4>
 	<dl>
 		<dt>portCount</dt>
-		<dd>The maximum number of ports this bridge will have. Usually equal to the number 
+		<dd>The maximum number of ports this bridge will have. Usually equal to the number
 			of physical ports present on the device, minus the management port.</dd>
 		<dt>mstiCount</dt>
 		<dd>Maximum number of MSTIs for when the device runs MSTP (this is in addition to the CIST, which is always present).
 			Should be zero if your device supports only STP/RSTP, or 0..64 if your device supports also MSTP.
 			Passing an invalid value will cause an assertion failure in the function.
 		</dd>
-        <dt>maxVlanNumber</dt>
-        <dd>The maximum VLAN number your device supports, or otherwise zero. The library uses this to determine the size of an&nbsp;
+		<dt>maxVlanNumber</dt>
+		<dd>The maximum VLAN number your device supports while in MSTP mode, or otherwise zero. The library uses this to determine the size of an&nbsp;
             MST Configuration Table that it holds internally and from which it calculates the MST
             Configuration Digest. See also <a href="STP_SetMstConfigTable.html">STP_SetMstConfigTable</a>
-            and <a href="STP_GetMstConfigTable.html">STP_GetMstConfigTable</a>.</dd>
+			and <a href="STP_GetMstConfigTable.html">STP_GetMstConfigTable</a>.</dd>
 		<dt>callbacks</dt>
 		<dd>Pointer to an <a href="STP_CALLBACKS.html">STP_CALLBACKS</a> structure containing
             pointers to application-defined STP callbacks. The STP library makes a copy of this
             structure, so the application can reuse it after the function returns.
 		</dd>
 		<dt>bridgeAddress</dt>
-		<dd>The MAC address of the STP bridge. See the Remarks section at
-			<a href="STP_SetBridgeAddress.html">STP_SetBridgeAddress</a> for important information
+		<dd>The MAC address of the STP bridge, usually equal to the MAC address of the
+			Ethernet peripheral of the management microcontroller/processor.
+			See the Remarks section at
+			<a href="STP_SetBridgeAddress.html">STP_SetBridgeAddress</a> for information
 			about this address. </dd>
 		<dt>debugLogBufferSize</dt>
 		<dd>The size of the debug log buffer this function will allocate, if <a href="STP_EnableLogging.html">STP_USE_LOG=0 is not defined</a> in the compiler options. Must be >= 2.
-			</dd>
+		</dd>
 	</dl>
 	<h4>Return value</h4>
 	<dl>
@@ -58,7 +60,7 @@
 	<p>
 		This functions allocates all the memory required for running the bridge,
 		and it does so only using the STP callback <code>
-		<a href="StpCallback_AllocAndZeroMemory.html">allocAndZeroMemory</a></code>. No other STP
+			<a href="StpCallback_AllocAndZeroMemory.html">allocAndZeroMemory</a></code>. No other STP
 		function allocates memory. This allows the application programmer to determine empirically
 		the memory requirement of the STP library for a given bridge. The memory requirement
 		depends, among other things, on the number of ports, the number of spanning trees, and the
@@ -66,13 +68,13 @@
 		program.</p>
 	<p>
 		This function sets all operational parameters
-		(such as ForwardDelay, HelloTime, bridge priority, port priority etc.) to their default values from the 802.1Q standard. </p>
-    <p>
+		(such as ForwardDelay, HelloTime, bridge priority, port priority etc.) to their default values from the 802.1Q standard.</p>
+	<p>
 		This function initializes the bridge for RSTP operation. If you need to switch to Legacy STP or MSTP, call <a href="STP_SetStpVersion.html">STP_SetStpVersion</a>.</p>
 	<p>
 		This function does not start the bridge (i.e., does not begin execution of the bridge&#39;s
 		state machines). The application must explicitly start the bridge by calling <a href="STP_StartBridge.html">
-			STP_StartBridge</a>, usually after setting some operational parameters.</p>
+		STP_StartBridge</a>, usually after setting some operational parameters.</p>
 	<p>
 		The STP library generates debug log text and passes it to the application
 		via <code><a href="StpCallback_DebugStrOut.html">StpCallback_DebugStrOut</a></code>. This callback in turn usually sends this text
@@ -110,5 +112,5 @@
 	<p>
 		Since the library is not reentrant, you must not call library functions from an interrupt
 		handler in an embedded application.</p>
-	</body>
+</body>
 </html>
