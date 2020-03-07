@@ -189,13 +189,13 @@
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\simulator\edge\edge.vcxproj">
+    <ProjectReference Include="..\edge\edge.vcxproj">
       <Project>{c4c530f1-e67c-48a2-81ed-41e428f17ed9}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\mstp-lib.vcxproj">
+    <ProjectReference Include="..\..\mstp-lib.vcxproj">
       <Project>{1dc9dd21-a2c5-46fc-b13e-c3382471bed2}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\simulator\simulator.vcxproj">
+    <ProjectReference Include="..\simulator.vcxproj">
       <Project>{072c8c7e-79fa-413c-a33c-eddb256d72be}</Project>
     </ProjectReference>
   </ItemGroup>
