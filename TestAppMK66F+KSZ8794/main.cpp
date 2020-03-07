@@ -271,8 +271,6 @@ static STP_BRIDGE* bridge;
 
 static void make_mac_address (uint8_t address[6])
 {
-	const uint8_t* uid = (uint8_t*)&SIM->UIDH;
-
 	uint64_t v0 = SIM->UIDH;
 	uint64_t v1 = ((uint64_t)SIM->UIDMH << 16) | ((uint64_t)SIM->UIDML >> 16);
 	uint64_t v2 = ((uint64_t)(SIM->UIDML & 0xFFFF) << 32) | SIM->UIDL;
