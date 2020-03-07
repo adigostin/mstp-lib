@@ -19,8 +19,9 @@ void STP_SetBridgeAddress
 	<h4>
 		Summary</h4>
 	<p>
-		Function which the application must call every time the bridge&#39;s MAC address 
-		changes while STP is running.</p>
+		Function which the application must call every time the MAC address
+		of the management microcontroller/processor changes, for example when
+		the end user changes it in a web interface or a CLI.</p>
 	<h4>
 		Parameters</h4>
 	<dl>
@@ -28,19 +29,18 @@ void STP_SetBridgeAddress
 		<dd>Pointer to an STP_BRIDGE object, obtained from <a href="STP_CreateBridge.html">
 			STP_CreateBridge</a>.</dd>
 		<dt>address</dt>
-		<dd>The new MAC address of the STP bridge.</dd>
+		<dd>The new MAC address.</dd>
 		<dt>timestamp</dt>
 		<dd>A timestamp used for the debug log. </dd>
 	</dl>
 	<h4>
 		Remarks</h4>
 	<p>
-			Execution of this function is a potentially lengthy process. 
+			Execution of this function is a potentially lengthy process.
 			It may call various callbacks multiple times.</p>
 	<p>
 			See the Remarks section in <a href="STP_SetBridgePriority.html">STP_SetBridgePriority</a> for information on how the bridge priority is calculated from the bridge address.</p>
 	<p>
 			This function <strong>may not</strong> be called from within an <a href="STP_CALLBACKS.html">STP callback</a>.</p>
-	
 </body>
 </html>

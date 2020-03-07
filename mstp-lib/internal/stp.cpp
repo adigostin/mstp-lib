@@ -1,6 +1,6 @@
 
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
-// Copyright (c) 2011-2019 Adi Gostin, distributed under Apache License v2.0.
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #include "../stp.h"
 #include "stp_bridge.h"
@@ -195,9 +195,32 @@ void STP_StartBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 void STP_StopBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 {
 	assert (bridge->started);
-	bridge->started = false;
 
 	bridge->callbacks.enableBpduTrapping (bridge, false, timestamp);
+
+	for (unsigned int pi = 0; pi < bridge->portCount; pi++)
+	{
+		PORT* port = bridge->ports[pi];
+		for (unsigned int ti = 0; ti < bridge->treeCount(); ti++)
+		{
+			PORT_TREE* tree = port->trees[ti];
+
+			if (!tree->learning)
+			{
+				bridge->callbacks.enableLearning(bridge, pi, ti, true, timestamp);
+				tree->learning = true;
+			}
+
+			if (!tree->forwarding)
+			{
+				bridge->callbacks.enableForwarding(bridge, pi, ti, true, timestamp);
+				tree->forwarding = true;
+			}
+		}
+	}
+
+	// This one last, to allow the callbacks to still call "const" library functions.
+	bridge->started = false;
 
 	LOG (bridge, -1, -1, "{T}: Bridge stopped.\r\n", timestamp);
 	LOG (bridge, -1, -1, "------------------------------------\r\n");

@@ -1,4 +1,7 @@
 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #include "pch.h"
 #include "simulator.h"
 #include "wire.h"
@@ -6,26 +9,23 @@
 #include "port.h"
 #include "win32/xml_serializer.h"
 
-using namespace std;
-using namespace edge;
-
 static const _bstr_t NextMacAddressString = "NextMacAddress";
 
 class project : public edge::object, public project_i
 {
 	using base = edge::object;
 
-	wstring _path;
-	vector<unique_ptr<bridge>> _bridges;
-	vector<unique_ptr<wire>> _wires;
-	mac_address _next_mac_address = next_mac_address_property._default_value.value();
+	std::wstring _path;
+	std::vector<std::unique_ptr<bridge>> _bridges;
+	std::vector<std::unique_ptr<wire>> _wires;
+	mac_address _next_mac_address = next_mac_address_property.default_value.value();
 	bool _simulationPaused = false;
 	bool _changedFlag = false;
 
 public:
-	virtual const vector<unique_ptr<bridge>>& bridges() const override final { return _bridges; }
+	virtual const std::vector<std::unique_ptr<bridge>>& bridges() const override final { return _bridges; }
 
-	virtual void insert_bridge (size_t index, unique_ptr<bridge>&& bridge) override final
+	virtual void insert_bridge (size_t index, std::unique_ptr<bridge>&& bridge) override final
 	{
 		assert (index <= _bridges.size());
 		assert (bridge->_project == nullptr);
@@ -42,13 +42,13 @@ public:
 		this->event_invoker<invalidate_e>()(this);
 	}
 
-	virtual unique_ptr<bridge> remove_bridge(size_t index) override final
+	virtual std::unique_ptr<bridge> remove_bridge(size_t index) override final
 	{
 		assert (index < _bridges.size());
 		bridge* b = _bridges[index].get();
 		assert (b->_project == this);
 
-		if (any_of (_wires.begin(), _wires.end(), [b, this](const unique_ptr<wire>& w) {
+		if (std::any_of (_wires.begin(), _wires.end(), [b, this](const std::unique_ptr<wire>& w) {
 			return any_of (w->points().begin(), w->points().end(), [b, this] (wire_end p) {
 				return std::holds_alternative<connected_wire_end>(p) && (std::get<connected_wire_end>(p)->bridge() == b);
 			});
@@ -69,9 +69,9 @@ public:
 		return result;
 	}
 
-	virtual const vector<unique_ptr<wire>>& wires() const override final { return _wires; }
+	virtual const std::vector<std::unique_ptr<wire>>& wires() const override final { return _wires; }
 
-	virtual void insert_wire (size_t index, unique_ptr<wire>&& wire) override final
+	virtual void insert_wire (size_t index, std::unique_ptr<wire>&& wire) override final
 	{
 		assert (index <= _wires.size());
 		assert (wire->_project == nullptr);
@@ -87,7 +87,7 @@ public:
 		this->event_invoker<invalidate_e>()(this);
 	}
 
-	virtual unique_ptr<wire> remove_wire (size_t index) override final
+	virtual std::unique_ptr<wire> remove_wire (size_t index) override final
 	{
 		assert (index < _wires.size());
 		wire* w = _wires[index].get();
@@ -127,7 +127,7 @@ public:
 
 	virtual bool IsWireForwarding (wire* wire, unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const override final
 	{
-		if (!holds_alternative<connected_wire_end>(wire->p0()) || !holds_alternative<connected_wire_end>(wire->p1()))
+		if (!std::holds_alternative<connected_wire_end>(wire->p0()) || !std::holds_alternative<connected_wire_end>(wire->p1()))
 			return false;
 
 		auto portA = std::get<connected_wire_end>(wire->p0());
@@ -139,9 +139,9 @@ public:
 
 		if (hasLoop != nullptr)
 		{
-			unordered_set<port*> txPorts;
+			std::unordered_set<port*> txPorts;
 
-			function<bool(port* txPort)> transmitsTo = [this, vlanNumber, &txPorts, &transmitsTo, targetPort=portA](port* txPort) -> bool
+			std::function<bool(port* txPort)> transmitsTo = [this, vlanNumber, &txPorts, &transmitsTo, targetPort=portA](port* txPort) -> bool
 			{
 				if (txPort->IsForwarding(vlanNumber))
 				{
@@ -180,7 +180,7 @@ public:
 	virtual mac_address alloc_mac_address_range (size_t count) override final
 	{
 		if (count >= 128)
-			throw range_error("count must be lower than 128.");
+			throw std::range_error("count must be lower than 128.");
 
 		auto result = _next_mac_address;
 		_next_mac_address[5] += (uint8_t)count;
@@ -209,7 +209,7 @@ public:
 		if (FAILED(hr))
 			return hr;
 
-		hr = FormatAndSaveToFile (doc, filePath);
+		hr = format_and_save_to_file (doc, filePath);
 		if (FAILED(hr))
 			return hr;
 
@@ -217,54 +217,7 @@ public:
 		return S_OK;
 	}
 
-	HRESULT FormatAndSaveToFile (IXMLDOMDocument3* doc, const wchar_t* path) const
-	{
-		com_ptr<IStream> stream;
-		auto hr = SHCreateStreamOnFileEx (path, STGM_WRITE | STGM_SHARE_DENY_WRITE | STGM_CREATE, FILE_ATTRIBUTE_NORMAL, FALSE, nullptr, &stream);
-		if (FAILED(hr))
-			return hr;
-
-		com_ptr<IMXWriter> writer;
-		hr = CoCreateInstance (CLSID_MXXMLWriter60, nullptr, CLSCTX_ALL, IID_PPV_ARGS(&writer));
-		if (FAILED(hr))
-			return hr;
-
-		hr = writer->put_encoding (_bstr_t("utf-8"));
-		if (FAILED(hr))
-			return hr;
-
-		hr = writer->put_indent (_variant_t(true));
-		if (FAILED(hr))
-			return hr;
-
-		hr = writer->put_standalone (_variant_t(true));
-		if (FAILED(hr))
-			return hr;
-
-		hr = writer->put_output (_variant_t(stream));
-		if (FAILED(hr))
-			return hr;
-
-		com_ptr<ISAXXMLReader> saxReader;
-		hr = CoCreateInstance (CLSID_SAXXMLReader60, nullptr, CLSCTX_ALL, IID_PPV_ARGS(&saxReader));
-		if (FAILED(hr))
-			return hr;
-
-		hr = saxReader->putContentHandler(com_ptr<ISAXContentHandler>(writer));
-		if (FAILED(hr))
-			return hr;
-
-		hr = saxReader->putProperty(L"http://xml.org/sax/properties/lexical-handler", _variant_t(writer));
-		if (FAILED(hr))
-			return hr;
-
-		hr = saxReader->parse(_variant_t(doc));
-		if (FAILED(hr))
-			return hr;
-
-		hr = stream->Commit(STGC_DEFAULT);
-		return hr;
-	}
+	static std::span<const concrete_type* const> known_types();
 
 	virtual HRESULT load (const wchar_t* filePath) override final
 	{
@@ -293,7 +246,7 @@ public:
 			return E_FAIL;
 		com_ptr<IXMLDOMElement> projectElement = projectNode;
 
-		deserialize_to (projectElement, this);
+		deserialize_to (projectElement, this, known_types());
 
 		_path = filePath;
 		this->event_invoker<loaded_e>()(this);
@@ -336,7 +289,7 @@ public:
 	virtual ChangedEvent::subscriber GetChangedEvent() override final { return ChangedEvent::subscriber(this); }
 
 	virtual const object_collection_property* bridges_prop() const override final { return &bridges_property; }
-	
+
 	virtual const object_collection_property* wires_prop() const override final { return &wires_property; }
 
 	virtual property_changing_e::subscriber property_changing() override final { return property_changing_e::subscriber(this); }
@@ -344,7 +297,7 @@ public:
 	virtual property_changed_e::subscriber property_changed() override final { return property_changed_e::subscriber(this); }
 
 	mac_address next_mac_address() const { return _next_mac_address; }
-	
+
 	void set_next_mac_address (mac_address value)
 	{
 		if (_next_mac_address != value)
@@ -355,10 +308,10 @@ public:
 		}
 	}
 
-	static inline mac_address_p next_mac_address_property = {
+	static constexpr mac_address_p next_mac_address_property = {
 		"NextMacAddress", nullptr, nullptr, ui_visible::yes,
-		static_cast<mac_address_p::member_getter_t>(&next_mac_address),
-		static_cast<mac_address_p::member_setter_t>(&set_next_mac_address),
+		&next_mac_address,
+		&set_next_mac_address,
 		mac_address{ 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x80 },
 	};
 
@@ -369,10 +322,18 @@ public:
 
 	static const typed_object_collection_property<class project, bridge> bridges_property;
 	static const typed_object_collection_property<class project, wire> wires_property;
-	static const property* _properties[];
-	static const xtype<class project> _type;
-	virtual const struct type* type() const { return &_type; }
+	static const property* const _properties[];
+	static const xtype<project> _type;
+	virtual const concrete_type* type() const { return &_type; }
 };
+
+//static
+std::span<const concrete_type* const> project::known_types()
+{
+	static const concrete_type* const types[] =
+		{ &project::_type, &bridge::_type, &bridge_tree::_type, &port::_type, &port_tree::_type, &wire::_type };
+	return types;
+}
 
 const typed_object_collection_property<project, bridge> project::bridges_property = {
 	"Bridges", nullptr, nullptr, ui_visible::no,
@@ -384,8 +345,8 @@ const typed_object_collection_property<project, wire> project::wires_property {
 	&wire_count, &wire_at, &insert_wire, &remove_wire
 };
 
-const property* project::_properties[] = { &next_mac_address_property, &bridges_property, &wires_property };
+const property* const project::_properties[] = { &next_mac_address_property, &bridges_property, &wires_property };
 
-const xtype<project> project::_type = { "Project", &base::_type, _properties, [] { return new project(); } };
+const xtype<project> project::_type = { "Project", &base::_type, _properties, nullptr };
 
 extern const project_factory_t project_factory = []() -> std::shared_ptr<project_i> { return std::make_shared<project>(); };

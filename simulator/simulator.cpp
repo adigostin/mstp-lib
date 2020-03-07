@@ -1,4 +1,7 @@
 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #include "pch.h"
 #include "simulator.h"
 #include "bridge.h"
@@ -17,7 +20,6 @@
 
 #pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
-using namespace std;
 using namespace D2D1;
 using namespace edge;
 
@@ -31,7 +33,7 @@ extern const project_window_factory_t project_window_factory;
 extern const project_factory_t project_factory;
 
 #pragma region project_i
-pair<wire*, size_t> project_i::GetWireConnectedToPort (const class port* port) const
+std::pair<wire*, size_t> project_i::GetWireConnectedToPort (const class port* port) const
 {
 	for (auto& w : wires())
 	{
@@ -93,14 +95,14 @@ std::unique_ptr<bridge> project_i::remove_bridge (bridge* b)
 class SimulatorApp : public event_manager, public simulator_app_i
 {
 	HINSTANCE const _hInstance;
-	wstring _regKeyPath;
-	vector<std::unique_ptr<project_window_i>> _projectWindows;
+	std::wstring _regKeyPath;
+	std::vector<std::unique_ptr<project_window_i>> _projectWindows;
 
 public:
 	SimulatorApp (HINSTANCE hInstance)
 		: _hInstance(hInstance)
 	{
-		wstringstream ss;
+		std::wstringstream ss;
 		ss << L"SOFTWARE\\" << company_name << L"\\" << ::app_name << L"\\" << ::app_version_string;
 		_regKeyPath = ss.str();
 	}
@@ -109,17 +111,16 @@ public:
 
 	virtual void add_project_window (std::unique_ptr<project_window_i>&& pw) override final
 	{
-		pw->destroying().add_handler(&OnProjectWindowDestroying, this);
+		pw->destroying().add_handler(&on_project_window_destroying, this);
 		_projectWindows.push_back(std::move(pw));
 		this->event_invoker<project_window_added_e>()(_projectWindows.back().get());
 	}
 
-	static void OnProjectWindowDestroying (void* callbackArg, edge::win32_window_i* w)
+	static void on_project_window_destroying (void* callbackArg, project_window_i* pw)
 	{
-		auto pw = dynamic_cast<project_window_i*>(w);
 		auto app = static_cast<SimulatorApp*>(callbackArg);
 
-		pw->destroying().remove_handler (&OnProjectWindowDestroying, app);
+		pw->destroying().remove_handler (&on_project_window_destroying, app);
 
 		auto it = find_if (app->_projectWindows.begin(), app->_projectWindows.end(), [pw](auto& p) { return p.get() == pw; });
 		assert (it != app->_projectWindows.end());
@@ -195,14 +196,14 @@ public:
 
 static void RegisterApplicationAndFileTypes()
 {
-	auto exePath = make_unique<wchar_t[]>(MAX_PATH);
+	auto exePath = std::make_unique<wchar_t[]>(MAX_PATH);
 	DWORD dwRes = GetModuleFileName (nullptr, exePath.get(), MAX_PATH); assert(dwRes);
-	wstringstream ss;
+	std::wstringstream ss;
 	ss << L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\" << PathFindFileName(exePath.get());
 	auto appPathKeyName = ss.str();
 
 	bool notifyShell = false;
-	auto buffer = make_unique<wchar_t[]>(MAX_PATH);
+	auto buffer = std::make_unique<wchar_t[]>(MAX_PATH);
 	DWORD cbData = MAX_PATH;
 	auto ls = RegGetValue (HKEY_CURRENT_USER, appPathKeyName.c_str(), nullptr, RRF_RT_REG_SZ, nullptr, buffer.get(), &cbData);
 	if ((ls != ERROR_SUCCESS) || (_wcsicmp (buffer.get(), exePath.get()) != 0))
@@ -216,7 +217,7 @@ static void RegisterApplicationAndFileTypes()
 	ss << L"SOFTWARE\\Classes\\" << ProgID << L"\\shell\\open\\command";
 	auto progIdKeyName = ss.str();
 	ss.str(L"");
-	ss << L"\"" << exePath.get() << L"\" \"%%1\"";
+	ss << L"\"" << exePath.get() << L"\" \"%1\"";
 	auto progIdKeyValue = ss.str();
 	cbData = MAX_PATH;
 	ls = RegGetValue (HKEY_CURRENT_USER, progIdKeyName.c_str(), nullptr, RRF_RT_REG_SZ, nullptr, buffer.get(), &cbData);
@@ -262,7 +263,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 
 	bool tryDebugFirst = false;
 #ifdef _DEBUG
-	tryDebugFirst = true;
+	tryDebugFirst = (LoadLibraryA("dxgidebug.dll") != nullptr);
 #endif
 
 	com_ptr<ID3D11Device> d3d_device;
@@ -275,9 +276,9 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 		if (tryDebugFirst)
 		{
 			hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
-								   D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_DEBUG,
-								   &d3dFeatureLevel, 1,
-								   D3D11_SDK_VERSION, &d3d_device, nullptr, &deviceContext);
+			                       D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_DEBUG,
+			                       &d3dFeatureLevel, 1,
+			                       D3D11_SDK_VERSION, &d3d_device, nullptr, &deviceContext);
 		}
 
 		if (!tryDebugFirst || FAILED(hr))
@@ -289,7 +290,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 			assert(SUCCEEDED(hr));
 		}
 
-		d3d_dc = deviceContext.get();
+		d3d_dc = deviceContext;
 	}
 
 	com_ptr<IDWriteFactory> dwrite_factory;
@@ -300,13 +301,13 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 		SimulatorApp app (hInstance);
 
 		auto project = project_factory();
-		project_window_create_params params = 
+		project_window_create_params params =
 		{
 			&app, project, true, true, 1, SW_SHOW, d3d_dc, dwrite_factory
 		};
 
 		auto projectWindow = project_window_factory (params);
-		app.add_project_window(move(projectWindow));
+		app.add_project_window(std::move(projectWindow));
 
 		processExitValue = (int)app.RunMessageLoop();
 	}
@@ -328,7 +329,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 namespace natvis
 {
 	struct hex_dummy_low { unsigned char c; };
-	struct hex_dummy_high { unsigned char c; };	
+	struct hex_dummy_high { unsigned char c; };
 	static volatile hex_dummy_low dummylo;
 	static volatile hex_dummy_high dummyhi;
 }

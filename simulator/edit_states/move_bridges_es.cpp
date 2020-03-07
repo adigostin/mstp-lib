@@ -1,4 +1,7 @@
 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #include "pch.h"
 #include "edit_state.h"
 #include "bridge.h"
@@ -26,32 +29,32 @@ public:
 	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) override final
 	{
 		auto firstBridge = static_cast<bridge*>(_selection->objects()[0]); assert (firstBridge != nullptr);
-		_first_bridge_initial_location = firstBridge->GetLocation();
+		_first_bridge_initial_location = firstBridge->location();
 
 		for (auto o : _selection->objects())
 		{
 			auto b = dynamic_cast<bridge*>(o); assert (b != nullptr);
-			_infos.push_back ({ b, b->GetLocation() - firstBridge->GetLocation() });
+			_infos.push_back ({ b, b->location() - firstBridge->location() });
 		}
 
-		_offset_first_bridge = location.w - firstBridge->GetLocation();
+		_offset_first_bridge = location.w - firstBridge->location();
 	}
 
 	virtual void process_mouse_move (const mouse_location& location) override final
 	{
 		auto firstBridgeLocation = location.w - _offset_first_bridge;
-		_infos[0].b->SetLocation(firstBridgeLocation);
+		_infos[0].b->set_location(firstBridgeLocation);
 		for (size_t i = 1; i < _infos.size(); i++)
-			_infos[i].b->SetLocation (firstBridgeLocation + _infos[i].offset_from_first);
+			_infos[i].b->set_location (firstBridgeLocation + _infos[i].offset_from_first);
 	}
 
 	virtual std::optional<LRESULT> process_key_or_syskey_down (UINT virtualKey, UINT modifierKeys) override final
 	{
 		if (virtualKey == VK_ESCAPE)
 		{
-			_infos[0].b->SetLocation (_first_bridge_initial_location);
+			_infos[0].b->set_location (_first_bridge_initial_location);
 			for (size_t i = 1; i < _infos.size(); i++)
-				_infos[i].b->SetLocation (_first_bridge_initial_location + _infos[i].offset_from_first);
+				_infos[i].b->set_location (_first_bridge_initial_location + _infos[i].offset_from_first);
 
 			_completed = true;
 			::InvalidateRect (_ew->hwnd(), nullptr, FALSE);

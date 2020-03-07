@@ -1,11 +1,15 @@
+
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #include "pch.h"
 #include "bridge.h"
 #include "wire.h"
 #include "simulator.h"
 #include "win32/d2d_window.h"
+#include "win32/text_layout.h"
 
 using namespace D2D1;
-using namespace edge;
 
 static constexpr UINT WM_PACKET_RECEIVED = WM_APP + 1;
 
@@ -20,9 +24,9 @@ std::string mac_address_to_string (mac_address address)
 	return ss.str();
 }
 
-template<typename char_type> bool mac_address_from_string (std::basic_string_view<char_type> str, mac_address& to)
+void mac_address_from_string (std::string_view str, mac_address& to)
 {
-//	static constexpr char FormatErrorMessage[] = u8"Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX or XXXXXXXXXXXX (6 hex bytes).";
+	static constexpr char FormatErrorMessage[] = "Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX or XXXXXXXXXXXX (6 hex bytes).";
 
 	int offsetMultiplier;
 	if (str.size() == 12)
@@ -32,12 +36,12 @@ template<typename char_type> bool mac_address_from_string (std::basic_string_vie
 	else if (str.size() == 17)
 	{
 		if ((str[2] != ':') || (str[5] != ':') || (str[8] != ':') || (str[11] != ':') || (str[14] != ':'))
-			return false;
+			throw edge::string_convert_exception(FormatErrorMessage);
 
 		offsetMultiplier = 3;
 	}
 	else
-		return false;
+		throw edge::string_convert_exception(FormatErrorMessage);
 
 	for (size_t i = 0; i < 6; i++)
 	{
@@ -45,18 +49,13 @@ template<typename char_type> bool mac_address_from_string (std::basic_string_vie
 		wchar_t ch1 = str[i * offsetMultiplier + 1];
 
 		if (!iswxdigit(ch0) || !iswxdigit(ch1))
-			return false;
+			throw edge::string_convert_exception(FormatErrorMessage);
 
 		auto hn = (ch0 <= '9') ? (ch0 - '0') : ((ch0 >= 'a') ? (ch0 - 'a' + 10) : (ch0 - 'A' + 10));
 		auto ln = (ch1 <= '9') ? (ch1 - '0') : ((ch1 >= 'a') ? (ch1 - 'a' + 10) : (ch1 - 'A' + 10));
 		to[i] = (hn << 4) | ln;
 	}
-
-	return true;
 }
-
-template bool mac_address_from_string (std::basic_string_view<char> from, mac_address& to);
-template bool mac_address_from_string (std::basic_string_view<wchar_t> from, mac_address& to);
 
 static constexpr wchar_t helper_window_class_name[] = L"{C2A14267-93FD-44FD-89A3-809FBB66A20B}";
 HINSTANCE bridge::_hinstance;
@@ -73,8 +72,8 @@ bridge::bridge (size_t port_count, size_t msti_count, mac_address macAddress)
 	for (size_t portIndex = 0; portIndex < port_count; portIndex++)
 	{
 		offset += (port::PortToPortSpacing / 2 + port::InteriorWidth / 2);
-		auto port = std::unique_ptr<class port>(new class port(this, portIndex, side::bottom, offset));
-		_ports.push_back (std::move(port));
+		auto p = std::unique_ptr<port>(new port(this, portIndex, side::bottom, offset));
+		_ports.push_back (std::move(p));
 		offset += (port::InteriorWidth / 2 + port::PortToPortSpacing / 2);
 	}
 
@@ -276,7 +275,7 @@ void bridge::ProcessReceivedPackets()
 								f.data = fsd.data;
 								f.tx_path_taken = fsd.tx_path_taken;
 								f.tx_path_taken.push_back (txPortAddress);
-								
+
 								this->event_invoker<packet_transmit_e>()(this, txPortIndex, std::move(f));
 							}
 						}
@@ -294,7 +293,7 @@ void bridge::ProcessReceivedPackets()
 		this->event_invoker<invalidate_e>()(this);
 }
 
-void bridge::SetLocation(float x, float y)
+void bridge::set_location(float x, float y)
 {
 	if ((_x != x) || (_y != y))
 	{
@@ -336,15 +335,15 @@ void bridge::render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsign
 
 	// Draw bridge outline.
 	D2D1_ROUNDED_RECT rr = RoundedRect (bounds(), RoundRadius, RoundRadius);
-	InflateRoundedRect (&rr, -bridgeOutlineWidth / 2);
+	edge::inflate (&rr, -bridgeOutlineWidth / 2);
 	com_ptr<ID2D1SolidColorBrush> brush;
 	dc->CreateSolidColorBrush (configIdColor, &brush);
 	dc->FillRoundedRectangle (&rr, brush/*_powered ? dos._poweredFillBrush : dos._unpoweredBrush*/);
 	dc->DrawRoundedRectangle (&rr, dos._brushWindowText, bridgeOutlineWidth);
 
 	// Draw bridge text.
-	auto tl = text_layout::create (dos._dWriteFactory, dos._regularTextFormat, text.str().c_str());
-	dc->DrawTextLayout ({ _x + OutlineWidth * 2 + 3, _y + OutlineWidth * 2 + 3}, tl.layout, dos._brushWindowText);
+	auto tl = edge::text_layout (dos._dWriteFactory, dos._regularTextFormat, text.str().c_str());
+	dc->DrawTextLayout ({ _x + OutlineWidth * 2 + 3, _y + OutlineWidth * 2 + 3}, tl, dos._brushWindowText);
 
 	for (auto& port : _ports)
 		port->render (dc, dos, vlanNumber);
@@ -492,9 +491,9 @@ std::string bridge::mst_config_id_name() const
 	return std::string(std::begin(configId->ConfigurationName), std::begin(configId->ConfigurationName) + len);
 }
 
-void bridge::set_mst_config_id_name (std::string_view value)
+void bridge::set_mst_config_id_name (std::string value)
 {
-	if (value.length() > 32)
+	if (value.size() > 32)
 		throw std::invalid_argument("Invalid MST Config Name: more than 32 characters.");
 
 	char null_terminated[33];
@@ -577,6 +576,9 @@ void bridge::set_stp_version (STP_VERSION stp_version)
 
 void bridge::set_bridge_max_age (uint32_t value)
 {
+	if ((value < 6) || (value > 40))
+		throw std::invalid_argument("MaxAge must be in the range 6..40.\r\nThe default value, also recommended by the standard, is 20.");
+
 	if (bridge_max_age() != value)
 	{
 		this->on_property_changing (&bridge_max_age_property);
@@ -653,7 +655,7 @@ bool bridge::mst_config_table_changed() const
 void bridge::on_deserializing()
 {
 	_deserializing = true;
-	_enable_stp_after_deserialize = stp_enabled_property._default_value.value();
+	_enable_stp_after_deserialize = stp_enabled_property.default_value.value();
 }
 
 void bridge::on_deserialized()
@@ -668,44 +670,40 @@ static const edge::property_group mst_group = { 10, "MST Config Id" };
 
 const mac_address_p bridge::bridge_address_property {
 	"Address", nullptr, nullptr, ui_visible::yes,
-	static_cast<mac_address_p::member_getter_t>(&bridge_address),
-	static_cast<mac_address_p::member_setter_t>(&set_bridge_address),
-	std::nullopt,
+	&bridge_address,
+	&set_bridge_address,
 };
 
 const bool_p bridge::stp_enabled_property {
 	"STPEnabled", nullptr, nullptr, ui_visible::yes,
-	static_cast<bool_p::member_getter_t>(&stp_enabled),
-	static_cast<bool_p::member_setter_t>(&set_stp_enabled),
-	false,
+	&stp_enabled,
+	&set_stp_enabled,
+	false, // default_value
 };
 
 const stp_version_p bridge::stp_version_property {
 	"StpVersion", nullptr, nullptr, ui_visible::yes,
-	static_cast<stp_version_p::member_getter_t>(&stp_version),
-	static_cast<stp_version_p::member_setter_t>(&set_stp_version),
-	STP_VERSION_RSTP,
+	&stp_version,
+	&set_stp_version,
+	STP_VERSION_RSTP, // default_value
 };
 
-const size_p bridge::port_count_property {
+const size_t_p bridge::port_count_property {
 	"PortCount", nullptr, nullptr, ui_visible::yes,
-	static_cast<size_p::member_getter_t>(&port_count),
+	&port_count,
 	nullptr,
-	std::nullopt,
 };
 
-const size_p bridge::msti_count_property {
+const size_t_p bridge::msti_count_property {
 	"MstiCount", nullptr, nullptr, ui_visible::yes,
-	static_cast<size_p::member_getter_t>(&msti_count),
+	&msti_count,
 	nullptr,
-	std::nullopt,
 };
 
 const temp_string_p bridge::mst_config_id_name_property {
 	"MstConfigName", &mst_group, nullptr, ui_visible::yes,
-	static_cast<temp_string_p::member_getter_t>(&mst_config_id_name),
-	static_cast<temp_string_p::member_setter_t>(&set_mst_config_id_name),
-	std::nullopt,
+	&mst_config_id_name,
+	&set_mst_config_id_name,
 };
 
 const typed_value_collection_property<bridge, uint32_property_traits> bridge::mst_config_table_property {
@@ -720,16 +718,15 @@ const typed_value_collection_property<bridge, uint32_property_traits> bridge::ms
 
 const edge::uint32_p bridge::mst_config_id_rev_level {
 	"MstConfigRevLevel", &mst_group, nullptr, ui_visible::yes,
-	static_cast<uint32_p::member_getter_t>(&bridge::GetMstConfigIdRevLevel),
-	static_cast<uint32_p::member_setter_t>(&bridge::SetMstConfigIdRevLevel),
+	&GetMstConfigIdRevLevel,
+	&SetMstConfigIdRevLevel,
 	0,
 };
 
 const config_id_digest_p bridge::mst_config_id_digest {
 	"MstConfigDigest", &mst_group, nullptr, ui_visible::yes,
-	static_cast<temp_string_p::member_getter_t>(&bridge::GetMstConfigIdDigest),
+	&GetMstConfigIdDigest,
 	nullptr,
-	std::nullopt,
 };
 
 #pragma region Timer and related parameters from Table 13-5
@@ -737,35 +734,35 @@ const uint32_p bridge::migrate_time_property {
 	"MigrateTime", &bridge_times_group, nullptr, ui_visible::yes,
 	[](const object* o) { return 3u; },
 	nullptr,
-	3,
+	3, // default_value
 };
 
 const uint32_p bridge::bridge_hello_time_property {
 	"BridgeHelloTime", &bridge_times_group, nullptr, ui_visible::yes,
 	[](const object* o) { return 2u; },
 	nullptr,
-	2,
+	2, // default_value
 };
 
 const uint32_p bridge::bridge_max_age_property {
 	"BridgeMaxAge", &bridge_times_group, nullptr, ui_visible::yes,
-	static_cast<uint32_p::member_getter_t>(&bridge_max_age),
-	static_cast<uint32_p::member_setter_t>(&set_bridge_max_age),
-	20,
+	&bridge_max_age,
+	&set_bridge_max_age,
+	20, // default_value
 };
 
 const uint32_p bridge::bridge_forward_delay_property {
 	"BridgeForwardDelay", &bridge_times_group, nullptr, ui_visible::yes,
-	static_cast<uint32_p::member_getter_t>(&bridge_forward_delay),
-	static_cast<uint32_p::member_setter_t>(&set_bridge_forward_delay),
-	15,
+	&bridge_forward_delay,
+	&set_bridge_forward_delay,
+	15, // default_value
 };
 
 const uint32_p bridge::tx_hold_count_property {
 	"TxHoldCount", &bridge_times_group, nullptr, ui_visible::yes,
-	static_cast<uint32_p::member_getter_t>(&tx_hold_count),
-	static_cast<uint32_p::member_setter_t>(&set_tx_hold_count),
-	6
+	&tx_hold_count,
+	&set_tx_hold_count,
+	6 // default_value
 };
 
 const uint32_p bridge::max_hops_property {
@@ -775,36 +772,14 @@ const uint32_p bridge::max_hops_property {
 	ui_visible::yes,
 	[](const object* o) { return 20u; },
 	nullptr,
-	20
+	20 // default_value
 };
 
-const float_p bridge::x_property {
-	"X", nullptr, nullptr, ui_visible::no,
-	static_cast<float_p::member_getter_t>(&x),
-	static_cast<float_p::member_setter_t>(&set_x),
-	std::nullopt
-};
+const float_p bridge::x_property { "X", nullptr, nullptr, ui_visible::no, &x, &set_x };
+const float_p bridge::y_property { "Y", nullptr, nullptr, ui_visible::no, &y, &set_y };
 
-const float_p bridge::y_property {
-	"Y", nullptr, nullptr, ui_visible::no,
-	static_cast<float_p::member_getter_t>(&y),
-	static_cast<float_p::member_setter_t>(&set_y),
-	std::nullopt
-};
-
-const float_p bridge::width_property {
-	"Width", nullptr, nullptr, ui_visible::no,
-	static_cast<float_p::member_getter_t>(&width),
-	static_cast<float_p::member_setter_t>(&set_width),
-	std::nullopt
-};
-
-const float_p bridge::height_property {
-	"Height", nullptr, nullptr, ui_visible::no,
-	static_cast<float_p::member_getter_t>(&height),
-	static_cast<float_p::member_setter_t>(&set_height),
-	std::nullopt
-};
+const float_p bridge::width_property  { "Width",  nullptr, nullptr, ui_visible::no, &width,  &set_width };
+const float_p bridge::height_property { "Height", nullptr, nullptr, ui_visible::no, &height, &set_height };
 
 const typed_object_collection_property<bridge, bridge_tree> bridge::trees_property {
 	"BridgeTrees", nullptr, nullptr, ui_visible::no,
@@ -813,7 +788,7 @@ const typed_object_collection_property<bridge, bridge_tree> bridge::trees_proper
 
 const typed_object_collection_property<bridge, port> bridge::ports_property {
 	"Ports", nullptr, nullptr, ui_visible::no,
-	&port_count, &port
+	&port_count, &port_at
 };
 #pragma endregion
 
@@ -838,11 +813,11 @@ const edge::property* const bridge::_properties[] = {
 	&ports_property,
 };
 
-const xtype<bridge, size_p, size_p, mac_address_p>  bridge::_type = {
+const xtype<bridge, size_t_property_traits, size_t_property_traits, mac_address_property_traits> bridge::_type = {
 	"Bridge",
 	&base::_type,
 	_properties,
-	[](size_t port_count, size_t msti_count, mac_address address) { return new bridge(port_count, msti_count, address); },
+	[](size_t port_count, size_t msti_count, mac_address address) { return std::make_unique<bridge>(port_count, msti_count, address); },
 	&port_count_property,
 	&msti_count_property,
 	&bridge_address_property,
@@ -895,7 +870,7 @@ void bridge::StpCallback_TransmitReleaseBuffer (const STP_BRIDGE* bridge, void* 
 	auto b = static_cast<class bridge*>(STP_GetApplicationContext(bridge));
 
 	frame_t info;
-	info.data = move(b->_txPacketData);
+	info.data = std::move(b->_txPacketData);
 	info.timestamp = b->_txTimestamp;
 	b->event_invoker<packet_transmit_e>()(b, b->_txTransmittingPort->port_index(), std::move(info));
 }
@@ -941,7 +916,7 @@ void bridge::StpCallback_DebugStrOut (const STP_BRIDGE* bridge, int portIndex, i
 			if ((b->_currentLogLine.portIndex != portIndex) || (b->_currentLogLine.treeIndex != treeIndex))
 			{
 				b->_logLines.push_back(std::make_unique<BridgeLogLine>(std::move(b->_currentLogLine)));
-				b->event_invoker<LogLineGenerated>()(b, b->_logLines.back().get());
+				b->event_invoker<log_line_generated_e>()(b, b->_logLines.back().get());
 			}
 
 			b->_currentLogLine.text.append (nullTerminatedString, (size_t) stringLength);
@@ -950,14 +925,14 @@ void bridge::StpCallback_DebugStrOut (const STP_BRIDGE* bridge, int portIndex, i
 		if (!b->_currentLogLine.text.empty() && (b->_currentLogLine.text.back() == L'\n'))
 		{
 			b->_logLines.push_back(std::make_unique<BridgeLogLine>(std::move(b->_currentLogLine)));
-			b->event_invoker<LogLineGenerated>()(b, b->_logLines.back().get());
+			b->event_invoker<log_line_generated_e>()(b, b->_logLines.back().get());
 		}
 	}
 
 	if (flush && !b->_currentLogLine.text.empty())
 	{
 		b->_logLines.push_back(std::make_unique<BridgeLogLine>(std::move(b->_currentLogLine)));
-		b->event_invoker<LogLineGenerated>()(b, b->_logLines.back().get());
+		b->event_invoker<log_line_generated_e>()(b, b->_logLines.back().get());
 	}
 }
 

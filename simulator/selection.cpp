@@ -1,4 +1,7 @@
 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #include "pch.h"
 #include "simulator.h"
 #include "bridge.h"
@@ -6,14 +9,13 @@
 #include "port.h"
 #include "events.h"
 
-using namespace std;
 using namespace edge;
 
 class selection : public event_manager, public selection_i
 {
 	project_i* const _project;
 	ULONG _refCount = 1;
-	vector<object*> _objects;
+	std::vector<object*> _objects;
 
 public:
 	selection (project_i* project)
@@ -63,7 +65,7 @@ public:
 		}
 	}
 
-	virtual const vector<object*>& objects() const override final { return _objects; }
+	virtual const std::vector<object*>& objects() const override final { return _objects; }
 
 	void add_internal (object* o)
 	{
@@ -90,7 +92,7 @@ public:
 	virtual void select (object* o) override final
 	{
 		if (o == nullptr)
-			throw invalid_argument("Parameter may not be nullptr.");
+			throw std::invalid_argument("Parameter may not be nullptr.");
 
 		if ((_objects.size() != 1) || (_objects[0] != o))
 		{
@@ -104,10 +106,10 @@ public:
 	virtual void add (object* o) override final
 	{
 		if (o == nullptr)
-			throw invalid_argument("Parameter may not be nullptr.");
+			throw std::invalid_argument("Parameter may not be nullptr.");
 
 		if (std::find (_objects.begin(), _objects.end(), o) != _objects.end())
-			throw invalid_argument("Object was already added to selection.");
+			throw std::invalid_argument("Object was already added to selection.");
 
 		add_internal(o);
 		event_invoker<changed_e>()(this);
@@ -116,11 +118,11 @@ public:
 	virtual void remove (object* o) override final
 	{
 		if (o == nullptr)
-			throw invalid_argument("Parameter may not be nullptr.");
+			throw std::invalid_argument("Parameter may not be nullptr.");
 
 		auto it = std::find (_objects.begin(), _objects.end(), o);
 		if (it == _objects.end())
-			throw invalid_argument("Object is not selected.");
+			throw std::invalid_argument("Object is not selected.");
 		size_t index = it - _objects.begin();
 
 		remove_internal(index);

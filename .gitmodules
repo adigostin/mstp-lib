@@ -1,0 +1,3 @@
+[submodule "edge"]
+	path = simulator/edge
+	url = https://github.com/adigostin/edge.git

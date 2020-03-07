@@ -1,4 +1,7 @@
 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #include "pch.h"
 #include "port_tree.h"
 #include "port.h"
@@ -9,7 +12,7 @@
 using namespace edge;
 
 const char port_priority_type_name[] = "PortPriority";
-const edge::NVP port_priority_nvps[] {
+const nvp port_priority_nvps[] {
 	{ "10 (16 dec)",  0x10 },
 	{ "20 (32 dec)",  0x20 },
 	{ "30 (48 dec)",  0x30 },
@@ -29,7 +32,7 @@ const edge::NVP port_priority_nvps[] {
 };
 
 const char port_role_type_name[] = "port_role";
-const edge::NVP port_role_nvps[] =
+const nvp port_role_nvps[] =
 {
 	{ STP_GetPortRoleString(STP_PORT_ROLE_DISABLED),   (int) STP_PORT_ROLE_DISABLED },
 	{ STP_GetPortRoleString(STP_PORT_ROLE_ROOT),       (int) STP_PORT_ROLE_ROOT },
@@ -173,11 +176,10 @@ STP_PORT_ROLE port_tree::role() const
 	return STP_GetPortRole (_port->bridge()->stp_bridge(), (unsigned int)_port->port_index(), (unsigned int)_tree_index);
 }
 
-const edge::size_p port_tree::tree_index_property {
+const edge::size_t_p port_tree::tree_index_property {
 	"TreeIndex", nullptr, nullptr, edge::ui_visible::no,
-	static_cast<const edge::size_p::member_getter_t>(&tree_index),
+	static_cast<size_t_p::member_getter_t>(&tree_index),
 	nullptr,
-	std::nullopt,
 };
 
 const port_priority_p port_tree::priority_property {
@@ -198,7 +200,6 @@ const edge::bool_p port_tree::learning_property {
 	ui_visible::yes,
 	static_cast<edge::bool_p::member_getter_t>(&learning),
 	nullptr,
-	std::nullopt,
 };
 
 const edge::bool_p port_tree::forwarding_property {
@@ -208,7 +209,6 @@ const edge::bool_p port_tree::forwarding_property {
 	ui_visible::yes,
 	static_cast<edge::bool_p::member_getter_t>(&forwarding),
 	nullptr,
-	std::nullopt,
 };
 
 const port_role_p port_tree::role_property {
@@ -218,7 +218,6 @@ const port_role_p port_tree::role_property {
 	ui_visible::yes,
 	static_cast<port_role_p::member_getter_t>(&role),
 	nullptr,
-	std::nullopt,
 };
 
 static const edge::property_group port_path_cost_group = { 5, "Port Path Cost" };
@@ -253,11 +252,4 @@ const edge::property* const port_tree::_properties[] = {
 	&internal_port_path_cost_property,
 };
 
-const xtype<port_tree> port_tree::_type = {
-	"PortTree",
-	&base::_type,
-	_properties, 
-	nullptr
-};
-
-const edge::type* port_tree::type() const { return &_type; }
+const xtype<port_tree> port_tree::_type = { "PortTree", &base::_type, _properties, nullptr };

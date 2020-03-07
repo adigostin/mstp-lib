@@ -1,3 +1,7 @@
+
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #pragma once
 #include "object.h"
 #include "win32/com_ptr.h"
@@ -6,7 +10,8 @@
 class bridge;
 class port;
 
-using edge::size_p;
+using edge::size_t_p;
+using edge::size_t_property_traits;
 using edge::uint32_p;
 using edge::bool_p;
 using edge::float_p;
@@ -14,16 +19,21 @@ using edge::backed_string_p;
 using edge::temp_string_p;
 using edge::property;
 using edge::type;
+using edge::concrete_type;
 using edge::xtype;
 using edge::value_property;
 using edge::typed_object_collection_property;
 using edge::property_change_args;
+using edge::side;
+using edge::binary_reader;
+using edge::out_stream_i;
+using edge::nvp;
 
-extern const edge::NVP port_priority_nvps[];
+extern const nvp port_priority_nvps[];
 extern const char port_priority_type_name[];
 using port_priority_p = edge::enum_property<uint32_t, port_priority_type_name, port_priority_nvps, true>;
 
-extern const edge::NVP port_role_nvps[];
+extern const nvp port_role_nvps[];
 extern const char port_role_type_name[];
 using port_role_p = edge::enum_property<STP_PORT_ROLE, port_role_type_name, port_role_nvps>;
 
@@ -42,7 +52,7 @@ class port_tree : public edge::object
 
 	static UINT_PTR _flush_timer;
 	static std::unordered_set<port_tree*> _trees;
-	
+
 	static void on_bridge_property_changing (void* arg, object* obj, const property_change_args& args);
 	static void on_bridge_property_changed (void* arg, object* obj, const property_change_args& args);
 	static void CALLBACK flush_timer_proc (HWND hwnd, UINT, UINT_PTR, DWORD);
@@ -68,7 +78,7 @@ public:
 
 	size_t tree_index() const { return _tree_index; }
 
-	static const size_p tree_index_property;
+	static const size_t_p tree_index_property;
 	static const port_priority_p priority_property;
 	static const bool_p learning_property;
 	static const bool_p forwarding_property;
@@ -77,5 +87,5 @@ public:
 	static const uint32_p internal_port_path_cost_property;
 	static const property* const _properties[];
 	static const xtype<port_tree> _type;
-	const struct type* type() const;
+	const concrete_type* type() const override final { return &_type; }
 };

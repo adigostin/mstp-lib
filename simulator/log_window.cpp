@@ -1,13 +1,14 @@
 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #include "pch.h"
 #include "simulator.h"
 #include "resource.h"
 #include "win32/d2d_window.h"
 #include "win32/utility_functions.h"
-#include "bridge.h"
-#include "port.h"
+#include "win32/text_layout.h"
 
-using namespace std;
 using namespace D2D1;
 using namespace edge;
 
@@ -23,7 +24,7 @@ class log_window : public d2d_window, public log_window_i
 	bridge* _bridge = nullptr;
 	int _selectedPort = -1;
 	int _selectedTree = -1;
-	vector<const BridgeLogLine*> _lines;
+	std::vector<const BridgeLogLine*> _lines;
 	UINT_PTR _timerId = 0;
 	int _animationCurrentLineCount = 0;
 	int _animationEndLineCount = 0;
@@ -51,8 +52,12 @@ public:
 	{
 		_selection->changed().remove_handler(&OnSelectionChanged, this);
 		if (_bridge != nullptr)
-			_bridge->GetLogLineGeneratedEvent().remove_handler(OnLogLineGeneratedStatic, this);
+			_bridge->log_line_generated().remove_handler(OnLogLineGeneratedStatic, this);
 	}
+
+	virtual HWND hwnd() const override { return base::hwnd(); }
+
+	using base::invalidate;
 
 	static void OnSelectionChanged (void* callbackArg, selection_i* selection)
 	{
@@ -85,40 +90,29 @@ public:
 
 		if ((_bridge == nullptr) || _lines.empty())
 		{
-			static constexpr wchar_t TextNoBridge[] = L"The STP activity log is shown here.\r\nSelect a bridge to see its log.";
-			static constexpr wchar_t TextNoEntries[] = L"No log text generated yet.\r\nYou may want to enable STP on the selected bridge.";
+			static constexpr char TextNoBridge[] = "The STP activity log is shown here.\r\nSelect a bridge to see its log.";
+			static constexpr char TextNoEntries[] = "No log text generated yet.\r\nYou may want to enable STP on the selected bridge.";
 
 			auto oldta = _textFormat->GetTextAlignment();
 			_textFormat->SetTextAlignment (DWRITE_TEXT_ALIGNMENT_CENTER);
-			com_ptr<IDWriteTextLayout> tl;
 			auto text = (_bridge == nullptr) ? TextNoBridge : TextNoEntries;
-			auto hr = dwrite_factory()->CreateTextLayout (text, (UINT32) wcslen(text), _textFormat, client_width(), 10000, &tl); assert(SUCCEEDED(hr));
+			auto tl = edge::text_layout_with_metrics (dwrite_factory(), _textFormat, text, client_width());
 			_textFormat->SetTextAlignment(oldta);
-			DWRITE_TEXT_METRICS metrics;
-			tl->GetMetrics (&metrics);
-			dc->DrawTextLayout ({ client_width() / 2 - metrics.width / 2 - metrics.left, client_height() / 2 }, tl, text_brush);
+			D2D1_POINT_2F origin = { client_width() / 2 - tl.width() / 2 - tl.left(), client_height() / 2 };
+			dc->DrawTextLayout (origin, tl, text_brush);
 		}
 		else
 		{
 			float y = 0;
-			float lineHeight = 0;
+			float lineHeight = text_layout_with_metrics(dwrite_factory(), _textFormat, L"A").height();
 			for (int lineIndex = _topLineIndex; (lineIndex < _animationCurrentLineCount) && (y < client_height()); lineIndex++)
 			{
-				wstring line (_lines[lineIndex]->text.begin(), _lines[lineIndex]->text.end());
+				std::wstring line (_lines[lineIndex]->text.begin(), _lines[lineIndex]->text.end());
 
 				if ((line.length() >= 2) && (line[line.length() - 2] == '\r') && (line[line.length() - 1] == '\n'))
 					line.resize (line.length() - 2);
 
-				com_ptr<IDWriteTextLayout> tl;
-				auto hr = dwrite_factory()->CreateTextLayout (line.c_str(), (UINT32) line.length(), _textFormat, 10000, 10000, &tl); assert(SUCCEEDED(hr));
-
-				if (lineHeight == 0)
-				{
-					DWRITE_TEXT_METRICS metrics;
-					tl->GetMetrics (&metrics);
-					lineHeight = metrics.height;
-				}
-
+				auto tl = text_layout (dwrite_factory(), _textFormat, line);
 				dc->DrawTextLayout ({ 0, y }, tl, text_brush, D2D1_DRAW_TEXT_OPTIONS_NO_SNAP);
 				y += lineHeight;
 
@@ -198,7 +192,7 @@ public:
 		si.nPage = lw->_numberOfLinesFitting;
 		SetScrollInfo (lw->hwnd(), SB_VERT, &si, TRUE);
 
-		lw->invalidate();
+		::InvalidateRect (lw->hwnd(), nullptr, FALSE);
 	}
 
 	void SelectBridge (bridge* b)
@@ -212,7 +206,7 @@ public:
 
 				_lines.clear();
 				_bridge->log_cleared().remove_handler (on_log_cleared, this);
-				_bridge->GetLogLineGeneratedEvent().remove_handler (OnLogLineGeneratedStatic, this);
+				_bridge->log_line_generated().remove_handler (OnLogLineGeneratedStatic, this);
 				_bridge = nullptr;
 			}
 
@@ -229,11 +223,11 @@ public:
 					}
 				}
 
-				_bridge->GetLogLineGeneratedEvent().add_handler (OnLogLineGeneratedStatic, this);
+				_bridge->log_line_generated().add_handler (OnLogLineGeneratedStatic, this);
 				_bridge->log_cleared().add_handler (on_log_cleared, this);
 			}
 
-			_topLineIndex = max (0, (int) _lines.size() - _numberOfLinesFitting);
+			_topLineIndex = std::max (0, (int) _lines.size() - _numberOfLinesFitting);
 			_animationCurrentLineCount = (int) _lines.size();
 			_animationEndLineCount     = (int) _lines.size();
 
@@ -249,12 +243,12 @@ public:
 		}
 	}
 
-	optional<LRESULT> window_proc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) final
+	std::optional<LRESULT> window_proc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) final
 	{
 		if (msg == WM_SIZE)
 		{
 			base::window_proc (hwnd, msg, wParam, lParam); // Pass it to the base class first, which stores the client size.
-			ProcessWmSize (wParam, lParam);
+			process_wm_size (wParam, lParam);
 			return 0;
 		}
 
@@ -344,15 +338,11 @@ public:
 
 	static int CalcNumberOfLinesFitting (IDWriteTextFormat* textFormat, float clientHeightDips, IDWriteFactory* dWriteFactory)
 	{
-		com_ptr<IDWriteTextLayout> tl;
-		auto hr = dWriteFactory->CreateTextLayout (L"A", 1, textFormat, 1000, 1000, &tl); assert(SUCCEEDED(hr));
-		DWRITE_TEXT_METRICS metrics;
-		hr = tl->GetMetrics(&metrics);
-		int numberOfLinesFitting = (int) floor(clientHeightDips / metrics.height);
-		return numberOfLinesFitting;
+		auto tl = edge::text_layout_with_metrics (dWriteFactory, textFormat, "A");
+		return (int) floor(clientHeightDips / tl.height());
 	}
 
-	void ProcessWmSize (WPARAM wParam, LPARAM lParam)
+	void process_wm_size (WPARAM wParam, LPARAM lParam)
 	{
 		bool isLastLineVisible = (_topLineIndex + _numberOfLinesFitting >= _animationCurrentLineCount);
 
@@ -433,19 +423,19 @@ public:
 		switch (LOWORD(wParam))
 		{
 			case SB_LINEUP:
-				newTopLineIndex = max (_topLineIndex - 1, 0);
+				newTopLineIndex = std::max (_topLineIndex - 1, 0);
 				break;
 
 			case SB_PAGEUP:
-				newTopLineIndex = max (_topLineIndex - _numberOfLinesFitting, 0);
+				newTopLineIndex = std::max (_topLineIndex - _numberOfLinesFitting, 0);
 				break;
 
 			case SB_LINEDOWN:
-				newTopLineIndex = _topLineIndex + min(_animationEndLineCount - (_topLineIndex + _numberOfLinesFitting), 1);
+				newTopLineIndex = _topLineIndex + std::min(_animationEndLineCount - (_topLineIndex + _numberOfLinesFitting), 1);
 				break;
 
 			case SB_PAGEDOWN:
-				newTopLineIndex = _topLineIndex + min(_animationEndLineCount - (_topLineIndex + _numberOfLinesFitting), _numberOfLinesFitting);
+				newTopLineIndex = _topLineIndex + std::min(_animationEndLineCount - (_topLineIndex + _numberOfLinesFitting), _numberOfLinesFitting);
 				break;
 
 			case SB_THUMBTRACK:
@@ -472,9 +462,9 @@ public:
 
 		int newTopLineIndex;
 		if (linesToScroll < 0)
-			newTopLineIndex = max (_topLineIndex + linesToScroll, 0);
+			newTopLineIndex = std::max (_topLineIndex + linesToScroll, 0);
 		else
-			newTopLineIndex = _topLineIndex + min(_animationEndLineCount - (_topLineIndex + _numberOfLinesFitting), linesToScroll);
+			newTopLineIndex = _topLineIndex + std::min(_animationEndLineCount - (_topLineIndex + _numberOfLinesFitting), linesToScroll);
 
 		ProcessUserScroll (newTopLineIndex);
 	}

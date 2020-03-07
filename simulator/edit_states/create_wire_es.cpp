@@ -1,4 +1,7 @@
 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #include "pch.h"
 #include "edit_state.h"
 #include "bridge.h"
@@ -39,7 +42,7 @@ public:
 				newWire->set_p0 (fromPort);
 				newWire->set_p1 (fromPort->GetCPLocation());
 				_wire = newWire.get();
-				_project->insert_wire(_project->wires().size(), move(newWire));
+				_project->insert_wire(_project->wires().size(), std::move(newWire));
 				_substate  = waiting_first_up;
 			}
 		}

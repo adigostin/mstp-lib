@@ -1,8 +1,11 @@
 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #pragma once
-#include "object.h"
+#include "collection.h"
 #include "win32/com_ptr.h"
-#include "win32/win32_lib.h"
+#include "win32/zoomable_window.h"
 
 struct drawing_resources
 {
@@ -26,7 +29,7 @@ struct drawing_resources
 	edge::com_ptr<ID2D1StrokeStyle> _strokeStyleSelectionRect;
 };
 
-class renderable_object : public edge::object
+class renderable_object : public edge::owned_object
 {
 public:
 	struct ht_result
@@ -42,10 +45,11 @@ public:
 
 	virtual void render_selection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const = 0;
 	virtual ht_result hit_test (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) = 0;
+	virtual D2D1_RECT_F extent() const = 0;
 
 protected:
 	template<typename tpd_>
-	void set_and_invalidate (const tpd_* pd, typename tpd_::value_t& field, typename tpd_::param_t value)
+	void set_and_invalidate (const tpd_* pd, typename tpd_::value_t& field, typename tpd_::value_t value)
 	{
 		this->on_property_changing(pd);
 		field = value;

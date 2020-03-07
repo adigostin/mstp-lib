@@ -1,11 +1,14 @@
 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #include "pch.h"
 #include "simulator.h"
 #include "resource.h"
 #include "bridge.h"
 #include "port.h"
 
-class vlan_window : public virtual vlan_window_i, public edge::property_editor_parent_i
+class vlan_window : public virtual vlan_window_i
 {
 	simulator_app_i*  const _app;
 	project_window_i* const _pw;
@@ -67,11 +70,6 @@ public:
 
 		if (_hwnd != nullptr)
 			::DestroyWindow(_hwnd);
-	}
-
-	virtual destroying_event::subscriber destroying() final
-	{
-		assert(false); return nullptr;
 	}
 
 	virtual HWND hwnd() const override final { return _hwnd; }
@@ -182,18 +180,18 @@ public:
 
 			if ((HIWORD(wParam) == BN_CLICKED) && (LOWORD(wParam) == IDC_BUTTON_EDIT_MST_CONFIG_TABLE))
 			{
-				if (std::all_of (_selection->objects().begin(), _selection->objects().end(), [](edge::object* o) { return o->is<bridge>(); }))
+				if (std::all_of (_selection->objects().begin(), _selection->objects().end(), [](edge::object* o) { return o->type() == &bridge::_type; }))
 				{
-					auto editor = config_id_editor_factory(_selection->objects());
-					editor->show(this);
+					auto editor = create_config_id_editor(_selection->objects());
+					editor->show(static_cast<win32_window_i*>(this));
 				}
-				else if (std::all_of (_selection->objects().begin(), _selection->objects().end(), [](edge::object* o) { return o->is<port>(); }))
+				else if (std::all_of (_selection->objects().begin(), _selection->objects().end(), [](edge::object* o) { return o->type() == &port::_type; }))
 				{
 					std::vector<edge::object*> objects;
 					std::transform (_selection->objects().begin(), _selection->objects().end(), std::back_inserter(objects),
 									[](edge::object* o) { return (edge::object*) static_cast<port*>(o)->bridge(); });
-					auto editor = config_id_editor_factory(objects);
-					editor->show(this);
+					auto editor = create_config_id_editor(objects);
+					editor->show(static_cast<win32_window_i*>(this));
 				}
 				else
 					MessageBoxA (_hwnd, "Select some bridges or ports first.", _app->app_name(), 0);
@@ -256,10 +254,10 @@ public:
 		}
 		else
 		{
-			project_window_create_params create_params = 
+			project_window_create_params create_params =
 				{ _app, _project, false, false, vlanNumber, SW_SHOW, _d3d_dc, _dwrite_factory };
 			auto pw = _app->project_window_factory()(create_params);
-			_app->add_project_window(move(pw));
+			_app->add_project_window(std::move(pw));
 		}
 
 		ComboBox_SetCurSel (hwnd, -1);
@@ -276,7 +274,7 @@ public:
 		auto tableButton = GetDlgItem (_hwnd, IDC_BUTTON_EDIT_MST_CONFIG_TABLE); assert (tableButton != nullptr);
 		auto& objects = _selection->objects();
 
-		if (objects.empty() || std::any_of (objects.begin(), objects.end(), [](edge::object* o) { return !o->is<bridge>() && !o->is<port>(); }))
+		if (objects.empty() || std::any_of (objects.begin(), objects.end(), [](edge::object* o) { return (o->type() != &bridge::_type) && (o->type() != &port::_type); }))
 		{
 			::SetWindowText (edit, L"(no bridge selected)");
 			::EnableWindow (edit, FALSE);

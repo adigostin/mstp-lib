@@ -1,4 +1,7 @@
 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #include "pch.h"
 #include "simulator.h"
 #include "resource.h"
@@ -8,8 +11,8 @@
 #include "wire.h"
 #include "win32/zoomable_window.h"
 #include "win32/utility_functions.h"
+#include "win32/text_layout.h"
 
-using namespace std;
 using namespace D2D1;
 using namespace edge;
 
@@ -39,7 +42,7 @@ class edit_window : public zoomable_window, public edit_window_i
 	selection_i*      const _selection;
 	com_ptr<IDWriteTextFormat> _legendFont;
 	struct drawing_resources _drawing_resources;
-	unique_ptr<edit_state> _state;
+	std::unique_ptr<edit_state> _state;
 	ht_result _htResult = { nullptr, 0 };
 
 public:
@@ -77,10 +80,14 @@ public:
 		_selection->changed().remove_handler (&OnSelectionChanged, this);
 	}
 
+	virtual HWND hwnd() const override { return base::hwnd(); }
+
+	using base::invalidate;
+
 	static void on_selected_vlan_changed (void* callbackArg, project_window_i* pw, unsigned int vlanNumber)
 	{
 		auto window = static_cast<edit_window*>(callbackArg);
-		window->invalidate();
+		::InvalidateRect (window->hwnd(), nullptr, FALSE);
 	}
 
 	static void on_project_property_changing (void* callback_arg, object* project_obj, const property_change_args& args)
@@ -93,27 +100,27 @@ public:
 			&& (window->_htResult.object == project->bridges()[args.index].get()))
 		{
 			window->_htResult = { nullptr, 0 };
-			window->invalidate();
+			::InvalidateRect (window->hwnd(), nullptr, FALSE);
 		}
 		else if ((args.property == project->wires_prop())
 			&& (args.type == collection_property_change_type::remove)
 			&& (window->_htResult.object == project->wires()[args.index].get()))
 		{
 			window->_htResult = { nullptr, 0 };
-			window->invalidate();
+			::InvalidateRect (window->hwnd(), nullptr, FALSE);
 		}
 	}
 
 	static void OnProjectInvalidate (void* callbackArg, project_i*)
 	{
 		auto window = static_cast<edit_window*>(callbackArg);
-		window->invalidate();
+		::InvalidateRect (window->hwnd(), nullptr, FALSE);
 	}
 
 	static void OnSelectionChanged (void* callbackArg, selection_i* selection)
 	{
 		auto window = static_cast<edit_window*>(callbackArg);
-		window->invalidate();
+		::InvalidateRect (window->hwnd(), nullptr, FALSE);
 	}
 
 	struct LegendInfoEntry
@@ -148,11 +155,10 @@ public:
 	{
 		float maxLineWidth = 0;
 		float maxLineHeight = 0;
-		vector<com_ptr<IDWriteTextLayout>> layouts;
+		std::vector<text_layout> layouts;
 		for (auto& info : LegendInfo)
 		{
-			com_ptr<IDWriteTextLayout> tl;
-			auto hr = dwrite_factory()->CreateTextLayout (info.text, (UINT32) wcslen(info.text), _legendFont, 1000, 1000, &tl); assert(SUCCEEDED(hr));
+			auto tl = text_layout (dwrite_factory(), _legendFont, info.text);
 
 			DWRITE_TEXT_METRICS metrics;
 			tl->GetMetrics (&metrics);
@@ -163,13 +169,13 @@ public:
 			if (metrics.height > maxLineHeight)
 				maxLineHeight = metrics.height;
 
-			layouts.push_back(move(tl));
+			layouts.push_back(std::move(tl));
 		}
 
 		float textX = client_width() - (5 + maxLineWidth + 5 + port::ExteriorHeight + 5);
 		float lineX = textX - 3;
 		float bitmapX = client_width() - (5 + port::ExteriorHeight + 5);
-		float rowHeight = 2 + max (maxLineHeight, port::ExteriorWidth);
+		float rowHeight = 2 + std::max (maxLineHeight, port::ExteriorWidth);
 		float y = client_height() - _countof(LegendInfo) * rowHeight;
 
 		auto lineWidth = GetDipSizeFromPixelSize({ 0, 1 }).height;
@@ -213,24 +219,23 @@ public:
 
 		float maxLineWidth = 0;
 		float lineHeight = 0;
-		vector<pair<text_layout, D2D1_COLOR_F>> lines;
+		std::vector<std::pair<text_layout, D2D1_COLOR_F>> lines;
 		for (const STP_MST_CONFIG_ID& configId : configIds)
 		{
-			stringstream ss;
+			std::stringstream ss;
 			ss << configId.ConfigurationName << " -- " << (configId.RevisionLevelLow | (configId.RevisionLevelHigh << 8)) << " -- "
-				<< uppercase << setfill('0') << hex
-				<< setw(2) << (int)configId.ConfigurationDigest[0] << setw(2) << (int)configId.ConfigurationDigest[1] << ".."
-				<< setw(2) << (int)configId.ConfigurationDigest[14] << setw(2) << (int)configId.ConfigurationDigest[15];
-			string line = ss.str();
-			auto tl = text_layout::create (dwrite_factory(), _legendFont, line.c_str());
+				<< std::uppercase << std::setfill('0') << std::hex
+				<< std::setw(2) << (int)configId.ConfigurationDigest[0] << std::setw(2) << (int)configId.ConfigurationDigest[1] << ".."
+				<< std::setw(2) << (int)configId.ConfigurationDigest[14] << std::setw(2) << (int)configId.ConfigurationDigest[15];
+			auto tl = text_layout_with_metrics (dwrite_factory(), _legendFont, ss.str());
 
-			if (tl.metrics.width > maxLineWidth)
-				maxLineWidth = tl.metrics.width;
+			if (tl.width() > maxLineWidth)
+				maxLineWidth = tl.width();
 
-			if (tl.metrics.height > lineHeight)
-				lineHeight = tl.metrics.height;
+			if (tl.height() > lineHeight)
+				lineHeight = tl.height();
 
-			lines.push_back ({ move(tl), RegionColors[colorIndex] });
+			lines.push_back ({ std::move(tl), RegionColors[colorIndex] });
 			colorIndex = (colorIndex + 1) % _countof(RegionColors);
 		}
 
@@ -238,9 +243,9 @@ public:
 		float UpDownPadding = 2;
 		float coloredRectWidth = lineHeight * 2;
 
-		auto title = text_layout::create (dwrite_factory(), _legendFont, "MST Regions:");
+		auto title = text_layout_with_metrics (dwrite_factory(), _legendFont, "MST Regions:");
 
-		float y = client_height() - lines.size() * (lineHeight + 2 * UpDownPadding) - title.metrics.height - 2 * UpDownPadding;
+		float y = client_height() - lines.size() * (lineHeight + 2 * UpDownPadding) - title.height() - 2 * UpDownPadding;
 
 		auto oldaa = dc->GetAntialiasMode();
 		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
@@ -254,8 +259,8 @@ public:
 		dc->DrawLine ({ lineX, y }, { lineX, client_height() }, _drawing_resources._brushWindowText, lineWidth);
 		dc->SetAntialiasMode(oldaa);
 
-		dc->DrawTextLayout ({ LeftRightPadding, y + UpDownPadding }, title.layout, _drawing_resources._brushWindowText);
-		y += (title.metrics.height + 2 * UpDownPadding);
+		dc->DrawTextLayout ({ LeftRightPadding, y + UpDownPadding }, title, _drawing_resources._brushWindowText);
+		y += (title.height() + 2 * UpDownPadding);
 
 		for (auto& p : lines)
 		{
@@ -264,7 +269,7 @@ public:
 			D2D1_RECT_F rect = { LeftRightPadding, y + UpDownPadding, LeftRightPadding + coloredRectWidth, y + UpDownPadding + lineHeight };
 			dc->FillRectangle (&rect, brush);
 			D2D1_POINT_2F pt = { LeftRightPadding + coloredRectWidth + LeftRightPadding, y + UpDownPadding };
-			dc->DrawTextLayout (pt, p.first.layout, _drawing_resources._brushWindowText);
+			dc->DrawTextLayout (pt, p.first, _drawing_resources._brushWindowText);
 			y += (lineHeight + 2 * UpDownPadding);
 		}
 	}
@@ -291,25 +296,25 @@ public:
 		float leftRightPadding = 3;
 		float topBottomPadding = 1.5f;
 		auto textFormat = smallFont ? _drawing_resources._smallTextFormat.get() : _drawing_resources._regularTextFormat.get();
-		auto tl = edge::text_layout::create (_drawing_resources._dWriteFactory, textFormat, text);
+		auto tl = edge::text_layout_with_metrics (_drawing_resources._dWriteFactory, textFormat, text);
 
 		float pixelWidthDips = GetDipSizeFromPixelSize ({ 1, 0 }).width;
 		float lineWidthDips = roundf(1.0f / pixelWidthDips) * pixelWidthDips;
 
 		float left = dLocation.x - leftRightPadding;
 		if (ha == DWRITE_TEXT_ALIGNMENT_CENTER)
-			left -= tl.metrics.width / 2;
+			left -= tl.width() / 2;
 		else if (ha == DWRITE_TEXT_ALIGNMENT_TRAILING)
-			left -= tl.metrics.width;
+			left -= tl.width();
 
 		float top = dLocation.y;
 		if (va == DWRITE_PARAGRAPH_ALIGNMENT_FAR)
-			top -= (topBottomPadding * 2 + tl.metrics.height + lineWidthDips * 2);
+			top -= (topBottomPadding * 2 + tl.height() + lineWidthDips * 2);
 		else if (va == DWRITE_PARAGRAPH_ALIGNMENT_CENTER)
-			top -= (topBottomPadding + tl.metrics.height + lineWidthDips);
-		
-		float right = left + 2 * leftRightPadding + tl.metrics.width;
-		float bottom = top + 2 * topBottomPadding + tl.metrics.height;
+			top -= (topBottomPadding + tl.height() + lineWidthDips);
+
+		float right = left + 2 * leftRightPadding + tl.width();
+		float bottom = top + 2 * topBottomPadding + tl.height();
 		left   = roundf (left   / pixelWidthDips) * pixelWidthDips - lineWidthDips / 2;
 		top    = roundf (top    / pixelWidthDips) * pixelWidthDips - lineWidthDips / 2;
 		right  = roundf (right  / pixelWidthDips) * pixelWidthDips + lineWidthDips / 2;
@@ -323,16 +328,16 @@ public:
 		brush->SetColor (GetD2DSystemColor(COLOR_INFOTEXT));
 		rt->DrawRoundedRectangle (&rr, brush, lineWidthDips);
 
-		rt->DrawTextLayout ({ rr.rect.left + leftRightPadding, rr.rect.top + topBottomPadding }, tl.layout, brush);
+		rt->DrawTextLayout ({ rr.rect.left + leftRightPadding, rr.rect.top + topBottomPadding }, tl, brush);
 	}
 
 	void render_bridges (ID2D1RenderTarget* dc, const std::set<STP_MST_CONFIG_ID>& configIds) const
 	{
 		Matrix3x2F oldtr;
 		dc->GetTransform(&oldtr);
-		dc->SetTransform (GetZoomTransform() * oldtr);
+		dc->SetTransform (zoom_transform() * oldtr);
 
-		for (const unique_ptr<bridge>& bridge : _project->bridges())
+		for (auto& bridge : _project->bridges())
 		{
 			D2D1_COLOR_F color = ColorF(ColorF::LightGreen);
 			if (STP_GetStpVersion(bridge->stp_bridge()) >= STP_VERSION_MSTP)
@@ -355,9 +360,9 @@ public:
 	{
 		Matrix3x2F oldtr;
 		dc->GetTransform(&oldtr);
-		dc->SetTransform (GetZoomTransform() * oldtr);
+		dc->SetTransform (zoom_transform() * oldtr);
 
-		for (const unique_ptr<wire>& w : _project->wires())
+		for (auto& w : _project->wires())
 		{
 			bool hasLoop;
 			bool forwarding = _project->IsWireForwarding(w.get(), _pw->selected_vlan_number(), &hasLoop);
@@ -379,13 +384,13 @@ public:
 			bool anyPortConnected = false;
 			for (auto& b : _project->bridges())
 				anyPortConnected |= any_of (b->ports().begin(), b->ports().end(),
-											[this](const unique_ptr<port>& p) { return _project->GetWireConnectedToPort(p.get()).first != nullptr; });
+											[this](const std::unique_ptr<port>& p) { return _project->GetWireConnectedToPort(p.get()).first != nullptr; });
 
 			if (!anyPortConnected)
 			{
 				bridge* b = _project->bridges().front().get();
 				auto text = "No port connected. You can connect\r\nports by drawing wires with the mouse.";
-				auto wl = D2D1_POINT_2F { b->GetLeft() + b->GetWidth() / 2, b->GetBottom() + port::ExteriorHeight * 1.5f };
+				auto wl = D2D1_POINT_2F { b->left() + b->width() / 2, b->bottom() + port::ExteriorHeight * 1.5f };
 				auto dl = pointw_to_pointd(wl);
 				render_hint (dc, { dl.x, dl.y }, text, DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, false);
 			}
@@ -557,11 +562,11 @@ public:
 				}
 			}
 
-			return nullopt;
+			return std::nullopt;
 		}
 		else if (uMsg == WM_MOUSEMOVE)
 		{
-			ProcessWmMouseMove (POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
+			process_wm_mousemove (POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
 			base::window_proc (hwnd, uMsg, wParam, lParam);
 			return 0;
 		}
@@ -651,9 +656,9 @@ public:
 		return { };
 	}
 
-	void DeleteSelection()
+	void delete_selection()
 	{
-		if (any_of(_selection->objects().begin(), _selection->objects().end(), [](object* o) { return o->is<port>(); }))
+		if (any_of(_selection->objects().begin(), _selection->objects().end(), [](object* o) { return o->type() == &port::_type; }))
 		{
 			MessageBoxA (hwnd(), "Ports cannot be deleted.", _app->app_name(), 0);
 			return;
@@ -698,7 +703,7 @@ public:
 			bool anyPointRemainsConnected = any_of (wire->points().begin(), wire->points().end(),
 				[&bridgesToRemove, this](auto& pt) { return std::holds_alternative<connected_wire_end>(pt)
 					&& (bridgesToRemove.count(std::get<connected_wire_end>(pt)->bridge()) == 0); });
-			
+
 			auto it1 = it;
 			it++;
 
@@ -741,11 +746,11 @@ public:
 
 		if (virtualKey == VK_DELETE)
 		{
-			DeleteSelection();
+			delete_selection();
 			return 0;
 		}
 
-		return nullopt;
+		return std::nullopt;
 	}
 
 	std::optional<LRESULT> ProcessKeyOrSysKeyUp (UINT virtualKey, UINT modifierKeys)
@@ -758,11 +763,11 @@ public:
 				_state = nullptr;
 				SetCursor (LoadCursor (nullptr, IDC_ARROW));
 			}
-			
+
 			return res;
 		}
 
-		return nullopt;
+		return std::nullopt;
 	}
 
 	std::optional<LRESULT> ProcessMouseButtonDown (mouse_button button, UINT modifierKeysDown, POINT pt)
@@ -770,7 +775,7 @@ public:
 		::SetFocus(hwnd());
 		if (::GetFocus() != hwnd())
 			// Some validation code (maybe in the Properties Window) must have failed and taken focus back.
-			return nullopt;
+			return std::nullopt;
 
 		mouse_location ml;
 		ml.pt = pt;
@@ -817,8 +822,8 @@ public:
 		}
 		else
 		{
-			unique_ptr<edit_state> stateMoveThreshold;
-			unique_ptr<edit_state> stateButtonUp;
+			std::unique_ptr<edit_state> stateMoveThreshold;
+			std::unique_ptr<edit_state> stateButtonUp;
 
 			if (dynamic_cast<bridge*>(ht.object) != nullptr)
 			{
@@ -854,8 +859,8 @@ public:
 				}
 			}
 
-			auto state = CreateStateBeginningDrag(make_edit_state_deps(), ht.object, button, modifierKeysDown, ml, ::GetCursor(), move(stateMoveThreshold), move(stateButtonUp));
-			EnterState(move(state));
+			auto state = CreateStateBeginningDrag(make_edit_state_deps(), ht.object, button, modifierKeysDown, ml, ::GetCursor(), std::move(stateMoveThreshold), std::move(stateButtonUp));
+			EnterState(std::move(state));
 		}
 
 		return 0;
@@ -877,14 +882,14 @@ public:
 		}
 
 		if (button == mouse_button::right)
-			return nullopt; // return "not handled", to cause our called to pass the message to DefWindowProc, which will generate WM_CONTEXTMENU
+			return std::nullopt; // return "not handled", to cause our called to pass the message to DefWindowProc, which will generate WM_CONTEXTMENU
 
 		return 0;
 	}
 
 	virtual void EnterState (std::unique_ptr<edit_state>&& state) override final
 	{
-		_state = move(state);
+		_state = std::move(state);
 		_htResult = { nullptr };
 	}
 
@@ -927,7 +932,7 @@ public:
 		}
 	}
 
-	void ProcessWmMouseMove (POINT pt)
+	void process_wm_mousemove (POINT pt)
 	{
 		auto dLocation = pointp_to_pointd(pt);
 		auto wLocation = pointd_to_pointw(dLocation);
@@ -977,7 +982,21 @@ public:
 
 	virtual const struct drawing_resources& drawing_resources() const override final { return _drawing_resources; }
 
-	virtual D2D1::Matrix3x2F GetZoomTransform() const override final { return base::GetZoomTransform(); }
+	virtual D2D1::Matrix3x2F zoom_transform() const override final { return base::zoom_transform(); }
+
+	virtual void zoom_all() override
+	{
+		if (!_project->bridges().empty() || !_project->wires().empty())
+		{
+			auto r = _project->bridges().empty() ? _project->wires()[0]->extent() : _project->bridges()[0]->extent();
+			for (auto& b : _project->bridges())
+				r = union_rects(r, b->extent());
+			for (auto& w : _project->wires())
+				r = union_rects(r, w->extent());
+
+			this->zoom_to (r, 20, 0, 1.5f, false);
+		}
+	}
 
 	edit_state_deps make_edit_state_deps()
 	{

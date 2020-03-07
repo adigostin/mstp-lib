@@ -1,3 +1,7 @@
+
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #include "pch.h"
 #include "simulator.h"
 #include "resource.h"
@@ -6,7 +10,6 @@
 #include "wire.h"
 #include "win32/property_grid.h"
 
-using namespace std;
 using namespace edge;
 
 static constexpr wchar_t ProjectWindowWndClassName[] = L"project_window-{24B42526-2970-4B3C-A753-2DABD22C4BB0}";
@@ -26,7 +29,7 @@ static COMDLG_FILTERSPEC const ProjectFileDialogFileTypes[] =
 };
 static const wchar_t ProjectFileExtensionWithoutDot[] = L"stp";
 
-static const wnd_class_params class_params = 
+static const wnd_class_params class_params =
 {
 	ProjectWindowWndClassName,      // lpszClassName
 	CS_DBLCLKS,                     // style
@@ -50,7 +53,7 @@ class project_window : public window, public virtual project_window_i
 	std::unique_ptr<property_grid_i>    _pg;
 	std::unique_ptr<log_window_i>       _log_window;
 	std::unique_ptr<vlan_window_i>      _vlanWindow;
-	RECT _restoreBounds;
+	RECT _restore_bounds;
 	uint32_t _selectedVlanNumber = 1;
 	uint32_t _dpi;
 	float _pg_desired_width_dips;
@@ -75,13 +78,15 @@ public:
 		assert (create_params.selectedVlan >= 1);
 
 		int nCmdShow = create_params.nCmdShow;
-		bool read = TryGetSavedWindowLocation (&_restoreBounds, &nCmdShow);
+		bool read = TryGetSavedWindowLocation (&_restore_bounds, &nCmdShow);
 		if (!read)
-			::GetWindowRect(hwnd(), &_restoreBounds);
+			::GetWindowRect(hwnd(), &_restore_bounds);
 		else
 		{
 			_restoring_size_from_registry = true;
-			::MoveWindow(hwnd(), _restoreBounds.left, _restoreBounds.top, width(_restoreBounds), height(_restoreBounds), TRUE);
+			auto width = _restore_bounds.right - _restore_bounds.left;
+			auto height = _restore_bounds.bottom - _restore_bounds.top;
+			::MoveWindow(hwnd(), _restore_bounds.left, _restore_bounds.top, width, height, TRUE);
 			_restoring_size_from_registry = false;
 		}
 		::ShowWindow (hwnd(), nCmdShow);
@@ -114,6 +119,7 @@ public:
 
 		edit_window_create_params cps = { _app, this, _project.get(), _selection.get(), hwnd(), edit_window_rect(), create_params.d3d_dc, create_params.dwrite_factory };
 		_edit_window = _app->edit_window_factory()(cps);
+		_edit_window->zoom_all();
 
 		if (auto recentFiles = GetRecentFileList(); !recentFiles.empty())
 			AddRecentFileMenuItems(recentFiles);
@@ -135,6 +141,10 @@ public:
 		if (_pg)
 			destroy_property_grid();
 	}
+
+	virtual HWND hwnd() const override { return base::hwnd(); }
+
+	using base::client_rect_pixels;
 
 	LONG splitter_width_pixels() const
 	{
@@ -198,6 +208,7 @@ public:
 	{
 		auto pw = static_cast<project_window*>(callbackArg);
 		pw->SetWindowTitle();
+		pw->_edit_window->zoom_all();
 	}
 
 	static void OnProjectWindowAdded (void* callbackArg, project_window_i* pw)
@@ -230,7 +241,7 @@ public:
 	LONG GetVlanWindowLeft() const
 	{
 		if (_pg != nullptr)
-			return _pg->GetWidth() + splitter_width_pixels();
+			return _pg->width_pixels() + splitter_width_pixels();
 		else
 			return 0;
 	}
@@ -238,7 +249,7 @@ public:
 	LONG GetVlanWindowRight() const
 	{
 		if (_log_window != nullptr)
-			return client_width_pixels() - _log_window->GetWidth() - splitter_width_pixels();
+			return client_width_pixels() - _log_window->width_pixels() - splitter_width_pixels();
 		else
 			return client_width_pixels();
 	}
@@ -248,27 +259,27 @@ public:
 		auto rect = client_rect_pixels();
 
 		if (_pg != nullptr)
-			rect.left += _pg->GetWidth() + splitter_width_pixels();
+			rect.left += _pg->width_pixels() + splitter_width_pixels();
 
 		if (_log_window != nullptr)
-			rect.right -= _log_window->GetWidth() + splitter_width_pixels();
+			rect.right -= _log_window->width_pixels() + splitter_width_pixels();
 
 		if (_vlanWindow != nullptr)
-			rect.top += _vlanWindow->GetHeight();
+			rect.top += _vlanWindow->height_pixels();
 
 		return rect;
 	}
 
 	void SetWindowTitle()
 	{
-		wstringstream windowTitle;
+		std::wstringstream windowTitle;
 
 		const auto& filePath = _project->file_path();
 		if (!filePath.empty())
 		{
 			const wchar_t* fileName = PathFindFileName (filePath.c_str());
 			const wchar_t* fileExt = PathFindExtension (filePath.c_str());
-			windowTitle << setw(fileExt - fileName) << fileName;
+			windowTitle << std::setw(fileExt - fileName) << fileName;
 		}
 		else
 			windowTitle << L"Untitled";
@@ -307,6 +318,12 @@ public:
 			return 0;
 		}
 
+		if (msg == WM_DESTROY)
+		{
+			this->event_invoker<destroying_e>()(this);
+			return 0;
+		}
+
 		if (msg == WM_CLOSE)
 		{
 			TryClose();
@@ -315,7 +332,7 @@ public:
 
 		if (msg == WM_SIZE)
 		{
-			ProcessWmSize (hwnd, wParam, { LOWORD(lParam), HIWORD(lParam) });
+			process_wm_size (hwnd, wParam, { LOWORD(lParam), HIWORD(lParam) });
 			return 0;
 		}
 
@@ -324,7 +341,7 @@ public:
 			WINDOWPLACEMENT wp = { sizeof(wp) };
 			::GetWindowPlacement (hwnd, &wp);
 			if (wp.showCmd == SW_NORMAL)
-				::GetWindowRect (hwnd, &_restoreBounds);
+				::GetWindowRect (hwnd, &_restore_bounds);
 			return 0;
 		}
 
@@ -368,7 +385,7 @@ public:
 
 		if (msg == WM_MOUSEMOVE)
 		{
-			ProcessWmMouseMove (POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) }, (UINT) wParam);
+			process_wm_mousemove (POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) }, (UINT) wParam);
 			return 0;
 		}
 
@@ -381,10 +398,10 @@ public:
 		return base_class_result;
 	}
 
-	void ProcessWmSize (HWND hwnd, WPARAM wParam, SIZE newClientSize)
+	void process_wm_size (HWND hwnd, WPARAM wParam, SIZE newClientSize)
 	{
 		if (wParam == SIZE_RESTORED)
-			::GetWindowRect(hwnd, &_restoreBounds);
+			::GetWindowRect(hwnd, &_restore_bounds);
 
 		ResizeChildWindows();
 	}
@@ -392,24 +409,24 @@ public:
 	void ResizeChildWindows()
 	{
 		if (_pg != nullptr)
-			_pg->SetRect (pg_restricted_rect());
+			_pg->move_window (pg_restricted_rect());
 
 		if (_log_window != nullptr)
-			_log_window->SetRect (log_restricted_rect());
+			_log_window->move_window (log_restricted_rect());
 
 		if (_vlanWindow != nullptr)
-			_vlanWindow->SetRect ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->preferred_size().cy });
+			_vlanWindow->move_window ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->preferred_size().cy });
 
 		if (_edit_window != nullptr)
-			_edit_window->SetRect (edit_window_rect());
+			_edit_window->move_window (edit_window_rect());
 	}
 
 	void ProcessWmLButtonDown (POINT pt, UINT modifierKeysDown)
 	{
-		if ((_pg != nullptr) && (pt.x >= _pg->GetWidth()) && (pt.x < _pg->GetWidth() + splitter_width_pixels()))
+		if ((_pg != nullptr) && (pt.x >= _pg->width_pixels()) && (pt.x < _pg->width_pixels() + splitter_width_pixels()))
 		{
 			_windowBeingResized = tool_window::props;
-			_resize_offset = pt.x - _pg->GetWidth();
+			_resize_offset = pt.x - _pg->width_pixels();
 			::SetCapture(hwnd());
 		}
 		else if ((_log_window != nullptr) && (pt.x >= _log_window->GetX() - splitter_width_pixels()) && (pt.x < _log_window->GetX()))
@@ -420,7 +437,7 @@ public:
 		}
 	}
 
-	void ProcessWmMouseMove (POINT pt, UINT modifierKeysDown)
+	void process_wm_mousemove (POINT pt, UINT modifierKeysDown)
 	{
 		if (_windowBeingResized == tool_window::props)
 		{
@@ -428,9 +445,9 @@ public:
 			pg_desired_width_pixels = std::max (pg_desired_width_pixels, 0l);
 			pg_desired_width_pixels = std::min (pg_desired_width_pixels, client_width_pixels());
 			_pg_desired_width_dips = pg_desired_width_pixels * 96.0f / _dpi;
-			_pg->SetRect (pg_restricted_rect());
-			_vlanWindow->SetRect ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->GetHeight() });
-			_edit_window->SetRect (edit_window_rect());
+			_pg->move_window (pg_restricted_rect());
+			_vlanWindow->move_window ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->height_pixels() });
+			_edit_window->move_window (edit_window_rect());
 			::UpdateWindow (_pg->hwnd());
 			::UpdateWindow (_edit_window->hwnd());
 			::UpdateWindow (_vlanWindow->hwnd());
@@ -441,9 +458,9 @@ public:
 			log_desired_width_pixels = std::max (log_desired_width_pixels, 0l);
 			log_desired_width_pixels = std::min (log_desired_width_pixels, client_width_pixels());
 			_log_desired_width_dips = log_desired_width_pixels * 96.0f / _dpi;
-			_log_window->SetRect (log_restricted_rect());
-			_vlanWindow->SetRect ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->GetHeight() });
-			_edit_window->SetRect (edit_window_rect());
+			_log_window->move_window (log_restricted_rect());
+			_vlanWindow->move_window ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->height_pixels() });
+			_edit_window->move_window (edit_window_rect());
 			::UpdateWindow (_log_window->hwnd());
 			::UpdateWindow (_edit_window->hwnd());
 			::UpdateWindow (_vlanWindow->hwnd());
@@ -468,7 +485,7 @@ public:
 
 	void SetCursor (POINT pt)
 	{
-		if ((_pg != nullptr) && (pt.x >= _pg->GetWidth()) && (pt.x < _pg->GetWidth() + splitter_width_pixels()))
+		if ((_pg != nullptr) && (pt.x >= _pg->width_pixels()) && (pt.x < _pg->width_pixels() + splitter_width_pixels()))
 		{
 			::SetCursor (LoadCursor(nullptr, IDC_SIZEWE));
 		}
@@ -489,7 +506,7 @@ public:
 
 		if (_pg != nullptr)
 		{
-			rect.left = _pg->GetWidth();
+			rect.left = _pg->width_pixels();
 			rect.top = 0;
 			rect.right = rect.left + splitter_width_pixels();
 			rect.bottom = client_height_pixels();
@@ -508,7 +525,7 @@ public:
 		EndPaint(hwnd(), &ps);
 	}
 
-	optional<LRESULT> ProcessWmCommand (WPARAM wParam, LPARAM lParam)
+	std::optional<LRESULT> ProcessWmCommand (WPARAM wParam, LPARAM lParam)
 	{
 		if (wParam == ID_VIEW_PROPERTIES)
 		{
@@ -544,7 +561,7 @@ public:
 
 		if (((HIWORD(wParam) == 0) || (HIWORD(wParam) == 1)) && (LOWORD(wParam) == ID_FILE_OPEN))
 		{
-			wstring openPath;
+			std::wstring openPath;
 			HRESULT hr = TryChooseFilePath (OpenOrSave::Open, hwnd(), nullptr, openPath);
 			if (SUCCEEDED(hr))
 				Open(openPath.c_str());
@@ -554,11 +571,11 @@ public:
 		if (((HIWORD(wParam) == 0) || (HIWORD(wParam) == 1)) && (LOWORD(wParam) == ID_FILE_NEW))
 		{
 			auto project = _app->project_factory()();
-			project_window_create_params params = 
+			project_window_create_params params =
 			{
 				_app, project, true, true, 1, SW_SHOW, _d3d_dc, _dwrite_factory
 			};
-			
+
 			auto pw = _app->project_window_factory()(params);
 			_app->add_project_window(std::move(pw));
 			return 0;
@@ -584,7 +601,7 @@ public:
 			int charCount = ::GetMenuString (fileMenu, (UINT)wParam, nullptr, 0, MF_BYCOMMAND);
 			if (charCount > 0)
 			{
-				auto path = make_unique<wchar_t[]>(charCount + 1);
+				auto path = std::make_unique<wchar_t[]>(charCount + 1);
 				::GetMenuString (fileMenu, (UINT)wParam, path.get(), charCount + 1, MF_BYCOMMAND);
 				Open(path.get());
 			}
@@ -597,7 +614,7 @@ public:
 			return 0;
 		}
 
-		return nullopt;
+		return std::nullopt;
 	}
 
 	void Open (const wchar_t* openPath)
@@ -696,7 +713,7 @@ public:
 
 	enum class OpenOrSave { Open, Save };
 
-	static HRESULT TryChooseFilePath (OpenOrSave which, HWND fileDialogParentHWnd, const wchar_t* pathToInitializeDialogTo, wstring& sbOut)
+	static HRESULT TryChooseFilePath (OpenOrSave which, HWND fileDialogParentHWnd, const wchar_t* pathToInitializeDialogTo, std::wstring& sbOut)
 	{
 		com_ptr<IFileDialog> dialog;
 		HRESULT hr = CoCreateInstance ((which == OpenOrSave::Save) ? CLSID_FileSaveDialog : CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, __uuidof(dialog), (void**) &dialog);
@@ -719,7 +736,7 @@ public:
 			auto filePtr = PathFindFileName(pathToInitializeDialogTo);
 			dialog->SetFileName(filePtr);
 
-			wstring dir (pathToInitializeDialogTo, filePtr - pathToInitializeDialogTo);
+			std::wstring dir (pathToInitializeDialogTo, filePtr - pathToInitializeDialogTo);
 			com_ptr<IShellItem> si;
 			hr = SHCreateItemFromParsingName (dir.c_str(), nullptr, IID_PPV_ARGS(&si));
 			if (SUCCEEDED(hr))
@@ -853,10 +870,10 @@ public:
 			auto lstatus = RegCreateKeyEx(HKEY_CURRENT_USER, _app->GetRegKeyPath(), 0, NULL, 0, KEY_WRITE, NULL, &key, NULL);
 			if (lstatus == ERROR_SUCCESS)
 			{
-				RegSetValueEx(key, RegValueNameWindowLeft, 0, REG_DWORD, (BYTE*)&_restoreBounds.left, 4);
-				RegSetValueEx(key, RegValueNameWindowTop, 0, REG_DWORD, (BYTE*)&_restoreBounds.top, 4);
-				RegSetValueEx(key, RegValueNameWindowRight, 0, REG_DWORD, (BYTE*)&_restoreBounds.right, 4);
-				RegSetValueEx(key, RegValueNameWindowBottom, 0, REG_DWORD, (BYTE*)&_restoreBounds.bottom, 4);
+				RegSetValueEx(key, RegValueNameWindowLeft, 0, REG_DWORD, (BYTE*)&_restore_bounds.left, 4);
+				RegSetValueEx(key, RegValueNameWindowTop, 0, REG_DWORD, (BYTE*)&_restore_bounds.top, 4);
+				RegSetValueEx(key, RegValueNameWindowRight, 0, REG_DWORD, (BYTE*)&_restore_bounds.right, 4);
+				RegSetValueEx(key, RegValueNameWindowBottom, 0, REG_DWORD, (BYTE*)&_restore_bounds.bottom, 4);
 				RegSetValueEx(key, RegValueNameShowCmd, 0, REG_DWORD, (BYTE*)&wp.showCmd, 4);
 				RegCloseKey(key);
 			}
@@ -884,11 +901,13 @@ public:
 
 	virtual project_i* project() const override final { return _project.get(); }
 
-	static vector<wstring> GetRecentFileList()
+	virtual destroying_e::subscriber destroying() override final { return destroying_e::subscriber(this); }
+
+	static std::vector<std::wstring> GetRecentFileList()
 	{
 		// We ignore errors in this particular function.
 
-		vector<wstring> fileList;
+		std::vector<std::wstring> fileList;
 
 		com_ptr<IApplicationDocumentLists> docList;
 		auto hr = CoCreateInstance (CLSID_ApplicationDocumentLists, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IApplicationDocumentLists), (void**) &docList);
@@ -938,7 +957,7 @@ public:
 		return -1;
 	}
 
-	void AddRecentFileMenuItems (const vector<wstring>& recentFiles)
+	void AddRecentFileMenuItems (const std::vector<std::wstring>& recentFiles)
 	{
 		auto mainMenu = ::GetMenu(hwnd());
 		auto fileMenu = ::GetSubMenu (mainMenu, 0);
@@ -973,13 +992,13 @@ public:
 		if (objs.empty())
 			return;
 
-		if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<bridge>(); })
-			|| all_of (objs.begin(), objs.end(), [](object* o) { return o->is<port>(); }))
+		if (all_of (objs.begin(), objs.end(), [](object* o) { return o->type() == &bridge::_type; })
+			|| all_of (objs.begin(), objs.end(), [](object* o) { return o->type() == &port::_type; }))
 		{
 			const char* first_section_name;
 			std::function<std::pair<object*, unsigned int>(object* o)> tree_selector;
 
-			if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<bridge>(); }))
+			if (all_of (objs.begin(), objs.end(), [](object* o) { return o->type() == &bridge::_type; }))
 			{
 				first_section_name = "Bridge Properties";
 
@@ -1018,7 +1037,7 @@ public:
 					all_same_tree_index = false;
 			}
 
-			stringstream ss;
+			std::stringstream ss;
 			ss << "VLAN " << _selectedVlanNumber << " Properties";
 			if (all_same_tree_index && (first_tree_index == 0))
 				ss << " (CIST)";
@@ -1029,7 +1048,7 @@ public:
 
 			_pg->add_section (ss.str().c_str(), trees.data(), trees.size());
 		}
-		else if (all_of (objs.begin(), objs.end(), [](object* o) { return o->is<wire>(); }))
+		else if (all_of (objs.begin(), objs.end(), [](object* o) { return o->type() == &wire::_type; }))
 		{
 			_pg->add_section("Wire Properties", objs.data(), objs.size());
 		}

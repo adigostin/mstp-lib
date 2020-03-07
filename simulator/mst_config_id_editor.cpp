@@ -1,23 +1,23 @@
 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #include "pch.h"
 #include "simulator.h"
 #include "resource.h"
 #include "bridge.h"
 #include "win32/utility_functions.h"
 
-using namespace std;
-using namespace edge;
-
 static constexpr UINT WM_SHOWN = WM_APP + 1;
 
-class mst_config_id_editor : public property_editor_i
+class mst_config_id_editor : public edge::property_editor_i
 {
 	project_i* _project;
 	std::unordered_set<bridge*> _bridges;
 	HWND _hwnd = nullptr;
 
 public:
-	mst_config_id_editor (const std::vector<object*>& objects)
+	mst_config_id_editor (std::span<object* const> objects)
 	{
 		assert (!objects.empty());
 
@@ -65,11 +65,9 @@ public:
 		}
 	}
 
-	virtual bool show (property_editor_parent_i* parent) override
+	virtual bool show (edge::win32_window_i* parent) override
 	{
-		auto parent_window = dynamic_cast<win32_window_i*>(parent);
-		assert (parent_window != nullptr);
-		INT_PTR dr = DialogBoxParam (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDD_DIALOG_MST_CONFIG_ID), parent_window->hwnd(), &DialogProcStatic, (LPARAM) this);
+		INT_PTR dr = DialogBoxParam (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDD_DIALOG_MST_CONFIG_ID), parent->hwnd(), &DialogProcStatic, (LPARAM) this);
 		return (dr == IDOK);
 	}
 
@@ -237,13 +235,13 @@ public:
 		{
 			lvi.iItem = vlanNumber;
 
-			wstring text = to_wstring(vlanNumber);
+			std::wstring text = std::to_wstring(vlanNumber);
 			lvi.iSubItem = 0;
 			lvi.pszText = const_cast<wchar_t*>(text.c_str());
 			ListView_InsertItem (list, &lvi);
 
 			auto treeIndex = entries[vlanNumber].treeIndex;
-			text = to_wstring (treeIndex);
+			text = std::to_wstring (treeIndex);
 			lvi.iSubItem = 1;
 			lvi.pszText = const_cast<wchar_t*>(text.c_str());
 			ListView_SetItem (list, &lvi);
@@ -252,7 +250,7 @@ public:
 
 	void LoadDefaultConfig()
 	{
-		vector<STP_CONFIG_TABLE_ENTRY> entries;
+		std::vector<STP_CONFIG_TABLE_ENTRY> entries;
 		entries.resize(1 + max_vlan_number);
 
 		for (auto b : _bridges)
@@ -269,7 +267,7 @@ public:
 		{
 			auto treeCount = 1 + STP_GetMstiCount(b->stp_bridge());
 
-			vector<STP_CONFIG_TABLE_ENTRY> entries;
+			std::vector<STP_CONFIG_TABLE_ENTRY> entries;
 			entries.resize(1 + max_vlan_number);
 
 			entries[0] = { 0, 0 }; // VLAN0 does not exist.
@@ -290,7 +288,7 @@ public:
 	}
 };
 
-std::unique_ptr<property_editor_i> config_id_editor_factory (const std::vector<object*>& objects)
+std::unique_ptr<edge::property_editor_i> create_config_id_editor (std::span<object* const> objects)
 {
 	return std::make_unique<mst_config_id_editor>(objects);
 }

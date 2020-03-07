@@ -1,4 +1,7 @@
 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #include "pch.h"
 #include "wire.h"
 #include "bridge.h"
@@ -8,7 +11,7 @@
 
 static constexpr float thickness = 2;
 
-std::string wire_end_property_traits::to_string (wire_end from)
+void wire_end_property_traits::to_string (value_t from, std::string& to)
 {
 	std::stringstream ss;
 	if (std::holds_alternative<connected_wire_end>(from))
@@ -22,22 +25,23 @@ std::string wire_end_property_traits::to_string (wire_end from)
 				if (b->ports()[pi].get() == p)
 				{
 					ss << "Connected;" << bi << ";" << pi;
-					return ss.str();
+					to = ss.str();
+					return;
 				}
 			}
 		}
 
-		assert(false); return { };
+		assert(false);
 	}
 	else
 	{
 		auto location = std::get<loose_wire_end>(from);
 		ss << "Loose;" << location.x << ";" << location.y;
-		return ss.str();
+		to = ss.str();
 	}
 }
 
-bool wire_end_property_traits::from_string (std::string_view from, wire_end& to, const object* obj)
+void wire_end_property_traits::from_string (std::string_view from, value_t& to)
 {
 	size_t s1 = from.find(';');
 	size_t s2 = from.rfind(';');
@@ -47,10 +51,8 @@ bool wire_end_property_traits::from_string (std::string_view from, wire_end& to,
 		size_t bridge_index, port_index;
 		std::from_chars (from.data() + s1 + 1, from.data() + s2, bridge_index);
 		std::from_chars (from.data() + s2 + 1, from.data() + from.size(), port_index);
-		auto w = static_cast<const wire*>(obj);
-		auto port = w->project()->bridges()[bridge_index]->ports()[port_index].get();
-		to = port;
-		return true;
+		to = serialized_connected_end(bridge_index, port_index);
+		return;
 	}
 
 	if (std::string_view(from.data(), s1) == "Loose")
@@ -59,15 +61,33 @@ bool wire_end_property_traits::from_string (std::string_view from, wire_end& to,
 		std::from_chars (from.data() + s1 + 1, from.data() + s2, end.x);
 		std::from_chars (from.data() + s2 + 1, from.data() + from.size(), end.y);
 		to = end;
-		return true;
+		return;
 	}
 
-	return false;
+	throw edge::string_convert_exception(from, type_name);
 }
 
 wire::wire (wire_end firstEnd, wire_end secondEnd)
 	: _points({ firstEnd, secondEnd })
 { }
+
+// deserialize_i
+void wire::on_deserializing()
+{ }
+
+void wire::on_deserialized()
+{
+	for (auto& p : _points)
+	{
+		if (std::holds_alternative<serialized_connected_end>(p))
+		{
+			auto bridge_index = std::get<serialized_connected_end>(p).first;
+			auto port_index = std::get<serialized_connected_end>(p).second;
+			auto port = project()->bridges()[bridge_index]->ports()[port_index].get();
+			p = port;
+		}
+	}
+}
 
 void wire::set_point (size_t pointIndex, wire_end point)
 {
@@ -136,31 +156,45 @@ renderable_object::ht_result wire::hit_test (const edge::zoomable_i* zoomable, D
 		auto pointWLocation = this->point_coords(i);
 		auto pointDLocation = zoomable->pointw_to_pointd(pointWLocation);
 		D2D1_RECT_F rect = { pointDLocation.x, pointDLocation.y, pointDLocation.x, pointDLocation.y };
-		edge::InflateRect(&rect, tolerance);
+		edge::inflate(&rect, tolerance);
 		if (edge::point_in_rect (rect, dLocation))
 			return { this, (int) i };
 	}
 
-	if (HitTestLine (zoomable, dLocation, tolerance, point_coords(0), point_coords(1), thickness))
+	if (zoomable->hit_test_line (dLocation, tolerance, point_coords(0), point_coords(1), thickness))
 		return { this, -1 };
 
 	return { };
+}
+
+D2D1_RECT_F wire::extent() const
+{
+	auto tl = point_coords(0);
+	auto br = point_coords(0);
+	for (size_t i = 1; i < _points.size(); i++)
+	{
+		auto c = point_coords(i);
+		tl.x = std::min (tl.x, c.x);
+		tl.y = std::min (tl.y, c.y);
+		br.x = std::max (br.x, c.x);
+		br.y = std::max (br.y, c.y);
+	}
+
+	return { tl.x, tl.y, br.x, br.y };
 }
 
 const wire_end_p wire::p0_property = {
 	"P0", nullptr, nullptr, ui_visible::no,
 	static_cast<wire_end_p::member_getter_t>(&p0),
 	static_cast<wire_end_p::member_setter_t>(&set_p0),
-	std::nullopt
 };
 
 const wire_end_p wire::p1_property = {
 	"P1", nullptr, nullptr, ui_visible::no,
 	static_cast<wire_end_p::member_getter_t>(&p1),
 	static_cast<wire_end_p::member_setter_t>(&set_p1),
-	std::nullopt
 };
 
-const property* wire::_properties[] = { &p0_property, &p1_property };
+const property* const wire::_properties[] = { &p0_property, &p1_property };
 
-const xtype<wire> wire::_type = { "Wire", &base::_type, _properties, [] { return new wire(); } };
+const xtype<wire> wire::_type = { "Wire", &base::_type, _properties, [] { return std::make_unique<wire>(); } };

@@ -39,6 +39,7 @@ extern "C" void EMAC0_IRQHandler()
 
 void ethernet_get_received (ethernet_rx_callback rx_callback)
 {
+	__DSB();
 	while (true)
 	{
 		auto desc = &rx_descriptors[rx_desc_read_index];
@@ -48,13 +49,15 @@ void ethernet_get_received (ethernet_rx_callback rx_callback)
 		const uint8_t* data = rx_buffers[rx_desc_read_index];
 		size_t size = (desc->status & 0x3FFF0000) >> 16;
 		rx_callback (data, size);
-	
+
 		desc->status |= (1u << 31);
 
 		rx_desc_read_index++;
 		if (rx_desc_read_index == rx_desc_count)
 			rx_desc_read_index = 0;
 	}
+
+	__DSB();
 
 	// In case we ran out of descriptors and the RX HW was suspended, wake it up.
 	EMAC0->RXPOLLD = 0;
@@ -64,6 +67,8 @@ void* ethernet_transmit_get_buffer (size_t size)
 {
 	assert (size > 0);
 	assert (size <= tx_buffer_size);
+
+	__DSB();
 
 	while (tx_descriptors[tx_desc_write_index].status & (1u << 31))
 		;
@@ -76,19 +81,23 @@ void ethernet_transmit_release_buffer (void* buffer)
 {
 	assert (buffer == tx_buffer);
 
+	bool last = (tx_desc_write_index == tx_desc_count - 1);
+
 	tx_descriptors[tx_desc_write_index].status =
-		  (1 << 8)    // LS  - Last Descriptor
-		| (1 << 9)    // FS  - First Descriptor
-		| (3 << 22)   // CIC = 3 - all checksums
-		| (1 << 20)   // TCH - Second Address Chained
-	    | (1u << 31); // OWN - Owned by DMA
-	       
+	      (1u << 31)  // OWN  - Owned by DMA
+		| (1u << 30)  // IC   - Interrupt on Completion
+		| (1u << 29)  // LS   - Last Segment of the frame
+		| (1u << 28)  // FS   - First Segment of a frame
+		| (3u << 22)  // CIC  - 3 = all checksums
+		| (last ? (1u << 21) : 0) // TER - Transmit End of Ring
+		| (1u << 20); // TCH  - Second Address Chained
+
+	__DSB();
+
 	// Tell the DMA to reacquire the descriptor now that we've filled it in.
 	EMAC0->TXPOLLD = 0;
 
-	tx_desc_write_index++;
-	if (tx_desc_write_index == tx_desc_count)
-		tx_desc_write_index = 0;
+	tx_desc_write_index = (last ? 0 : (tx_desc_write_index + 1));
 }
 
 void ethernet_init (const uint8_t *mac_address)
@@ -104,7 +113,7 @@ void ethernet_init (const uint8_t *mac_address)
 	EMAC0->PC = (1 << 10) // MDIX Enable
 		| (1 << 3) // Auto Negotiation Enable
 		| (3 << 1); // ANMODE = 3 (100Base-TX, Full-Duplex)
-	
+
 	// Reset the PHY peripheral.
 	SYSCTL->SREPHY = 1;
 	for (volatile int i = 0; i < 16; i++);
@@ -137,11 +146,7 @@ void ethernet_init (const uint8_t *mac_address)
 
 	for (size_t i = 0; i < tx_desc_count; i++)
 	{
-		tx_descriptors[i].status = (1 << 29) // LS: Last Segment
-			| (1 << 28) // FS: First Segment
-			| (1 << 30) // IC: Interrupt on Completion
-			| (1 << 20) // TCH: Second Address Chained
-			| (3 << 22); // CIC: Checksum Insertion Control - 0x3 = Insert a TCP/UDP/ICMP checksum that is fully calculated in this engine
+		tx_descriptors[i].status = 0;
 		tx_descriptors[i].count = sizeof(tx_buffer);
 		tx_descriptors[i].buffer1 = tx_buffer;
 		tx_descriptors[i].next = &tx_descriptors[(i + 1) % tx_desc_count];
@@ -155,6 +160,8 @@ void ethernet_init (const uint8_t *mac_address)
 		rx_descriptors[i].next = &rx_descriptors[(i + 1) % rx_desc_count];
 	}
 
+	__DSB();
+
     EMAC0->RXDLADDR = (uint32_t)rx_descriptors;
 	EMAC0->TXDLADDR = (uint32_t)tx_descriptors;
 
@@ -165,8 +172,8 @@ void ethernet_init (const uint8_t *mac_address)
 
 	// Program the hardware with its MAC address (for filtering). Note that we must set
 	// the registers in this order since the address is latched internally on the write to EMAC_O_ADDRL.
-	EMAC0->ADDR0H = mac_address[4] | (mac_address[5] << 8);
-	EMAC0->ADDR0L = mac_address[0] | (mac_address[1] << 8) | (mac_address[2] << 16) | (mac_address[3] << 24);
+	EMAC0->ADDR0H = (mac_address[0] << 8) | mac_address[1];
+	EMAC0->ADDR0L = (mac_address[2] << 24) | (mac_address[3] << 16) | (mac_address[4] << 8) | mac_address[5];
 
 	// Set MAC filtering options.  We receive all broadcast and multicast
 	// packets along with those addressed specifically for us.
@@ -188,4 +195,14 @@ void ethernet_init (const uint8_t *mac_address)
 
 	//NVIC_EnableIRQ(EMAC0_IRQn);
 	//EMAC0->DMAIM |= (1 << 6) | (1 << 16); // set RIE (Receive Interrupt Enable) and NIE
+}
+
+void ethernet_get_device_address (uint8_t addr[6])
+{
+	addr[0] = EMAC0->ADDR0H >> 8;
+	addr[1] = EMAC0->ADDR0H;
+    addr[2] = EMAC0->ADDR0L >> 24;
+	addr[3] = EMAC0->ADDR0L >> 16;
+	addr[4] = EMAC0->ADDR0L >> 8;
+	addr[5] = EMAC0->ADDR0L;
 }

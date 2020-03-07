@@ -1,6 +1,6 @@
 
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
-// Copyright (c) 2011-2019 Adi Gostin, distributed under Apache License v2.0.
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 // This file implements "13.27 Per Port variables" from 802.1Q-2018.
 
@@ -45,10 +45,10 @@ struct PORT_TREE
 	bool          msgFlagsAgreement     : 1;
 	bool          msgFlagsTcAckOrMaster : 1;
 
-	INFO_IS       infoIs;       // 13.27.ax) - 13.27.32
-	RCVD_INFO     rcvdInfo;	    // 13.27.bi) - 13.27.53
-	STP_PORT_ROLE role;	        // 13.27.bn) - 13.27.66
-	STP_PORT_ROLE selectedRole;	// 13.27.bp) - 13.27.68
+	INFO_IS       infoIs       : 8; // 13.27.ax) - 13.27.32
+	RCVD_INFO     rcvdInfo     : 8; // 13.27.bi) - 13.27.53
+	STP_PORT_ROLE role         : 8;	// 13.27.bn) - 13.27.66
+	STP_PORT_ROLE selectedRole : 8; // 13.27.bp) - 13.27.68
 
 	unsigned int InternalPortPathCost; // 13.27.ay) - 13.27.33
 
@@ -64,12 +64,12 @@ struct PORT_TREE
 
 	// If the ISIS-SPB is implemented, there is one instance per port of the following variable(s) for the CIST and
 	// one per port for each SPT:
-	PRIORITY_VECTOR agreedPriority; // 13.27.bu) - 13.27.13
-	bool agreementOutstanding;      // 13.27.bv) - 13.27.15
+//	PRIORITY_VECTOR agreedPriority; // 13.27.bu) - 13.27.13
+//	bool agreementOutstanding;      // 13.27.bv) - 13.27.15
 
 	// If the ISIS-SPB is implemented, there is one instance per port of the following variables for each SPT:
-	bool            agreedAbove;       // 13.27.bw) - 13.27.5
-	PRIORITY_VECTOR neighbourPriority; // 13.27.bx) - 13.27.41
+//	bool            agreedAbove;       // 13.27.bw) - 13.27.5
+//	PRIORITY_VECTOR neighbourPriority; // 13.27.bx) - 13.27.41
 
 	// 13.25 State machine timers
 	unsigned short fdWhile;			// e) - 13.25.2

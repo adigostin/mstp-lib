@@ -1,6 +1,6 @@
 
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
-// Copyright (c) 2011-2019 Adi Gostin, distributed under Apache License v2.0.
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #ifndef MSTP_LIB_BPDU_H
 #define MSTP_LIB_BPDU_H
@@ -61,7 +61,7 @@ struct BPDU_HEADER
 //  - STP Config BPDUs use members up to and including ForwardDelay.
 //  - RSTP BPDUs use members up to and including Version1Length.
 //  - MSTP BPDUs use members up to and including mstiConfigMessages (the array length can be zero or more)
-struct MSTP_BPDU : public BPDU_HEADER
+struct MSTP_BPDU : BPDU_HEADER
 {
 	unsigned char cistFlags;			// octet 5
 

@@ -1,27 +1,19 @@
 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #include "pch.h"
 #include "port.h"
 #include "bridge.h"
 #include "win32/utility_functions.h"
 #include "win32/d2d_window.h"
+#include "win32/text_layout.h"
 
-using namespace std;
 using namespace D2D1;
 using namespace edge;
 
-const char side_type_name[] = "side";
-
-const edge::NVP side_nvps[] =
-{
-	{ "Left",   (int) side::left },
-	{ "Top",    (int) side::top },
-	{ "Right",  (int) side::right },
-	{ "Bottom", (int) side::bottom },
-	{ 0, 0 },
-};
-
 const char admin_p2p_type_name[] = "admin_p2p";
-const edge::NVP admin_p2p_nvps[] =
+const nvp admin_p2p_nvps[] =
 {
 	{ "ForceTrue", (int)STP_ADMIN_P2P_FORCE_TRUE },
 	{ "ForceFalse", (int)STP_ADMIN_P2P_FORCE_FALSE },
@@ -31,7 +23,7 @@ const edge::NVP admin_p2p_nvps[] =
 
 const char port_speed_type_name[] = "port_speed";
 const char port_speed_unknown_str[] = "(none)";
-const edge::NVP port_speed_nvps[] = {
+const nvp port_speed_nvps[] = {
 	{  "10M",    10 },
 	{ "100M",   100 },
 	{   "1G",  1000 },
@@ -39,7 +31,7 @@ const edge::NVP port_speed_nvps[] = {
 	{ 0, 0 },
 };
 
-port::port (class bridge* bridge, size_t port_index, enum side side, float offset)
+port::port (class bridge* bridge, size_t port_index, edge::side side, float offset)
 	: _bridge(bridge), _port_index(port_index), _side(side), _offset(offset)
 {
 	// No need to call remove_handler since a bridge and its bridge_trees are deleted at the same time.
@@ -48,8 +40,8 @@ port::port (class bridge* bridge, size_t port_index, enum side side, float offse
 
 	for (size_t treeIndex = 0; treeIndex < bridge->trees().size(); treeIndex++)
 	{
-		auto tree = unique_ptr<port_tree>(new port_tree(this, treeIndex));
-		_trees.push_back (move(tree));
+		auto tree = std::unique_ptr<port_tree>(new port_tree(this, treeIndex));
+		_trees.push_back (std::move(tree));
 	}
 }
 
@@ -74,16 +66,16 @@ void port::on_bridge_property_changed (void* arg, object* obj, const property_ch
 D2D1_POINT_2F port::GetCPLocation() const
 {
 	if (_side == side::left)
-		return { _bridge->GetLeft() - ExteriorHeight, _bridge->GetTop() + _offset };
+		return { _bridge->left() - ExteriorHeight, _bridge->top() + _offset };
 
 	if (_side == side::right)
-		return { _bridge->GetRight() + ExteriorHeight, _bridge->GetTop() + _offset };
+		return { _bridge->right() + ExteriorHeight, _bridge->top() + _offset };
 
 	if (_side == side::top)
-		return { _bridge->GetLeft() + _offset, _bridge->GetTop() - ExteriorHeight };
+		return { _bridge->left() + _offset, _bridge->top() - ExteriorHeight };
 
 	// _side == side::bottom
-	return { _bridge->GetLeft() + _offset, _bridge->GetBottom() + ExteriorHeight };
+	return { _bridge->left() + _offset, _bridge->bottom() + ExteriorHeight };
 }
 
 Matrix3x2F port::GetPortTransform() const
@@ -92,22 +84,22 @@ Matrix3x2F port::GetPortTransform() const
 	{
 		//portTransform = Matrix3x2F::Rotation (90, Point2F (0, 0)) * Matrix3x2F::Translation (bridgeRect.left, bridgeRect.top + port->GetOffset ());
 		// The above calculation is correct but slow. Let's assign the matrix members directly.
-		return { 0, 1, -1, 0, _bridge->GetLeft(), _bridge->GetTop() + _offset};
+		return { 0, 1, -1, 0, _bridge->left(), _bridge->top() + _offset};
 	}
 	else if (_side == side::right)
 	{
 		//portTransform = Matrix3x2F::Rotation (270, Point2F (0, 0)) * Matrix3x2F::Translation (bridgeRect.right, bridgeRect.top + port->GetOffset ());
-		return { 0, -1, 1, 0, _bridge->GetRight(), _bridge->GetTop() + _offset };
+		return { 0, -1, 1, 0, _bridge->right(), _bridge->top() + _offset };
 	}
 	else if (_side == side::top)
 	{
 		//portTransform = Matrix3x2F::Rotation (180, Point2F (0, 0)) * Matrix3x2F::Translation (bridgeRect.left + port->GetOffset (), bridgeRect.top);
-		return { -1, 0, 0, -1, _bridge->GetLeft() + _offset, _bridge->GetTop() };
+		return { -1, 0, 0, -1, _bridge->left() + _offset, _bridge->top() };
 	}
 	else //if (_side == side::bottom)
 	{
 		//portTransform = Matrix3x2F::Translation (bridgeRect.left + port->GetOffset (), bridgeRect.bottom);
-		return { 1, 0, 0, 1, _bridge->GetLeft() + _offset, _bridge->GetBottom() };
+		return { 1, 0, 0, 1, _bridge->left() + _offset, _bridge->bottom() };
 	}
 }
 
@@ -121,7 +113,7 @@ void port::RenderExteriorNonStpPort (ID2D1RenderTarget* dc, const drawing_resour
 // static
 void port::RenderExteriorStpPort (ID2D1RenderTarget* dc, const drawing_resources& dos, STP_PORT_ROLE role, bool learning, bool forwarding, bool operEdge)
 {
-	static constexpr float circleDiameter = min (ExteriorHeight / 2, ExteriorWidth);
+	static constexpr float circleDiameter = std::min (ExteriorHeight / 2, ExteriorWidth);
 
 	static constexpr float edw = ExteriorWidth;
 	static constexpr float edh = ExteriorHeight;
@@ -268,11 +260,11 @@ void port::render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned
 
 		if (STP_GetTxCount(b, (unsigned int)_port_index) == STP_GetTxHoldCount(b))
 		{
-			auto layout = edge::text_layout::create (dos._dWriteFactory, dos._smallTextFormat, "txCount=TxHoldCount");
+			auto layout = edge::text_layout_with_metrics (dos._dWriteFactory, dos._smallTextFormat, "txCount=TxHoldCount");
 			D2D1_MATRIX_3X2_F old;
 			rt->GetTransform(&old);
 			rt->SetTransform (Matrix3x2F::Rotation(-90) * old);
-			rt->DrawTextLayout ({ -layout.metrics.width - 3, 2 }, layout.layout, dos._brushWindowText);
+			rt->DrawTextLayout ({ -layout.width() - 3, 2 }, layout, dos._brushWindowText);
 			rt->SetTransform(&old);
 		}
 
@@ -284,27 +276,23 @@ void port::render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned
 
 	// Draw the interior of the port.
 	auto portRect = D2D1_RECT_F { -InteriorWidth / 2, -InteriorDepth, InteriorWidth / 2, 0 };
-	InflateRect (&portRect, -interiorPortOutlineWidth / 2);
+	inflate (&portRect, -interiorPortOutlineWidth / 2);
 	rt->FillRectangle (&portRect, mac_operational() ? dos._poweredFillBrush : dos._unpoweredBrush);
 	rt->DrawRectangle (&portRect, dos._brushWindowText, interiorPortOutlineWidth);
 
-	com_ptr<IDWriteTextLayout> layout;
-	wstringstream ss;
-	ss << setfill(L'0') << setw(4) << hex << STP_GetPortIdentifier(b, (unsigned int)_port_index, treeIndex);
-	auto hr = dos._dWriteFactory->CreateTextLayout (ss.str().c_str(), (UINT32) ss.tellp(), dos._smallTextFormat, 10000, 10000, &layout); assert(SUCCEEDED(hr));
-	DWRITE_TEXT_METRICS metrics;
-	hr = layout->GetMetrics(&metrics); assert(SUCCEEDED(hr));
+	std::wstringstream ss;
+	ss << std::setfill(L'0') << std::setw(4) << std::hex << STP_GetPortIdentifier(b, (unsigned int)_port_index, treeIndex);
+	auto layout = text_layout_with_metrics (dos._dWriteFactory, dos._smallTextFormat, ss.str().c_str());
 	DWRITE_LINE_METRICS lineMetrics;
 	UINT32 actualLineCount;
-	hr = layout->GetLineMetrics(&lineMetrics, 1, &actualLineCount); assert(SUCCEEDED(hr));
-	rt->DrawTextLayout ({ -metrics.width / 2, -lineMetrics.baseline - OutlineWidth * 2 - 1}, layout, dos._brushWindowText);
-	
+	auto hr = layout->GetLineMetrics(&lineMetrics, 1, &actualLineCount); assert(SUCCEEDED(hr));
+	rt->DrawTextLayout ({ -layout.width() / 2, -lineMetrics.baseline - OutlineWidth * 2 - 1}, layout, dos._brushWindowText);
+
 	if (_trees[treeIndex]->fdb_flush_text_visible())
 	{
-		hr = dos._dWriteFactory->CreateTextLayout (L"Flush", 5, dos._smallBoldTextFormat, 10000, 10000, &layout); assert(SUCCEEDED(hr));
-		hr = layout->GetMetrics(&metrics); assert(SUCCEEDED(hr));
+		layout = text_layout_with_metrics (dos._dWriteFactory, dos._smallBoldTextFormat, L"Flush");
 		hr = layout->GetLineMetrics(&lineMetrics, 1, &actualLineCount); assert(SUCCEEDED(hr));
-		D2D1_POINT_2F l = { -metrics.width / 2, -InteriorDepth - lineMetrics.baseline - lineMetrics.height * 0.2f };
+		D2D1_POINT_2F l = { -layout.width() / 2, -InteriorDepth - lineMetrics.baseline - lineMetrics.height * 0.2f };
 		rt->DrawTextLayout (l, layout, dos._brushWindowText);
 	}
 
@@ -318,7 +306,7 @@ D2D1_RECT_F port::GetInnerOuterRect() const
 	auto tr = GetPortTransform();
 	tl = tr.TransformPoint(tl);
 	br = tr.TransformPoint(br);
-	return { min(tl.x, br.x), min (tl.y, br.y), max(tl.x, br.x), max(tl.y, br.y) };
+	return { std::min(tl.x, br.x), std::min (tl.y, br.y), std::max(tl.x, br.x), std::max(tl.y, br.y) };
 }
 
 void port::render_selection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const
@@ -378,7 +366,7 @@ bool port::IsForwarding (unsigned int vlanNumber) const
 	return STP_GetPortForwarding (stpb, (unsigned int)_port_index, treeIndex);
 }
 
-void port::SetSideAndOffset (enum side side, float offset)
+void port::SetSideAndOffset (edge::side side, float offset)
 {
 	if ((_side != side) || (_offset != offset))
 	{
@@ -496,7 +484,6 @@ const edge::float_p port::offset_property {
 	"Offset", nullptr, nullptr, ui_visible::no,
 	static_cast<float_p::member_getter_t>(&offset),
 	static_cast<float_p::member_setter_t>(&set_offset),
-	std::nullopt,
 };
 
 static const edge::property_group link_group = { -1, "Link" };
@@ -512,7 +499,6 @@ const port_speed_p port::actual_speed_property {
 	"ActualSpeed", &link_group, "Actual speed in megabits per second, calculated when a link is established as a minimum between this port's and remote port's SupportedSpeed properties, and passed to STP for port path cost calculation.", ui_visible::yes,
 	static_cast<port_speed_p::member_var_t>(&port::_actual_speed),
 	nullptr,
-	std::nullopt
 };
 
 const bool_p port::auto_edge_property {
@@ -593,7 +579,6 @@ const bool_p port::detected_p2p_property {
 	ui_visible::yes,
 	static_cast<bool_p::member_getter_t>(&detected_p2p),
 	nullptr,
-	std::nullopt,
 };
 
 const admin_p2p_p port::admin_p2p_property {
@@ -613,7 +598,6 @@ const edge::bool_p port::oper_p2p_property {
 	ui_visible::yes,
 	static_cast<bool_p::member_getter_t>(&oper_p2p),
 	nullptr,
-	std::nullopt,
 };
 
 const typed_object_collection_property<port, port_tree> port::trees_property {

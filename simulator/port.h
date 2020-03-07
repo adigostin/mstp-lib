@@ -1,4 +1,7 @@
 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #pragma once
 #include "renderable_object.h"
 #include "port_tree.h"
@@ -21,18 +24,13 @@ struct link_pulse_t
 
 using packet_t = std::variant<link_pulse_t, frame_t>;
 
-enum class side { left, top, right, bottom };
-extern const char side_type_name[];
-extern const edge::NVP side_nvps[];
-using side_p = edge::enum_property<enum side, side_type_name, side_nvps>;
-
 extern const char admin_p2p_type_name[];
-extern const edge::NVP admin_p2p_nvps[];
+extern const nvp admin_p2p_nvps[];
 using admin_p2p_p = edge::enum_property<STP_ADMIN_P2P, admin_p2p_type_name, admin_p2p_nvps>;
 
 extern const char port_speed_type_name[];
 extern const char port_speed_unknown_str[];
-extern const edge::NVP port_speed_nvps[];
+extern const nvp port_speed_nvps[];
 using port_speed_p = edge::enum_property<uint32_t, port_speed_type_name, port_speed_nvps, false, port_speed_unknown_str>;
 
 class port : public renderable_object
@@ -43,9 +41,9 @@ class port : public renderable_object
 
 	bridge* const _bridge;
 	size_t  const _port_index;
-	side _side = side_property._default_value.value();
+	side _side = side_property.default_value.value();
 	float _offset;
-	uint32_t _supported_speed = supported_speed_property._default_value.value();
+	uint32_t _supported_speed = supported_speed_property.default_value.value();
 	uint32_t _actual_speed = 0;
 	std::vector<std::unique_ptr<port_tree>> _trees;
 
@@ -56,7 +54,7 @@ class port : public renderable_object
 	static void on_bridge_property_changed (void* arg, object* obj, const property_change_args& args);
 
 public:
-	port (class bridge* bridge, size_t port_index, enum side side, float offset);
+	port (class bridge* bridge, size_t port_index, side side, float offset);
 
 	static constexpr int HTCodeInnerOuter = 1;
 	static constexpr int HTCodeCP = 2;
@@ -71,14 +69,14 @@ public:
 	const bridge* bridge() const { return _bridge; }
 	class bridge* bridge() { return _bridge; }
 	size_t port_index() const { return _port_index; }
-	enum side side() const { return _side; }
+	side side() const { return _side; }
 	float offset() const { return _offset; }
 	D2D1_POINT_2F GetCPLocation() const;
 	bool mac_operational() const;
 	D2D1::Matrix3x2F GetPortTransform() const;
 	D2D1_RECT_F GetInnerOuterRect() const;
 	bool IsForwarding (unsigned int vlanNumber) const;
-	void SetSideAndOffset (enum side side, float offset);
+	void SetSideAndOffset (edge::side side, float offset);
 	const std::vector<std::unique_ptr<port_tree>>& trees() const { return _trees; }
 
 	static void RenderExteriorNonStpPort (ID2D1RenderTarget* dc, const drawing_resources& dos, bool macOperational);
@@ -88,6 +86,7 @@ public:
 
 	virtual void render_selection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const override final;
 	virtual ht_result hit_test (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) override final;
+	virtual D2D1_RECT_F extent() const override { assert(false); return { }; }
 
 	void invalidate();
 
@@ -115,12 +114,13 @@ public:
 
 private:
 	void set_actual_speed (uint32_t value);
-	void set_side (enum side side) { _side = side; }
+	void set_side (edge::side side) { _side = side; }
 	void set_offset (float offset) { _offset = offset; }
 	size_t tree_count() const { return _trees.size(); }
 	port_tree* tree (size_t index) const { return _trees[index].get(); }
 
-	static const side_p side_property;
+public:
+	static const edge::side_p side_property;
 	static const float_p offset_property;
 	static const port_speed_p supported_speed_property;
 	static const port_speed_p actual_speed_property;
@@ -137,5 +137,5 @@ private:
 
 	static const property* const port::_properties[];
 	static const xtype<port> _type;
-	virtual const struct type* type() const { return &_type; }
+	virtual const concrete_type* type() const { return &_type; }
 };

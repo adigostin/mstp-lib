@@ -1,4 +1,7 @@
 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #include "pch.h"
 #include "edit_state.h"
 #include "bridge.h"
@@ -19,7 +22,7 @@ class create_bridge_es : public edit_state
 		if (_bridge == nullptr)
 			_bridge = make_temp_bridge(4, 4, ml.w);
 
-		_bridge->SetLocation (ml.w.x - _bridge->GetWidth() / 2, ml.w.y - _bridge->GetHeight() / 2);
+		_bridge->set_location (ml.w.x - _bridge->width() / 2, ml.w.y - _bridge->height() / 2);
 		::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
 	}
 
@@ -31,7 +34,7 @@ class create_bridge_es : public edit_state
 			auto bridge_address = _project->alloc_mac_address_range(number_of_addresses_to_reserve);
 			auto b = std::make_unique<bridge>(_bridge->port_count(), _bridge->msti_count(), bridge_address);
 			b->set_stp_enabled(true);
-			b->SetLocation(_bridge->GetLocation());
+			b->set_location(_bridge->location());
 
 			size_t insert_index = _project->bridges().size();
 			_project->insert_bridge(insert_index, std::move(b));
@@ -45,7 +48,7 @@ class create_bridge_es : public edit_state
 	static std::unique_ptr<bridge> make_temp_bridge (size_t port_count, size_t msti_count, D2D1_POINT_2F center)
 	{
 		auto new_bridge = std::make_unique<bridge>(port_count, msti_count, null_address);
-		new_bridge->SetLocation (center.x - new_bridge->GetWidth() / 2, center.y - new_bridge->GetHeight() / 2);
+		new_bridge->set_location (center.x - new_bridge->width() / 2, center.y - new_bridge->height() / 2);
 		return new_bridge;
 	}
 
@@ -54,7 +57,7 @@ class create_bridge_es : public edit_state
 		if (virtualKey == VK_ESCAPE)
 		{
 			_completed = true;
-			_ew->invalidate();
+			::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
 			return 0;
 		}
 
@@ -87,8 +90,9 @@ class create_bridge_es : public edit_state
 
 			if ((new_port_count != _bridge->port_count()) || (new_msti_count != _bridge->msti_count()))
 			{
-				_bridge = make_temp_bridge (new_port_count, new_msti_count, edge::center(_bridge->bounds()));
-				_ew->invalidate();
+				D2D1_POINT_2F center = { _bridge->left() + _bridge->width() / 2, _bridge->top() + _bridge->height() / 2 };
+				_bridge = make_temp_bridge (new_port_count, new_msti_count, center);
+				::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
 			}
 
 			return 0;
@@ -103,15 +107,15 @@ class create_bridge_es : public edit_state
 		{
 			D2D1::Matrix3x2F oldtr;
 			dc->GetTransform(&oldtr);
-			dc->SetTransform (_ew->GetZoomTransform() * oldtr);
+			dc->SetTransform (_ew->zoom_transform() * oldtr);
 
 			_bridge->render (dc, _ew->drawing_resources(), _pw->selected_vlan_number(), D2D1::ColorF(D2D1::ColorF::LightGreen));
 
 			dc->SetTransform(&oldtr);
 
-			auto x = _bridge->GetLeft() + _bridge->GetWidth() / 2;
-			auto y = _bridge->GetBottom() + port::ExteriorHeight * 1.1f;
-			auto centerD = _ew->GetZoomTransform().TransformPoint({ x, y });
+			auto x = _bridge->left() + _bridge->width() / 2;
+			auto y = _bridge->bottom() + port::ExteriorHeight * 1.1f;
+			auto centerD = _ew->zoom_transform().TransformPoint({ x, y });
 			std::stringstream ss;
 			ss << "Port Count = " << _bridge->port_count() << ", MSTI Count = " << _bridge->msti_count() << "\r\n"
 				<< "Press Arrow Left / Right to change the number of ports.\r\n"

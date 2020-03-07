@@ -1,6 +1,9 @@
+
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #pragma once
 #include "object.h"
-#include "win32/win32_lib.h"
 #include "renderable_object.h"
 #include "stp.h"
 #include "bridge.h"
@@ -15,9 +18,10 @@ class bridge;
 class port;
 class wire;
 
-using edge::property_changing_e;
-using edge::property_changed_e;
+using property_changing_e = edge::object::property_changing_e;
+using property_changed_e = edge::object::property_changed_e;
 using edge::property_change_args;
+using edge::collection_property_change_type;
 
 static constexpr unsigned char DefaultConfigTableDigest[16] = { 0xAC, 0x36, 0x17, 0x7F, 0x50, 0x28, 0x3C, 0xD4, 0xB8, 0x38, 0x21, 0xD8, 0xAB, 0x26, 0xDE, 0x62 };
 
@@ -57,7 +61,7 @@ using selection_factory_t = std::unique_ptr<selection_i>(*)(project_i* project);
 
 // ============================================================================
 
-struct __declspec(novtable) log_window_i abstract : virtual edge::win32_window_i
+struct __declspec(novtable) log_window_i abstract : edge::win32_window_i
 {
 	virtual ~log_window_i() { }
 };
@@ -83,7 +87,7 @@ struct mouse_location
 	D2D1_POINT_2F w;
 };
 
-struct __declspec(novtable) edit_window_i : virtual edge::win32_window_i
+struct __declspec(novtable) edit_window_i : edge::win32_window_i
 {
 	virtual const struct drawing_resources& drawing_resources() const = 0;
 	virtual void EnterState (std::unique_ptr<edit_state>&& state) = 0;
@@ -95,7 +99,8 @@ struct __declspec(novtable) edit_window_i : virtual edge::win32_window_i
 							 DWRITE_TEXT_ALIGNMENT ha,
 							 DWRITE_PARAGRAPH_ALIGNMENT va,
 							 bool smallFont = false) const = 0;
-	virtual D2D1::Matrix3x2F GetZoomTransform() const = 0;
+	virtual D2D1::Matrix3x2F zoom_transform() const = 0;
+	virtual void zoom_all() = 0;
 };
 struct edit_window_create_params
 {
@@ -115,11 +120,13 @@ using edit_window_factory_t = std::unique_ptr<edit_window_i>(*)(const edit_windo
 struct __declspec(novtable) project_window_i : public virtual edge::win32_window_i
 {
 	struct selected_vlan_number_changed_e : public edge::event<selected_vlan_number_changed_e, project_window_i*, uint32_t> { };
+	struct destroying_e : public edge::event<destroying_e, project_window_i*> { };
 
 	virtual project_i* project() const = 0;
 	virtual void select_vlan (uint32_t vlanNumber) = 0;
 	virtual uint32_t selected_vlan_number() const = 0;
 	virtual selected_vlan_number_changed_e::subscriber selected_vlan_number_changed() = 0;
+	virtual destroying_e::subscriber destroying() = 0;
 };
 
 struct project_window_create_params
