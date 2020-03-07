@@ -165,7 +165,7 @@ scan:
 	if (desc->status & error_flags)
 	{
 		// Ignore it and mark it as empty (E flag) and if needed also as last (W flag).
-		desc->status = (1u << 15) | (last ? (1u << 13) : 0);
+		desc->status = (1u << 15) | (last ? (1u << 13) : 0u);
 		__DSB(); // push new descriptor data from processor's cache to memory
 		rx_consume_index = last ? 0 : (rx_consume_index + 1);
 		ENET->RDAR = ENET_RDAR_RDAR_MASK;
@@ -185,7 +185,7 @@ void enet_read_release_buffer(uint8_t* data)
 	bool last = (rx_consume_index == rx_buffer_count - 1);
 
 	// Mark it as empty (E flag) and if needed also as last (W flag).
-	desc->status = (1u << 15) | (last ? (1u << 13) : 0);
+	desc->status = (1u << 15) | (last ? (1u << 13) : 0u);
 	__DSB(); // push new descriptor data from processor's cache to memory
 	rx_consume_index = last ? 0 : (rx_consume_index + 1);
 	ENET->RDAR = ENET_RDAR_RDAR_MASK;

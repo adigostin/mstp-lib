@@ -42,13 +42,14 @@ extern "C" void SystemInit()
 
 static const uint8_t bpdu_dest_address[6] = { 0x01, 0x80, 0xC2, 0, 0, 0 };
 static const uint8_t bpdu_llc_field[3] = { 0x42, 0x42, 0x03 };
+static const size_t stp_port_count = 3;
 
 static void print_port_info (size_t port_index, STP_PORT_ROLE role, bool learning, bool forwarding)
 {
 	assert (debug_enabled());
 	const char* role_string = STP_GetPortRoleString(role);
 	const char* state = (!learning && !forwarding) ? "Blocking" : (forwarding ? "Forwarding" : "Learning");
-	debug_printf("Port %d: %s %s\n", port_index + 1, role_string, state);
+	debug_printf("Port %d: %s & %s\n", port_index + 1, role_string, state);
 }
 
 static void StpCallback_EnableBpduTrapping (const STP_BRIDGE* bridge, bool enable, unsigned int timestamp)
@@ -168,11 +169,11 @@ static void* StpCallback_TransmitGetBuffer (const STP_BRIDGE* bridge, unsigned i
 	if (wrap)
 		frame[10]++;
 
-	uint16_t etherTypeOrSize = 3 + bpduSize;
+	uint16_t etherTypeOrSize = sizeof(bpdu_llc_field) + bpduSize;
 	frame[12] = uint8_t (etherTypeOrSize >> 8);
 	frame[13] = uint8_t (etherTypeOrSize & 0xFF);
 
-	memcpy (&frame[14], bpdu_llc_field, 3);
+	memcpy (&frame[14], bpdu_llc_field, sizeof(bpdu_llc_field));
 
 	// Tail-tag field that tells the switch IC which port to send this bpdu out of.
 	// Bit 6 tells the switch to send the frame without searching the DA in its MAC tables.
@@ -317,28 +318,38 @@ static void process_received_frames()
 		{
 			if (debug_enabled())
 			{
+				gpio_toggle(PTA, 10);
+/*
 				gpio_set(PTA, 10, false);
 				debug_printf ("%02X%02X%02X%02X%02X%02X %02X%02X%02X%02X%02X%02X %02X%02X ...(%d bytes)\r\n",
 					frame[0], frame[1], frame[2], frame[3], frame[4], frame[5],
 					frame[6], frame[7], frame[8], frame[9], frame[10], frame[11],
 					frame[12], frame[13], frame_size);
 				gpio_set(PTA, 10, true);
+*/
 			}
 		}
 
-		size_t port_index;
+		size_t port_index = -1;
 		if (STP_IsBridgeStarted(bridge))
 		{
-			// We have enabled tail tagging in StpCallback_EnableBpduTrapping.
-			port_index = frame[frame_size - 1];
-			frame_size--;
+			// If STP is started, it means that we have enabled tail tagging in StpCallback_EnableBpduTrapping.
+			// Still, we might be processing a frame received just before we enabled tail tagging,
+			// so let's additionally verify that the tag contains a valid port index; it's not a failsafe check
+			// but that's the best we can manage on these KSZ switches...
+			if (frame[frame_size - 1] < stp_port_count)
+			{
+				port_index = frame[frame_size - 1];
+				frame_size--;
+			}
 		}
 
 		if (memcmp (frame, bpdu_dest_address, 6) == 0)
 		{
-			if ((frame_size > 14 + 3)
-				&& (memcmp(&frame[14], bpdu_llc_field, 3) == 0)
-				&& STP_IsBridgeStarted(bridge))
+			if ((frame_size > 14 + sizeof(bpdu_llc_field))
+				&& (memcmp(&frame[14], bpdu_llc_field, sizeof(bpdu_llc_field)) == 0)
+				&& STP_IsBridgeStarted(bridge)
+				&& (port_index != -1))
 			{
 				if (!STP_GetPortEnabled(bridge, port_index))
 				{
@@ -364,7 +375,7 @@ static void poll_port_state()
 {
 	uint32_t timestamp = scheduler_get_time_ms32();
 
-	for (size_t port_index = 0; port_index < 3; port_index++)
+	for (size_t port_index = 0; port_index < stp_port_count; port_index++)
 	{
 		uint16_t reg = 0x1E + (port_index << 4);
 		uint8_t val = switch_read_reg(reg);
@@ -492,7 +503,7 @@ int main()
 	// That's good enough for this STP demo app.
 	ENET->RCR |= ENET_RCR_PROM_MASK;
 
-	bridge = STP_CreateBridge (3, 0, 0, &stp_callbacks, mac_address, 128);
+	bridge = STP_CreateBridge (stp_port_count, 0, 0, &stp_callbacks, mac_address, 128);
 	STP_StartBridge(bridge, scheduler_get_time_ms32());
 
 	// Let's read the link states right now, and then set up polling every 100 ms.
