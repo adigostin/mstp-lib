@@ -28,7 +28,7 @@ Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "_help", "_help\", "{FF53569
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mstp-lib", "mstp-lib.vcxproj", "{1DC9DD21-A2C5-46FC-B13E-C3382471BED2}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "edge", "edge\edge.vcxproj", "{C4C530F1-E67C-48A2-81ED-41E428F17ED9}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "edge", "simulator\edge\edge.vcxproj", "{C4C530F1-E67C-48A2-81ED-41E428F17ED9}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tests", "tests\tests.vcxproj", "{4C5CA0AB-18CA-47FA-A989-176A37CACFB4}"
 EndProject
