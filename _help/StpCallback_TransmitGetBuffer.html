@@ -45,8 +45,8 @@ void* StpCallback_TransmitGetBuffer
 		<li>a pointer to a buffer where the STP library will construct the BPDU to be sent, or</li>
 		<li>NULL, if the application wants to discard the BPDU.</li>
 	</ul>
-	<p>The application might want to discard a BPDU, for instance, when it knows that a 
-		port is hardwired to a non-STP device and wants to save bandwidth by not sending 
+	<p>The application might want to discard a BPDU, for instance, when it knows that a
+		port is hardwired to a non-STP device and wants to save bandwidth by not sending
 		BPDUs to that port.</p>
 	<h4>
 		Remarks</h4>
@@ -65,9 +65,9 @@ void* StpCallback_TransmitGetBuffer
 			buffer must be large enough to contain the non-STP headers and the largest BPDU
 			that the STP library might request (see below).</p>
 	<p>
-			An embedded application must prepend a non-STP header to the BPDU (see below). So unless your 
+			An embedded application must prepend a non-STP header to the BPDU (see below). So unless your
 			particular Ethernet driver prepends
-			part of this header itself, this function should obtain a longer buffer, construct the non-STP header in the first bytes, and return 
+			part of this header itself, this function should obtain a longer buffer, construct the non-STP header in the first bytes, and return
 			a pointer that points just after the non-STP header.</p>
 	<p>
 			The non-STP header has the following format:</p>
@@ -77,7 +77,8 @@ void* StpCallback_TransmitGetBuffer
 			port from which this BPDU should be sent. The application can generate this MAC
 			address, for example, by <a href="STP_GetBridgeAddress.html">getting the bridge&#39;s MAC address</a> and adding <code>1+portIndex</code>
 			to its last byte.</li>
-		<li>A hardware-specific structure (typically 4 or 8 bytes), which tells the switch IC which
+		<li>On most switches (not on Microchip KSZ ones, see below), here goes
+			a hardware-specific &quot;tag&quot; structure, typically 4 or 8 bytes, which tells the switch IC which
 			port to transmit this BPDU out of. Refer to the datasheet of the switch IC for
 			information about the format of this structure. Also read about the port mapping in
 			the Remarks section of the <a href="STP_OnPortEnabled.html">STP_OnPortEnabled</a> function.
@@ -86,7 +87,7 @@ void* StpCallback_TransmitGetBuffer
 					<code style="white-space:nowrap">0x81,&nbsp;(1 &lt;&lt; portIndex),&nbsp;0x00,&nbsp;0x00</code>.</li>
 				<li>For the <strong>AR8328</strong> switch IC, this header could be
 					<code style="white-space:nowrap">0xAA,&nbsp;0xAA,&nbsp;0x80,&nbsp;0x80&nbsp;|&nbsp;(1&nbsp;&lt;&lt;&nbsp;(1&nbsp;+&nbsp;portIndex))</code>.</li>
-				<li>For the <strong>88E6352</strong> switch IC, this header could be <code>0x91, 0x00, 0x00, 0x00, 0x40, 
+				<li>For the <strong>88E6352</strong> switch IC, this header could be <code>0x91, 0x00, 0x00, 0x00, 0x40,
 			portIndex &lt;&lt; 3, 0x00, 0x00</code>.</li>
 			</ul>
 		</li>
@@ -95,6 +96,14 @@ void* StpCallback_TransmitGetBuffer
 		<li>3 bytes for the LLC field, which normally are 0x42, 0x42, 0x03.</li>
 	</ul>
 
+	<p>
+		On some
+		Microchip switches (KSZxxxx), the tag is not located in the headers, but instead
+		in a byte at the end of the frame, after the BPDU, after any padding your
+		Ethernet peripheral might append in order to extend your frame to 64 bytes,
+		and before the CRC.
+		The name of this functionality in Microchip datasheets is Tail Tagging.
+		You can find a sample implementation in the TestAppMK66F+KSZ8794 directory.</p>
 	<p>
 			The largest <code>bpduSize</code> that the STP library requests can be calculated from §14.4 in
 			802.1Q-2018:</p>
