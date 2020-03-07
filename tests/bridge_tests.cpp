@@ -1,4 +1,7 @@
 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #include "pch.h"
 #include "bridge.h"
 #include "test_helpers.h"
@@ -23,7 +26,7 @@ TEST_CLASS(bridge_tests)
 		auto b = std::make_unique<bridge>(port_count, msti_count, address);
 
 		auto get_root_bridge_id = [&b] { return b->trees()[0]->root_bridge_id(); };
-		
+
 		b->set_stp_enabled(true);
 		get_root_bridge_id();
 

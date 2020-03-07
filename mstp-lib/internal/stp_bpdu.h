@@ -1,6 +1,6 @@
 
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
-// Copyright (c) 2011-2019 Adi Gostin, distributed under Apache License v2.0.
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #ifndef MSTP_LIB_BPDU_H
 #define MSTP_LIB_BPDU_H

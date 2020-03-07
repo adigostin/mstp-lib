@@ -1,4 +1,7 @@
 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #include "pch.h"
 #include "internal/stp_bpdu.h"
 #include "test_helpers.h"
@@ -197,7 +200,7 @@ TEST_CLASS(bpdu_tests)
 		type = STP_GetValidatedBpduType (STP_VERSION_LEGACY_STP, mstp_bpdu_with_mstis, sizeof(mstp_bpdu_with_mstis));
 		Assert::AreEqual<int> (VALIDATED_BPDU_TYPE_RST, type);
 	}
-	
+
 	TEST_METHOD(validate_mstp_bpdu_while_running_rstp)
 	{
 		// Tests validation of a BPDU received from a bridge that runs MSTP, when we're running RSTP.
