@@ -71,7 +71,7 @@ void StpCallback_EnableBpduTrapping
 			by the switch IC to a specific port.)</li>
 	</ul>
 	<p>
-		When <code>enable</code> is <code>false</code>, the application should undo all 
+		When <code>enable</code> is <code>false</code>, the application must undo all 
 		these operations. This step must not be omitted; once STP is disabled on a switch, that 
 		switch must resume flooding BPDUs between its ports, or else loops will form.</p>
 	<p>
