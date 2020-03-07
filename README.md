@@ -16,27 +16,27 @@ The Simulator lets you create networks and see the library
 in action. See the screenshot below. This is a project for
 Visual Studio 2017.
 
-### Embedded Application Example
-The repository includes sources for a sample RSTP implementation
-on an embedded device: a project for IAR Embedded Workbench 7.x,
-for a device with an LPC2000 microcontroller and an IP175C
-switch chip.
+### Embedded Application Examples
+The repository includes sources with a couple of RSTP implementations
+on embedded devices with microcontrollers and switches such as
+Marvell, Microchip, IC+. The projects are for Rowley CrossWorks
+(gcc and clang compilers) and IAR Embedded Workbench (EDG compiler).
 
-This sample highlights the platform-specific
+These samples highlight the platform-specific
 code required by STP -- mostly code that writes to
 a few hardware registers of the switch chip. To integrate
 the library in your embedded application, you'll need to
 write platform-specific code for your particular switch IC.
 Drop me a message at
 [adigostin@gmail.com](mailto:adigostin@gmail.com)
-and I'll try to help.
+and I might be able to help.
 
 ### API Help
 The repository also includes
 [help files](https://github.com/adigostin/mstp-lib/tree/master/_help)
 for most of the library APIs -
 [some](http://htmlpreview.github.io/?https://github.com/adigostin/mstp-lib/blob/master/_help/STP_CreateBridge.html)
-[quite](http://htmlpreview.github.io/?https://github.com/adigostin/mstp-lib/blob/master/_help/StpCallback_TransmitGetBuffer.html)
+[rather](http://htmlpreview.github.io/?https://github.com/adigostin/mstp-lib/blob/master/_help/StpCallback_TransmitGetBuffer.html)
 [extensive](http://htmlpreview.github.io/?https://github.com/adigostin/mstp-lib/blob/master/_help/STP_OnPortEnabled.html).
 
 ### Screenshot of the Windows Simulator
