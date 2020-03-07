@@ -1,4 +1,7 @@
 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #include "pch.h"
 #include "simulator.h"
 #include "resource.h"
@@ -80,7 +83,7 @@ public:
 	virtual HWND hwnd() const override { return base::hwnd(); }
 
 	using base::invalidate;
-	
+
 	static void on_selected_vlan_changed (void* callbackArg, project_window_i* pw, unsigned int vlanNumber)
 	{
 		auto window = static_cast<edit_window*>(callbackArg);
@@ -309,7 +312,7 @@ public:
 			top -= (topBottomPadding * 2 + tl.height() + lineWidthDips * 2);
 		else if (va == DWRITE_PARAGRAPH_ALIGNMENT_CENTER)
 			top -= (topBottomPadding + tl.height() + lineWidthDips);
-		
+
 		float right = left + 2 * leftRightPadding + tl.width();
 		float bottom = top + 2 * topBottomPadding + tl.height();
 		left   = roundf (left   / pixelWidthDips) * pixelWidthDips - lineWidthDips / 2;
@@ -700,7 +703,7 @@ public:
 			bool anyPointRemainsConnected = any_of (wire->points().begin(), wire->points().end(),
 				[&bridgesToRemove, this](auto& pt) { return std::holds_alternative<connected_wire_end>(pt)
 					&& (bridgesToRemove.count(std::get<connected_wire_end>(pt)->bridge()) == 0); });
-			
+
 			auto it1 = it;
 			it++;
 
@@ -760,7 +763,7 @@ public:
 				_state = nullptr;
 				SetCursor (LoadCursor (nullptr, IDC_ARROW));
 			}
-			
+
 			return res;
 		}
 

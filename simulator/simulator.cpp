@@ -1,4 +1,7 @@
 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #include "pch.h"
 #include "simulator.h"
 #include "bridge.h"
@@ -298,7 +301,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 		SimulatorApp app (hInstance);
 
 		auto project = project_factory();
-		project_window_create_params params = 
+		project_window_create_params params =
 		{
 			&app, project, true, true, 1, SW_SHOW, d3d_dc, dwrite_factory
 		};
@@ -326,7 +329,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 namespace natvis
 {
 	struct hex_dummy_low { unsigned char c; };
-	struct hex_dummy_high { unsigned char c; };	
+	struct hex_dummy_high { unsigned char c; };
 	static volatile hex_dummy_low dummylo;
 	static volatile hex_dummy_high dummyhi;
 }

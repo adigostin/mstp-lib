@@ -1,3 +1,7 @@
+
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+
 #include "pch.h"
 #include "simulator.h"
 #include "resource.h"
@@ -25,7 +29,7 @@ static COMDLG_FILTERSPEC const ProjectFileDialogFileTypes[] =
 };
 static const wchar_t ProjectFileExtensionWithoutDot[] = L"stp";
 
-static const wnd_class_params class_params = 
+static const wnd_class_params class_params =
 {
 	ProjectWindowWndClassName,      // lpszClassName
 	CS_DBLCLKS,                     // style
@@ -567,11 +571,11 @@ public:
 		if (((HIWORD(wParam) == 0) || (HIWORD(wParam) == 1)) && (LOWORD(wParam) == ID_FILE_NEW))
 		{
 			auto project = _app->project_factory()();
-			project_window_create_params params = 
+			project_window_create_params params =
 			{
 				_app, project, true, true, 1, SW_SHOW, _d3d_dc, _dwrite_factory
 			};
-			
+
 			auto pw = _app->project_window_factory()(params);
 			_app->add_project_window(std::move(pw));
 			return 0;
