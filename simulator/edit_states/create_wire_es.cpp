@@ -84,7 +84,7 @@ public:
 		}
 	}
 
-	virtual std::optional<LRESULT> process_key_or_syskey_down (UINT virtualKey, UINT modifierKeys) override final
+	virtual handled process_key_or_syskey_down (uint32_t virtualKey, modifier_key modifierKeys) override final
 	{
 		if (virtualKey == VK_ESCAPE)
 		{
@@ -96,10 +96,10 @@ public:
 
 			_substate = down;
 			::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
-			return 0;
+			return handled(true);
 		}
 
-		return std::nullopt;
+		return handled(false);
 	}
 
 	virtual void render (ID2D1DeviceContext* rt) override final

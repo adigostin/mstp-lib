@@ -55,6 +55,7 @@ class port : public renderable_object
 
 public:
 	port (class bridge* bridge, size_t port_index, side side, float offset);
+	~port();
 
 	static constexpr int HTCodeInnerOuter = 1;
 	static constexpr int HTCodeCP = 2;

@@ -3,8 +3,12 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "..\simulator.h"
 #include "win32\window.h"
+#include "simulator.h"
+
+using edge::handled;
+using edge::modifier_key;
+using edge::mouse_button;
 
 struct edit_state_deps
 {
@@ -31,8 +35,8 @@ public:
 	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) { }
 	virtual void process_mouse_button_up   (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) { }
 	virtual void process_mouse_move (const mouse_location& location) { }
-	virtual std::optional<LRESULT> process_key_or_syskey_down (UINT virtualKey, UINT modifierKeys) { return std::nullopt; }
-	virtual std::optional<LRESULT> process_key_or_syskey_up   (UINT virtualKey, UINT modifierKeys) { return std::nullopt; }
+	virtual handled process_key_or_syskey_down (uint32_t vkey, modifier_key mks) { return handled(false); }
+	virtual handled process_key_or_syskey_up   (uint32_t vkey, modifier_key mks) { return handled(false); }
 	virtual void render (ID2D1DeviceContext* dc) { }
 	virtual bool completed() const = 0;
 	virtual HCURSOR cursor() const { return LoadCursor(nullptr, IDC_ARROW); }

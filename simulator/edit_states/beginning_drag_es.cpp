@@ -95,15 +95,15 @@ public:
 		}
 	}
 
-	virtual std::optional<LRESULT> process_key_or_syskey_down (UINT virtualKey, UINT modifierKeys) override final
+	virtual handled process_key_or_syskey_down (uint32_t virtualKey, modifier_key modifierKeys) override final
 	{
 		if (virtualKey == VK_ESCAPE)
 		{
 			_completed = true;
-			return 0;
+			return handled(true);
 		}
 
-		return nullopt;
+		return handled(false);
 	}
 };
 

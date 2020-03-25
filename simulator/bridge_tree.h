@@ -37,6 +37,7 @@ class bridge_tree : public object
 
 public:
 	bridge_tree (bridge* parent, size_t tree_index);
+	~bridge_tree();
 
 	uint32_t bridge_priority() const;
 	void set_bridge_priority (uint32_t priority);

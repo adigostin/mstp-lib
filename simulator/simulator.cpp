@@ -270,12 +270,32 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 	com_ptr<ID3D11DeviceContext1> d3d_dc;
 
 	{
+		com_ptr<IDXGIFactory1> dxgi_factory;
+		hr = CreateDXGIFactory1 (IID_PPV_ARGS(&dxgi_factory)); assert(SUCCEEDED(hr));
+		std::vector<std::pair<com_ptr<IDXGIAdapter1>, SIZE_T>> adapters;
+		size_t best = -1;
+		while(true)
+		{
+			com_ptr<IDXGIAdapter1> a;
+			hr = dxgi_factory->EnumAdapters1 ((UINT)adapters.size(), &a);
+			if (FAILED(hr))
+				break;
+
+			DXGI_ADAPTER_DESC1 desc;
+			hr = a->GetDesc1(&desc); assert(SUCCEEDED(hr));
+
+			if ((best == -1) || (desc.DedicatedVideoMemory > adapters[best].second))
+				best = adapters.size();
+
+			adapters.push_back({ std::move(a), desc.DedicatedVideoMemory });
+		}
+
 		auto d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
 		com_ptr<ID3D11DeviceContext> deviceContext;
 
 		if (tryDebugFirst)
 		{
-			hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
+			hr = D3D11CreateDevice(adapters[best].first, D3D_DRIVER_TYPE_UNKNOWN, nullptr,
 			                       D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_DEBUG,
 			                       &d3dFeatureLevel, 1,
 			                       D3D11_SDK_VERSION, &d3d_device, nullptr, &deviceContext);
@@ -283,7 +303,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 
 		if (!tryDebugFirst || FAILED(hr))
 		{
-			hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
+			hr = D3D11CreateDevice(adapters[best].first, D3D_DRIVER_TYPE_UNKNOWN, nullptr,
 								   D3D11_CREATE_DEVICE_BGRA_SUPPORT,
 								   &d3dFeatureLevel, 1,
 								   D3D11_SDK_VERSION, &d3d_device, nullptr, &deviceContext);

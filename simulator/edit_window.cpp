@@ -55,7 +55,7 @@ public:
 	{
 		HRESULT hr;
 
-		auto dc = base::d2d_dc();
+		auto dc = base::dc();
 		_drawing_resources._dWriteFactory = dwrite_factory();
 		hr = dwrite_factory()->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
 			DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_drawing_resources._regularTextFormat); assert(SUCCEEDED(hr));
@@ -178,7 +178,7 @@ public:
 		float rowHeight = 2 + std::max (maxLineHeight, port::ExteriorWidth);
 		float y = client_height() - _countof(LegendInfo) * rowHeight;
 
-		auto lineWidth = GetDipSizeFromPixelSize({ 0, 1 }).height;
+		auto lineWidth = sizep_to_sized({ 0, 1 }).height;
 
 		auto oldaa = dc->GetAntialiasMode();
 		dc->SetAntialiasMode (D2D1_ANTIALIAS_MODE_ALIASED);
@@ -249,7 +249,7 @@ public:
 
 		auto oldaa = dc->GetAntialiasMode();
 		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-		float lineWidth = GetDipSizeFromPixelSize({ 0, 1 }).height;
+		float lineWidth = sizep_to_sized({ 0, 1 }).height;
 		float lineX = LeftRightPadding + coloredRectWidth + LeftRightPadding + maxLineWidth + LeftRightPadding;
 		com_ptr<ID2D1SolidColorBrush> brush;
 		dc->CreateSolidColorBrush (GetD2DSystemColor(COLOR_INFOBK), &brush);
@@ -298,7 +298,7 @@ public:
 		auto textFormat = smallFont ? _drawing_resources._smallTextFormat.get() : _drawing_resources._regularTextFormat.get();
 		auto tl = edge::text_layout_with_metrics (_drawing_resources._dWriteFactory, textFormat, text);
 
-		float pixelWidthDips = GetDipSizeFromPixelSize ({ 1, 0 }).width;
+		float pixelWidthDips = sizep_to_sized ({ 1, 0 }).width;
 		float lineWidthDips = roundf(1.0f / pixelWidthDips) * pixelWidthDips;
 
 		float left = dLocation.x - leftRightPadding;
@@ -468,7 +468,7 @@ public:
 		base::release_render_resources(dc);
 	}
 
-	void render(ID2D1DeviceContext* dc) const final
+	virtual void render(ID2D1DeviceContext* dc) const override final
 	{
 		std::set<STP_MST_CONFIG_ID> configIds;
 		for (auto& bridge : _project->bridges())
@@ -531,56 +531,9 @@ public:
 
 	std::optional<LRESULT> window_proc (HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) final
 	{
-		if ((uMsg == WM_LBUTTONDOWN) || (uMsg == WM_RBUTTONDOWN))
-		{
-			auto button = (uMsg == WM_LBUTTONDOWN) ? mouse_button::left : mouse_button::right;
-			UINT modifierKeysDown = (UINT) wParam;
-			auto result = ProcessMouseButtonDown (button, modifierKeysDown, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
-			return result ? result.value() : base::window_proc (hwnd, uMsg, wParam, lParam);
-		}
-		else if ((uMsg == WM_LBUTTONUP) || (uMsg == WM_RBUTTONUP))
-		{
-			auto button = (uMsg == WM_LBUTTONUP) ? mouse_button::left : mouse_button::right;
-			UINT modifierKeysDown = (UINT) wParam;
-			auto result = ProcessMouseButtonUp (button, modifierKeysDown, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
-			return result ? result.value() : base::window_proc (hwnd, uMsg, wParam, lParam);
-		}
-		else if (uMsg == WM_SETCURSOR)
-		{
-			if (((HWND) wParam == hwnd) && (LOWORD (lParam) == HTCLIENT))
-			{
-				// Let's check the result because GetCursorPos fails when the input desktop is not the current desktop
-				// (happens for example when the monitor goes to sleep and then the lock screen is displayed).
-				POINT pt;
-				if (::GetCursorPos (&pt))
-				{
-					if (ScreenToClient (hwnd, &pt))
-					{
-						this->ProcessWmSetCursor(pt);
-						return TRUE;
-					}
-				}
-			}
-
-			return std::nullopt;
-		}
-		else if (uMsg == WM_MOUSEMOVE)
-		{
-			process_wm_mousemove (POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
-			base::window_proc (hwnd, uMsg, wParam, lParam);
-			return 0;
-		}
-		else if (uMsg == WM_CONTEXTMENU)
+		if (uMsg == WM_CONTEXTMENU)
 		{
 			return ProcessWmContextMenu (hwnd, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
-		}
-		else if ((uMsg == WM_KEYDOWN) || (uMsg == WM_SYSKEYDOWN))
-		{
-			return ProcessKeyOrSysKeyDown ((UINT) wParam, GetModifierKeys());
-		}
-		else if ((uMsg == WM_KEYUP) || (uMsg == WM_SYSKEYUP))
-		{
-			return ProcessKeyOrSysKeyUp ((UINT) wParam, GetModifierKeys());
 		}
 		else if (uMsg == WM_COMMAND)
 		{
@@ -730,68 +683,63 @@ public:
 		}
 	}
 
-	std::optional<LRESULT> ProcessKeyOrSysKeyDown (UINT virtualKey, UINT modifierKeys)
+	virtual handled on_virtual_key_down (uint32_t vkey, modifier_key mks) override
 	{
-		if (_state != nullptr)
+		if (_state)
 		{
-			auto res = _state->process_key_or_syskey_down (virtualKey, modifierKeys);
+			handled h = _state->process_key_or_syskey_down (vkey, mks);
 			if (_state->completed())
 			{
 				_state = nullptr;
 				::SetCursor (LoadCursor (nullptr, IDC_ARROW));
-			};
+			}
 
-			return res;
+			return h;
 		}
 
-		if (virtualKey == VK_DELETE)
+		if (vkey == VK_DELETE)
 		{
 			delete_selection();
-			return 0;
+			return handled(true);
 		}
 
-		return std::nullopt;
+		return handled(false);
 	}
 
-	std::optional<LRESULT> ProcessKeyOrSysKeyUp (UINT virtualKey, UINT modifierKeys)
+	virtual handled on_virtual_key_up (uint32_t vkey, modifier_key mks) override
 	{
-		if (_state != nullptr)
+		if (_state)
 		{
-			auto res = _state->process_key_or_syskey_up (virtualKey, modifierKeys);
+			handled h = _state->process_key_or_syskey_up (vkey, mks);
 			if (_state->completed())
 			{
 				_state = nullptr;
 				SetCursor (LoadCursor (nullptr, IDC_ARROW));
 			}
 
-			return res;
+			return h;
 		}
 
-		return std::nullopt;
+		return handled(false);
 	}
 
-	std::optional<LRESULT> ProcessMouseButtonDown (mouse_button button, UINT modifierKeysDown, POINT pt)
+	virtual handled on_mouse_down (mouse_button button, modifier_key mks, POINT pp, D2D1_POINT_2F pd) override
 	{
-		::SetFocus(hwnd());
-		if (::GetFocus() != hwnd())
-			// Some validation code (maybe in the Properties Window) must have failed and taken focus back.
-			return std::nullopt;
-
 		mouse_location ml;
-		ml.pt = pt;
-		ml.d = pointp_to_pointd(pt);
+		ml.pt = pp;
+		ml.d = pointp_to_pointd(pp);
 		ml.w = pointd_to_pointw(ml.d);
 
 		if (_state != nullptr)
 		{
-			_state->process_mouse_button_down (button, modifierKeysDown, ml);
+			_state->process_mouse_button_down (button, (UINT)mks, ml);
 			if (_state->completed())
 			{
 				_state = nullptr;
 				::SetCursor (LoadCursor (nullptr, IDC_ARROW));
 			};
 
-			return 0;
+			return handled(true);
 		}
 
 		auto ht = HitTestObjects (ml.d, SnapDistance);
@@ -799,7 +747,7 @@ public:
 			_selection->clear();
 		else
 		{
-			if (modifierKeysDown & MK_CONTROL)
+			if ((UINT)mks & MK_CONTROL)
 			{
 				if (_selection->contains(ht.object))
 					_selection->remove(ht.object);
@@ -859,21 +807,21 @@ public:
 				}
 			}
 
-			auto state = CreateStateBeginningDrag(make_edit_state_deps(), ht.object, button, modifierKeysDown, ml, ::GetCursor(), std::move(stateMoveThreshold), std::move(stateButtonUp));
+			auto state = CreateStateBeginningDrag(make_edit_state_deps(), ht.object, button, (UINT)mks, ml, ::GetCursor(), std::move(stateMoveThreshold), std::move(stateButtonUp));
 			EnterState(std::move(state));
 		}
 
-		return 0;
+		return handled(true);
 	}
 
-	std::optional<LRESULT> ProcessMouseButtonUp (mouse_button button, UINT modifierKeysDown, POINT pt)
+	virtual handled on_mouse_up (mouse_button button, modifier_key mks, POINT pp, D2D1_POINT_2F pd) override
 	{
-		auto dLocation = pointp_to_pointd(pt);
+		auto dLocation = pointp_to_pointd(pp);
 		auto wLocation = pointd_to_pointw(dLocation);
 
 		if (_state != nullptr)
 		{
-			_state->process_mouse_button_up (button, modifierKeysDown, { pt, dLocation, wLocation });
+			_state->process_mouse_button_up (button, (UINT)mks, { pp, dLocation, wLocation });
 			if (_state->completed())
 			{
 				_state = nullptr;
@@ -882,9 +830,9 @@ public:
 		}
 
 		if (button == mouse_button::right)
-			return std::nullopt; // return "not handled", to cause our called to pass the message to DefWindowProc, which will generate WM_CONTEXTMENU
+			return handled(false); // return "not handled", to cause our caller to pass the message to DefWindowProc, which will generate WM_CONTEXTMENU
 
-		return 0;
+		return handled(true);
 	}
 
 	virtual void EnterState (std::unique_ptr<edit_state>&& state) override final
@@ -893,58 +841,57 @@ public:
 		_htResult = { nullptr };
 	}
 
-	void ProcessWmSetCursor (POINT pt)
+	virtual HCURSOR cursor_at (POINT pp, D2D1_POINT_2F pd) const override
 	{
-		auto dLocation = pointp_to_pointd(pt);
-		auto wLocation = pointd_to_pointw(dLocation);
+		auto wLocation = pointd_to_pointw(pd);
 
 		if (_state != nullptr)
+			return _state->cursor();
+
+		auto ht = HitTestObjects (pd, SnapDistance);
+
+		LPCWSTR idc = IDC_ARROW;
+		if (dynamic_cast<port*>(ht.object))
 		{
-			::SetCursor (_state->cursor());
+			if (ht.code == port::HTCodeCP)
+				idc = IDC_CROSS;
 		}
-		else
+		else if (dynamic_cast<wire*>(ht.object))
 		{
-			auto ht = HitTestObjects (dLocation, SnapDistance);
-
-			LPCWSTR idc = IDC_ARROW;
-			if (dynamic_cast<port*>(ht.object) != nullptr)
-			{
-				if (ht.code == port::HTCodeCP)
-					idc = IDC_CROSS;
-			}
-			else if (dynamic_cast<wire*>(ht.object) != nullptr)
-			{
-				if (ht.code >= 0)
-					// wire point
-					idc = IDC_CROSS;
-				else
-					// wire line
-					idc = IDC_ARROW;
-			}
-
-			::SetCursor (LoadCursor(nullptr, idc));
-
-			if (_htResult != ht)
-			{
-				_htResult = ht;
-				::InvalidateRect(hwnd(), nullptr, 0);
-			}
+			if (ht.code >= 0)
+				// wire point
+				idc = IDC_CROSS;
+			else
+				// wire line
+				idc = IDC_ARROW;
 		}
+
+		return LoadCursor(nullptr, idc);
 	}
 
-	void process_wm_mousemove (POINT pt)
+	virtual void on_mouse_move (modifier_key mks, POINT pp, D2D1_POINT_2F pd) override
 	{
-		auto dLocation = pointp_to_pointd(pt);
-		auto wLocation = pointd_to_pointw(dLocation);
+		base::on_mouse_move (mks, pp, pd);
+
+		auto pw = pointd_to_pointw(pd);
 
 		if (_state != nullptr)
 		{
-			_state->process_mouse_move ({ pt, dLocation, wLocation });
+			_state->process_mouse_move ({ pp, pd, pw });
 			if (_state->completed())
 			{
 				_state = nullptr;
 				::SetCursor (LoadCursor (nullptr, IDC_ARROW));
 			}
+
+			return;
+		}
+
+		auto ht = HitTestObjects (pd, SnapDistance);
+		if (_htResult != ht)
+		{
+			_htResult = ht;
+			invalidate();
 		}
 	}
 

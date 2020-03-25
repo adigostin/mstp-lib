@@ -51,7 +51,6 @@ std::unordered_set<port_tree*> port_tree::_trees;
 port_tree::port_tree (port* port, size_t tree_index)
 	: _port(port), _tree_index(tree_index)
 {
-	// No need to call remove_handler since a bridge and its bridge_trees are deleted at the same time.
 	_port->bridge()->property_changing().add_handler(&on_bridge_property_changing, this);
 	_port->bridge()->property_changed().add_handler(&on_bridge_property_changed, this);
 
@@ -65,6 +64,9 @@ port_tree::~port_tree()
 	_trees.erase(this);
 	if (_trees.empty())
 		::KillTimer (nullptr, _flush_timer);
+
+	_port->bridge()->property_changed().remove_handler(&on_bridge_property_changed, this);
+	_port->bridge()->property_changing().remove_handler(&on_bridge_property_changing, this);
 }
 
 void port_tree::on_bridge_property_changing (void* arg, object* obj, const property_change_args& args)

@@ -52,13 +52,13 @@ class create_bridge_es : public edit_state
 		return new_bridge;
 	}
 
-	virtual std::optional<LRESULT> process_key_or_syskey_down (UINT virtualKey, UINT modifierKeys) override final
+	virtual handled process_key_or_syskey_down (uint32_t virtualKey, modifier_key modifierKeys) override final
 	{
 		if (virtualKey == VK_ESCAPE)
 		{
 			_completed = true;
-			::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
-			return 0;
+			_ew->invalidate();
+			return handled(true);
 		}
 
 		static constexpr UINT keys[] = { VK_SUBTRACT, VK_OEM_MINUS, VK_LEFT, VK_ADD, VK_OEM_PLUS, VK_RIGHT, VK_UP, VK_DOWN };
@@ -95,10 +95,10 @@ class create_bridge_es : public edit_state
 				::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
 			}
 
-			return 0;
+			return handled(true);
 		}
 
-		return std::nullopt;
+		return handled(false);
 	}
 
 	virtual void render (ID2D1DeviceContext* dc) override final

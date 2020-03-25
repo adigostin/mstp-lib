@@ -23,6 +23,14 @@ class project : public edge::object, public project_i
 	bool _changedFlag = false;
 
 public:
+	~project()
+	{
+		while(!_wires.empty())
+			remove_wire(0);
+		while(!_bridges.empty())
+			remove_bridge(0);
+	}
+
 	virtual const std::vector<std::unique_ptr<bridge>>& bridges() const override final { return _bridges; }
 
 	virtual void insert_bridge (size_t index, std::unique_ptr<bridge>&& bridge) override final

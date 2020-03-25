@@ -50,6 +50,7 @@ public:
 
 	~log_window()
 	{
+		SelectBridge(nullptr);
 		_selection->changed().remove_handler(&OnSelectionChanged, this);
 		if (_bridge != nullptr)
 			_bridge->log_line_generated().remove_handler(OnLogLineGeneratedStatic, this);
@@ -79,14 +80,14 @@ public:
 		}
 	}
 
-	void render (ID2D1DeviceContext* dc) const final
+	virtual void render (ID2D1DeviceContext* dc) const override final
 	{
 		dc->Clear(GetD2DSystemColor(COLOR_WINDOW));
 
 		dc->SetTransform(dpi_transform());
 
 		com_ptr<ID2D1SolidColorBrush> text_brush;
-		d2d_dc()->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOWTEXT), &text_brush);
+		dc->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOWTEXT), &text_brush);
 
 		if ((_bridge == nullptr) || _lines.empty())
 		{

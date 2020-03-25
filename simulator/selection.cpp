@@ -14,7 +14,6 @@ using namespace edge;
 class selection : public event_manager, public selection_i
 {
 	project_i* const _project;
-	ULONG _refCount = 1;
 	std::vector<object*> _objects;
 
 public:
@@ -26,6 +25,7 @@ public:
 
 	~selection()
 	{
+		clear();
 		_project->property_changing().remove_handler (&on_project_property_changing, this);
 	}
 

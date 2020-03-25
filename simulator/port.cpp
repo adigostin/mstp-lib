@@ -34,7 +34,6 @@ const nvp port_speed_nvps[] = {
 port::port (class bridge* bridge, size_t port_index, edge::side side, float offset)
 	: _bridge(bridge), _port_index(port_index), _side(side), _offset(offset)
 {
-	// No need to call remove_handler since a bridge and its bridge_trees are deleted at the same time.
 	_bridge->property_changing().add_handler(&on_bridge_property_changing, this);
 	_bridge->property_changed().add_handler(&on_bridge_property_changed, this);
 
@@ -43,6 +42,12 @@ port::port (class bridge* bridge, size_t port_index, edge::side side, float offs
 		auto tree = std::unique_ptr<port_tree>(new port_tree(this, treeIndex));
 		_trees.push_back (std::move(tree));
 	}
+}
+
+port::~port()
+{
+	_bridge->property_changed().remove_handler(&on_bridge_property_changed, this);
+	_bridge->property_changing().remove_handler(&on_bridge_property_changing, this);
 }
 
 void port::on_bridge_property_changing (void* arg, object* obj, const property_change_args& args)

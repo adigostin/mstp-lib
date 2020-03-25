@@ -11,12 +11,17 @@ using namespace edge;
 bridge_tree::bridge_tree (bridge* parent, size_t tree_index)
 	: _parent(parent), _tree_index(tree_index)
 {
-	// No need to call remove_handler since a bridge and its bridge_trees are deleted at the same time.
 	_parent->property_changing().add_handler(&on_bridge_property_changing, this);
 	_parent->property_changed().add_handler(&on_bridge_property_changed, this);
 
 	::GetSystemTime(&_last_topology_change);
 	_topology_change_count = 0;
+}
+
+bridge_tree::~bridge_tree()
+{
+	_parent->property_changed().remove_handler(&on_bridge_property_changed, this);
+	_parent->property_changing().remove_handler(&on_bridge_property_changing, this);
 }
 
 static const value_property* const properties_changed_on_stp_enable_disable[] = {

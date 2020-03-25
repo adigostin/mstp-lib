@@ -38,6 +38,87 @@ static const wnd_class_params class_params =
 	MAKEINTRESOURCE(IDI_DESIGNER),  // lpIconSmName
 };
 
+static HINSTANCE GetHInstance()
+{
+	HMODULE hm;
+	BOOL bRes = ::GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)&GetHInstance, &hm);
+	assert(bRes);
+	return hm;
+}
+
+struct pw_area : d2d_window
+{
+	using base = d2d_window;
+
+	std::unique_ptr<edge::property_grid_i> const pg;
+
+	pw_area (HWND parent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dwrite_factory)
+		: base (GetHInstance(), WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, parent, 0, d3d_dc, dwrite_factory)
+		, pg(edge::property_grid_factory(this, this->window::client_rect()))
+	{ }
+
+	virtual HCURSOR cursor_at (POINT pp, D2D1_POINT_2F pd) const override
+	{
+		return pg->cursor_at(pp, pd);
+	}
+
+	virtual void render(ID2D1DeviceContext* dc) const override
+	{
+		pg->render(dc);
+	}
+
+	virtual handled on_mouse_down (mouse_button button, modifier_key mks, POINT pp, D2D1_POINT_2F pd) override
+	{
+		return base::on_mouse_down (button, mks, pp, pd)
+			|| pg->process_mouse_down (button, mks, pp, pd);
+	}
+
+	virtual handled on_mouse_up (mouse_button button, modifier_key mks, POINT pp, D2D1_POINT_2F pd) override
+	{
+		return base::on_mouse_up (button, mks, pp, pd)
+			|| pg->process_mouse_up (button, mks, pp, pd);
+	}
+
+	virtual void on_mouse_move (modifier_key mks, POINT pp, D2D1_POINT_2F pd) override
+	{
+		base::on_mouse_move (mks, pp, pd);
+		pg->process_mouse_move (mks, pp, pd);
+	}
+
+	virtual handled on_virtual_key_down (uint32_t vkey, modifier_key mks) override
+	{
+		return base::on_virtual_key_down (vkey, mks)
+			|| pg->process_key_down(vkey, mks);
+	}
+
+	virtual handled on_virtual_key_up (uint32_t vkey, modifier_key mks) override
+	{
+		return base::on_virtual_key_up (vkey, mks)
+			|| pg->process_key_up(vkey, mks);
+	}
+
+	virtual handled on_char_key (uint32_t key) override
+	{
+		return base::on_char_key(key)
+			|| pg->process_char_key(key);
+	}
+
+	virtual void on_client_size_changed (SIZE client_size_pixels, D2D1_SIZE_F client_size_dips) override
+	{
+		base::on_client_size_changed(client_size_pixels, client_size_dips);
+		pg->set_rect(client_rect());
+		::UpdateWindow(hwnd());
+	}
+
+	virtual void on_dpi_changed (UINT dpi) override
+	{
+		base::on_dpi_changed(dpi);
+		pg->set_rect(client_rect());
+	}
+
+	// TODO: handle scrollbars
+};
+
 #pragma warning (disable: 4250)
 
 class project_window : public window, public virtual project_window_i
@@ -48,15 +129,14 @@ class project_window : public window, public virtual project_window_i
 	com_ptr<ID3D11DeviceContext1> const _d3d_dc;
 	com_ptr<IDWriteFactory>       const _dwrite_factory;
 	std::shared_ptr<project_i>    const _project;
-	std::unique_ptr<selection_i>  const _selection;
+	std::unique_ptr<selection_i>        _selection;
 	std::unique_ptr<edit_window_i>      _edit_window;
-	std::unique_ptr<property_grid_i>    _pg;
+	std::unique_ptr<pw_area>            _pw;
 	std::unique_ptr<log_window_i>       _log_window;
 	std::unique_ptr<vlan_window_i>      _vlanWindow;
 	RECT _restore_bounds;
 	uint32_t _selectedVlanNumber = 1;
-	uint32_t _dpi;
-	float _pg_desired_width_dips;
+	float _pw_desired_width_dips;
 	float _log_desired_width_dips;
 	bool _restoring_size_from_registry = false;
 
@@ -91,21 +171,9 @@ public:
 		}
 		::ShowWindow (hwnd(), nCmdShow);
 
-		if (auto proc_addr = GetProcAddress(GetModuleHandleA("User32.dll"), "GetDpiForWindow"))
-		{
-			auto proc = reinterpret_cast<UINT(WINAPI*)(HWND)>(proc_addr);
-			_dpi = proc(hwnd());
-		}
-		else
-		{
-			HDC tempDC = GetDC(hwnd());
-			_dpi = GetDeviceCaps (tempDC, LOGPIXELSX);
-			ReleaseDC (hwnd(), tempDC);
-		}
-
-		_pg_desired_width_dips = (client_width_pixels() * 96.0f / _dpi) * 20 / 100;
-		TryReadRegFloat (RegValueNamePropertiesWindowWidth, _pg_desired_width_dips);
-		_log_desired_width_dips = (client_width_pixels() * 96.0f / _dpi) * 30 / 100;
+		_pw_desired_width_dips = (client_width_pixels() * 96.0f / dpi()) * 20 / 100;
+		TryReadRegFloat (RegValueNamePropertiesWindowWidth, _pw_desired_width_dips);
+		_log_desired_width_dips = (client_width_pixels() * 96.0f / dpi()) * 30 / 100;
 		TryReadRegFloat (RegValueNameLogWindowWidth, _log_desired_width_dips);
 
 		if (create_params.show_property_grid)
@@ -138,23 +206,28 @@ public:
 		_app->project_window_removed().remove_handler (&OnProjectWindowRemoved, this);
 		_app->project_window_added().remove_handler (&OnProjectWindowAdded, this);
 		_project->GetChangedFlagChangedEvent().remove_handler (&OnProjectChangedFlagChanged, this);
-		if (_pg)
+
+		// Destroy things explicitly, and in this order, because they keep raw pointers to each other.
+		// This needs refactoring!
+		if (_pw)
 			destroy_property_grid();
+		_log_window = nullptr;
+		_vlanWindow = nullptr;
+		_edit_window = nullptr;
+		_selection = nullptr;
 	}
 
 	virtual HWND hwnd() const override { return base::hwnd(); }
 
-	using base::client_rect_pixels;
-
 	LONG splitter_width_pixels() const
 	{
-		static constexpr float splitter_width_dips = 4;
-		return (LONG) round (splitter_width_dips * _dpi / 96.0f);
+		static constexpr float splitter_width_dips = 5;
+		return (LONG) round (splitter_width_dips * dpi() / 96.0f);
 	}
 
 	RECT pg_restricted_rect() const
 	{
-		LONG pg_desired_width_pixels = (LONG)round(_pg_desired_width_dips * _dpi / 96);
+		LONG pg_desired_width_pixels = (LONG)round(_pw_desired_width_dips * dpi() / 96);
 		LONG w = std::min (pg_desired_width_pixels, client_width_pixels() * 40 / 100);
 		w = std::max(w, 100l);
 		return RECT{ 0, 0, w, client_height_pixels() };
@@ -162,19 +235,19 @@ public:
 
 	void create_property_grid()
 	{
-		_pg = property_grid_factory (_app->GetHInstance(), WS_EX_CLIENTEDGE, pg_restricted_rect(), hwnd(), _d3d_dc, _dwrite_factory);
+		_pw = std::make_unique<pw_area>(hwnd(), pg_restricted_rect(), _d3d_dc, _dwrite_factory);
 		float desc_height;
 		if (TryReadRegFloat(RegValueNamePGDescHeight, desc_height))
-			_pg->set_description_height(desc_height);
+			_pw->pg->set_description_height(desc_height);
 		set_selection_to_pg();
 		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
-		_pg->description_height_changed().add_handler(&on_pg_desc_height_changed, this);
+		_pw->pg->description_height_changed().add_handler(&on_pg_desc_height_changed, this);
 	}
 
 	void destroy_property_grid()
 	{
-		_pg->description_height_changed().remove_handler(&on_pg_desc_height_changed, this);
-		_pg = nullptr;
+		_pw->pg->description_height_changed().remove_handler(&on_pg_desc_height_changed, this);
+		_pw = nullptr;
 		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, false);
 	}
 
@@ -186,7 +259,7 @@ public:
 
 	RECT log_restricted_rect() const
 	{
-		LONG log_desired_width_pixels = (LONG)round(_log_desired_width_dips * _dpi / 96);
+		LONG log_desired_width_pixels = (LONG)round(_log_desired_width_dips * dpi() / 96);
 		LONG w = std::min (log_desired_width_pixels, client_width_pixels() * 40 / 100);
 		w = std::max(w, 100l);
 		return RECT{ client_width_pixels() - w, 0, client_width_pixels(), client_height_pixels() };
@@ -234,14 +307,14 @@ public:
 	static void on_selection_changed (void* callbackArg, selection_i* selection)
 	{
 		auto pw = static_cast<project_window*>(callbackArg);
-		if (pw->_pg != nullptr)
+		if (pw->_pw->pg != nullptr)
 			pw->set_selection_to_pg();
 	}
 
 	LONG GetVlanWindowLeft() const
 	{
-		if (_pg != nullptr)
-			return _pg->width_pixels() + splitter_width_pixels();
+		if (_pw)
+			return _pw->width_pixels() + splitter_width_pixels();
 		else
 			return 0;
 	}
@@ -258,8 +331,8 @@ public:
 	{
 		auto rect = client_rect_pixels();
 
-		if (_pg != nullptr)
-			rect.left += _pg->width_pixels() + splitter_width_pixels();
+		if (_pw)
+			rect.left += _pw->width_pixels() + splitter_width_pixels();
 
 		if (_log_window != nullptr)
 			rect.right -= _log_window->width_pixels() + splitter_width_pixels();
@@ -309,7 +382,6 @@ public:
 
 		if (msg == WM_DPICHANGED)
 		{
-			_dpi = LOWORD(wParam);
 			if (!_restoring_size_from_registry)
 			{
 				auto r = (RECT*) lParam;
@@ -408,8 +480,8 @@ public:
 
 	void ResizeChildWindows()
 	{
-		if (_pg != nullptr)
-			_pg->move_window (pg_restricted_rect());
+		if (_pw)
+			_pw->move_window (pg_restricted_rect());
 
 		if (_log_window != nullptr)
 			_log_window->move_window (log_restricted_rect());
@@ -423,10 +495,10 @@ public:
 
 	void ProcessWmLButtonDown (POINT pt, UINT modifierKeysDown)
 	{
-		if ((_pg != nullptr) && (pt.x >= _pg->width_pixels()) && (pt.x < _pg->width_pixels() + splitter_width_pixels()))
+		if (_pw && (pt.x >= _pw->width_pixels()) && (pt.x < _pw->width_pixels() + splitter_width_pixels()))
 		{
 			_windowBeingResized = tool_window::props;
-			_resize_offset = pt.x - _pg->width_pixels();
+			_resize_offset = pt.x - _pw->width_pixels();
 			::SetCapture(hwnd());
 		}
 		else if ((_log_window != nullptr) && (pt.x >= _log_window->GetX() - splitter_width_pixels()) && (pt.x < _log_window->GetX()))
@@ -444,26 +516,34 @@ public:
 			LONG pg_desired_width_pixels = pt.x - _resize_offset;
 			pg_desired_width_pixels = std::max (pg_desired_width_pixels, 0l);
 			pg_desired_width_pixels = std::min (pg_desired_width_pixels, client_width_pixels());
-			_pg_desired_width_dips = pg_desired_width_pixels * 96.0f / _dpi;
-			_pg->move_window (pg_restricted_rect());
-			_vlanWindow->move_window ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->height_pixels() });
-			_edit_window->move_window (edit_window_rect());
-			::UpdateWindow (_pg->hwnd());
-			::UpdateWindow (_edit_window->hwnd());
-			::UpdateWindow (_vlanWindow->hwnd());
+			float new_pg_desired_width_dips = pg_desired_width_pixels * 96.0f / dpi();
+			if (_pw_desired_width_dips != new_pg_desired_width_dips)
+			{
+				_pw_desired_width_dips = new_pg_desired_width_dips;
+				_pw->move_window (pg_restricted_rect());
+				::UpdateWindow (_pw->hwnd());
+				_vlanWindow->move_window ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->height_pixels() });
+				::UpdateWindow (_vlanWindow->hwnd());
+				_edit_window->move_window (edit_window_rect());
+				::UpdateWindow (_edit_window->hwnd());
+			}
 		}
 		else if (_windowBeingResized == tool_window::log)
 		{
 			LONG log_desired_width_pixels = client_width_pixels() - pt.x - _resize_offset;
 			log_desired_width_pixels = std::max (log_desired_width_pixels, 0l);
 			log_desired_width_pixels = std::min (log_desired_width_pixels, client_width_pixels());
-			_log_desired_width_dips = log_desired_width_pixels * 96.0f / _dpi;
-			_log_window->move_window (log_restricted_rect());
-			_vlanWindow->move_window ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->height_pixels() });
-			_edit_window->move_window (edit_window_rect());
-			::UpdateWindow (_log_window->hwnd());
-			::UpdateWindow (_edit_window->hwnd());
-			::UpdateWindow (_vlanWindow->hwnd());
+			float new_log_desired_width_dips = log_desired_width_pixels * 96.0f / dpi();
+			if (_log_desired_width_dips != new_log_desired_width_dips)
+			{
+				_log_desired_width_dips = new_log_desired_width_dips;
+				_log_window->move_window (log_restricted_rect());
+				::UpdateWindow (_log_window->hwnd());
+				_vlanWindow->move_window ({ GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->height_pixels() });
+				::UpdateWindow (_vlanWindow->hwnd());
+				_edit_window->move_window (edit_window_rect());
+				::UpdateWindow (_edit_window->hwnd());
+			}
 		}
 	}
 
@@ -471,7 +551,7 @@ public:
 	{
 		if (_windowBeingResized == tool_window::props)
 		{
-			WriteRegFloat (RegValueNamePropertiesWindowWidth, _pg_desired_width_dips);
+			WriteRegFloat (RegValueNamePropertiesWindowWidth, _pw_desired_width_dips);
 			_windowBeingResized = tool_window::none;
 			::ReleaseCapture();
 		}
@@ -485,7 +565,7 @@ public:
 
 	void SetCursor (POINT pt)
 	{
-		if ((_pg != nullptr) && (pt.x >= _pg->width_pixels()) && (pt.x < _pg->width_pixels() + splitter_width_pixels()))
+		if (_pw && (pt.x >= _pw->width_pixels()) && (pt.x < _pw->width_pixels() + splitter_width_pixels()))
 		{
 			::SetCursor (LoadCursor(nullptr, IDC_SIZEWE));
 		}
@@ -504,9 +584,9 @@ public:
 
 		RECT rect;
 
-		if (_pg != nullptr)
+		if (_pw)
 		{
-			rect.left = _pg->width_pixels();
+			rect.left = _pw->width_pixels();
 			rect.top = 0;
 			rect.right = rect.left + splitter_width_pixels();
 			rect.bottom = client_height_pixels();
@@ -529,7 +609,7 @@ public:
 	{
 		if (wParam == ID_VIEW_PROPERTIES)
 		{
-			if (_pg != nullptr)
+			if (_pw)
 				destroy_property_grid();
 			else
 				create_property_grid();
@@ -889,7 +969,7 @@ public:
 			_selectedVlanNumber = vlanNumber;
 			event_invoker<selected_vlan_number_changed_e>()(this, vlanNumber);
 			::InvalidateRect (hwnd(), nullptr, FALSE);
-			if (_pg != nullptr)
+			if (_pw)
 				set_selection_to_pg();
 			SetWindowTitle();
 		}
@@ -987,7 +1067,7 @@ public:
 	{
 		const auto& objs = _selection->objects();
 
-		_pg->clear();
+		_pw->pg->clear();
 
 		if (objs.empty())
 			return;
@@ -1023,7 +1103,7 @@ public:
 				};
 			}
 
-			_pg->add_section (first_section_name, objs.data(), objs.size());
+			_pw->pg->add_section (first_section_name, objs.data(), objs.size());
 
 			auto first_tree_index = tree_selector(objs.front()).second;
 			bool all_same_tree_index = true;
@@ -1046,11 +1126,11 @@ public:
 			else
 				ss << " (multiple trees)";
 
-			_pg->add_section (ss.str().c_str(), trees.data(), trees.size());
+			_pw->pg->add_section (ss.str().c_str(), trees.data(), trees.size());
 		}
 		else if (all_of (objs.begin(), objs.end(), [](object* o) { return o->type() == &wire::_type; }))
 		{
-			_pg->add_section("Wire Properties", objs.data(), objs.size());
+			_pw->pg->add_section("Wire Properties", objs.data(), objs.size());
 		}
 		else
 			assert(false); // not implemented
