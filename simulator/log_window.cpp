@@ -50,27 +50,21 @@ public:
 
 	~log_window()
 	{
-		SelectBridge(nullptr);
 		_selection->changed().remove_handler<&log_window::on_selection_changed>(this);
-		if (_bridge != nullptr)
-			_bridge->log_line_generated().remove_handler<&log_window::on_log_line_generated>(this);
+		select_bridge(nullptr);
 	}
 
 	void on_selection_changed (selection_i* selection)
 	{
 		if (selection->objects().size() != 1)
-			SelectBridge(nullptr);
+			select_bridge(nullptr);
 		else
 		{
-			auto b = dynamic_cast<bridge*>(selection->objects().front());
-			if (b == nullptr)
-			{
-				auto port = dynamic_cast<class port*>(selection->objects().front());
-				if (port != nullptr)
-					b = port->bridge();
-			}
-
-			SelectBridge(b);
+			auto o = selection->objects().front();
+			if (auto b = dynamic_cast<bridge*>(o))
+				select_bridge(b);
+			else if (auto p = dynamic_cast<port*>(o))
+				select_bridge(p->bridge());
 		}
 	}
 
@@ -184,7 +178,7 @@ public:
 		::InvalidateRect (hwnd(), nullptr, FALSE);
 	}
 
-	void SelectBridge (bridge* b)
+	void select_bridge (bridge* b)
 	{
 		if (_bridge != b)
 		{
