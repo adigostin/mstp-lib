@@ -47,7 +47,7 @@ class edit_window : public zoomable_window, public edit_window_i
 
 public:
 	edit_window (const edit_window_create_params& cps)
-		: base(cps.app->GetHInstance(), WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, cps.rect, cps.hWndParent, 0, cps.d3d_dc, cps.dWriteFactory)
+		: base(WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, cps.rect, cps.hWndParent, 0, cps.d3d_dc, cps.dWriteFactory)
 		, _app(cps.app)
 		, _pw(cps.pw)
 		, _project(cps.project)

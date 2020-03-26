@@ -64,7 +64,7 @@ using selection_factory_t = std::unique_ptr<selection_i>(*)(project_i* project);
 struct __declspec(novtable) log_window_i : virtual edge::win32_window_i
 {
 };
-using log_window_factory_t = std::unique_ptr<log_window_i>(*const)(HINSTANCE hInstance, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dWriteFactory, selection_i* selection, const std::shared_ptr<project_i>& project);
+using log_window_factory_t = std::unique_ptr<log_window_i>(*const)(HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dWriteFactory, selection_i* selection, const std::shared_ptr<project_i>& project);
 extern const log_window_factory_t log_window_factory;
 
 // ============================================================================
@@ -113,6 +113,15 @@ struct edit_window_create_params
 	IDWriteFactory* dWriteFactory;
 };
 using edit_window_factory_t = std::unique_ptr<edit_window_i>(*)(const edit_window_create_params& cps);
+
+// ============================================================================
+
+struct __declspec(novtable) properties_window_i : virtual edge::dpi_aware_window_i
+{
+	virtual edge::property_grid_i* pg() const = 0;
+};
+
+using properties_window_factory_t = std::unique_ptr<properties_window_i>(HWND parent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dwrite_factory);
 
 // ============================================================================
 
@@ -226,6 +235,7 @@ struct simulator_app_i
 	virtual edit_window_factory_t edit_window_factory() const = 0;
 	virtual project_window_factory_t project_window_factory() const = 0;
 	virtual project_factory_t project_factory() const = 0;
+	virtual properties_window_factory_t* properties_window_factory() const = 0;
 };
 
 // ============================================================================

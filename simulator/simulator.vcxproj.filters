@@ -54,6 +54,7 @@
     <ClCompile Include="bridge_tree.cpp" />
     <ClCompile Include="port.cpp" />
     <ClCompile Include="port_tree.cpp" />
+    <ClCompile Include="properties_window.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="simulator.rc" />

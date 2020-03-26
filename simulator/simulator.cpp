@@ -31,6 +31,7 @@ extern const selection_factory_t selection_factory;
 extern const edit_window_factory_t edit_window_factory;
 extern const project_window_factory_t project_window_factory;
 extern const project_factory_t project_factory;
+extern properties_window_factory_t properties_window_factory;
 
 #pragma region project_i
 std::pair<wire*, size_t> project_i::GetWireConnectedToPort (const class port* port) const
@@ -153,6 +154,8 @@ public:
 	virtual project_window_factory_t project_window_factory() const override final { return ::project_window_factory; }
 
 	virtual project_factory_t project_factory() const override { return ::project_factory; }
+
+	virtual properties_window_factory_t* properties_window_factory() const override final { return ::properties_window_factory; }
 
 	WPARAM RunMessageLoop()
 	{

@@ -38,103 +38,19 @@ static const wnd_class_params class_params =
 	MAKEINTRESOURCE(IDI_DESIGNER),  // lpIconSmName
 };
 
-static HINSTANCE GetHInstance()
-{
-	HMODULE hm;
-	BOOL bRes = ::GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)&GetHInstance, &hm);
-	assert(bRes);
-	return hm;
-}
-
-struct pw_area : d2d_window
-{
-	using base = d2d_window;
-
-	std::unique_ptr<edge::property_grid_i> const pg;
-
-	pw_area (HWND parent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dwrite_factory)
-		: base (GetHInstance(), WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, parent, 0, d3d_dc, dwrite_factory)
-		, pg(edge::property_grid_factory(this, client_rect_pixels()))
-	{ }
-
-	virtual HCURSOR cursor_at (POINT pp, D2D1_POINT_2F pd) const override
-	{
-		return pg->cursor_at(pp, pd);
-	}
-
-	virtual void render(ID2D1DeviceContext* dc) const override
-	{
-		pg->render(dc);
-	}
-
-	virtual handled on_mouse_down (mouse_button button, modifier_key mks, POINT pp, D2D1_POINT_2F pd) override
-	{
-		return base::on_mouse_down (button, mks, pp, pd)
-			|| pg->on_mouse_down (button, mks, pp, pd);
-	}
-
-	virtual handled on_mouse_up (mouse_button button, modifier_key mks, POINT pp, D2D1_POINT_2F pd) override
-	{
-		return base::on_mouse_up (button, mks, pp, pd)
-			|| pg->on_mouse_up (button, mks, pp, pd);
-	}
-
-	virtual void on_mouse_move (modifier_key mks, POINT pp, D2D1_POINT_2F pd) override
-	{
-		base::on_mouse_move (mks, pp, pd);
-		pg->on_mouse_move (mks, pp, pd);
-	}
-
-	virtual handled on_key_down (uint32_t vkey, modifier_key mks) override
-	{
-		return base::on_key_down (vkey, mks)
-			|| pg->on_key_down(vkey, mks);
-	}
-
-	virtual handled on_key_up (uint32_t vkey, modifier_key mks) override
-	{
-		return base::on_key_up (vkey, mks)
-			|| pg->on_key_up(vkey, mks);
-	}
-
-	virtual handled on_char_key (uint32_t key) override
-	{
-		return base::on_char_key(key)
-			|| pg->on_char_key(key);
-	}
-
-	virtual void on_client_size_changed (SIZE client_size_pixels, D2D1_SIZE_F client_size_dips) override
-	{
-		base::on_client_size_changed(client_size_pixels, client_size_dips);
-		pg->set_rect(client_rect_pixels());
-		::UpdateWindow(hwnd());
-	}
-
-	virtual void on_dpi_changed (UINT dpi) override
-	{
-		base::on_dpi_changed(dpi);
-		pg->set_rect(client_rect_pixels());
-		pg->on_dpi_changed();
-	}
-
-	// TODO: handle scrollbars
-};
-
-#pragma warning (disable: 4250)
-
 class project_window : public window, public virtual project_window_i
 {
 	using base = window;
 
-	simulator_app_i*              const _app;
-	com_ptr<ID3D11DeviceContext1> const _d3d_dc;
-	com_ptr<IDWriteFactory>       const _dwrite_factory;
-	std::shared_ptr<project_i>    const _project;
-	std::unique_ptr<selection_i>        _selection;
-	std::unique_ptr<edit_window_i>      _edit_window;
-	std::unique_ptr<pw_area>            _pw;
-	std::unique_ptr<log_window_i>       _log_window;
-	std::unique_ptr<vlan_window_i>      _vlanWindow;
+	simulator_app_i*               const _app;
+	com_ptr<ID3D11DeviceContext1>  const _d3d_dc;
+	com_ptr<IDWriteFactory>        const _dwrite_factory;
+	std::shared_ptr<project_i>     const _project;
+	std::unique_ptr<selection_i>         _selection;
+	std::unique_ptr<edit_window_i>       _edit_window;
+	std::unique_ptr<properties_window_i> _pw;
+	std::unique_ptr<log_window_i>        _log_window;
+	std::unique_ptr<vlan_window_i>       _vlanWindow;
 	RECT _restore_bounds;
 	uint32_t _selectedVlanNumber = 1;
 	float _pw_desired_width_dips;
@@ -147,7 +63,7 @@ class project_window : public window, public virtual project_window_i
 
 public:
 	project_window (const project_window_create_params& create_params)
-		: window(create_params.app->GetHInstance(), class_params, 0, WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+		: window(class_params, 0, WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
 				 CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr)
 		, _app(create_params.app)
 		, _project(create_params.project)
@@ -236,18 +152,18 @@ public:
 
 	void create_property_grid()
 	{
-		_pw = std::make_unique<pw_area>(hwnd(), pg_restricted_rect(), _d3d_dc, _dwrite_factory);
+		_pw = _app->properties_window_factory()(hwnd(), pg_restricted_rect(), _d3d_dc, _dwrite_factory);
 		float desc_height;
 		if (TryReadRegFloat(RegValueNamePGDescHeight, desc_height))
-			_pw->pg->set_description_height(desc_height);
+			_pw->pg()->set_description_height(desc_height);
 		set_selection_to_pg();
 		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
-		_pw->pg->description_height_changed().add_handler<&project_window::on_pg_desc_height_changed>(this);
+		_pw->pg()->description_height_changed().add_handler<&project_window::on_pg_desc_height_changed>(this);
 	}
 
 	void destroy_property_grid()
 	{
-		_pw->pg->description_height_changed().remove_handler<&project_window::on_pg_desc_height_changed>(this);
+		_pw->pg()->description_height_changed().remove_handler<&project_window::on_pg_desc_height_changed>(this);
 		_pw = nullptr;
 		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, false);
 	}
@@ -267,7 +183,7 @@ public:
 
 	void create_log_window()
 	{
-		_log_window = log_window_factory (_app->GetHInstance(), hwnd(), log_restricted_rect(), _d3d_dc, _dwrite_factory, _selection.get(), _project);
+		_log_window = log_window_factory (hwnd(), log_restricted_rect(), _d3d_dc, _dwrite_factory, _selection.get(), _project);
 		SetMainMenuItemCheck (ID_VIEW_STPLOG, true);
 	}
 
@@ -302,7 +218,7 @@ public:
 
 	void on_selection_changed (selection_i* selection)
 	{
-		if (_pw->pg)
+		if (_pw)
 			set_selection_to_pg();
 	}
 
@@ -1034,7 +950,7 @@ public:
 	{
 		const auto& objs = _selection->objects();
 
-		_pw->pg->clear();
+		_pw->pg()->clear();
 
 		if (objs.empty())
 			return;
@@ -1070,7 +986,7 @@ public:
 				};
 			}
 
-			_pw->pg->add_section (first_section_name, objs);
+			_pw->pg()->add_section (first_section_name, objs);
 
 			auto first_tree_index = tree_selector(objs.front()).second;
 			bool all_same_tree_index = true;
@@ -1093,11 +1009,11 @@ public:
 			else
 				ss << " (multiple trees)";
 
-			_pw->pg->add_section (ss.str().c_str(), trees);
+			_pw->pg()->add_section (ss.str().c_str(), trees);
 		}
 		else if (all_of (objs.begin(), objs.end(), [](object* o) { return o->type() == &wire::_type; }))
 		{
-			_pw->pg->add_section("Wire Properties", objs);
+			_pw->pg()->add_section("Wire Properties", objs);
 		}
 		else
 			assert(false); // not implemented
