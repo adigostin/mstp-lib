@@ -584,12 +584,12 @@ public:
 		return nullptr;
 	}
 
-	ht_result HitTestObjects (D2D1_POINT_2F dLocation, float tolerance) const
+	ht_result hit_test_objects (D2D1_POINT_2F pd, float tolerance) const
 	{
 		auto& wires = _project->wires();
 		for (auto it = wires.rbegin(); it != wires.rend(); it++)
 		{
-			auto ht = it->get()->hit_test (this, dLocation, tolerance);
+			auto ht = it->get()->hit_test (this, pd, tolerance);
 			if (ht.object != nullptr)
 				return ht;
 		}
@@ -597,7 +597,7 @@ public:
 		auto& bridges = _project->bridges();
 		for (auto it = bridges.rbegin(); it != bridges.rend(); it++)
 		{
-			auto ht = it->get()->hit_test(this, dLocation, tolerance);
+			auto ht = it->get()->hit_test(this, pd, tolerance);
 			if (ht.object != nullptr)
 				return ht;
 		}
@@ -738,7 +738,7 @@ public:
 			return handled(true);
 		}
 
-		auto ht = HitTestObjects (ml.d, SnapDistance);
+		auto ht = hit_test_objects (ml.d, SnapDistance);
 		if (ht.object == nullptr)
 			_selection->clear();
 		else
@@ -844,7 +844,7 @@ public:
 		if (_state != nullptr)
 			return _state->cursor();
 
-		auto ht = HitTestObjects (pd, SnapDistance);
+		auto ht = hit_test_objects (pd, SnapDistance);
 
 		LPCWSTR idc = IDC_ARROW;
 		if (dynamic_cast<port*>(ht.object))
@@ -883,7 +883,7 @@ public:
 			return;
 		}
 
-		auto ht = HitTestObjects (pd, SnapDistance);
+		auto ht = hit_test_objects (pd, SnapDistance);
 		if (_htResult != ht)
 		{
 			_htResult = ht;
