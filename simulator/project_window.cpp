@@ -141,7 +141,7 @@ class project_window : public window, public virtual project_window_i
 	bool _restoring_size_from_registry = false;
 
 	enum class tool_window { none, props, vlan, log };
-	tool_window _windowBeingResized = tool_window::none;
+	tool_window _window_being_resized = tool_window::none;
 	LONG _resize_offset;
 
 public:
@@ -426,41 +426,6 @@ public:
 				return base_class_result;
 		}
 
-		if (msg == WM_SETCURSOR)
-		{
-			if (((HWND) wParam == hwnd) && (LOWORD (lParam) == HTCLIENT))
-			{
-				POINT pt;
-				BOOL bRes = ::GetCursorPos (&pt);
-				if (bRes)
-				{
-					bRes = ::ScreenToClient (hwnd, &pt); assert(bRes);
-					this->SetCursor(pt);
-					return 0;
-				}
-			}
-
-			return base_class_result;
-		}
-
-		if (msg == WM_LBUTTONDOWN)
-		{
-			ProcessWmLButtonDown (POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) }, (UINT) wParam);
-			return 0;
-		}
-
-		if (msg == WM_MOUSEMOVE)
-		{
-			process_wm_mousemove (POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) }, (UINT) wParam);
-			return 0;
-		}
-
-		if (msg == WM_LBUTTONUP)
-		{
-			ProcessWmLButtonUp (POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) }, (UINT) wParam);
-			return 0;
-		}
-
 		return base_class_result;
 	}
 
@@ -487,27 +452,32 @@ public:
 			_edit_window->move_window (edit_window_rect());
 	}
 
-	void ProcessWmLButtonDown (POINT pt, UINT modifierKeysDown)
+	virtual handled on_mouse_down (mouse_button button, modifier_key mks, POINT pp, D2D1_POINT_2F pd) override
 	{
-		if (_pw && (pt.x >= _pw->width_pixels()) && (pt.x < _pw->width_pixels() + splitter_width_pixels()))
+		if (button == mouse_button::left)
 		{
-			_windowBeingResized = tool_window::props;
-			_resize_offset = pt.x - _pw->width_pixels();
-			::SetCapture(hwnd());
+			if (_pw && (pp.x >= _pw->width_pixels()) && (pp.x < _pw->width_pixels() + splitter_width_pixels()))
+			{
+				_window_being_resized = tool_window::props;
+				_resize_offset = pp.x - _pw->width_pixels();
+				return handled(true);
+			}
+			else if ((_log_window != nullptr) && (pp.x >= _log_window->GetX() - splitter_width_pixels()) && (pp.x < _log_window->GetX()))
+			{
+				_window_being_resized = tool_window::log;
+				_resize_offset = _log_window->GetX() - pp.x;
+				return handled(true);
+			}
 		}
-		else if ((_log_window != nullptr) && (pt.x >= _log_window->GetX() - splitter_width_pixels()) && (pt.x < _log_window->GetX()))
-		{
-			_windowBeingResized = tool_window::log;
-			_resize_offset = _log_window->GetX() - pt.x;
-			::SetCapture(hwnd());
-		}
+
+		return handled(false);
 	}
 
-	void process_wm_mousemove (POINT pt, UINT modifierKeysDown)
+	virtual void on_mouse_move (modifier_key mks, POINT pp, D2D1_POINT_2F pd) override
 	{
-		if (_windowBeingResized == tool_window::props)
+		if (_window_being_resized == tool_window::props)
 		{
-			LONG pg_desired_width_pixels = pt.x - _resize_offset;
+			LONG pg_desired_width_pixels = pp.x - _resize_offset;
 			pg_desired_width_pixels = std::max (pg_desired_width_pixels, 0l);
 			pg_desired_width_pixels = std::min (pg_desired_width_pixels, client_width_pixels());
 			float new_pg_desired_width_dips = pg_desired_width_pixels * 96.0f / dpi();
@@ -522,9 +492,9 @@ public:
 				::UpdateWindow (_edit_window->hwnd());
 			}
 		}
-		else if (_windowBeingResized == tool_window::log)
+		else if (_window_being_resized == tool_window::log)
 		{
-			LONG log_desired_width_pixels = client_width_pixels() - pt.x - _resize_offset;
+			LONG log_desired_width_pixels = client_width_pixels() - pp.x - _resize_offset;
 			log_desired_width_pixels = std::max (log_desired_width_pixels, 0l);
 			log_desired_width_pixels = std::min (log_desired_width_pixels, client_width_pixels());
 			float new_log_desired_width_dips = log_desired_width_pixels * 96.0f / dpi();
@@ -541,34 +511,36 @@ public:
 		}
 	}
 
-	void ProcessWmLButtonUp (POINT pt, UINT modifierKeysDown)
+	virtual handled on_mouse_up (mouse_button button, modifier_key mks, POINT pp, D2D1_POINT_2F pd) override
 	{
-		if (_windowBeingResized == tool_window::props)
+		if (button == mouse_button::left)
 		{
-			WriteRegFloat (RegValueNamePropertiesWindowWidth, _pw_desired_width_dips);
-			_windowBeingResized = tool_window::none;
-			::ReleaseCapture();
+			if (_window_being_resized == tool_window::props)
+			{
+				WriteRegFloat (RegValueNamePropertiesWindowWidth, _pw_desired_width_dips);
+				_window_being_resized = tool_window::none;
+				return handled(true);
+			}
+			else if (_window_being_resized == tool_window::log)
+			{
+				WriteRegFloat (RegValueNameLogWindowWidth, _log_desired_width_dips);
+				_window_being_resized = tool_window::none;
+				return handled(true);
+			}
 		}
-		else if (_windowBeingResized == tool_window::log)
-		{
-			WriteRegFloat (RegValueNameLogWindowWidth, _log_desired_width_dips);
-			_windowBeingResized = tool_window::none;
-			::ReleaseCapture();
-		}
+
+		return handled(false);
 	}
 
-	void SetCursor (POINT pt)
+	virtual HCURSOR cursor_at (POINT pp, D2D1_POINT_2F pd) const override
 	{
-		if (_pw && (pt.x >= _pw->width_pixels()) && (pt.x < _pw->width_pixels() + splitter_width_pixels()))
-		{
-			::SetCursor (LoadCursor(nullptr, IDC_SIZEWE));
-		}
-		else if ((_log_window != nullptr) && (pt.x >= _log_window->GetX() - splitter_width_pixels()) && (pt.x < _log_window->GetX()))
-		{
-			::SetCursor (LoadCursor(nullptr, IDC_SIZEWE));
-		}
-		else
-			::SetCursor (LoadCursor(nullptr, IDC_ARROW));
+		if (_pw && (pp.x >= _pw->width_pixels()) && (pp.x < _pw->width_pixels() + splitter_width_pixels()))
+			return LoadCursor(nullptr, IDC_SIZEWE);
+
+		if ((_log_window != nullptr) && (pp.x >= _log_window->GetX() - splitter_width_pixels()) && (pp.x < _log_window->GetX()))
+			return LoadCursor(nullptr, IDC_SIZEWE);
+
+		return nullptr;
 	}
 
 	void ProcessWmPaint()
