@@ -13,11 +13,37 @@ class properties_window : public d2d_window, public virtual properties_window_i
 
 	std::unique_ptr<edge::property_grid_i> const _pg;
 
+	HWND _tooltip = nullptr;
+	POINT _last_tt_location = { -1, -1 };
+
 public:
 	properties_window (HWND parent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dwrite_factory)
 		: base (WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, parent, 0, d3d_dc, dwrite_factory)
 		, _pg(edge::property_grid_factory(this, client_rect_pixels()))
-	{ }
+	{
+		auto hinstance = (HINSTANCE)::GetWindowLongPtr (hwnd(), GWLP_HINSTANCE);
+
+		_tooltip = CreateWindowEx (WS_EX_TOPMOST, TOOLTIPS_CLASS, nullptr,
+			WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP,
+			CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+			hwnd(), nullptr, hinstance, nullptr);
+
+		TOOLINFO ti = { sizeof(TOOLINFO) };
+		ti.uFlags   = TTF_SUBCLASS;
+		ti.hwnd     = hwnd();
+		ti.lpszText = L"";
+		ti.rect     = client_rect_pixels();
+		SendMessage(_tooltip, TTM_ADDTOOL, 0, (LPARAM) (LPTOOLINFO) &ti);
+
+		SendMessage (_tooltip, TTM_SETDELAYTIME, TTDT_INITIAL, 1500);
+		SendMessage (_tooltip, TTM_SETDELAYTIME, TTDT_AUTOPOP, (LPARAM)(LONG)MAXSHORT);
+		SendMessage (_tooltip, TTM_SETMAXTIPWIDTH, 0, client_width_pixels());
+	}
+
+	~properties_window()
+	{
+		::DestroyWindow(_tooltip);
+	}
 
 	virtual property_grid_i* pg() const override { return _pg.get(); }
 
@@ -47,6 +73,33 @@ public:
 	{
 		base::on_mouse_move (mks, pp, pd);
 		_pg->on_mouse_move (mks, pp, pd);
+
+		if (_last_tt_location != pp)
+		{
+			_last_tt_location = pp;
+
+			::SendMessage (_tooltip, TTM_POP, 0, 0);
+
+			std::wstring text;
+			std::wstring title;
+
+			auto i = _pg->item_at(pd);
+			if (i.first)
+			{
+				title = utf8_to_utf16(i.first->description_title());
+				text  = utf8_to_utf16(i.first->description_text());
+
+				if (!title.empty() && text.empty())
+					text = L"--";
+			}
+
+			TOOLINFO ti = { sizeof(TOOLINFO) };
+			ti.hwnd     = hwnd();
+			ti.lpszText = text.data();
+			SendMessage(_tooltip, TTM_UPDATETIPTEXT, 0, (LPARAM)&ti);
+
+			SendMessage(_tooltip, TTM_SETTITLE, TTI_INFO, (LPARAM)title.data());
+		}
 	}
 
 	virtual handled on_key_down (uint32_t vkey, modifier_key mks) override
@@ -72,6 +125,13 @@ public:
 		base::on_client_size_changed(client_size_pixels, client_size_dips);
 		_pg->set_rect(client_rect_pixels());
 		::UpdateWindow(hwnd());
+
+		TOOLINFO ti = { sizeof(TOOLINFO) };
+		ti.uFlags   = TTF_SUBCLASS;
+		ti.hwnd     = hwnd();
+		ti.lpszText = L"";
+		ti.rect     = client_rect_pixels();
+		SendMessage(_tooltip, TTM_SETTOOLINFO, 0, (LPARAM) (LPTOOLINFO) &ti);
 	}
 
 	virtual void on_dpi_changed (UINT dpi) override

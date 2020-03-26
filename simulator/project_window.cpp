@@ -20,7 +20,6 @@ static constexpr wchar_t RegValueNameWindowRight[] = L"WindowRight";
 static constexpr wchar_t RegValueNameWindowBottom[] = L"WindowBottom";
 static constexpr wchar_t RegValueNamePropertiesWindowWidth[] = L"PropertiesWindowWidth";
 static constexpr wchar_t RegValueNameLogWindowWidth[] = L"LogWindowWidth";
-static constexpr wchar_t RegValueNamePGDescHeight[] = L"PropertyGridDescriptionHeight";
 
 static COMDLG_FILTERSPEC const ProjectFileDialogFileTypes[] =
 {
@@ -153,24 +152,14 @@ public:
 	void create_property_grid()
 	{
 		_pw = _app->properties_window_factory()(hwnd(), pg_restricted_rect(), _d3d_dc, _dwrite_factory);
-		float desc_height;
-		if (TryReadRegFloat(RegValueNamePGDescHeight, desc_height))
-			_pw->pg()->set_description_height(desc_height);
 		set_selection_to_pg();
 		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
-		_pw->pg()->description_height_changed().add_handler<&project_window::on_pg_desc_height_changed>(this);
 	}
 
 	void destroy_property_grid()
 	{
-		_pw->pg()->description_height_changed().remove_handler<&project_window::on_pg_desc_height_changed>(this);
 		_pw = nullptr;
 		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, false);
-	}
-
-	void on_pg_desc_height_changed (float height)
-	{
-		WriteRegFloat(RegValueNamePGDescHeight, height);
 	}
 
 	RECT log_restricted_rect() const
