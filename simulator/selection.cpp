@@ -20,48 +20,47 @@ public:
 	selection (project_i* project)
 		: _project(project)
 	{
-		_project->property_changing().add_handler (&on_project_property_changing, this);
+		_project->property_changing().add_handler<&selection::on_project_property_changing>(this);
 	}
 
 	~selection()
 	{
 		clear();
-		_project->property_changing().remove_handler (&on_project_property_changing, this);
+		_project->property_changing().remove_handler<&selection::on_project_property_changing>(this);
 	}
 
-	static void on_project_property_changing (void* callback_arg, object* project_obj, const property_change_args& args)
+	void on_project_property_changing (object* project_obj, const property_change_args& args)
 	{
-		auto s = static_cast<class selection*>(callback_arg);
 		auto project = dynamic_cast<project_i*>(project_obj);
 		if ((args.property == project->bridges_prop()) && (args.type == collection_property_change_type::remove))
 		{
 			bridge* b = project->bridges()[args.index].get();
 
-			for (size_t i = 0; i < s->_objects.size(); )
+			for (size_t i = 0; i < _objects.size(); )
 			{
-				auto so = s->_objects[i];
+				auto so = _objects[i];
 				if ((so == b) || ((dynamic_cast<port*>(so) != nullptr) && (static_cast<port*>(so)->bridge() == b)))
-					s->remove_internal(i);
+					remove_internal(i);
 				else
 					i++;
 			}
 
-			s->event_invoker<changed_e>()(s);
+			event_invoker<changed_e>()(this);
 		}
 		else if ((args.property == project->wires_prop()) && (args.type == collection_property_change_type::remove))
 		{
 			wire* w = project->wires()[args.index].get();
 
-			for (size_t i = 0; i < s->_objects.size(); )
+			for (size_t i = 0; i < _objects.size(); )
 			{
-				auto so = s->_objects[i];
+				auto so = _objects[i];
 				if (so == w)
-					s->remove_internal(i);
+					remove_internal(i);
 				else
 					i++;
 			}
 
-			s->event_invoker<changed_e>()(s);
+			event_invoker<changed_e>()(this);
 		}
 	}
 

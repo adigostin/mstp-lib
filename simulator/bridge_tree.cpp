@@ -11,8 +11,8 @@ using namespace edge;
 bridge_tree::bridge_tree (bridge* parent, size_t tree_index)
 	: _parent(parent), _tree_index(tree_index)
 {
-	_parent->property_changing().add_handler(&on_bridge_property_changing, this);
-	_parent->property_changed().add_handler(&on_bridge_property_changed, this);
+	_parent->property_changing().add_handler<&bridge_tree::on_bridge_property_changing>(this);
+	_parent->property_changed().add_handler<&bridge_tree::on_bridge_property_changed>(this);
 
 	::GetSystemTime(&_last_topology_change);
 	_topology_change_count = 0;
@@ -20,8 +20,8 @@ bridge_tree::bridge_tree (bridge* parent, size_t tree_index)
 
 bridge_tree::~bridge_tree()
 {
-	_parent->property_changed().remove_handler(&on_bridge_property_changed, this);
-	_parent->property_changing().remove_handler(&on_bridge_property_changing, this);
+	_parent->property_changed().remove_handler<&bridge_tree::on_bridge_property_changed>(this);
+	_parent->property_changing().remove_handler<&bridge_tree::on_bridge_property_changing>(this);
 }
 
 static const value_property* const properties_changed_on_stp_enable_disable[] = {
@@ -34,18 +34,16 @@ static const value_property* const properties_changed_on_stp_enable_disable[] = 
 	&bridge_tree::receiving_port_id_property,
 };
 
-void bridge_tree::on_bridge_property_changing (void* arg, object* obj, const property_change_args& args)
+void bridge_tree::on_bridge_property_changing (object* obj, const property_change_args& args)
 {
-	auto bt = static_cast<bridge_tree*>(arg);
 	for (auto it = std::begin(properties_changed_on_stp_enable_disable); it != std::end(properties_changed_on_stp_enable_disable); it++)
-		bt->on_property_changing(*it);
+		this->on_property_changing(*it);
 }
 
-void bridge_tree::on_bridge_property_changed (void* arg, object* obj, const property_change_args& args)
+void bridge_tree::on_bridge_property_changed (object* obj, const property_change_args& args)
 {
-	auto bt = static_cast<bridge_tree*>(arg);
 	for (auto it = std::rbegin(properties_changed_on_stp_enable_disable); it != std::rend(properties_changed_on_stp_enable_disable); it++)
-		bt->on_property_changed(*it);
+		this->on_property_changed(*it);
 }
 
 void bridge_tree::on_topology_change (unsigned int timestamp)

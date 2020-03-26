@@ -14,7 +14,7 @@ using namespace edge;
 
 #pragma warning (disable: 4250)
 
-class log_window : public d2d_window, public log_window_i
+class log_window : public d2d_window, public virtual log_window_i
 {
 	using base = d2d_window;
 
@@ -45,27 +45,21 @@ public:
 
 		_numberOfLinesFitting = CalcNumberOfLinesFitting (_textFormat, client_height(), dWriteFactory);
 
-		_selection->changed().add_handler (&OnSelectionChanged, this);
+		_selection->changed().add_handler<&log_window::on_selection_changed>(this);
 	}
 
 	~log_window()
 	{
 		SelectBridge(nullptr);
-		_selection->changed().remove_handler(&OnSelectionChanged, this);
+		_selection->changed().remove_handler<&log_window::on_selection_changed>(this);
 		if (_bridge != nullptr)
-			_bridge->log_line_generated().remove_handler(OnLogLineGeneratedStatic, this);
+			_bridge->log_line_generated().remove_handler<&log_window::on_log_line_generated>(this);
 	}
 
-	virtual HWND hwnd() const override { return base::hwnd(); }
-
-	using base::invalidate;
-
-	static void OnSelectionChanged (void* callbackArg, selection_i* selection)
+	void on_selection_changed (selection_i* selection)
 	{
-		auto logArea = static_cast<log_window*>(callbackArg);
-
 		if (selection->objects().size() != 1)
-			logArea->SelectBridge(nullptr);
+			SelectBridge(nullptr);
 		else
 		{
 			auto b = dynamic_cast<bridge*>(selection->objects().front());
@@ -76,7 +70,7 @@ public:
 					b = port->bridge();
 			}
 
-			logArea->SelectBridge(b);
+			SelectBridge(b);
 		}
 	}
 
@@ -123,12 +117,7 @@ public:
 		}
 	}
 
-	static void OnLogLineGeneratedStatic (void* callbackArg, bridge* b, const BridgeLogLine* ll)
-	{
-		static_cast<log_window*>(callbackArg)->OnLogLineGenerated(ll);
-	}
-
-	void OnLogLineGenerated (const BridgeLogLine* ll)
+	void on_log_line_generated (bridge* b, const BridgeLogLine* ll)
 	{
 		if (((_selectedPort == -1) || (_selectedPort == ll->portIndex))
 			&& ((_selectedTree == -1) || (_selectedTree == ll->treeIndex)))
@@ -176,24 +165,23 @@ public:
 		}
 	}
 
-	static void on_log_cleared(void* arg, bridge* b)
+	void on_log_cleared(bridge* b)
 	{
-		auto lw = static_cast<log_window*>(arg);
-		if (lw->_animationScrollFramesRemaining > 0)
-			lw->EndAnimation();
-		lw->_lines.clear();
-		lw->_animationCurrentLineCount = lw->_animationEndLineCount = 0;
-		lw->_topLineIndex = 0;
+		if (_animationScrollFramesRemaining > 0)
+			EndAnimation();
+		_lines.clear();
+		_animationCurrentLineCount = _animationEndLineCount = 0;
+		_topLineIndex = 0;
 
 		SCROLLINFO si = { sizeof (si) };
 		si.fMask = SIF_RANGE | SIF_PAGE | SIF_POS | SIF_DISABLENOSCROLL;
 		si.nMin = 0;
 		si.nMax = 0;
 		si.nPos = 0;
-		si.nPage = lw->_numberOfLinesFitting;
-		SetScrollInfo (lw->hwnd(), SB_VERT, &si, TRUE);
+		si.nPage = _numberOfLinesFitting;
+		SetScrollInfo (hwnd(), SB_VERT, &si, TRUE);
 
-		::InvalidateRect (lw->hwnd(), nullptr, FALSE);
+		::InvalidateRect (hwnd(), nullptr, FALSE);
 	}
 
 	void SelectBridge (bridge* b)
@@ -206,8 +194,8 @@ public:
 					EndAnimation();
 
 				_lines.clear();
-				_bridge->log_cleared().remove_handler (on_log_cleared, this);
-				_bridge->log_line_generated().remove_handler (OnLogLineGeneratedStatic, this);
+				_bridge->log_cleared().remove_handler<&log_window::on_log_cleared>(this);
+				_bridge->log_line_generated().remove_handler<&log_window::on_log_line_generated>(this);
 				_bridge = nullptr;
 			}
 
@@ -224,8 +212,8 @@ public:
 					}
 				}
 
-				_bridge->log_line_generated().add_handler (OnLogLineGeneratedStatic, this);
-				_bridge->log_cleared().add_handler (on_log_cleared, this);
+				_bridge->log_line_generated().add_handler<&log_window::on_log_line_generated>(this);
+				_bridge->log_cleared().add_handler<&log_window::on_log_cleared>(this);
 			}
 
 			_topLineIndex = std::max (0, (int) _lines.size() - _numberOfLinesFitting);

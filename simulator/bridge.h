@@ -157,7 +157,7 @@ public:
 	uint32_t tx_hold_count() const { return STP_GetTxHoldCount(_stpBridge); }
 	void set_tx_hold_count (uint32_t value);
 private:
-	static void OnPortInvalidate (void* callbackArg, renderable_object* object);
+	void on_port_invalidated (renderable_object* object);
 	void OnLinkPulseTick();
 	void ProcessReceivedPackets();
 

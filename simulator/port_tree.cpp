@@ -51,8 +51,8 @@ std::unordered_set<port_tree*> port_tree::_trees;
 port_tree::port_tree (port* port, size_t tree_index)
 	: _port(port), _tree_index(tree_index)
 {
-	_port->bridge()->property_changing().add_handler(&on_bridge_property_changing, this);
-	_port->bridge()->property_changed().add_handler(&on_bridge_property_changed, this);
+	_port->bridge()->property_changing().add_handler<&port_tree::on_bridge_property_changing>(this);
+	_port->bridge()->property_changed().add_handler<&port_tree::on_bridge_property_changed>(this);
 
 	if (_trees.empty())
 		_flush_timer = ::SetTimer (nullptr, 0, 100, flush_timer_proc);
@@ -65,32 +65,28 @@ port_tree::~port_tree()
 	if (_trees.empty())
 		::KillTimer (nullptr, _flush_timer);
 
-	_port->bridge()->property_changed().remove_handler(&on_bridge_property_changed, this);
-	_port->bridge()->property_changing().remove_handler(&on_bridge_property_changing, this);
+	_port->bridge()->property_changed().remove_handler<&port_tree::on_bridge_property_changed>(this);
+	_port->bridge()->property_changing().remove_handler<&port_tree::on_bridge_property_changing>(this);
 }
 
-void port_tree::on_bridge_property_changing (void* arg, object* obj, const property_change_args& args)
+void port_tree::on_bridge_property_changing (object* obj, const property_change_args& args)
 {
-	auto this_ = static_cast<port_tree*>(arg);
-
 	if (args.property == &bridge::stp_enabled_property)
 	{
-		this_->on_property_changing(&learning_property);
-		this_->on_property_changing(&forwarding_property);
-		this_->on_property_changing(&role_property);
+		on_property_changing(&learning_property);
+		on_property_changing(&forwarding_property);
+		on_property_changing(&role_property);
 	}
 }
 
-void port_tree::on_bridge_property_changed (void* arg, object* obj, const property_change_args& args)
+void port_tree::on_bridge_property_changed (object* obj, const property_change_args& args)
 {
-	auto this_ = static_cast<port_tree*>(arg);
-
 	if (args.property == &bridge::stp_enabled_property)
 	{
-		this_->on_property_changed(&role_property);
-		this_->on_property_changed(&forwarding_property);
-		this_->on_property_changed(&learning_property);
-		this_->_port->invalidate();
+		on_property_changed(&role_property);
+		on_property_changed(&forwarding_property);
+		on_property_changed(&learning_property);
+		_port->invalidate();
 	}
 }
 

@@ -61,9 +61,8 @@ using selection_factory_t = std::unique_ptr<selection_i>(*)(project_i* project);
 
 // ============================================================================
 
-struct __declspec(novtable) log_window_i abstract : edge::win32_window_i
+struct __declspec(novtable) log_window_i : virtual edge::win32_window_i
 {
-	virtual ~log_window_i() { }
 };
 using log_window_factory_t = std::unique_ptr<log_window_i>(*const)(HINSTANCE hInstance, HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dWriteFactory, selection_i* selection, const std::shared_ptr<project_i>& project);
 extern const log_window_factory_t log_window_factory;
@@ -152,8 +151,8 @@ struct __declspec(novtable) project_i
 	virtual ~project_i() { }
 
 	struct invalidate_e : public edge::event<invalidate_e, project_i*> { };
-	struct loaded_e : public edge::event<loaded_e, project_i*> { };
-	struct ChangedFlagChangedEvent : public edge::event<ChangedFlagChangedEvent, project_i*> { };
+	struct loaded_event : public edge::event<loaded_event, project_i*> { };
+	struct changed_flag_changed_event : public edge::event<changed_flag_changed_event, project_i*> { };
 	struct ChangedEvent : public edge::event<ChangedEvent, project_i*> { };
 
 	virtual const std::vector<std::unique_ptr<bridge>>& bridges() const = 0;
@@ -163,7 +162,7 @@ struct __declspec(novtable) project_i
 	virtual void insert_wire (size_t index, std::unique_ptr<wire>&& wire) = 0;
 	virtual std::unique_ptr<wire> remove_wire (size_t index) = 0;
 	virtual invalidate_e::subscriber invalidated() = 0;
-	virtual loaded_e::subscriber GetLoadedEvent() = 0;
+	virtual loaded_event::subscriber loaded() = 0;
 	virtual mac_address alloc_mac_address_range (size_t count) = 0;
 	virtual const std::wstring& file_path() const = 0;
 	virtual HRESULT save (const wchar_t* filePath) = 0;
@@ -174,7 +173,7 @@ struct __declspec(novtable) project_i
 	virtual bool simulation_paused() const = 0;
 	virtual bool GetChangedFlag() const = 0;
 	virtual void SetChangedFlag (bool projectChangedFlag) = 0;
-	virtual ChangedFlagChangedEvent::subscriber GetChangedFlagChangedEvent() = 0;
+	virtual changed_flag_changed_event::subscriber changed_flag_changed() = 0;
 	virtual ChangedEvent::subscriber GetChangedEvent() = 0;
 	virtual const object_collection_property* bridges_prop() const = 0;
 	virtual const object_collection_property* wires_prop() const = 0;

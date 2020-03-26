@@ -46,22 +46,21 @@ public:
 		else
 			assert(false);
 
-		_project->property_changing().add_handler(&on_project_property_changing, this);
+		_project->property_changing().add_handler<&mst_config_id_editor::on_project_property_changing>(this);
 	}
 
 	~mst_config_id_editor()
 	{
-		_project->property_changing().remove_handler(&on_project_property_changing, this);
+		_project->property_changing().remove_handler<&mst_config_id_editor::on_project_property_changing>(this);
 	}
 
-	static void on_project_property_changing (void* callbackArg, object* o, const edge::property_change_args& e)
+	void on_project_property_changing (object* o, const edge::property_change_args& e)
 	{
-		auto dialog = static_cast<mst_config_id_editor*>(callbackArg);
-		if ((e.property == dialog->_project->bridges_prop()) && (e.type == collection_property_change_type::remove))
+		if ((e.property == _project->bridges_prop()) && (e.type == collection_property_change_type::remove))
 		{
-			auto bridge_being_removed = dialog->_project->bridges()[e.index].get();
-			if (dialog->_bridges.count(bridge_being_removed))
-				::EndDialog (dialog->_hwnd, IDCANCEL);
+			auto bridge_being_removed = _project->bridges()[e.index].get();
+			if (_bridges.count(bridge_being_removed))
+				::EndDialog (_hwnd, IDCANCEL);
 		}
 	}
 

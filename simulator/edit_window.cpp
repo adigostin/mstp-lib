@@ -66,61 +66,57 @@ public:
 		dwrite_factory()->CreateTextFormat (L"Tahoma", nullptr,  DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
 			DWRITE_FONT_STRETCH_CONDENSED, 11, L"en-US", &_legendFont); assert(SUCCEEDED(hr));
 
-		_selection->changed().add_handler (&OnSelectionChanged, this);
-		_project->property_changing().add_handler(&on_project_property_changing, this);
-		_project->invalidated().add_handler (&OnProjectInvalidate, this);
-		_pw->selected_vlan_number_changed().add_handler (&on_selected_vlan_changed, this);
+		_selection->changed().add_handler<&edit_window::on_selection_changed>(this);
+		_project->property_changing().add_handler<&edit_window::on_project_property_changing>(this);
+		_project->invalidated().add_handler<&edit_window::on_project_invalidated>(this);
+		_pw->selected_vlan_number_changed().add_handler<&edit_window::on_selected_vlan_changed>(this);
 	}
 
 	virtual ~edit_window()
 	{
-		_pw->selected_vlan_number_changed().remove_handler (&on_selected_vlan_changed, this);
-		_project->invalidated().remove_handler (&OnProjectInvalidate, this);
-		_project->property_changing().remove_handler(&on_project_property_changing, this);
-		_selection->changed().remove_handler (&OnSelectionChanged, this);
+		_pw->selected_vlan_number_changed().remove_handler<&edit_window::on_selected_vlan_changed>(this);
+		_project->invalidated().remove_handler<&edit_window::on_project_invalidated>(this);
+		_project->property_changing().remove_handler<&edit_window::on_project_property_changing>(this);
+		_selection->changed().remove_handler<&edit_window::on_selection_changed>(this);
 	}
 
 	virtual HWND hwnd() const override { return base::hwnd(); }
 
 	using base::invalidate;
 
-	static void on_selected_vlan_changed (void* callbackArg, project_window_i* pw, unsigned int vlanNumber)
+	void on_selected_vlan_changed (project_window_i* pw, unsigned int vlanNumber)
 	{
-		auto window = static_cast<edit_window*>(callbackArg);
-		::InvalidateRect (window->hwnd(), nullptr, FALSE);
+		invalidate();
 	}
 
-	static void on_project_property_changing (void* callback_arg, object* project_obj, const property_change_args& args)
+	void on_project_property_changing (object* project_obj, const property_change_args& args)
 	{
-		auto window = static_cast<edit_window*>(callback_arg);
 		auto project = dynamic_cast<project_i*>(project_obj);
 
 		if ((args.property == project->bridges_prop())
 			&& (args.type == collection_property_change_type::remove)
-			&& (window->_htResult.object == project->bridges()[args.index].get()))
+			&& (_htResult.object == project->bridges()[args.index].get()))
 		{
-			window->_htResult = { nullptr, 0 };
-			::InvalidateRect (window->hwnd(), nullptr, FALSE);
+			_htResult = { nullptr, 0 };
+			::InvalidateRect (hwnd(), nullptr, FALSE);
 		}
 		else if ((args.property == project->wires_prop())
 			&& (args.type == collection_property_change_type::remove)
-			&& (window->_htResult.object == project->wires()[args.index].get()))
+			&& (_htResult.object == project->wires()[args.index].get()))
 		{
-			window->_htResult = { nullptr, 0 };
-			::InvalidateRect (window->hwnd(), nullptr, FALSE);
+			_htResult = { nullptr, 0 };
+			::InvalidateRect (hwnd(), nullptr, FALSE);
 		}
 	}
 
-	static void OnProjectInvalidate (void* callbackArg, project_i*)
+	void on_project_invalidated (project_i*)
 	{
-		auto window = static_cast<edit_window*>(callbackArg);
-		::InvalidateRect (window->hwnd(), nullptr, FALSE);
+		invalidate();
 	}
 
-	static void OnSelectionChanged (void* callbackArg, selection_i* selection)
+	void on_selection_changed (selection_i* selection)
 	{
-		auto window = static_cast<edit_window*>(callbackArg);
-		::InvalidateRect (window->hwnd(), nullptr, FALSE);
+		invalidate();
 	}
 
 	struct LegendInfoEntry
@@ -683,7 +679,7 @@ public:
 		}
 	}
 
-	virtual handled on_virtual_key_down (uint32_t vkey, modifier_key mks) override
+	virtual handled on_key_down (uint32_t vkey, modifier_key mks) override
 	{
 		if (_state)
 		{
@@ -706,7 +702,7 @@ public:
 		return handled(false);
 	}
 
-	virtual handled on_virtual_key_up (uint32_t vkey, modifier_key mks) override
+	virtual handled on_key_up (uint32_t vkey, modifier_key mks) override
 	{
 		if (_state)
 		{

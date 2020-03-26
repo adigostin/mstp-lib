@@ -45,8 +45,8 @@ public:
 		static_cast<project_child*>(b)->on_added_to_project(this);
 		this->on_property_changed(args);
 
-		b->invalidated().add_handler (&on_project_child_invalidated, this);
-		b->packet_transmit().add_handler (&on_packet_transmit, this);
+		b->invalidated().add_handler<&project::on_project_child_invalidated>(this);
+		b->packet_transmit().add_handler<&project::on_packet_transmit>(this);
 		this->event_invoker<invalidate_e>()(this);
 	}
 
@@ -63,8 +63,8 @@ public:
 		}))
 			assert(false); // can't remove a connected bridge
 
-		b->packet_transmit().remove_handler (&on_packet_transmit, this);
-		b->invalidated().remove_handler (&on_project_child_invalidated, this);
+		b->packet_transmit().remove_handler<&project::on_packet_transmit>(this);
+		b->invalidated().remove_handler<&project::on_project_child_invalidated>(this);
 
 		property_change_args args = { &bridges_property, index, collection_property_change_type::remove };
 		this->on_property_changing(args);
@@ -91,7 +91,7 @@ public:
 		static_cast<project_child*>(w)->on_added_to_project(this);
 		this->on_property_changed(args);
 
-		w->invalidated().add_handler (&on_project_child_invalidated, this);
+		w->invalidated().add_handler<&project::on_project_child_invalidated>(this);
 		this->event_invoker<invalidate_e>()(this);
 	}
 
@@ -101,7 +101,7 @@ public:
 		wire* w = _wires[index].get();
 		assert(w->_project == this);
 
-		_wires[index]->invalidated().remove_handler (&on_project_child_invalidated, this);
+		_wires[index]->invalidated().remove_handler<&project::on_project_child_invalidated>(this);
 
 		property_change_args args = { &wires_property, index, collection_property_change_type::remove };
 		this->on_property_changing (args);
@@ -114,24 +114,22 @@ public:
 		return result;
 	}
 
-	static void on_packet_transmit (void* callbackArg, bridge* bridge, size_t txPortIndex, packet_t&& pi)
+	void on_packet_transmit (bridge* bridge, size_t txPortIndex, packet_t&& pi)
 	{
-		auto project = static_cast<class project*>(callbackArg);
 		auto tx_port = bridge->ports().at(txPortIndex).get();
-		auto rx_port = project->find_connected_port(tx_port);
+		auto rx_port = find_connected_port(tx_port);
 		if (rx_port != nullptr)
 			rx_port->bridge()->enqueue_received_packet(std::move(pi), rx_port->port_index());
 	}
 
-	static void on_project_child_invalidated (void* callbackArg, renderable_object* object)
+	void on_project_child_invalidated (renderable_object* object)
 	{
-		auto project = static_cast<class project*>(callbackArg);
-		project->event_invoker<invalidate_e>()(project);
+		event_invoker<invalidate_e>()(this);
 	}
 
 	virtual invalidate_e::subscriber invalidated() override final { return invalidate_e::subscriber(this); }
 
-	virtual loaded_e::subscriber GetLoadedEvent() override final { return loaded_e::subscriber(this); }
+	virtual loaded_event::subscriber loaded() override final { return loaded_event::subscriber(this); }
 
 	virtual bool IsWireForwarding (wire* wire, unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const override final
 	{
@@ -257,7 +255,7 @@ public:
 		deserialize_to (projectElement, this, known_types());
 
 		_path = filePath;
-		this->event_invoker<loaded_e>()(this);
+		this->event_invoker<loaded_event>()(this);
 		return S_OK;
 	}
 
@@ -288,11 +286,11 @@ public:
 		if (_changedFlag != changedFlag)
 		{
 			_changedFlag = changedFlag;
-			this->event_invoker<ChangedFlagChangedEvent>()(this);
+			this->event_invoker<changed_flag_changed_event>()(this);
 		}
 	}
 
-	virtual ChangedFlagChangedEvent::subscriber GetChangedFlagChangedEvent() override final { return ChangedFlagChangedEvent::subscriber(this); }
+	virtual changed_flag_changed_event::subscriber changed_flag_changed() override final { return changed_flag_changed_event::subscriber(this); }
 
 	virtual ChangedEvent::subscriber GetChangedEvent() override final { return ChangedEvent::subscriber(this); }
 

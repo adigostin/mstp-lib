@@ -70,37 +70,37 @@ struct pw_area : d2d_window
 	virtual handled on_mouse_down (mouse_button button, modifier_key mks, POINT pp, D2D1_POINT_2F pd) override
 	{
 		return base::on_mouse_down (button, mks, pp, pd)
-			|| pg->process_mouse_down (button, mks, pp, pd);
+			|| pg->on_mouse_down (button, mks, pp, pd);
 	}
 
 	virtual handled on_mouse_up (mouse_button button, modifier_key mks, POINT pp, D2D1_POINT_2F pd) override
 	{
 		return base::on_mouse_up (button, mks, pp, pd)
-			|| pg->process_mouse_up (button, mks, pp, pd);
+			|| pg->on_mouse_up (button, mks, pp, pd);
 	}
 
 	virtual void on_mouse_move (modifier_key mks, POINT pp, D2D1_POINT_2F pd) override
 	{
 		base::on_mouse_move (mks, pp, pd);
-		pg->process_mouse_move (mks, pp, pd);
+		pg->on_mouse_move (mks, pp, pd);
 	}
 
-	virtual handled on_virtual_key_down (uint32_t vkey, modifier_key mks) override
+	virtual handled on_key_down (uint32_t vkey, modifier_key mks) override
 	{
-		return base::on_virtual_key_down (vkey, mks)
-			|| pg->process_key_down(vkey, mks);
+		return base::on_key_down (vkey, mks)
+			|| pg->on_key_down(vkey, mks);
 	}
 
-	virtual handled on_virtual_key_up (uint32_t vkey, modifier_key mks) override
+	virtual handled on_key_up (uint32_t vkey, modifier_key mks) override
 	{
-		return base::on_virtual_key_up (vkey, mks)
-			|| pg->process_key_up(vkey, mks);
+		return base::on_key_up (vkey, mks)
+			|| pg->on_key_up(vkey, mks);
 	}
 
 	virtual handled on_char_key (uint32_t key) override
 	{
 		return base::on_char_key(key)
-			|| pg->process_char_key(key);
+			|| pg->on_char_key(key);
 	}
 
 	virtual void on_client_size_changed (SIZE client_size_pixels, D2D1_SIZE_F client_size_dips) override
@@ -192,20 +192,20 @@ public:
 		if (auto recentFiles = GetRecentFileList(); !recentFiles.empty())
 			AddRecentFileMenuItems(recentFiles);
 
-		_project->GetChangedFlagChangedEvent().add_handler (&OnProjectChangedFlagChanged, this);
-		_app->project_window_added().add_handler (&OnProjectWindowAdded, this);
-		_app->project_window_removed().add_handler (&OnProjectWindowRemoved, this);
-		_project->GetLoadedEvent().add_handler (&OnProjectLoaded, this);
-		_selection->changed().add_handler (&on_selection_changed, this);
+		_project->changed_flag_changed().add_handler<&project_window::on_project_changed_flag_changed>(this);
+		_app->project_window_added().add_handler<&project_window::on_project_window_added>(this);
+		_app->project_window_removed().add_handler<&project_window::on_project_window_removed>(this);
+		_project->loaded().add_handler<&project_window::on_project_loaded>(this);
+		_selection->changed().add_handler<&project_window::on_selection_changed>(this);
 	}
 
 	~project_window()
 	{
-		_selection->changed().remove_handler (&on_selection_changed, this);
-		_project->GetLoadedEvent().remove_handler (&OnProjectLoaded, this);
-		_app->project_window_removed().remove_handler (&OnProjectWindowRemoved, this);
-		_app->project_window_added().remove_handler (&OnProjectWindowAdded, this);
-		_project->GetChangedFlagChangedEvent().remove_handler (&OnProjectChangedFlagChanged, this);
+		_selection->changed().remove_handler<&project_window::on_selection_changed>(this);
+		_project->loaded().remove_handler<&project_window::on_project_loaded>(this);
+		_app->project_window_removed().remove_handler<&project_window::on_project_window_removed>(this);
+		_app->project_window_added().remove_handler<&project_window::on_project_window_added>(this);
+		_project->changed_flag_changed().remove_handler<&project_window::on_project_changed_flag_changed>(this);
 
 		// Destroy things explicitly, and in this order, because they keep raw pointers to each other.
 		// This needs refactoring!
@@ -241,20 +241,19 @@ public:
 			_pw->pg->set_description_height(desc_height);
 		set_selection_to_pg();
 		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
-		_pw->pg->description_height_changed().add_handler(&on_pg_desc_height_changed, this);
+		_pw->pg->description_height_changed().add_handler<&project_window::on_pg_desc_height_changed>(this);
 	}
 
 	void destroy_property_grid()
 	{
-		_pw->pg->description_height_changed().remove_handler(&on_pg_desc_height_changed, this);
+		_pw->pg->description_height_changed().remove_handler<&project_window::on_pg_desc_height_changed>(this);
 		_pw = nullptr;
 		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, false);
 	}
 
-	static void on_pg_desc_height_changed (void* arg, float height)
+	void on_pg_desc_height_changed (float height)
 	{
-		auto pw = static_cast<project_window*>(arg);
-		pw->WriteRegFloat(RegValueNamePGDescHeight, height);
+		WriteRegFloat(RegValueNamePGDescHeight, height);
 	}
 
 	RECT log_restricted_rect() const
@@ -277,38 +276,33 @@ public:
 		SetMainMenuItemCheck (ID_VIEW_STPLOG, false);
 	}
 
-	static void OnProjectLoaded (void* callbackArg, project_i* project)
+	void on_project_loaded (project_i* project)
 	{
-		auto pw = static_cast<project_window*>(callbackArg);
-		pw->SetWindowTitle();
-		pw->_edit_window->zoom_all();
+		SetWindowTitle();
+		_edit_window->zoom_all();
 	}
 
-	static void OnProjectWindowAdded (void* callbackArg, project_window_i* pw)
+	void on_project_window_added (project_window_i* pw)
 	{
-		auto thispw = static_cast<project_window*>(callbackArg);
-		if (pw->project() == thispw->project())
-			thispw->SetWindowTitle();
+		if (pw->project() == _project.get())
+			SetWindowTitle();
 	}
 
-	static void OnProjectWindowRemoved (void* callbackArg, project_window_i* pw)
+	void on_project_window_removed (project_window_i* pw)
 	{
-		auto thispw = static_cast<project_window*>(callbackArg);
-		if (pw->project() == thispw->project())
-			thispw->SetWindowTitle();
+		if (pw->project() == _project.get())
+			SetWindowTitle();
 	}
 
-	static void OnProjectChangedFlagChanged (void* callbackArg, project_i* project)
+	void on_project_changed_flag_changed (project_i* project)
 	{
-		auto pw = static_cast<project_window*>(callbackArg);
-		pw->SetWindowTitle();
+		SetWindowTitle();
 	}
 
-	static void on_selection_changed (void* callbackArg, selection_i* selection)
+	void on_selection_changed (selection_i* selection)
 	{
-		auto pw = static_cast<project_window*>(callbackArg);
-		if (pw->_pw->pg != nullptr)
-			pw->set_selection_to_pg();
+		if (_pw->pg)
+			set_selection_to_pg();
 	}
 
 	LONG GetVlanWindowLeft() const
@@ -1103,7 +1097,7 @@ public:
 				};
 			}
 
-			_pw->pg->add_section (first_section_name, objs.data(), objs.size());
+			_pw->pg->add_section (first_section_name, objs);
 
 			auto first_tree_index = tree_selector(objs.front()).second;
 			bool all_same_tree_index = true;
@@ -1126,11 +1120,11 @@ public:
 			else
 				ss << " (multiple trees)";
 
-			_pw->pg->add_section (ss.str().c_str(), trees.data(), trees.size());
+			_pw->pg->add_section (ss.str().c_str(), trees);
 		}
 		else if (all_of (objs.begin(), objs.end(), [](object* o) { return o->type() == &wire::_type; }))
 		{
-			_pw->pg->add_section("Wire Properties", objs.data(), objs.size());
+			_pw->pg->add_section("Wire Properties", objs);
 		}
 		else
 			assert(false); // not implemented

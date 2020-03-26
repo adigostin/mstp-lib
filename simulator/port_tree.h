@@ -53,8 +53,8 @@ class port_tree : public edge::object
 	static UINT_PTR _flush_timer;
 	static std::unordered_set<port_tree*> _trees;
 
-	static void on_bridge_property_changing (void* arg, object* obj, const property_change_args& args);
-	static void on_bridge_property_changed (void* arg, object* obj, const property_change_args& args);
+	void on_bridge_property_changing (object* obj, const property_change_args& args);
+	void on_bridge_property_changed (object* obj, const property_change_args& args);
 	static void CALLBACK flush_timer_proc (HWND hwnd, UINT, UINT_PTR, DWORD);
 
 public:

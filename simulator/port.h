@@ -50,8 +50,8 @@ class port : public renderable_object
 	static constexpr uint32_t MissedLinkPulseCounterMax = 3;
 	uint32_t _missedLinkPulseCounter = MissedLinkPulseCounterMax;
 
-	static void on_bridge_property_changing (void* arg, object* obj, const property_change_args& args);
-	static void on_bridge_property_changed (void* arg, object* obj, const property_change_args& args);
+	void on_bridge_property_changing (object* obj, const property_change_args& args);
+	void on_bridge_property_changed  (object* obj, const property_change_args& args);
 
 public:
 	port (class bridge* bridge, size_t port_index, side side, float offset);

@@ -43,15 +43,15 @@ public:
 		::GetWindowRect(_hwnd, &rc);
 		::MoveWindow (_hwnd, location.x, location.y, rc.right - rc.left, rc.bottom - rc.top, TRUE);
 
-		_selection->added().add_handler (&OnAddedToSelection, this);
-		_selection->removing().add_handler (&OnRemovingFromSelection, this);
-		_selection->changed().add_handler (&OnSelectionChanged, this);
-		_pw->selected_vlan_number_changed().add_handler (&on_selected_vlan_changed, this);
+		_selection->added().add_handler<&vlan_window::on_added_to_selection>(this);
+		_selection->removing().add_handler<&vlan_window::on_removing_from_selection>(this);
+		_selection->changed().add_handler<&vlan_window::on_selection_changed>(this);
+		_pw->selected_vlan_number_changed().add_handler<&vlan_window::on_selected_vlan_changed>(this);
 
 		for (auto o : _selection->objects())
 		{
 			if (auto b = dynamic_cast<bridge*>(o); b != nullptr)
-				b->property_changed().add_handler (&OnBridgePropertyChanged, this);
+				b->property_changed().add_handler<&vlan_window::on_bridge_property_changed>(this);
 		}
 	}
 
@@ -60,13 +60,13 @@ public:
 		for (auto o : _selection->objects())
 		{
 			if (auto b = dynamic_cast<bridge*>(o); b != nullptr)
-				b->property_changed().remove_handler (&OnBridgePropertyChanged, this);
+				b->property_changed().remove_handler<&vlan_window::on_bridge_property_changed>(this);
 		}
 
-		_pw->selected_vlan_number_changed().remove_handler (&on_selected_vlan_changed, this);
-		_selection->changed().remove_handler (&OnSelectionChanged, this);
-		_selection->removing().remove_handler (&OnRemovingFromSelection, this);
-		_selection->added().remove_handler (&OnAddedToSelection, this);
+		_pw->selected_vlan_number_changed().remove_handler<&vlan_window::on_selected_vlan_changed>(this);
+		_selection->changed().remove_handler<&vlan_window::on_selection_changed>(this);
+		_selection->removing().remove_handler<&vlan_window::on_removing_from_selection>(this);
+		_selection->added().remove_handler<&vlan_window::on_added_to_selection>(this);
 
 		if (_hwnd != nullptr)
 			::DestroyWindow(_hwnd);
@@ -205,33 +205,33 @@ public:
 		return { FALSE, 0 };
 	}
 
-	static void OnAddedToSelection (void* callbackArg, selection_i* selection, edge::object* obj)
+	void on_added_to_selection (selection_i* selection, edge::object* obj)
 	{
 		auto b = dynamic_cast<bridge*>(obj);
 		if (b != nullptr)
-			b->property_changed().add_handler (&OnBridgePropertyChanged, callbackArg);
+			b->property_changed().add_handler<&vlan_window::on_bridge_property_changed>(this);
 	}
 
-	static void OnRemovingFromSelection (void* callbackArg, selection_i* selection, edge::object* obj)
+	void on_removing_from_selection (selection_i* selection, edge::object* obj)
 	{
 		auto b = dynamic_cast<bridge*>(obj);
 		if (b != nullptr)
-			b->property_changed().remove_handler (&OnBridgePropertyChanged, callbackArg);
+			b->property_changed().remove_handler<&vlan_window::on_bridge_property_changed>(this);
 	}
 
-	static void OnBridgePropertyChanged (void* callbackArg, edge::object* o, const edge::property_change_args& args)
+	void on_bridge_property_changed (edge::object* o, const edge::property_change_args& args)
 	{
-		static_cast<vlan_window*>(callbackArg)->LoadSelectedTreeEdit();
+		LoadSelectedTreeEdit();
 	}
 
-	static void OnSelectionChanged (void* callbackArg, selection_i* selection)
+	void on_selection_changed (selection_i* selection)
 	{
-		static_cast<vlan_window*>(callbackArg)->LoadSelectedTreeEdit();
+		LoadSelectedTreeEdit();
 	}
 
-	static void on_selected_vlan_changed (void* callbackArg, project_window_i* pw, unsigned int vlanNumber)
+	void on_selected_vlan_changed (project_window_i* pw, unsigned int vlanNumber)
 	{
-		static_cast<vlan_window*>(callbackArg)->LoadSelectedTreeEdit();
+		LoadSelectedTreeEdit();
 	}
 
 	void ProcessVlanSelChange (HWND hwnd)

@@ -87,7 +87,7 @@ bridge::bridge (size_t port_count, size_t msti_count, mac_address macAddress)
 	STP_SetApplicationContext (_stpBridge, this);
 
 	for (auto& port : _ports)
-		port->invalidated().add_handler(&OnPortInvalidate, this);
+		port->invalidated().add_handler<&bridge::on_port_invalidated>(this);
 
 	// ----------------------------------------------------------------------------
 
@@ -162,15 +162,13 @@ bridge::~bridge()
 	// ----------------------------------------------------------------
 
 	for (auto& port : _ports)
-		port->invalidated().remove_handler(&OnPortInvalidate, this);
+		port->invalidated().remove_handler<&bridge::on_port_invalidated>(this);
 	STP_DestroyBridge (_stpBridge);
 }
 
-//static
-void bridge::OnPortInvalidate (void* callbackArg, renderable_object* object)
+void bridge::on_port_invalidated (renderable_object* object)
 {
-	auto bridge = static_cast<class bridge*>(callbackArg);
-	bridge->event_invoker<invalidate_e>()(bridge);
+	this->event_invoker<invalidate_e>()(this);
 }
 
 // Checks the wires and computes macOperational for each port on this bridge.

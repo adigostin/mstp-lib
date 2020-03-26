@@ -32,8 +32,8 @@ class bridge_tree : public object
 	friend class bridge;
 
 	void on_topology_change (unsigned int timestamp);
-	static void on_bridge_property_changing (void* arg, object* obj, const property_change_args& args);
-	static void on_bridge_property_changed (void* arg, object* obj, const property_change_args& args);
+	void on_bridge_property_changing (object* obj, const property_change_args& args);
+	void on_bridge_property_changed (object* obj, const property_change_args& args);
 
 public:
 	bridge_tree (bridge* parent, size_t tree_index);

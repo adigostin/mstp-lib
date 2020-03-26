@@ -34,8 +34,8 @@ const nvp port_speed_nvps[] = {
 port::port (class bridge* bridge, size_t port_index, edge::side side, float offset)
 	: _bridge(bridge), _port_index(port_index), _side(side), _offset(offset)
 {
-	_bridge->property_changing().add_handler(&on_bridge_property_changing, this);
-	_bridge->property_changed().add_handler(&on_bridge_property_changed, this);
+	_bridge->property_changing().add_handler<&port::on_bridge_property_changing>(this);
+	_bridge->property_changed().add_handler<&port::on_bridge_property_changed>(this);
 
 	for (size_t treeIndex = 0; treeIndex < bridge->trees().size(); treeIndex++)
 	{
@@ -46,22 +46,20 @@ port::port (class bridge* bridge, size_t port_index, edge::side side, float offs
 
 port::~port()
 {
-	_bridge->property_changed().remove_handler(&on_bridge_property_changed, this);
-	_bridge->property_changing().remove_handler(&on_bridge_property_changing, this);
+	_bridge->property_changed().remove_handler<&port::on_bridge_property_changed>(this);
+	_bridge->property_changing().remove_handler<&port::on_bridge_property_changing>(this);
 }
 
-void port::on_bridge_property_changing (void* arg, object* obj, const property_change_args& args)
+void port::on_bridge_property_changing (object* obj, const property_change_args& args)
 {
-	auto bt = static_cast<port*>(arg);
 	if (args.property == &bridge::stp_enabled_property)
 	{
 		// Currently no port property needs to change when STP is enabled/disabled.
 	}
 }
 
-void port::on_bridge_property_changed (void* arg, object* obj, const property_change_args& args)
+void port::on_bridge_property_changed (object* obj, const property_change_args& args)
 {
-	auto bt = static_cast<port*>(arg);
 	if (args.property == &bridge::stp_enabled_property)
 	{
 		// Currently no port property needs to change when STP is enabled/disabled.

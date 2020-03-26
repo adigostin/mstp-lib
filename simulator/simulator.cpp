@@ -111,24 +111,22 @@ public:
 
 	virtual void add_project_window (std::unique_ptr<project_window_i>&& pw) override final
 	{
-		pw->destroying().add_handler(&on_project_window_destroying, this);
+		pw->destroying().add_handler<&SimulatorApp::on_project_window_destroying>(this);
 		_projectWindows.push_back(std::move(pw));
 		this->event_invoker<project_window_added_e>()(_projectWindows.back().get());
 	}
 
-	static void on_project_window_destroying (void* callbackArg, project_window_i* pw)
+	void on_project_window_destroying (project_window_i* pw)
 	{
-		auto app = static_cast<SimulatorApp*>(callbackArg);
+		pw->destroying().remove_handler<&SimulatorApp::on_project_window_destroying>(this);
 
-		pw->destroying().remove_handler (&on_project_window_destroying, app);
-
-		auto it = find_if (app->_projectWindows.begin(), app->_projectWindows.end(), [pw](auto& p) { return p.get() == pw; });
-		assert (it != app->_projectWindows.end());
-		app->event_invoker<project_window_removing_e>()(pw);
+		auto it = find_if (_projectWindows.begin(), _projectWindows.end(), [pw](auto& p) { return p.get() == pw; });
+		assert (it != _projectWindows.end());
+		event_invoker<project_window_removing_e>()(pw);
 		auto pwLastRef = std::move(*it);
-		app->_projectWindows.erase(it);
-		app->event_invoker<project_window_removed_e>()(pwLastRef.get());
-		if (app->_projectWindows.empty())
+		_projectWindows.erase(it);
+		event_invoker<project_window_removed_e>()(pwLastRef.get());
+		if (_projectWindows.empty())
 			PostQuitMessage(0);
 	}
 
