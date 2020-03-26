@@ -54,7 +54,7 @@ struct pw_area : d2d_window
 
 	pw_area (HWND parent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dwrite_factory)
 		: base (GetHInstance(), WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, parent, 0, d3d_dc, dwrite_factory)
-		, pg(edge::property_grid_factory(this, this->window::client_rect()))
+		, pg(edge::property_grid_factory(this, client_rect_pixels()))
 	{ }
 
 	virtual HCURSOR cursor_at (POINT pp, D2D1_POINT_2F pd) const override
@@ -106,14 +106,15 @@ struct pw_area : d2d_window
 	virtual void on_client_size_changed (SIZE client_size_pixels, D2D1_SIZE_F client_size_dips) override
 	{
 		base::on_client_size_changed(client_size_pixels, client_size_dips);
-		pg->set_rect(client_rect());
+		pg->set_rect(client_rect_pixels());
 		::UpdateWindow(hwnd());
 	}
 
 	virtual void on_dpi_changed (UINT dpi) override
 	{
 		base::on_dpi_changed(dpi);
-		pg->set_rect(client_rect());
+		pg->set_rect(client_rect_pixels());
+		pg->on_dpi_changed();
 	}
 
 	// TODO: handle scrollbars
