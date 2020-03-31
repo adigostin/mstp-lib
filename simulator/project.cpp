@@ -355,4 +355,7 @@ const property* const project::_properties[] = { &next_mac_address_property, &br
 
 const xtype<project> project::_type = { "Project", &base::_type, _properties, nullptr };
 
-extern const project_factory_t project_factory = []() -> std::shared_ptr<project_i> { return std::make_shared<project>(); };
+extern std::shared_ptr<project_i> project_factory()
+{
+	return std::make_shared<project>();
+};

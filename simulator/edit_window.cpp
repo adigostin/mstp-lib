@@ -947,7 +947,7 @@ public:
 	}
 };
 
-extern const edit_window_factory_t edit_window_factory = [](const edit_window_create_params& create_params) -> std::unique_ptr<edit_window_i>
+extern std::unique_ptr<edit_window_i> edit_window_factory (const edit_window_create_params& create_params)
 {
 	return std::make_unique<edit_window>(create_params);
 };

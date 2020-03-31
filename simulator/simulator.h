@@ -57,7 +57,7 @@ struct __declspec(novtable) selection_i
 	struct changed_e : public edge::event<changed_e, selection_i*> { };
 	virtual changed_e::subscriber changed() = 0;
 };
-using selection_factory_t = std::unique_ptr<selection_i>(*)(project_i* project);
+using selection_factory_t = std::unique_ptr<selection_i>(project_i* project);
 
 // ============================================================================
 
@@ -112,7 +112,7 @@ struct edit_window_create_params
 	ID3D11DeviceContext1* d3d_dc;
 	IDWriteFactory* dWriteFactory;
 };
-using edit_window_factory_t = std::unique_ptr<edit_window_i>(*)(const edit_window_create_params& cps);
+using edit_window_factory_t = std::unique_ptr<edit_window_i>(const edit_window_create_params& cps);
 
 // ============================================================================
 
@@ -149,7 +149,7 @@ struct project_window_create_params
 	IDWriteFactory*       dwrite_factory;
 };
 
-using project_window_factory_t = std::unique_ptr<project_window_i>(*)(const project_window_create_params& create_params);
+using project_window_factory_t = std::unique_ptr<project_window_i>(const project_window_create_params& create_params);
 
 // ============================================================================
 
@@ -194,7 +194,7 @@ struct __declspec(novtable) project_i
 	std::unique_ptr<wire> remove_wire (wire* w);
 	std::unique_ptr<bridge> remove_bridge (bridge* b);
 };
-using project_factory_t = std::shared_ptr<project_i>(*const)();
+using project_factory_t = std::shared_ptr<project_i>();
 
 // ============================================================================
 
@@ -231,10 +231,10 @@ struct simulator_app_i
 	virtual project_window_added_e::subscriber project_window_added() = 0;
 	virtual project_window_removing_e::subscriber project_window_removing() = 0;
 	virtual project_window_removed_e::subscriber project_window_removed() = 0;
-	virtual selection_factory_t selection_factory() const = 0;
-	virtual edit_window_factory_t edit_window_factory() const = 0;
-	virtual project_window_factory_t project_window_factory() const = 0;
-	virtual project_factory_t project_factory() const = 0;
+	virtual selection_factory_t* selection_factory() const = 0;
+	virtual edit_window_factory_t* edit_window_factory() const = 0;
+	virtual project_window_factory_t* project_window_factory() const = 0;
+	virtual project_factory_t* project_factory() const = 0;
 	virtual properties_window_factory_t* properties_window_factory() const = 0;
 };
 

@@ -135,7 +135,7 @@ public:
 	virtual changed_e::subscriber changed() override final { return changed_e::subscriber(this); }
 };
 
-extern const selection_factory_t selection_factory = [](project_i* project) -> std::unique_ptr<selection_i>
+extern std::unique_ptr<selection_i> selection_factory(project_i* project)
 {
 	return std::make_unique<selection>(project);
 };

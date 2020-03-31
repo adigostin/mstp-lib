@@ -1009,7 +1009,7 @@ public:
 	}
 };
 
-extern const project_window_factory_t project_window_factory = [](const project_window_create_params& create_params) -> std::unique_ptr<project_window_i>
+extern std::unique_ptr<project_window_i> project_window_factory (const project_window_create_params& create_params)
 {
 	return std::make_unique<project_window>(create_params);
 };
