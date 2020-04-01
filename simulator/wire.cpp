@@ -125,10 +125,10 @@ void wire::render (ID2D1RenderTarget* rt, const drawing_resources& dos, bool for
 	rt->DrawLine (point_coords(0), point_coords(1), brush, width, ss);
 }
 
-void wire::render_selection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const
+void wire::render_selection (const edge::zoomable_window_i* window, ID2D1RenderTarget* rt, const drawing_resources& dos) const
 {
-	auto fd = zoomable->pointw_to_pointd(point_coords(0));
-	auto td = zoomable->pointw_to_pointd(point_coords(1));
+	auto fd = window->pointw_to_pointd(point_coords(0));
+	auto td = window->pointw_to_pointd(point_coords(1));
 
 	float halfw = 10;
 	float angle = atan2(td.y - fd.y, td.x - fd.x);
@@ -149,19 +149,19 @@ void wire::render_selection (const edge::zoomable_i* zoomable, ID2D1RenderTarget
 	rt->DrawLine (vertices[3], vertices[0], dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
 }
 
-renderable_object::ht_result wire::hit_test (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance)
+renderable_object::ht_result wire::hit_test (const edge::zoomable_window_i* window, D2D1_POINT_2F dLocation, float tolerance)
 {
 	for (size_t i = 0; i < _points.size(); i++)
 	{
 		auto pointWLocation = this->point_coords(i);
-		auto pointDLocation = zoomable->pointw_to_pointd(pointWLocation);
+		auto pointDLocation = window->pointw_to_pointd(pointWLocation);
 		D2D1_RECT_F rect = { pointDLocation.x, pointDLocation.y, pointDLocation.x, pointDLocation.y };
 		edge::inflate(&rect, tolerance);
 		if (edge::point_in_rect (rect, dLocation))
 			return { this, (int) i };
 	}
 
-	if (zoomable->hit_test_line (dLocation, tolerance, point_coords(0), point_coords(1), thickness))
+	if (window->hit_test_line (dLocation, tolerance, point_coords(0), point_coords(1), thickness))
 		return { this, -1 };
 
 	return { };

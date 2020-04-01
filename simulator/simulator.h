@@ -86,7 +86,7 @@ struct mouse_location
 	D2D1_POINT_2F w;
 };
 
-struct __declspec(novtable) edit_window_i : virtual edge::zoomable_i
+struct __declspec(novtable) edit_window_i : virtual edge::zoomable_window_i
 {
 	virtual const struct drawing_resources& drawing_resources() const = 0;
 	virtual void EnterState (std::unique_ptr<edit_state>&& state) = 0;

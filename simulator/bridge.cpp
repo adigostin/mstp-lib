@@ -347,29 +347,29 @@ void bridge::render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsign
 		port->render (dc, dos, vlanNumber);
 }
 
-void bridge::render_selection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const
+void bridge::render_selection (const edge::zoomable_window_i* window, ID2D1RenderTarget* rt, const drawing_resources& dos) const
 {
 	auto oldaa = rt->GetAntialiasMode();
 	rt->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
 
-	auto tl = zoomable->pointw_to_pointd ({ _x - OutlineWidth / 2, _y - OutlineWidth / 2 });
-	auto br = zoomable->pointw_to_pointd ({ _x + _width + OutlineWidth / 2, _y + _height + OutlineWidth / 2 });
+	auto tl = window->pointw_to_pointd ({ _x - OutlineWidth / 2, _y - OutlineWidth / 2 });
+	auto br = window->pointw_to_pointd ({ _x + _width + OutlineWidth / 2, _y + _height + OutlineWidth / 2 });
 	rt->DrawRectangle ({ tl.x - 10, tl.y - 10, br.x + 10, br.y + 10 }, dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
 
 	rt->SetAntialiasMode(oldaa);
 }
 
-renderable_object::ht_result bridge::hit_test (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance)
+renderable_object::ht_result bridge::hit_test (const edge::zoomable_window_i* window, D2D1_POINT_2F dLocation, float tolerance)
 {
 	for (auto& p : _ports)
 	{
-		auto ht = p->hit_test (zoomable, dLocation, tolerance);
+		auto ht = p->hit_test (window, dLocation, tolerance);
 		if (ht.object != nullptr)
 			return ht;
 	}
 
-	auto tl = zoomable->pointw_to_pointd ({ _x, _y });
-	auto br = zoomable->pointw_to_pointd ({ _x + _width, _y + _height });
+	auto tl = window->pointw_to_pointd ({ _x, _y });
+	auto br = window->pointw_to_pointd ({ _x + _width, _y + _height });
 
 	if ((dLocation.x >= tl.x) && (dLocation.y >= tl.y) && (dLocation.x < br.x) && (dLocation.y < br.y))
 		return { this, HTCodeInner };

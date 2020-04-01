@@ -312,43 +312,43 @@ D2D1_RECT_F port::GetInnerOuterRect() const
 	return { std::min(tl.x, br.x), std::min (tl.y, br.y), std::max(tl.x, br.x), std::max(tl.y, br.y) };
 }
 
-void port::render_selection (const edge::zoomable_i* zoomable, ID2D1RenderTarget* rt, const drawing_resources& dos) const
+void port::render_selection (const edge::zoomable_window_i* window, ID2D1RenderTarget* rt, const drawing_resources& dos) const
 {
 	auto ir = GetInnerOuterRect();
 
 	auto oldaa = rt->GetAntialiasMode();
 	rt->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
 
-	auto lt = zoomable->pointw_to_pointd ({ ir.left, ir.top });
-	auto rb = zoomable->pointw_to_pointd ({ ir.right, ir.bottom });
+	auto lt = window->pointw_to_pointd ({ ir.left, ir.top });
+	auto rb = window->pointw_to_pointd ({ ir.right, ir.bottom });
 	rt->DrawRectangle ({ lt.x - 10, lt.y - 10, rb.x + 10, rb.y + 10 }, dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
 
 	rt->SetAntialiasMode(oldaa);
 }
 
-bool port::HitTestCP (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) const
+bool port::HitTestCP (const edge::zoomable_window_i* window, D2D1_POINT_2F dLocation, float tolerance) const
 {
 	auto cpWLocation = GetCPLocation();
-	auto cpDLocation = zoomable->pointw_to_pointd(cpWLocation);
+	auto cpDLocation = window->pointw_to_pointd(cpWLocation);
 
 	return (abs (cpDLocation.x - dLocation.x) <= tolerance)
 		&& (abs (cpDLocation.y - dLocation.y) <= tolerance);
 }
 
-bool port::HitTestInnerOuter (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance) const
+bool port::HitTestInnerOuter (const edge::zoomable_window_i* window, D2D1_POINT_2F dLocation, float tolerance) const
 {
 	auto ir = GetInnerOuterRect();
-	auto lt = zoomable->pointw_to_pointd ({ ir.left, ir.top });
-	auto rb = zoomable->pointw_to_pointd ({ ir.right, ir.bottom });
+	auto lt = window->pointw_to_pointd ({ ir.left, ir.top });
+	auto rb = window->pointw_to_pointd ({ ir.right, ir.bottom });
 	return (dLocation.x >= lt.x) && (dLocation.y >= lt.y) && (dLocation.x < rb.x) && (dLocation.y < rb.y);
 }
 
-renderable_object::ht_result port::hit_test (const edge::zoomable_i* zoomable, D2D1_POINT_2F dLocation, float tolerance)
+renderable_object::ht_result port::hit_test (const edge::zoomable_window_i* window, D2D1_POINT_2F dLocation, float tolerance)
 {
-	if (HitTestCP (zoomable, dLocation, tolerance))
+	if (HitTestCP (window, dLocation, tolerance))
 		return { this, HTCodeCP };
 
-	if (HitTestInnerOuter (zoomable, dLocation, tolerance))
+	if (HitTestInnerOuter (window, dLocation, tolerance))
 		return { this, HTCodeInnerOuter };
 
 	return { };
