@@ -35,13 +35,13 @@ struct mac_address_property_traits
 	static void serialize (value_t from, out_stream_i* to) { assert(false); }
 	static void deserialize (binary_reader& from, value_t& to) { assert(false); }
 };
-using mac_address_p = edge::typed_property<mac_address_property_traits>;
+using mac_address_p = edge::static_value_property<mac_address_property_traits>;
 
 extern std::unique_ptr<edge::property_editor_i> create_config_id_editor (std::span<object* const> objects);
 
-struct config_id_digest_p : edge::typed_property<edge::temp_string_property_traits>, edge::pg_custom_editor_i
+struct config_id_digest_p : edge::static_value_property<edge::temp_string_property_traits>, edge::pg_custom_editor_i
 {
-	using base = edge::typed_property<edge::temp_string_property_traits>;
+	using base = edge::static_value_property<edge::temp_string_property_traits>;
 	using base::base;
 
 	virtual std::unique_ptr<edge::property_editor_i> create_editor (std::span<object* const> objects) const override

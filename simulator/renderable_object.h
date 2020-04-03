@@ -28,7 +28,7 @@ using edge::side;
 using edge::binary_reader;
 using edge::out_stream_i;
 using edge::nvp;
-using edge::typed_property;
+using edge::static_value_property;
 using edge::com_ptr;
 using edge::pg_hidden;
 using edge::prop_wrapper;

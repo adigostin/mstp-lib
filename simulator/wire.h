@@ -24,7 +24,7 @@ struct wire_end_property_traits
 	static void serialize (value_t from, out_stream_i* to) { assert(false); }
 	static void deserialize (binary_reader& from, value_t& to) { assert(false); }
 };
-using wire_end_p = typed_property<wire_end_property_traits>;
+using wire_end_p = static_value_property<wire_end_property_traits>;
 
 class wire : public project_child, public edge::deserialize_i
 {
