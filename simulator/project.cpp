@@ -223,7 +223,7 @@ public:
 		return S_OK;
 	}
 
-	static std::span<const concrete_type* const> known_types();
+	static const std::span<const concrete_type* const> known_types;
 
 	virtual HRESULT load (const wchar_t* filePath) override final
 	{
@@ -252,7 +252,7 @@ public:
 			return E_FAIL;
 		com_ptr<IXMLDOMElement> projectElement = projectNode;
 
-		deserialize_to (projectElement, this, known_types());
+		deserialize_to (projectElement, this, known_types);
 
 		_path = filePath;
 		this->event_invoker<loaded_event>()(this);
@@ -315,7 +315,7 @@ public:
 	}
 
 	static constexpr mac_address_p next_mac_address_property = {
-		"NextMacAddress", nullptr, nullptr, ui_visible::yes,
+		"NextMacAddress", nullptr, nullptr,
 		&next_mac_address,
 		&set_next_mac_address,
 		mac_address{ 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x80 },
@@ -326,34 +326,23 @@ public:
 	size_t wire_count() const { return _wires.size(); }
 	wire* wire_at(size_t index) const { return _wires[index].get(); }
 
-	static const typed_object_collection_property<class project, bridge> bridges_property;
-	static const typed_object_collection_property<class project, wire> wires_property;
-	static const property* const _properties[];
-	static const xtype<project> _type;
+	static const prop_wrapper<typed_object_collection_property<project, bridge>, pg_hidden> bridges_property;
+	static const prop_wrapper<typed_object_collection_property<project, wire>, pg_hidden> wires_property;
+	static constexpr const property* const _properties[] = { &next_mac_address_property, &bridges_property, &wires_property };
+	static constexpr xtype<project> _type = { "Project", &base::_type, _properties, nullptr };
 	virtual const concrete_type* type() const { return &_type; }
 };
 
-//static
-std::span<const concrete_type* const> project::known_types()
-{
-	static const concrete_type* const types[] =
-		{ &project::_type, &bridge::_type, &bridge_tree::_type, &port::_type, &port_tree::_type, &wire::_type };
-	return types;
-}
+static constexpr const concrete_type* known_types_arr[]
+	= { &project::_type, &bridge::_type, &bridge_tree::_type, &port::_type, &port_tree::_type, &wire::_type };
 
-const typed_object_collection_property<project, bridge> project::bridges_property = {
-	"Bridges", nullptr, nullptr, ui_visible::no,
-	&bridge_count, &bridge_at, &insert_bridge, &remove_bridge
-};
+const std::span<const concrete_type* const> project::known_types = known_types_arr;
 
-const typed_object_collection_property<project, wire> project::wires_property {
-	"Wires", nullptr, nullptr, ui_visible::no,
-	&wire_count, &wire_at, &insert_wire, &remove_wire
-};
+const prop_wrapper<typed_object_collection_property<project, bridge>, pg_hidden> project::bridges_property
+	= { "Bridges", nullptr, nullptr, &bridge_count, &bridge_at, &insert_bridge, &remove_bridge };
 
-const property* const project::_properties[] = { &next_mac_address_property, &bridges_property, &wires_property };
-
-const xtype<project> project::_type = { "Project", &base::_type, _properties, nullptr };
+const prop_wrapper<typed_object_collection_property<project, wire>, pg_hidden> project::wires_property
+	= { "Wires", nullptr, nullptr, &wire_count, &wire_at, &insert_wire, &remove_wire };
 
 extern std::shared_ptr<project_i> project_factory()
 {

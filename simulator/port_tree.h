@@ -6,28 +6,10 @@
 #include "object.h"
 #include "win32/com_ptr.h"
 #include "stp.h"
+#include "renderable_object.h"
 
 class bridge;
 class port;
-
-using edge::size_t_p;
-using edge::size_t_property_traits;
-using edge::uint32_p;
-using edge::bool_p;
-using edge::float_p;
-using edge::backed_string_p;
-using edge::temp_string_p;
-using edge::property;
-using edge::type;
-using edge::concrete_type;
-using edge::xtype;
-using edge::value_property;
-using edge::typed_object_collection_property;
-using edge::property_change_args;
-using edge::side;
-using edge::binary_reader;
-using edge::out_stream_i;
-using edge::nvp;
 
 extern const nvp port_priority_nvps[];
 extern const char port_priority_type_name[];
@@ -78,7 +60,7 @@ public:
 
 	size_t tree_index() const { return _tree_index; }
 
-	static const size_t_p tree_index_property;
+	static const prop_wrapper<size_t_p, edge::pg_hidden> tree_index_property;
 	static const port_priority_p priority_property;
 	static const bool_p learning_property;
 	static const bool_p forwarding_property;

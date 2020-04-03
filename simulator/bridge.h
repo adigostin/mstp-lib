@@ -39,7 +39,7 @@ using mac_address_p = edge::typed_property<mac_address_property_traits>;
 
 extern std::unique_ptr<edge::property_editor_i> create_config_id_editor (std::span<object* const> objects);
 
-struct config_id_digest_p : edge::typed_property<edge::temp_string_property_traits>, edge::custom_editor_property_i
+struct config_id_digest_p : edge::typed_property<edge::temp_string_property_traits>, edge::pg_custom_editor_i
 {
 	using base = edge::typed_property<edge::temp_string_property_traits>;
 	using base::base;
@@ -193,7 +193,7 @@ public:
 	bool mst_config_table_changed() const;
 
 	size_t tree_count() const { return _trees.size(); }
-	bridge_tree* tree (size_t index) const { return _trees[index].get(); }
+	bridge_tree* tree_at (size_t index) const { return _trees[index].get(); }
 	port* port_at (size_t index) const { return _ports[index].get(); }
 
 public:
@@ -203,7 +203,7 @@ public:
 	static const size_t_p      port_count_property;
 	static const size_t_p      msti_count_property;
 	static const temp_string_p mst_config_id_name_property;
-	static const typed_value_collection_property<bridge, uint32_property_traits> mst_config_table_property;
+	static const prop_wrapper<typed_value_collection_property<bridge, uint32_property_traits>, pg_hidden> mst_config_table_property;
 	static const uint32_p      mst_config_id_rev_level;
 	static const config_id_digest_p  mst_config_id_digest;
 	static const uint32_p      migrate_time_property;
@@ -212,12 +212,12 @@ public:
 	static const uint32_p      bridge_forward_delay_property;
 	static const uint32_p      tx_hold_count_property;
 	static const uint32_p      max_hops_property;
-	static const float_p x_property;
-	static const float_p y_property;
-	static const float_p width_property;
-	static const float_p height_property;
-	static const typed_object_collection_property<bridge, bridge_tree> trees_property;
-	static const typed_object_collection_property<bridge, class port> ports_property;
+	static const prop_wrapper<float_p, pg_hidden> x_property;
+	static const prop_wrapper<float_p, pg_hidden> y_property;
+	static const prop_wrapper<float_p, pg_hidden> width_property;
+	static const prop_wrapper<float_p, pg_hidden> height_property;
+	static const prop_wrapper<typed_object_collection_property<bridge, bridge_tree>, pg_hidden> trees_property;
+	static const prop_wrapper<typed_object_collection_property<bridge,      ::port>, pg_hidden> ports_property;
 
 	static const property* const _properties[];
 	static const xtype<bridge, size_t_property_traits, size_t_property_traits, mac_address_property_traits> _type;

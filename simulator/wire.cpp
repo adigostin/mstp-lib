@@ -183,14 +183,14 @@ D2D1_RECT_F wire::extent() const
 	return { tl.x, tl.y, br.x, br.y };
 }
 
-const wire_end_p wire::p0_property = {
-	"P0", nullptr, nullptr, ui_visible::no,
+const prop_wrapper<wire_end_p, pg_hidden> wire::p0_property = {
+	"P0", nullptr, nullptr,
 	static_cast<wire_end_p::member_getter_t>(&p0),
 	static_cast<wire_end_p::member_setter_t>(&set_p0),
 };
 
-const wire_end_p wire::p1_property = {
-	"P1", nullptr, nullptr, ui_visible::no,
+const prop_wrapper<wire_end_p, pg_hidden> wire::p1_property = {
+	"P1", nullptr, nullptr,
 	static_cast<wire_end_p::member_getter_t>(&p1),
 	static_cast<wire_end_p::member_setter_t>(&set_p1),
 };

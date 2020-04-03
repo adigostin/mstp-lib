@@ -223,50 +223,50 @@ const nvp bridge_priority_nvps[] =
 const char bridge_priority_type_name[] = "bridge_priority";
 
 const bridge_priority_p bridge_tree::bridge_priority_property {
-	"BridgePriority", nullptr, nullptr, ui_visible::yes,
+	"BridgePriority", nullptr, nullptr,
 	static_cast<bridge_priority_p::member_getter_t>(&bridge_priority),
 	static_cast<bridge_priority_p::member_setter_t>(&set_bridge_priority),
 	0x8000,
 };
 
 const temp_string_p bridge_tree::root_id_property =
-	{ "RootID", &rpv_group, nullptr, ui_visible::yes, &root_bridge_id, nullptr, };
+	{ "RootID", &rpv_group, nullptr, &root_bridge_id, nullptr, };
 
 const uint32_p bridge_tree::external_root_path_cost_property =
-	{ "ExternalRootPathCost", &rpv_group, nullptr, ui_visible::yes, &external_root_path_cost, nullptr };
+	{ "ExternalRootPathCost", &rpv_group, nullptr, &external_root_path_cost, nullptr };
 
 const temp_string_p bridge_tree::regional_root_id_property =
-	{ "RegionalRootId", &rpv_group, nullptr, ui_visible::yes, &regional_root_id, nullptr };
+	{ "RegionalRootId", &rpv_group, nullptr, &regional_root_id, nullptr };
 
 const uint32_p bridge_tree::internal_root_path_cost_property =
-	{ "InternalRootPathCost", &rpv_group, nullptr, ui_visible::yes, &internal_root_path_cost, nullptr };
+	{ "InternalRootPathCost", &rpv_group, nullptr, &internal_root_path_cost, nullptr };
 
 const temp_string_p bridge_tree::designated_bridge_id_property =
-	{ "DesignatedBridgeId", &rpv_group, nullptr, ui_visible::yes, &designated_bridge_id, nullptr };
+	{ "DesignatedBridgeId", &rpv_group, nullptr, &designated_bridge_id, nullptr };
 
 const temp_string_p bridge_tree::designated_port_id_property =
-	{ "DesignatedPortId", &rpv_group, nullptr, ui_visible::yes, &designated_port_id, nullptr };
+	{ "DesignatedPortId", &rpv_group, nullptr, &designated_port_id, nullptr };
 
 const temp_string_p bridge_tree::receiving_port_id_property =
-	{ "ReceivingPortId", &rpv_group, nullptr, ui_visible::yes, &receiving_port_id, nullptr };
+	{ "ReceivingPortId", &rpv_group, nullptr, &receiving_port_id, nullptr };
 
 const edge::uint32_p bridge_tree::hello_time_property =
-	{ "HelloTime", &root_times_group, nullptr, ui_visible::yes, &hello_time, nullptr };
+	{ "HelloTime", &root_times_group, nullptr, &hello_time, nullptr };
 
 const edge::uint32_p bridge_tree::max_age_property =
-	{ "MaxAge", &root_times_group, nullptr, ui_visible::yes, &max_age, nullptr };
+	{ "MaxAge", &root_times_group, nullptr, &max_age, nullptr };
 
 const edge::uint32_p bridge_tree::forward_delay_property =
-	{ "ForwardDelay", &root_times_group, nullptr, ui_visible::yes, &bridge_forward_delay, nullptr };
+	{ "ForwardDelay", &root_times_group, nullptr, &bridge_forward_delay, nullptr };
 
 const edge::uint32_p bridge_tree::message_age_property =
-	{ "MessageAge", &root_times_group, nullptr, ui_visible::yes, &message_age, nullptr };
+	{ "MessageAge", &root_times_group, nullptr, &message_age, nullptr };
 
 const edge::uint32_p bridge_tree::remaining_hops_property =
-	{ "remainingHops", &root_times_group, nullptr, ui_visible::yes, &remaining_hops, nullptr };
+	{ "remainingHops", &root_times_group, nullptr, &remaining_hops, nullptr };
 
 const edge::uint32_p bridge_tree::topology_change_count_property =
-	{ "Topology Change Count", nullptr, nullptr, ui_visible::yes, &topology_change_count, nullptr };
+	{ "Topology Change Count", nullptr, nullptr, &topology_change_count, nullptr };
 
 const edge::property* const bridge_tree::_properties[] =
 {

@@ -121,8 +121,8 @@ private:
 	port_tree* tree (size_t index) const { return _trees[index].get(); }
 
 public:
-	static const edge::side_p side_property;
-	static const float_p offset_property;
+	static const prop_wrapper<side_p, pg_hidden> side_property;
+	static const prop_wrapper<float_p, pg_hidden> offset_property;
 	static const port_speed_p supported_speed_property;
 	static const port_speed_p actual_speed_property;
 	static const bool_p auto_edge_property;
@@ -134,9 +134,9 @@ public:
 	static const admin_p2p_p admin_p2p_property;
 	static const bool_p detected_p2p_property;
 	static const bool_p oper_p2p_property;
-	static const typed_object_collection_property<port, port_tree> trees_property;
+	static const prop_wrapper<typed_object_collection_property<port, port_tree>, pg_hidden> trees_property;
 
-	static const property* const port::_properties[];
+	static const property* const _properties[];
 	static const xtype<port> _type;
 	virtual const concrete_type* type() const { return &_type; }
 };

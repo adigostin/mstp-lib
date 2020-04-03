@@ -6,27 +6,53 @@
 #include "collection.h"
 #include "win32/com_ptr.h"
 #include "win32/zoomable_window.h"
+#include "win32/property_grid.h"
+
+using edge::size_t_p;
+using edge::size_t_property_traits;
+using edge::uint32_p;
+using edge::bool_p;
+using edge::float_p;
+using edge::backed_string_p;
+using edge::temp_string_p;
+using edge::side_p;
+using edge::property;
+using edge::object;
+using edge::type;
+using edge::concrete_type;
+using edge::xtype;
+using edge::value_property;
+using edge::typed_object_collection_property;
+using edge::property_change_args;
+using edge::side;
+using edge::binary_reader;
+using edge::out_stream_i;
+using edge::nvp;
+using edge::typed_property;
+using edge::com_ptr;
+using edge::pg_hidden;
+using edge::prop_wrapper;
 
 struct drawing_resources
 {
-	edge::com_ptr<IDWriteFactory> _dWriteFactory;
-	edge::com_ptr<ID2D1SolidColorBrush> _poweredFillBrush;
-	edge::com_ptr<ID2D1SolidColorBrush> _unpoweredBrush;
-	edge::com_ptr<ID2D1SolidColorBrush> _brushWindowText;
-	edge::com_ptr<ID2D1SolidColorBrush> _brushWindow;
-	edge::com_ptr<ID2D1SolidColorBrush> _brushHighlight;
-	edge::com_ptr<ID2D1SolidColorBrush> _brushDiscardingPort;
-	edge::com_ptr<ID2D1SolidColorBrush> _brushLearningPort;
-	edge::com_ptr<ID2D1SolidColorBrush> _brushForwarding;
-	edge::com_ptr<ID2D1SolidColorBrush> _brushNoForwardingWire;
-	edge::com_ptr<ID2D1SolidColorBrush> _brushLoop;
-	edge::com_ptr<ID2D1SolidColorBrush> _brushTempWire;
-	edge::com_ptr<ID2D1StrokeStyle> _strokeStyleForwardingWire;
-	edge::com_ptr<ID2D1StrokeStyle> _strokeStyleNoForwardingWire;
-	edge::com_ptr<IDWriteTextFormat> _regularTextFormat;
-	edge::com_ptr<IDWriteTextFormat> _smallTextFormat;
-	edge::com_ptr<IDWriteTextFormat> _smallBoldTextFormat;
-	edge::com_ptr<ID2D1StrokeStyle> _strokeStyleSelectionRect;
+	com_ptr<IDWriteFactory> _dWriteFactory;
+	com_ptr<ID2D1SolidColorBrush> _poweredFillBrush;
+	com_ptr<ID2D1SolidColorBrush> _unpoweredBrush;
+	com_ptr<ID2D1SolidColorBrush> _brushWindowText;
+	com_ptr<ID2D1SolidColorBrush> _brushWindow;
+	com_ptr<ID2D1SolidColorBrush> _brushHighlight;
+	com_ptr<ID2D1SolidColorBrush> _brushDiscardingPort;
+	com_ptr<ID2D1SolidColorBrush> _brushLearningPort;
+	com_ptr<ID2D1SolidColorBrush> _brushForwarding;
+	com_ptr<ID2D1SolidColorBrush> _brushNoForwardingWire;
+	com_ptr<ID2D1SolidColorBrush> _brushLoop;
+	com_ptr<ID2D1SolidColorBrush> _brushTempWire;
+	com_ptr<ID2D1StrokeStyle> _strokeStyleForwardingWire;
+	com_ptr<ID2D1StrokeStyle> _strokeStyleNoForwardingWire;
+	com_ptr<IDWriteTextFormat> _regularTextFormat;
+	com_ptr<IDWriteTextFormat> _smallTextFormat;
+	com_ptr<IDWriteTextFormat> _smallBoldTextFormat;
+	com_ptr<ID2D1StrokeStyle> _strokeStyleSelectionRect;
 };
 
 class renderable_object : public edge::owned_object

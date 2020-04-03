@@ -606,7 +606,6 @@ void bridge::set_tx_hold_count (uint32_t value)
 }
 
 #pragma region properties
-
 size_t bridge::mst_config_table_get_value_count() const
 {
 	unsigned int entry_count;
@@ -667,45 +666,45 @@ static const edge::property_group bridge_times_group = { 5, "Timer Params (Table
 static const edge::property_group mst_group = { 10, "MST Config Id" };
 
 const mac_address_p bridge::bridge_address_property {
-	"Address", nullptr, nullptr, ui_visible::yes,
+	"Address", nullptr, nullptr,
 	&bridge_address,
 	&set_bridge_address,
 };
 
 const bool_p bridge::stp_enabled_property {
-	"STPEnabled", nullptr, nullptr, ui_visible::yes,
+	"STPEnabled", nullptr, nullptr,
 	&stp_enabled,
 	&set_stp_enabled,
 	false, // default_value
 };
 
 const stp_version_p bridge::stp_version_property {
-	"StpVersion", nullptr, nullptr, ui_visible::yes,
+	"StpVersion", nullptr, nullptr,
 	&stp_version,
 	&set_stp_version,
 	STP_VERSION_RSTP, // default_value
 };
 
 const size_t_p bridge::port_count_property {
-	"PortCount", nullptr, nullptr, ui_visible::yes,
+	"PortCount", nullptr, nullptr,
 	&port_count,
 	nullptr,
 };
 
 const size_t_p bridge::msti_count_property {
-	"MstiCount", nullptr, nullptr, ui_visible::yes,
+	"MstiCount", nullptr, nullptr,
 	&msti_count,
 	nullptr,
 };
 
 const temp_string_p bridge::mst_config_id_name_property {
-	"MstConfigName", &mst_group, nullptr, ui_visible::yes,
+	"MstConfigName", &mst_group, nullptr,
 	&mst_config_id_name,
 	&set_mst_config_id_name,
 };
 
-const typed_value_collection_property<bridge, uint32_property_traits> bridge::mst_config_table_property {
-	"MstConfigTable", nullptr, nullptr, ui_visible::no,
+const prop_wrapper<typed_value_collection_property<bridge, uint32_property_traits>, pg_hidden> bridge::mst_config_table_property {
+	"MstConfigTable", nullptr, nullptr,
 	&mst_config_table_get_value_count,
 	&mst_config_table_get_value,
 	&mst_config_table_set_value,
@@ -715,49 +714,46 @@ const typed_value_collection_property<bridge, uint32_property_traits> bridge::ms
 };
 
 const edge::uint32_p bridge::mst_config_id_rev_level {
-	"MstConfigRevLevel", &mst_group, nullptr, ui_visible::yes,
+	"MstConfigRevLevel", &mst_group, nullptr,
 	&GetMstConfigIdRevLevel,
 	&SetMstConfigIdRevLevel,
 	0,
 };
 
-const config_id_digest_p bridge::mst_config_id_digest {
-	"MstConfigDigest", &mst_group, nullptr, ui_visible::yes,
-	&GetMstConfigIdDigest,
-	nullptr,
-};
+const config_id_digest_p bridge::mst_config_id_digest
+	= { "MstConfigDigest", &mst_group, nullptr, &GetMstConfigIdDigest, nullptr, };
 
 #pragma region Timer and related parameters from Table 13-5
 const uint32_p bridge::migrate_time_property {
-	"MigrateTime", &bridge_times_group, nullptr, ui_visible::yes,
+	"MigrateTime", &bridge_times_group, nullptr,
 	[](const object* o) { return 3u; },
 	nullptr,
 	3, // default_value
 };
 
 const uint32_p bridge::bridge_hello_time_property {
-	"BridgeHelloTime", &bridge_times_group, nullptr, ui_visible::yes,
+	"BridgeHelloTime", &bridge_times_group, nullptr,
 	[](const object* o) { return 2u; },
 	nullptr,
 	2, // default_value
 };
 
 const uint32_p bridge::bridge_max_age_property {
-	"BridgeMaxAge", &bridge_times_group, nullptr, ui_visible::yes,
+	"BridgeMaxAge", &bridge_times_group, nullptr,
 	&bridge_max_age,
 	&set_bridge_max_age,
 	20, // default_value
 };
 
 const uint32_p bridge::bridge_forward_delay_property {
-	"BridgeForwardDelay", &bridge_times_group, nullptr, ui_visible::yes,
+	"BridgeForwardDelay", &bridge_times_group, nullptr,
 	&bridge_forward_delay,
 	&set_bridge_forward_delay,
 	15, // default_value
 };
 
 const uint32_p bridge::tx_hold_count_property {
-	"TxHoldCount", &bridge_times_group, nullptr, ui_visible::yes,
+	"TxHoldCount", &bridge_times_group, nullptr,
 	&tx_hold_count,
 	&set_tx_hold_count,
 	6 // default_value
@@ -767,28 +763,29 @@ const uint32_p bridge::max_hops_property {
 	"MaxHops",
 	&bridge_times_group,
 	"Setting this is not yet implemented in the library",
-	ui_visible::yes,
 	[](const object* o) { return 20u; },
 	nullptr,
 	20 // default_value
 };
-
-const float_p bridge::x_property { "X", nullptr, nullptr, ui_visible::no, &x, &set_x };
-const float_p bridge::y_property { "Y", nullptr, nullptr, ui_visible::no, &y, &set_y };
-
-const float_p bridge::width_property  { "Width",  nullptr, nullptr, ui_visible::no, &width,  &set_width };
-const float_p bridge::height_property { "Height", nullptr, nullptr, ui_visible::no, &height, &set_height };
-
-const typed_object_collection_property<bridge, bridge_tree> bridge::trees_property {
-	"BridgeTrees", nullptr, nullptr, ui_visible::no,
-	&tree_count, &tree
-};
-
-const typed_object_collection_property<bridge, port> bridge::ports_property {
-	"Ports", nullptr, nullptr, ui_visible::no,
-	&port_count, &port_at
-};
 #pragma endregion
+
+const prop_wrapper<float_p, pg_hidden> bridge::x_property
+	= { "X", nullptr, nullptr, &x, &set_x };
+
+const prop_wrapper<float_p, pg_hidden> bridge::y_property
+	= { "Y", nullptr, nullptr, &y, &set_y };
+
+const prop_wrapper<float_p, pg_hidden> bridge::width_property
+	= { "Width", nullptr, nullptr, &width, &set_width };
+
+const prop_wrapper<float_p, pg_hidden> bridge::height_property
+	= { "Height", nullptr, nullptr, &height, &set_height };
+
+const prop_wrapper<typed_object_collection_property<bridge, bridge_tree>, pg_hidden> bridge::trees_property
+	= { "BridgeTrees", nullptr, nullptr, &tree_count, &tree_at };
+
+const prop_wrapper<typed_object_collection_property<bridge, port>, pg_hidden> bridge::ports_property
+	= { "Ports", nullptr, nullptr, &port_count, &port_at };
 
 const edge::property* const bridge::_properties[] = {
 	&bridge_address_property,

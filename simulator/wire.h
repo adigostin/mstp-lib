@@ -15,18 +15,6 @@ using connected_wire_end = port*;
 using serialized_connected_end = std::pair<size_t, size_t>;
 using wire_end = std::variant<loose_wire_end, connected_wire_end, serialized_connected_end>;
 
-using edge::type;
-using edge::concrete_type;
-using edge::xtype;
-using edge::property;
-using edge::typed_property;
-using edge::uint32_p;
-using edge::ui_visible;
-using edge::object;
-using edge::out_stream_i;
-using edge::binary_reader;
-using edge::com_ptr;
-
 struct wire_end_property_traits
 {
 	static constexpr char type_name[] = "wire_end";
@@ -71,8 +59,8 @@ public:
 	virtual ht_result hit_test (const edge::zoomable_window_i* window, D2D1_POINT_2F dLocation, float tolerance) override final;
 	virtual D2D1_RECT_F extent() const override;
 
-	static const wire_end_p p0_property;
-	static const wire_end_p p1_property;
+	static const prop_wrapper<wire_end_p, pg_hidden> p0_property;
+	static const prop_wrapper<wire_end_p, pg_hidden> p1_property;
 	static const property* const _properties[];
 	static const xtype<wire> _type;
 	virtual const concrete_type* type() const override { return &_type; }

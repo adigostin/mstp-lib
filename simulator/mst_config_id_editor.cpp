@@ -193,10 +193,10 @@ public:
 
 		LVCOLUMN lvc = { 0 };
 		lvc.mask = LVCF_TEXT | LVCF_WIDTH;
-		lvc.pszText = L"VLAN";
+		lvc.pszText = const_cast<wchar_t*>(L"VLAN");
 		lvc.cx = (allSameDigest ? 80 : 120) * dpi / 96;
 		ListView_InsertColumn (list, 0, &lvc);
-		lvc.pszText = L"Tree";
+		lvc.pszText = const_cast<wchar_t*>(L"Tree");
 		lvc.cx = (allSameDigest ? 80 : 40) * dpi / 96;
 		ListView_InsertColumn (list, 1, &lvc);
 
@@ -206,7 +206,7 @@ public:
 		{
 			LVITEM lvi = { 0 };
 			lvi.mask = LVIF_TEXT;
-			lvi.pszText = L"(multiple selection)";
+			lvi.pszText = const_cast<wchar_t*>(L"(multiple selection)");
 			ListView_InsertItem (list, &lvi);
 		}
 
