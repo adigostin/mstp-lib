@@ -3,7 +3,7 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "collection.h"
+#include "object.h"
 #include "win32/com_ptr.h"
 #include "win32/zoomable_window.h"
 #include "win32/property_grid.h"
@@ -55,7 +55,7 @@ struct drawing_resources
 	com_ptr<ID2D1StrokeStyle> _strokeStyleSelectionRect;
 };
 
-class renderable_object : public edge::owned_object
+class renderable_object : public object
 {
 public:
 	struct ht_result
