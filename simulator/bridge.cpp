@@ -781,10 +781,10 @@ const prop_wrapper<float_p, pg_hidden> bridge::width_property
 const prop_wrapper<float_p, pg_hidden> bridge::height_property
 	= { "Height", nullptr, nullptr, &height, &set_height };
 
-const prop_wrapper<typed_object_collection_property<bridge, bridge_tree>, pg_hidden> bridge::trees_property
+const prop_wrapper<typed_object_collection_property<bridge_tree>, pg_hidden> bridge::trees_property
 	= { "BridgeTrees", nullptr, nullptr, &tree_count, &tree_at };
 
-const prop_wrapper<typed_object_collection_property<bridge, port>, pg_hidden> bridge::ports_property
+const prop_wrapper<typed_object_collection_property<port>, pg_hidden> bridge::ports_property
 	= { "Ports", nullptr, nullptr, &port_count, &port_at };
 
 const edge::property* const bridge::_properties[] = {

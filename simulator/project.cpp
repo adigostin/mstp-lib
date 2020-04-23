@@ -326,8 +326,8 @@ public:
 	size_t wire_count() const { return _wires.size(); }
 	wire* wire_at(size_t index) const { return _wires[index].get(); }
 
-	static const prop_wrapper<typed_object_collection_property<project, bridge>, pg_hidden> bridges_property;
-	static const prop_wrapper<typed_object_collection_property<project, wire>, pg_hidden> wires_property;
+	static const prop_wrapper<typed_object_collection_property<bridge>, pg_hidden> bridges_property;
+	static const prop_wrapper<typed_object_collection_property<wire>, pg_hidden> wires_property;
 	static constexpr const property* const _properties[] = { &next_mac_address_property, &bridges_property, &wires_property };
 	static constexpr xtype<project> _type = { "Project", &base::_type, _properties, nullptr };
 	virtual const concrete_type* type() const { return &_type; }
@@ -338,10 +338,10 @@ static constexpr const concrete_type* known_types_arr[]
 
 const std::span<const concrete_type* const> project::known_types = known_types_arr;
 
-const prop_wrapper<typed_object_collection_property<project, bridge>, pg_hidden> project::bridges_property
+const prop_wrapper<typed_object_collection_property<bridge>, pg_hidden> project::bridges_property
 	= { "Bridges", nullptr, nullptr, &bridge_count, &bridge_at, &insert_bridge, &remove_bridge };
 
-const prop_wrapper<typed_object_collection_property<project, wire>, pg_hidden> project::wires_property
+const prop_wrapper<typed_object_collection_property<wire>, pg_hidden> project::wires_property
 	= { "Wires", nullptr, nullptr, &wire_count, &wire_at, &insert_wire, &remove_wire };
 
 extern std::shared_ptr<project_i> project_factory()

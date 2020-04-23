@@ -176,7 +176,7 @@ STP_PORT_ROLE port_tree::role() const
 
 const prop_wrapper<size_t_p, edge::pg_hidden> port_tree::tree_index_property {
 	"TreeIndex", nullptr, nullptr,
-	static_cast<size_t_p::member_getter_t>(&tree_index),
+	&tree_index,
 	nullptr,
 };
 
@@ -185,8 +185,8 @@ const port_priority_p port_tree::priority_property {
 	nullptr,
 	"The value of the priority field which is contained in the first (in network byte order) octet of the (2 octet long) Port ID. "
 		"The other octet of the Port ID is given by the value of dot1dStpPort.",
-	static_cast<port_priority_p::member_getter_t>(&priority),
-	static_cast<port_priority_p::member_setter_t>(&set_priority),
+	&priority,
+	&set_priority,
 	0x80,
 };
 
@@ -194,7 +194,7 @@ const edge::bool_p port_tree::learning_property {
 	"learning",
 	nullptr,
 	nullptr,
-	static_cast<edge::bool_p::member_getter_t>(&learning),
+	&learning,
 	nullptr,
 };
 
@@ -202,7 +202,7 @@ const edge::bool_p port_tree::forwarding_property {
 	"forwarding",
 	nullptr,
 	nullptr,
-	static_cast<edge::bool_p::member_getter_t>(&forwarding),
+	&forwarding,
 	nullptr,
 };
 
@@ -210,7 +210,7 @@ const port_role_p port_tree::role_property {
 	"role",
 	nullptr,
 	nullptr,
-	static_cast<port_role_p::member_getter_t>(&role),
+	&role,
 	nullptr,
 };
 
@@ -220,8 +220,8 @@ const uint32_p port_tree::admin_internal_port_path_cost_property {
 	"AdminInternalPortPathCost",
 	&port_path_cost_group,
 	nullptr,
-	static_cast<uint32_p::member_getter_t>(&admin_internal_port_path_cost),
-	static_cast<uint32_p::member_setter_t>(&set_admin_internal_port_path_cost),
+	&admin_internal_port_path_cost,
+	&set_admin_internal_port_path_cost,
 	0,
 };
 
@@ -229,7 +229,7 @@ const uint32_p port_tree::internal_port_path_cost_property {
 	"InternalPortPathCost",
 	&port_path_cost_group,
 	nullptr,
-	static_cast<uint32_p::member_getter_t>(&internal_port_path_cost),
+	&internal_port_path_cost,
 	nullptr,
 	0,
 };

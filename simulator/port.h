@@ -113,14 +113,14 @@ public:
 	uint32_t supported_speed() const { return _supported_speed; }
 	void set_supported_speed (uint32_t value);
 
-private:
+	uint32_t actual_speed() const { return _actual_speed; }
+
 	void set_actual_speed (uint32_t value);
 	void set_side (edge::side side) { _side = side; }
 	void set_offset (float offset) { _offset = offset; }
 	size_t tree_count() const { return _trees.size(); }
 	port_tree* tree (size_t index) const { return _trees[index].get(); }
 
-public:
 	static const prop_wrapper<side_p, pg_hidden> side_property;
 	static const prop_wrapper<float_p, pg_hidden> offset_property;
 	static const port_speed_p supported_speed_property;
@@ -134,7 +134,7 @@ public:
 	static const admin_p2p_p admin_p2p_property;
 	static const bool_p detected_p2p_property;
 	static const bool_p oper_p2p_property;
-	static const prop_wrapper<typed_object_collection_property<port, port_tree>, pg_hidden> trees_property;
+	static const prop_wrapper<typed_object_collection_property<port_tree>, pg_hidden> trees_property;
 
 	static const property* const _properties[];
 	static const xtype<port> _type;

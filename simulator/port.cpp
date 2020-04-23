@@ -484,14 +484,14 @@ static constexpr property_group link_group = { -1, "Link" };
 
 const port_speed_p port::supported_speed_property {
 	"SupportedSpeed", &link_group, "Maximum supported speed. The Simulator reads this at the instant the link is established (cable connected).",
-	static_cast<port_speed_p::member_getter_t>(&port::supported_speed),
-	static_cast<port_speed_p::member_setter_t>(&port::set_supported_speed),
+	&supported_speed,
+	&set_supported_speed,
 	100
 };
 
 const port_speed_p port::actual_speed_property {
 	"ActualSpeed", &link_group, "Actual speed in megabits per second, calculated when a link is established as a minimum between this port's and remote port's SupportedSpeed properties, and passed to STP for port path cost calculation.",
-	static_cast<port_speed_p::member_var_t>(&port::_actual_speed),
+	&actual_speed,
 	nullptr,
 };
 
@@ -503,8 +503,8 @@ const bool_p port::auto_edge_property {
 		"is to detect other Bridges attached to the LAN, and set ieee8021SpanningTreeRstpPortOperEdgePort automatically. "
 		"The default value is true(1) This is optional and provided only by implementations that support the automatic "
 		"identification of edge ports. The value of this object MUST be retained across reinitializations of the management system.",
-	static_cast<bool_p::member_getter_t>(&auto_edge),
-	static_cast<bool_p::member_setter_t>(&set_auto_edge),
+	&auto_edge,
+	&set_auto_edge,
 	true,
 };
 
@@ -517,8 +517,8 @@ const bool_p port::admin_edge_property {
 		"of dot1dStpPortOperEdgePort to change to the same value. Note that even when this object's value is true, "
 		"the value of the corresponding instance of dot1dStpPortOperEdgePort can be false if a BPDU has been received. "
 		"The value of this object MUST be retained across reinitializations of the management system",
-	static_cast<bool_p::member_getter_t>(&admin_edge),
-	static_cast<bool_p::member_setter_t>(&set_admin_edge),
+	&admin_edge,
+	&set_admin_edge,
 	false,
 };
 
@@ -526,7 +526,7 @@ const bool_p port::mac_operational_property {
 	"MAC_Operational",
 	&link_group,
 	nullptr,
-	static_cast<bool_p::member_getter_t>(&mac_operational),
+	&mac_operational,
 	nullptr,
 	false,
 };
@@ -537,7 +537,7 @@ const uint32_p port::detected_port_path_cost_property {
 	"DetectedPortPathCost",
 	&port_path_cost_group,
 	"The Port Path Cost calculated from ActualSpeed, which STP uses for path cost calculation while AdminExternalPortPathCost is zero.",
-	static_cast<uint32_p::member_getter_t>(&GetDetectedPortPathCost),
+	&GetDetectedPortPathCost,
 	nullptr,
 	0,
 };
@@ -546,8 +546,8 @@ const uint32_p port::admin_external_port_path_cost_property {
 	"AdminExternalPortPathCost",
 	&port_path_cost_group,
 	nullptr,
-	static_cast<uint32_p::member_getter_t>(&GetAdminExternalPortPathCost),
-	static_cast<uint32_p::member_setter_t>(&SetAdminExternalPortPathCost),
+	&GetAdminExternalPortPathCost,
+	&SetAdminExternalPortPathCost,
 	0,
 };
 
@@ -555,7 +555,7 @@ const uint32_p port::external_port_path_cost_property {
 	"ExternalPortPathCost",
 	&port_path_cost_group,
 	nullptr,
-	static_cast<uint32_p::member_getter_t>(&GetExternalPortPathCost),
+	&GetExternalPortPathCost,
 	nullptr,
 	0,
 };
@@ -564,7 +564,7 @@ const bool_p port::detected_p2p_property {
 	"detectedPointToPointMAC",
 	&link_group,
 	nullptr,
-	static_cast<bool_p::member_getter_t>(&detected_p2p),
+	&detected_p2p,
 	nullptr,
 };
 
@@ -572,8 +572,8 @@ const admin_p2p_p port::admin_p2p_property {
 	"adminPointToPointMAC",
 	&link_group,
 	nullptr,
-	static_cast<admin_p2p_p::member_getter_t>(&admin_p2p),
-	static_cast<admin_p2p_p::member_setter_t>(&set_admin_p2p),
+	&admin_p2p,
+	&set_admin_p2p,
 	STP_ADMIN_P2P_AUTO,
 };
 
@@ -581,14 +581,12 @@ const edge::bool_p port::oper_p2p_property {
 	"operPointToPointMAC",
 	&link_group,
 	nullptr,
-	static_cast<bool_p::member_getter_t>(&oper_p2p),
+	&oper_p2p,
 	nullptr,
 };
 
-const prop_wrapper<typed_object_collection_property<port, port_tree>, pg_hidden> port::trees_property {
-	"PortTrees", nullptr, nullptr,
-	&tree_count, &tree
-};
+const prop_wrapper<typed_object_collection_property<port_tree>, pg_hidden> port::trees_property
+	{ "PortTrees", nullptr, nullptr, &tree_count, &tree };
 
 const edge::property* const port::_properties[] =
 {

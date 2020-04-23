@@ -46,10 +46,8 @@ public:
 
 	wire_end p0() const { return _points[0]; }
 	void set_p0 (wire_end p0) { set_point(0, p0); }
-	void set_p0 (port* p0) { set_point(0, p0); }
 	wire_end p1() const { return _points[1]; }
 	void set_p1 (wire_end p1) { set_point(1, p1); }
-	void set_p1 (port* p1) { set_point(1, p1); }
 
 	D2D1_POINT_2F point_coords (size_t pointIndex) const;
 

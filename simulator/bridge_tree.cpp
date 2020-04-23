@@ -222,12 +222,8 @@ const nvp bridge_priority_nvps[] =
 
 const char bridge_priority_type_name[] = "bridge_priority";
 
-const bridge_priority_p bridge_tree::bridge_priority_property {
-	"BridgePriority", nullptr, nullptr,
-	static_cast<bridge_priority_p::member_getter_t>(&bridge_priority),
-	static_cast<bridge_priority_p::member_setter_t>(&set_bridge_priority),
-	0x8000,
-};
+const bridge_priority_p bridge_tree::bridge_priority_property
+	{ "BridgePriority", nullptr, nullptr, &bridge_priority, &set_bridge_priority, 0x8000 };
 
 const temp_string_p bridge_tree::root_id_property =
 	{ "RootID", &rpv_group, nullptr, &root_bridge_id, nullptr, };

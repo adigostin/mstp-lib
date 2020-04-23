@@ -216,8 +216,8 @@ public:
 	static const prop_wrapper<float_p, pg_hidden> y_property;
 	static const prop_wrapper<float_p, pg_hidden> width_property;
 	static const prop_wrapper<float_p, pg_hidden> height_property;
-	static const prop_wrapper<typed_object_collection_property<bridge, bridge_tree>, pg_hidden> trees_property;
-	static const prop_wrapper<typed_object_collection_property<bridge,      ::port>, pg_hidden> ports_property;
+	static const prop_wrapper<typed_object_collection_property<bridge_tree>, pg_hidden> trees_property;
+	static const prop_wrapper<typed_object_collection_property<::port>, pg_hidden> ports_property;
 
 	static const property* const _properties[];
 	static const xtype<bridge, size_t_property_traits, size_t_property_traits, mac_address_property_traits> _type;
