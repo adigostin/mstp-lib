@@ -62,6 +62,6 @@ public:
 	static const prop_wrapper<wire_end_p, pg_hidden> p0_property;
 	static const prop_wrapper<wire_end_p, pg_hidden> p1_property;
 	static const property* const _properties[];
-	static const xtype<wire> _type;
+	static const xtype<> _type;
 	virtual const concrete_type* type() const override { return &_type; }
 };

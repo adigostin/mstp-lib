@@ -194,4 +194,4 @@ const prop_wrapper<wire_end_p, pg_hidden> wire::p1_property = { "P1", nullptr, n
 
 const property* const wire::_properties[] = { &p0_property, &p1_property };
 
-const xtype<wire> wire::_type = { "Wire", &base::_type, _properties, std::make_unique<wire> };
+const xtype<> wire::_type = { "Wire", &base::_type, _properties, []()->std::unique_ptr<object> { return std::make_unique<wire>(); } };

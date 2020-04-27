@@ -292,7 +292,7 @@ private:
 	static const prop_wrapper<typed_object_collection_property<wire>, pg_hidden> wires_property;
 	static constexpr const property* const _properties[] = { &next_mac_address_property, &bridges_property, &wires_property };
 public:
-	static constexpr xtype<project> _type = { "Project", &base::_type, _properties, nullptr };
+	static constexpr xtype<> _type = { "Project", &base::_type, _properties, nullptr };
 	virtual const concrete_type* type() const { return &_type; }
 };
 

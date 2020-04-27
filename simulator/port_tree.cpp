@@ -250,4 +250,4 @@ const edge::property* const port_tree::_properties[] = {
 	&internal_port_path_cost_property,
 };
 
-const xtype<port_tree> port_tree::_type = { "PortTree", &base::_type, _properties, nullptr };
+const xtype<> port_tree::_type = { "PortTree", &base::_type, _properties, nullptr };

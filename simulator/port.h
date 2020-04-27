@@ -143,6 +143,6 @@ public:
 	static const prop_wrapper<typed_object_collection_property<port_tree>, pg_hidden> trees_property;
 
 	static const property* const _properties[];
-	static const xtype<port> _type;
+	static const xtype<> _type;
 	virtual const concrete_type* type() const { return &_type; }
 };

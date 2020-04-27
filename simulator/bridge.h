@@ -235,6 +235,6 @@ public:
 	static const prop_wrapper<typed_object_collection_property<::port>, pg_hidden> ports_property;
 
 	static const property* const _properties[];
-	static const xtype<bridge, size_t_property_traits, size_t_property_traits, mac_address_property_traits> _type;
+	static const xtype<size_t_property_traits, size_t_property_traits, mac_address_property_traits> _type;
 	virtual const concrete_type* type() const override { return &_type; }
 };

@@ -819,11 +819,11 @@ const edge::property* const bridge::_properties[] = {
 	&ports_property,
 };
 
-const xtype<bridge, size_t_property_traits, size_t_property_traits, mac_address_property_traits> bridge::_type = {
+const xtype<size_t_property_traits, size_t_property_traits, mac_address_property_traits> bridge::_type = {
 	"Bridge",
 	&base::_type,
 	_properties,
-	[](size_t port_count, size_t msti_count, mac_address address) { return std::make_unique<bridge>(port_count, msti_count, address); },
+	[](size_t port_count, size_t msti_count, mac_address address)->std::unique_ptr<object> { return std::make_unique<bridge>(port_count, msti_count, address); },
 	&port_count_property,
 	&msti_count_property,
 	&bridge_address_property,

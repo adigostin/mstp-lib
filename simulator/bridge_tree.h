@@ -79,7 +79,7 @@ public:
 	static const uint32_p      remaining_hops_property;
 	static const uint32_p      topology_change_count_property;
 	static const edge::property* const _properties[];
-	static const edge::xtype<bridge_tree> _type;
+	static const edge::xtype<> _type;
 	const concrete_type* type() const override final { return &_type; }
 };
 

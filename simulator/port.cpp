@@ -627,4 +627,4 @@ const edge::property* const port::_properties[] =
 	&trees_property,
 };
 
-const edge::xtype<port> port::_type = { "Port", &base::_type, _properties, nullptr };
+const edge::xtype<> port::_type = { "Port", &base::_type, _properties, nullptr };
