@@ -73,7 +73,7 @@ std::unique_ptr<wire> project_i::remove_wire (wire* w)
 	for (size_t wi = 0; wi < wires.size(); wi++)
 	{
 		if (wires[wi].get() == w)
-			return this->remove_wire(wi);
+			return this->wire_collection_i::remove(wi);
 	}
 
 	assert(false); return nullptr;
@@ -85,7 +85,7 @@ std::unique_ptr<bridge> project_i::remove_bridge (bridge* b)
 	for (size_t bi = 0; bi < bridges.size(); bi++)
 	{
 		if (bridges[bi].get() == b)
-			return this->remove_bridge(bi);
+			return this->bridge_collection_i::remove(bi);
 	}
 
 	assert(false); return nullptr;

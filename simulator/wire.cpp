@@ -71,6 +71,11 @@ wire::wire (wire_end firstEnd, wire_end secondEnd)
 	: _points({ firstEnd, secondEnd })
 { }
 
+project_i* wire::project() const
+{
+	return static_cast<project_i*>(static_cast<wire_collection_i*>(base::parent()));
+}
+
 // deserialize_i
 void wire::on_deserializing()
 { }

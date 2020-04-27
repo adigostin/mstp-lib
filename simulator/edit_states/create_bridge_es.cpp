@@ -37,7 +37,7 @@ class create_bridge_es : public edit_state
 			b->set_location(_bridge->location());
 
 			size_t insert_index = _project->bridges().size();
-			_project->insert_bridge(insert_index, std::move(b));
+			_project->bridge_collection_i::insert(insert_index, std::move(b));
 			_project->SetChangedFlag(true);
 			_selection->select(_project->bridges().back().get());
 		}

@@ -26,15 +26,17 @@ struct wire_end_property_traits
 };
 using wire_end_p = static_value_property<wire_end_property_traits>;
 
-class wire : public project_child, public edge::deserialize_i
+class wire : public renderable_object, public edge::deserialize_i
 {
-	using base = project_child;
+	using base = renderable_object;
 
 	std::array<wire_end, 2> _points;
 
 public:
 	wire() = default;
 	wire (wire_end firstEnd, wire_end secondEnd);
+
+	project_i* project() const;
 
 	// deserialize_i
 	virtual void on_deserializing() override;

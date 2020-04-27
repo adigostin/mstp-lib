@@ -48,46 +48,52 @@ const char stp_disabled_text[] = "(STP disabled)";
 UINT_PTR                       port_tree::_flush_timer;
 std::unordered_set<port_tree*> port_tree::_trees;
 
-port_tree::port_tree (port* port, size_t tree_index)
-	: _port(port), _tree_index(tree_index)
+port_tree::port_tree (size_t tree_index)
+	: _tree_index(tree_index)
+{ }
+
+::port* port_tree::port() const
 {
-	_port->bridge()->property_changing().add_handler<&port_tree::on_bridge_property_changing>(this);
-	_port->bridge()->property_changed().add_handler<&port_tree::on_bridge_property_changed>(this);
+	return static_cast<::port*>(static_cast<typed_object_collection_i<port_tree>*>(base::parent()));
+}
+
+void port_tree::on_inserted_to_parent()
+{
+	base::on_inserted_to_parent();
+
+	port()->stp_enabled_changing().add_handler<&port_tree::on_stp_enabled_changing>(this);
+	port()->stp_enabled_changed().add_handler<&port_tree::on_stp_enabled_changed>(this);
 
 	if (_trees.empty())
 		_flush_timer = ::SetTimer (nullptr, 0, 100, flush_timer_proc);
 	_trees.insert(this);
 }
 
-port_tree::~port_tree()
+void port_tree::on_removing_from_parent()
 {
 	_trees.erase(this);
 	if (_trees.empty())
 		::KillTimer (nullptr, _flush_timer);
 
-	_port->bridge()->property_changed().remove_handler<&port_tree::on_bridge_property_changed>(this);
-	_port->bridge()->property_changing().remove_handler<&port_tree::on_bridge_property_changing>(this);
+	port()->stp_enabled_changed().remove_handler<&port_tree::on_stp_enabled_changed>(this);
+	port()->stp_enabled_changing().remove_handler<&port_tree::on_stp_enabled_changing>(this);
+
+	base::on_removing_from_parent();
 }
 
-void port_tree::on_bridge_property_changing (object* obj, const property_change_args& args)
+void port_tree::on_stp_enabled_changing (const property_change_args& args)
 {
-	if (args.property == &bridge::stp_enabled_property)
-	{
-		on_property_changing(&learning_property);
-		on_property_changing(&forwarding_property);
-		on_property_changing(&role_property);
-	}
+	on_property_changing(&learning_property);
+	on_property_changing(&forwarding_property);
+	on_property_changing(&role_property);
 }
 
-void port_tree::on_bridge_property_changed (object* obj, const property_change_args& args)
+void port_tree::on_stp_enabled_changed (const property_change_args& args)
 {
-	if (args.property == &bridge::stp_enabled_property)
-	{
-		on_property_changed(&role_property);
-		on_property_changed(&forwarding_property);
-		on_property_changed(&learning_property);
-		_port->invalidate();
-	}
+	on_property_changed(&role_property);
+	on_property_changed(&forwarding_property);
+	on_property_changed(&learning_property);
+	port()->invalidate();
 }
 
 void port_tree::flush_timer_proc (HWND hwnd, UINT, UINT_PTR timer_id, DWORD)
@@ -101,7 +107,7 @@ void port_tree::flush_timer_proc (HWND hwnd, UINT, UINT_PTR timer_id, DWORD)
 		if (tree->_flush_text_visible != text_visible)
 		{
 			tree->_flush_text_visible = text_visible;
-			tree->_port->invalidate();
+			tree->port()->invalidate();
 		}
 	}
 }
@@ -112,13 +118,13 @@ void port_tree::flush_fdb (unsigned int timestamp)
 	if (!_flush_text_visible)
 	{
 		_flush_text_visible = true;
-		_port->invalidate();
+		port()->invalidate();
 	}
 }
 
 uint32_t port_tree::priority() const
 {
-	return STP_GetPortPriority (_port->bridge()->stp_bridge(), (unsigned int)_port->port_index(), (unsigned int)_tree_index);
+	return STP_GetPortPriority (port()->bridge()->stp_bridge(), (unsigned int)port()->port_index(), (unsigned int)_tree_index);
 }
 
 void port_tree::set_priority (uint32_t priority)
@@ -126,28 +132,28 @@ void port_tree::set_priority (uint32_t priority)
 	if (this->priority() != priority)
 	{
 		this->on_property_changing(&priority_property);
-		STP_SetPortPriority (_port->bridge()->stp_bridge(), (unsigned int)_port->port_index(), (unsigned int)_tree_index, (unsigned char) priority, GetMessageTime());
+		STP_SetPortPriority (port()->bridge()->stp_bridge(), (unsigned int)port()->port_index(), (unsigned int)_tree_index, (unsigned char) priority, GetMessageTime());
 		this->on_property_changed(&priority_property);
 	}
 }
 
 uint32_t port_tree::internal_port_path_cost() const
 {
-	return STP_GetInternalPortPathCost(_port->bridge()->stp_bridge(), (unsigned int)_port->port_index(), (unsigned int)_tree_index);
+	return STP_GetInternalPortPathCost(port()->bridge()->stp_bridge(), (unsigned int)port()->port_index(), (unsigned int)_tree_index);
 }
 
 uint32_t port_tree::admin_internal_port_path_cost() const
 {
-	return STP_GetAdminInternalPortPathCost(_port->bridge()->stp_bridge(), (unsigned int)_port->port_index(), (unsigned int)_tree_index);
+	return STP_GetAdminInternalPortPathCost(port()->bridge()->stp_bridge(), (unsigned int)port()->port_index(), (unsigned int)_tree_index);
 }
 
 void port_tree::set_admin_internal_port_path_cost (uint32_t value)
 {
-	if (STP_GetAdminInternalPortPathCost (_port->bridge()->stp_bridge(), (unsigned int)_port->port_index(), (unsigned int)_tree_index) != value)
+	if (STP_GetAdminInternalPortPathCost (port()->bridge()->stp_bridge(), (unsigned int)port()->port_index(), (unsigned int)_tree_index) != value)
 	{
 		this->on_property_changing (&admin_internal_port_path_cost_property);
 		this->on_property_changing (&internal_port_path_cost_property);
-		STP_SetAdminInternalPortPathCost (_port->bridge()->stp_bridge(), (unsigned int)_port->port_index(), (unsigned int)_tree_index, value, ::GetMessageTime());
+		STP_SetAdminInternalPortPathCost (port()->bridge()->stp_bridge(), (unsigned int)port()->port_index(), (unsigned int)_tree_index, value, ::GetMessageTime());
 		this->on_property_changed (&internal_port_path_cost_property);
 		this->on_property_changed (&admin_internal_port_path_cost_property);
 	}
@@ -155,23 +161,23 @@ void port_tree::set_admin_internal_port_path_cost (uint32_t value)
 
 bool port_tree::learning() const
 {
-	if (!STP_IsBridgeStarted(_port->bridge()->stp_bridge()))
+	if (!STP_IsBridgeStarted(port()->bridge()->stp_bridge()))
 		throw std::logic_error(stp_disabled_text);
-	return STP_GetPortLearning(_port->bridge()->stp_bridge(), (unsigned int)_port->port_index(), (unsigned int)_tree_index);
+	return STP_GetPortLearning(port()->bridge()->stp_bridge(), (unsigned int)port()->port_index(), (unsigned int)_tree_index);
 }
 
 bool port_tree::forwarding() const
 {
-	if (!STP_IsBridgeStarted(_port->bridge()->stp_bridge()))
+	if (!STP_IsBridgeStarted(port()->bridge()->stp_bridge()))
 		throw std::logic_error(stp_disabled_text);
-	return STP_GetPortForwarding(_port->bridge()->stp_bridge(), (unsigned int)_port->port_index(), (unsigned int)_tree_index);
+	return STP_GetPortForwarding(port()->bridge()->stp_bridge(), (unsigned int)port()->port_index(), (unsigned int)_tree_index);
 }
 
 STP_PORT_ROLE port_tree::role() const
 {
-	if (!STP_IsBridgeStarted(_port->bridge()->stp_bridge()))
+	if (!STP_IsBridgeStarted(port()->bridge()->stp_bridge()))
 		throw std::logic_error(stp_disabled_text);
-	return STP_GetPortRole (_port->bridge()->stp_bridge(), (unsigned int)_port->port_index(), (unsigned int)_tree_index);
+	return STP_GetPortRole (port()->bridge()->stp_bridge(), (unsigned int)port()->port_index(), (unsigned int)_tree_index);
 }
 
 const prop_wrapper<size_t_p, edge::pg_hidden> port_tree::tree_index_property {

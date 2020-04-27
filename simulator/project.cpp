@@ -26,36 +26,28 @@ public:
 	~project()
 	{
 		while(!_wires.empty())
-			remove_wire(0);
+			wire_collection_i::remove_last();
 		while(!_bridges.empty())
-			remove_bridge(0);
+			bridge_collection_i::remove_last();
 	}
 
+private:
 	virtual const std::vector<std::unique_ptr<bridge>>& bridges() const override final { return _bridges; }
 
-	virtual void insert_bridge (size_t index, std::unique_ptr<bridge>&& bridge) override final
-	{
-		assert (index <= _bridges.size());
-		assert (bridge->_project == nullptr);
-		auto b = bridge.get();
+	// bridge_collection_i
+	virtual std::vector<std::unique_ptr<bridge>>& bridge_store() override final { return _bridges; }
 
-		property_change_args args = { &bridges_property, index, collection_property_change_type::insert };
-		this->on_property_changing(args);
-		_bridges.insert (_bridges.begin() + index, std::move(bridge));
-		static_cast<project_child*>(b)->on_added_to_project(this);
-		this->on_property_changed(args);
+	virtual void on_child_inserted (size_t index, bridge* b) override
+	{
+		bridge_collection_i::on_child_inserted(index, b);
 
 		b->invalidated().add_handler<&project::on_project_child_invalidated>(this);
 		b->packet_transmit().add_handler<&project::on_packet_transmit>(this);
 		this->event_invoker<invalidate_e>()(this);
 	}
 
-	virtual std::unique_ptr<bridge> remove_bridge(size_t index) override final
+	virtual void on_child_removing (size_t index, bridge* b) override
 	{
-		assert (index < _bridges.size());
-		bridge* b = _bridges[index].get();
-		assert (b->_project == this);
-
 		if (std::any_of (_wires.begin(), _wires.end(), [b, this](const std::unique_ptr<wire>& w) {
 			return any_of (w->points().begin(), w->points().end(), [b, this] (wire_end p) {
 				return std::holds_alternative<connected_wire_end>(p) && (std::get<connected_wire_end>(p)->bridge() == b);
@@ -65,53 +57,28 @@ public:
 
 		b->packet_transmit().remove_handler<&project::on_packet_transmit>(this);
 		b->invalidated().remove_handler<&project::on_project_child_invalidated>(this);
-
-		property_change_args args = { &bridges_property, index, collection_property_change_type::remove };
-		this->on_property_changing(args);
-		static_cast<project_child*>(b)->on_removing_from_project(this);
-		auto result = std::move(_bridges[index]);
-		_bridges.erase (_bridges.begin() + index);
-		this->on_property_changed(args);
-
 		this->event_invoker<invalidate_e>()(this);
-		return result;
+
+		bridge_collection_i::on_child_removing(index, b);
 	}
 
 	virtual const std::vector<std::unique_ptr<wire>>& wires() const override final { return _wires; }
 
-	virtual void insert_wire (size_t index, std::unique_ptr<wire>&& wire) override final
+	// wire_collection_i
+	virtual std::vector<std::unique_ptr<wire>>& wire_store() override final { return _wires; }
+
+	virtual void on_child_inserted (size_t index, wire* wire) override
 	{
-		assert (index <= _wires.size());
-		assert (wire->_project == nullptr);
-		auto w = wire.get();
-
-		property_change_args args = { &wires_property, index, collection_property_change_type::insert };
-		this->on_property_changing(args);
-		_wires.insert (_wires.begin() + index, std::move(wire));
-		static_cast<project_child*>(w)->on_added_to_project(this);
-		this->on_property_changed(args);
-
-		w->invalidated().add_handler<&project::on_project_child_invalidated>(this);
+		wire_collection_i::on_child_inserted (index, wire);
+		wire->invalidated().add_handler<&project::on_project_child_invalidated>(this);
 		this->event_invoker<invalidate_e>()(this);
 	}
 
-	virtual std::unique_ptr<wire> remove_wire (size_t index) override final
+	virtual void on_child_removing (size_t index, wire* wire) override
 	{
-		assert (index < _wires.size());
-		wire* w = _wires[index].get();
-		assert(w->_project == this);
-
-		_wires[index]->invalidated().remove_handler<&project::on_project_child_invalidated>(this);
-
-		property_change_args args = { &wires_property, index, collection_property_change_type::remove };
-		this->on_property_changing (args);
-		static_cast<project_child*>(w)->on_removing_from_project(this);
-		auto result = std::move(_wires[index]);
-		_wires.erase (_wires.begin() + index);
-		this->on_property_changed (args);
-
+		wire->invalidated().remove_handler<&project::on_project_child_invalidated>(this);
 		this->event_invoker<invalidate_e>()(this);
-		return result;
+		wire_collection_i::on_child_removing (index, wire);
 	}
 
 	void on_packet_transmit (bridge* bridge, size_t txPortIndex, packet_t&& pi)
@@ -294,9 +261,9 @@ public:
 
 	virtual ChangedEvent::subscriber GetChangedEvent() override final { return ChangedEvent::subscriber(this); }
 
-	virtual const object_collection_property* bridges_prop() const override final { return &bridges_property; }
+	virtual const typed_object_collection_property<bridge>* bridges_prop() const override final { return &bridges_property; }
 
-	virtual const object_collection_property* wires_prop() const override final { return &wires_property; }
+	virtual const typed_object_collection_property<wire>* wires_prop() const override final { return &wires_property; }
 
 	virtual property_changing_e::subscriber property_changing() override final { return property_changing_e::subscriber(this); }
 
@@ -321,14 +288,10 @@ public:
 		mac_address{ 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x80 },
 	};
 
-	size_t bridge_count() const { return _bridges.size(); }
-	bridge* bridge_at(size_t index) const { return _bridges[index].get(); }
-	size_t wire_count() const { return _wires.size(); }
-	wire* wire_at(size_t index) const { return _wires[index].get(); }
-
 	static const prop_wrapper<typed_object_collection_property<bridge>, pg_hidden> bridges_property;
 	static const prop_wrapper<typed_object_collection_property<wire>, pg_hidden> wires_property;
 	static constexpr const property* const _properties[] = { &next_mac_address_property, &bridges_property, &wires_property };
+public:
 	static constexpr xtype<project> _type = { "Project", &base::_type, _properties, nullptr };
 	virtual const concrete_type* type() const { return &_type; }
 };
@@ -339,12 +302,9 @@ static constexpr const concrete_type* known_types_arr[]
 const std::span<const concrete_type* const> project::known_types = known_types_arr;
 
 const prop_wrapper<typed_object_collection_property<bridge>, pg_hidden> project::bridges_property
-	= { "Bridges", nullptr, nullptr, &bridge_count, &bridge_at, &insert_bridge, &remove_bridge };
+	= { "Bridges", nullptr, nullptr, false, [](object* obj) { return static_cast<typed_object_collection_i<bridge>*>(static_cast<project*>(obj)); } };
 
 const prop_wrapper<typed_object_collection_property<wire>, pg_hidden> project::wires_property
-	= { "Wires", nullptr, nullptr, &wire_count, &wire_at, &insert_wire, &remove_wire };
+	= { "Wires", nullptr, nullptr, false, [](object* obj) { return static_cast<typed_object_collection_i<wire>*>(static_cast<project*>(obj)); } };
 
-extern std::shared_ptr<project_i> project_factory()
-{
-	return std::make_shared<project>();
-};
+extern std::shared_ptr<project_i> project_factory() { return std::make_shared<project>(); };

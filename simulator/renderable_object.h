@@ -3,7 +3,7 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "object.h"
+#include "collections.h"
 #include "win32/com_ptr.h"
 #include "win32/zoomable_window.h"
 #include "win32/property_grid.h"
@@ -17,11 +17,13 @@ using edge::backed_string_p;
 using edge::temp_string_p;
 using edge::side_p;
 using edge::property;
+using edge::event;
 using edge::object;
 using edge::type;
 using edge::concrete_type;
 using edge::xtype;
 using edge::value_property;
+using edge::typed_object_collection_i;
 using edge::typed_object_collection_property;
 using edge::property_change_args;
 using edge::side;
@@ -82,29 +84,4 @@ protected:
 		this->on_property_changed(pd);
 		this->event_invoker<invalidate_e>()(this);
 	}
-};
-
-struct project_i;
-
-class project_child : public renderable_object
-{
-	friend class project;
-
-	project_i* _project = nullptr;
-
-protected:
-	virtual void on_added_to_project(project_i* project)
-	{
-		assert (_project == nullptr);
-		_project = project;
-	}
-
-	virtual void on_removing_from_project(project_i* project)
-	{
-		assert (_project == project);
-		_project = nullptr;
-	}
-
-public:
-	project_i* project() const { return _project; }
 };

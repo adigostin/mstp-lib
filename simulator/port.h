@@ -33,13 +33,12 @@ extern const char port_speed_unknown_str[];
 extern const nvp port_speed_nvps[];
 using port_speed_p = edge::enum_property<uint32_t, port_speed_type_name, port_speed_nvps, false, port_speed_unknown_str>;
 
-class port : public renderable_object
+class port : public renderable_object, public typed_object_collection_i<port_tree>
 {
 	using base = renderable_object;
 
 	friend class bridge;
 
-	bridge* const _bridge;
 	size_t  const _port_index;
 	side _side = side_property.default_value.value();
 	float _offset;
@@ -50,12 +49,16 @@ class port : public renderable_object
 	static constexpr uint32_t MissedLinkPulseCounterMax = 3;
 	uint32_t _missedLinkPulseCounter = MissedLinkPulseCounterMax;
 
+	virtual std::vector<std::unique_ptr<port_tree>>& children_store() override final { return _trees; }
+
+	virtual void on_inserted_to_parent  () override;
+	virtual void on_removing_from_parent() override;
+
 	void on_bridge_property_changing (object* obj, const property_change_args& args);
 	void on_bridge_property_changed  (object* obj, const property_change_args& args);
 
 public:
-	port (class bridge* bridge, size_t port_index, side side, float offset);
-	~port();
+	port (size_t port_index, side side, float offset);
 
 	static constexpr int HTCodeInnerOuter = 1;
 	static constexpr int HTCodeCP = 2;
@@ -67,8 +70,7 @@ public:
 	static constexpr float ExteriorHeight = 20;
 	static constexpr float OutlineWidth = 2;
 
-	const bridge* bridge() const { return _bridge; }
-	class bridge* bridge() { return _bridge; }
+	::bridge* bridge() const;
 	size_t port_index() const { return _port_index; }
 	side side() const { return _side; }
 	float offset() const { return _offset; }
@@ -79,6 +81,12 @@ public:
 	bool IsForwarding (unsigned int vlanNumber) const;
 	void SetSideAndOffset (edge::side side, float offset);
 	const std::vector<std::unique_ptr<port_tree>>& trees() const { return _trees; }
+
+	struct stp_enabled_changing_e : event<stp_enabled_changing_e, const property_change_args&> { };
+	struct stp_enabled_changed_e  : event<stp_enabled_changed_e,  const property_change_args&> { };
+
+	stp_enabled_changing_e::subscriber stp_enabled_changing() { return stp_enabled_changing_e::subscriber(this); }
+	stp_enabled_changed_e ::subscriber stp_enabled_changed () { return stp_enabled_changed_e ::subscriber(this); }
 
 	static void RenderExteriorNonStpPort (ID2D1RenderTarget* dc, const drawing_resources& dos, bool macOperational);
 	static void RenderExteriorStpPort (ID2D1RenderTarget* dc, const drawing_resources& dos, STP_PORT_ROLE role, bool learning, bool forwarding, bool operEdge);
@@ -118,8 +126,6 @@ public:
 	void set_actual_speed (uint32_t value);
 	void set_side (edge::side side) { _side = side; }
 	void set_offset (float offset) { _offset = offset; }
-	size_t tree_count() const { return _trees.size(); }
-	port_tree* tree (size_t index) const { return _trees[index].get(); }
 
 	static const prop_wrapper<side_p, pg_hidden> side_property;
 	static const prop_wrapper<float_p, pg_hidden> offset_property;

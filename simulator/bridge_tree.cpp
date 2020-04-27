@@ -8,20 +8,30 @@
 
 using namespace edge;
 
-bridge_tree::bridge_tree (bridge* parent, size_t tree_index)
-	: _parent(parent), _tree_index(tree_index)
+bridge_tree::bridge_tree (size_t tree_index)
+	: _tree_index(tree_index)
 {
-	_parent->property_changing().add_handler<&bridge_tree::on_bridge_property_changing>(this);
-	_parent->property_changed().add_handler<&bridge_tree::on_bridge_property_changed>(this);
-
 	::GetSystemTime(&_last_topology_change);
 	_topology_change_count = 0;
 }
 
-bridge_tree::~bridge_tree()
+bridge* bridge_tree::parent() const
 {
-	_parent->property_changed().remove_handler<&bridge_tree::on_bridge_property_changed>(this);
-	_parent->property_changing().remove_handler<&bridge_tree::on_bridge_property_changing>(this);
+	return static_cast<bridge*>(static_cast<bridge_tree_collection_i*>(base::parent()));
+}
+
+void bridge_tree::on_inserted_to_parent()
+{
+	base::on_inserted_to_parent();
+	parent()->property_changing().add_handler<&bridge_tree::on_bridge_property_changing>(this);
+	parent()->property_changed().add_handler<&bridge_tree::on_bridge_property_changed>(this);
+}
+
+void bridge_tree::on_removing_from_parent()
+{
+	parent()->property_changed().remove_handler<&bridge_tree::on_bridge_property_changed>(this);
+	parent()->property_changing().remove_handler<&bridge_tree::on_bridge_property_changing>(this);
+	base::on_removing_from_parent();
 }
 
 static const value_property* const properties_changed_on_stp_enable_disable[] = {
@@ -36,14 +46,20 @@ static const value_property* const properties_changed_on_stp_enable_disable[] = 
 
 void bridge_tree::on_bridge_property_changing (object* obj, const property_change_args& args)
 {
-	for (auto it = std::begin(properties_changed_on_stp_enable_disable); it != std::end(properties_changed_on_stp_enable_disable); it++)
-		this->on_property_changing(*it);
+	if (args.property == &bridge::stp_enabled_property)
+	{
+		for (auto prop : properties_changed_on_stp_enable_disable)
+			this->on_property_changing(prop);
+	}
 }
 
 void bridge_tree::on_bridge_property_changed (object* obj, const property_change_args& args)
 {
-	for (auto it = std::rbegin(properties_changed_on_stp_enable_disable); it != std::rend(properties_changed_on_stp_enable_disable); it++)
-		this->on_property_changed(*it);
+	if (args.property == &bridge::stp_enabled_property)
+	{
+		for (auto prop : properties_changed_on_stp_enable_disable)
+			this->on_property_changed(prop);
+	}
 }
 
 void bridge_tree::on_topology_change (unsigned int timestamp)
@@ -56,7 +72,7 @@ void bridge_tree::on_topology_change (unsigned int timestamp)
 
 uint32_t bridge_tree::bridge_priority() const
 {
-	return STP_GetBridgePriority (_parent->stp_bridge(), (unsigned int)_tree_index);
+	return STP_GetBridgePriority (parent()->stp_bridge(), (unsigned int)_tree_index);
 }
 
 void bridge_tree::set_bridge_priority (uint32_t priority)
@@ -64,7 +80,7 @@ void bridge_tree::set_bridge_priority (uint32_t priority)
 	if (bridge_priority() != priority)
 	{
 		this->on_property_changing(&bridge_priority_property);
-		STP_SetBridgePriority (_parent->stp_bridge(), (unsigned int)_tree_index, (unsigned short) priority, GetMessageTime());
+		STP_SetBridgePriority (parent()->stp_bridge(), (unsigned int)_tree_index, (unsigned short) priority, GetMessageTime());
 		this->on_property_changed(&bridge_priority_property);
 	}
 }
@@ -72,13 +88,13 @@ void bridge_tree::set_bridge_priority (uint32_t priority)
 std::array<unsigned char, 36> bridge_tree::root_priorty_vector() const
 {
 	std::array<unsigned char, 36> prioVector;
-	STP_GetRootPriorityVector(_parent->stp_bridge(), (unsigned int)_tree_index, prioVector.data());
+	STP_GetRootPriorityVector(parent()->stp_bridge(), (unsigned int)_tree_index, prioVector.data());
 	return prioVector;
 }
 
 std::string bridge_tree::root_bridge_id() const
 {
-	if (!STP_IsBridgeStarted (_parent->stp_bridge()))
+	if (!STP_IsBridgeStarted (parent()->stp_bridge()))
 		throw std::logic_error(stp_disabled_text);
 
 	auto rpv = root_priorty_vector();
@@ -92,7 +108,7 @@ std::string bridge_tree::root_bridge_id() const
 
 uint32_t bridge_tree::external_root_path_cost() const
 {
-	if (!STP_IsBridgeStarted(_parent->stp_bridge()))
+	if (!STP_IsBridgeStarted(parent()->stp_bridge()))
 		throw std::logic_error(stp_disabled_text);
 
 	auto rpv = root_priorty_vector();
@@ -102,7 +118,7 @@ uint32_t bridge_tree::external_root_path_cost() const
 
 std::string bridge_tree::regional_root_id() const
 {
-	if (!STP_IsBridgeStarted (_parent->stp_bridge()))
+	if (!STP_IsBridgeStarted (parent()->stp_bridge()))
 		throw std::logic_error(stp_disabled_text);
 
 	auto rpv = root_priorty_vector();
@@ -116,7 +132,7 @@ std::string bridge_tree::regional_root_id() const
 
 uint32_t bridge_tree::internal_root_path_cost() const
 {
-	if (!STP_IsBridgeStarted(_parent->stp_bridge()))
+	if (!STP_IsBridgeStarted(parent()->stp_bridge()))
 		throw std::logic_error(stp_disabled_text);
 
 	auto rpv = root_priorty_vector();
@@ -126,7 +142,7 @@ uint32_t bridge_tree::internal_root_path_cost() const
 
 std::string bridge_tree::designated_bridge_id() const
 {
-	if (!STP_IsBridgeStarted(_parent->stp_bridge()))
+	if (!STP_IsBridgeStarted(parent()->stp_bridge()))
 		throw std::logic_error(stp_disabled_text);
 
 	auto rpv = root_priorty_vector();
@@ -140,7 +156,7 @@ std::string bridge_tree::designated_bridge_id() const
 
 std::string bridge_tree::designated_port_id() const
 {
-	if (!STP_IsBridgeStarted(_parent->stp_bridge()))
+	if (!STP_IsBridgeStarted(parent()->stp_bridge()))
 		throw std::logic_error(stp_disabled_text);
 
 	auto rpv = root_priorty_vector();
@@ -151,7 +167,7 @@ std::string bridge_tree::designated_port_id() const
 
 std::string bridge_tree::receiving_port_id() const
 {
-	if (!STP_IsBridgeStarted(_parent->stp_bridge()))
+	if (!STP_IsBridgeStarted(parent()->stp_bridge()))
 		throw std::logic_error(stp_disabled_text);
 
 	auto rpv = root_priorty_vector();
@@ -163,35 +179,35 @@ std::string bridge_tree::receiving_port_id() const
 uint32_t bridge_tree::hello_time() const
 {
 	unsigned short ht;
-	STP_GetRootTimes(_parent->stp_bridge(), (unsigned int)_tree_index, nullptr, &ht, nullptr, nullptr, nullptr);
+	STP_GetRootTimes(parent()->stp_bridge(), (unsigned int)_tree_index, nullptr, &ht, nullptr, nullptr, nullptr);
 	return ht;
 }
 
 uint32_t bridge_tree::max_age() const
 {
 	unsigned short ma;
-	STP_GetRootTimes(_parent->stp_bridge(), (unsigned int)_tree_index, nullptr, nullptr, &ma, nullptr, nullptr);
+	STP_GetRootTimes(parent()->stp_bridge(), (unsigned int)_tree_index, nullptr, nullptr, &ma, nullptr, nullptr);
 	return ma;
 }
 
 uint32_t bridge_tree::bridge_forward_delay() const
 {
 	unsigned short fd;
-	STP_GetRootTimes(_parent->stp_bridge(), (unsigned int)_tree_index, &fd, nullptr, nullptr, nullptr, nullptr);
+	STP_GetRootTimes(parent()->stp_bridge(), (unsigned int)_tree_index, &fd, nullptr, nullptr, nullptr, nullptr);
 	return fd;
 }
 
 uint32_t bridge_tree::message_age() const
 {
 	unsigned short ma;
-	STP_GetRootTimes(_parent->stp_bridge(), (unsigned int)_tree_index, nullptr, nullptr, nullptr, &ma, nullptr);
+	STP_GetRootTimes(parent()->stp_bridge(), (unsigned int)_tree_index, nullptr, nullptr, nullptr, &ma, nullptr);
 	return ma;
 }
 
 uint32_t bridge_tree::remaining_hops() const
 {
 	unsigned char rh;
-	STP_GetRootTimes(_parent->stp_bridge(), (unsigned int)_tree_index, nullptr, nullptr, nullptr, nullptr, &rh);
+	STP_GetRootTimes(parent()->stp_bridge(), (unsigned int)_tree_index, nullptr, nullptr, nullptr, nullptr, &rh);
 	return rh;
 }
 

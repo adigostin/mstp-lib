@@ -31,29 +31,46 @@ const nvp port_speed_nvps[] = {
 	{ 0, 0 },
 };
 
-port::port (class bridge* bridge, size_t port_index, edge::side side, float offset)
-	: _bridge(bridge), _port_index(port_index), _side(side), _offset(offset)
-{
-	_bridge->property_changing().add_handler<&port::on_bridge_property_changing>(this);
-	_bridge->property_changed().add_handler<&port::on_bridge_property_changed>(this);
+port::port (size_t port_index, edge::side side, float offset)
+	: _port_index(port_index), _side(side), _offset(offset)
+{ }
 
-	for (size_t treeIndex = 0; treeIndex < bridge->trees().size(); treeIndex++)
-	{
-		auto tree = std::unique_ptr<port_tree>(new port_tree(this, treeIndex));
-		_trees.push_back (std::move(tree));
-	}
+
+::bridge* port::bridge() const
+{
+	return static_cast<::bridge*>(static_cast<port_collection_i*>(base::parent()));
 }
 
-port::~port()
+void port::on_inserted_to_parent()
 {
-	_bridge->property_changed().remove_handler<&port::on_bridge_property_changed>(this);
-	_bridge->property_changing().remove_handler<&port::on_bridge_property_changing>(this);
+	base::on_inserted_to_parent();
+
+	size_t tree_count = bridge()->trees().size();
+
+	for (size_t treeIndex = 0; treeIndex < tree_count; treeIndex++)
+		this->append(std::make_unique<port_tree>(treeIndex));
+
+	bridge()->property_changing().add_handler<&port::on_bridge_property_changing>(this);
+	bridge()->property_changed().add_handler<&port::on_bridge_property_changed>(this);
+
+}
+
+void port::on_removing_from_parent()
+{
+	bridge()->property_changed().remove_handler<&port::on_bridge_property_changed>(this);
+	bridge()->property_changing().remove_handler<&port::on_bridge_property_changing>(this);
+
+	while (!_trees.empty())
+		this->remove_last();
+
+	base::on_removing_from_parent();
 }
 
 void port::on_bridge_property_changing (object* obj, const property_change_args& args)
 {
 	if (args.property == &bridge::stp_enabled_property)
 	{
+		this->event_invoker<stp_enabled_changing_e>()(args);
 		// Currently no port property needs to change when STP is enabled/disabled.
 	}
 }
@@ -63,22 +80,23 @@ void port::on_bridge_property_changed (object* obj, const property_change_args& 
 	if (args.property == &bridge::stp_enabled_property)
 	{
 		// Currently no port property needs to change when STP is enabled/disabled.
+		this->event_invoker<stp_enabled_changed_e>()(args);
 	}
 }
 
 D2D1_POINT_2F port::GetCPLocation() const
 {
 	if (_side == side::left)
-		return { _bridge->left() - ExteriorHeight, _bridge->top() + _offset };
+		return { bridge()->left() - ExteriorHeight, bridge()->top() + _offset };
 
 	if (_side == side::right)
-		return { _bridge->right() + ExteriorHeight, _bridge->top() + _offset };
+		return { bridge()->right() + ExteriorHeight, bridge()->top() + _offset };
 
 	if (_side == side::top)
-		return { _bridge->left() + _offset, _bridge->top() - ExteriorHeight };
+		return { bridge()->left() + _offset, bridge()->top() - ExteriorHeight };
 
 	// _side == side::bottom
-	return { _bridge->left() + _offset, _bridge->bottom() + ExteriorHeight };
+	return { bridge()->left() + _offset, bridge()->bottom() + ExteriorHeight };
 }
 
 Matrix3x2F port::GetPortTransform() const
@@ -87,22 +105,22 @@ Matrix3x2F port::GetPortTransform() const
 	{
 		//portTransform = Matrix3x2F::Rotation (90, Point2F (0, 0)) * Matrix3x2F::Translation (bridgeRect.left, bridgeRect.top + port->GetOffset ());
 		// The above calculation is correct but slow. Let's assign the matrix members directly.
-		return { 0, 1, -1, 0, _bridge->left(), _bridge->top() + _offset};
+		return { 0, 1, -1, 0, bridge()->left(), bridge()->top() + _offset};
 	}
 	else if (_side == side::right)
 	{
 		//portTransform = Matrix3x2F::Rotation (270, Point2F (0, 0)) * Matrix3x2F::Translation (bridgeRect.right, bridgeRect.top + port->GetOffset ());
-		return { 0, -1, 1, 0, _bridge->right(), _bridge->top() + _offset };
+		return { 0, -1, 1, 0, bridge()->right(), bridge()->top() + _offset };
 	}
 	else if (_side == side::top)
 	{
 		//portTransform = Matrix3x2F::Rotation (180, Point2F (0, 0)) * Matrix3x2F::Translation (bridgeRect.left + port->GetOffset (), bridgeRect.top);
-		return { -1, 0, 0, -1, _bridge->left() + _offset, _bridge->top() };
+		return { -1, 0, 0, -1, bridge()->left() + _offset, bridge()->top() };
 	}
 	else //if (_side == side::bottom)
 	{
 		//portTransform = Matrix3x2F::Translation (bridgeRect.left + port->GetOffset (), bridgeRect.bottom);
-		return { 1, 0, 0, 1, _bridge->left() + _offset, _bridge->bottom() };
+		return { 1, 0, 0, 1, bridge()->left() + _offset, bridge()->bottom() };
 	}
 }
 
@@ -251,7 +269,7 @@ void port::render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned
 
 	// Draw the exterior of the port.
 	float interiorPortOutlineWidth = OutlineWidth;
-	auto b = _bridge->stp_bridge();
+	auto b = bridge()->stp_bridge();
 	auto treeIndex = STP_GetTreeIndexFromVlanNumber(b, vlanNumber);
 	if (STP_IsBridgeStarted (b))
 	{
@@ -361,7 +379,7 @@ void port::invalidate()
 
 bool port::IsForwarding (unsigned int vlanNumber) const
 {
-	auto stpb = _bridge->stp_bridge();
+	auto stpb = bridge()->stp_bridge();
 	if (!STP_IsBridgeStarted(stpb))
 		return true;
 
@@ -383,39 +401,39 @@ bool port::mac_operational() const { return _actual_speed > 0; }
 
 bool port::auto_edge() const
 {
-	return STP_GetPortAutoEdge (_bridge->stp_bridge(), (unsigned int)_port_index);
+	return STP_GetPortAutoEdge (bridge()->stp_bridge(), (unsigned int)_port_index);
 }
 
 void port::set_auto_edge (bool autoEdge)
 {
-	STP_SetPortAutoEdge (_bridge->stp_bridge(), (unsigned int)_port_index, autoEdge, (unsigned int) GetMessageTime());
+	STP_SetPortAutoEdge (bridge()->stp_bridge(), (unsigned int)_port_index, autoEdge, (unsigned int) GetMessageTime());
 }
 
 bool port::admin_edge() const
 {
-	return STP_GetPortAdminEdge (_bridge->stp_bridge(), (unsigned int)_port_index);
+	return STP_GetPortAdminEdge (bridge()->stp_bridge(), (unsigned int)_port_index);
 }
 
 void port::set_admin_edge (bool adminEdge)
 {
-	STP_SetPortAdminEdge (_bridge->stp_bridge(), (unsigned int)_port_index, adminEdge, (unsigned int) GetMessageTime());
+	STP_SetPortAdminEdge (bridge()->stp_bridge(), (unsigned int)_port_index, adminEdge, (unsigned int) GetMessageTime());
 }
 
 unsigned int port::GetDetectedPortPathCost() const
 {
-	return STP_GetDetectedPortPathCost(_bridge->stp_bridge(), (unsigned int)_port_index);
+	return STP_GetDetectedPortPathCost(bridge()->stp_bridge(), (unsigned int)_port_index);
 }
 
 unsigned int port::GetAdminExternalPortPathCost() const
 {
-	return STP_GetAdminExternalPortPathCost (_bridge->stp_bridge(), (unsigned int)_port_index);
+	return STP_GetAdminExternalPortPathCost (bridge()->stp_bridge(), (unsigned int)_port_index);
 }
 
 void port::SetAdminExternalPortPathCost(unsigned int adminExternalPortPathCost)
 {
 	this->on_property_changing (&admin_external_port_path_cost_property);
 	this->on_property_changing (&external_port_path_cost_property);
-	STP_SetAdminExternalPortPathCost (_bridge->stp_bridge(), (unsigned int)_port_index, adminExternalPortPathCost, GetMessageTime());
+	STP_SetAdminExternalPortPathCost (bridge()->stp_bridge(), (unsigned int)_port_index, adminExternalPortPathCost, GetMessageTime());
 	this->on_property_changed (&external_port_path_cost_property);
 	this->on_property_changed (&admin_external_port_path_cost_property);
 }
@@ -423,17 +441,17 @@ void port::SetAdminExternalPortPathCost(unsigned int adminExternalPortPathCost)
 unsigned int port::GetExternalPortPathCost() const
 {
 	unsigned int treeIndex = 0; // CIST
-	return STP_GetExternalPortPathCost (_bridge->stp_bridge(), (unsigned int)_port_index);
+	return STP_GetExternalPortPathCost (bridge()->stp_bridge(), (unsigned int)_port_index);
 }
 
 bool port::detected_p2p() const
 {
-	return STP_GetDetectedPointToPointMAC(_bridge->stp_bridge(), (unsigned int)_port_index);
+	return STP_GetDetectedPointToPointMAC(bridge()->stp_bridge(), (unsigned int)_port_index);
 }
 
 STP_ADMIN_P2P port::admin_p2p() const
 {
-	return STP_GetAdminPointToPointMAC(_bridge->stp_bridge(), (unsigned int)_port_index);
+	return STP_GetAdminPointToPointMAC(bridge()->stp_bridge(), (unsigned int)_port_index);
 }
 
 void port::set_supported_speed (uint32_t value)
@@ -466,14 +484,14 @@ void port::set_admin_p2p (STP_ADMIN_P2P admin_p2p)
 {
 	this->on_property_changing (&admin_p2p_property);
 	this->on_property_changing (&oper_p2p_property);
-	STP_SetAdminPointToPointMAC (_bridge->stp_bridge(), (unsigned int)_port_index, admin_p2p, ::GetMessageTime());
+	STP_SetAdminPointToPointMAC (bridge()->stp_bridge(), (unsigned int)_port_index, admin_p2p, ::GetMessageTime());
 	this->on_property_changed (&oper_p2p_property);
 	this->on_property_changed (&admin_p2p_property);
 }
 
 bool port::oper_p2p() const
 {
-	return STP_GetOperPointToPointMAC(_bridge->stp_bridge(), (unsigned int)_port_index);
+	return STP_GetOperPointToPointMAC(bridge()->stp_bridge(), (unsigned int)_port_index);
 }
 
 const prop_wrapper<side_p, pg_hidden> port::side_property = { "Side", nullptr, nullptr, &side, &set_side, side::bottom };
@@ -586,7 +604,10 @@ const edge::bool_p port::oper_p2p_property {
 };
 
 const prop_wrapper<typed_object_collection_property<port_tree>, pg_hidden> port::trees_property
-	{ "PortTrees", nullptr, nullptr, &tree_count, &tree };
+{
+	"PortTrees", nullptr, nullptr, true,
+	[](object* obj) { return static_cast<typed_object_collection_i<port_tree>*>(static_cast<port*>(obj)); }
+};
 
 const edge::property* const port::_properties[] =
 {

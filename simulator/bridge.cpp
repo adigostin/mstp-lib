@@ -66,14 +66,13 @@ std::unordered_set<bridge*> bridge::_created_bridges;
 bridge::bridge (size_t port_count, size_t msti_count, mac_address macAddress)
 {
 	for (size_t i = 0; i < 1 + msti_count; i++)
-		_trees.push_back (std::make_unique<bridge_tree>(this, i));
+		this->bridge_tree_collection_i::append(std::make_unique<bridge_tree>(i));
 
 	float offset = 0;
 	for (size_t portIndex = 0; portIndex < port_count; portIndex++)
 	{
 		offset += (port::PortToPortSpacing / 2 + port::InteriorWidth / 2);
-		auto p = std::unique_ptr<port>(new port(this, portIndex, side::bottom, offset));
-		_ports.push_back (std::move(p));
+		this->port_collection_i::append(std::make_unique<port>(portIndex, side::bottom, offset));
 		offset += (port::InteriorWidth / 2 + port::PortToPortSpacing / 2);
 	}
 
@@ -161,9 +160,21 @@ bridge::~bridge()
 
 	// ----------------------------------------------------------------
 
-	for (auto& port : _ports)
-		port->invalidated().remove_handler<&bridge::on_port_invalidated>(this);
+	while (!_ports.empty())
+	{
+		this->port_collection_i::last()->invalidated().remove_handler<&bridge::on_port_invalidated>(this);
+		this->port_collection_i::remove_last();
+	}
+
+	while (!_trees.empty())
+		this->bridge_tree_collection_i::remove_last();
+
 	STP_DestroyBridge (_stpBridge);
+}
+
+project_i* bridge::project() const
+{
+	return static_cast<project_i*>(static_cast<bridge_collection_i*>(base::parent()));
 }
 
 void bridge::on_port_invalidated (renderable_object* object)
@@ -782,10 +793,10 @@ const prop_wrapper<float_p, pg_hidden> bridge::height_property
 	= { "Height", nullptr, nullptr, &height, &set_height };
 
 const prop_wrapper<typed_object_collection_property<bridge_tree>, pg_hidden> bridge::trees_property
-	= { "BridgeTrees", nullptr, nullptr, &tree_count, &tree_at };
+	= { "BridgeTrees", nullptr, nullptr, true, [](object* obj) -> typed_object_collection_i<bridge_tree>* { return static_cast<bridge*>(obj); } };
 
 const prop_wrapper<typed_object_collection_property<port>, pg_hidden> bridge::ports_property
-	= { "Ports", nullptr, nullptr, &port_count, &port_at };
+	= { "Ports", nullptr, nullptr, true, [](object* obj) -> typed_object_collection_i<port>* { return static_cast<bridge*>(obj); } };
 
 const edge::property* const bridge::_properties[] = {
 	&bridge_address_property,

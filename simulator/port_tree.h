@@ -25,9 +25,6 @@ class port_tree : public edge::object
 {
 	using base = edge::object;
 
-	friend port;
-
-	port* const _port;
 	size_t const _tree_index;
 	ULONGLONG _flush_tick_count = 0;
 	bool _flush_text_visible = false;
@@ -35,13 +32,17 @@ class port_tree : public edge::object
 	static UINT_PTR _flush_timer;
 	static std::unordered_set<port_tree*> _trees;
 
-	void on_bridge_property_changing (object* obj, const property_change_args& args);
-	void on_bridge_property_changed (object* obj, const property_change_args& args);
+	void on_stp_enabled_changing (const property_change_args& args);
+	void on_stp_enabled_changed  (const property_change_args& args);
 	static void CALLBACK flush_timer_proc (HWND hwnd, UINT, UINT_PTR, DWORD);
 
+	virtual void on_inserted_to_parent() override;
+	virtual void on_removing_from_parent() override;
+
 public:
-	port_tree (port* port, size_t tree_index);
-	~port_tree();
+	port_tree (size_t tree_index);
+
+	::port* port() const;
 
 	uint32_t priority() const;
 	void set_priority (uint32_t priority);

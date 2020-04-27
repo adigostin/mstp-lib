@@ -57,9 +57,23 @@ using edge::uint32_property_traits;
 
 struct project_i;
 
-class bridge : public project_child, public edge::deserialize_i
+struct bridge_tree_collection_i : typed_object_collection_i<bridge_tree>
 {
-	using base = project_child;
+protected:
+	virtual std::vector<std::unique_ptr<bridge_tree>>& bridge_tree_store() = 0;
+	virtual std::vector<std::unique_ptr<bridge_tree>>& children_store() override final { return bridge_tree_store(); }
+};
+
+struct port_collection_i : typed_object_collection_i<port>
+{
+protected:
+	virtual std::vector<std::unique_ptr<port>>& port_store() = 0;
+	virtual std::vector<std::unique_ptr<port>>& children_store() override final { return port_store(); }
+};
+
+class bridge : public renderable_object, public bridge_tree_collection_i, public port_collection_i, public edge::deserialize_i
+{
+	using base = renderable_object;
 
 	float _x;
 	float _y;
@@ -88,9 +102,14 @@ class bridge : public project_child, public edge::deserialize_i
 	port*                _txTransmittingPort;
 	unsigned int         _txTimestamp;
 
+	virtual std::vector<std::unique_ptr<bridge_tree>>& bridge_tree_store() override final { return _trees; }
+	virtual std::vector<std::unique_ptr<port>>& port_store() override final { return _ports; }
+
 public:
 	bridge (size_t port_count, size_t msti_count, mac_address macAddress);
 	virtual ~bridge();
+
+	project_i* project() const;
 
 	static constexpr int HTCodeInner = 1;
 
@@ -191,10 +210,6 @@ public:
 	uint32_t mst_config_table_get_value(size_t i) const;
 	void mst_config_table_set_value(size_t i, uint32_t value);
 	bool mst_config_table_changed() const;
-
-	size_t tree_count() const { return _trees.size(); }
-	bridge_tree* tree_at (size_t index) const { return _trees[index].get(); }
-	port* port_at (size_t index) const { return _ports[index].get(); }
 
 public:
 	static const mac_address_p bridge_address_property;

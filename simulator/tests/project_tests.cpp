@@ -10,7 +10,7 @@
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
-extern const project_factory_t project_factory;
+extern project_factory_t project_factory;
 
 TEST_CLASS(project_tests)
 {
@@ -20,14 +20,14 @@ public:
 		uint32_t port_count = 4;
 		uint32_t msti_count = 0;
 		auto p = project_factory();
-		p->insert_bridge(0, std::make_unique<bridge>(port_count, msti_count, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 }));
-		p->insert_bridge(1, std::make_unique<bridge>(port_count, msti_count, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x70 }));
-		p->insert_bridge(2, std::make_unique<bridge>(port_count, msti_count, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x80 }));
+		p->bridge_collection_i::append(std::make_unique<bridge>(port_count, msti_count, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 }));
+		p->bridge_collection_i::append(std::make_unique<bridge>(port_count, msti_count, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x70 }));
+		p->bridge_collection_i::append(std::make_unique<bridge>(port_count, msti_count, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x80 }));
 
 		auto w = std::make_unique<wire>();
 		w->set_p0(p->bridges()[1]->ports()[2].get());
 		w->set_p1(p->bridges()[2]->ports()[3].get());
-		p->insert_wire(0, std::move(w));
+		p->wire_collection_i::append(std::move(w));
 
 		Assert::AreEqual (p->bridges()[1]->ports()[2].get(), std::get<connected_wire_end>(p->wires()[0]->p0()));
 		Assert::AreEqual (p->bridges()[2]->ports()[3].get(), std::get<connected_wire_end>(p->wires()[0]->p1()));

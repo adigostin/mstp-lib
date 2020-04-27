@@ -155,7 +155,21 @@ using project_window_factory_t = std::unique_ptr<project_window_i>(const project
 
 enum class save_project_option { save_unconditionally, save_if_changed_ask_user_first };
 
-struct __declspec(novtable) project_i
+struct bridge_collection_i : typed_object_collection_i<bridge>
+{
+protected:
+	virtual std::vector<std::unique_ptr<bridge>>& bridge_store() = 0;
+	virtual std::vector<std::unique_ptr<bridge>>& children_store() override final { return bridge_store(); }
+};
+
+struct wire_collection_i : typed_object_collection_i<wire>
+{
+protected:
+	virtual std::vector<std::unique_ptr<wire>>& wire_store() = 0;
+	virtual std::vector<std::unique_ptr<wire>>& children_store() override final { return wire_store(); }
+};
+
+struct __declspec(novtable) project_i : bridge_collection_i, wire_collection_i
 {
 	virtual ~project_i() { }
 
@@ -165,11 +179,7 @@ struct __declspec(novtable) project_i
 	struct ChangedEvent : public edge::event<ChangedEvent, project_i*> { };
 
 	virtual const std::vector<std::unique_ptr<bridge>>& bridges() const = 0;
-	virtual void insert_bridge (size_t index, std::unique_ptr<bridge>&& bridge) = 0;
-	virtual std::unique_ptr<bridge> remove_bridge (size_t index) = 0;
 	virtual const std::vector<std::unique_ptr<wire>>& wires() const = 0;
-	virtual void insert_wire (size_t index, std::unique_ptr<wire>&& wire) = 0;
-	virtual std::unique_ptr<wire> remove_wire (size_t index) = 0;
 	virtual invalidate_e::subscriber invalidated() = 0;
 	virtual loaded_event::subscriber loaded() = 0;
 	virtual mac_address alloc_mac_address_range (size_t count) = 0;
@@ -184,8 +194,8 @@ struct __declspec(novtable) project_i
 	virtual void SetChangedFlag (bool projectChangedFlag) = 0;
 	virtual changed_flag_changed_event::subscriber changed_flag_changed() = 0;
 	virtual ChangedEvent::subscriber GetChangedEvent() = 0;
-	virtual const object_collection_property* bridges_prop() const = 0;
-	virtual const object_collection_property* wires_prop() const = 0;
+	virtual const typed_object_collection_property<bridge>* bridges_prop() const = 0;
+	virtual const typed_object_collection_property<wire>* wires_prop() const = 0;
 	virtual property_changing_e::subscriber property_changing() = 0;
 	virtual property_changed_e::subscriber property_changed() = 0;
 
