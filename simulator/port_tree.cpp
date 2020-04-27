@@ -57,9 +57,9 @@ port_tree::port_tree (size_t tree_index)
 	return static_cast<::port*>(static_cast<typed_object_collection_i<port_tree>*>(base::parent()));
 }
 
-void port_tree::on_inserted_to_parent()
+void port_tree::on_inserted_into_parent()
 {
-	base::on_inserted_to_parent();
+	base::on_inserted_into_parent();
 
 	port()->stp_enabled_changing().add_handler<&port_tree::on_stp_enabled_changing>(this);
 	port()->stp_enabled_changed().add_handler<&port_tree::on_stp_enabled_changed>(this);

@@ -20,9 +20,9 @@ bridge* bridge_tree::parent() const
 	return static_cast<bridge*>(static_cast<bridge_tree_collection_i*>(base::parent()));
 }
 
-void bridge_tree::on_inserted_to_parent()
+void bridge_tree::on_inserted_into_parent()
 {
-	base::on_inserted_to_parent();
+	base::on_inserted_into_parent();
 	parent()->property_changing().add_handler<&bridge_tree::on_bridge_property_changing>(this);
 	parent()->property_changed().add_handler<&bridge_tree::on_bridge_property_changed>(this);
 }

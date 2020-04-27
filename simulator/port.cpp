@@ -41,9 +41,9 @@ port::port (size_t port_index, edge::side side, float offset)
 	return static_cast<::bridge*>(static_cast<port_collection_i*>(base::parent()));
 }
 
-void port::on_inserted_to_parent()
+void port::on_inserted_into_parent()
 {
-	base::on_inserted_to_parent();
+	base::on_inserted_into_parent();
 
 	size_t tree_count = bridge()->trees().size();
 

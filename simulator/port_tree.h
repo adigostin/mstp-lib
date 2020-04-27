@@ -36,7 +36,7 @@ class port_tree : public edge::object
 	void on_stp_enabled_changed  (const property_change_args& args);
 	static void CALLBACK flush_timer_proc (HWND hwnd, UINT, UINT_PTR, DWORD);
 
-	virtual void on_inserted_to_parent() override;
+	virtual void on_inserted_into_parent() override;
 	virtual void on_removing_from_parent() override;
 
 public:

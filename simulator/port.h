@@ -51,7 +51,7 @@ class port : public renderable_object, public typed_object_collection_i<port_tre
 
 	virtual std::vector<std::unique_ptr<port_tree>>& children_store() override final { return _trees; }
 
-	virtual void on_inserted_to_parent  () override;
+	virtual void on_inserted_into_parent() override;
 	virtual void on_removing_from_parent() override;
 
 	void on_bridge_property_changing (object* obj, const property_change_args& args);

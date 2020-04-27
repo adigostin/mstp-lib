@@ -40,7 +40,7 @@ public:
 	bridge* parent() const;
 
 protected:
-	virtual void on_inserted_to_parent() override;
+	virtual void on_inserted_into_parent() override;
 	virtual void on_removing_from_parent() override;
 
 public:
