@@ -50,6 +50,9 @@ class port : public renderable_object, public typed_object_collection_i<port_tre
 	uint32_t _missedLinkPulseCounter = MissedLinkPulseCounterMax;
 
 	virtual std::vector<std::unique_ptr<port_tree>>& children_store() override final { return _trees; }
+	virtual const typed_object_collection_property<port_tree>* collection_property() const override final { return &trees_property; }
+	virtual void call_property_changing (const property_change_args& args) override final { this->on_property_changing(args); }
+	virtual void call_property_changed  (const property_change_args& args) override final { this->on_property_changed(args); }
 
 	virtual void on_inserted_into_parent() override;
 	virtual void on_removing_from_parent() override;

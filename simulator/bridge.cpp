@@ -792,10 +792,10 @@ const prop_wrapper<float_p, pg_hidden> bridge::width_property
 const prop_wrapper<float_p, pg_hidden> bridge::height_property
 	= { "Height", nullptr, nullptr, &height, &set_height };
 
-const prop_wrapper<typed_object_collection_property<bridge_tree>, pg_hidden> bridge::trees_property
+const prop_wrapper<typed_object_collection_property<bridge_tree>, pg_hidden> bridge::trees_prop
 	= { "BridgeTrees", nullptr, nullptr, true, [](object* obj) -> typed_object_collection_i<bridge_tree>* { return static_cast<bridge*>(obj); } };
 
-const prop_wrapper<typed_object_collection_property<port>, pg_hidden> bridge::ports_property
+const prop_wrapper<typed_object_collection_property<port>, pg_hidden> bridge::ports_prop
 	= { "Ports", nullptr, nullptr, true, [](object* obj) -> typed_object_collection_i<port>* { return static_cast<bridge*>(obj); } };
 
 const edge::property* const bridge::_properties[] = {
@@ -815,8 +815,8 @@ const edge::property* const bridge::_properties[] = {
 	&tx_hold_count_property,
 	&max_hops_property,
 	&x_property, &y_property, &width_property, &height_property,
-	&trees_property,
-	&ports_property,
+	&trees_prop,
+	&ports_prop,
 };
 
 const xtype<size_t_property_traits, size_t_property_traits, mac_address_property_traits> bridge::_type = {

@@ -62,6 +62,9 @@ struct bridge_tree_collection_i : typed_object_collection_i<bridge_tree>
 protected:
 	virtual std::vector<std::unique_ptr<bridge_tree>>& bridge_tree_store() = 0;
 	virtual std::vector<std::unique_ptr<bridge_tree>>& children_store() override final { return bridge_tree_store(); }
+
+	virtual const typed_object_collection_property<bridge_tree>* trees_property() const = 0;
+	virtual const typed_object_collection_property<bridge_tree>* collection_property() const override final { return trees_property(); }
 };
 
 struct port_collection_i : typed_object_collection_i<port>
@@ -69,6 +72,9 @@ struct port_collection_i : typed_object_collection_i<port>
 protected:
 	virtual std::vector<std::unique_ptr<port>>& port_store() = 0;
 	virtual std::vector<std::unique_ptr<port>>& children_store() override final { return port_store(); }
+
+	virtual const typed_object_collection_property<port>* ports_property() const = 0;
+	virtual const typed_object_collection_property<port>* collection_property() const override final { return ports_property(); }
 };
 
 class bridge : public renderable_object, public bridge_tree_collection_i, public port_collection_i, public edge::deserialize_i
@@ -103,7 +109,11 @@ class bridge : public renderable_object, public bridge_tree_collection_i, public
 	unsigned int         _txTimestamp;
 
 	virtual std::vector<std::unique_ptr<bridge_tree>>& bridge_tree_store() override final { return _trees; }
+	virtual const typed_object_collection_property<bridge_tree>* trees_property() const override final { return &trees_prop; }
 	virtual std::vector<std::unique_ptr<port>>& port_store() override final { return _ports; }
+	virtual const typed_object_collection_property<port>* ports_property() const override final { return &ports_prop; }
+	virtual void call_property_changing (const property_change_args& args) override final { this->on_property_changing(args); }
+	virtual void call_property_changed  (const property_change_args& args) override final { this->on_property_changed(args); }
 
 public:
 	bridge (size_t port_count, size_t msti_count, mac_address macAddress);
@@ -231,8 +241,8 @@ public:
 	static const prop_wrapper<float_p, pg_hidden> y_property;
 	static const prop_wrapper<float_p, pg_hidden> width_property;
 	static const prop_wrapper<float_p, pg_hidden> height_property;
-	static const prop_wrapper<typed_object_collection_property<bridge_tree>, pg_hidden> trees_property;
-	static const prop_wrapper<typed_object_collection_property<::port>, pg_hidden> ports_property;
+	static const prop_wrapper<typed_object_collection_property<bridge_tree>, pg_hidden> trees_prop;
+	static const prop_wrapper<typed_object_collection_property<port>, pg_hidden> ports_prop;
 
 	static const property* const _properties[];
 	static const xtype<size_t_property_traits, size_t_property_traits, mac_address_property_traits> _type;

@@ -160,6 +160,8 @@ struct bridge_collection_i : typed_object_collection_i<bridge>
 protected:
 	virtual std::vector<std::unique_ptr<bridge>>& bridge_store() = 0;
 	virtual std::vector<std::unique_ptr<bridge>>& children_store() override final { return bridge_store(); }
+	virtual const typed_object_collection_property<bridge>* get_bridges_property() const = 0;
+	virtual const typed_object_collection_property<bridge>* collection_property() const override final { return get_bridges_property(); }
 };
 
 struct wire_collection_i : typed_object_collection_i<wire>
@@ -167,11 +169,13 @@ struct wire_collection_i : typed_object_collection_i<wire>
 protected:
 	virtual std::vector<std::unique_ptr<wire>>& wire_store() = 0;
 	virtual std::vector<std::unique_ptr<wire>>& children_store() override final { return wire_store(); }
+	virtual const typed_object_collection_property<wire>* get_wires_property() const = 0;
+	virtual const typed_object_collection_property<wire>* collection_property() const override final { return get_wires_property(); }
 };
 
 struct __declspec(novtable) project_i : bridge_collection_i, wire_collection_i
 {
-	virtual ~project_i() { }
+	virtual ~project_i() = default;
 
 	struct invalidate_e : public edge::event<invalidate_e, project_i*> { };
 	struct loaded_event : public edge::event<loaded_event, project_i*> { };
@@ -201,8 +205,6 @@ struct __declspec(novtable) project_i : bridge_collection_i, wire_collection_i
 
 	std::pair<wire*, size_t> GetWireConnectedToPort (const port* port) const;
 	port* find_connected_port (port* txPort) const;
-	std::unique_ptr<wire> remove_wire (wire* w);
-	std::unique_ptr<bridge> remove_bridge (bridge* b);
 };
 using project_factory_t = std::shared_ptr<project_i>();
 

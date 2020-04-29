@@ -32,10 +32,14 @@ public:
 	}
 
 private:
-	virtual const std::vector<std::unique_ptr<bridge>>& bridges() const override final { return _bridges; }
+	// object_collection_i
+	virtual void call_property_changing (const property_change_args& args) override final { this->on_property_changing(args); }
+	virtual void call_property_changed  (const property_change_args& args) override final { this->on_property_changed(args); }
 
 	// bridge_collection_i
 	virtual std::vector<std::unique_ptr<bridge>>& bridge_store() override final { return _bridges; }
+
+	virtual const typed_object_collection_property<bridge>* get_bridges_property() const override final { return &bridges_property; }
 
 	virtual void on_child_inserted (size_t index, bridge* b) override
 	{
@@ -62,10 +66,10 @@ private:
 		bridge_collection_i::on_child_removing(index, b);
 	}
 
-	virtual const std::vector<std::unique_ptr<wire>>& wires() const override final { return _wires; }
-
 	// wire_collection_i
 	virtual std::vector<std::unique_ptr<wire>>& wire_store() override final { return _wires; }
+
+	virtual const typed_object_collection_property<wire>* get_wires_property() const override final { return &wires_property; }
 
 	virtual void on_child_inserted (size_t index, wire* wire) override
 	{
@@ -93,6 +97,11 @@ private:
 	{
 		event_invoker<invalidate_e>()(this);
 	}
+
+	// project_i
+	virtual const std::vector<std::unique_ptr<bridge>>& bridges() const override final { return _bridges; }
+
+	virtual const std::vector<std::unique_ptr<wire>>& wires() const override final { return _wires; }
 
 	virtual invalidate_e::subscriber invalidated() override final { return invalidate_e::subscriber(this); }
 

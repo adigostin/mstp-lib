@@ -66,30 +66,6 @@ port* project_i::find_connected_port (port* tx_port) const
 
 	return nullptr;
 }
-
-std::unique_ptr<wire> project_i::remove_wire (wire* w)
-{
-	auto& wires = this->wires();
-	for (size_t wi = 0; wi < wires.size(); wi++)
-	{
-		if (wires[wi].get() == w)
-			return this->wire_collection_i::remove(wi);
-	}
-
-	assert(false); return nullptr;
-}
-
-std::unique_ptr<bridge> project_i::remove_bridge (bridge* b)
-{
-	auto& bridges = this->bridges();
-	for (size_t bi = 0; bi < bridges.size(); bi++)
-	{
-		if (bridges[bi].get() == b)
-			return this->bridge_collection_i::remove(bi);
-	}
-
-	assert(false); return nullptr;
-}
 #pragma endregion
 
 class SimulatorApp : public event_manager, public simulator_app_i

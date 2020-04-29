@@ -670,10 +670,10 @@ public:
 					p.first->set_point(pi, p.first->point_coords(pi));
 
 			for (auto w : wiresToRemove)
-				_project->remove_wire(w);
+				_project->wire_collection_i::remove(w);
 
 			for (auto b : bridgesToRemove)
-				_project->remove_bridge(b);
+				_project->bridge_collection_i::remove(b);
 
 			_project->SetChangedFlag(true);
 		}

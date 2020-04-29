@@ -32,7 +32,7 @@ public:
 		Assert::AreEqual (p->bridges()[1]->ports()[2].get(), std::get<connected_wire_end>(p->wires()[0]->p0()));
 		Assert::AreEqual (p->bridges()[2]->ports()[3].get(), std::get<connected_wire_end>(p->wires()[0]->p1()));
 
-		p->remove_bridge((size_t)0);
+		p->bridge_collection_i::remove((size_t)0);
 
 		Assert::AreEqual (p->bridges()[0]->ports()[2].get(), std::get<connected_wire_end>(p->wires()[0]->p0()));
 		Assert::AreEqual (p->bridges()[1]->ports()[3].get(), std::get<connected_wire_end>(p->wires()[0]->p1()));
