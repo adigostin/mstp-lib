@@ -178,18 +178,20 @@ struct __declspec(novtable) project_i : bridge_collection_i, wire_collection_i
 	virtual ~project_i() = default;
 
 	struct invalidate_e : public edge::event<invalidate_e, project_i*> { };
-	struct loaded_event : public edge::event<loaded_event, project_i*> { };
+	struct loaded_e     : public edge::event<loaded_e, project_i*> { };
+	struct saved_e      : public edge::event<saved_e, project_i*> { };
 	struct changed_flag_changed_event : public edge::event<changed_flag_changed_event, project_i*> { };
 	struct ChangedEvent : public edge::event<ChangedEvent, project_i*> { };
 
 	virtual const std::vector<std::unique_ptr<bridge>>& bridges() const = 0;
 	virtual const std::vector<std::unique_ptr<wire>>& wires() const = 0;
 	virtual invalidate_e::subscriber invalidated() = 0;
-	virtual loaded_event::subscriber loaded() = 0;
+	virtual loaded_e::subscriber loaded() = 0;
+	virtual saved_e::subscriber saved() = 0;
 	virtual mac_address alloc_mac_address_range (size_t count) = 0;
 	virtual const std::wstring& file_path() const = 0;
-	virtual HRESULT save (const wchar_t* filePath) = 0;
-	virtual HRESULT load (const wchar_t* filePath) = 0;
+	virtual void save (const wchar_t* path) = 0;
+	virtual void load (const wchar_t* path) = 0;
 	virtual bool IsWireForwarding (wire* wire, uint32_t vlanNumber, _Out_opt_ bool* hasLoop) const = 0;
 	virtual void pause_simulation() = 0;
 	virtual void resume_simulation() = 0;

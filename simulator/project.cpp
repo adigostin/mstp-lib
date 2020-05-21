@@ -9,6 +9,9 @@
 #include "port.h"
 #include "win32/xml_serializer.h"
 
+using edge::com_exception;
+using edge::throw_if_failed;
+
 static const _bstr_t NextMacAddressString = "NextMacAddress";
 
 class project : public edge::object, public project_i
@@ -105,7 +108,9 @@ private:
 
 	virtual invalidate_e::subscriber invalidated() override final { return invalidate_e::subscriber(this); }
 
-	virtual loaded_event::subscriber loaded() override final { return loaded_event::subscriber(this); }
+	virtual loaded_e::subscriber loaded() override final { return loaded_e::subscriber(this); }
+
+	virtual saved_e::subscriber saved() override final { return saved_e::subscriber(this); }
 
 	virtual bool IsWireForwarding (wire* wire, unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const override final
 	{
@@ -178,61 +183,67 @@ private:
 
 	virtual const std::wstring& file_path() const override final { return _path; }
 
-	virtual HRESULT save (const wchar_t* filePath) override final
+	virtual void save (const wchar_t* path) override final
 	{
+		assert (path || !_path.empty());
+
 		com_ptr<IXMLDOMDocument3> doc;
 		HRESULT hr = CoCreateInstance (CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(doc), (void**) &doc);
-		if (FAILED(hr))
-			return hr;
+		throw_if_failed(hr);
 
 		auto project_element = serialize (doc, this, true);
 
 		hr = doc->appendChild (project_element, nullptr);
-		if (FAILED(hr))
-			return hr;
+		throw_if_failed(hr);
 
-		hr = format_and_save_to_file (doc, filePath);
-		if (FAILED(hr))
-			return hr;
+		hr = format_and_save_to_file (doc, path ? path : _path.c_str());
+		throw_if_failed(hr);
 
-		_path = filePath;
-		return S_OK;
+		if (path)
+			_path = path;
+		this->SetChangedFlag(false);
+		this->event_invoker<saved_e>()(this);
 	}
 
 	static const std::span<const concrete_type* const> known_types;
 
-	virtual HRESULT load (const wchar_t* filePath) override final
+	virtual void load (const wchar_t* filePath) override final
 	{
 		com_ptr<IXMLDOMDocument3> doc;
-		HRESULT hr = CoCreateInstance (CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(doc), (void**) &doc); if (FAILED(hr)) return hr;
+		HRESULT hr = CoCreateInstance (CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(doc), (void**) &doc);
+		throw_if_failed(hr);
 
 		if (!PathFileExists(filePath))
-			return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
+			throw com_exception (HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
 
 		VARIANT_BOOL isSuccessful;
-		hr = doc->load(_variant_t(filePath), &isSuccessful); if (FAILED(hr)) return hr;
+		hr = doc->load(_variant_t(filePath), &isSuccessful);
+		throw_if_failed(hr);
 		if (isSuccessful != VARIANT_TRUE)
-			return E_FAIL;
+			throw std::exception("Load failed");
 
 		com_ptr<IXMLDOMNode> xmlDeclarationNode;
-		hr = doc->get_firstChild(&xmlDeclarationNode); if (FAILED(hr)) return hr;
+		hr = doc->get_firstChild(&xmlDeclarationNode);
+		throw_if_failed(hr);
 		_bstr_t nodeName;
-		hr = xmlDeclarationNode->get_nodeName(nodeName.GetAddress()); if (FAILED(hr)) return hr;
+		hr = xmlDeclarationNode->get_nodeName(nodeName.GetAddress());
+		throw_if_failed(hr);
 		if (_wcsicmp (nodeName.GetBSTR(), L"xml") != 0)
-			return E_FAIL;
+			throw com_exception(E_FAIL);
 
 		com_ptr<IXMLDOMNode> projectNode;
-		hr = xmlDeclarationNode->get_nextSibling(&projectNode); assert(SUCCEEDED(hr));
-		hr = projectNode->get_nodeName(nodeName.GetAddress()); assert(SUCCEEDED(hr));
+		hr = xmlDeclarationNode->get_nextSibling(&projectNode);
+		throw_if_failed(hr);
+		hr = projectNode->get_nodeName(nodeName.GetAddress());
+		throw_if_failed(hr);
 		if (_wcsicmp (nodeName.GetBSTR(), L"Project") != 0)
-			return E_FAIL;
+			throw com_exception(E_FAIL);
 		com_ptr<IXMLDOMElement> projectElement = projectNode;
 
 		deserialize_to (projectElement, this, known_types);
 
 		_path = filePath;
-		this->event_invoker<loaded_event>()(this);
-		return S_OK;
+		this->event_invoker<loaded_e>()(this);
 	}
 
 	virtual void pause_simulation() override final

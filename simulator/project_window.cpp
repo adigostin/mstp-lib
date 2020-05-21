@@ -112,12 +112,14 @@ public:
 		_app->project_window_added().add_handler<&project_window::on_project_window_added>(this);
 		_app->project_window_removed().add_handler<&project_window::on_project_window_removed>(this);
 		_project->loaded().add_handler<&project_window::on_project_loaded>(this);
+		_project->saved().add_handler<&project_window::on_project_saved>(this);
 		_selection->changed().add_handler<&project_window::on_selection_changed>(this);
 	}
 
 	~project_window()
 	{
 		_selection->changed().remove_handler<&project_window::on_selection_changed>(this);
+		_project->saved().remove_handler<&project_window::on_project_saved>(this);
 		_project->loaded().remove_handler<&project_window::on_project_loaded>(this);
 		_app->project_window_removed().remove_handler<&project_window::on_project_window_removed>(this);
 		_app->project_window_added().remove_handler<&project_window::on_project_window_added>(this);
@@ -186,6 +188,11 @@ public:
 	{
 		SetWindowTitle();
 		_edit_window->zoom_all();
+	}
+
+	void on_project_saved (project_i* project)
+	{
+		SetWindowTitle();
 	}
 
 	void on_project_window_added (project_window_i* pw)
@@ -298,7 +305,7 @@ public:
 
 		if (msg == WM_CLOSE)
 		{
-			TryClose();
+			try_close_window();
 			return 0;
 		}
 
@@ -505,18 +512,42 @@ public:
 			return 0;
 		}
 
-		if (((HIWORD(wParam) == 0) || (HIWORD(wParam) == 1)) && (LOWORD(wParam) == ID_FILE_SAVE))
+		if (((HIWORD(wParam) == 0) || (HIWORD(wParam) == 1)) && ((LOWORD(wParam) == ID_FILE_SAVE) || (LOWORD(wParam) == ID_FILE_SAVEAS)))
 		{
-			Save();
+			try
+			{
+				if ((LOWORD(wParam) == ID_FILE_SAVEAS) || _project->file_path().empty())
+				{
+					auto path = try_choose_save_path (hwnd(), nullptr, ProjectFileDialogFileTypes, ProjectFileExtensionWithoutDot);
+					_project->save(path.c_str());
+				}
+				else
+					_project->save(nullptr);
+			}
+			catch (const canceled_by_user_exception&)
+			{ }
+			catch (const std::exception& ex)
+			{
+				TaskDialog (hwnd(), nullptr, _app->app_namew(), L"Can't save", utf8_to_utf16(ex.what()).c_str(), 0, TD_ERROR_ICON, nullptr);
+			}
+
 			return 0;
 		}
 
 		if (((HIWORD(wParam) == 0) || (HIWORD(wParam) == 1)) && (LOWORD(wParam) == ID_FILE_OPEN))
 		{
-			std::wstring openPath;
-			HRESULT hr = TryChooseFilePath (OpenOrSave::Open, hwnd(), nullptr, openPath);
-			if (SUCCEEDED(hr))
-				Open(openPath.c_str());
+			try
+			{
+				auto path = try_choose_open_path (hwnd(), nullptr, ProjectFileDialogFileTypes, ProjectFileExtensionWithoutDot);
+				open (path.c_str());
+			}
+			catch (const canceled_by_user_exception&)
+			{ }
+			catch (const std::exception& ex)
+			{
+				TaskDialog (hwnd(), nullptr, _app->app_namew(), L"Can't open", utf8_to_utf16(ex.what()).c_str(), 0, TD_ERROR_ICON, nullptr);
+			}
+
 			return 0;
 		}
 
@@ -530,12 +561,6 @@ public:
 
 			auto pw = _app->project_window_factory()(params);
 			_app->add_project_window(std::move(pw));
-			return 0;
-		}
-
-		if (wParam == ID_FILE_SAVEAS)
-		{
-			MessageBoxA (hwnd(), "Not yet implemented.", _app->app_name(), 0);
 			return 0;
 		}
 
@@ -555,7 +580,14 @@ public:
 			{
 				auto path = std::make_unique<wchar_t[]>(charCount + 1);
 				::GetMenuString (fileMenu, (UINT)wParam, path.get(), charCount + 1, MF_BYCOMMAND);
-				Open(path.get());
+				try
+				{
+					open(path.get());
+				}
+				catch (const std::exception& ex)
+				{
+					TaskDialog (hwnd(), nullptr, _app->app_namew(), L"Can't open", utf8_to_utf16(ex.what()).c_str(), 0, TD_ERROR_ICON, nullptr);
+				}
 			}
 		}
 
@@ -569,11 +601,11 @@ public:
 		return std::nullopt;
 	}
 
-	void Open (const wchar_t* openPath)
+	void open (const wchar_t* path)
 	{
 		for (auto& pw : _app->project_windows())
 		{
-			if (_wcsicmp (pw->project()->file_path().c_str(), openPath) == 0)
+			if (_wcsicmp (pw->project()->file_path().c_str(), path) == 0)
 			{
 				::BringWindowToTop (pw->hwnd());
 				::FlashWindow (pw->hwnd(), FALSE);
@@ -581,168 +613,49 @@ public:
 			}
 		}
 
-		std::shared_ptr<project_i> projectToLoadTo;
 		if (_project->bridges().empty() && _project->wires().empty())
-			projectToLoadTo = _project;
-		else
-			projectToLoadTo = _app->project_factory()();
-
-		auto hr = projectToLoadTo->load(openPath);
-		if (FAILED(hr))
 		{
-			auto werror = std::wstring (_com_error(hr).ErrorMessage());
-			auto text = std::wstring(L"Cannot open ") + openPath + L"\r\n";
-			text.append (werror.begin(), werror.end());
-			TaskDialog (hwnd(), GetWindowInstance(hwnd()), _app->app_namew(), text.c_str(), nullptr, 0, TD_ERROR_ICON, nullptr);
+			_project->load(path);
 			return;
 		}
 
-		if (projectToLoadTo != _project)
-		{
-			project_window_create_params cps = { _app, projectToLoadTo, true, true, 1, SW_SHOW, _d3d_dc, _dwrite_factory };
-			auto newWindow = _app->project_window_factory()(cps);
-			_app->add_project_window(std::move(newWindow));
-		}
+		auto new_project = _app->project_factory()();
+		new_project->load(path);
+		project_window_create_params cps = { _app, new_project, true, true, 1, SW_SHOW, _d3d_dc, _dwrite_factory };
+		auto new_window = _app->project_window_factory()(cps);
+		_app->add_project_window(std::move(new_window));
 	}
 
-	HRESULT Save()
-	{
-		HRESULT hr;
-
-		auto savePath = _project->file_path();
-		if (savePath.empty())
-		{
-			hr = TryChooseFilePath (OpenOrSave::Save, hwnd(), L"", savePath);
-			if (FAILED(hr))
-				return hr;
-		}
-
-		hr = _project->save (savePath.c_str());
-		if (FAILED(hr))
-		{
-			auto werror = std::wstring (_com_error(hr).ErrorMessage());
-			auto text = std::wstring(L"Could Not Save\r\n");
-			text.append (werror.begin(), werror.end());
-			MessageBox (hwnd(), text.c_str(), _app->app_namew(), 0);
-			return hr;
-		}
-
-		_project->SetChangedFlag(false);
-		return S_OK;
-	}
-
-	HRESULT AskSaveDiscardCancel (const wchar_t* askText, bool* saveChosen)
-	{
-		static const TASKDIALOG_BUTTON buttons[] =
-		{
-			{ IDYES, L"Save Changes" },
-			{ IDNO, L"Discard Changes" },
-			{ IDCANCEL, L"Cancel" },
-		};
-
-		auto app_name = std::wstring (_app->app_name(), strchr(_app->app_name(), 0));
-		TASKDIALOGCONFIG tdc = { sizeof (tdc) };
-		tdc.hwndParent = hwnd();
-		tdc.pszWindowTitle = app_name.c_str();
-		tdc.pszMainIcon = TD_WARNING_ICON;
-		tdc.pszMainInstruction = L"File was changed";
-		tdc.pszContent = askText;
-		tdc.cButtons = _countof(buttons);
-		tdc.pButtons = buttons;
-		tdc.nDefaultButton = IDOK;
-
-		int pressedButton;
-		auto hr = TaskDialogIndirect (&tdc, &pressedButton, nullptr, nullptr);
-		if (FAILED(hr))
-			return hr;
-
-		if (pressedButton == IDCANCEL)
-			return HRESULT_FROM_WIN32(ERROR_CANCELLED);
-
-		*saveChosen = (pressedButton == IDYES);
-		return S_OK;
-	}
-
-	enum class OpenOrSave { Open, Save };
-
-	static HRESULT TryChooseFilePath (OpenOrSave which, HWND fileDialogParentHWnd, const wchar_t* pathToInitializeDialogTo, std::wstring& sbOut)
-	{
-		com_ptr<IFileDialog> dialog;
-		HRESULT hr = CoCreateInstance ((which == OpenOrSave::Save) ? CLSID_FileSaveDialog : CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, __uuidof(dialog), (void**) &dialog);
-		if (FAILED(hr))
-			return hr;
-
-		//DWORD options;
-		//hr = dialog->GetOptions (&options); rassert_hr(hr);
-		//hr = dialog->SetOptions (options | FOS_FORCEFILESYSTEM); rassert_hr(hr);
-		hr = dialog->SetFileTypes (_countof(ProjectFileDialogFileTypes), ProjectFileDialogFileTypes);
-		if (FAILED(hr))
-			return hr;
-
-		hr = dialog->SetDefaultExtension (ProjectFileExtensionWithoutDot);
-		if (FAILED(hr))
-			return hr;
-
-		if ((pathToInitializeDialogTo != nullptr) && (pathToInitializeDialogTo[0] != 0))
-		{
-			auto filePtr = PathFindFileName(pathToInitializeDialogTo);
-			dialog->SetFileName(filePtr);
-
-			std::wstring dir (pathToInitializeDialogTo, filePtr - pathToInitializeDialogTo);
-			com_ptr<IShellItem> si;
-			hr = SHCreateItemFromParsingName (dir.c_str(), nullptr, IID_PPV_ARGS(&si));
-			if (SUCCEEDED(hr))
-				dialog->SetFolder(si);
-		}
-
-		hr = dialog->Show(fileDialogParentHWnd);
-		if (FAILED(hr))
-			return hr;
-
-		com_ptr<IShellItem> item;
-		hr = dialog->GetResult (&item);
-		if (FAILED(hr))
-			return hr;
-
-		{
-			wchar_t* filePath;
-			hr = item->GetDisplayName (SIGDN_FILESYSPATH, &filePath);
-			if (FAILED(hr))
-				return hr;
-			sbOut = filePath;
-			CoTaskMemFree(filePath);
-		}
-
-		SHAddToRecentDocs(SHARD_PATHW, sbOut.c_str());
-		return S_OK;
-	}
-
-	HRESULT TryClose()
+	void try_close_window()
 	{
 		auto count = count_if (_app->project_windows().begin(), _app->project_windows().end(),
 							   [this] (const std::unique_ptr<project_window_i>& pw) { return pw->project() == _project.get(); });
-		if (count == 1)
+		if ((count == 1) && _project->GetChangedFlag())
 		{
-			// Closing last window of this project.
-			if (_project->GetChangedFlag())
+			// Closing last window of a project with changes not saved.
+			try
 			{
-				bool saveChosen;
-				auto hr = AskSaveDiscardCancel(L"Save changes?", &saveChosen);
-				if (FAILED(hr))
-					return hr;
-
-				if (saveChosen)
+				if (ask_save_discard_cancel (hwnd(), L"Save changes?", _app->app_namew()))
 				{
-					hr = this->Save();
-					if (FAILED(hr))
-						return hr;
+					std::wstring path = _project->file_path();
+					if (path.empty())
+						path = try_choose_save_path (hwnd(), nullptr, ProjectFileDialogFileTypes, ProjectFileExtensionWithoutDot);
+					_project->save (path.c_str());
 				}
+			}
+			catch (const canceled_by_user_exception&)
+			{
+				return;
+			}
+			catch (const std::exception& ex)
+			{
+				TaskDialog (hwnd(), nullptr, _app->app_namew(), L"Can't save", utf8_to_utf16(ex.what()).c_str(), 0, TD_ERROR_ICON, nullptr);
+				return;
 			}
 		}
 
 		SaveWindowLocation();
 		::DestroyWindow (hwnd());
-		return S_OK;
 	}
 
 	bool TryReadRegFloat (const wchar_t* valueName, float& value)
