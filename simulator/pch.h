@@ -52,5 +52,5 @@
 #include "assert.h"
 
 #define TCB_SPAN_NAMESPACE_NAME std
-#define TCB_SPAN_NO_CONTRACT_CHECKING 1
+#define TCB_SPAN_NO_CONTRACT_CHECKING
 #include "tcb/span.hpp"
