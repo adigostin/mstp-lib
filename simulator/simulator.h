@@ -130,7 +130,7 @@ struct __declspec(novtable) project_window_i : public virtual edge::win32_window
 	struct selected_vlan_number_changed_e : public edge::event<selected_vlan_number_changed_e, project_window_i*, uint32_t> { };
 	struct destroying_e : public edge::event<destroying_e, project_window_i*> { };
 
-	virtual project_i* project() const = 0;
+	virtual const std::shared_ptr<project_i>& project() const = 0;
 	virtual void select_vlan (uint32_t vlanNumber) = 0;
 	virtual uint32_t selected_vlan_number() const = 0;
 	virtual selected_vlan_number_changed_e::subscriber selected_vlan_number_changed() = 0;

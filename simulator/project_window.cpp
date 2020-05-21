@@ -197,13 +197,13 @@ public:
 
 	void on_project_window_added (project_window_i* pw)
 	{
-		if (pw->project() == _project.get())
+		if (pw->project() == _project)
 			SetWindowTitle();
 	}
 
 	void on_project_window_removed (project_window_i* pw)
 	{
-		if (pw->project() == _project.get())
+		if (pw->project() == _project)
 			SetWindowTitle();
 	}
 
@@ -268,7 +268,7 @@ public:
 			windowTitle << L"*";
 
 		auto& pws = _app->project_windows();
-		if (any_of (pws.begin(), pws.end(), [this](const std::unique_ptr<project_window_i>& pw) { return (pw.get() != this) && (pw->project() == _project.get()); }))
+		if (any_of (pws.begin(), pws.end(), [this](const std::unique_ptr<project_window_i>& pw) { return (pw.get() != this) && (pw->project() == _project); }))
 			windowTitle << L" - VLAN " << _selectedVlanNumber;
 
 		::SetWindowText (hwnd(), windowTitle.str().c_str());
@@ -629,7 +629,7 @@ public:
 	void try_close_window()
 	{
 		auto count = count_if (_app->project_windows().begin(), _app->project_windows().end(),
-							   [this] (const std::unique_ptr<project_window_i>& pw) { return pw->project() == _project.get(); });
+							   [this] (const std::unique_ptr<project_window_i>& pw) { return pw->project() == _project; });
 		if ((count == 1) && _project->GetChangedFlag())
 		{
 			// Closing last window of a project with changes not saved.
@@ -764,7 +764,7 @@ public:
 
 	virtual selected_vlan_number_changed_e::subscriber selected_vlan_number_changed() override final { return selected_vlan_number_changed_e::subscriber(this); }
 
-	virtual project_i* project() const override final { return _project.get(); }
+	virtual const std::shared_ptr<project_i>& project() const override final { return _project; }
 
 	virtual destroying_e::subscriber destroying() override final { return destroying_e::subscriber(this); }
 
