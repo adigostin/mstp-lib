@@ -777,16 +777,16 @@ public:
 		ml.d = pointp_to_pointd(pp);
 		ml.w = pointd_to_pointw(ml.d);
 
-		if (_state != nullptr)
+		if (_state)
 		{
-			_state->process_mouse_button_down (button, (UINT)mks, ml);
+			auto handled = _state->process_mouse_button_down (button, mks, ml);
 			if (_state->completed())
 			{
 				_state = nullptr;
 				::SetCursor (LoadCursor (nullptr, IDC_ARROW));
 			};
 
-			return handled(true);
+			return handled;
 		}
 
 		auto ht = hit_test_objects (ml.d, SnapDistance);
@@ -810,55 +810,60 @@ public:
 			}
 		}
 
-		if (ht.object == nullptr)
+		if (button == mouse_button::left)
 		{
-			// TODO: area selection
-			//stateForMoveThreshold =
-		}
-		else
-		{
-			std::unique_ptr<edit_state> stateMoveThreshold;
-			std::unique_ptr<edit_state> stateButtonUp;
-
-			if (dynamic_cast<bridge*>(ht.object) != nullptr)
+			if (ht.object == nullptr)
 			{
-				if (button == mouse_button::left)
-					stateMoveThreshold = create_state_move_bridges (make_edit_state_deps());
+				// TODO: area selection
+				//stateForMoveThreshold =
+				return handled(true);
 			}
-			else if (dynamic_cast<port*>(ht.object) != nullptr)
+			else
 			{
-				auto port = dynamic_cast<class port*>(ht.object);
+				std::unique_ptr<edit_state> stateMoveThreshold;
+				std::unique_ptr<edit_state> stateButtonUp;
 
-				if (ht.code == port::HTCodeInnerOuter)
+				if (dynamic_cast<bridge*>(ht.object) != nullptr)
 				{
-					if ((button == mouse_button::left) && (_selection->objects().size() == 1) && (dynamic_cast<class port*>(_selection->objects()[0]) != nullptr))
-						stateMoveThreshold = create_state_move_port (make_edit_state_deps());
+					if (button == mouse_button::left)
+						stateMoveThreshold = create_state_move_bridges (make_edit_state_deps());
 				}
-				else if (ht.code == port::HTCodeCP)
+				else if (dynamic_cast<port*>(ht.object) != nullptr)
 				{
-					auto alreadyConnectedWire = _project->GetWireConnectedToPort(port);
-					if (alreadyConnectedWire.first == nullptr)
+					auto port = dynamic_cast<class port*>(ht.object);
+
+					if (ht.code == port::HTCodeInnerOuter)
 					{
-						stateMoveThreshold = create_state_create_wire(make_edit_state_deps());
-						stateButtonUp = create_state_create_wire(make_edit_state_deps());
+						if ((button == mouse_button::left) && (_selection->objects().size() == 1) && (dynamic_cast<class port*>(_selection->objects()[0]) != nullptr))
+							stateMoveThreshold = create_state_move_port (make_edit_state_deps());
+					}
+					else if (ht.code == port::HTCodeCP)
+					{
+						auto alreadyConnectedWire = _project->GetWireConnectedToPort(port);
+						if (alreadyConnectedWire.first == nullptr)
+						{
+							stateMoveThreshold = create_state_create_wire(make_edit_state_deps());
+							stateButtonUp = create_state_create_wire(make_edit_state_deps());
+						}
 					}
 				}
-			}
-			else if (dynamic_cast<wire*>(ht.object) != nullptr)
-			{
-				auto w = static_cast<wire*>(ht.object);
-				if (ht.code >= 0)
+				else if (dynamic_cast<wire*>(ht.object) != nullptr)
 				{
-					stateMoveThreshold = CreateStateMoveWirePoint(make_edit_state_deps(), w, ht.code);
-					stateButtonUp = CreateStateMoveWirePoint (make_edit_state_deps(), w, ht.code);
+					auto w = static_cast<wire*>(ht.object);
+					if (ht.code >= 0)
+					{
+						stateMoveThreshold = CreateStateMoveWirePoint(make_edit_state_deps(), w, ht.code);
+						stateButtonUp = CreateStateMoveWirePoint (make_edit_state_deps(), w, ht.code);
+					}
 				}
-			}
 
-			auto state = CreateStateBeginningDrag(make_edit_state_deps(), ht.object, button, (UINT)mks, ml, ::GetCursor(), std::move(stateMoveThreshold), std::move(stateButtonUp));
-			EnterState(std::move(state));
+				auto state = CreateStateBeginningDrag(make_edit_state_deps(), ht.object, button, mks, ml, ::GetCursor(), std::move(stateMoveThreshold), std::move(stateButtonUp));
+				EnterState(std::move(state));
+				return handled(true);
+			}
 		}
 
-		return handled(true);
+		return handled(false);
 	}
 
 	handled process_mouse_button_up (mouse_button button, modifier_key mks, POINT pp)
@@ -868,12 +873,14 @@ public:
 
 		if (_state != nullptr)
 		{
-			_state->process_mouse_button_up (button, (UINT)mks, { pp, pd, wLocation });
+			auto handled = _state->process_mouse_button_up (button, mks, { pp, pd, wLocation });
 			if (_state->completed())
 			{
 				_state = nullptr;
 				::SetCursor (LoadCursor (nullptr, IDC_ARROW));
 			};
+
+			return handled;
 		}
 
 		if (button == mouse_button::right)

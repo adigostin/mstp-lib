@@ -28,14 +28,14 @@ class create_wire_es : public edit_state
 public:
 	using base::base;
 
-	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) override final
+	virtual handled process_mouse_button_down (mouse_button button, modifier_key mks, const mouse_location& ml) override final
 	{
 		if (button != edge::mouse_button::left)
-			return;
+			return handled(true); // discard it
 
 		if (_substate == waiting_first_down)
 		{
-			auto fromPort = _ew->GetCPAt(location.d, SnapDistance);
+			auto fromPort = _ew->GetCPAt(ml.d, SnapDistance);
 			if (fromPort != nullptr)
 			{
 				auto newWire = std::make_unique<wire>();
@@ -46,6 +46,8 @@ public:
 				_substate  = waiting_first_up;
 			}
 		}
+
+		return handled(true);
 	}
 
 	virtual void process_mouse_move (const mouse_location& location) override final
@@ -71,8 +73,11 @@ public:
 			_substate = waiting_second_up;
 	}
 
-	virtual void process_mouse_button_up (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) override final
+	virtual handled process_mouse_button_up (mouse_button button, modifier_key mks, const mouse_location& ml) override final
 	{
+		if (button != edge::mouse_button::left)
+			return handled(true); // discard it
+		
 		if (_substate == waiting_second_up)
 		{
 			if (std::holds_alternative<connected_wire_end>(_wire->p1()))
@@ -82,6 +87,8 @@ public:
 				_substate = down;
 			}
 		}
+
+		return handled(true);
 	}
 
 	virtual handled process_key_or_syskey_down (uint32_t virtualKey, modifier_key modifierKeys) override final

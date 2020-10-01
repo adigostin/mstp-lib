@@ -112,7 +112,7 @@ public:
 	void set_location (D2D1_POINT_2F location) { set_location (location.x, location.y); }
 	D2D1_RECT_F bounds() const { return { _x, _y, _x + _width, _y + _height }; }
 
-	void SetCoordsForInteriorPort (port* port, D2D1_POINT_2F proposedLocation);
+	void move_port (port* port, D2D1_POINT_2F proposedLocation);
 
 	const std::vector<std::unique_ptr<bridge_tree>>& trees() const { return _trees; }
 	const std::vector<std::unique_ptr<port>>& ports() const { return _ports; }

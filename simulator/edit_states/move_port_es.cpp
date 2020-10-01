@@ -18,23 +18,27 @@ class move_port_es : public edit_state
 public:
 	using base::base;
 
-	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) override final
+	handled process_mouse_button_down (mouse_button button, modifier_key mks, const mouse_location& ml) final
 	{
-		assert (_selection->objects().size() == 1);
+		if (button != mouse_button::left)
+			return handled(true); // discard it
+		
+		rassert (_selection->objects().size() == 1);
 		_port = dynamic_cast<port*>(_selection->objects().front());
-		assert (_port != nullptr);
+		rassert (_port);
 		_initialSide = _port->side();
 		_initialOffset = _port->offset();
+		return handled(true);
 	}
 
-	virtual void process_mouse_move (const mouse_location& location) override final
+	void process_mouse_move (const mouse_location& ml) final
 	{
-		_port->bridge()->SetCoordsForInteriorPort (_port, location.w);
+		_port->bridge()->move_port(_port, ml.w);
 	}
 
-	virtual handled process_key_or_syskey_down (uint32_t virtualKey, modifier_key modifierKeys) override final
+	handled process_key_or_syskey_down (uint32_t vkey, modifier_key mks) final
 	{
-		if (virtualKey == VK_ESCAPE)
+		if (vkey == VK_ESCAPE)
 		{
 			_port->SetSideAndOffset (_initialSide, _initialOffset);
 			_completed = true;
@@ -44,13 +48,17 @@ public:
 		return handled(false);
 	}
 
-	virtual void process_mouse_button_up (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) override final
+	handled process_mouse_button_up (mouse_button button, modifier_key mks, const mouse_location& mk) final
 	{
+		if (button != mouse_button::left)
+			return handled(true); // discard it
+		
 		_project->SetChangedFlag(true);
 		_completed = true;
+		return handled(true);
 	}
 
-	virtual bool completed() const override final { return _completed; }
+	bool completed() const final { return _completed; }
 };
 
 std::unique_ptr<edit_state> create_state_move_port (const edit_state_deps& deps) { return std::make_unique<move_port_es>(deps); }

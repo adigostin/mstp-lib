@@ -25,8 +25,11 @@ class move_bridges_es : public edit_state
 public:
 	using base::base;
 
-	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) override final
+	virtual handled process_mouse_button_down (mouse_button button, modifier_key mks, const mouse_location& ml) override final
 	{
+		if (button != mouse_button::left)
+			return handled(true); // discard it
+
 		auto firstBridge = static_cast<bridge*>(_selection->objects()[0]); assert (firstBridge != nullptr);
 		_first_bridge_initial_location = firstBridge->location();
 
@@ -36,7 +39,9 @@ public:
 			_infos.push_back ({ b, b->location() - firstBridge->location() });
 		}
 
-		_offset_first_bridge = location.w - firstBridge->location();
+		_offset_first_bridge = ml.w - firstBridge->location();
+
+		return handled(true);
 	}
 
 	virtual void process_mouse_move (const mouse_location& location) override final
@@ -63,10 +68,14 @@ public:
 		return handled(false);
 	}
 
-	virtual void process_mouse_button_up (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) override final
+	virtual handled process_mouse_button_up (mouse_button button, modifier_key mks, const mouse_location& ml) override final
 	{
+		if (button != mouse_button::left)
+			return handled(true); // discard it
+		
 		_project->SetChangedFlag(true);
 		_completed = true;
+		return handled(true);
 	}
 
 	virtual bool completed() const override final { return _completed; }

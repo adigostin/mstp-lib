@@ -443,7 +443,7 @@ void bridge::set_bridge_address (mac_address address)
 	}
 }
 
-void bridge::SetCoordsForInteriorPort (class port* _port, D2D1_POINT_2F proposedLocation)
+void bridge::move_port (class port* _port, D2D1_POINT_2F proposedLocation)
 {
 	float mouseX = proposedLocation.x - _x;
 	float mouseY = proposedLocation.y - _y;

@@ -17,6 +17,11 @@ class create_bridge_es : public edit_state
 
 	using base::base;
 
+	virtual handled process_mouse_button_down (mouse_button button, modifier_key mks, const mouse_location& ml) override final
+	{
+		return handled(true); // discard it
+	}
+
 	virtual void process_mouse_move (const mouse_location& ml) override final
 	{
 		if (_bridge == nullptr)
@@ -26,8 +31,11 @@ class create_bridge_es : public edit_state
 		::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
 	}
 
-	virtual void process_mouse_button_up (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) override final
+	virtual handled process_mouse_button_up (mouse_button button, modifier_key mks, const mouse_location& ml) override final
 	{
+		if (button != mouse_button::left)
+			return handled(true); // discard it
+
 		if (_bridge != nullptr)
 		{
 			size_t number_of_addresses_to_reserve = (_bridge->port_count() + 15) / 16 * 16;
@@ -42,6 +50,8 @@ class create_bridge_es : public edit_state
 		}
 
 		_completed = true;
+
+		return handled(true);
 	}
 
 	static std::unique_ptr<bridge> make_temp_bridge (size_t port_count, size_t msti_count, D2D1_POINT_2F center)

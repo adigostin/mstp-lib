@@ -32,8 +32,8 @@ public:
 	{ }
 
 	virtual ~edit_state() { }
-	virtual void process_mouse_button_down (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) { }
-	virtual void process_mouse_button_up   (edge::mouse_button button, UINT modifierKeysDown, const mouse_location& location) { }
+	virtual handled process_mouse_button_down (mouse_button button, modifier_key mks, const mouse_location& ml) { return handled(false); }
+	virtual handled process_mouse_button_up   (mouse_button button, modifier_key mks, const mouse_location& ml) { return handled(false); }
 	virtual void process_mouse_move (const mouse_location& location) { }
 	virtual handled process_key_or_syskey_down (uint32_t vkey, modifier_key mks) { return handled(false); }
 	virtual handled process_key_or_syskey_up   (uint32_t vkey, modifier_key mks) { return handled(false); }
@@ -48,10 +48,10 @@ std::unique_ptr<edit_state> create_state_create_bridge (const edit_state_deps& d
 std::unique_ptr<edit_state> create_state_create_wire (const edit_state_deps& deps);
 std::unique_ptr<edit_state> CreateStateMoveWirePoint (const edit_state_deps& deps, wire* wire, size_t pointIndex);
 std::unique_ptr<edit_state> CreateStateBeginningDrag (const edit_state_deps& deps,
-													 renderable_object* clickedObject,
-													 edge::mouse_button button,
-													 UINT modifierKeysDown,
-													 const mouse_location& location,
-													 HCURSOR cursor,
-													 std::unique_ptr<edit_state>&& stateMoveThreshold,
-													 std::unique_ptr<edit_state>&& stateButtonUp);
+	renderable_object* clickedObject,
+	mouse_button button,
+	modifier_key mks,
+	const mouse_location& ml,
+	HCURSOR cursor,
+	std::unique_ptr<edit_state>&& stateMoveThreshold,
+	std::unique_ptr<edit_state>&& stateButtonUp);
