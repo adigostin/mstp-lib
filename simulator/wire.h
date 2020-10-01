@@ -4,29 +4,36 @@
 
 #pragma once
 #include "renderable_object.h"
-#include "win32/utility_functions.h"
-#include "win32/xml_serializer.h"
+#include "utility_functions.h"
+#include "xml_serializer.h"
 
 class port;
 struct project_i;
 
 using loose_wire_end = D2D1_POINT_2F;
 using connected_wire_end = port*;
-using serialized_connected_end = std::pair<size_t, size_t>;
-using wire_end = std::variant<loose_wire_end, connected_wire_end, serialized_connected_end>;
+using wire_end = std::variant<loose_wire_end, connected_wire_end>;
 
-struct wire_end_property_traits
+using edge::xtype;
+using edge::com_ptr;
+using edge::type;
+using edge::static_value_property;
+using edge::uint32_p;
+using edge::object;
+
+struct wire_end_p : edge::property, edge::custom_serialize_property_i
 {
-	static constexpr char type_name[] = "wire_end";
-	using value_t = wire_end;
-	static void to_string (value_t from, std::string& to);
-	static void from_string (std::string_view from, value_t& to);
-	static void serialize (value_t from, out_stream_i* to) { assert(false); }
-	static void deserialize (binary_reader& from, value_t& to) { assert(false); }
-};
-using wire_end_p = static_value_property<wire_end_property_traits>;
+	size_t const _index;
+	_bstr_t const _name_bstr;
 
-class wire : public renderable_object, public edge::deserialize_i
+	wire_end_p (const char* name, size_t index);
+	// custom_serialize_property_i
+	virtual void serialize (edge::xml_serializer_i* serializer, const object* obj, const edge::serialize_element_getter& element_getter) const override;
+	virtual void deserialize (edge::xml_deserializer_i* deserializer, IXMLDOMElement* element, object* obj) const override;
+	virtual void deserialize (edge::xml_deserializer_i* deserializer, std::string_view attr_value, object* obj) const override;
+};
+
+class wire : public renderable_object
 {
 	using base = renderable_object;
 
@@ -38,18 +45,16 @@ public:
 
 	project_i* project() const;
 
-	// deserialize_i
-	virtual void on_deserializing() override;
-	virtual void on_deserialized() override;
-
 	const std::array<wire_end, 2>& points() const { return _points; }
 	wire_end point (size_t i) const { return _points[i]; }
 	void set_point (size_t i, wire_end point);
 
 	wire_end p0() const { return _points[0]; }
 	void set_p0 (wire_end p0) { set_point(0, p0); }
+	void set_p0 (port* p0) { set_point(0, p0); }
 	wire_end p1() const { return _points[1]; }
 	void set_p1 (wire_end p1) { set_point(1, p1); }
+	void set_p1 (port* p1) { set_point(1, p1); }
 
 	D2D1_POINT_2F point_coords (size_t pointIndex) const;
 
@@ -59,9 +64,9 @@ public:
 	virtual ht_result hit_test (const edge::zoomable_window_i* window, D2D1_POINT_2F dLocation, float tolerance) override final;
 	virtual D2D1_RECT_F extent() const override;
 
-	static const prop_wrapper<wire_end_p, pg_hidden> p0_property;
-	static const prop_wrapper<wire_end_p, pg_hidden> p1_property;
+	static const wire_end_p p0_property;
+	static const wire_end_p p1_property;
 	static const property* const _properties[];
 	static const xtype<> _type;
-	virtual const concrete_type* type() const override { return &_type; }
+	virtual const edge::concrete_type* type() const override { return &_type; }
 };

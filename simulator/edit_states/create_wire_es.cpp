@@ -42,7 +42,7 @@ public:
 				newWire->set_p0 (fromPort);
 				newWire->set_p1 (fromPort->GetCPLocation());
 				_wire = newWire.get();
-				_project->wire_collection_i::insert(_project->wires().size(), std::move(newWire));
+				_project->wire_collection_i::append(std::move(newWire));
 				_substate  = waiting_first_up;
 			}
 		}
@@ -90,7 +90,7 @@ public:
 		{
 			if (_wire != nullptr)
 			{
-				_project->wire_collection_i::remove(_project->wires().size() - 1);
+				_project->wire_collection_i::remove_last();
 				_wire = nullptr;
 			}
 

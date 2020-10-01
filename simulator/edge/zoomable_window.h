@@ -7,6 +7,9 @@
 
 namespace edge
 {
+	#pragma warning(push)
+	#pragma warning(disable: 4250) // disable "inherits via dominance" warning
+
 	class zoomable_window abstract : public d2d_window, public virtual zoomable_window_i
 	{
 		using base = d2d_window;
@@ -51,8 +54,8 @@ namespace edge
 
 	protected:
 		virtual std::optional<LRESULT> window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
-		virtual void create_render_resources (ID2D1DeviceContext* dc) override;
-		virtual void release_render_resources (ID2D1DeviceContext* dc) override;
+		virtual void create_render_resources (const d2d_render_args& ra) override;
+		virtual void release_render_resources (const d2d_render_args& ra) override;
 		virtual void on_zoom_transform_changed();
 
 	private:
@@ -63,4 +66,6 @@ namespace edge
 		void process_wm_mousewheel  (WPARAM wparam, LPARAM lparam);
 		void process_wm_mousemove   (WPARAM wparam, LPARAM lparam);
 	};
+
+	#pragma warning(pop)
 }

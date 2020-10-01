@@ -20,12 +20,14 @@
 #include <optional>
 #include <queue>
 #include <set>
+#include <span>
 #include <sstream>
 #include <stdexcept>
 #include <string_view>
 #include <typeindex>
 #include <unordered_map>
 #include <variant>
+#include <vector>
 
 #include <comdef.h>
 #include <CommCtrl.h>
@@ -41,9 +43,4 @@
 #include <wincodec.h>
 #include <Windows.h>
 #include <windowsx.h>
-
-#include "..\assert.h"
-
-#define TCB_SPAN_NAMESPACE_NAME std
-#define TCB_SPAN_NO_CONTRACT_CHECKING
-#include "../tcb/span.hpp"
+#include <winrt/Windows.UI.ViewManagement.h>

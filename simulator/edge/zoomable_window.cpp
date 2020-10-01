@@ -10,9 +10,9 @@ using namespace D2D1;
 
 namespace edge
 {
-	void zoomable_window::create_render_resources (ID2D1DeviceContext* dc)
+	void zoomable_window::create_render_resources (const d2d_render_args& ra)
 	{
-		base::create_render_resources(dc);
+		base::create_render_resources(ra);
 
 		if (_smooth_zoom_info)
 		{
@@ -59,9 +59,9 @@ namespace edge
 		}
 	}
 
-	void zoomable_window::release_render_resources (ID2D1DeviceContext* dc)
+	void zoomable_window::release_render_resources (const d2d_render_args& ra)
 	{
-		base::release_render_resources(dc);
+		base::release_render_resources(ra);
 
 		if (_smooth_zoom_info)
 		{
@@ -212,6 +212,10 @@ namespace edge
 
 	std::optional<LRESULT> zoomable_window::window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
+		auto res = base::window_proc (hwnd, uMsg, wParam, lParam);
+		if (res)
+			return res;
+
 		if (_enableUserZoomingAndPanning)
 		{
 			if (uMsg == WM_MOUSEWHEEL)
@@ -237,17 +241,16 @@ namespace edge
 			{
 				process_wm_mousemove(wParam, lParam);
 				base::window_proc(hwnd, uMsg, wParam, lParam);
-				return 0;
+				return std::nullopt;
 			}
 		}
 
 		if (uMsg == WM_SIZE)
 		{
-			base::window_proc (hwnd, uMsg, wParam, lParam); // Pass it to the base class first, which stores the client size.
 			process_wm_size(wParam, lParam);
-			return 0;
+			return std::nullopt;
 		}
 
-		return base::window_proc(hwnd, uMsg, wParam, lParam);
+		return std::nullopt;
 	}
 }

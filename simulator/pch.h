@@ -24,13 +24,13 @@
 #include <queue>
 #include <random>
 #include <set>
+#include <span>
 #include <sstream>
 #include <thread>
 #include <typeindex>
 #include <unordered_map>
 #include <unordered_set>
 #include <variant>
-#include <xutility>
 
 // Windows
 #define _COM_NO_STANDARD_GUIDS_
@@ -48,9 +48,3 @@
 #include <Windows.h>
 #include <windowsx.h>
 #undef DrawText
-
-#include "assert.h"
-
-#define TCB_SPAN_NAMESPACE_NAME std
-#define TCB_SPAN_NO_CONTRACT_CHECKING
-#include "tcb/span.hpp"

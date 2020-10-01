@@ -3,7 +3,7 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "object.h"
+#include "edge_win32.h"
 #include "renderable_object.h"
 #include "stp.h"
 #include "bridge.h"
@@ -18,10 +18,9 @@ class bridge;
 class port;
 class wire;
 
-using property_changing_e = edge::object::property_changing_e;
-using property_changed_e = edge::object::property_changed_e;
+using edge::property_changing_e;
+using edge::property_changed_e;
 using edge::property_change_args;
-using edge::collection_property_change_type;
 
 static constexpr unsigned char DefaultConfigTableDigest[16] = { 0xAC, 0x36, 0x17, 0x7F, 0x50, 0x28, 0x3C, 0xD4, 0xB8, 0x38, 0x21, 0xD8, 0xAB, 0x26, 0xDE, 0x62 };
 
@@ -63,6 +62,7 @@ using selection_factory_t = std::unique_ptr<selection_i>(project_i* project);
 
 struct __declspec(novtable) log_window_i : virtual edge::win32_window_i
 {
+	virtual ~log_window_i() { }
 };
 using log_window_factory_t = std::unique_ptr<log_window_i>(*const)(HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dWriteFactory, selection_i* selection, const std::shared_ptr<project_i>& project);
 extern const log_window_factory_t log_window_factory;
@@ -116,12 +116,22 @@ using edit_window_factory_t = std::unique_ptr<edit_window_i>(const edit_window_c
 
 // ============================================================================
 
-struct __declspec(novtable) properties_window_i : virtual edge::dpi_aware_window_i
+struct properties_window_create_params
 {
+	HWND hwnd_parent;
+	RECT rect;
+	ID3D11DeviceContext* d3d_dc;
+	IDWriteFactory* dwrite_factory;
+};
+
+struct __declspec(novtable) properties_window_i : virtual edge::win32_window_i
+{
+	virtual ~properties_window_i() = default;
+
 	virtual edge::property_grid_i* pg() const = 0;
 };
 
-using properties_window_factory_t = std::unique_ptr<properties_window_i>(HWND parent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dwrite_factory);
+using properties_window_factory_t = std::unique_ptr<properties_window_i>(const properties_window_create_params& cps);
 
 // ============================================================================
 
@@ -155,23 +165,9 @@ using project_window_factory_t = std::unique_ptr<project_window_i>(const project
 
 enum class save_project_option { save_unconditionally, save_if_changed_ask_user_first };
 
-struct bridge_collection_i : typed_object_collection_i<bridge>
-{
-protected:
-	virtual std::vector<std::unique_ptr<bridge>>& bridge_store() = 0;
-	virtual std::vector<std::unique_ptr<bridge>>& children_store() override final { return bridge_store(); }
-	virtual const typed_object_collection_property<bridge>* get_bridges_property() const = 0;
-	virtual const typed_object_collection_property<bridge>* collection_property() const override final { return get_bridges_property(); }
-};
+using bridge_collection_i = edge::typed_object_collection_i<bridge>;
 
-struct wire_collection_i : typed_object_collection_i<wire>
-{
-protected:
-	virtual std::vector<std::unique_ptr<wire>>& wire_store() = 0;
-	virtual std::vector<std::unique_ptr<wire>>& children_store() override final { return wire_store(); }
-	virtual const typed_object_collection_property<wire>* get_wires_property() const = 0;
-	virtual const typed_object_collection_property<wire>* collection_property() const override final { return get_wires_property(); }
-};
+using wire_collection_i = edge::typed_object_collection_i<wire>;
 
 struct __declspec(novtable) project_i : bridge_collection_i, wire_collection_i
 {
@@ -183,8 +179,6 @@ struct __declspec(novtable) project_i : bridge_collection_i, wire_collection_i
 	struct changed_flag_changed_event : public edge::event<changed_flag_changed_event, project_i*> { };
 	struct ChangedEvent : public edge::event<ChangedEvent, project_i*> { };
 
-	virtual const std::vector<std::unique_ptr<bridge>>& bridges() const = 0;
-	virtual const std::vector<std::unique_ptr<wire>>& wires() const = 0;
 	virtual invalidate_e::subscriber invalidated() = 0;
 	virtual loaded_e::subscriber loaded() = 0;
 	virtual saved_e::subscriber saved() = 0;
@@ -204,6 +198,16 @@ struct __declspec(novtable) project_i : bridge_collection_i, wire_collection_i
 	virtual const typed_object_collection_property<wire>* wires_prop() const = 0;
 	virtual property_changing_e::subscriber property_changing() = 0;
 	virtual property_changed_e::subscriber property_changed() = 0;
+
+	const std::vector<std::unique_ptr<bridge>>& bridges() const
+	{
+		return this->edge::typed_object_collection_i<bridge>::children();
+	}
+
+	const std::vector<std::unique_ptr<wire>>& wires() const
+	{
+		return this->edge::typed_object_collection_i<wire>::children();
+	}
 
 	std::pair<wire*, size_t> GetWireConnectedToPort (const port* port) const;
 	port* find_connected_port (port* txPort) const;

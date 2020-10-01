@@ -4,7 +4,7 @@
 
 #pragma once
 #include "object.h"
-#include "win32/com_ptr.h"
+#include "com_ptr.h"
 
 class bridge;
 
@@ -12,12 +12,11 @@ using edge::object;
 using edge::uint32_p;
 using edge::temp_string_p;
 using edge::property_change_args;
-using edge::nvp;
-using edge::concrete_type;
 
-extern const nvp bridge_priority_nvps[];
+extern const edge::nvp bridge_priority_nvps[];
 extern const char bridge_priority_type_name[];
-using bridge_priority_p = edge::enum_property<uint32_t, bridge_priority_type_name, bridge_priority_nvps, true>;
+using bridge_priority_traits = edge::enum_property_traits<uint32_t, bridge_priority_type_name, bridge_priority_nvps, true>;
+using bridge_priority_p = edge::static_value_property<bridge_priority_traits>;
 
 class bridge_tree : public object
 {
@@ -31,8 +30,8 @@ class bridge_tree : public object
 	friend class bridge;
 
 	void on_topology_change (unsigned int timestamp);
-	void on_bridge_property_changing (object* obj, const property_change_args& args);
-	void on_bridge_property_changed (object* obj, const property_change_args& args);
+	static void on_bridge_property_changing (void* arg, object* obj, const property_change_args& args);
+	static void on_bridge_property_changed (void* arg, object* obj, const property_change_args& args);
 
 public:
 	bridge_tree (size_t tree_index);
@@ -80,6 +79,6 @@ public:
 	static const uint32_p      topology_change_count_property;
 	static const edge::property* const _properties[];
 	static const edge::xtype<> _type;
-	const concrete_type* type() const override final { return &_type; }
+	virtual const edge::concrete_type* type() const override final { return &_type; }
 };
 

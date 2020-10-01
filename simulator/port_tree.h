@@ -3,21 +3,23 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "object.h"
-#include "win32/com_ptr.h"
+#include "collections.h"
+#include "com_ptr.h"
 #include "stp.h"
 #include "renderable_object.h"
 
 class bridge;
 class port;
 
-extern const nvp port_priority_nvps[];
+extern const edge::nvp port_priority_nvps[];
 extern const char port_priority_type_name[];
-using port_priority_p = edge::enum_property<uint32_t, port_priority_type_name, port_priority_nvps, true>;
+using port_priority_traits = edge::enum_property_traits<uint32_t, port_priority_type_name, port_priority_nvps, true>;
+using port_priority_p = edge::static_value_property<port_priority_traits>;
 
-extern const nvp port_role_nvps[];
+extern const edge::nvp port_role_nvps[];
 extern const char port_role_type_name[];
-using port_role_p = edge::enum_property<STP_PORT_ROLE, port_role_type_name, port_role_nvps>;
+using port_role_traits = edge::enum_property_traits<STP_PORT_ROLE, port_role_type_name, port_role_nvps>;
+using port_role_p = edge::static_value_property<port_role_traits>;
 
 extern const char stp_disabled_text[];
 
@@ -61,7 +63,7 @@ public:
 
 	size_t tree_index() const { return _tree_index; }
 
-	static const prop_wrapper<size_t_p, edge::pg_hidden> tree_index_property;
+	static const size_p tree_index_property;
 	static const port_priority_p priority_property;
 	static const bool_p learning_property;
 	static const bool_p forwarding_property;
@@ -70,5 +72,5 @@ public:
 	static const uint32_p internal_port_path_cost_property;
 	static const property* const _properties[];
 	static const xtype<> _type;
-	const concrete_type* type() const override final { return &_type; }
+	virtual const edge::concrete_type* type() const override final;
 };

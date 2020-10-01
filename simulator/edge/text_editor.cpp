@@ -22,12 +22,12 @@ namespace edge
 		text_layout_with_metrics _text_layout;
 		size_t _selection_origin_pos = 0;
 		size_t _caret_pos;
-		d2d_window_i* const _control;
+		d2d_window_i* const _window;
 		bool _mouse_captured = false;
 
 	public:
-		text_editor (d2d_window_i* control, IDWriteFactory* dwrite_factory, IDWriteTextFormat* format, uint32_t fill_argb, uint32_t text_argb, const D2D1_RECT_F& rect, float lr_padding, std::string_view text)
-			: _control(control)
+		text_editor (d2d_window_i* window, IDWriteFactory* dwrite_factory, IDWriteTextFormat* format, uint32_t fill_argb, uint32_t text_argb, const D2D1_RECT_F& rect, float lr_padding, std::string_view text)
+			: _window(window)
 			, _dwrite_factory(dwrite_factory)
 			, _format(format)
 			, _fill_argb(fill_argb)
@@ -51,16 +51,16 @@ namespace edge
 			set_caret_pos (_text.size(), true);
 			set_caret_screen_location_from_caret_pos();
 
-			//_control->GetZoomOrOriginChanged().AddHandler (&TextEditor::OnZoomOrOriginChanged, this);
+			//_window->GetZoomOrOriginChanged().AddHandler (&TextEditor::OnZoomOrOriginChanged, this);
 
 			invalidate ();
 		}
 
 		~text_editor()
 		{
-			//_control->GetZoomOrOriginChanged().RemoveHandler (&TextEditor::OnZoomOrOriginChanged, this);
-			_control->invalidate(_editorBounds);
-			_control->hide_caret();
+			//_window->GetZoomOrOriginChanged().RemoveHandler (&TextEditor::OnZoomOrOriginChanged, this);
+			_window->invalidate(_editorBounds);
+			_window->hide_caret();
 		}
 
 		void set_caret_pos (size_t pos, bool keepSelectionOrigin)
@@ -98,8 +98,9 @@ namespace edge
 			if (_caret_pos > 0)
 				x = text_layout_with_metrics (_dwrite_factory, _format, { _text.data(), _caret_pos }).width();
 
+			auto dpi = ::GetDpiForWindow(_window->hwnd());
 			static constexpr float caret_width_not_aligned = 1.5f;
-			float pixel_width = 96.0f / _control->dpi();
+			float pixel_width = 96.0f / dpi;
 			auto caret_width = roundf(caret_width_not_aligned / pixel_width) * pixel_width;
 
 			D2D1_RECT_F b;
@@ -107,8 +108,8 @@ namespace edge
 			b.top = roundf (offset.y / pixel_width) * pixel_width;
 			b.right = b.left + caret_width;
 			b.bottom = roundf ((b.top + _text_layout.height()) / pixel_width) * pixel_width;
-			b = align_to_pixel(b, _control->dpi());
-			_control->show_caret(b, D2D1::ColorF(_text_argb & 0x00FF'FFFF));
+			b = align_to_pixel(b, dpi);
+			_window->show_caret(b, D2D1::ColorF(_text_argb & 0x00FF'FFFF));
 		}
 		/*
 		// static
@@ -134,7 +135,7 @@ namespace edge
 
 			auto vertices = corners(_editorBounds);
 			//VectorD verticesD[4];
-			//_control->TransformLocationsToDisplayCoords(&vertices.points[0], verticesD, 4);
+			//_window->TransformLocationsToDisplayCoords(&vertices.points[0], verticesD, 4);
 
 			auto insideBounds = point_in_polygon (vertices, dLocation);
 
@@ -144,14 +145,14 @@ namespace edge
 			return pos;
 		}
 
-		virtual handled on_mouse_down (mouse_button button, modifier_key mks, POINT pp, D2D1_POINT_2F pd) override
+		virtual handled on_mouse_down (const mouse_ud_args& ma) override
 		{
-			if (button != mouse_button::left)
+			if (ma.button != mouse_button::left)
 				return handled(false);
 
-			size_t byte_index = text_pos_at(pd);
+			size_t byte_index = text_pos_at(ma.pd);
 
-			bool keepSelectionOrigin = ((mks & modifier_key::shift) != 0);
+			bool keepSelectionOrigin = ((ma.mks & modifier_key::shift) != 0);
 
 			set_caret_pos (byte_index, keepSelectionOrigin);
 			set_caret_screen_location_from_caret_pos ();
@@ -159,9 +160,9 @@ namespace edge
 			return handled(true);
 		}
 
-		virtual handled on_mouse_up (mouse_button button, modifier_key mks, POINT pp, D2D1_POINT_2F pd) override
+		virtual handled on_mouse_up (const mouse_ud_args& ma) override
 		{
-			if (button == mouse_button::left)
+			if (ma.button == mouse_button::left)
 			{
 				_mouse_captured = false;
 				return handled(true);
@@ -170,11 +171,11 @@ namespace edge
 			return handled(false);
 		}
 
-		virtual void on_mouse_move (modifier_key mks, POINT pp, D2D1_POINT_2F pd) override
+		virtual void on_mouse_move (const mouse_move_args& ma) override
 		{
-			if ((mks & modifier_key::lbutton) != 0)
+			if ((ma.mks & modifier_key::lbutton) != 0)
 			{
-				size_t pos = text_pos_at (pd, nullptr);
+				size_t pos = text_pos_at (ma.pd, nullptr);
 				set_caret_pos (pos, true);
 				set_caret_screen_location_from_caret_pos();
 			}
@@ -319,7 +320,7 @@ namespace edge
 					BOOL bRes = ::GlobalUnlock(hMem); assert (bRes || (GetLastError() == NO_ERROR));
 
 					bool putToClipboard = false;
-					if (::OpenClipboard(_control->hwnd()))
+					if (::OpenClipboard(_window->hwnd()))
 					{
 						if (::EmptyClipboard())
 						{
@@ -351,7 +352,7 @@ namespace edge
 			else if (((mks == modifier_key::control) && (virtualKey == 'V'))
 				|| ((mks == modifier_key::shift) && (virtualKey == VK_INSERT)))
 			{
-				if (::OpenClipboard(_control->hwnd()))
+				if (::OpenClipboard(_window->hwnd()))
 				{
 					auto h = GetClipboardData(CF_UNICODETEXT);
 					if (h != nullptr)
@@ -424,7 +425,7 @@ namespace edge
 			auto poly = corners(_editorBounds);
 			//_transform.TransformLocations(&poly.points[0], 4);
 			auto bounds = polygon_bounds(poly);
-			_control->invalidate(bounds);
+			_window->invalidate(bounds);
 		}
 
 		void extend_editor_bounds()

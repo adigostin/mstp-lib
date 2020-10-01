@@ -72,6 +72,16 @@ public:
 			::DestroyWindow(_hwnd);
 	}
 
+	static constexpr auto is_bridge = [](const object* o) { return o->type()->is_same_or_derived_from(&bridge::_type); };
+
+	static constexpr auto is_port = [](const object* o) { return o->type()->is_same_or_derived_from(&port::_type); };
+
+	static constexpr auto is_bridge_or_port = [](const object* o)
+	{
+		return o->type()->is_same_or_derived_from(&bridge::_type)
+			|| o->type()->is_same_or_derived_from(&port::_type);
+	};
+
 	virtual HWND hwnd() const override final { return _hwnd; }
 
 	virtual SIZE preferred_size() const override final
@@ -180,12 +190,12 @@ public:
 
 			if ((HIWORD(wParam) == BN_CLICKED) && (LOWORD(wParam) == IDC_BUTTON_EDIT_MST_CONFIG_TABLE))
 			{
-				if (std::all_of (_selection->objects().begin(), _selection->objects().end(), [](edge::object* o) { return o->type() == &bridge::_type; }))
+				if (std::all_of (_selection->objects().begin(), _selection->objects().end(), is_bridge))
 				{
 					auto editor = create_config_id_editor(_selection->objects());
 					editor->show(static_cast<win32_window_i*>(this));
 				}
-				else if (std::all_of (_selection->objects().begin(), _selection->objects().end(), [](edge::object* o) { return o->type() == &port::_type; }))
+				else if (std::all_of (_selection->objects().begin(), _selection->objects().end(), is_port))
 				{
 					std::vector<edge::object*> objects;
 					std::transform (_selection->objects().begin(), _selection->objects().end(), std::back_inserter(objects),
@@ -274,7 +284,7 @@ public:
 		auto tableButton = GetDlgItem (_hwnd, IDC_BUTTON_EDIT_MST_CONFIG_TABLE); assert (tableButton != nullptr);
 		auto& objects = _selection->objects();
 
-		if (objects.empty() || std::any_of (objects.begin(), objects.end(), [](edge::object* o) { return (o->type() != &bridge::_type) && (o->type() != &port::_type); }))
+		if (objects.empty() || !std::all_of (objects.begin(), objects.end(), is_bridge_or_port))
 		{
 			::SetWindowText (edit, L"(no bridge selected)");
 			::EnableWindow (edit, FALSE);

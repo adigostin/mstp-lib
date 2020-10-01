@@ -3,25 +3,20 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include <string>
+#include <exception>
 #include <string_view>
 #include <memory>
-#include <type_traits>
-#include <cstdint>
-#include <cstdio>
 #include <optional>
-
-#define TCB_SPAN_NAMESPACE_NAME std
-#define TCB_SPAN_NO_CONTRACT_CHECKING
-#include "tcb/span.hpp"
-
-#include "assert.h"
+#include <span>
+#include <vector>
+#include "rassert.h"
 
 namespace edge
 {
 	class object;
 	class type;
-	struct concrete_type;
+	struct value_property;
+	struct object_collection_property;
 	template<typename... factory_arg_property_traits> struct xtype;
 
 	struct property_group
@@ -53,15 +48,19 @@ namespace edge
 	// It should contain at least one virtual function (in C++20 that could be the destructor).
 	struct property
 	{
-		const char* const _name;
-		const property_group* const _group;
-		const char* const _description;
+		const char* const name;
+		const property_group* const group;
+		const char* const description;
+		bool ui_visible;
 
-		constexpr property (const char* name, const property_group* group, const char* description)
-			: _name(name), _group((group != nullptr) ? group : &misc_group), _description(description)
+		constexpr property (const char* name, const property_group* group, const char* description, bool ui_visible)
+			: name(name), group((group != nullptr) ? group : &misc_group), description(description), ui_visible(ui_visible)
 		{ }
 		property (const property&) = delete;
 		property& operator= (const property&) = delete;
+
+		virtual const value_property* as_value_prop() const { return nullptr; }
+		virtual const object_collection_property* as_oc_prop() const { return nullptr; }
 
 	private:
 		virtual void dummy_to_make_polymorphic() { }
@@ -73,40 +72,28 @@ namespace edge
 		int value;
 	};
 
-	struct out_stream_i
+	struct out_sstream_i
 	{
-		virtual void write (const void* data, size_t size) = 0;
-
-		void write (uint8_t data) { write(&data, sizeof(data)); }
-	};
-
-	struct binary_reader
-	{
-		const uint8_t* ptr;
-		const uint8_t* const end;
+		virtual void write (const char* data, size_t size) = 0;
+		void write (std::string_view sv) { write (sv.data(), sv.size()); }
+		void write (char ch) { write (&ch, 1); }
 	};
 
 	struct value_property : property
 	{
 		using property::property;
 
+		virtual const value_property* as_value_prop() const override final { return this; }
 		virtual const char* type_name() const = 0;
 		virtual bool can_set (const object* obj) const = 0;
-		virtual void get_to_string (const object* from, std::string& to) const = 0;
+		virtual void get_to_string (const object* from, out_sstream_i* to) const = 0;
 		virtual void set_from_string (std::string_view from, object* to) const = 0;
-		virtual void serialize (const object* from, out_stream_i* to) const = 0;
-		virtual void deserialize (binary_reader& from, object* to) const = 0;
 		virtual const nvp* nvps() const = 0;
+		virtual int get_enum_value_as_int (const object* obj) const = 0;
 		virtual bool equal (const object* obj1, const object* obj2) const = 0;
 		virtual bool changed_from_default(const object* obj) const = 0;
 		virtual void reset_to_default(object* obj) const = 0;
-
-		std::string get_to_string (const object* from) const
-		{
-			std::string to;
-			get_to_string (from, to);
-			return to;
-		}
+		std::string get_to_string (const object* from) const;
 	};
 
 	// ========================================================================
@@ -125,12 +112,14 @@ namespace edge
 		struct nvps_helper
 		{
 			static const nvp* nvps() { return nullptr; }
+			static int value(value_t v) { rassert(false); return -1; }
 		};
 
 		template <typename T>
 		struct nvps_helper<T, typename std::enable_if<bool(sizeof(&T::nvps))>::type>
 		{
 			static const nvp* nvps() { return T::nvps; }
+			static int value(value_t v) { return (int)v; }
 		};
 
 	public:
@@ -138,11 +127,13 @@ namespace edge
 
 		virtual const nvp* nvps() const override final { return nvps_helper<property_traits>::nvps(); }
 
+		virtual int get_enum_value_as_int (const object* obj) const override final { return nvps_helper<property_traits>::value(get(obj)); }
+
 		virtual value_t get (const object* from) const = 0;
 
 		virtual void set (value_t from, object* to) const = 0;
 
-		virtual void get_to_string (const object* from, std::string& to) const override final
+		virtual void get_to_string (const object* from, out_sstream_i* to) const override final
 		{
 			property_traits::to_string(this->get(from), to);
 		}
@@ -152,19 +143,6 @@ namespace edge
 			value_t value;
 			property_traits::from_string (from, value);
 			this->set(value, to);
-		}
-
-		virtual void serialize (const object* from, out_stream_i* to) const override final
-		{
-			property_traits::serialize (this->get(from), to);
-		}
-
-		virtual void deserialize (binary_reader& from, object* to) const override final
-		{
-			value_t value;
-			property_traits::deserialize(from, value);
-			if (to)
-				this->set (value, to);
 		}
 
 		virtual bool equal (const object* obj1, const object* obj2) const override final
@@ -235,7 +213,7 @@ namespace edge
 				if (type == member_var)
 					return obj->*mv;
 
-				throw nullptr;
+				rassert(false); return { };
 			}
 		};
 
@@ -267,7 +245,7 @@ namespace edge
 				else if (type == static_function)
 					ss(to, from);
 				else
-					assert(false);
+					rassert(false);
 			}
 
 			bool is_null() const { return type == none; }
@@ -277,8 +255,8 @@ namespace edge
 		setter_t const _setter;
 		std::optional<value_t> const default_value;
 
-		constexpr static_value_property (const char* name, const property_group* group, const char* description, getter_t getter, setter_t setter, std::optional<value_t>&& default_value = std::nullopt)
-			: base(name, group, description), _getter(getter), _setter(setter), default_value(std::move(default_value))
+		constexpr static_value_property (const char* name, const property_group* group, const char* description, bool ui_visible, getter_t getter, setter_t setter, std::optional<value_t>&& default_value = std::nullopt)
+			: base(name, group, description, ui_visible), _getter(getter), _setter(setter), default_value(std::move(default_value))
 		{ }
 
 		virtual bool can_set (const object* obj) const override final { return !_setter.is_null(); }
@@ -287,7 +265,7 @@ namespace edge
 
 		virtual void set (value_t from, object* to) const override final { _setter.set(from, to); }
 
-		virtual bool changed_from_default (const object* obj) const override
+		virtual bool changed_from_default (const object* obj) const override final
 		{
 			return !default_value || (_getter.get(obj) != default_value.value());
 		}
@@ -305,10 +283,9 @@ namespace edge
 		static const char type_name[];
 		using value_t = bool;
 		static constexpr nvp nvps[] = { { "False", 0 }, { "True", 1 }, { nullptr, -1 }, };
-		static void to_string (value_t from, std::string& to);
+		static void to_string (value_t from, out_sstream_i* to);
 		static void from_string (std::string_view from, value_t& to);
-		static void serialize (value_t from, out_stream_i* to) { assert(false); } // not implemented
-		static void deserialize (binary_reader& from, value_t& to) { assert(false); } // not implemented
+		static void serialize (value_t from, std::vector<uint8_t>& to) { rassert(false); } // not implemented
 	};
 	using bool_p = static_value_property<bool_property_traits>;
 
@@ -318,15 +295,17 @@ namespace edge
 		//static_assert (std::is_arithmetic_v<t_>);
 		static constexpr const char* type_name = type_name_;
 		using value_t = t_;
-		static void to_string (value_t from, std::string& to); // needs specialization
+		static void to_string (value_t from, out_sstream_i* to); // needs specialization
 		static void from_string (std::string_view from, value_t& to); // needs specialization
-		static void serialize (value_t from, out_stream_i* to); // needs specialization
-		static void deserialize (binary_reader& from, value_t& to); // needs specialization
 	};
 
 	extern const char int32_type_name[];
 	using int32_property_traits = arithmetic_property_traits<int32_t, int32_type_name>;
 	using int32_p = static_value_property<int32_property_traits>;
+
+	extern const char uint8_type_name[];
+	using uint8_property_traits = arithmetic_property_traits<uint8_t, uint8_type_name>;
+	using uint8_p = static_value_property<uint8_property_traits>;
 
 	extern const char uint32_type_name[];
 	using uint32_property_traits = arithmetic_property_traits<uint32_t, uint32_type_name>;
@@ -336,9 +315,9 @@ namespace edge
 	using uint64_property_traits = arithmetic_property_traits<uint64_t, uint64_type_name>;
 	using uint64_p = static_value_property<uint64_property_traits>;
 
-	extern const char size_t_type_name[];
-	using size_t_property_traits = arithmetic_property_traits<size_t, size_t_type_name>;
-	using size_t_p = static_value_property<size_t_property_traits>;
+	extern const char size_type_name[];
+	using size_property_traits = arithmetic_property_traits<size_t, size_type_name>;
+	using size_p = static_value_property<size_property_traits>;
 
 	extern const char float_type_name[];
 	using float_property_traits = arithmetic_property_traits<float, float_type_name>;
@@ -346,12 +325,10 @@ namespace edge
 
 	struct backed_string_property_traits
 	{
-		static const char type_name[];
+		static constexpr char type_name[] = "backed_string";
 		using value_t = std::string_view;
-		static void to_string (value_t from, std::string& to) { to = from; }
+		static void to_string (value_t from, out_sstream_i* to) { to->write(from); }
 		static void from_string (std::string_view from, value_t& to) { to = from; }
-		static void serialize (value_t from, out_stream_i* to);
-		static void deserialize (binary_reader& from, value_t& to);
 	};
 	using backed_string_p = static_value_property<backed_string_property_traits>;
 
@@ -359,24 +336,24 @@ namespace edge
 	{
 		static constexpr char type_name[] = "temp_string";
 		using value_t = std::string;
-		static void to_string (value_t from, std::string& to) { to = from; }
+		static void to_string (value_t from, out_sstream_i* to) { to->write(from); }
 		static void from_string (std::string_view from, value_t& to) { to = from; }
-		static void serialize (value_t from, out_stream_i* to);
-		static void deserialize (binary_reader& from, value_t& to);
 	};
 	using temp_string_p = static_value_property<temp_string_property_traits>;
 
 	// ========================================================================
 
-	template<typename enum_t, const char* type_name_, const nvp* nvps_, bool serialize_as_integer, const char* unknown_str>
+	extern const char unknown_enum_value_str[];
+
+	template<typename value_t_, const char* type_name_, const nvp* nvps_, bool serialize_as_integer = false, const char* unknown_str = unknown_enum_value_str>
 	struct enum_property_traits
 	{
 		static constexpr const char* type_name = type_name_;
-		using value_t = enum_t;
+		using value_t = value_t_;
 
 		static constexpr const nvp* nvps = nvps_;
 
-		static void to_string (enum_t from, std::string& to)
+		static void to_string (value_t from, out_sstream_i* to)
 		{
 			if (serialize_as_integer)
 			{
@@ -388,15 +365,15 @@ namespace edge
 			{
 				if (nvp->value == (int)from)
 				{
-					to = nvp->name;
+					to->write(nvp->name);
 					return;
 				}
 			}
 
-			to = unknown_str;
+			to->write(unknown_str);
 		}
 
-		static void from_string (std::string_view from, enum_t& to)
+		static void from_string (std::string_view from, value_t& to)
 		{
 			if (serialize_as_integer)
 			{
@@ -404,7 +381,7 @@ namespace edge
 				{
 					int32_t val;
 					int32_property_traits::from_string(from, val);
-					to = (enum_t)val;
+					to = (value_t)val;
 					return;
 				}
 				catch (const string_convert_exception&)
@@ -416,7 +393,7 @@ namespace edge
 			{
 				if (from == nvp->name)
 				{
-					to = static_cast<enum_t>(nvp->value);
+					to = static_cast<value_t>(nvp->value);
 					return;
 				}
 			}
@@ -424,27 +401,20 @@ namespace edge
 			throw string_convert_exception(from, type_name);
 		}
 
-		static void serialize (value_t from, out_stream_i* to) { assert(false); }
-		static void deserialize (binary_reader& from, value_t& to) { assert(false); }
+		static void serialize (value_t from, std::vector<uint8_t>& to) { rassert(false); }
 	};
 
 	extern const char unknown_enum_value_str[];
 
-	template<typename enum_t, const char* type_name, const nvp* nvps_, bool serialize_as_integer = false, const char* unknown_str = unknown_enum_value_str>
-	using enum_property = static_value_property<enum_property_traits<enum_t, type_name, nvps_, serialize_as_integer, unknown_str>>;
+	template<typename value_t, const char* type_name, const nvp* nvps_, bool serialize_as_integer = false, const char* unknown_str = unknown_enum_value_str>
+	using static_enum_property = static_value_property<enum_property_traits<value_t, type_name, nvps_, serialize_as_integer, unknown_str>>;
 
 	// ========================================================================
 
 	enum class side { left, top, right, bottom };
-	static constexpr const char side_type_name[] = "side";
-	static constexpr const nvp side_nvps[] = {
-		{ "Left",   (int) side::left },
-		{ "Top",    (int) side::top },
-		{ "Right",  (int) side::right },
-		{ "Bottom", (int) side::bottom },
-		{ 0, 0 },
-	};
-	using side_p = edge::enum_property<side, side_type_name, side_nvps>;
+	extern const char side_type_name[];
+	extern const nvp side_nvps[];
+	using side_p = edge::static_enum_property<side, side_type_name, side_nvps>;
 
 	// ========================================================================
 
@@ -469,16 +439,15 @@ namespace edge
 		getter_t const _getter;
 		setter_t const _setter;
 
-		typed_object_property (const char* name, const property_group* group, const char* description, getter_t getter, setter_t setter)
-			: base (name, group, description), _getter(getter), _setter(setter)
+		typed_object_property (const char* name, const property_group* group, const char* description, bool ui_visible, getter_t getter, setter_t setter)
+			: base (name, group, description, ui_visible), _getter(getter), _setter(setter)
 		{
 			static_assert (std::is_base_of<object, object_t>::value);
 		}
 
 		std::unique_ptr<object_t> set (object* obj, std::unique_ptr<object_t>&& value) const
 		{
-			(obj->*_setter)(std::move(value));
-			assert(false); return nullptr; // TODO: return old value
+			return (obj->*_setter)(std::move(value));
 		}
 
 		virtual object_t* get (const object* obj) const override final { return (obj->*_getter)(); }
@@ -496,11 +465,12 @@ namespace edge
 		using property::property;
 		virtual size_t size (const object* obj) const = 0;
 		virtual bool can_insert_remove() const = 0;
-		virtual void get_value (const object* from_obj, size_t from_index, std::string& to) const = 0;
+		virtual void get_to_string (const object* from_obj, size_t from_index, out_sstream_i* to) const = 0;
 		virtual void set_value (std::string_view from, object* to_obj, size_t to_index) const = 0;
 		virtual void insert_value (std::string_view from, object* to_obj, size_t to_index) const = 0;
 		virtual void remove_value (object* obj, size_t index) const = 0;
 		virtual bool changed (const object* obj) const = 0;
+		std::string get_to_string (const object* from_obj, size_t from_index) const;
 	};
 
 	// TODO: try to get rid of object_t
@@ -511,25 +481,7 @@ namespace edge
 
 		using base = value_collection_property;
 
-		using member_get_size_t = size_t(object_t::*)() const;
-		using static_get_size_t = size_t(*)(const object_t*);
-
-		enum accessor_type { member_function, static_function };
-
-		struct get_size_t
-		{
-			accessor_type const type;
-			union
-			{
-				member_get_size_t mg;
-				static_get_size_t sg;
-			};
-
-			constexpr get_size_t (member_get_size_t mg) : type(member_function), mg(mg) { }
-			constexpr get_size_t (static_get_size_t sg) : type(static_function), sg(sg) { }
-		};
-
-
+		using get_size_t     = size_t(object_t::*)() const;
 		using get_value_t    = typename property_traits::value_t(object_t::*)(size_t) const;
 		using set_value_t    = void(object_t::*)(size_t, typename property_traits::value_t);
 		using insert_value_t = void(object_t::*)(size_t, typename property_traits::value_t);
@@ -543,9 +495,9 @@ namespace edge
 		remove_value_t const _remove_value;
 		changed_t      const _changed;
 
-		constexpr typed_value_collection_property (const char* name, const property_group* group, const char* description,
+		constexpr typed_value_collection_property (const char* name, const property_group* group, const char* description, bool ui_visible,
 			get_size_t get_size, get_value_t get_value, set_value_t set_value, insert_value_t insert_value, remove_value_t remove_value, changed_t changed)
-			: base (name, group, description)
+			: base (name, group, description, ui_visible)
 			, _get_size(get_size)
 			, _get_value(get_value)
 			, _set_value(set_value)
@@ -566,18 +518,10 @@ namespace edge
 		virtual size_t size (const object* obj) const override
 		{
 			auto ot = static_cast<const object_t*>(obj);
-
-			if (_get_size.type == accessor_type::member_function)
-				return (ot->*(_get_size.mg))();
-
-			if (_get_size.type == accessor_type::static_function)
-				return _get_size.sg(ot);
-
-			assert(false);
-			return 0;
+			return (ot->*_get_size)();
 		}
 
-		virtual void get_value (const object* from_obj, size_t from_index, std::string& to) const override
+		virtual void get_to_string (const object* from_obj, size_t from_index, out_sstream_i* to) const override
 		{
 			auto value = (static_cast<const object_t*>(from_obj)->*_get_value)(from_index);
 			property_traits::to_string(value, to);
@@ -599,7 +543,7 @@ namespace edge
 
 		virtual void remove_value (object* obj, size_t index) const override
 		{
-			assert(false); // not implemented
+			rassert(false); // not implemented
 		}
 
 		virtual bool can_insert_remove() const override { return _insert_value != nullptr; }
@@ -610,4 +554,8 @@ namespace edge
 			return (ot->*_changed)();
 		}
 	};
+
+	// ========================================================================
+
+	bool same_type (const char* type_name1, const char* type_name2);
 }

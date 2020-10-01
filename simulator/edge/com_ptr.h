@@ -57,7 +57,7 @@ namespace edge
 		{
 			if (from)
 			{
-				_ptr = from->_ptr;
+				_ptr = from._ptr;
 				_ptr->AddRef();
 			}
 		}
@@ -165,13 +165,13 @@ namespace edge
 		co_task_mem_ptr (const co_task_mem_ptr&) = delete;
 		co_task_mem_ptr& operator= (const co_task_mem_ptr&) = delete;
 
-		co_task_mem_ptr (co_task_mem_ptr&& from)
+		co_task_mem_ptr (co_task_mem_ptr&& from) noexcept
 		{
 			if (from._ptr != nullptr)
 				std::swap (this->_ptr, from._ptr);
 		}
 
-		co_task_mem_ptr& operator= (co_task_mem_ptr&& from)
+		co_task_mem_ptr& operator= (co_task_mem_ptr&& from) noexcept
 		{
 			if (_ptr != nullptr)
 			{

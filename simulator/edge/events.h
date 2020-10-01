@@ -5,16 +5,17 @@
 #pragma once
 #include <vector>
 #include <array>
-#include "assert.h"
+#include "rassert.h"
 
 namespace edge
 {
-	// In most cases it's easier to use this class as hierarchy root rather than as a member variable.
-	// When it is a member variable, it might be destroyed before subscribers have a chance to unsubscribe themselves.
+	// Note that this event system currently works only on a single thread;
+	// don't try to do something with events on more than one thread.
+
 	class event_manager
 	{
 		template<typename event_t, typename... args_t>
-		friend struct event;
+		friend struct event_base;
 
 		struct handler
 		{
@@ -28,13 +29,12 @@ namespace edge
 			struct handler handler;
 		};
 
-		// TODO: Make this a pointer to save RAM.
 		std::vector<id_and_handler> handlers;
 
 	protected:
 		~event_manager()
 		{
-			assert(handlers.empty());
+			rassert(handlers.empty());
 		}
 
 		template<typename event_t>
@@ -44,18 +44,20 @@ namespace edge
 		}
 	};
 
-	// Note that this currently works only with a single thread;
-	// don't try to do something with events in more than one thread.
 	template<typename event_t, typename... args_t>
-	struct event
+	struct event_base
 	{
-		using callback_t = void(*)(void* callback_arg, args_t... args);
+		friend class event_manager;
+
+		using callback_t = void(*)(void*, args_t...);
 
 	private:
-		static constexpr char id = 0; // the address of this field is used within this file to tell between different events, even if they have handlers with the same signature
+		// The address of this field is used within this file to tell between different event types,
+		// even if they have handlers with the same signature. This eliminates the need for RTTI.
+		static constexpr char id = 0;
 
 	public:
-		event() = delete; // this class and classes derived from it are not meant to be instantiated.
+		event_base() = delete; // this class and classes derived from it are not meant to be instantiated.
 
 		class subscriber
 		{
@@ -66,12 +68,12 @@ namespace edge
 				: _em(em)
 			{ }
 
-			void add_handler (void(*callback)(void* callback_arg, args_t... args), void* callback_arg)
+			void add_handler (callback_t callback, void* callback_arg)
 			{
 				_em->handlers.push_back( { &id, { reinterpret_cast<void*>(callback), callback_arg } });
 			}
 
-			void remove_handler (void(*callback)(void* callback_arg, args_t... args), void* callback_arg)
+			void remove_handler (callback_t callback, void* callback_arg)
 			{
 				for (auto it = _em->handlers.begin(); it != _em->handlers.end(); it++)
 				{
@@ -82,56 +84,58 @@ namespace edge
 					}
 				}
 
-				assert(false); // handler to remove not found
+				rassert(false); // handler to remove not found
 			}
 
 		private:
 			template<typename T>
 			struct extract_class;
 
-			template<typename R, typename C, class... A>
-			struct extract_class<R(C::*)(A...)>
+			template<typename C, class... A>
+			struct extract_class<void(C::*)(A...)>
 			{
 				using class_type = C;
 			};
 
-			template<typename R, typename C, class... A>
-			struct extract_class<R(C::*)(A...) const>
-			{
-				using class_type = C;
-			};
-
-			template<auto member_callback>
+			template<class target_class, void(target_class::*member_callback)(args_t...)>
 			static void proxy (void* arg, args_t... args)
 			{
-				using member_callback_t = decltype(member_callback);
-				using class_type = typename extract_class<member_callback_t>::class_type;
-				auto c = static_cast<class_type*>(arg);
+				auto c = static_cast<target_class*>(arg);
 				(c->*member_callback)(std::forward<args_t>(args)...);
 			}
 
 		public:
-			template<auto member_callback>
+			template<auto member_callback, typename class_type = extract_class<decltype(member_callback)>::class_type>
 			std::enable_if_t<std::is_member_function_pointer_v<decltype(member_callback)>>
-			add_handler (typename extract_class<decltype(member_callback)>::class_type* target)
+			add_handler (class_type* target)
 			{
-				add_handler (&subscriber::proxy<member_callback>, target);
+				add_handler (&subscriber::proxy<class_type, member_callback>, target);
 			}
 
-			template<auto member_callback>
+			template<auto member_callback, typename class_type = extract_class<decltype(member_callback)>::class_type>
 			std::enable_if_t<std::is_member_function_pointer_v<decltype(member_callback)>>
-			remove_handler (typename extract_class<decltype(member_callback)>::class_type* target)
+			remove_handler (class_type* target)
 			{
-				remove_handler (&subscriber::proxy<member_callback>, target);
+				remove_handler (&subscriber::proxy<class_type, member_callback>, target);
 			}
 		};
-
-	private:
-		friend class event_manager;
 
 		class invoker
 		{
 			const event_manager* const _em;
+
+			struct handler
+			{
+				callback_t callback;
+				void* arg;
+			};
+
+			struct handler_list
+			{
+				handler first[8];
+				size_t count = 0;
+				std::vector<handler> rest;
+			};
 
 		public:
 			invoker (const event_manager* em)
@@ -149,43 +153,72 @@ namespace edge
 				return false;
 			}
 
-			void operator()(args_t... args)
+		protected:
+			handler_list make_handler_list() const
 			{
-				event_manager::handler first[8];
-				size_t count = 0;
-				std::vector<event_manager::handler> rest;
-
-				// Note that this function must be reentrant (one event handler can invoke
+				// Note that the invoker must be reentrant (one event handler can invoke
 				// another event, or add/remove events), that's why these stack copies.
+
+				handler_list res;
 
 				for (auto& p : _em->handlers)
 				{
 					if (p.id == &id)
 					{
-						if (count < std::size(first))
-							first[count] = p.handler;
+						auto h = handler { reinterpret_cast<callback_t>(p.handler.callback), p.handler.callback_arg };
+						if (res.count < std::size(res.first))
+							res.first[res.count] = h;
 						else
-							rest.push_back(p.handler);
-						count++;
+							res.rest.push_back(h);
+						res.count++;
 					}
 				}
 
-				for (size_t i = 0; i < count; i++)
-				{
-					callback_t callback;
-					void* arg;
-					if (i < std::size(first))
-					{
-						callback = reinterpret_cast<callback_t>(first[i].callback);
-						arg = first[i].callback_arg;
-					}
-					else
-					{
-						callback = reinterpret_cast<callback_t>(rest[i - std::size(first)].callback);
-						arg = rest[i - std::size(first)].callback_arg;
-					}
+				return res;
+			}
+		};
+	};
 
-					callback (arg, std::forward<args_t>(args)...);
+	template<typename event_t, typename... args_t>
+	struct event : event_base<event_t, args_t...>
+	{
+		using base = event_base<event_t, args_t...>;
+
+		struct invoker : base::invoker
+		{
+			using base::invoker::invoker;
+
+			void operator()(args_t... args) const
+			{
+				auto hl = base::invoker::make_handler_list();
+				for (size_t i = 0; i < hl.count; i++)
+				{
+					auto handler = (i < std::size(hl.first)) ? hl.first[i] : hl.rest[i - std::size(hl.first)];
+					handler.callback (handler.arg, std::forward<args_t>(args)...);
+				}
+			}
+
+		};
+	};
+
+	template<typename event_t, typename cancel_type, typename... args_t>
+	struct cancelable_event : event_base<event_t, std::optional<cancel_type>&, args_t...>
+	{
+		using base = event_base<event_t, std::optional<cancel_type>&, args_t...>;
+
+		struct invoker : base::invoker
+		{
+			using base::invoker::invoker;
+
+			void operator()(std::optional<cancel_type>& cancel, args_t... args) const
+			{
+				auto hl = base::invoker::make_handler_list();
+				for (size_t i = 0; i < hl.count; i++)
+				{
+					auto handler = (i < std::size(hl.first)) ? hl.first[i] : hl.rest[i - std::size(hl.first)];
+					handler.callback (handler.arg, cancel, std::forward<args_t>(args)...);
+					if (cancel)
+						return;
 				}
 			}
 		};

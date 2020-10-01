@@ -3,19 +3,33 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #include "pch.h"
-#include "wire.h"
-#include "bridge.h"
-#include "port.h"
-#include "win32/utility_functions.h"
 #include "simulator.h"
 
 static constexpr float thickness = 2;
 
-void wire_end_property_traits::to_string (value_t from, std::string& to)
+// ============================================================================
+// wire_end_p
+
+wire_end_p::wire_end_p (const char* name, size_t index)
+	: property(name, nullptr, nullptr, false)
+	, _index(index)
+	, _name_bstr(name)
+{ }
+
+void wire_end_p::serialize (edge::xml_serializer_i* serializer, const object* obj, const edge::serialize_element_getter& element_getter) const
 {
+	auto w = static_cast<const wire*>(obj);
+	auto& from = w->point(_index);
+
 	std::stringstream ss;
 	if (std::holds_alternative<connected_wire_end>(from))
 	{
+		//auto p = std::get<connected_wire_end>(we);
+		//auto b = p->bridge();
+		//auto pi = static_cast<const edge::typed_object_collection_i<port>*>(p->bridge())->index_of(p);
+		//auto bi = static_cast<const edge::typed_object_collection_i<bridge>*>(b->project())->index_of(b);
+		//auto value = std::string("Connected;") + std::to_string(bi) + ";" + std::to_string(pi);
+		//element_getter()->setAttribute(_name_bstr, _variant_t(value.c_str()));
 		port* p = std::get<connected_wire_end>(from);
 		for (size_t bi = 0; bi < p->bridge()->project()->bridges().size(); bi++)
 		{
@@ -25,24 +39,36 @@ void wire_end_property_traits::to_string (value_t from, std::string& to)
 				if (b->ports()[pi].get() == p)
 				{
 					ss << "Connected;" << bi << ";" << pi;
-					to = ss.str();
+					element_getter()->setAttribute(_name_bstr, _variant_t(ss.str().c_str()));
 					return;
 				}
 			}
 		}
 
-		assert(false);
+		rassert(false);
 	}
 	else
 	{
+		//auto p = std::get<loose_wire_end>(we);
+		//auto value = std::string("Loose;") + std::to_string(p.x) + ";" + std::to_string(p.y);
+		//element_getter()->setAttribute(_name_bstr, _variant_t(value.c_str()));
 		auto location = std::get<loose_wire_end>(from);
 		ss << "Loose;" << location.x << ";" << location.y;
-		to = ss.str();
+		element_getter()->setAttribute(_name_bstr, _variant_t(ss.str().c_str()));
+		return;
 	}
 }
 
-void wire_end_property_traits::from_string (std::string_view from, value_t& to)
+void wire_end_p::deserialize (edge::xml_deserializer_i* deserializer, IXMLDOMElement* element, object* obj) const
 {
+	rassert(false);
+}
+
+void wire_end_p::deserialize (edge::xml_deserializer_i* deserializer, std::string_view attr_value, object* obj) const
+{
+	auto w = static_cast<wire*>(obj);
+	auto project = static_cast<project_i*>(deserializer->context());
+	auto from = attr_value;
 	size_t s1 = from.find(';');
 	size_t s2 = from.rfind(';');
 
@@ -51,7 +77,8 @@ void wire_end_property_traits::from_string (std::string_view from, value_t& to)
 		size_t bridge_index, port_index;
 		std::from_chars (from.data() + s1 + 1, from.data() + s2, bridge_index);
 		std::from_chars (from.data() + s2 + 1, from.data() + from.size(), port_index);
-		to = serialized_connected_end(bridge_index, port_index);
+		auto port = project->bridges()[bridge_index]->ports()[port_index].get();
+		w->set_point(_index, port);
 		return;
 	}
 
@@ -60,12 +87,14 @@ void wire_end_property_traits::from_string (std::string_view from, value_t& to)
 		loose_wire_end end;
 		std::from_chars (from.data() + s1 + 1, from.data() + s2, end.x);
 		std::from_chars (from.data() + s2 + 1, from.data() + from.size(), end.y);
-		to = end;
+		w->set_point(_index, end);
 		return;
 	}
 
-	throw edge::string_convert_exception(from, type_name);
+	rassert(false);
 }
+
+// ============================================================================
 
 wire::wire (wire_end firstEnd, wire_end secondEnd)
 	: _points({ firstEnd, secondEnd })
@@ -73,25 +102,8 @@ wire::wire (wire_end firstEnd, wire_end secondEnd)
 
 project_i* wire::project() const
 {
-	return static_cast<project_i*>(static_cast<wire_collection_i*>(base::parent()));
-}
-
-// deserialize_i
-void wire::on_deserializing()
-{ }
-
-void wire::on_deserialized()
-{
-	for (auto& p : _points)
-	{
-		if (std::holds_alternative<serialized_connected_end>(p))
-		{
-			auto bridge_index = std::get<serialized_connected_end>(p).first;
-			auto port_index = std::get<serialized_connected_end>(p).second;
-			auto port = project()->bridges()[bridge_index]->ports()[port_index].get();
-			p = port;
-		}
-	}
+	auto bc = static_cast<edge::typed_object_collection_i<wire>*>(base::parent());
+	return static_cast<project_i*>(bc);
 }
 
 void wire::set_point (size_t pointIndex, wire_end point)
@@ -188,10 +200,8 @@ D2D1_RECT_F wire::extent() const
 	return { tl.x, tl.y, br.x, br.y };
 }
 
-const prop_wrapper<wire_end_p, pg_hidden> wire::p0_property = { "P0", nullptr, nullptr, &p0, &set_p0, };
-
-const prop_wrapper<wire_end_p, pg_hidden> wire::p1_property = { "P1", nullptr, nullptr, &p1, &set_p1 };
-
+const wire_end_p wire::p0_property("P0", 0);
+const wire_end_p wire::p1_property("P1", 1);
 const property* const wire::_properties[] = { &p0_property, &p1_property };
 
-const xtype<> wire::_type = { "Wire", &base::_type, _properties, []()->std::unique_ptr<object> { return std::make_unique<wire>(); } };
+const xtype<> wire::_type = { "Wire", &base::_type, _properties, [] { return std::unique_ptr<object>(new wire()); } };

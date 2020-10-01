@@ -8,6 +8,22 @@
 
 namespace edge
 {
+	modifier_key get_modifier_keys()
+	{
+		modifier_key keys = modifier_key::none;
+
+		if (GetKeyState (VK_SHIFT) < 0)
+			keys |= modifier_key::shift;
+
+		if (GetKeyState (VK_CONTROL) < 0)
+			keys |= modifier_key::control;
+
+		if (GetKeyState (VK_MENU) < 0)
+			keys |= modifier_key::alt;
+
+		return keys;
+	}
+
 	#pragma region win32_window_i interface
 	bool win32_window_i::visible() const
 	{
@@ -91,24 +107,22 @@ namespace edge
 	{
 		::InvalidateRect (hwnd(), &rect, FALSE);
 	}
-	#pragma endregion
 
-	#pragma region dpi_aware_i
-	D2D1::Matrix3x2F dpi_aware_window_i::dpi_transform() const
+	D2D1::Matrix3x2F win32_window_i::dpi_transform() const
 	{
-		auto dpi = this->dpi();
+		auto dpi = ::GetDpiForWindow(hwnd());
 		return { dpi / 96.0f, 0, 0, dpi / 96.0f, 0, 0 };
 	}
 
-	float dpi_aware_window_i::pixel_width() const
+	float win32_window_i::pixel_width() const
 	{
-		return 96.0f / dpi();
+		return 96.0f / ::GetDpiForWindow(hwnd());
 	}
 
-	D2D1_RECT_F dpi_aware_window_i::client_rect() const
+	D2D1_RECT_F win32_window_i::client_rect() const
 	{
 		RECT rect = this->client_rect_pixels();
-		float dpi = (float)this->dpi();
+		auto dpi = ::GetDpiForWindow(hwnd());
 		D2D1_RECT_F res;
 		res.left   = rect.left   * 96.0f / dpi;
 		res.top    = rect.top    * 96.0f / dpi;
@@ -117,79 +131,87 @@ namespace edge
 		return res;
 	}
 
-	D2D1_SIZE_F dpi_aware_window_i::client_size() const
+	D2D1_SIZE_F win32_window_i::client_size() const
 	{
 		SIZE cs = client_size_pixels();
-		float width = cs.cx * 96.0f / dpi();
-		float height = cs.cy * 96.0f / dpi();
+		auto dpi = ::GetDpiForWindow(hwnd());
+		float width = cs.cx * 96.0f / dpi;
+		float height = cs.cy * 96.0f / dpi;
 		return { width, height };
 	}
 
-	float dpi_aware_window_i::client_width() const
+	float win32_window_i::client_width() const
 	{
-		return client_width_pixels() * 96.0f / dpi();
+		return client_width_pixels() * 96.0f / ::GetDpiForWindow(hwnd());
 	}
 
-	float dpi_aware_window_i::client_height() const
+	float win32_window_i::client_height() const
 	{
-		return client_height_pixels() * 96.0f / dpi();
+		return client_height_pixels() * 96.0f / ::GetDpiForWindow(hwnd());
 	}
 
-	float dpi_aware_window_i::lengthp_to_lengthd (LONG lengthp) const
+	float win32_window_i::lengthp_to_lengthd (LONG lengthp) const
 	{
-		return lengthp * 96.0f / dpi();
+		return lengthp * 96.0f / ::GetDpiForWindow(hwnd());
 	}
 
-	LONG dpi_aware_window_i::lengthd_to_lengthp (float lengthd, int round_style) const
+	LONG win32_window_i::lengthd_to_lengthp (float lengthd, int round_style) const
 	{
+		auto dpi = ::GetDpiForWindow(hwnd());
+
 		if (round_style < 0)
-			return (LONG) std::floorf(lengthd / 96.0f * dpi());
+			return (LONG) std::floorf(lengthd / 96.0f * dpi);
 
 		if (round_style > 0)
-			return (LONG) std::ceilf(lengthd / 96.0f * dpi());
+			return (LONG) std::ceilf(lengthd / 96.0f * dpi);
 
-		return (LONG) std::roundf(lengthd / 96.0f * dpi());
+		return (LONG) std::roundf(lengthd / 96.0f * dpi);
 	}
 
-	D2D1_POINT_2F dpi_aware_window_i::pointp_to_pointd (POINT p) const
+	D2D1_POINT_2F win32_window_i::pointp_to_pointd (POINT p) const
 	{
-		return { p.x * 96.0f / dpi(), p.y * 96.0f / dpi() };
+		auto dpi = ::GetDpiForWindow(hwnd());
+		return { p.x * 96.0f / dpi, p.y * 96.0f / dpi };
 	}
 
-	D2D1_POINT_2F dpi_aware_window_i::pointp_to_pointd (long xPixels, long yPixels) const
+	D2D1_POINT_2F win32_window_i::pointp_to_pointd (long xPixels, long yPixels) const
 	{
-		return { xPixels * 96.0f / dpi(), yPixels * 96.0f / dpi() };
+		auto dpi = ::GetDpiForWindow(hwnd());
+		return { xPixels * 96.0f / dpi, yPixels * 96.0f / dpi };
 	}
 
-	POINT dpi_aware_window_i::pointd_to_pointp (float xDips, float yDips, int round_style) const
+	POINT win32_window_i::pointd_to_pointp (float xDips, float yDips, int round_style) const
 	{
+		auto dpi = ::GetDpiForWindow(hwnd());
+
 		if (round_style < 0)
-			return { (int)std::floor(xDips / 96.0f * dpi()), (int)std::floor(yDips / 96.0f * dpi()) };
+			return { (int)std::floor(xDips / 96.0f * dpi), (int)std::floor(yDips / 96.0f * dpi) };
 
 		if (round_style > 0)
-			return { (int)std::ceil(xDips / 96.0f * dpi()), (int)std::ceil(yDips / 96.0f * dpi()) };
+			return { (int)std::ceil(xDips / 96.0f * dpi), (int)std::ceil(yDips / 96.0f * dpi) };
 
-		return { (int)std::round(xDips / 96.0f * dpi()), (int)std::round(yDips / 96.0f * dpi()) };
+		return { (int)std::round(xDips / 96.0f * dpi), (int)std::round(yDips / 96.0f * dpi) };
 	}
 
-	POINT dpi_aware_window_i::pointd_to_pointp (D2D1_POINT_2F locationDips, int round_style) const
+	POINT win32_window_i::pointd_to_pointp (D2D1_POINT_2F locationDips, int round_style) const
 	{
 		return pointd_to_pointp(locationDips.x, locationDips.y, round_style);
 	}
 
-	D2D1_SIZE_F dpi_aware_window_i::sizep_to_sized(SIZE sizep) const
+	D2D1_SIZE_F win32_window_i::sizep_to_sized(SIZE sizep) const
 	{
-		return D2D1_SIZE_F{ sizep.cx * 96.0f / dpi(), sizep.cy * 96.0f / dpi() };
+		auto dpi = ::GetDpiForWindow(hwnd());
+		return D2D1_SIZE_F{ sizep.cx * 96.0f / dpi, sizep.cy * 96.0f / dpi };
 	}
 
-	D2D1_RECT_F dpi_aware_window_i::rectp_to_rectd (RECT rp) const
+	D2D1_RECT_F win32_window_i::rectp_to_rectd (RECT rp) const
 	{
 		auto tl = pointp_to_pointd(rp.left, rp.top);
 		auto br = pointp_to_pointd(rp.right, rp.bottom);
 		return { tl.x, tl.y, br.x, br.y };
 	}
 
-	void dpi_aware_window_i::invalidate (const D2D1_RECT_F& rect)
+	void win32_window_i::invalidate (const D2D1_RECT_F& rect)
 	{
 		auto tl = this->pointd_to_pointp (rect.left, rect.top, -1);
 		auto br = this->pointd_to_pointp (rect.right, rect.bottom, 1);

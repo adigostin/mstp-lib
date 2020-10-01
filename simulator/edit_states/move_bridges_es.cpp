@@ -5,7 +5,6 @@
 #include "pch.h"
 #include "edit_state.h"
 #include "bridge.h"
-#include "win32/utility_functions.h"
 
 class move_bridges_es : public edit_state
 {

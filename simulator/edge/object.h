@@ -13,31 +13,36 @@ namespace edge
 {
 	class type
 	{
-		const char* const _name;
+	public:
+		const char* const name;
 		const type* const base_type;
 		std::span<const property* const> const props;
 
-	public:
-		constexpr type(const char* name, const type* base_type, std::span<const property* const> props) noexcept
-			: _name(name), base_type(base_type), props(props)
-		{ }
-
-		const char* name() const { return _name; }
+		type (const char* name, const type* base_type, std::span<const property* const> props) noexcept;
+		virtual ~type() = default;
 		std::vector<const property*> make_property_list() const;
 		const property* find_property (const char* name) const;
 		bool has_property (const property* p) const;
-		bool is_derived_from (const type* t) const;
-		bool is_derived_from (const type& t) const;
+		bool is_same_or_derived_from (const type* t) const;
+		bool is_same_or_derived_from (const type& t) const;
 
 	private:
 		void add_properties (std::vector<const property*>& properties) const;
 	};
 
-	struct concrete_type : type
+	class concrete_type : public type
 	{
-		using type::type;
+		using base = type;
+		static std::vector<const concrete_type*>* _known_types;
+
+	public:
+		concrete_type (const char* name, const type* base_type, std::span<const property* const> props) noexcept;
+		virtual ~concrete_type();
 		virtual std::span<const value_property* const> factory_props() const = 0;
 		virtual std::unique_ptr<object> create (std::span<std::string_view> string_values) const = 0;
+		std::unique_ptr<object> create() const;
+
+		static const std::vector<const concrete_type*>& known_types();
 	};
 
 	template<typename... factory_arg_property_traits>
@@ -48,11 +53,11 @@ namespace edge
 		using factory_t = std::unique_ptr<object>(typename factory_arg_property_traits::value_t... factory_args);
 
 		factory_t* const _factory;
-		std::array<const value_property*, parameter_count> const _factory_props;
+		std::array<const value_property*, parameter_count> const _factory_props; // TODO: change to tuple
 
 	public:
 		constexpr xtype (const char* name, const type* base, std::span<const property* const> props,
-			factory_t* factory = nullptr, const static_value_property<factory_arg_property_traits>*... factory_props)
+			factory_t* factory = nullptr, const typed_value_property<factory_arg_property_traits>*... factory_props)
 			: concrete_type(name, base, props)
 			, _factory(factory)
 			, _factory_props(std::array<const value_property*, parameter_count>{ factory_props... })
@@ -78,8 +83,8 @@ namespace edge
 	public:
 		virtual std::unique_ptr<object> create (std::span<std::string_view> string_values) const override
 		{
-			assert (_factory);
-			assert (string_values.size() == parameter_count);
+			rassert (_factory);
+			rassert (string_values.size() == parameter_count);
 			std::tuple<typename factory_arg_property_traits::value_t...> values;
 			return create_internal(string_values, values, std::make_index_sequence<parameter_count>());
 		}
@@ -110,6 +115,9 @@ namespace edge
 		{ }
 	};
 
+	struct property_changing_e : event<property_changing_e, object*, const property_change_args&> { };
+	struct property_changed_e  : event<property_changed_e , object*, const property_change_args&> { };
+
 	struct parent_i;
 	// TODO: make event_manager a member var, possibly a pointer
 	class object : public event_manager
@@ -133,43 +141,34 @@ namespace edge
 
 		parent_i* parent() const { return _parent; }
 
-		struct property_changing_e : event<property_changing_e, object*, const property_change_args&> { };
-		struct property_changed_e  : event<property_changed_e , object*, const property_change_args&> { };
-		struct inserting_into_parent_e : public event<inserting_into_parent_e> { };
 		struct inserted_into_parent_e : public event<inserted_into_parent_e> { };
 		struct removing_from_parent_e : public event<removing_from_parent_e> { };
-		struct removed_from_parent_e : public event<removed_from_parent_e> { };
 
 		property_changing_e::subscriber property_changing() { return property_changing_e::subscriber(this); }
 		property_changed_e::subscriber property_changed() { return property_changed_e::subscriber(this); }
-		inserting_into_parent_e::subscriber inserting_into_parent() { return inserting_into_parent_e::subscriber(this); }
 		inserted_into_parent_e::subscriber inserted_into_parent() { return inserted_into_parent_e::subscriber(this); }
 		removing_from_parent_e::subscriber removing_from_parent() { return removing_from_parent_e::subscriber(this); }
-		removed_from_parent_e::subscriber removed_from_parent() { return removed_from_parent_e::subscriber(this); }
+
+		virtual void walk_tree (const std::function<void(object*)>& f);
 
 	protected:
 		virtual void on_property_changing (const property_change_args&);
 		virtual void on_property_changed (const property_change_args&);
-		virtual void on_inserting_into_parent () { this->event_invoker<inserting_into_parent_e>()(); }
-		virtual void on_inserted_into_parent  () { this->event_invoker<inserted_into_parent_e>()(); }
+		virtual void on_inserted_into_parent() { this->event_invoker<inserted_into_parent_e>()(); }
 		virtual void on_removing_from_parent() { this->event_invoker<removing_from_parent_e>()(); }
-		virtual void on_removed_from_parent () { this->event_invoker<removed_from_parent_e>()(); }
 
 		static const edge::type _type;
 	public:
-		virtual const concrete_type* type() const = 0;
+		virtual const edge::concrete_type* type() const = 0;
 	};
 
 	struct parent_i
 	{
 	protected:
-		void call_inserting_into_parent(object* child);
-		void set_parent(object* child);
+		void set_this_as_parent(object* child);
 		void call_inserted_into_parent(object* child);
 
 		void call_removing_from_parent(object* child);
-		void clear_parent(object* child);
-		void call_removed_from_parent(object* child);
+		void clear_this_as_parent(object* child);
 	};
-
 }

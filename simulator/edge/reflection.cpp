@@ -2,6 +2,7 @@
 // This file is part of the "edge" library, available at https://github.com/adigostin/edge
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
+#include "pch.h"
 #include "reflection.h"
 #include <ctype.h>
 
@@ -28,13 +29,24 @@ namespace edge
 		: _message(make_string(str, type_name))
 	{ }
 
+	std::string value_property::get_to_string (const object* from) const
+	{
+		struct oss : out_sstream_i
+		{
+			std::string buffer;
+			virtual void write (const char* data, size_t size) override { buffer.append(data, size); }
+		} s;
+		this->get_to_string(from, &s);
+		return std::move(s.buffer);
+	}
+
 	// ========================================================================
 
 	const char bool_property_traits::type_name[] = "bool";
 
-	void bool_property_traits::to_string (value_t from, std::string& to)
+	void bool_property_traits::to_string (value_t from, out_sstream_i* to)
 	{
-		to = from ? "True" : "False";
+		to->write(from ? "True" : "False");
 	}
 
 	void bool_property_traits::from_string (std::string_view from, value_t& to)
@@ -58,7 +70,7 @@ namespace edge
 
 	extern const char int32_type_name[] = "int32";
 
-	template<> void int32_property_traits::to_string (value_t from, std::string& to)
+	template<> void int32_property_traits::to_string (value_t from, out_sstream_i* to)
 	{
 		char buffer[16];
 		#ifdef _MSC_VER
@@ -66,7 +78,7 @@ namespace edge
 		#else
 			sprintf (buffer, "%d", from);
 		#endif
-		to = buffer;
+		to->write(buffer);
 	}
 
 	template<> void int32_property_traits::from_string (std::string_view from, int32_t& to)
@@ -83,29 +95,37 @@ namespace edge
 		to = value;
 	}
 
-	template<> void int32_property_traits::serialize (value_t from, out_stream_i* to)
+	// ========================================================================
+
+	extern const char uint8_type_name[] = "uint8";
+
+	template<> void uint8_property_traits::to_string (value_t from, out_sstream_i* to)
 	{
-		assert(false); // not implemented
+		return uint32_property_traits::to_string(from, to);
 	}
 
-	template<> void int32_property_traits::deserialize (binary_reader& from, value_t& to)
+	template<> void uint8_property_traits::from_string (std::string_view from, uint8_t& to)
 	{
-		assert(false); // not implemented
+		uint32_t value;
+		uint32_property_traits::from_string(from, value);
+		if (value > 0xFF)
+			throw std::range_error("Value out of range (expected 0..255)");
+		to = (uint8_t)value;
 	}
 
 	// ========================================================================
 
 	extern const char uint32_type_name[] = "uint32";
 
-	template<> void uint32_property_traits::to_string (value_t from, std::string& to)
+	template<> void uint32_property_traits::to_string (value_t from, out_sstream_i* to)
 	{
 		char buffer[16];
 		#ifdef _MSC_VER
-		sprintf_s (buffer, "%u", from);
+			sprintf_s (buffer, "%u", from);
 		#else
-		sprintf (buffer, "%u", from);
+			sprintf (buffer, "%u", from);
 		#endif
-		to = buffer;
+		to->write(buffer);
 	}
 
 	template<> void uint32_property_traits::from_string (std::string_view from, uint32_t& to)
@@ -122,29 +142,19 @@ namespace edge
 		to = value;
 	}
 
-	template<> void uint32_property_traits::serialize (value_t from, out_stream_i* to)
-	{
-		assert(false); // not implemented
-	}
-
-	template<> void uint32_property_traits::deserialize (binary_reader& from, value_t& to)
-	{
-		assert(false); // not implemented
-	}
-
 	// ========================================================================
 
 	extern const char uint64_type_name[] = "uint64";
 
-	template<> void uint64_property_traits::to_string (value_t from, std::string& to)
+	template<> void uint64_property_traits::to_string (value_t from, out_sstream_i* to)
 	{
 		char buffer[32];
 		#ifdef _MSC_VER
-		sprintf_s (buffer, "%llu", from);
+			sprintf_s (buffer, "%llu", from);
 		#else
-		sprintf (buffer, "%llu", from);
+			sprintf (buffer, "%llu", from);
 		#endif
-		to = buffer;
+		to->write(buffer);
 	}
 
 	template<> void uint64_property_traits::from_string (std::string_view from, uint64_t& to)
@@ -161,47 +171,27 @@ namespace edge
 		to = value;
 	}
 
-	template<> void uint64_property_traits::serialize (value_t from, out_stream_i* to)
-	{
-		assert(false); // not implemented
-	}
-
-	template<> void uint64_property_traits::deserialize (binary_reader& from, value_t& to)
-	{
-		assert(false); // not implemented
-	}
-
 	// ========================================================================
 
-	extern const char size_t_type_name[] = "size_t";
+	extern const char size_type_name[] = "size_t";
 
-	template<> void size_t_property_traits::to_string (value_t from, std::string& to)
+	template<> void size_property_traits::to_string (value_t from, out_sstream_i* to)
 	{
 		uint32_property_traits::to_string((uint32_t)from, to);
 	}
 
-	template<> void size_t_property_traits::from_string (std::string_view from, size_t&to)
+	template<> void size_property_traits::from_string (std::string_view from, size_t&to)
 	{
 		uint32_t val;
 		uint32_property_traits::from_string (from, val);
 		to = val;
 	}
 
-	template<> void size_t_property_traits::serialize (value_t from, out_stream_i* to)
-	{
-		assert(false); // not implemented
-	}
-
-	template<> void size_t_property_traits::deserialize (binary_reader& from, value_t& to)
-	{
-		assert(false); // not implemented
-	}
-
 	// ========================================================================
 
 	extern const char float_type_name[] = "float";
 
-	template<> void float_property_traits::to_string (value_t from, std::string& to)
+	template<> void float_property_traits::to_string (value_t from, out_sstream_i* to)
 	{
 		char buffer[32];
 		#ifdef _MSC_VER
@@ -209,7 +199,7 @@ namespace edge
 		#else
 			sprintf (buffer, "%f", from);
 		#endif
-		to = buffer;
+		to->write(buffer);
 	}
 
 	template<> void float_property_traits::from_string (std::string_view from, float& to)
@@ -226,82 +216,33 @@ namespace edge
 		to = value;
 	}
 
-	template<> void float_property_traits::serialize (value_t from, out_stream_i* to)
-	{
-		assert(false); // not implemented
-	}
-
-	template<> void float_property_traits::deserialize (binary_reader& from, value_t& to)
-	{
-		assert(false); // not implemented
-	}
-
-	// ========================================================================
-
-	const char backed_string_property_traits::type_name[] = "backed_string";
-
-	void backed_string_property_traits::serialize (value_t from, out_stream_i* to)
-	{
-		if (from.size() < 254)
-		{
-			to->write((uint8_t)from.size());
-		}
-		else if (from.size() < 65536)
-		{
-			to->write((uint8_t)254);
-			to->write ((uint8_t)(from.size()));
-			to->write ((uint8_t)(from.size() >> 8));
-		}
-		else
-		{
-			to->write((uint8_t)255);
-			to->write ((uint8_t)(from.size()));
-			to->write ((uint8_t)(from.size() >> 8));
-			to->write ((uint8_t)(from.size() >> 16));
-			to->write ((uint8_t)(from.size() >> 24));
-		}
-
-		to->write (from.data(), from.size());
-	}
-
-	void backed_string_property_traits::deserialize (binary_reader& from, value_t& to)
-	{
-		assert (from.ptr + 1 <= from.end);
-		size_t len = *from.ptr++;
-
-		if (len == 254)
-		{
-			assert (from.ptr + 2 <= from.end);
-			len = *from.ptr++;
-			len |= (*from.ptr++ << 8);
-		}
-		else if (len == 255)
-		{
-			assert (from.ptr + 4 <= from.end);
-			len = *from.ptr++;
-			len |= (*from.ptr++ << 8);
-			len |= (*from.ptr++ << 16);
-			len |= (*from.ptr++ << 24);
-		}
-
-		assert (from.ptr + len <= from.end);
-		to = std::string_view((const char*)from.ptr, len);
-		from.ptr += len;
-	}
-
-	// ========================================================================
-
-	void temp_string_property_traits::serialize (value_t from, out_stream_i* to)
-	{
-		assert(false); // not implemented
-	}
-
-	void temp_string_property_traits::deserialize (binary_reader& from, value_t& to)
-	{
-		assert(false); // not implemented
-	}
-
 	// ========================================================================
 
 	const char unknown_enum_value_str[] = "(unknown)";
+
+	const char side_type_name[] = "side";
+	const nvp side_nvps[] = {
+		{ "Left",   (int) side::left },
+		{ "Top",    (int) side::top },
+		{ "Right",  (int) side::right },
+		{ "Bottom", (int) side::bottom },
+		{ 0, 0 },
+	};
+
+	std::string value_collection_property::get_to_string (const object* from_obj, size_t from_index) const
+	{
+		struct oss : out_sstream_i
+		{
+			std::string buffer;
+			virtual void write (const char* data, size_t size) override { buffer.append(data, size); }
+		} s;
+		this->get_to_string (from_obj, from_index, &s);
+		return std::move(s.buffer);
+	}
+
+	bool same_type (const char* type_name1, const char* type_name2)
+	{
+		return (type_name1 == type_name2)
+			|| (strcmp (type_name1, type_name2) == 0);
+	}
 }

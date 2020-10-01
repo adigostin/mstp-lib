@@ -8,10 +8,6 @@
 #include "wire.h"
 #include "resource.h"
 
-#pragma comment (lib, "d2d1.lib")
-#pragma comment (lib, "dwrite.lib")
-#pragma comment (lib, "D3D11.lib")
-#pragma comment (lib, "Dxgi.lib")
 #pragma comment (lib, "Shlwapi")
 #pragma comment (lib, "Version")
 #pragma comment (lib, "Comctl32")

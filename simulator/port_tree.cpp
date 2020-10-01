@@ -7,12 +7,12 @@
 #include "port.h"
 #include "bridge.h"
 #include "stp.h"
-#include "win32/xml_serializer.h"
+#include "xml_serializer.h"
 
 using namespace edge;
 
 const char port_priority_type_name[] = "PortPriority";
-const nvp port_priority_nvps[] {
+const edge::nvp port_priority_nvps[] {
 	{ "10 (16 dec)",  0x10 },
 	{ "20 (32 dec)",  0x20 },
 	{ "30 (48 dec)",  0x30 },
@@ -32,7 +32,7 @@ const nvp port_priority_nvps[] {
 };
 
 const char port_role_type_name[] = "port_role";
-const nvp port_role_nvps[] =
+const edge::nvp port_role_nvps[] =
 {
 	{ STP_GetPortRoleString(STP_PORT_ROLE_DISABLED),   (int) STP_PORT_ROLE_DISABLED },
 	{ STP_GetPortRoleString(STP_PORT_ROLE_ROOT),       (int) STP_PORT_ROLE_ROOT },
@@ -180,8 +180,8 @@ STP_PORT_ROLE port_tree::role() const
 	return STP_GetPortRole (port()->bridge()->stp_bridge(), (unsigned int)port()->port_index(), (unsigned int)_tree_index);
 }
 
-const prop_wrapper<size_t_p, edge::pg_hidden> port_tree::tree_index_property {
-	"TreeIndex", nullptr, nullptr,
+const edge::size_p port_tree::tree_index_property {
+	"TreeIndex", nullptr, nullptr, false,
 	&tree_index,
 	nullptr,
 };
@@ -191,6 +191,7 @@ const port_priority_p port_tree::priority_property {
 	nullptr,
 	"The value of the priority field which is contained in the first (in network byte order) octet of the (2 octet long) Port ID. "
 		"The other octet of the Port ID is given by the value of dot1dStpPort.",
+	true,
 	&priority,
 	&set_priority,
 	0x80,
@@ -200,6 +201,7 @@ const edge::bool_p port_tree::learning_property {
 	"learning",
 	nullptr,
 	nullptr,
+	true,
 	&learning,
 	nullptr,
 };
@@ -208,6 +210,7 @@ const edge::bool_p port_tree::forwarding_property {
 	"forwarding",
 	nullptr,
 	nullptr,
+	true,
 	&forwarding,
 	nullptr,
 };
@@ -216,6 +219,7 @@ const port_role_p port_tree::role_property {
 	"role",
 	nullptr,
 	nullptr,
+	true,
 	&role,
 	nullptr,
 };
@@ -226,6 +230,7 @@ const uint32_p port_tree::admin_internal_port_path_cost_property {
 	"AdminInternalPortPathCost",
 	&port_path_cost_group,
 	nullptr,
+	true,
 	&admin_internal_port_path_cost,
 	&set_admin_internal_port_path_cost,
 	0,
@@ -235,6 +240,7 @@ const uint32_p port_tree::internal_port_path_cost_property {
 	"InternalPortPathCost",
 	&port_path_cost_group,
 	nullptr,
+	true,
 	&internal_port_path_cost,
 	nullptr,
 	0,
@@ -251,3 +257,5 @@ const edge::property* const port_tree::_properties[] = {
 };
 
 const xtype<> port_tree::_type = { "PortTree", &base::_type, _properties, nullptr };
+
+const concrete_type* port_tree::type() const { return &_type; }

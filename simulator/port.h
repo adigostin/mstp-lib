@@ -25,15 +25,17 @@ struct link_pulse_t
 using packet_t = std::variant<link_pulse_t, frame_t>;
 
 extern const char admin_p2p_type_name[];
-extern const nvp admin_p2p_nvps[];
-using admin_p2p_p = edge::enum_property<STP_ADMIN_P2P, admin_p2p_type_name, admin_p2p_nvps>;
+extern const edge::nvp admin_p2p_nvps[];
+using admin_p2p_traits = edge::enum_property_traits<STP_ADMIN_P2P, admin_p2p_type_name, admin_p2p_nvps>;
+using admin_p2p_p = edge::static_value_property<admin_p2p_traits>;
 
 extern const char port_speed_type_name[];
 extern const char port_speed_unknown_str[];
 extern const nvp port_speed_nvps[];
-using port_speed_p = edge::enum_property<uint32_t, port_speed_type_name, port_speed_nvps, false, port_speed_unknown_str>;
+using port_speed_traits = edge::enum_property_traits<uint32_t, port_speed_type_name, port_speed_nvps, false, port_speed_unknown_str>;
+using port_speed_p = edge::static_value_property<port_speed_traits>;
 
-class port : public renderable_object, public typed_object_collection_i<port_tree>
+class port : public renderable_object, public edge::typed_object_collection_i<port_tree>
 {
 	using base = renderable_object;
 
@@ -49,16 +51,16 @@ class port : public renderable_object, public typed_object_collection_i<port_tre
 	static constexpr uint32_t MissedLinkPulseCounterMax = 3;
 	uint32_t _missedLinkPulseCounter = MissedLinkPulseCounterMax;
 
-	virtual std::vector<std::unique_ptr<port_tree>>& children_store() override final { return _trees; }
-	virtual const typed_object_collection_property<port_tree>* collection_property() const override final { return &trees_property; }
+	virtual void children_store (std::vector<std::unique_ptr<port_tree>>** out) override final { *out = &_trees; }
+	virtual void collection_property (const typed_object_collection_property<port_tree>** out) const override final { *out = &trees_property; }
 	virtual void call_property_changing (const property_change_args& args) override final { this->on_property_changing(args); }
 	virtual void call_property_changed  (const property_change_args& args) override final { this->on_property_changed(args); }
 
 	virtual void on_inserted_into_parent() override;
 	virtual void on_removing_from_parent() override;
 
-	void on_bridge_property_changing (object* obj, const property_change_args& args);
-	void on_bridge_property_changed  (object* obj, const property_change_args& args);
+	static void on_bridge_property_changing (void* arg, object* obj, const property_change_args& args);
+	static void on_bridge_property_changed  (void* arg, object* obj, const property_change_args& args);
 
 public:
 	port (size_t port_index, side side, float offset);
@@ -75,7 +77,7 @@ public:
 
 	::bridge* bridge() const;
 	size_t port_index() const { return _port_index; }
-	side side() const { return _side; }
+	edge::side side() const { return _side; }
 	float offset() const { return _offset; }
 	D2D1_POINT_2F GetCPLocation() const;
 	bool mac_operational() const;
@@ -130,8 +132,8 @@ public:
 	void set_side (edge::side side) { _side = side; }
 	void set_offset (float offset) { _offset = offset; }
 
-	static const prop_wrapper<side_p, pg_hidden> side_property;
-	static const prop_wrapper<float_p, pg_hidden> offset_property;
+	static const side_p side_property;
+	static const float_p offset_property;
 	static const port_speed_p supported_speed_property;
 	static const port_speed_p actual_speed_property;
 	static const bool_p auto_edge_property;
@@ -143,7 +145,7 @@ public:
 	static const admin_p2p_p admin_p2p_property;
 	static const bool_p detected_p2p_property;
 	static const bool_p oper_p2p_property;
-	static const prop_wrapper<typed_object_collection_property<port_tree>, pg_hidden> trees_property;
+	static const typed_object_collection_property<port_tree> trees_property;
 
 	static const property* const _properties[];
 	static const xtype<> _type;

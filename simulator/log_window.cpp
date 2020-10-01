@@ -5,9 +5,7 @@
 #include "pch.h"
 #include "simulator.h"
 #include "resource.h"
-#include "win32/d2d_window.h"
-#include "win32/utility_functions.h"
-#include "win32/text_layout.h"
+#include "d2d_window.h"
 
 using namespace D2D1;
 using namespace edge;
@@ -68,14 +66,14 @@ public:
 		}
 	}
 
-	virtual void render (ID2D1DeviceContext* dc) const override final
+	virtual void render (const d2d_render_args& ra) const override final
 	{
-		dc->Clear(GetD2DSystemColor(COLOR_WINDOW));
+		ra.dc->Clear(GetD2DSystemColor(COLOR_WINDOW));
 
-		dc->SetTransform(dpi_transform());
+		ra.dc->SetTransform(dpi_transform());
 
 		com_ptr<ID2D1SolidColorBrush> text_brush;
-		dc->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOWTEXT), &text_brush);
+		ra.dc->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOWTEXT), &text_brush);
 
 		if ((_bridge == nullptr) || _lines.empty())
 		{
@@ -88,7 +86,7 @@ public:
 			auto tl = edge::text_layout_with_metrics (dwrite_factory(), _textFormat, text, client_width());
 			_textFormat->SetTextAlignment(oldta);
 			D2D1_POINT_2F origin = { client_width() / 2 - tl.width() / 2 - tl.left(), client_height() / 2 };
-			dc->DrawTextLayout (origin, tl, text_brush);
+			ra.dc->DrawTextLayout (origin, tl, text_brush);
 		}
 		else
 		{
@@ -102,7 +100,7 @@ public:
 					line.resize (line.length() - 2);
 
 				auto tl = text_layout (dwrite_factory(), _textFormat, line);
-				dc->DrawTextLayout ({ 0, y }, tl, text_brush, D2D1_DRAW_TEXT_OPTIONS_NO_SNAP);
+				ra.dc->DrawTextLayout ({ 0, y }, tl, text_brush, D2D1_DRAW_TEXT_OPTIONS_NO_SNAP);
 				y += lineHeight;
 
 				if (y >= client_height())

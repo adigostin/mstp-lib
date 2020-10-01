@@ -8,6 +8,7 @@
 #include "text_layout.h"
 
 using namespace D2D1;
+using namespace winrt::Windows::UI::ViewManagement;
 
 #pragma comment (lib, "d2d1.lib")
 #pragma comment (lib, "dwrite.lib")
@@ -53,13 +54,18 @@ namespace edge
 
 		QueryPerformanceFrequency(&_performance_counter_frequency);
 
-		hr = dwrite_factory->CreateTextFormat (L"Courier New", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_CONDENSED, 11.0f * 96 / dpi(), L"en-US", &_debug_text_format); assert(SUCCEEDED(hr));
+		float font_size = 11.0f * 96 / ::GetDpiForWindow(hwnd());
+		hr = dwrite_factory->CreateTextFormat (L"Courier New", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_CONDENSED, font_size, L"en-US", &_debug_text_format); assert(SUCCEEDED(hr));
+	}
+
+	d2d_window::~d2d_window()
+	{
+		release_d2d_dc();
 	}
 
 	void d2d_window::create_d2d_dc()
 	{
 		assert (_d2d_dc == nullptr);
-		assert (_d2d_factory       == nullptr);
 
 		com_ptr<IDXGISurface2> dxgiSurface;
 		auto hr = _swap_chain->GetBuffer (0, IID_PPV_ARGS(&dxgiSurface)); assert(SUCCEEDED(hr));
@@ -69,45 +75,36 @@ namespace edge
 		cps.options = D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS;
 		hr = D2D1CreateDeviceContext (dxgiSurface, &cps, &_d2d_dc); assert(SUCCEEDED(hr));
 
-		com_ptr<ID2D1Factory> factory;
-		_d2d_dc->GetFactory(&factory);
-		hr = factory->QueryInterface(&_d2d_factory); assert(SUCCEEDED(hr));
-
 		_d2d_dc->SetTextAntialiasMode (D2D1_TEXT_ANTIALIAS_MODE_CLEARTYPE);
 	}
 
 	void d2d_window::release_d2d_dc()
 	{
 		assert (_d2d_dc != nullptr);
-		assert (_d2d_factory != nullptr);
 		_d2d_dc = nullptr;
-		_d2d_factory = nullptr;
 	}
 
-	void d2d_window::render (ID2D1DeviceContext* dc) const
+	void d2d_window::render (const d2d_render_args& ra) const
 	{
-		static constexpr D2D1_COLOR_F white = { 1, 1, 1, 1 };
-		dc->Clear(&white);
+		ra.dc->Clear(ra.back_brush->GetColor());
 
-		dc->SetTransform(dpi_transform());
+		ra.dc->SetTransform(dpi_transform());
 
 		com_ptr<ID2D1SolidColorBrush> brush;
 		static constexpr D2D1_COLOR_F red = { 1, 0, 0, 1 };
-		dc->CreateSolidColorBrush (&red, nullptr, &brush);
+		ra.dc->CreateSolidColorBrush (&red, nullptr, &brush);
 
 		auto pw = pixel_width();
 
 		auto rect = inflate(client_rect(), -pw);
-		dc->DrawRectangle (&rect, brush, 2 * pw);
-		dc->DrawLine ({ rect.left, rect.top }, { rect.right, rect.bottom }, brush, 2 * pw);
-		dc->DrawLine ({ rect.left, rect.bottom }, { rect.right, rect.top }, brush, 2 * pw);
+		ra.dc->DrawRectangle (&rect, brush, 2 * pw);
+		ra.dc->DrawLine ({ rect.left, rect.top }, { rect.right, rect.bottom }, brush, 2 * pw);
+		ra.dc->DrawLine ({ rect.left, rect.bottom }, { rect.right, rect.top }, brush, 2 * pw);
 	}
 
-	void d2d_window::on_size_changed (SIZE client_size_pixels, D2D1_SIZE_F client_size_dips)
+	void d2d_window::process_wm_size (SIZE client_size_pixels, D2D1_SIZE_F client_size_dips)
 	{
-		base::on_size_changed(client_size_pixels, client_size_dips);
-
-		if (_swap_chain != nullptr)
+		if (_swap_chain)
 		{
 			// Direct2D extends this to 8x8 and gives a warning. Let's extend it ourselves to avoid getting the warning.
 			UINT width = std::max (8u, (UINT)client_size_pixels.cx);
@@ -116,41 +113,51 @@ namespace edge
 			_swap_chain->GetDesc1(&desc1);
 			if ((desc1.Width != width) || (desc1.Height != height))
 			{
-				this->d2d_dc_releasing();
+				this->d2d_dc_releasing(_d2d_dc);
 				release_d2d_dc();
 				auto hr = _swap_chain->ResizeBuffers (0, width, height, DXGI_FORMAT_UNKNOWN, 0); assert(SUCCEEDED(hr));
 				create_d2d_dc();
-				this->d2d_dc_recreated();
+				this->d2d_dc_recreated(_d2d_dc);
 			}
 		}
 	}
 
-	std::optional<LRESULT> d2d_window::window_proc (HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+	std::optional<LRESULT> d2d_window::window_proc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
-		auto resultBaseClass = base::window_proc(hwnd, uMsg, wParam, lParam);
+		auto res = base::window_proc(hwnd, msg, wParam, lParam);
+		if (res)
+			return res;
 
-		if (uMsg == WM_ERASEBKGND)
+		if (msg == WM_SIZE)
+		{
+			SIZE client_size_pixels = { LOWORD(lParam), HIWORD(lParam) };
+			D2D1_SIZE_F client_size_dips = sizep_to_sized(client_size_pixels);
+			this->process_wm_size(client_size_pixels, client_size_dips);
+			return std::nullopt;
+		}
+
+		if (msg == WM_ERASEBKGND)
 			return 0; // 0 means the window remains marked for erasing, so the fErase member of the PAINTSTRUCT structure will be TRUE.
 
-		if (uMsg == WM_PAINT)
+		if (msg == WM_PAINT)
 		{
 			process_wm_paint();
 			return 0;
 		}
 
-		if (uMsg == WM_SETFOCUS)
+		if (msg == WM_SETFOCUS)
 		{
 			process_wm_set_focus();
-			return 0;
+			return std::nullopt;
 		}
 
-		if (uMsg == WM_KILLFOCUS)
+		if (msg == WM_KILLFOCUS)
 		{
 			process_wm_kill_focus();
-			return 0;
+			return std::nullopt;
 		}
 
-		return resultBaseClass;
+		return std::nullopt;
 	}
 
 	void d2d_window::process_wm_paint()
@@ -165,8 +172,28 @@ namespace edge
 			return;
 		}
 
+		UISettings ui_settings;
+
+		d2d_render_args ra;
+		ra.dc = _d2d_dc;
+		ra.dpi = ::GetDpiForWindow(hwnd());
+
+		auto cv = ui_settings.GetColorValue(UIColorType::Background);
+		D2D1_COLOR_F back = { cv.R / 255.0f, cv.G / 255.0f, cv.B / 255.0f, cv.A / 255.0f };
+		_d2d_dc->CreateSolidColorBrush (back, &ra.back_brush);
+
+		cv = ui_settings.GetColorValue(UIColorType::Foreground);
+		D2D1_COLOR_F fore = { cv.R / 255.0f, cv.G / 255.0f, cv.B / 255.0f, cv.A / 255.0f };
+		_d2d_dc->CreateSolidColorBrush (fore, &ra.fore_brush);
+
+		cv = ui_settings.GetColorValue(UIColorType::Accent);
+		D2D1_COLOR_F back_selected = { cv.R / 255.0f, cv.G / 255.0f, cv.B / 255.0f, cv.A / 255.0f };
+		_d2d_dc->CreateSolidColorBrush (back_selected, &ra.selected_back_brush_focused);
+
+		_d2d_dc->CreateSolidColorBrush (interpolate(back, fore, 75), &ra.selected_back_brush_not_focused);
+
 		// Call this before calculating the update rects, to allow derived classed to invalidate stuff.
-		this->create_render_resources (_d2d_dc);
+		this->create_render_resources (ra);
 
 		LARGE_INTEGER start_time;
 		BOOL bRes = QueryPerformanceCounter(&start_time); assert(bRes);
@@ -316,7 +343,8 @@ namespace edge
 			#pragma endregion
 		}
 		*/
-		this->render (_d2d_dc);
+
+		this->render (ra);
 		/*
 		_updateGeometry = nullptr;
 
@@ -389,7 +417,7 @@ namespace edge
 			perf_info_queue.pop_front();
 		#pragma endregion
 
-		this->release_render_resources (_d2d_dc);
+		this->release_render_resources (ra);
 
 		assert(_painting);
 		_painting = false;
@@ -464,8 +492,8 @@ namespace edge
 		return (d2d_window*)(timer_id - offsetof(d2d_window, _caret_on));
 	}
 
-	// This can be called repeatedly, first to show the caret, and then to move it.
-	void d2d_window::show_caret (const D2D1_RECT_F& bounds, D2D1_COLOR_F color, const D2D1_MATRIX_3X2_F* transform)
+	// This is allowed to be called repeatedly, first to show the caret, and then to move it.
+	void d2d_window::show_caret (const D2D1_RECT_F& bounds, const D2D1_COLOR_F& color, const D2D1_MATRIX_3X2_F* transform)
 	{
 		assert (!_painting);
 

@@ -10,6 +10,7 @@ namespace edge
 	{
 		virtual size_t child_count() const = 0;
 		virtual object* child_at(size_t index) const = 0;
+		virtual void reserve (size_t capacity) = 0;
 		virtual void insert (size_t index, std::unique_ptr<object>&& child) = 0;
 		void append (std::unique_ptr<object>&& child) { insert(child_count(), std::move(child)); }
 		virtual const object_collection_property* collection_property() const = 0;
@@ -24,24 +25,47 @@ namespace edge
 	struct typed_object_collection_i : object_collection_i
 	{
 	private:
-		virtual std::vector<std::unique_ptr<child_t>>& children_store() = 0;
-		const std::vector<std::unique_ptr<child_t>>& children_store() const { return const_cast<typed_object_collection_i*>(this)->children_store(); }
+		virtual void children_store (std::vector<std::unique_ptr<child_t>>** out) = 0;
 
-		virtual const typed_object_collection_property<child_t>* collection_property() const = 0;
+		void children_store (const std::vector<std::unique_ptr<child_t>>** out) const
+		{
+			std::vector<std::unique_ptr<child_t>>* ncout;
+			const_cast<typed_object_collection_i<child_t>*>(this)->children_store(&ncout);
+			*out = ncout;
+		}
 
-		void call_inserting_into_parent(object* child) = delete;
-		void set_parent(object* child) = delete;
+		std::vector<std::unique_ptr<child_t>>& children_store()
+		{
+			std::vector<std::unique_ptr<child_t>>* children;
+			this->children_store(&children);
+			return *children;
+		}
+
+		const std::vector<std::unique_ptr<child_t>>& children_store() const
+		{
+			const std::vector<std::unique_ptr<child_t>>* children;
+			this->children_store(&children);
+			return *children;
+		}
+
+		virtual void collection_property (const typed_object_collection_property<child_t>** out) const = 0;
+
+		virtual const object_collection_property* collection_property() const override final
+		{
+			const typed_object_collection_property<child_t>* prop;
+			this->collection_property(&prop);
+			return prop;
+		}
+
+		void set_this_as_parent(object* child) = delete;
 		void call_inserted_into_parent(object* child) = delete;
 
 		void call_removing_from_parent(object* child) = delete;
-		void clear_parent(object* child) = delete;
-		void call_removed_from_parent(object* child) = delete;
+		void clear_this_as_parent(object* child) = delete;
 
 	protected:
-		virtual void on_child_inserting (size_t index, child_t* child) { }
 		virtual void on_child_inserted (size_t index, child_t* child) { }
 		virtual void on_child_removing (size_t index, child_t* child) { }
-		virtual void on_child_removed (size_t index, child_t* child) { }
 
 	public:
 		const std::vector<std::unique_ptr<child_t>>& children() const { return children_store(); }
@@ -52,6 +76,11 @@ namespace edge
 
 		child_t* last() const { return children_store().back().get(); }
 
+		virtual void reserve (size_t capacity) override final
+		{
+			children_store().reserve(capacity);
+		}
+
 		virtual void insert (size_t index, std::unique_ptr<object>&& child) override final
 		{
 			auto typed_child_raw = static_cast<child_t*>(child.release());
@@ -60,19 +89,17 @@ namespace edge
 
 		void insert (size_t index, std::unique_ptr<child_t>&& o)
 		{
-			static_assert (std::is_base_of<object, child_t>::value);
+			static_assert (std::is_base_of_v<object, child_t>);
 
 			auto& children = children_store();
-			assert (index <= children.size());
+			rassert (index <= children.size());
 			child_t* raw = o.get();
 
 			property_change_args args = { this->collection_property(), index, collection_property_change_type::insert };
 
-			this->parent_i::call_inserting_into_parent(raw);
-			this->on_child_inserting(index, raw);
 			this->call_property_changing(args);
 			children.insert (children.begin() + index, std::move(o));
-			this->parent_i::set_parent(raw);
+			this->parent_i::set_this_as_parent(raw);
 			this->call_property_changed(args);
 			this->on_child_inserted (index, raw);
 			this->parent_i::call_inserted_into_parent(raw);
@@ -85,10 +112,10 @@ namespace edge
 
 		std::unique_ptr<child_t> remove(size_t index)
 		{
-			static_assert (std::is_base_of<object, child_t>::value);
+			static_assert (std::is_base_of_v<object, child_t>);
 
 			auto& children = children_store();
-			assert (index < children.size());
+			rassert (index < children.size());
 			auto it = children.begin() + index;
 			child_t* raw = (*it).get();
 
@@ -97,12 +124,10 @@ namespace edge
 			this->parent_i::call_removing_from_parent(raw);
 			this->on_child_removing (index, raw);
 			this->call_property_changing(args);
-			this->parent_i::clear_parent(raw);
+			this->parent_i::clear_this_as_parent(raw);
 			auto result = std::move (children[index]);
 			children.erase (children.begin() + index);
 			this->call_property_changed (args);
-			this->on_child_removed (index, raw);
-			this->parent_i::call_removed_from_parent(raw);
 
 			return result;
 		}
@@ -121,7 +146,7 @@ namespace edge
 					return remove(i);
 			}
 
-			assert(false); return nullptr;
+			rassert(false); return nullptr;
 		}
 
 		size_t index_of (child_t* child) const
@@ -133,7 +158,7 @@ namespace edge
 					return i;
 			}
 
-			assert(false);
+			rassert(false);
 			return -1;
 		}
 	};
@@ -146,9 +171,11 @@ namespace edge
 
 		bool const preallocated;
 
-		object_collection_property (const char* name, const property_group* group, const char* description, bool preallocated)
-			: base(name, group, description), preallocated(preallocated)
+		object_collection_property (const char* name, const property_group* group, const char* description, bool ui_visible, bool preallocated)
+			: base(name, group, description, ui_visible), preallocated(preallocated)
 		{ }
+
+		virtual const object_collection_property* as_oc_prop() const { return this; }
 
 		// Purpose of this is to let the object that holds the property to cast a pointer-to-itself
 		// to a ponter to the collection represented by the property. This eliminates the need to do
@@ -168,11 +195,11 @@ namespace edge
 		collection_getter_t const _collection_getter;
 
 		constexpr typed_object_collection_property (const char* name, const property_group* group, const char* description,
-			bool preallocated, collection_getter_t collection_getter)
-			: base (name, group, description, preallocated)
+			bool ui_visible, bool preallocated, collection_getter_t collection_getter)
+			: base (name, group, description, ui_visible, preallocated)
 			, _collection_getter(collection_getter)
 		{
-			static_assert (std::is_base_of<object, child_t>::value);
+			static_assert (std::is_base_of_v<object, child_t>);
 		}
 
 		virtual typed_object_collection_i<child_t>* collection_cast(object* obj) const override

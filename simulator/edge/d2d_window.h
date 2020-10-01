@@ -4,11 +4,11 @@
 
 #pragma once
 #include "window.h"
-#include "com_ptr.h"
 #include "utility_functions.h"
 
 namespace edge
 {
+	#pragma warning(push)
 	#pragma warning(disable: 4250) // disable "inherits via dominance" warning
 
 	class d2d_window abstract : public window, public virtual d2d_window_i
@@ -24,7 +24,6 @@ namespace edge
 		com_ptr<IDXGIFactory2> _dxgi_factory;
 		com_ptr<IDXGISwapChain1> _swap_chain;
 		com_ptr<ID2D1DeviceContext> _d2d_dc;
-		com_ptr<ID2D1Factory1> _d2d_factory;
 		bool _caret_on = false;
 		bool _caret_blink_on = false;
 		std::pair<D2D1_RECT_F, D2D1_MATRIX_3X2_F> _caret_bounds;
@@ -55,14 +54,14 @@ namespace edge
 		d2d_window (DWORD exStyle, DWORD style,
 				   const RECT& rect, HWND hWndParent, int child_control_id,
 				   ID3D11DeviceContext* d3d_dc, IDWriteFactory* dwrite_factory);
+		virtual ~d2d_window();
 
 		ID3D11DeviceContext* d3d_dc() const { return _d3d_dc; }
-		ID2D1Factory1* d2d_factory() const { return _d2d_factory; }
 
 		// d2d_window_i
 		virtual ID2D1DeviceContext* dc() const { return _d2d_dc; }
 		virtual IDWriteFactory* dwrite_factory() const override { return _dwrite_factory; }
-		virtual void show_caret (const D2D1_RECT_F& bounds, D2D1_COLOR_F color, const D2D1_MATRIX_3X2_F* transform = nullptr) override;
+		virtual void show_caret (const D2D1_RECT_F& bounds, const D2D1_COLOR_F& color, const D2D1_MATRIX_3X2_F* transform = nullptr) override;
 		virtual void hide_caret() override;
 
 		float fps();
@@ -70,14 +69,12 @@ namespace edge
 
 	protected:
 		virtual std::optional<LRESULT> window_proc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) override;
-		virtual void create_render_resources (ID2D1DeviceContext* dc) { }
-		virtual void render (ID2D1DeviceContext* dc) const;
-		virtual void release_render_resources (ID2D1DeviceContext* dc) { }
+		virtual void create_render_resources (const d2d_render_args& ra) { }
+		virtual void render (const d2d_render_args& ra) const;
+		virtual void release_render_resources (const d2d_render_args& ra) { }
 
-		virtual void d2d_dc_releasing() { }
-		virtual void d2d_dc_recreated() { }
-
-		virtual void on_size_changed (SIZE client_size_pixels, D2D1_SIZE_F client_size_dips) override;
+		virtual void d2d_dc_releasing (ID2D1DeviceContext* dc) { }
+		virtual void d2d_dc_recreated (ID2D1DeviceContext* dc) { }
 
 	private:
 		void invalidate_caret();
@@ -89,5 +86,8 @@ namespace edge
 		void process_wm_paint();
 		void process_wm_set_focus();
 		void process_wm_kill_focus();
+		void process_wm_size (SIZE client_size_pixels, D2D1_SIZE_F client_size_dips);
 	};
+
+	#pragma warning(pop)
 }

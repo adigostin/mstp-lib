@@ -108,7 +108,7 @@ public:
 			throw std::invalid_argument("Parameter may not be nullptr.");
 
 		if (std::find (_objects.begin(), _objects.end(), o) != _objects.end())
-			throw std::invalid_argument("Object was already added to selection.");
+			throw std::invalid_argument("Object already in selection.");
 
 		add_internal(o);
 		event_invoker<changed_e>()(this);
@@ -121,7 +121,7 @@ public:
 
 		auto it = std::find (_objects.begin(), _objects.end(), o);
 		if (it == _objects.end())
-			throw std::invalid_argument("Object is not selected.");
+			throw std::invalid_argument("Object not in selection.");
 		size_t index = it - _objects.begin();
 
 		remove_internal(index);

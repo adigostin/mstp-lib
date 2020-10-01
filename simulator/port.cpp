@@ -5,15 +5,14 @@
 #include "pch.h"
 #include "port.h"
 #include "bridge.h"
-#include "win32/utility_functions.h"
-#include "win32/d2d_window.h"
-#include "win32/text_layout.h"
+#include "utility_functions.h"
+#include "edge_win32.h"
 
 using namespace D2D1;
 using namespace edge;
 
 const char admin_p2p_type_name[] = "admin_p2p";
-const nvp admin_p2p_nvps[] =
+const edge::nvp admin_p2p_nvps[] =
 {
 	{ "ForceTrue", (int)STP_ADMIN_P2P_FORCE_TRUE },
 	{ "ForceFalse", (int)STP_ADMIN_P2P_FORCE_FALSE },
@@ -50,15 +49,15 @@ void port::on_inserted_into_parent()
 	for (size_t treeIndex = 0; treeIndex < tree_count; treeIndex++)
 		this->append(std::make_unique<port_tree>(treeIndex));
 
-	bridge()->property_changing().add_handler<&port::on_bridge_property_changing>(this);
-	bridge()->property_changed().add_handler<&port::on_bridge_property_changed>(this);
+	bridge()->property_changing().add_handler(&port::on_bridge_property_changing, this);
+	bridge()->property_changed().add_handler(&port::on_bridge_property_changed, this);
 
 }
 
 void port::on_removing_from_parent()
 {
-	bridge()->property_changed().remove_handler<&port::on_bridge_property_changed>(this);
-	bridge()->property_changing().remove_handler<&port::on_bridge_property_changing>(this);
+	bridge()->property_changed().remove_handler(port::on_bridge_property_changed, this);
+	bridge()->property_changing().remove_handler(port::on_bridge_property_changing, this);
 
 	while (!_trees.empty())
 		this->remove_last();
@@ -66,21 +65,23 @@ void port::on_removing_from_parent()
 	base::on_removing_from_parent();
 }
 
-void port::on_bridge_property_changing (object* obj, const property_change_args& args)
+void port::on_bridge_property_changing (void* arg, object* obj, const property_change_args& args)
 {
+	auto bt = static_cast<port*>(arg);
 	if (args.property == &bridge::stp_enabled_property)
 	{
-		this->event_invoker<stp_enabled_changing_e>()(args);
+		bt->event_invoker<stp_enabled_changing_e>()(args);
 		// Currently no port property needs to change when STP is enabled/disabled.
 	}
 }
 
-void port::on_bridge_property_changed (object* obj, const property_change_args& args)
+void port::on_bridge_property_changed (void* arg, object* obj, const property_change_args& args)
 {
+	auto bt = static_cast<port*>(arg);
 	if (args.property == &bridge::stp_enabled_property)
 	{
 		// Currently no port property needs to change when STP is enabled/disabled.
-		this->event_invoker<stp_enabled_changed_e>()(args);
+		bt->event_invoker<stp_enabled_changed_e>()(args);
 	}
 }
 
@@ -285,7 +286,7 @@ void port::render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned
 			D2D1_MATRIX_3X2_F old;
 			rt->GetTransform(&old);
 			rt->SetTransform (Matrix3x2F::Rotation(-90) * old);
-			rt->DrawTextLayout ({ -layout.width() - 3, 2 }, layout, dos._brushWindowText);
+			rt->DrawTextLayout ({ -layout.width() - 3, 2 }, layout.layout(), dos._brushWindowText);
 			rt->SetTransform(&old);
 		}
 
@@ -297,7 +298,7 @@ void port::render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned
 
 	// Draw the interior of the port.
 	auto portRect = D2D1_RECT_F { -InteriorWidth / 2, -InteriorDepth, InteriorWidth / 2, 0 };
-	inflate (&portRect, -interiorPortOutlineWidth / 2);
+	edge::inflate (&portRect, -interiorPortOutlineWidth / 2);
 	rt->FillRectangle (&portRect, mac_operational() ? dos._poweredFillBrush : dos._unpoweredBrush);
 	rt->DrawRectangle (&portRect, dos._brushWindowText, interiorPortOutlineWidth);
 
@@ -494,21 +495,21 @@ bool port::oper_p2p() const
 	return STP_GetOperPointToPointMAC(bridge()->stp_bridge(), (unsigned int)_port_index);
 }
 
-const prop_wrapper<side_p, pg_hidden> port::side_property = { "Side", nullptr, nullptr, &side, &set_side, side::bottom };
+const side_p port::side_property = { "Side", nullptr, nullptr, false, &side, &set_side, side::bottom };
 
-const prop_wrapper<float_p, pg_hidden> port::offset_property = { "Offset", nullptr, nullptr, &offset, &set_offset };
+const float_p port::offset_property = { "Offset", nullptr, nullptr, false, &offset, &set_offset };
 
 static constexpr property_group link_group = { -1, "Link" };
 
 const port_speed_p port::supported_speed_property {
-	"SupportedSpeed", &link_group, "Maximum supported speed. The Simulator reads this at the instant the link is established (cable connected).",
+	"SupportedSpeed", &link_group, "Maximum supported speed. The Simulator reads this at the instant the link is established (cable connected).", true,
 	&supported_speed,
 	&set_supported_speed,
 	100
 };
 
 const port_speed_p port::actual_speed_property {
-	"ActualSpeed", &link_group, "Actual speed in megabits per second, calculated when a link is established as a minimum between this port's and remote port's SupportedSpeed properties, and passed to STP for port path cost calculation.",
+	"ActualSpeed", &link_group, "Actual speed in megabits per second, calculated when a link is established as a minimum between this port's and remote port's SupportedSpeed properties, and passed to STP for port path cost calculation.", true,
 	&actual_speed,
 	nullptr,
 };
@@ -521,6 +522,7 @@ const bool_p port::auto_edge_property {
 		"is to detect other Bridges attached to the LAN, and set ieee8021SpanningTreeRstpPortOperEdgePort automatically. "
 		"The default value is true(1) This is optional and provided only by implementations that support the automatic "
 		"identification of edge ports. The value of this object MUST be retained across reinitializations of the management system.",
+	true,
 	&auto_edge,
 	&set_auto_edge,
 	true,
@@ -535,6 +537,7 @@ const bool_p port::admin_edge_property {
 		"of dot1dStpPortOperEdgePort to change to the same value. Note that even when this object's value is true, "
 		"the value of the corresponding instance of dot1dStpPortOperEdgePort can be false if a BPDU has been received. "
 		"The value of this object MUST be retained across reinitializations of the management system",
+	true,
 	&admin_edge,
 	&set_admin_edge,
 	false,
@@ -544,6 +547,7 @@ const bool_p port::mac_operational_property {
 	"MAC_Operational",
 	&link_group,
 	nullptr,
+	true,
 	&mac_operational,
 	nullptr,
 	false,
@@ -555,6 +559,7 @@ const uint32_p port::detected_port_path_cost_property {
 	"DetectedPortPathCost",
 	&port_path_cost_group,
 	"The Port Path Cost calculated from ActualSpeed, which STP uses for path cost calculation while AdminExternalPortPathCost is zero.",
+	true,
 	&GetDetectedPortPathCost,
 	nullptr,
 	0,
@@ -564,6 +569,7 @@ const uint32_p port::admin_external_port_path_cost_property {
 	"AdminExternalPortPathCost",
 	&port_path_cost_group,
 	nullptr,
+	true,
 	&GetAdminExternalPortPathCost,
 	&SetAdminExternalPortPathCost,
 	0,
@@ -573,6 +579,7 @@ const uint32_p port::external_port_path_cost_property {
 	"ExternalPortPathCost",
 	&port_path_cost_group,
 	nullptr,
+	true,
 	&GetExternalPortPathCost,
 	nullptr,
 	0,
@@ -582,6 +589,7 @@ const bool_p port::detected_p2p_property {
 	"detectedPointToPointMAC",
 	&link_group,
 	nullptr,
+	true,
 	&detected_p2p,
 	nullptr,
 };
@@ -590,6 +598,7 @@ const admin_p2p_p port::admin_p2p_property {
 	"adminPointToPointMAC",
 	&link_group,
 	nullptr,
+	true,
 	&admin_p2p,
 	&set_admin_p2p,
 	STP_ADMIN_P2P_AUTO,
@@ -599,14 +608,15 @@ const edge::bool_p port::oper_p2p_property {
 	"operPointToPointMAC",
 	&link_group,
 	nullptr,
+	true,
 	&oper_p2p,
 	nullptr,
 };
 
-const prop_wrapper<typed_object_collection_property<port_tree>, pg_hidden> port::trees_property
+const typed_object_collection_property<port_tree> port::trees_property
 {
-	"PortTrees", nullptr, nullptr, true,
-	[](object* obj) { return static_cast<typed_object_collection_i<port_tree>*>(static_cast<port*>(obj)); }
+	"PortTrees", nullptr, nullptr, false,
+	true, [](object* o) -> typed_object_collection_i<port_tree>* { return static_cast<port*>(o); }
 };
 
 const edge::property* const port::_properties[] =

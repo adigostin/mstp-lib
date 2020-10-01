@@ -7,7 +7,7 @@
 #include "wire.h"
 #include "bridge.h"
 #include "port.h"
-#include "win32/xml_serializer.h"
+#include "xml_serializer.h"
 
 using edge::com_exception;
 using edge::throw_if_failed;
@@ -40,9 +40,9 @@ private:
 	virtual void call_property_changed  (const property_change_args& args) override final { this->on_property_changed(args); }
 
 	// bridge_collection_i
-	virtual std::vector<std::unique_ptr<bridge>>& bridge_store() override final { return _bridges; }
+	virtual void children_store (std::vector<std::unique_ptr<bridge>>** out) override final { *out = &_bridges; }
 
-	virtual const typed_object_collection_property<bridge>* get_bridges_property() const override final { return &bridges_property; }
+	virtual void collection_property (const typed_object_collection_property<bridge>** out) const override final { *out = &bridges_property; }
 
 	virtual void on_child_inserted (size_t index, bridge* b) override
 	{
@@ -64,15 +64,16 @@ private:
 
 		b->packet_transmit().remove_handler<&project::on_packet_transmit>(this);
 		b->invalidated().remove_handler<&project::on_project_child_invalidated>(this);
+
 		this->event_invoker<invalidate_e>()(this);
 
 		bridge_collection_i::on_child_removing(index, b);
 	}
 
 	// wire_collection_i
-	virtual std::vector<std::unique_ptr<wire>>& wire_store() override final { return _wires; }
+	virtual void children_store (std::vector<std::unique_ptr<wire>>** out) override final {*out = &_wires; }
 
-	virtual const typed_object_collection_property<wire>* get_wires_property() const override final { return &wires_property; }
+	virtual void collection_property (const typed_object_collection_property<wire>** out) const override final { *out = &wires_property; }
 
 	virtual void on_child_inserted (size_t index, wire* wire) override
 	{
@@ -102,10 +103,6 @@ private:
 	}
 
 	// project_i
-	virtual const std::vector<std::unique_ptr<bridge>>& bridges() const override final { return _bridges; }
-
-	virtual const std::vector<std::unique_ptr<wire>>& wires() const override final { return _wires; }
-
 	virtual invalidate_e::subscriber invalidated() override final { return invalidate_e::subscriber(this); }
 
 	virtual loaded_e::subscriber loaded() override final { return loaded_e::subscriber(this); }
@@ -191,7 +188,8 @@ private:
 		HRESULT hr = CoCreateInstance (CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(doc), (void**) &doc);
 		throw_if_failed(hr);
 
-		auto project_element = serialize (doc, this, true);
+		auto serializer = edge::create_serializer (doc, static_cast<project_i*>(this));
+		auto project_element = serializer->serialize_object(this, true);
 
 		hr = doc->appendChild (project_element, nullptr);
 		throw_if_failed(hr);
@@ -199,13 +197,13 @@ private:
 		hr = format_and_save_to_file (doc, path ? path : _path.c_str());
 		throw_if_failed(hr);
 
-		if (path)
-			_path = path;
+		_path = path;
 		this->SetChangedFlag(false);
 		this->event_invoker<saved_e>()(this);
 	}
 
-	static const std::span<const concrete_type* const> known_types;
+	static constexpr const concrete_type* const known_types[]
+		= { &bridge::_type, &bridge_tree::_type, &port::_type, &port_tree::_type, &wire::_type };
 
 	virtual void load (const wchar_t* filePath) override final
 	{
@@ -240,7 +238,8 @@ private:
 			throw com_exception(E_FAIL);
 		com_ptr<IXMLDOMElement> projectElement = projectNode;
 
-		deserialize_to (projectElement, this, known_types);
+		auto de = create_deserializer(known_types, static_cast<project_i*>(this));
+		de->deserialize_to (projectElement, this);
 
 		_path = filePath;
 		this->event_invoker<loaded_e>()(this);
@@ -302,29 +301,28 @@ private:
 	}
 
 	static constexpr mac_address_p next_mac_address_property = {
-		"NextMacAddress", nullptr, nullptr,
+		"NextMacAddress", nullptr, nullptr, false,
 		&next_mac_address,
 		&set_next_mac_address,
 		mac_address{ 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x80 },
 	};
 
-	static const prop_wrapper<typed_object_collection_property<bridge>, pg_hidden> bridges_property;
-	static const prop_wrapper<typed_object_collection_property<wire>, pg_hidden> wires_property;
+	static const typed_object_collection_property<bridge> bridges_property;
+	static const typed_object_collection_property<wire> wires_property;
 	static constexpr const property* const _properties[] = { &next_mac_address_property, &bridges_property, &wires_property };
 public:
-	static constexpr xtype<> _type = { "Project", &base::_type, _properties, nullptr };
+	static inline const xtype<> _type = { "Project", &base::_type, _properties, nullptr };
 	virtual const concrete_type* type() const { return &_type; }
 };
 
-static constexpr const concrete_type* known_types_arr[]
-	= { &project::_type, &bridge::_type, &bridge_tree::_type, &port::_type, &port_tree::_type, &wire::_type };
+const typed_object_collection_property<bridge> project::bridges_property = {
+	"Bridges", nullptr, nullptr, false,
+	false, [](object* o) -> typed_object_collection_i<bridge>* { return static_cast<project*>(o); }
+};
 
-const std::span<const concrete_type* const> project::known_types = known_types_arr;
-
-const prop_wrapper<typed_object_collection_property<bridge>, pg_hidden> project::bridges_property
-	= { "Bridges", nullptr, nullptr, false, [](object* obj) { return static_cast<typed_object_collection_i<bridge>*>(static_cast<project*>(obj)); } };
-
-const prop_wrapper<typed_object_collection_property<wire>, pg_hidden> project::wires_property
-	= { "Wires", nullptr, nullptr, false, [](object* obj) { return static_cast<typed_object_collection_i<wire>*>(static_cast<project*>(obj)); } };
+const typed_object_collection_property<wire> project::wires_property {
+	"Wires", nullptr, nullptr, false,
+	false, [](object* o) -> typed_object_collection_i<wire>* { return static_cast<project*>(o); }
+};
 
 extern std::shared_ptr<project_i> project_factory() { return std::make_shared<project>(); };

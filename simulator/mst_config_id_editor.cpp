@@ -6,7 +6,7 @@
 #include "simulator.h"
 #include "resource.h"
 #include "bridge.h"
-#include "win32/utility_functions.h"
+#include "utility_functions.h"
 
 static constexpr UINT WM_SHOWN = WM_APP + 1;
 
@@ -56,7 +56,7 @@ public:
 
 	void on_project_property_changing (object* o, const edge::property_change_args& e)
 	{
-		if ((e.property == _project->bridges_prop()) && (e.type == collection_property_change_type::remove))
+		if ((e.property == _project->bridges_prop()) && (e.type == edge::collection_property_change_type::remove))
 		{
 			auto bridge_being_removed = _project->bridges()[e.index].get();
 			if (_bridges.count(bridge_being_removed))

@@ -4,12 +4,10 @@
 
 #pragma once
 #include "collections.h"
-#include "win32/com_ptr.h"
-#include "win32/zoomable_window.h"
-#include "win32/property_grid.h"
+#include "edge_win32.h"
 
-using edge::size_t_p;
-using edge::size_t_property_traits;
+using edge::size_p;
+using edge::size_property_traits;
 using edge::uint32_p;
 using edge::bool_p;
 using edge::float_p;
@@ -27,13 +25,10 @@ using edge::typed_object_collection_i;
 using edge::typed_object_collection_property;
 using edge::property_change_args;
 using edge::side;
-using edge::binary_reader;
-using edge::out_stream_i;
+using edge::out_sstream_i;
 using edge::nvp;
 using edge::static_value_property;
 using edge::com_ptr;
-using edge::pg_hidden;
-using edge::prop_wrapper;
 
 struct drawing_resources
 {
@@ -77,7 +72,7 @@ public:
 
 protected:
 	template<typename tpd_>
-	void set_and_invalidate (const tpd_* pd, typename tpd_::value_t& field, typename tpd_::value_t value)
+	void set_and_invalidate (const tpd_* pd, typename tpd_::value_t& field, const typename tpd_::value_t& value)
 	{
 		this->on_property_changing(pd);
 		field = value;

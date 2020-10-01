@@ -4,6 +4,8 @@
 
 #include "pch.h"
 #include "simulator.h"
+#include "d2d_window.h"
+#include "property_grid.h"
 
 using namespace edge;
 
@@ -14,81 +16,122 @@ class properties_window : public d2d_window, public virtual properties_window_i
 	std::unique_ptr<edge::property_grid_i> const _pg;
 
 public:
-	properties_window (HWND parent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dwrite_factory)
-		: base (WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, rect, parent, 0, d3d_dc, dwrite_factory)
-		, _pg(edge::property_grid_factory(this, client_rect_pixels()))
+	properties_window (const properties_window_create_params& cps)
+		: base(WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, cps.rect, cps.hwnd_parent, 0, cps.d3d_dc, cps.dwrite_factory)
+		, _pg(property_grid_factory(this, this->client_rect()))
 	{ }
+
+	virtual HWND hwnd() const override { return this->window::hwnd(); }
 
 	virtual property_grid_i* pg() const override { return _pg.get(); }
 
-	virtual HCURSOR cursor_at (POINT pp, D2D1_POINT_2F pd) const override
+	virtual std::optional<LRESULT> window_proc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) override
 	{
-		return _pg->cursor_at(pp, pd);
+		auto lr = base::window_proc(hwnd, msg, wparam, lparam);
+		if (lr)
+			return lr;
+
+		if (msg == WM_SIZE)
+		{
+			_pg->set_bounds(client_rect());
+			::UpdateWindow(hwnd);
+			return std::nullopt;
+		}
+
+		if (msg == 0x02E3) // WM_DPICHANGED_AFTERPARENT
+		{
+			_pg->set_bounds(this->client_rect());
+			_pg->on_dpi_changed();
+			return std::nullopt;
+		}
+
+		if ((msg == WM_LBUTTONDOWN) || (msg == WM_RBUTTONDOWN))
+		{
+			::SetFocus(hwnd);
+			if (::GetFocus() != hwnd)
+				return std::nullopt;
+
+			mouse_button button = (msg == WM_LBUTTONDOWN) ? edge::mouse_button::left : edge::mouse_button::right;
+			modifier_key mks = get_modifier_keys();
+			auto pd = this->pointp_to_pointd(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
+			edge::mouse_ud_args ma = { button, mks, pd };
+			bool handled = _pg->on_mouse_down(ma);
+			if (handled)
+				return 0;
+			return std::nullopt;
+		}
+
+		if ((msg == WM_LBUTTONUP) || (msg == WM_RBUTTONUP))
+		{
+			mouse_button button = (msg == WM_LBUTTONUP) ? edge::mouse_button::left : edge::mouse_button::right;
+			modifier_key mks = get_modifier_keys();
+			auto pd = this->pointp_to_pointd(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
+			edge::mouse_ud_args ma = { button, mks, pd };
+			bool handled = _pg->on_mouse_up(ma);
+			if (handled)
+				return 0;
+			return std::nullopt;
+		}
+
+		if (msg == WM_MOUSEMOVE)
+		{
+			modifier_key mks = (modifier_key)wparam;
+			auto pd = this->pointp_to_pointd(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
+			edge::mouse_move_args ma = { mks, pd };
+			_pg->on_mouse_move(ma);
+			return std::nullopt;
+		}
+
+		if (msg == WM_KEYDOWN)
+		{
+			auto handled = _pg->on_key_down ((uint32_t)wparam, get_modifier_keys());
+			return handled ? std::optional<LRESULT>(0) : std::nullopt;
+		}
+
+		if (msg == WM_KEYUP)
+		{
+			auto handled = _pg->on_key_up ((uint32_t) wparam, get_modifier_keys());
+			return handled ? std::optional<LRESULT>(0) : std::nullopt;
+		}
+
+		if (msg == WM_CHAR)
+		{
+			auto handled = _pg->on_char_key ((uint32_t)wparam);
+			return handled ? std::optional<LRESULT>(0) : std::nullopt;
+		}
+
+		if (msg == WM_SETCURSOR)
+		{
+			if (((HWND) wparam == hwnd) && (LOWORD (lparam) == HTCLIENT))
+			{
+				POINT pt;
+				if (::GetCursorPos (&pt))
+				{
+					if (::ScreenToClient (hwnd, &pt))
+					{
+						auto pd = pointp_to_pointd(pt);
+						auto cursor = _pg->cursor_at(pt, pd);
+						::SetCursor (cursor);
+						return TRUE;
+					}
+				}
+			}
+
+			return std::nullopt;
+		}
+
+		return std::nullopt;
 	}
 
-	virtual void render(ID2D1DeviceContext* dc) const override
+	virtual void render (const d2d_render_args& ra) const override
 	{
-		_pg->render(dc);
-	}
-
-	virtual handled on_mouse_down (mouse_button button, modifier_key mks, POINT pp, D2D1_POINT_2F pd) override
-	{
-		return base::on_mouse_down (button, mks, pp, pd)
-			|| _pg->on_mouse_down (button, mks, pp, pd);
-	}
-
-	virtual handled on_mouse_up (mouse_button button, modifier_key mks, POINT pp, D2D1_POINT_2F pd) override
-	{
-		return base::on_mouse_up (button, mks, pp, pd)
-			|| _pg->on_mouse_up (button, mks, pp, pd);
-	}
-
-	virtual void on_mouse_move (modifier_key mks, POINT pp, D2D1_POINT_2F pd) override
-	{
-		base::on_mouse_move (mks, pp, pd);
-		_pg->on_mouse_move (mks, pp, pd);
-	}
-
-	virtual handled on_key_down (uint32_t vkey, modifier_key mks) override
-	{
-		return base::on_key_down (vkey, mks)
-			|| _pg->on_key_down(vkey, mks);
-	}
-
-	virtual handled on_key_up (uint32_t vkey, modifier_key mks) override
-	{
-		return base::on_key_up (vkey, mks)
-			|| _pg->on_key_up(vkey, mks);
-	}
-
-	virtual handled on_char_key (uint32_t key) override
-	{
-		return base::on_char_key(key)
-			|| _pg->on_char_key(key);
-	}
-
-	virtual void on_size_changed (SIZE client_size_pixels, D2D1_SIZE_F client_size_dips) override
-	{
-		base::on_size_changed(client_size_pixels, client_size_dips);
-		_pg->set_rect(client_rect_pixels());
-		::UpdateWindow(hwnd());
-	}
-
-	virtual void on_dpi_changed (UINT dpi) override
-	{
-		base::on_dpi_changed(dpi);
-		_pg->set_rect(client_rect_pixels());
-		_pg->on_dpi_changed();
+		_pg->render(ra);
 	}
 
 	// TODO: handle scrollbars
 };
 
-extern std::unique_ptr<properties_window_i> properties_window_factory (
-	HWND parent,
-	const RECT& rect,
-	ID3D11DeviceContext1* d3d_dc,
-	IDWriteFactory* dwrite_factory)
+std::unique_ptr<properties_window_i> properties_window_factory (const properties_window_create_params& cps)
 {
-	return std::make_unique<properties_window>(parent, rect, d3d_dc, dwrite_factory);
-};
+	return std::make_unique<properties_window>(cps);
+}

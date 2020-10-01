@@ -5,7 +5,7 @@
 #include "pch.h"
 #include "edit_state.h"
 #include "bridge.h"
-#include "win32/d2d_window.h"
+#include "edge_win32.h"
 
 class create_bridge_es : public edit_state
 {
@@ -36,8 +36,7 @@ class create_bridge_es : public edit_state
 			b->set_stp_enabled(true);
 			b->set_location(_bridge->location());
 
-			size_t insert_index = _project->bridges().size();
-			_project->bridge_collection_i::insert(insert_index, std::move(b));
+			_project->bridge_collection_i::append(std::move(b));
 			_project->SetChangedFlag(true);
 			_selection->select(_project->bridges().back().get());
 		}
