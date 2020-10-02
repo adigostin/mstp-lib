@@ -64,15 +64,6 @@ BEGIN
     END
 END
 
-IDR_CONTEXT_MENU_PORT MENU
-BEGIN
-    POPUP "PORT"
-    BEGIN
-        MENUITEM "AutoEdge",                    ID_PORT_AUTO_EDGE
-        MENUITEM "AdminEdge",                   ID_PORT_ADMIN_EDGE
-    END
-END
-
 IDR_CONTEXT_MENU_LOG_WINDOW MENU
 BEGIN
     POPUP "XX"

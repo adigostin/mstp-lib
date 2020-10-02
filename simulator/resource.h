@@ -6,7 +6,6 @@
 #define IDD_DIALOG_VLAN                 108
 #define IDR_CONTEXT_MENU_EMPTY_SPACE    130
 #define IDR_CONTEXT_MENU_BRIDGE         131
-#define IDR_CONTEXT_MENU_PORT           132
 #define IDR_MAIN_MENU                   133
 #define IDD_DIALOG_MST_CONFIG_ID        134
 #define IDR_ACCELERATOR1                135
@@ -22,8 +21,6 @@
 #define IDC_STATIC_HINT_NOT_MSTP        1021
 #define IDC_STATIC_EXTENT               1025
 #define ID_NEW_BRIDGE                   32772
-#define ID_PORT_AUTO_EDGE               32773
-#define ID_PORT_ADMIN_EDGE              32774
 #define ID_BRIDGE_ENABLE_STP            32775
 #define ID_BRIDGE_DISABLE_STP           32776
 #define ID_PASTE_BRIDGE                 32777
