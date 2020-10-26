@@ -6,7 +6,6 @@
 #include "port.h"
 #include "bridge.h"
 #include "utility_functions.h"
-#include "edge_win32.h"
 
 using namespace D2D1;
 using namespace edge;
@@ -257,7 +256,7 @@ void port::RenderExteriorStpPort (ID2D1RenderTarget* dc, const drawing_resources
 		dc->DrawLine (Point2F (-edw / 2, dshly), Point2F (edw / 2, dshly), dos._brushDiscardingPort);
 	}
 	else
-		assert(false); // not implemented
+		rassert(false); // not implemented
 
 	dc->SetAntialiasMode(oldaa);
 }
@@ -307,13 +306,13 @@ void port::render (ID2D1RenderTarget* rt, const drawing_resources& dos, unsigned
 	auto layout = text_layout_with_metrics (dos._dWriteFactory, dos._smallTextFormat, ss.str().c_str());
 	DWRITE_LINE_METRICS lineMetrics;
 	UINT32 actualLineCount;
-	auto hr = layout->GetLineMetrics(&lineMetrics, 1, &actualLineCount); assert(SUCCEEDED(hr));
+	auto hr = layout->GetLineMetrics(&lineMetrics, 1, &actualLineCount); rassert(SUCCEEDED(hr));
 	rt->DrawTextLayout ({ -layout.width() / 2, -lineMetrics.baseline - OutlineWidth * 2 - 1}, layout, dos._brushWindowText);
 
 	if (_trees[treeIndex]->fdb_flush_text_visible())
 	{
 		layout = text_layout_with_metrics (dos._dWriteFactory, dos._smallBoldTextFormat, L"Flush");
-		hr = layout->GetLineMetrics(&lineMetrics, 1, &actualLineCount); assert(SUCCEEDED(hr));
+		hr = layout->GetLineMetrics(&lineMetrics, 1, &actualLineCount); rassert(SUCCEEDED(hr));
 		D2D1_POINT_2F l = { -layout.width() / 2, -InteriorDepth - lineMetrics.baseline - lineMetrics.height * 0.2f };
 		rt->DrawTextLayout (l, layout, dos._brushWindowText);
 	}
@@ -471,7 +470,7 @@ void port::set_actual_speed (uint32_t value)
 	{
 		// The actual speed should either be transitioning from zero to non-zero (MAC_Operational becoming True),
 		// or it should be transitioning from non-zero to zero (MAC_Operational becoming False).
-		assert (_actual_speed ^ value);
+		rassert (_actual_speed ^ value);
 
 		this->on_property_changing (&actual_speed_property);
 		this->on_property_changing (&mac_operational_property);
@@ -637,4 +636,4 @@ const edge::property* const port::_properties[] =
 	&trees_property,
 };
 
-const edge::xtype<> port::_type = { "Port", &base::_type, _properties, nullptr };
+const edge::xtype<port> port::_type = { "Port", &base::_type, _properties };

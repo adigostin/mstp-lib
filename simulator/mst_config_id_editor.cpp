@@ -19,7 +19,7 @@ class mst_config_id_editor : public edge::property_editor_i
 public:
 	mst_config_id_editor (std::span<object* const> objects)
 	{
-		assert (!objects.empty());
+		rassert (!objects.empty());
 
 		if (auto first = dynamic_cast<bridge*>(objects[0]))
 		{
@@ -27,8 +27,8 @@ public:
 			for (auto o : objects)
 			{
 				auto b = dynamic_cast<bridge*>(o);
-				assert (b != nullptr);
-				assert (b->project() == _project);
+				rassert (b != nullptr);
+				rassert (b->project() == _project);
 				_bridges.insert(b);
 			}
 		}
@@ -38,13 +38,13 @@ public:
 			for (auto o : objects)
 			{
 				auto p = dynamic_cast<port*>(o);
-				assert (p != nullptr);
-				assert (p->bridge()->project() == _project);
+				rassert (p != nullptr);
+				rassert (p->bridge()->project() == _project);
 				_bridges.insert(p->bridge());
 			}
 		}
 		else
-			assert(false);
+			rassert(false);
 
 		_project->property_changing().add_handler<&mst_config_id_editor::on_project_property_changing>(this);
 	}
@@ -82,7 +82,7 @@ public:
 		{
 			window = reinterpret_cast<mst_config_id_editor*>(lParam);
 			window->_hwnd = hwnd;
-			assert (GetWindowLongPtr(hwnd, GWLP_USERDATA) == 0);
+			rassert (GetWindowLongPtr(hwnd, GWLP_USERDATA) == 0);
 			SetWindowLongPtr (hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(window));
 		}
 		else

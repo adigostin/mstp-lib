@@ -38,6 +38,10 @@ namespace edge
 		virtual bool bound (const object* o) const = 0;
 	};
 
+	struct __declspec(novtable) pg_app_context_i : string_convert_context_i
+	{
+	};
+
 	// Visual C++ seems to have a bug that causes it to generate an incorrect object layout for this class for constexpr variables.
 	// See bug report at https://developercommunity.visualstudio.com/content/problem/974911/bad-code-gen-with-constexpr-variable-of-mi-class.html
 	// The workaround is to make this type non-literal, thus force all variables to be non-constexpr and be initialized by constructor code
@@ -57,6 +61,27 @@ namespace edge
 		{ }
 	};
 
+	struct pg_render_context
+	{
+		ID2D1DeviceContext* dc;
+
+		com_ptr<ID2D1SolidColorBrush> back;
+		com_ptr<ID2D1SolidColorBrush> fore;
+		com_ptr<ID2D1SolidColorBrush> border;
+		com_ptr<ID2D1SolidColorBrush> disabled_fore;
+		com_ptr<ID2D1SolidColorBrush> selected_back_focused;
+		com_ptr<ID2D1SolidColorBrush> selected_back_not_focused;
+		com_ptr<ID2D1SolidColorBrush> selected_fore;
+		com_ptr<ID2D1SolidColorBrush> root_item_back;
+		com_ptr<ID2D1SolidColorBrush> root_item_fore;
+		com_ptr<ID2D1SolidColorBrush> tooltip_back;
+		com_ptr<ID2D1SolidColorBrush> tooltip_fore;
+
+		com_ptr<ID2D1SolidColorBrush> data_bind_fore;
+		com_ptr<ID2D1LinearGradientBrush> item_gradient_brush;
+		com_ptr<ID2D1PathGeometry> triangle_geo;
+	};
+
 	struct __declspec(novtable) property_grid_i
 	{
 		virtual ~property_grid_i() = default;
@@ -67,11 +92,11 @@ namespace edge
 		virtual float border_width() const = 0;
 		virtual void on_dpi_changed() = 0;
 		virtual void clear() = 0;
-		virtual void add_section (const char* heading, std::span<object* const> objects) = 0;
-		void add_section (const char* heading, object* obj) { add_section(heading, { &obj, 1 }); }
+		virtual void add_section (const char* heading, std::span<object* const> objects, pg_app_context_i* app_context) = 0;
+		void add_section (const char* heading, object* obj, pg_app_context_i* app_context) { add_section(heading, { &obj, 1 }, app_context); }
 		virtual std::span<const std::unique_ptr<root_item_i>> sections() const = 0;
 		virtual bool read_only() const = 0;
-		virtual void render (const d2d_render_args& ra) const = 0;
+		virtual void render (ID2D1DeviceContext* dc) const = 0;
 		virtual handled on_mouse_down (const mouse_ud_args& args) = 0;
 		virtual handled on_mouse_up   (const mouse_ud_args& args) = 0;
 		virtual void    on_mouse_move (const mouse_move_args& args) = 0;
@@ -113,28 +138,21 @@ namespace edge
 		virtual void invalidate() = 0;
 		virtual text_editor_i* show_text_editor (const D2D1_RECT_F& rect, bool bold, float lr_padding, std::string_view str) = 0;
 		virtual int show_enum_editor (D2D1_POINT_2F dip, const nvp* nvps) = 0;
-		virtual void change_property (const std::vector<object*>& objects, const value_property* prop, std::string_view new_value_str) = 0;
+		virtual void change_property (const std::vector<object*>& objects, const value_property* prop, std::string_view new_value_str, pg_app_context_i* app_context) = 0;
 		virtual float line_thickness() const = 0;
 		virtual float name_column_x (size_t indent) const = 0;
 		virtual float value_column_x() const = 0;
 		virtual float indent_width() const = 0;
+		virtual const theme_color_provider_i* tcp() const = 0;
+		virtual pg_render_context make_render_context (ID2D1DeviceContext* dc) const = 0;
 
 		float width() const { auto r = rectd(); return r.right - r.left; }
 		float height() const { auto r = rectd(); return r.bottom - r.top; }
 	};
 
-	using property_grid_factory_t = std::unique_ptr<property_grid_i>(d2d_window_i* window, const D2D1_RECT_F& bounds);
+	using property_grid_factory_t = std::unique_ptr<property_grid_i>(d2d_window_i* window, const D2D1_RECT_F& bounds, const theme_color_provider_i* tp);
 	extern property_grid_factory_t* const property_grid_factory;
 
-
-	struct pg_render_context
-	{
-		const d2d_render_args* ra;
-		com_ptr<ID2D1SolidColorBrush> disabled_fore_brush;
-		com_ptr<ID2D1SolidColorBrush> data_bind_fore_brush;
-		com_ptr<ID2D1LinearGradientBrush> item_gradient_brush;
-		com_ptr<ID2D1PathGeometry> triangle_geo;
-	};
 
 	struct __declspec(novtable) pgitem_i
 	{
@@ -180,6 +198,7 @@ namespace edge
 	struct __declspec(novtable) root_item_i : object_item_i
 	{
 		virtual property_grid_i* grid() const = 0;
+		virtual pg_app_context_i* app_context() const = 0;
 	};
 
 	struct __declspec(novtable) group_item_i : expandable_item_i
@@ -210,9 +229,9 @@ namespace edge
 	struct __declspec(novtable) value_property_item_i : value_item_i
 	{
 		virtual void render (const pg_render_context& rc, D2D1_POINT_2F pd, bool selected, bool focused) const override final;
-		virtual HCURSOR cursor_at(D2D1_POINT_2F pd, float item_y) const override final;
-		virtual void on_mouse_down (const mouse_ud_args& ma, float item_y) override final;
-		virtual void on_mouse_up   (const mouse_ud_args& ma, float item_y) override final;
+		virtual HCURSOR cursor_at(D2D1_POINT_2F pd, float item_y) const override;
+		virtual void on_mouse_down (const mouse_ud_args& ma, float item_y) override;
+		virtual void on_mouse_up   (const mouse_ud_args& ma, float item_y) override;
 		virtual std::string description_title() const override final;
 		virtual std::string description_text() const override final;
 
@@ -225,6 +244,14 @@ namespace edge
 		bool can_edit() const;
 		text_layout_with_metrics make_name_layout() const;
 		value_layout make_value_layout() const;
+	};
+
+	struct __declspec(novtable) object_collection_item_i : pgitem_i // expandable_item_i
+	{
+	};
+
+	struct __declspec(novtable) object_collection_child_item_i : pgitem_i // expandable_item_i
+	{
 	};
 
 	struct __declspec(novtable) value_collection_entry_item_i : value_item_i

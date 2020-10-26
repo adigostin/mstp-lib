@@ -8,7 +8,7 @@
 #include "bridge.h"
 #include "port.h"
 
-class vlan_window : public virtual vlan_window_i
+class vlan_window : public vlan_window_i
 {
 	simulator_app_i*  const _app;
 	project_window_i* const _pw;
@@ -35,7 +35,7 @@ public:
 		, _dwrite_factory(dwrite_factory)
 	{
 		HINSTANCE hInstance;
-		BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &DialogProcStatic, &hInstance); assert(bRes);
+		BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &DialogProcStatic, &hInstance); rassert(bRes);
 
 		_hwnd = CreateDialogParam (hInstance, MAKEINTRESOURCE(IDD_DIALOG_VLAN), hWndParent, &DialogProcStatic, reinterpret_cast<LPARAM>(this));
 
@@ -82,7 +82,9 @@ public:
 			|| o->type()->is_same_or_derived_from(&port::_type);
 	};
 
+	// win32_window_i
 	virtual HWND hwnd() const override final { return _hwnd; }
+	virtual edge::window_proc_e::subscriber window_proc() override { throw edge::not_implemented_exception(); }
 
 	virtual SIZE preferred_size() const override final
 	{
@@ -95,7 +97,7 @@ public:
 			UINT dpi = get_dpi_proc(_hwnd);
 
 			auto proc = reinterpret_cast<BOOL(WINAPI*)(LPRECT, DWORD, BOOL, DWORD, UINT)>(proc_addr);
-			BOOL bRes = proc (&rect, GetWindowStyle(_hwnd), FALSE, GetWindowExStyle(_hwnd), dpi); assert(bRes);
+			BOOL bRes = proc (&rect, GetWindowStyle(_hwnd), FALSE, GetWindowExStyle(_hwnd), dpi); rassert(bRes);
 			return { rect.right - rect.left, rect.bottom - rect.top };
 		}
 		else
@@ -103,7 +105,7 @@ public:
 			HDC tempDC = GetDC(hwnd());
 			UINT dpi = GetDeviceCaps (tempDC, LOGPIXELSX);
 			ReleaseDC (hwnd(), tempDC);
-			BOOL bRes = AdjustWindowRectEx (&rect, GetWindowStyle(_hwnd), FALSE, GetWindowExStyle(_hwnd)); assert(bRes);
+			BOOL bRes = AdjustWindowRectEx (&rect, GetWindowStyle(_hwnd), FALSE, GetWindowExStyle(_hwnd)); rassert(bRes);
 			return { rect.right - rect.left, rect.bottom - rect.top };
 		}
 	}
@@ -116,7 +118,7 @@ public:
 			window = reinterpret_cast<vlan_window*>(lParam);
 			//window->AddRef();
 			window->_hwnd = hwnd;
-			assert (GetWindowLongPtr(hwnd, GWLP_USERDATA) == 0);
+			rassert (GetWindowLongPtr(hwnd, GWLP_USERDATA) == 0);
 			SetWindowLongPtr (hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(window));
 		}
 		else
@@ -280,8 +282,8 @@ public:
 
 	void LoadSelectedTreeEdit()
 	{
-		auto edit = GetDlgItem (_hwnd, IDC_EDIT_SELECTED_TREE); assert (edit != nullptr);
-		auto tableButton = GetDlgItem (_hwnd, IDC_BUTTON_EDIT_MST_CONFIG_TABLE); assert (tableButton != nullptr);
+		auto edit = GetDlgItem (_hwnd, IDC_EDIT_SELECTED_TREE); rassert (edit != nullptr);
+		auto tableButton = GetDlgItem (_hwnd, IDC_BUTTON_EDIT_MST_CONFIG_TABLE); rassert (tableButton != nullptr);
 		auto& objects = _selection->objects();
 
 		if (objects.empty() || !std::all_of (objects.begin(), objects.end(), is_bridge_or_port))
@@ -303,7 +305,7 @@ public:
 			else if (auto p = dynamic_cast<port*>(o))
 				bridges.insert(p->bridge());
 			else
-				assert(false);
+				rassert(false);
 		}
 
 		auto tree = STP_GetTreeIndexFromVlanNumber ((*bridges.begin())->stp_bridge(), _pw->selected_vlan_number());

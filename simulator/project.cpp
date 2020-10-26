@@ -60,7 +60,7 @@ private:
 				return std::holds_alternative<connected_wire_end>(p) && (std::get<connected_wire_end>(p)->bridge() == b);
 			});
 		}))
-			assert(false); // can't remove a connected bridge
+			rassert(false); // can't remove a connected bridge
 
 		b->packet_transmit().remove_handler<&project::on_packet_transmit>(this);
 		b->invalidated().remove_handler<&project::on_project_child_invalidated>(this);
@@ -172,7 +172,7 @@ private:
 		{
 			_next_mac_address[4]++;
 			if (_next_mac_address[4] == 0)
-				assert(false); // not implemented
+				rassert(false); // not implemented
 		}
 
 		return result;
@@ -182,7 +182,7 @@ private:
 
 	virtual void save (const wchar_t* path) override final
 	{
-		assert (path || !_path.empty());
+		rassert (path || !_path.empty());
 
 		com_ptr<IXMLDOMDocument3> doc;
 		HRESULT hr = CoCreateInstance (CLSID_DOMDocument60, nullptr, CLSCTX_INPROC_SERVER, __uuidof(doc), (void**) &doc);
@@ -197,7 +197,9 @@ private:
 		hr = format_and_save_to_file (doc, path ? path : _path.c_str());
 		throw_if_failed(hr);
 
-		_path = path;
+		if (path)
+			_path = path;
+
 		this->SetChangedFlag(false);
 		this->event_invoker<saved_e>()(this);
 	}
@@ -311,7 +313,7 @@ private:
 	static const typed_object_collection_property<wire> wires_property;
 	static constexpr const property* const _properties[] = { &next_mac_address_property, &bridges_property, &wires_property };
 public:
-	static inline const xtype<> _type = { "Project", &base::_type, _properties, nullptr };
+	static inline const xtype<project> _type = { "Project", &base::_type, _properties };
 	virtual const concrete_type* type() const { return &_type; }
 };
 

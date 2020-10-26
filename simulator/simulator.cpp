@@ -13,8 +13,6 @@
 #pragma comment (lib, "Comctl32")
 #pragma comment (lib, "comsuppwd.lib")
 
-#pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
-
 using namespace D2D1;
 using namespace edge;
 
@@ -93,7 +91,7 @@ public:
 		pw->destroying().remove_handler<&SimulatorApp::on_project_window_destroying>(this);
 
 		auto it = find_if (_projectWindows.begin(), _projectWindows.end(), [pw](auto& p) { return p.get() == pw; });
-		assert (it != _projectWindows.end());
+		rassert (it != _projectWindows.end());
 		event_invoker<project_window_removing_e>()(pw);
 		auto pwLastRef = std::move(*it);
 		_projectWindows.erase(it);
@@ -127,6 +125,34 @@ public:
 	virtual project_factory_t* project_factory() const override { return &::project_factory; }
 
 	virtual properties_window_factory_t* properties_window_factory() const override final { return &::properties_window_factory; }
+
+	static uint32_t get_sys_color_argb (int nIndex)
+	{
+		DWORD c = ::GetSysColor(nIndex);
+		auto argb = 0xFF000000u | (GetRValue(c) << 16) | (GetGValue(c) << 8) | GetBValue(c);
+		return argb;
+	}
+
+	//color_theme_provider_i
+	virtual uint32_t argb (theme_color color) const override final
+	{
+		switch (color)
+		{
+			case theme_color::background: return get_sys_color_argb(COLOR_WINDOW);
+			case theme_color::foreground: return get_sys_color_argb(COLOR_WINDOWTEXT);
+			case theme_color::disabled_fore: return get_sys_color_argb(COLOR_GRAYTEXT);
+			case theme_color::selected_back_focused: return get_sys_color_argb(COLOR_HIGHLIGHT);
+			case theme_color::selected_back_not_focused: return get_sys_color_argb(COLOR_HIGHLIGHT);
+			case theme_color::selected_fore: return get_sys_color_argb(COLOR_HIGHLIGHTTEXT);
+			case theme_color::tooltip_back: return get_sys_color_argb(COLOR_INFOBK);
+			case theme_color::tooltip_fore: return get_sys_color_argb(COLOR_INFOTEXT);
+			case theme_color::active_caption_back: return get_sys_color_argb(COLOR_ACTIVECAPTION);
+			case theme_color::active_caption_fore: return get_sys_color_argb(COLOR_CAPTIONTEXT);
+			default:
+				rassert(false);
+				return 0;
+		}
+	}
 
 	WPARAM RunMessageLoop()
 	{
@@ -169,7 +195,7 @@ public:
 static void RegisterApplicationAndFileTypes()
 {
 	auto exePath = std::make_unique<wchar_t[]>(MAX_PATH);
-	DWORD dwRes = GetModuleFileName (nullptr, exePath.get(), MAX_PATH); assert(dwRes);
+	DWORD dwRes = GetModuleFileName (nullptr, exePath.get(), MAX_PATH); rassert(dwRes);
 	std::wstringstream ss;
 	ss << L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\" << PathFindFileName(exePath.get());
 	auto appPathKeyName = ss.str();
@@ -243,7 +269,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 
 	{
 		com_ptr<IDXGIFactory1> dxgi_factory;
-		hr = CreateDXGIFactory1 (IID_PPV_ARGS(&dxgi_factory)); assert(SUCCEEDED(hr));
+		hr = CreateDXGIFactory1 (IID_PPV_ARGS(&dxgi_factory)); rassert(SUCCEEDED(hr));
 		std::vector<std::pair<com_ptr<IDXGIAdapter1>, SIZE_T>> adapters;
 		size_t best = -1;
 		while(true)
@@ -254,7 +280,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 				break;
 
 			DXGI_ADAPTER_DESC1 desc;
-			hr = a->GetDesc1(&desc); assert(SUCCEEDED(hr));
+			hr = a->GetDesc1(&desc); rassert(SUCCEEDED(hr));
 
 			if ((best == -1) || (desc.DedicatedVideoMemory > adapters[best].second))
 				best = adapters.size();
@@ -279,14 +305,14 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 								   D3D11_CREATE_DEVICE_BGRA_SUPPORT,
 								   &d3dFeatureLevel, 1,
 								   D3D11_SDK_VERSION, &d3d_device, nullptr, &deviceContext);
-			assert(SUCCEEDED(hr));
+			rassert(SUCCEEDED(hr));
 		}
 
 		d3d_dc = deviceContext;
 	}
 
 	com_ptr<IDWriteFactory> dwrite_factory;
-	hr = DWriteCreateFactory (DWRITE_FACTORY_TYPE_SHARED, __uuidof (IDWriteFactory), reinterpret_cast<IUnknown**>(&dwrite_factory)); assert(SUCCEEDED(hr));
+	hr = DWriteCreateFactory (DWRITE_FACTORY_TYPE_SHARED, __uuidof (IDWriteFactory), reinterpret_cast<IUnknown**>(&dwrite_factory)); rassert(SUCCEEDED(hr));
 
 	int processExitValue;
 	{

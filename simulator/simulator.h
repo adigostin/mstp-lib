@@ -3,7 +3,6 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "edge_win32.h"
 #include "renderable_object.h"
 #include "stp.h"
 #include "bridge.h"
@@ -60,11 +59,10 @@ using selection_factory_t = std::unique_ptr<selection_i>(project_i* project);
 
 // ============================================================================
 
-struct __declspec(novtable) log_window_i : virtual edge::win32_window_i
+struct __declspec(novtable) log_window_i : edge::win32_window_i
 {
-	virtual ~log_window_i() { }
 };
-using log_window_factory_t = std::unique_ptr<log_window_i>(*const)(HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dWriteFactory, selection_i* selection, const std::shared_ptr<project_i>& project);
+using log_window_factory_t = std::unique_ptr<log_window_i>(*const)(HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dWriteFactory, selection_i* selection, const std::shared_ptr<project_i>& project, edge::theme_color_provider_i* tcp);
 extern const log_window_factory_t log_window_factory;
 
 // ============================================================================
@@ -86,19 +84,18 @@ struct mouse_location
 	D2D1_POINT_2F w;
 };
 
-struct __declspec(novtable) edit_window_i : virtual edge::zoomable_window_i
+struct __declspec(novtable) edit_window_i : edge::zoomable_window_i
 {
 	virtual const struct drawing_resources& drawing_resources() const = 0;
 	virtual void EnterState (std::unique_ptr<edit_state>&& state) = 0;
 	virtual port* GetCPAt (D2D1_POINT_2F dLocation, float tolerance) const = 0;
-	virtual void RenderSnapRect (ID2D1RenderTarget* rt, D2D1_POINT_2F wLocation) const = 0;
-	virtual void render_hint (ID2D1RenderTarget* rt,
+	virtual void RenderSnapRect (ID2D1DeviceContext* dc, D2D1_POINT_2F wLocation) const = 0;
+	virtual void render_hint (ID2D1DeviceContext* dc,
 							 D2D1_POINT_2F dLocation,
 							 std::string_view text,
 							 DWRITE_TEXT_ALIGNMENT ha,
 							 DWRITE_PARAGRAPH_ALIGNMENT va,
 							 bool smallFont = false) const = 0;
-	virtual D2D1::Matrix3x2F zoom_transform() const = 0;
 	virtual void zoom_all() = 0;
 };
 struct edit_window_create_params
@@ -120,14 +117,13 @@ struct properties_window_create_params
 {
 	HWND hwnd_parent;
 	RECT rect;
+	edge::theme_color_provider_i* tcp;
 	ID3D11DeviceContext* d3d_dc;
 	IDWriteFactory* dwrite_factory;
 };
 
-struct __declspec(novtable) properties_window_i : virtual edge::win32_window_i
+struct __declspec(novtable) properties_window_i : edge::d2d_window_i
 {
-	virtual ~properties_window_i() = default;
-
 	virtual edge::property_grid_i* pg() const = 0;
 };
 
@@ -135,11 +131,12 @@ using properties_window_factory_t = std::unique_ptr<properties_window_i>(const p
 
 // ============================================================================
 
-struct __declspec(novtable) project_window_i : public virtual edge::win32_window_i
+struct __declspec(novtable) project_window_i : edge::win32_window_i
 {
 	struct selected_vlan_number_changed_e : public edge::event<selected_vlan_number_changed_e, project_window_i*, uint32_t> { };
 	struct destroying_e : public edge::event<destroying_e, project_window_i*> { };
 
+	virtual HWND hwnd() const = 0;
 	virtual const std::shared_ptr<project_i>& project() const = 0;
 	virtual void select_vlan (uint32_t vlanNumber) = 0;
 	virtual uint32_t selected_vlan_number() const = 0;
@@ -169,7 +166,7 @@ using bridge_collection_i = edge::typed_object_collection_i<bridge>;
 
 using wire_collection_i = edge::typed_object_collection_i<wire>;
 
-struct __declspec(novtable) project_i : bridge_collection_i, wire_collection_i
+struct __declspec(novtable) project_i : bridge_collection_i, wire_collection_i, edge::pg_app_context_i
 {
 	virtual ~project_i() = default;
 
@@ -216,7 +213,7 @@ using project_factory_t = std::shared_ptr<project_i>();
 
 // ============================================================================
 
-struct __declspec(novtable) vlan_window_i : virtual edge::win32_window_i
+struct __declspec(novtable) vlan_window_i : edge::win32_window_i
 {
 	virtual SIZE preferred_size() const = 0;
 };
@@ -233,7 +230,7 @@ extern const vlan_window_factory_t vlan_window_factory;
 
 // ============================================================================
 
-struct simulator_app_i
+struct __declspec(novtable) simulator_app_i : edge::theme_color_provider_i
 {
 	struct project_window_added_e    : edge::event<project_window_added_e, project_window_i*> { };
 	struct project_window_removing_e : edge::event<project_window_removing_e, project_window_i*> { };

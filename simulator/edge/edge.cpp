@@ -3,11 +3,11 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #include "pch.h"
-#include "edge_win32.h"
-#include "utility_functions.h"
+#include "edge.h"
 
 namespace edge
 {
+	// TODO: move to utility functions
 	modifier_key get_modifier_keys()
 	{
 		modifier_key keys = modifier_key::none;
@@ -33,7 +33,7 @@ namespace edge
 	RECT win32_window_i::client_rect_pixels() const
 	{
 		RECT rect;
-		BOOL bRes = ::GetClientRect (hwnd(), &rect); assert(bRes);
+		BOOL bRes = ::GetClientRect (hwnd(), &rect); rassert(bRes);
 		return rect;
 	};
 
@@ -55,20 +55,29 @@ namespace edge
 		return rect.bottom - rect.top;
 	}
 
-	RECT win32_window_i::GetRect() const
+	RECT win32_window_i::rect_pixels() const
 	{
-		auto hwnd = this->hwnd();
-		auto parent = ::GetParent(hwnd); assert (parent != nullptr);
+		auto parent = ::GetParent(hwnd()); rassert (parent != nullptr);
 		RECT rect;
-		BOOL bRes = ::GetWindowRect (hwnd, &rect); assert(bRes);
+		BOOL bRes = ::GetWindowRect (hwnd(), &rect); rassert(bRes);
 		MapWindowPoints (HWND_DESKTOP, parent, (LPPOINT) &rect, 2);
 		return rect;
 	}
 
-	POINT win32_window_i::GetLocation() const
+	POINT win32_window_i::location_pixels() const
 	{
-		auto rect = GetRect();
+		auto rect = this->rect_pixels();
 		return { rect.left, rect.top };
+	}
+
+	LONG win32_window_i::x_pixels() const
+	{
+		return rect_pixels().left;
+	}
+
+	LONG win32_window_i::y_pixels() const
+	{
+		return rect_pixels().top;
 	}
 
 	LONG win32_window_i::width_pixels() const
@@ -95,7 +104,7 @@ namespace edge
 	void win32_window_i::move_window (const RECT& rect)
 	{
 		BOOL bRes = ::MoveWindow (hwnd(), rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE);
-		assert(bRes);
+		rassert(bRes);
 	}
 
 	void win32_window_i::invalidate()
@@ -108,21 +117,40 @@ namespace edge
 		::InvalidateRect (hwnd(), &rect, FALSE);
 	}
 
+	uint32_t win32_window_i::dpi() const
+	{
+		auto hwnd = this->hwnd();
+
+		UINT dpi;
+		if (auto proc_addr = GetProcAddress(GetModuleHandleA("User32.dll"), "GetDpiForWindow"))
+		{
+			auto proc = reinterpret_cast<UINT(WINAPI*)(HWND)>(proc_addr);
+			dpi = proc(hwnd);
+		}
+		else
+		{
+			HDC tempDC = GetDC(hwnd);
+			dpi = GetDeviceCaps (tempDC, LOGPIXELSX);
+			ReleaseDC (hwnd, tempDC);
+		}
+		return dpi;
+	}
+
 	D2D1::Matrix3x2F win32_window_i::dpi_transform() const
 	{
-		auto dpi = ::GetDpiForWindow(hwnd());
+		auto dpi = this->dpi();
 		return { dpi / 96.0f, 0, 0, dpi / 96.0f, 0, 0 };
 	}
 
 	float win32_window_i::pixel_width() const
 	{
-		return 96.0f / ::GetDpiForWindow(hwnd());
+		return 96.0f / this->dpi();
 	}
 
 	D2D1_RECT_F win32_window_i::client_rect() const
 	{
 		RECT rect = this->client_rect_pixels();
-		auto dpi = ::GetDpiForWindow(hwnd());
+		auto dpi = this->dpi();
 		D2D1_RECT_F res;
 		res.left   = rect.left   * 96.0f / dpi;
 		res.top    = rect.top    * 96.0f / dpi;
@@ -134,7 +162,7 @@ namespace edge
 	D2D1_SIZE_F win32_window_i::client_size() const
 	{
 		SIZE cs = client_size_pixels();
-		auto dpi = ::GetDpiForWindow(hwnd());
+		auto dpi = this->dpi();
 		float width = cs.cx * 96.0f / dpi;
 		float height = cs.cy * 96.0f / dpi;
 		return { width, height };
@@ -142,22 +170,22 @@ namespace edge
 
 	float win32_window_i::client_width() const
 	{
-		return client_width_pixels() * 96.0f / ::GetDpiForWindow(hwnd());
+		return client_width_pixels() * 96.0f / this->dpi();
 	}
 
 	float win32_window_i::client_height() const
 	{
-		return client_height_pixels() * 96.0f / ::GetDpiForWindow(hwnd());
+		return client_height_pixels() * 96.0f / this->dpi();
 	}
 
 	float win32_window_i::lengthp_to_lengthd (LONG lengthp) const
 	{
-		return lengthp * 96.0f / ::GetDpiForWindow(hwnd());
+		return lengthp * 96.0f / this->dpi();
 	}
 
 	LONG win32_window_i::lengthd_to_lengthp (float lengthd, int round_style) const
 	{
-		auto dpi = ::GetDpiForWindow(hwnd());
+		auto dpi = this->dpi();
 
 		if (round_style < 0)
 			return (LONG) std::floorf(lengthd / 96.0f * dpi);
@@ -170,19 +198,19 @@ namespace edge
 
 	D2D1_POINT_2F win32_window_i::pointp_to_pointd (POINT p) const
 	{
-		auto dpi = ::GetDpiForWindow(hwnd());
+		auto dpi = this->dpi();
 		return { p.x * 96.0f / dpi, p.y * 96.0f / dpi };
 	}
 
 	D2D1_POINT_2F win32_window_i::pointp_to_pointd (long xPixels, long yPixels) const
 	{
-		auto dpi = ::GetDpiForWindow(hwnd());
+		auto dpi = this->dpi();
 		return { xPixels * 96.0f / dpi, yPixels * 96.0f / dpi };
 	}
 
 	POINT win32_window_i::pointd_to_pointp (float xDips, float yDips, int round_style) const
 	{
-		auto dpi = ::GetDpiForWindow(hwnd());
+		auto dpi = this->dpi();
 
 		if (round_style < 0)
 			return { (int)std::floor(xDips / 96.0f * dpi), (int)std::floor(yDips / 96.0f * dpi) };
@@ -200,14 +228,31 @@ namespace edge
 
 	D2D1_SIZE_F win32_window_i::sizep_to_sized(SIZE sizep) const
 	{
-		auto dpi = ::GetDpiForWindow(hwnd());
+		auto dpi = this->dpi();
 		return D2D1_SIZE_F{ sizep.cx * 96.0f / dpi, sizep.cy * 96.0f / dpi };
 	}
 
-	D2D1_RECT_F win32_window_i::rectp_to_rectd (RECT rp) const
+	SIZE win32_window_i::sized_to_sizep (float width, float height, int round_style) const
+	{
+		return { lengthd_to_lengthp(width, round_style), lengthd_to_lengthp(height, round_style) };
+	}
+
+	SIZE win32_window_i::sized_to_sizep (D2D1_SIZE_F size, int round_style) const
+	{
+		return { lengthd_to_lengthp(size.width, round_style), lengthd_to_lengthp(size.height, round_style) };
+	}
+
+	D2D1_RECT_F win32_window_i::rectp_to_rectd (const RECT& rp) const
 	{
 		auto tl = pointp_to_pointd(rp.left, rp.top);
 		auto br = pointp_to_pointd(rp.right, rp.bottom);
+		return { tl.x, tl.y, br.x, br.y };
+	}
+
+	RECT win32_window_i::rectd_to_rectp (const D2D1_RECT_F& rd, int round_style) const
+	{
+		auto tl = pointd_to_pointp(rd.left, rd.top, -round_style);
+		auto br = pointd_to_pointp(rd.right, rd.bottom, round_style);
 		return { tl.x, tl.y, br.x, br.y };
 	}
 
@@ -243,6 +288,13 @@ namespace edge
 		}
 	}
 
+	D2D1_RECT_F zoomable_window_i::rectw_to_rectd (const D2D1_RECT_F& r) const
+	{
+		D2D1_POINT_2F tl = pointw_to_pointd({ r.left, r.top });
+		D2D1_POINT_2F br = pointw_to_pointd({ r.right, r.bottom });
+		return { tl.x, tl.y, br.x, br.y };
+	}
+
 	// The implementor should align the aimpoint to a pixel center so that graphics will look crisp at integer zoom factors.
 	D2D1_SIZE_F zoomable_window_i::pixel_aligned_window_center() const
 	{
@@ -272,29 +324,38 @@ namespace edge
 			* D2D1::Matrix3x2F::Scale(zoom, zoom)
 			* D2D1::Matrix3x2F::Translation(pixel_aligned_window_center());
 	}
-
-	bool zoomable_window_i::hit_test_line (D2D1_POINT_2F dLocation, float tolerance, D2D1_POINT_2F p0w, D2D1_POINT_2F p1w, float lineWidth) const
-	{
-		auto fd = this->pointw_to_pointd(p0w);
-		auto td = this->pointw_to_pointd(p1w);
-
-		float halfw = this->lengthw_to_lengthd(lineWidth) / 2.0f;
-		if (halfw < tolerance)
-			halfw = tolerance;
-
-		float angle = atan2(td.y - fd.y, td.x - fd.x);
-		float s = sin(angle);
-		float c = cos(angle);
-
-		std::array<D2D1_POINT_2F, 4> vertices =
-		{
-			D2D1_POINT_2F { fd.x + s * halfw, fd.y - c * halfw },
-			D2D1_POINT_2F { fd.x - s * halfw, fd.y + c * halfw },
-			D2D1_POINT_2F { td.x - s * halfw, td.y + c * halfw },
-			D2D1_POINT_2F { td.x + s * halfw, td.y - c * halfw }
-		};
-
-		return point_in_polygon (vertices, dLocation);
-	}
 	#pragma endregion
+
+	COLORREF theme_color_provider_i::color_win32 (theme_color color) const
+	{
+		uint32_t argb = this->argb(color);
+		return argb & 0xFFFFFF;
+	}
+
+	D2D_COLOR_F theme_color_provider_i::color_d2d (theme_color color) const
+	{
+		uint32_t argb = this->argb(color);
+		D2D_COLOR_F res = {
+			((argb >> 16) & 0xff) / 255.0f,
+			((argb >> 8) & 0xff) / 255.0f,
+			(argb & 0xff) / 255.0f,
+			((argb >> 24) & 0xff) / 255.0f
+		};
+		return res;
+	}
+
+	com_ptr<ID2D1SolidColorBrush> theme_color_provider_i::make_brush (ID2D1DeviceContext* dc, theme_color color) const
+	{
+		com_ptr<ID2D1SolidColorBrush> brush;
+		auto hr = dc->CreateSolidColorBrush (color_d2d(color), &brush);
+		rassert(SUCCEEDED(hr));
+		return brush;
+	}
+
+	com_ptr<ID2D1SolidColorBrush> theme_color_provider_i::make_brush (ID2D1DeviceContext* dc, theme_color color, float opacity) const
+	{
+		auto b = make_brush(dc, color);
+		b->SetOpacity(opacity);
+		return b;
+	}
 }

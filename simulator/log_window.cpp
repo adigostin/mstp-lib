@@ -5,19 +5,20 @@
 #include "pch.h"
 #include "simulator.h"
 #include "resource.h"
-#include "d2d_window.h"
+#include "d2d_renderer.h"
+#include "window.h"
 
 using namespace D2D1;
 using namespace edge;
 
-#pragma warning (disable: 4250)
-
-class log_window : public d2d_window, public virtual log_window_i
+class log_window : public event_manager, public log_window_i
 {
-	using base = d2d_window;
-
+	edge::theme_color_provider_i* const _tcp;
 	selection_i* const _selection;
 	std::shared_ptr<project_i> const _project;
+	window       _window;
+	d2d_renderer _renderer;
+	com_ptr<IDWriteFactory> const _dwrite_factory;
 	com_ptr<IDWriteTextFormat> _textFormat;
 	bridge* _bridge = nullptr;
 	int _selectedPort = -1;
@@ -33,24 +34,35 @@ class log_window : public d2d_window, public virtual log_window_i
 	static constexpr UINT AnimationScrollFramesMax = 10;
 
 public:
-	log_window (HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dWriteFactory, selection_i* selection, const std::shared_ptr<project_i>& project)
-		: base (WS_EX_CLIENTEDGE, WS_VISIBLE | WS_CHILD | WS_HSCROLL | WS_VSCROLL, rect, hWndParent, 0, d3d_dc, dWriteFactory)
+	log_window (HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dwrite_factory, selection_i* selection, const std::shared_ptr<project_i>& project, edge::theme_color_provider_i* tcp)
+		: _tcp(tcp)
+		, _window (WS_EX_CLIENTEDGE, WS_VISIBLE | WS_CHILD | WS_HSCROLL | WS_VSCROLL, hWndParent, rect)
+		, _renderer(this, d3d_dc, dwrite_factory)
+		, _dwrite_factory(dwrite_factory)
 		, _selection(selection)
 		, _project(project)
 	{
-		auto hr = dWriteFactory->CreateTextFormat (L"Consolas", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
-			DWRITE_FONT_STRETCH_NORMAL, 11, L"en-US", &_textFormat); assert(SUCCEEDED(hr));
+		auto hr = dwrite_factory->CreateTextFormat (L"Consolas", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
+			DWRITE_FONT_STRETCH_NORMAL, 11, L"en-US", &_textFormat); rassert(SUCCEEDED(hr));
 
-		_numberOfLinesFitting = CalcNumberOfLinesFitting (_textFormat, client_height(), dWriteFactory);
+		_numberOfLinesFitting = CalcNumberOfLinesFitting();
 
 		_selection->changed().add_handler<&log_window::on_selection_changed>(this);
+		_window.window_proc().add_handler<&log_window::on_window_proc>(this);
+		_renderer.render().add_handler<&log_window::render>(this);
 	}
 
 	~log_window()
 	{
+		_renderer.render().remove_handler<&log_window::render>(this);
+		_window.window_proc().remove_handler<&log_window::on_window_proc>(this);
 		_selection->changed().remove_handler<&log_window::on_selection_changed>(this);
 		select_bridge(nullptr);
 	}
+
+	// win32_window_i
+	virtual HWND hwnd() const override { return _window.hwnd(); }
+	virtual window_proc_e::subscriber window_proc() override { return _window.window_proc(); }
 
 	void on_selection_changed (selection_i* selection)
 	{
@@ -66,14 +78,13 @@ public:
 		}
 	}
 
-	virtual void render (const d2d_render_args& ra) const override final
+	void render (ID2D1DeviceContext* dc)
 	{
-		ra.dc->Clear(GetD2DSystemColor(COLOR_WINDOW));
+		dc->Clear(_tcp->color_d2d(edge::theme_color::background));
 
-		ra.dc->SetTransform(dpi_transform());
+		dc->SetTransform(dpi_transform());
 
-		com_ptr<ID2D1SolidColorBrush> text_brush;
-		ra.dc->CreateSolidColorBrush (GetD2DSystemColor(COLOR_WINDOWTEXT), &text_brush);
+		com_ptr<ID2D1SolidColorBrush> text_brush = _tcp->make_brush(dc, edge::theme_color::foreground);
 
 		if ((_bridge == nullptr) || _lines.empty())
 		{
@@ -83,15 +94,15 @@ public:
 			auto oldta = _textFormat->GetTextAlignment();
 			_textFormat->SetTextAlignment (DWRITE_TEXT_ALIGNMENT_CENTER);
 			auto text = (_bridge == nullptr) ? TextNoBridge : TextNoEntries;
-			auto tl = edge::text_layout_with_metrics (dwrite_factory(), _textFormat, text, client_width());
+			auto tl = edge::text_layout_with_metrics (_dwrite_factory, _textFormat, text, client_width());
 			_textFormat->SetTextAlignment(oldta);
 			D2D1_POINT_2F origin = { client_width() / 2 - tl.width() / 2 - tl.left(), client_height() / 2 };
-			ra.dc->DrawTextLayout (origin, tl, text_brush);
+			dc->DrawTextLayout (origin, tl, text_brush);
 		}
 		else
 		{
 			float y = 0;
-			float lineHeight = text_layout_with_metrics(dwrite_factory(), _textFormat, L"A").height();
+			float lineHeight = text_layout_with_metrics(_dwrite_factory, _textFormat, L"A").height();
 			for (int lineIndex = _topLineIndex; (lineIndex < _animationCurrentLineCount) && (y < client_height()); lineIndex++)
 			{
 				std::wstring line (_lines[lineIndex]->text.begin(), _lines[lineIndex]->text.end());
@@ -99,8 +110,8 @@ public:
 				if ((line.length() >= 2) && (line[line.length() - 2] == '\r') && (line[line.length() - 1] == '\n'))
 					line.resize (line.length() - 2);
 
-				auto tl = text_layout (dwrite_factory(), _textFormat, line);
-				ra.dc->DrawTextLayout ({ 0, y }, tl, text_brush, D2D1_DRAW_TEXT_OPTIONS_NO_SNAP);
+				auto tl = text_layout (_dwrite_factory, _textFormat, line);
+				dc->DrawTextLayout ({ 0, y }, tl, text_brush, D2D1_DRAW_TEXT_OPTIONS_NO_SNAP);
 				y += lineHeight;
 
 				if (y >= client_height())
@@ -123,8 +134,8 @@ public:
 				// The user has scrolled away from the last time. We append the text without doing any scrolling.
 
 				// If the user scrolled away, the animation is supposed to have been stopped.
-				assert (_animationCurrentLineCount == _animationEndLineCount);
-				assert (_animationScrollFramesRemaining == 0);
+				rassert (_animationCurrentLineCount == _animationEndLineCount);
+				rassert (_animationScrollFramesRemaining == 0);
 
 				SCROLLINFO si = { sizeof (si) };
 				si.fMask = SIF_RANGE | SIF_PAGE | SIF_DISABLENOSCROLL;
@@ -224,37 +235,36 @@ public:
 		}
 	}
 
-	std::optional<LRESULT> window_proc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) final
+	std::optional<LRESULT> on_window_proc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		if (msg == WM_SIZE)
 		{
-			base::window_proc (hwnd, msg, wParam, lParam); // Pass it to the base class first, which stores the client size.
 			process_wm_size (wParam, lParam);
-			return 0;
+			return std::nullopt;
 		}
 
 		if (msg == WM_VSCROLL)
 		{
 			ProcessWmVScroll (wParam, lParam);
-			return 0;
+			return std::nullopt;
 		}
 
 		if ((msg == WM_TIMER) && (_timerId != 0) && (wParam == _timerId))
 		{
 			ProcessAnimationTimer();
-			return 0;
+			return std::nullopt;
 		}
 
 		if (msg == WM_MOUSEWHEEL)
 		{
 			ProcessWmMouseWheel (wParam, lParam);
-			return 0;
+			return 0; // consume it
 		}
 
 		if (msg == WM_CONTEXTMENU)
 		{
 			ProcessWmContextMenu (hwnd, POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) });
-			return 0;
+			return 0; // consume it
 		}
 
 		if (msg == WM_COMMAND)
@@ -263,13 +273,13 @@ public:
 			{
 				for (auto& b : _project->bridges())
 					b->clear_log();
+				return 0; // consume it
 			}
 
-			return 0;
+			return std::nullopt;
 		}
 
-
-		return base::window_proc (hwnd, msg, wParam, lParam);
+		return std::nullopt;
 	}
 
 	void ProcessWmContextMenu (HWND hwnd, POINT pt)
@@ -280,8 +290,8 @@ public:
 
 	void ProcessAnimationTimer()
 	{
-		assert (_animationEndLineCount != _animationCurrentLineCount);
-		assert (_animationScrollFramesRemaining != 0);
+		rassert (_animationEndLineCount != _animationCurrentLineCount);
+		rassert (_animationScrollFramesRemaining != 0);
 
 		int linesToAddInThisAnimationFrame = (_animationEndLineCount - _animationCurrentLineCount) / _animationScrollFramesRemaining;
 		_animationCurrentLineCount += linesToAddInThisAnimationFrame;
@@ -313,14 +323,14 @@ public:
 		if (_animationScrollFramesRemaining > 0)
 		{
 			UINT animationFrameLengthMilliseconds = AnimationDurationMilliseconds / AnimationScrollFramesMax;
-			_timerId = SetTimer (hwnd(), (UINT_PTR) 1, animationFrameLengthMilliseconds, NULL); assert (_timerId != 0);
+			_timerId = SetTimer (hwnd(), (UINT_PTR) 1, animationFrameLengthMilliseconds, NULL); rassert (_timerId != 0);
 		}
 	}
 
-	static int CalcNumberOfLinesFitting (IDWriteTextFormat* textFormat, float clientHeightDips, IDWriteFactory* dWriteFactory)
+	int CalcNumberOfLinesFitting() const
 	{
-		auto tl = edge::text_layout_with_metrics (dWriteFactory, textFormat, "A");
-		return (int) floor(clientHeightDips / tl.height());
+		auto tl = edge::text_layout_with_metrics (_dwrite_factory, _textFormat, "A");
+		return (int) floor(client_height() / tl.height());
 	}
 
 	void process_wm_size (WPARAM wParam, LPARAM lParam)
@@ -339,7 +349,7 @@ public:
 				_topLineIndex = 0;
 		}
 
-		int newNumberOfLinesFitting = CalcNumberOfLinesFitting (_textFormat, client_height(), dwrite_factory());
+		int newNumberOfLinesFitting = CalcNumberOfLinesFitting();
 		if (_numberOfLinesFitting != newNumberOfLinesFitting)
 		{
 			_numberOfLinesFitting = newNumberOfLinesFitting;
@@ -372,12 +382,12 @@ public:
 
 	void EndAnimation()
 	{
-		assert (_animationScrollFramesRemaining > 0);
+		rassert (_animationScrollFramesRemaining > 0);
 
 		// Scroll animation is in progress. Finalize it.
-		assert (_animationEndLineCount > _animationCurrentLineCount);
-		assert (_timerId != 0);
-		BOOL bRes = KillTimer (hwnd(), _timerId); assert(bRes);
+		rassert (_animationEndLineCount > _animationCurrentLineCount);
+		rassert (_timerId != 0);
+		BOOL bRes = KillTimer (hwnd(), _timerId); rassert(bRes);
 		_timerId = 0;
 
 		_animationCurrentLineCount = _animationEndLineCount;

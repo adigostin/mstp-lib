@@ -34,17 +34,18 @@ namespace edge
 	D2D1_RECT_F inflate (D2D1_POINT_2F p, float distance);
 	D2D1_ROUNDED_RECT inflate (const D2D1_ROUNDED_RECT& rr, float distance);
 	void inflate (D2D1_ROUNDED_RECT* rr, float distance);
-	D2D1::ColorF GetD2DSystemColor (int sysColorIndex);
 	std::string get_window_text (HWND hwnd);
 	std::array<D2D1_POINT_2F, 4> corners (const D2D1_RECT_F& rect);
 	D2D1_RECT_F polygon_bounds (const std::array<D2D1_POINT_2F, 4>& points);
 	D2D1_COLOR_F interpolate (const D2D1_COLOR_F& first, const D2D1_COLOR_F& second, uint32_t percent_first);
+	uint32_t interpolate (uint32_t first, uint32_t second, uint32_t percent_first);
 	D2D1_RECT_F align_to_pixel (const D2D1_RECT_F& rect, uint32_t dpi);
 	std::wstring utf8_to_utf16 (std::string_view str_utf8);
 	std::string utf16_to_utf8 (std::wstring_view str_utf16);
 	std::string bstr_to_utf8 (BSTR bstr);
 	D2D1_RECT_F make_positive (const D2D1_RECT_F& r);
 	D2D1_RECT_F union_rects (const D2D1_RECT_F& a, const D2D1_RECT_F& b);
+	bool hit_test_line (D2D1_POINT_2F dLocation, float tolerance, D2D1_POINT_2F p0w, D2D1_POINT_2F p1w, float lineWidth);
 
 	class canceled_by_user_exception : std::exception
 	{
@@ -58,17 +59,4 @@ namespace edge
 		std::span<const COMDLG_FILTERSPEC> file_types, const wchar_t* file_extension_without_dot);
 
 	bool ask_save_discard_cancel (HWND parent_hwnd, const wchar_t* ask_text, const wchar_t* title_text);
-}
-
-struct timer_queue_timer_deleter
-{
-	void operator() (HANDLE handle) { ::DeleteTimerQueueTimer(nullptr, handle, INVALID_HANDLE_VALUE); }
-};
-using timer_queue_timer_unique_ptr = std::unique_ptr<std::remove_pointer_t<HANDLE>, timer_queue_timer_deleter>;
-inline timer_queue_timer_unique_ptr create_timer_queue_timer (WAITORTIMERCALLBACK Callback, PVOID Parameter, DWORD DueTime, DWORD Period)
-{
-	HANDLE handle;
-	BOOL bres = ::CreateTimerQueueTimer (&handle, nullptr, Callback, Parameter, DueTime, Period, 0);
-	assert(bres);
-	return timer_queue_timer_unique_ptr(handle);
 }

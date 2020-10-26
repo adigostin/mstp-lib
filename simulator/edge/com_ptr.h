@@ -3,10 +3,13 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "utility_functions.h"
+#include "rassert.h"
 
 namespace edge
 {
+	extern std::string utf16_to_utf8 (std::wstring_view str_utf16);
+
+
 	template<typename I> class com_ptr
 	{
 		I* _ptr = nullptr;
@@ -132,7 +135,7 @@ namespace edge
 
 		I* operator->() const
 		{
-			assert(_ptr != nullptr);
+			rassert(_ptr);
 			return _ptr;
 		}
 

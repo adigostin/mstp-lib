@@ -67,6 +67,6 @@ public:
 	static const wire_end_p p0_property;
 	static const wire_end_p p1_property;
 	static const property* const _properties[];
-	static const xtype<> _type;
+	static const xtype<wire> _type;
 	virtual const edge::concrete_type* type() const override { return &_type; }
 };

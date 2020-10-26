@@ -3,16 +3,13 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "d2d_window.h"
+#include "edge.h"
 
 namespace edge
 {
-	#pragma warning(push)
-	#pragma warning(disable: 4250) // disable "inherits via dominance" warning
-
-	class zoomable_window abstract : public d2d_window, public virtual zoomable_window_i
+	class zoomer : event_manager
 	{
-		using base = d2d_window;
+		d2d_window_i* const _window;
 
 		D2D1_POINT_2F _aimpoint = { 0, 0 }; // workspace coordinate shown at the center of the client area
 		float _zoom = 1;
@@ -42,23 +39,25 @@ namespace edge
 		std::optional<zoomed_to_rect> _zoomed_to_rect;
 
 	public:
-		using base::base;
+		zoomer(d2d_window_i* window);
+		~zoomer();
+
+		zoomer(const zoomer&) = delete;
+		zoomer& operator=(const zoomer&) = delete;
 
 		void zoom_to (D2D1_POINT_2F aimpoint, float zoom, bool smooth);
 
-		// zoomable_window_i
-		virtual D2D1_POINT_2F aimpoint() const override { return _aimpoint; }
-		virtual float zoom() const override { return _zoom; }
-		virtual zoom_transform_changed_e::subscriber zoom_transform_changed() override { return zoom_transform_changed_e::subscriber(this); }
-		virtual void zoom_to (const D2D1_RECT_F& rect, float min_margin, float min_zoom, float max_zoom, bool smooth) override;
-
-	protected:
-		virtual std::optional<LRESULT> window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
-		virtual void create_render_resources (const d2d_render_args& ra) override;
-		virtual void release_render_resources (const d2d_render_args& ra) override;
-		virtual void on_zoom_transform_changed();
+		D2D1_POINT_2F aimpoint() const { return _aimpoint; }
+		float zoom() const { return _zoom; }
+		zoom_transform_changed_e::subscriber zoom_transform_changed() { return zoom_transform_changed_e::subscriber(this); }
+		void zoom_to (const D2D1_RECT_F& rect, float min_margin, float min_zoom, float max_zoom, bool smooth);
 
 	private:
+		std::optional<LRESULT> on_window_proc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
+		void create_render_resources (ID2D1DeviceContext* dc);
+		void release_render_resources (ID2D1DeviceContext* dc);
+		static void on_before_render (void* arg, ID2D1DeviceContext* dc) { static_cast<zoomer*>(arg)->create_render_resources(dc); }
+		static void on_after_render (void* arg, ID2D1DeviceContext* dc) { static_cast<zoomer*>(arg)->release_render_resources(dc); }
 		void set_zoom_and_aimpoint_internal (float zoom, D2D1_POINT_2F aimpoint, bool smooth);
 		void process_wm_size        (WPARAM wparam, LPARAM lparam);
 		void process_wm_mbuttondown (WPARAM wparam, LPARAM lparam);
@@ -66,6 +65,4 @@ namespace edge
 		void process_wm_mousewheel  (WPARAM wparam, LPARAM lparam);
 		void process_wm_mousemove   (WPARAM wparam, LPARAM lparam);
 	};
-
-	#pragma warning(pop)
 }

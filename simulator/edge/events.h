@@ -3,8 +3,6 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include <vector>
-#include <array>
 #include "rassert.h"
 
 namespace edge
@@ -14,7 +12,7 @@ namespace edge
 
 	class event_manager
 	{
-		template<typename event_t, typename... args_t>
+		template<typename event_t, typename return_t, typename... args_t>
 		friend struct event_base;
 
 		struct handler
@@ -25,13 +23,13 @@ namespace edge
 
 		struct id_and_handler
 		{
-			const char* id;
+			std::type_index id;
 			struct handler handler;
 		};
 
 		std::vector<id_and_handler> handlers;
 
-	protected:
+	public:
 		~event_manager()
 		{
 			rassert(handlers.empty());
@@ -44,17 +42,12 @@ namespace edge
 		}
 	};
 
-	template<typename event_t, typename... args_t>
+	template<typename event_t, typename return_t, typename... args_t>
 	struct event_base
 	{
 		friend class event_manager;
 
-		using callback_t = void(*)(void*, args_t...);
-
-	private:
-		// The address of this field is used within this file to tell between different event types,
-		// even if they have handlers with the same signature. This eliminates the need for RTTI.
-		static constexpr char id = 0;
+		using callback_t = return_t(*)(void*, args_t...);
 
 	public:
 		event_base() = delete; // this class and classes derived from it are not meant to be instantiated.
@@ -68,16 +61,22 @@ namespace edge
 				: _em(em)
 			{ }
 
+			subscriber (event_manager& em)
+				: _em(&em)
+			{ }
+
 			void add_handler (callback_t callback, void* callback_arg)
 			{
-				_em->handlers.push_back( { &id, { reinterpret_cast<void*>(callback), callback_arg } });
+				_em->handlers.push_back( { std::type_index(typeid(event_t)), { reinterpret_cast<void*>(callback), callback_arg } });
 			}
 
 			void remove_handler (callback_t callback, void* callback_arg)
 			{
+				auto id = std::type_index(typeid(event_t));
+
 				for (auto it = _em->handlers.begin(); it != _em->handlers.end(); it++)
 				{
-					if ((it->id == &id) && (it->handler.callback == reinterpret_cast<void*>(callback)) && (it->handler.callback_arg == callback_arg))
+					if ((it->id == id) && (it->handler.callback == reinterpret_cast<void*>(callback)) && (it->handler.callback_arg == callback_arg))
 					{
 						_em->handlers.erase(it);
 						return;
@@ -92,16 +91,16 @@ namespace edge
 			struct extract_class;
 
 			template<typename C, class... A>
-			struct extract_class<void(C::*)(A...)>
+			struct extract_class<return_t(C::*)(A...)>
 			{
 				using class_type = C;
 			};
 
-			template<class target_class, void(target_class::*member_callback)(args_t...)>
-			static void proxy (void* arg, args_t... args)
+			template<class target_class, return_t(target_class::*member_callback)(args_t...)>
+			static return_t proxy (void* arg, args_t... args)
 			{
 				auto c = static_cast<target_class*>(arg);
-				(c->*member_callback)(std::forward<args_t>(args)...);
+				return (c->*member_callback)(std::forward<args_t>(args)...);
 			}
 
 		public:
@@ -109,6 +108,7 @@ namespace edge
 			std::enable_if_t<std::is_member_function_pointer_v<decltype(member_callback)>>
 			add_handler (class_type* target)
 			{
+				static_assert(std::is_convertible_v<decltype(member_callback), return_t(class_type::*)(args_t...)>, "types of parameters and/or return value don't match");
 				add_handler (&subscriber::proxy<class_type, member_callback>, target);
 			}
 
@@ -116,6 +116,7 @@ namespace edge
 			std::enable_if_t<std::is_member_function_pointer_v<decltype(member_callback)>>
 			remove_handler (class_type* target)
 			{
+				static_assert(std::is_convertible_v<decltype(member_callback), return_t(class_type::*)(args_t...)>, "types of parameters and/or return value don't match");
 				remove_handler (&subscriber::proxy<class_type, member_callback>, target);
 			}
 		};
@@ -144,9 +145,11 @@ namespace edge
 
 			bool has_handlers() const
 			{
+				auto id = std::type_index(typeid(event_t));
+
 				for (auto& h : _em->handlers)
 				{
-					if (h.id == &id)
+					if (h.id == id)
 						return true;
 				}
 
@@ -159,11 +162,13 @@ namespace edge
 				// Note that the invoker must be reentrant (one event handler can invoke
 				// another event, or add/remove events), that's why these stack copies.
 
+				auto id = std::type_index(typeid(event_t));
+
 				handler_list res;
 
 				for (auto& p : _em->handlers)
 				{
-					if (p.id == &id)
+					if (p.id == id)
 					{
 						auto h = handler { reinterpret_cast<callback_t>(p.handler.callback), p.handler.callback_arg };
 						if (res.count < std::size(res.first))
@@ -180,9 +185,9 @@ namespace edge
 	};
 
 	template<typename event_t, typename... args_t>
-	struct event : event_base<event_t, args_t...>
+	struct event : event_base<event_t, void, args_t...>
 	{
-		using base = event_base<event_t, args_t...>;
+		using base = event_base<event_t, void, args_t...>;
 
 		struct invoker : base::invoker
 		{
@@ -201,25 +206,27 @@ namespace edge
 		};
 	};
 
-	template<typename event_t, typename cancel_type, typename... args_t>
-	struct cancelable_event : event_base<event_t, std::optional<cancel_type>&, args_t...>
+	template<typename event_t, typename return_t, typename... args_t>
+	struct cancelable_event : event_base<event_t, std::optional<return_t>, args_t...>
 	{
-		using base = event_base<event_t, std::optional<cancel_type>&, args_t...>;
+		using base = event_base<event_t, std::optional<return_t>, args_t...>;
 
 		struct invoker : base::invoker
 		{
 			using base::invoker::invoker;
 
-			void operator()(std::optional<cancel_type>& cancel, args_t... args) const
+			std::optional<return_t> operator()(args_t... args) const
 			{
 				auto hl = base::invoker::make_handler_list();
-				for (size_t i = 0; i < hl.count; i++)
+				for (size_t i = hl.count - 1; i != -1; i--)
 				{
 					auto handler = (i < std::size(hl.first)) ? hl.first[i] : hl.rest[i - std::size(hl.first)];
-					handler.callback (handler.arg, cancel, std::forward<args_t>(args)...);
-					if (cancel)
-						return;
+					auto result = handler.callback (handler.arg, std::forward<args_t>(args)...);
+					if (result)
+						return result;
 				}
+
+				return std::nullopt;
 			}
 		};
 	};

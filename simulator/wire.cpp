@@ -178,7 +178,10 @@ renderable_object::ht_result wire::hit_test (const edge::zoomable_window_i* wind
 			return { this, (int) i };
 	}
 
-	if (window->hit_test_line (dLocation, tolerance, point_coords(0), point_coords(1), thickness))
+	auto p0d = window->pointw_to_pointd(point_coords(0));
+	auto p1d = window->pointw_to_pointd(point_coords(1));
+	auto lw  = window->lengthw_to_lengthd(thickness);
+	if (edge::hit_test_line(dLocation, tolerance, p0d, p1d, lw))
 		return { this, -1 };
 
 	return { };
@@ -204,4 +207,4 @@ const wire_end_p wire::p0_property("P0", 0);
 const wire_end_p wire::p1_property("P1", 1);
 const property* const wire::_properties[] = { &p0_property, &p1_property };
 
-const xtype<> wire::_type = { "Wire", &base::_type, _properties, [] { return std::unique_ptr<object>(new wire()); } };
+const xtype<wire> wire::_type = { "Wire", &base::_type, _properties, std::make_unique };

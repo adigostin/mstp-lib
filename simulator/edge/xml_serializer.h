@@ -14,12 +14,12 @@ namespace edge
 	{
 		virtual ~xml_serializer_i() = default;
 		virtual IXMLDOMDocument* doc() const = 0;
-		virtual void* context() const = 0;
+		virtual string_convert_context_i* context() const = 0;
 		virtual com_ptr<IXMLDOMElement> serialize_object (const object* obj, bool force_serialize_unchanged) = 0;
 		virtual void serialize_property (const object* obj, const property* prop, const serialize_element_getter& object_element_getter) = 0;
 	};
 
-	std::unique_ptr<xml_serializer_i> create_serializer (IXMLDOMDocument* doc, void* context);
+	std::unique_ptr<xml_serializer_i> create_serializer (IXMLDOMDocument* doc, string_convert_context_i* context);
 
 	HRESULT format_and_save_to_file (IXMLDOMDocument3* doc, const wchar_t* file_path);
 
@@ -30,10 +30,10 @@ namespace edge
 		virtual ~xml_deserializer_i() = default;
 		virtual void deserialize_to (IXMLDOMElement* element, object* o) = 0;
 		virtual std::unique_ptr<object> deserialize (IXMLDOMElement* elem) = 0;
-		virtual void* context() const = 0;
+		virtual string_convert_context_i* context() const = 0;
 	};
 
-	std::unique_ptr<xml_deserializer_i> create_deserializer (std::span<const concrete_type* const> known_types, void* context);
+	std::unique_ptr<xml_deserializer_i> create_deserializer (std::span<const concrete_type* const> known_types, string_convert_context_i* context);
 
 	// ========================================================================
 
@@ -52,7 +52,7 @@ namespace edge
 		virtual void deserialize_before_reflection (xml_deserializer_i* de, IXMLDOMElement* obj_element) { }
 		virtual void deserialize_after_reflection (xml_deserializer_i* de, IXMLDOMElement* obj_element) { }
 
-		virtual bool try_deserialize_xml_attribute (std::string_view name, std::string_view value) { return false; }
-		virtual bool try_deserialize_xml_element (IXMLDOMElement* e) { return false; }
+		virtual bool try_deserialize_xml_attribute (xml_deserializer_i* de, std::string_view name, std::string_view value) { return false; }
+		virtual bool try_deserialize_xml_element (xml_deserializer_i* de, IXMLDOMElement* e) { return false; }
 	};
 }

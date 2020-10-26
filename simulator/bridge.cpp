@@ -6,7 +6,6 @@
 #include "bridge.h"
 #include "wire.h"
 #include "simulator.h"
-#include "edge_win32.h"
 
 using namespace D2D1;
 
@@ -25,7 +24,7 @@ static constexpr UINT WM_PACKET_RECEIVED = WM_APP + 1;
 static constexpr uint8_t BpduDestAddress[6] = { 1, 0x80, 0xC2, 0, 0, 0 };
 
 const char mac_address_property_traits::type_name[] = "mac_address";
-void mac_address_property_traits::to_string (mac_address from, edge::out_sstream_i* to)
+void mac_address_property_traits::to_string (mac_address from, edge::out_sstream_i* to, const edge::string_convert_context_i*)
 {
 	std::stringstream ss;
 	ss << std::uppercase << std::setfill('0') << std::hex
@@ -34,7 +33,7 @@ void mac_address_property_traits::to_string (mac_address from, edge::out_sstream
 	to->write(ss.str());
 }
 
-void mac_address_property_traits::from_string (std::string_view str, mac_address& to)
+void mac_address_property_traits::from_string (std::string_view str, mac_address& to, const edge::string_convert_context_i*)
 {
 	static constexpr char format_error_message[] = "Invalid address format. The Bridge Address must have the format XX:XX:XX:XX:XX:XX or XXXXXXXXXXXX (6 hex bytes).";
 
@@ -110,7 +109,7 @@ bridge::bridge (size_t port_count, size_t msti_count, mac_address macAddress)
 					bridge->OnLinkPulseTick();
 			}
 		};
-		_link_pulse_timer_id = ::SetTimer (nullptr, 0, 16, link_pulse_callback); assert(_link_pulse_timer_id);
+		_link_pulse_timer_id = ::SetTimer (nullptr, 0, 16, link_pulse_callback); rassert(_link_pulse_timer_id);
 
 		DWORD period = 950 + (std::random_device()() % 100);
 		static constexpr auto one_second_callback = [](HWND, UINT, UINT_PTR, DWORD)
@@ -121,7 +120,7 @@ bridge::bridge (size_t port_count, size_t msti_count, mac_address macAddress)
 					STP_OnOneSecondTick (bridge->_stpBridge, ::GetMessageTime());
 			}
 		};
-		_one_second_timer_id = ::SetTimer (nullptr, 0, 1000, one_second_callback); assert(_one_second_timer_id);
+		_one_second_timer_id = ::SetTimer (nullptr, 0, 1000, one_second_callback); rassert(_one_second_timer_id);
 
 		static constexpr WNDPROC helper_window_proc = [](HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) -> LRESULT
 		{
@@ -134,7 +133,7 @@ bridge::bridge (size_t port_count, size_t msti_count, mac_address macAddress)
 
 			return ::DefWindowProc (hwnd, msg, wparam, lparam);
 		};
-		BOOL bRes = ::GetModuleHandleExW (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR)helper_window_proc, &_hinstance); assert(bRes);
+		BOOL bRes = ::GetModuleHandleExW (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR)helper_window_proc, &_hinstance); rassert(bRes);
 
 		WNDCLASS wc = { sizeof(WNDCLASS) };
 		wc.hInstance = _hinstance;
@@ -143,8 +142,8 @@ bridge::bridge (size_t port_count, size_t msti_count, mac_address macAddress)
 		ATOM atom = ::RegisterClass(&wc);
 	}
 
-	assert (_helper_window == nullptr);
-	_helper_window = ::CreateWindow (helper_window_class_name, L"", 0, 0, 0, 0, 0, HWND_MESSAGE, 0, _hinstance, 0); assert (_helper_window != nullptr);
+	rassert (_helper_window == nullptr);
+	_helper_window = ::CreateWindow (helper_window_class_name, L"", 0, 0, 0, 0, 0, HWND_MESSAGE, 0, _hinstance, 0); rassert (_helper_window != nullptr);
 	::SetWindowLongPtr (_helper_window, GWLP_USERDATA, (LONG_PTR)this);
 
 	_created_bridges.insert(this);
@@ -161,10 +160,10 @@ bridge::~bridge()
 	{
 		::UnregisterClass (helper_window_class_name, _hinstance);
 
-		BOOL bres = ::KillTimer (nullptr, _one_second_timer_id); assert(bres);
+		BOOL bres = ::KillTimer (nullptr, _one_second_timer_id); rassert(bres);
 		_one_second_timer_id = 0;
 
-		bres = ::KillTimer (nullptr, _link_pulse_timer_id); assert(bres);
+		bres = ::KillTimer (nullptr, _link_pulse_timer_id); rassert(bres);
 		_link_pulse_timer_id = 0;
 	}
 
@@ -261,7 +260,7 @@ void bridge::ProcessReceivedPackets()
 			if (!port->mac_operational())
 			{
 				// The sender must be misbehaving (forgot to send link pulses). Currently the simulator is single-threaded so this shouldn't happen.
-				assert(false);
+				rassert(false);
 			}
 			else
 			{
@@ -302,11 +301,11 @@ void bridge::ProcessReceivedPackets()
 					}
 				}
 				else
-					assert(false); // not implemented
+					rassert(false); // not implemented
 			}
 		}
 		else
-			assert(false);
+			rassert(false);
 	}
 
 	if (invalidate)
@@ -418,7 +417,7 @@ std::array<uint8_t, 6> bridge::GetPortAddress (size_t portIndex) const
 		{
 			pa[3]++;
 			if (pa[3] == 0)
-				assert(false); // not implemented
+				rassert(false); // not implemented
 		}
 	}
 
@@ -654,7 +653,7 @@ void bridge::mst_config_table_set_value(size_t i, uint32_t value)
 {
 	unsigned int entry_count;
 	auto table = STP_GetMstConfigTable (_stpBridge, &entry_count);
-	assert (i < entry_count);
+	rassert (i < entry_count);
 	if (table->treeIndex != value)
 	{
 		property_change_args args = { &mst_config_table_property, i, edge::collection_property_change_type::set };
@@ -841,11 +840,11 @@ const edge::property* const bridge::_properties[] = {
 	&ports_prop,
 };
 
-const xtype<size_property_traits, size_property_traits, mac_address_property_traits> bridge::_type = {
+const xtype<bridge, size_property_traits, size_property_traits, mac_address_property_traits> bridge::_type = {
 	"Bridge",
 	&base::_type,
 	_properties,
-	[](size_t port_count, size_t msti_count, mac_address address) { return std::unique_ptr<object>(new bridge(port_count, msti_count, address)); },
+	&std::make_unique,
 	&port_count_property,
 	&msti_count_property,
 	&bridge_address_property,

@@ -17,7 +17,6 @@ namespace edge
 	class type;
 	struct value_property;
 	struct object_collection_property;
-	template<typename... factory_arg_property_traits> struct xtype;
 
 	struct property_group
 	{
@@ -42,6 +41,11 @@ namespace edge
 	class not_implemented_exception : public std::exception
 	{
 		virtual const char* what() const noexcept override { return "Not implemented"; }
+	};
+
+	struct __declspec(novtable) string_convert_context_i
+	{
+		virtual ~string_convert_context_i() = default;
 	};
 
 	// Note that we want this type to be polymorphic so we can dynamic_cast<> on it.
@@ -86,14 +90,14 @@ namespace edge
 		virtual const value_property* as_value_prop() const override final { return this; }
 		virtual const char* type_name() const = 0;
 		virtual bool can_set (const object* obj) const = 0;
-		virtual void get_to_string (const object* from, out_sstream_i* to) const = 0;
-		virtual void set_from_string (std::string_view from, object* to) const = 0;
+		virtual void get_to_string (const object* from, out_sstream_i* to, const string_convert_context_i* context) const = 0;
+		virtual void set_from_string (std::string_view from, object* to, const string_convert_context_i* context) const = 0;
 		virtual const nvp* nvps() const = 0;
 		virtual int get_enum_value_as_int (const object* obj) const = 0;
 		virtual bool equal (const object* obj1, const object* obj2) const = 0;
 		virtual bool changed_from_default(const object* obj) const = 0;
 		virtual void reset_to_default(object* obj) const = 0;
-		std::string get_to_string (const object* from) const;
+		std::string get_to_string (const object* from, const string_convert_context_i* context) const;
 	};
 
 	// ========================================================================
@@ -105,6 +109,24 @@ namespace edge
 		using base::base;
 
 		using value_t  = typename property_traits::value_t;
+
+		static_assert (std::is_same_v<
+			decltype(property_traits::to_string(
+				std::declval<const value_t&>(),
+				std::declval<out_sstream_i*>(),
+				std::declval<const string_convert_context_i*>())
+			),
+			void
+		>);
+
+		static_assert (std::is_same_v<
+			decltype(property_traits::from_string(
+				std::declval<std::string_view>(),
+				std::declval<value_t&>(),
+				std::declval<const string_convert_context_i*>())
+			),
+			void
+		>);
 
 	private:
 		// https://stackoverflow.com/a/17534399/451036
@@ -133,15 +155,15 @@ namespace edge
 
 		virtual void set (value_t from, object* to) const = 0;
 
-		virtual void get_to_string (const object* from, out_sstream_i* to) const override final
+		virtual void get_to_string (const object* from, out_sstream_i* to, const string_convert_context_i* context) const override final
 		{
-			property_traits::to_string(this->get(from), to);
+			property_traits::to_string(this->get(from), to, context);
 		}
 
-		virtual void set_from_string (std::string_view from, object* to) const override final
+		virtual void set_from_string (std::string_view from, object* to, const string_convert_context_i* context) const override final
 		{
 			value_t value;
-			property_traits::from_string (from, value);
+			property_traits::from_string (from, value, context);
 			this->set(value, to);
 		}
 
@@ -283,9 +305,8 @@ namespace edge
 		static const char type_name[];
 		using value_t = bool;
 		static constexpr nvp nvps[] = { { "False", 0 }, { "True", 1 }, { nullptr, -1 }, };
-		static void to_string (value_t from, out_sstream_i* to);
-		static void from_string (std::string_view from, value_t& to);
-		static void serialize (value_t from, std::vector<uint8_t>& to) { rassert(false); } // not implemented
+		static void to_string (value_t from, out_sstream_i* to, const string_convert_context_i* context);
+		static void from_string (std::string_view from, value_t& to, const string_convert_context_i* context);
 	};
 	using bool_p = static_value_property<bool_property_traits>;
 
@@ -295,8 +316,8 @@ namespace edge
 		//static_assert (std::is_arithmetic_v<t_>);
 		static constexpr const char* type_name = type_name_;
 		using value_t = t_;
-		static void to_string (value_t from, out_sstream_i* to); // needs specialization
-		static void from_string (std::string_view from, value_t& to); // needs specialization
+		static void to_string (value_t from, out_sstream_i* to, const string_convert_context_i* context); // needs specialization
+		static void from_string (std::string_view from, value_t& to, const string_convert_context_i* context); // needs specialization
 	};
 
 	extern const char int32_type_name[];
@@ -323,12 +344,13 @@ namespace edge
 	using float_property_traits = arithmetic_property_traits<float, float_type_name>;
 	using float_p = static_value_property<float_property_traits>;
 
+	// TODO: class string_or_view
 	struct backed_string_property_traits
 	{
 		static constexpr char type_name[] = "backed_string";
 		using value_t = std::string_view;
-		static void to_string (value_t from, out_sstream_i* to) { to->write(from); }
-		static void from_string (std::string_view from, value_t& to) { to = from; }
+		static void to_string (value_t from, out_sstream_i* to, const string_convert_context_i* context) { to->write(from); }
+		static void from_string (std::string_view from, value_t& to, const string_convert_context_i* context) { to = from; }
 	};
 	using backed_string_p = static_value_property<backed_string_property_traits>;
 
@@ -336,8 +358,8 @@ namespace edge
 	{
 		static constexpr char type_name[] = "temp_string";
 		using value_t = std::string;
-		static void to_string (value_t from, out_sstream_i* to) { to->write(from); }
-		static void from_string (std::string_view from, value_t& to) { to = from; }
+		static void to_string (value_t from, out_sstream_i* to, const string_convert_context_i* context) { to->write(from); }
+		static void from_string (std::string_view from, value_t& to, const string_convert_context_i* context) { to = from; }
 	};
 	using temp_string_p = static_value_property<temp_string_property_traits>;
 
@@ -353,11 +375,11 @@ namespace edge
 
 		static constexpr const nvp* nvps = nvps_;
 
-		static void to_string (value_t from, out_sstream_i* to)
+		static void to_string (value_t from, out_sstream_i* to, const string_convert_context_i* context)
 		{
 			if (serialize_as_integer)
 			{
-				int32_property_traits::to_string((int32_t)from, to);
+				int32_property_traits::to_string((int32_t)from, to, context);
 				return;
 			}
 
@@ -373,14 +395,14 @@ namespace edge
 			to->write(unknown_str);
 		}
 
-		static void from_string (std::string_view from, value_t& to)
+		static void from_string (std::string_view from, value_t& to, const string_convert_context_i* context)
 		{
 			if (serialize_as_integer)
 			{
 				try
 				{
 					int32_t val;
-					int32_property_traits::from_string(from, val);
+					int32_property_traits::from_string(from, val, context);
 					to = (value_t)val;
 					return;
 				}
@@ -400,8 +422,6 @@ namespace edge
 
 			throw string_convert_exception(from, type_name);
 		}
-
-		static void serialize (value_t from, std::vector<uint8_t>& to) { rassert(false); }
 	};
 
 	extern const char unknown_enum_value_str[];
@@ -465,12 +485,12 @@ namespace edge
 		using property::property;
 		virtual size_t size (const object* obj) const = 0;
 		virtual bool can_insert_remove() const = 0;
-		virtual void get_to_string (const object* from_obj, size_t from_index, out_sstream_i* to) const = 0;
-		virtual void set_value (std::string_view from, object* to_obj, size_t to_index) const = 0;
-		virtual void insert_value (std::string_view from, object* to_obj, size_t to_index) const = 0;
+		virtual void get_to_string (const object* from_obj, size_t from_index, out_sstream_i* to, const string_convert_context_i* context) const = 0;
+		virtual void set_value (std::string_view from, object* to_obj, size_t to_index, const string_convert_context_i* context) const = 0;
+		virtual void insert_value (std::string_view from, object* to_obj, size_t to_index, const string_convert_context_i* context) const = 0;
 		virtual void remove_value (object* obj, size_t index) const = 0;
 		virtual bool changed (const object* obj) const = 0;
-		std::string get_to_string (const object* from_obj, size_t from_index) const;
+		std::string get_to_string (const object* from_obj, size_t from_index, const string_convert_context_i* context) const;
 	};
 
 	// TODO: try to get rid of object_t
@@ -512,7 +532,7 @@ namespace edge
 			//
 			// If insert_value is non-null, the object must not pre-allocate the collection,
 			// and the deserializer must call insert_value to append some values.
-			assert (set_value || insert_value);
+			rassert (set_value || insert_value);
 		}
 
 		virtual size_t size (const object* obj) const override
@@ -521,23 +541,23 @@ namespace edge
 			return (ot->*_get_size)();
 		}
 
-		virtual void get_to_string (const object* from_obj, size_t from_index, out_sstream_i* to) const override
+		virtual void get_to_string (const object* from_obj, size_t from_index, out_sstream_i* to, const string_convert_context_i* context) const override
 		{
 			auto value = (static_cast<const object_t*>(from_obj)->*_get_value)(from_index);
-			property_traits::to_string(value, to);
+			property_traits::to_string(value, to, context);
 		}
 
-		virtual void set_value (std::string_view from, object* to_obj, size_t to_index) const override
+		virtual void set_value (std::string_view from, object* to_obj, size_t to_index, const string_convert_context_i* context) const override
 		{
 			typename property_traits::value_t value;
-			property_traits::from_string(from, value);
+			property_traits::from_string(from, value, context);
 			(static_cast<object_t*>(to_obj)->*_set_value) (to_index, value);
 		}
 
-		virtual void insert_value (std::string_view from, object* to_obj, size_t to_index) const override
+		virtual void insert_value (std::string_view from, object* to_obj, size_t to_index, const string_convert_context_i* context) const override
 		{
 			typename property_traits::value_t value;
-			property_traits::from_string(from, value);
+			property_traits::from_string(from, value, context);
 			(static_cast<object_t*>(to_obj)->*_insert_value) (to_index, value);
 		}
 

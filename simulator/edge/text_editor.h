@@ -4,7 +4,7 @@
 
 #pragma once
 #include "com_ptr.h"
-#include "edge_win32.h"
+#include "edge.h"
 
 namespace edge
 {

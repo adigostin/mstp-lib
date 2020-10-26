@@ -4,33 +4,47 @@
 
 #include "pch.h"
 #include "simulator.h"
-#include "d2d_window.h"
+#include "window.h"
 #include "property_grid.h"
 
 using namespace edge;
 
-class properties_window : public d2d_window, public virtual properties_window_i
+class properties_window : event_manager, public properties_window_i
 {
-	using base = d2d_window;
-
+	window _window;
+	d2d_renderer _renderer;
 	std::unique_ptr<edge::property_grid_i> const _pg;
 
 public:
 	properties_window (const properties_window_create_params& cps)
-		: base(WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, cps.rect, cps.hwnd_parent, 0, cps.d3d_dc, cps.dwrite_factory)
-		, _pg(property_grid_factory(this, this->client_rect()))
-	{ }
+		: _window(WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, cps.hwnd_parent, cps.rect)
+		, _renderer(this, cps.d3d_dc, cps.dwrite_factory)
+		, _pg(property_grid_factory(this, this->client_rect(), cps.tcp))
+	{
+		_window.window_proc().add_handler<&properties_window::on_window_proc>(this);
+		_renderer.render().add_handler<&properties_window::on_render>(this);
+	}
 
-	virtual HWND hwnd() const override { return this->window::hwnd(); }
+	~properties_window()
+	{
+		_renderer.render().remove_handler<&properties_window::on_render>(this);
+		_window.window_proc().remove_handler<&properties_window::on_window_proc>(this);
+	}
 
+	// win32_window_i
+	virtual HWND hwnd() const override { return _window.hwnd(); }
+	virtual window_proc_e::subscriber window_proc() override { return _window.window_proc(); }
+
+	// d2d_window_i
+	virtual d2d_renderer& renderer() override final { return _renderer; }
+	virtual void show_caret (const D2D1_RECT_F& bounds, const D2D1_COLOR_F& color, const D2D1_MATRIX_3X2_F* transform = nullptr) override { _renderer.show_caret(bounds, color, transform); }
+	virtual void hide_caret() override { _renderer.hide_caret(); }
+
+	// properties_window_i
 	virtual property_grid_i* pg() const override { return _pg.get(); }
 
-	virtual std::optional<LRESULT> window_proc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) override
+	std::optional<LRESULT> on_window_proc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 	{
-		auto lr = base::window_proc(hwnd, msg, wparam, lparam);
-		if (lr)
-			return lr;
-
 		if (msg == WM_SIZE)
 		{
 			_pg->set_bounds(client_rect());
@@ -53,8 +67,9 @@ public:
 
 			mouse_button button = (msg == WM_LBUTTONDOWN) ? edge::mouse_button::left : edge::mouse_button::right;
 			modifier_key mks = get_modifier_keys();
-			auto pd = this->pointp_to_pointd(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
-			edge::mouse_ud_args ma = { button, mks, pd };
+			auto pp = POINT{ GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam) };
+			auto pd = this->pointp_to_pointd(pp);
+			edge::mouse_ud_args ma = { button, mks, pp, pd };
 			bool handled = _pg->on_mouse_down(ma);
 			if (handled)
 				return 0;
@@ -65,8 +80,9 @@ public:
 		{
 			mouse_button button = (msg == WM_LBUTTONUP) ? edge::mouse_button::left : edge::mouse_button::right;
 			modifier_key mks = get_modifier_keys();
-			auto pd = this->pointp_to_pointd(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
-			edge::mouse_ud_args ma = { button, mks, pd };
+			auto pp = POINT{ GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam) };
+			auto pd = this->pointp_to_pointd(pp);
+			edge::mouse_ud_args ma = { button, mks, pp, pd };
 			bool handled = _pg->on_mouse_up(ma);
 			if (handled)
 				return 0;
@@ -123,12 +139,10 @@ public:
 		return std::nullopt;
 	}
 
-	virtual void render (const d2d_render_args& ra) const override
+	void on_render (ID2D1DeviceContext* dc)
 	{
-		_pg->render(ra);
+		_pg->render(dc);
 	}
-
-	// TODO: handle scrollbars
 };
 
 std::unique_ptr<properties_window_i> properties_window_factory (const properties_window_create_params& cps)

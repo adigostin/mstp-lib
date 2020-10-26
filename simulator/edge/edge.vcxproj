@@ -23,19 +23,20 @@
     <ClInclude Include="collections.h" />
     <ClInclude Include="object.h" />
     <ClInclude Include="events.h" />
-    <ClInclude Include="edge_win32.h" />
+    <ClInclude Include="edge.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="reflection.h" />
     <ClInclude Include="com_ptr.h" />
-    <ClInclude Include="d2d_window.h" />
+    <ClInclude Include="d2d_renderer.h" />
     <ClInclude Include="property_grid.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="text_editor.h" />
     <ClInclude Include="text_layout.h" />
     <ClInclude Include="utility_functions.h" />
+    <ClInclude Include="win32_window_i.h" />
     <ClInclude Include="window.h" />
     <ClInclude Include="xml_serializer.h" />
-    <ClInclude Include="zoomable_window.h" />
+    <ClInclude Include="zoomer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="rassert.cpp" />
@@ -49,7 +50,7 @@
       <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </ForcedIncludeFiles>
     </ClCompile>
-    <ClCompile Include="edge_win32.cpp" />
+    <ClCompile Include="edge.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
@@ -66,14 +67,14 @@
       <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </ForcedIncludeFiles>
     </ClCompile>
-    <ClCompile Include="d2d_window.cpp" />
+    <ClCompile Include="d2d_renderer.cpp" />
     <ClCompile Include="property_grid.cpp" />
     <ClCompile Include="text_editor.cpp" />
     <ClCompile Include="text_layout.cpp" />
     <ClCompile Include="utility_functions.cpp" />
     <ClCompile Include="window.cpp" />
     <ClCompile Include="xml_serializer.cpp" />
-    <ClCompile Include="zoomable_window.cpp" />
+    <ClCompile Include="zoomer.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
@@ -181,6 +182,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -201,6 +203,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -30,12 +30,12 @@ public:
 		if (button != mouse_button::left)
 			return handled(true); // discard it
 
-		auto firstBridge = static_cast<bridge*>(_selection->objects()[0]); assert (firstBridge != nullptr);
+		auto firstBridge = static_cast<bridge*>(_selection->objects()[0]); rassert (firstBridge != nullptr);
 		_first_bridge_initial_location = firstBridge->location();
 
 		for (auto o : _selection->objects())
 		{
-			auto b = dynamic_cast<bridge*>(o); assert (b != nullptr);
+			auto b = dynamic_cast<bridge*>(o); rassert (b != nullptr);
 			_infos.push_back ({ b, b->location() - firstBridge->location() });
 		}
 

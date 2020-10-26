@@ -5,7 +5,6 @@
 #include "pch.h"
 #include "edit_state.h"
 #include "bridge.h"
-#include "edge_win32.h"
 
 class create_bridge_es : public edit_state
 {

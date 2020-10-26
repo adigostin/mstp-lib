@@ -35,37 +35,29 @@ namespace edge
 			, _editorBounds(rect)
 			, _lr_padding(lr_padding)
 		{
-			assert (rect.right - rect.left >= lr_padding);
+			rassert (rect.right - rect.left >= lr_padding);
 			auto buffer_size_chars = MultiByteToWideChar (CP_UTF8, 0, text.data(), (int)text.size(), nullptr, 0);
 			_text.resize (buffer_size_chars + 1);
 			MultiByteToWideChar (CP_UTF8, 0, text.data(), (int)text.size(), _text.data(), buffer_size_chars);
 			_text.resize (buffer_size_chars);
 			_text_layout = text_layout_with_metrics (_dwrite_factory, _format, _text);
-			/*
-			_transform = GetTransformToProjectCoords(e);
-			_horzAlignment = (e->GetHorzAlignmentPD() != nullptr) ? e->GetHorzAlignmentPD()->Get(e) : HorzAlignmentLeft;
-			_vertAlignment = (e->GetVertAlignmentPD() != nullptr) ? e->GetVertAlignmentPD()->Get(e) : VertAlignmentTop;
-			*/
 			extend_editor_bounds();
 
 			set_caret_pos (_text.size(), true);
 			set_caret_screen_location_from_caret_pos();
-
-			//_window->GetZoomOrOriginChanged().AddHandler (&TextEditor::OnZoomOrOriginChanged, this);
 
 			invalidate ();
 		}
 
 		~text_editor()
 		{
-			//_window->GetZoomOrOriginChanged().RemoveHandler (&TextEditor::OnZoomOrOriginChanged, this);
 			_window->invalidate(_editorBounds);
 			_window->hide_caret();
 		}
 
 		void set_caret_pos (size_t pos, bool keepSelectionOrigin)
 		{
-			assert ((pos >= 0) && (pos <= _text.size()));
+			rassert ((pos >= 0) && (pos <= _text.size()));
 
 			if (keepSelectionOrigin == false)
 			{
@@ -98,7 +90,7 @@ namespace edge
 			if (_caret_pos > 0)
 				x = text_layout_with_metrics (_dwrite_factory, _format, { _text.data(), _caret_pos }).width();
 
-			auto dpi = ::GetDpiForWindow(_window->hwnd());
+			auto dpi = _window->dpi();
 			static constexpr float caret_width_not_aligned = 1.5f;
 			float pixel_width = 96.0f / dpi;
 			auto caret_width = roundf(caret_width_not_aligned / pixel_width) * pixel_width;
@@ -111,15 +103,7 @@ namespace edge
 			b = align_to_pixel(b, dpi);
 			_window->show_caret(b, D2D1::ColorF(_text_argb & 0x00FF'FFFF));
 		}
-		/*
-		// static
-		void TextEditor::OnZoomOrOriginChanged (void* callbackArg, ID2DZoomableWindow* window)
-		{
-			window;  // Avoid Reporting unreferenced formal parameter
-			auto editor = static_cast<TextEditor*>(callbackArg);
-			editor->set_caret_screen_location_from_caret_pos();
-		}
-		*/
+
 		size_t text_pos_at (D2D1_POINT_2F dLocation, bool* isInside = nullptr)
 		{
 			auto textOffset = get_text_location();
@@ -128,7 +112,7 @@ namespace edge
 
 			BOOL trailing, insideText;
 			DWRITE_HIT_TEST_METRICS htm;
-			auto hr = _text_layout->HitTestPoint (locationInEditorCoords.width, locationInEditorCoords.height, &trailing, &insideText, &htm); assert(SUCCEEDED(hr));
+			auto hr = _text_layout->HitTestPoint (locationInEditorCoords.width, locationInEditorCoords.height, &trailing, &insideText, &htm); rassert(SUCCEEDED(hr));
 			auto pos = htm.textPosition;
 			if (trailing)
 				pos++;
@@ -313,11 +297,11 @@ namespace edge
 					size_t selectionStart = std::min (_caret_pos, _selection_origin_pos);
 					size_t charCount = abs((int) _caret_pos - (int) _selection_origin_pos);
 
-					auto hMem = ::GlobalAlloc (GMEM_MOVEABLE, 2 * (charCount + 1)); assert(hMem);
-					wchar_t* mem = (wchar_t*) ::GlobalLock(hMem); assert(mem);
+					auto hMem = ::GlobalAlloc (GMEM_MOVEABLE, 2 * (charCount + 1)); rassert(hMem);
+					wchar_t* mem = (wchar_t*) ::GlobalLock(hMem); rassert(mem);
 					wcsncpy_s (mem, charCount + 1, _text.data() + selectionStart, charCount);
 					mem[charCount] = 0;
-					BOOL bRes = ::GlobalUnlock(hMem); assert (bRes || (GetLastError() == NO_ERROR));
+					BOOL bRes = ::GlobalUnlock(hMem); rassert (bRes || (GetLastError() == NO_ERROR));
 
 					bool putToClipboard = false;
 					if (::OpenClipboard(_window->hwnd()))
@@ -410,7 +394,7 @@ namespace edge
 			if (ch >= 0x20)
 			{
 				if (ch > 0xFFFF)
-					assert(false); // not implemented
+					rassert(false); // not implemented
 
 				wchar_t c = (wchar_t) ch;
 				insert_text_over_selection (&c, 1);

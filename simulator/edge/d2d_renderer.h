@@ -3,17 +3,15 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "window.h"
-#include "utility_functions.h"
+#include "win32_window_i.h"
+#include "com_ptr.h"
 
 namespace edge
 {
-	#pragma warning(push)
-	#pragma warning(disable: 4250) // disable "inherits via dominance" warning
-
-	class d2d_window abstract : public window, public virtual d2d_window_i
+	class d2d_renderer
 	{
-		using base = window;
+		event_manager _em;
+		win32_window_i* const _window;
 		bool _painting = false;
 		bool _forceFullPresentation;
 		com_ptr<IDWriteFactory> const _dwrite_factory;
@@ -44,50 +42,49 @@ namespace edge
 			render_update_rects = 2,
 			full_clear = 4,
 		};
-		//virtual bool GetDebugFlag (debug_flag flag) const = 0;
-		//virtual void SetDebugFlag (debug_flag flag, bool value) = 0;
 
 		debug_flag _debug_flags = (debug_flag)0; //debug_flag::render_frame_durations_and_fps;
 		com_ptr<IDWriteTextFormat> _debug_text_format;
 
 	public:
-		d2d_window (DWORD exStyle, DWORD style,
-				   const RECT& rect, HWND hWndParent, int child_control_id,
-				   ID3D11DeviceContext* d3d_dc, IDWriteFactory* dwrite_factory);
-		virtual ~d2d_window();
+		d2d_renderer (win32_window_i* window, ID3D11DeviceContext* d3d_dc, IDWriteFactory* dwrite_factory);
+		d2d_renderer(const d2d_renderer&) = delete;
+		d2d_renderer& operator=(const d2d_renderer&) = delete;
+		~d2d_renderer();
 
+		win32_window_i* window() const { return _window; }
+		ID2D1DeviceContext* dc() const { return _d2d_dc; }
 		ID3D11DeviceContext* d3d_dc() const { return _d3d_dc; }
-
-		// d2d_window_i
-		virtual ID2D1DeviceContext* dc() const { return _d2d_dc; }
-		virtual IDWriteFactory* dwrite_factory() const override { return _dwrite_factory; }
-		virtual void show_caret (const D2D1_RECT_F& bounds, const D2D1_COLOR_F& color, const D2D1_MATRIX_3X2_F* transform = nullptr) override;
-		virtual void hide_caret() override;
-
+		IDWriteFactory* dwrite_factory() const { return _dwrite_factory; }
+		void show_caret (const D2D1_RECT_F& bounds, const D2D1_COLOR_F& color, const D2D1_MATRIX_3X2_F* transform = nullptr);
+		void hide_caret();
 		float fps();
 		float average_render_duration();
 
-	protected:
-		virtual std::optional<LRESULT> window_proc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) override;
-		virtual void create_render_resources (const d2d_render_args& ra) { }
-		virtual void render (const d2d_render_args& ra) const;
-		virtual void release_render_resources (const d2d_render_args& ra) { }
+		struct before_render_e : event<before_render_e, ID2D1DeviceContext*> { };
+		struct        render_e : event<       render_e, ID2D1DeviceContext*> { };
+		struct  after_render_e : event< after_render_e, ID2D1DeviceContext*> { };
+		struct dc_releasing_e : event<dc_releasing_e, ID2D1DeviceContext*> { };
+		struct dc_recreated_e : event<dc_recreated_e, ID2D1DeviceContext*> { };
 
-		virtual void d2d_dc_releasing (ID2D1DeviceContext* dc) { }
-		virtual void d2d_dc_recreated (ID2D1DeviceContext* dc) { }
+		before_render_e::subscriber before_render() { return before_render_e::subscriber(_em); }
+		render_e::subscriber render() { return render_e::subscriber(_em); }
+		after_render_e::subscriber after_render() { return after_render_e::subscriber(_em); }
+		dc_releasing_e::subscriber dc_releasing() { return dc_releasing_e::subscriber(_em); }
+		dc_recreated_e::subscriber dc_recreated() { return dc_recreated_e::subscriber(_em); }
 
 	private:
+		void render_no_handlers (ID2D1DeviceContext* dc) const;
 		void invalidate_caret();
 		static void CALLBACK on_blink_timer (HWND Arg1, UINT Arg2, UINT_PTR Arg3, DWORD Arg4);
 		UINT_PTR timer_id_from_window() const;
-		static d2d_window* window_from_timer_id (UINT_PTR);
+		static d2d_renderer* window_from_timer_id (UINT_PTR);
 		void create_d2d_dc();
 		void release_d2d_dc();
 		void process_wm_paint();
 		void process_wm_set_focus();
 		void process_wm_kill_focus();
 		void process_wm_size (SIZE client_size_pixels, D2D1_SIZE_F client_size_dips);
+		std::optional<LRESULT> on_window_proc (HWND, UINT msg, WPARAM wparam, LPARAM lparam);
 	};
-
-	#pragma warning(pop)
 }

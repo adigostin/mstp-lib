@@ -24,8 +24,8 @@ struct mac_address_property_traits
 {
 	static const char type_name[];
 	using value_t = mac_address;
-	static void to_string (mac_address from, edge::out_sstream_i* to);
-	static void from_string (std::string_view from, mac_address& to);
+	static void to_string (mac_address from, edge::out_sstream_i* to, const edge::string_convert_context_i*);
+	static void from_string (std::string_view from, mac_address& to, const edge::string_convert_context_i*);
 };
 using mac_address_p = edge::static_value_property<mac_address_property_traits>;
 
@@ -221,6 +221,6 @@ public:
 	static const typed_object_collection_property<port> ports_prop;
 
 	static const property* const _properties[];
-	static const xtype<size_property_traits, size_property_traits, mac_address_property_traits> _type;
+	static const xtype<bridge, size_property_traits, size_property_traits, mac_address_property_traits> _type;
 	virtual const edge::concrete_type* type() const override { return &_type; }
 };

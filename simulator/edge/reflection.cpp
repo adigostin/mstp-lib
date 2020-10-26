@@ -29,14 +29,14 @@ namespace edge
 		: _message(make_string(str, type_name))
 	{ }
 
-	std::string value_property::get_to_string (const object* from) const
+	std::string value_property::get_to_string (const object* from, const string_convert_context_i* context) const
 	{
 		struct oss : out_sstream_i
 		{
 			std::string buffer;
 			virtual void write (const char* data, size_t size) override { buffer.append(data, size); }
 		} s;
-		this->get_to_string(from, &s);
+		this->get_to_string(from, &s, context);
 		return std::move(s.buffer);
 	}
 
@@ -44,12 +44,12 @@ namespace edge
 
 	const char bool_property_traits::type_name[] = "bool";
 
-	void bool_property_traits::to_string (value_t from, out_sstream_i* to)
+	void bool_property_traits::to_string (value_t from, out_sstream_i* to, const string_convert_context_i* context)
 	{
 		to->write(from ? "True" : "False");
 	}
 
-	void bool_property_traits::from_string (std::string_view from, value_t& to)
+	void bool_property_traits::from_string (std::string_view from, value_t& to, const string_convert_context_i* context)
 	{
 		if ((from.size() == 4) && (tolower(from[0]) == 't') && (tolower(from[1]) == 'r') && (tolower(from[2]) == 'u') && (tolower(from[3]) == 'e'))
 		{
@@ -70,7 +70,7 @@ namespace edge
 
 	extern const char int32_type_name[] = "int32";
 
-	template<> void int32_property_traits::to_string (value_t from, out_sstream_i* to)
+	template<> void int32_property_traits::to_string (value_t from, out_sstream_i* to, const string_convert_context_i* context)
 	{
 		char buffer[16];
 		#ifdef _MSC_VER
@@ -81,7 +81,7 @@ namespace edge
 		to->write(buffer);
 	}
 
-	template<> void int32_property_traits::from_string (std::string_view from, int32_t& to)
+	template<> void int32_property_traits::from_string (std::string_view from, value_t& to, const string_convert_context_i* context)
 	{
 		if (from.empty())
 			throw string_convert_exception(from, type_name);
@@ -99,15 +99,15 @@ namespace edge
 
 	extern const char uint8_type_name[] = "uint8";
 
-	template<> void uint8_property_traits::to_string (value_t from, out_sstream_i* to)
+	template<> void uint8_property_traits::to_string (value_t from, out_sstream_i* to, const string_convert_context_i* context)
 	{
-		return uint32_property_traits::to_string(from, to);
+		return uint32_property_traits::to_string(from, to, context);
 	}
 
-	template<> void uint8_property_traits::from_string (std::string_view from, uint8_t& to)
+	template<> void uint8_property_traits::from_string (std::string_view from, value_t& to, const string_convert_context_i* context)
 	{
 		uint32_t value;
-		uint32_property_traits::from_string(from, value);
+		uint32_property_traits::from_string(from, value, context);
 		if (value > 0xFF)
 			throw std::range_error("Value out of range (expected 0..255)");
 		to = (uint8_t)value;
@@ -117,7 +117,7 @@ namespace edge
 
 	extern const char uint32_type_name[] = "uint32";
 
-	template<> void uint32_property_traits::to_string (value_t from, out_sstream_i* to)
+	template<> void uint32_property_traits::to_string (value_t from, out_sstream_i* to, const string_convert_context_i* context)
 	{
 		char buffer[16];
 		#ifdef _MSC_VER
@@ -128,7 +128,7 @@ namespace edge
 		to->write(buffer);
 	}
 
-	template<> void uint32_property_traits::from_string (std::string_view from, uint32_t& to)
+	template<> void uint32_property_traits::from_string (std::string_view from, value_t& to, const string_convert_context_i* context)
 	{
 		if (from.empty())
 			throw string_convert_exception(from, type_name);
@@ -146,7 +146,7 @@ namespace edge
 
 	extern const char uint64_type_name[] = "uint64";
 
-	template<> void uint64_property_traits::to_string (value_t from, out_sstream_i* to)
+	template<> void uint64_property_traits::to_string (value_t from, out_sstream_i* to, const string_convert_context_i* context)
 	{
 		char buffer[32];
 		#ifdef _MSC_VER
@@ -157,7 +157,7 @@ namespace edge
 		to->write(buffer);
 	}
 
-	template<> void uint64_property_traits::from_string (std::string_view from, uint64_t& to)
+	template<> void uint64_property_traits::from_string (std::string_view from, value_t& to, const string_convert_context_i* context)
 	{
 		if (from.empty())
 			throw string_convert_exception(from, type_name);
@@ -175,15 +175,15 @@ namespace edge
 
 	extern const char size_type_name[] = "size_t";
 
-	template<> void size_property_traits::to_string (value_t from, out_sstream_i* to)
+	template<> void size_property_traits::to_string (value_t from, out_sstream_i* to, const string_convert_context_i* context)
 	{
-		uint32_property_traits::to_string((uint32_t)from, to);
+		uint32_property_traits::to_string((uint32_t)from, to, context);
 	}
 
-	template<> void size_property_traits::from_string (std::string_view from, size_t&to)
+	template<> void size_property_traits::from_string (std::string_view from, value_t& to, const string_convert_context_i* context)
 	{
 		uint32_t val;
-		uint32_property_traits::from_string (from, val);
+		uint32_property_traits::from_string (from, val, context);
 		to = val;
 	}
 
@@ -191,7 +191,7 @@ namespace edge
 
 	extern const char float_type_name[] = "float";
 
-	template<> void float_property_traits::to_string (value_t from, out_sstream_i* to)
+	template<> void float_property_traits::to_string (value_t from, out_sstream_i* to, const string_convert_context_i* context)
 	{
 		char buffer[32];
 		#ifdef _MSC_VER
@@ -202,7 +202,7 @@ namespace edge
 		to->write(buffer);
 	}
 
-	template<> void float_property_traits::from_string (std::string_view from, float& to)
+	template<> void float_property_traits::from_string (std::string_view from, float& to, const string_convert_context_i* context)
 	{
 		if (from.empty())
 			throw string_convert_exception(from, type_name);
@@ -229,14 +229,14 @@ namespace edge
 		{ 0, 0 },
 	};
 
-	std::string value_collection_property::get_to_string (const object* from_obj, size_t from_index) const
+	std::string value_collection_property::get_to_string (const object* from_obj, size_t from_index, const string_convert_context_i* context) const
 	{
 		struct oss : out_sstream_i
 		{
 			std::string buffer;
 			virtual void write (const char* data, size_t size) override { buffer.append(data, size); }
 		} s;
-		this->get_to_string (from_obj, from_index, &s);
+		this->get_to_string (from_obj, from_index, &s, context);
 		return std::move(s.buffer);
 	}
 

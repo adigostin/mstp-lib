@@ -9,8 +9,8 @@
 
 namespace edge
 {
-	type::type (const char* name, const type* base_type, std::span<const property* const> props) noexcept
-		: name(name), base_type(base_type), props(props)
+	type::type (const type* base_type, std::span<const property* const> props) noexcept
+		: base_type(base_type), props(props)
 	{ }
 
 	void type::add_properties (std::vector<const property*>& properties) const
@@ -76,7 +76,7 @@ namespace edge
 	std::vector<const concrete_type*>* concrete_type::_known_types;
 
 	concrete_type::concrete_type (const char* name, const type* base_type, std::span<const property* const> props) noexcept
-		: base (name, base_type, props)
+		: base (base_type, props), name(name)
 	{
 		// The C++ standard guarantees that "known_types" (a POD) is zeroed before any constructor is executed.
 		if (_known_types == nullptr)
@@ -98,7 +98,7 @@ namespace edge
 
 	std::unique_ptr<object> concrete_type::create() const
 	{
-		return this->create({ });
+		return this->create({ }, nullptr);
 	}
 
 	const std::vector<const concrete_type*>& concrete_type::known_types() { return *_known_types; }
@@ -140,7 +140,7 @@ namespace edge
 		this->event_invoker<property_changed_e>()(this, args);
 	}
 
-	const type object::_type = { "object", nullptr, { } };
+	const type object::_type = { nullptr, { } };
 
 	// ========================================================================
 	// parent_i

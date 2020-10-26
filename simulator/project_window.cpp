@@ -29,19 +29,8 @@ static COMDLG_FILTERSPEC const ProjectFileDialogFileTypes[] =
 };
 static const wchar_t ProjectFileExtensionWithoutDot[] = L"stp";
 
-static const wnd_class_params class_params =
+class project_window : event_manager, public project_window_i
 {
-	ProjectWindowWndClassName,      // lpszClassName
-	CS_DBLCLKS,                     // style
-	MAKEINTRESOURCE(IDR_MAIN_MENU), // lpszMenuName
-	MAKEINTRESOURCE(IDI_DESIGNER),  // lpIconName
-	MAKEINTRESOURCE(IDI_DESIGNER),  // lpIconSmName
-};
-
-class project_window : public window, public virtual project_window_i
-{
-	using base = window;
-
 	simulator_app_i*               const _app;
 	com_ptr<ID3D11DeviceContext1>  const _d3d_dc;
 	com_ptr<IDWriteFactory>        const _dwrite_factory;
@@ -51,6 +40,7 @@ class project_window : public window, public virtual project_window_i
 	std::unique_ptr<properties_window_i> _pw;
 	std::unique_ptr<log_window_i>        _log_window;
 	std::unique_ptr<vlan_window_i>       _vlanWindow;
+	HWND _hwnd;
 	RECT _restore_bounds;
 	uint32_t _selectedVlanNumber = 1;
 	float _pw_desired_width_dips;
@@ -63,16 +53,20 @@ class project_window : public window, public virtual project_window_i
 
 public:
 	project_window (const project_window_create_params& create_params)
-		: window(class_params, 0, WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-				 CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr)
-		, _app(create_params.app)
+		: _app(create_params.app)
 		, _project(create_params.project)
 		, _selection(create_params.app->selection_factory()(create_params.project.get()))
 		, _selectedVlanNumber(create_params.selectedVlan)
 		, _d3d_dc(create_params.d3d_dc)
 		, _dwrite_factory(create_params.dwrite_factory)
 	{
-		assert (create_params.selectedVlan >= 1);
+		rassert (create_params.selectedVlan >= 1);
+
+		register_class(_app->GetHInstance());
+		_hwnd = ::CreateWindowEx(0, ProjectWindowWndClassName, L"", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+			CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr,
+			_app->GetHInstance(), nullptr); rassert(_hwnd);
+		SetWindowLongPtr(_hwnd, GWLP_USERDATA, (LONG_PTR)this);
 
 		int nCmdShow = create_params.nCmdShow;
 		bool read = TryGetSavedWindowLocation (&_restore_bounds, &nCmdShow);
@@ -86,9 +80,9 @@ public:
 		}
 		::ShowWindow (hwnd(), nCmdShow);
 
-		_pw_desired_width_dips = lengthp_to_lengthd(client_width_pixels()) * 20 / 100;
+		_pw_desired_width_dips = client_width() * 20 / 100;
 		TryReadRegFloat (RegValueNamePropertiesWindowWidth, _pw_desired_width_dips);
-		_log_desired_width_dips = lengthp_to_lengthd(client_width_pixels()) * 30 / 100;
+		_log_desired_width_dips = client_width() * 30 / 100;
 		TryReadRegFloat (RegValueNameLogWindowWidth, _log_desired_width_dips);
 
 		if (create_params.show_property_grid)
@@ -134,7 +128,32 @@ public:
 		_selection = nullptr;
 	}
 
-	virtual HWND hwnd() const override { return base::hwnd(); }
+	static void register_class(HINSTANCE hinstance)
+	{
+		WNDCLASSEX wcex;
+		BOOL bRes = ::GetClassInfoEx (hinstance, ProjectWindowWndClassName, &wcex);
+		if (!bRes)
+		{
+			wcex.cbSize = sizeof(wcex);
+			wcex.style = CS_DBLCLKS;
+			wcex.lpfnWndProc = &window_proc_static;
+			wcex.cbClsExtra = 0;
+			wcex.cbWndExtra = 0;
+			wcex.hInstance = hinstance;
+			wcex.hIcon = ::LoadIcon(hinstance, MAKEINTRESOURCE(IDI_DESIGNER));
+			wcex.hCursor = ::LoadCursor (nullptr, IDC_ARROW);
+			wcex.hbrBackground = nullptr;
+			wcex.lpszMenuName = MAKEINTRESOURCE(IDR_MAIN_MENU);
+			wcex.lpszClassName = ProjectWindowWndClassName;
+			wcex.hIconSm = ::LoadIcon(hinstance, MAKEINTRESOURCE(IDI_DESIGNER));
+			auto atom = ::RegisterClassEx (&wcex);
+			rassert (atom != 0);
+		}
+	}
+
+	virtual HWND hwnd() const override { return _hwnd; }
+
+	virtual window_proc_e::subscriber window_proc() override { throw edge::not_implemented_exception(); }
 
 	LONG splitter_width_pixels() const
 	{
@@ -152,7 +171,7 @@ public:
 
 	void create_property_grid()
 	{
-		properties_window_create_params cps = { hwnd(), pg_restricted_rect(), _d3d_dc, _dwrite_factory };
+		properties_window_create_params cps = { hwnd(), pg_restricted_rect(), _app, _d3d_dc, _dwrite_factory };
 		_pw = _app->properties_window_factory()(cps);
 		set_selection_to_pg();
 		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
@@ -174,7 +193,7 @@ public:
 
 	void create_log_window()
 	{
-		_log_window = log_window_factory (hwnd(), log_restricted_rect(), _d3d_dc, _dwrite_factory, _selection.get(), _project);
+		_log_window = log_window_factory (hwnd(), log_restricted_rect(), _d3d_dc, _dwrite_factory, _selection.get(), _project, _app);
 		SetMainMenuItemCheck (ID_VIEW_STPLOG, true);
 	}
 
@@ -283,18 +302,29 @@ public:
 		::SetMenuItemInfo (menu, item, FALSE, &mii);
 	}
 
-	std::optional<LRESULT> window_proc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) final
+	static LRESULT CALLBACK window_proc_static (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 	{
-		auto base_result = base::window_proc (hwnd, msg, wParam, lParam);
-		if (base_result)
-			return base_result;
+		if (!assert_function_running)
+		{
+			if (auto wnd = reinterpret_cast<project_window*>(GetWindowLongPtr(hwnd, GWLP_USERDATA)))
+			{
+				auto result = wnd->window_proc (msg, wparam, lparam);
+				if (result)
+					return result.value();
+			}
+		}
 
+		return ::DefWindowProc(hwnd, msg, wparam, lparam);
+	}
+
+	std::optional<LRESULT> window_proc (UINT msg, WPARAM wParam, LPARAM lParam)
+	{
 		if (msg == WM_DPICHANGED)
 		{
 			if (!_restoring_size_from_registry)
 			{
 				auto r = (RECT*) lParam;
-				::SetWindowPos (hwnd, nullptr, r->left, r->top, r->right - r->left, r->bottom - r->top, SWP_NOZORDER | SWP_NOACTIVATE);
+				::SetWindowPos (_hwnd, nullptr, r->left, r->top, r->right - r->left, r->bottom - r->top, SWP_NOZORDER | SWP_NOACTIVATE);
 			}
 			return std::nullopt;
 		}
@@ -313,16 +343,16 @@ public:
 
 		if (msg == WM_SIZE)
 		{
-			process_wm_size (hwnd, wParam, { LOWORD(lParam), HIWORD(lParam) });
+			process_wm_size (_hwnd, wParam, { LOWORD(lParam), HIWORD(lParam) });
 			return std::nullopt;
 		}
 
 		if (msg == WM_MOVE)
 		{
 			WINDOWPLACEMENT wp = { sizeof(wp) };
-			::GetWindowPlacement (hwnd, &wp);
+			::GetWindowPlacement (_hwnd, &wp);
 			if (wp.showCmd == SW_NORMAL)
-				::GetWindowRect (hwnd, &_restore_bounds);
+				::GetWindowRect (_hwnd, &_restore_bounds);
 			return std::nullopt;
 		}
 
@@ -337,13 +367,13 @@ public:
 
 		if (msg == WM_SETCURSOR)
 		{
-			if (((HWND) wParam == hwnd) && (LOWORD (lParam) == HTCLIENT))
+			if (((HWND) wParam == _hwnd) && (LOWORD (lParam) == HTCLIENT))
 			{
 				POINT pt;
 				BOOL bRes = ::GetCursorPos (&pt);
 				if (bRes)
 				{
-					bRes = ::ScreenToClient (hwnd, &pt); assert(bRes);
+					bRes = ::ScreenToClient (_hwnd, &pt); rassert(bRes);
 					::SetCursor(cursor_at(pt));
 					return 0;
 				}
@@ -405,10 +435,10 @@ public:
 			::SetCapture(hwnd());
 			return handled(true);
 		}
-		else if ((_log_window != nullptr) && (pp.x >= _log_window->GetX() - splitter_width_pixels()) && (pp.x < _log_window->GetX()))
+		else if ((_log_window != nullptr) && (pp.x >= _log_window->x_pixels() - splitter_width_pixels()) && (pp.x < _log_window->x_pixels()))
 		{
 			_window_being_resized = tool_window::log;
-			_resize_offset = _log_window->GetX() - pp.x;
+			_resize_offset = _log_window->x_pixels() - pp.x;
 			::SetCapture(hwnd());
 			return handled(true);
 		}
@@ -479,7 +509,7 @@ public:
 		if (_pw && (pp.x >= _pw->width_pixels()) && (pp.x < _pw->width_pixels() + splitter_width_pixels()))
 			return LoadCursor(nullptr, IDC_SIZEWE);
 
-		if ((_log_window != nullptr) && (pp.x >= _log_window->GetX() - splitter_width_pixels()) && (pp.x < _log_window->GetX()))
+		if ((_log_window != nullptr) && (pp.x >= _log_window->x_pixels() - splitter_width_pixels()) && (pp.x < _log_window->x_pixels()))
 			return LoadCursor(nullptr, IDC_SIZEWE);
 
 		return LoadCursor(nullptr, IDC_ARROW);
@@ -503,7 +533,7 @@ public:
 
 		if (_log_window != nullptr)
 		{
-			rect.right = _log_window->GetX();
+			rect.right = _log_window->x_pixels();
 			rect.left = rect.right - splitter_width_pixels();
 			rect.top = 0;
 			rect.bottom = client_height_pixels();
@@ -776,7 +806,7 @@ public:
 
 	virtual void select_vlan (uint32_t vlanNumber) override final
 	{
-		assert ((vlanNumber > 0) && (vlanNumber <= 4094));
+		rassert ((vlanNumber > 0) && (vlanNumber <= 4094));
 
 		if (_selectedVlanNumber != vlanNumber)
 		{
@@ -921,7 +951,7 @@ public:
 				};
 			}
 
-			_pw->pg()->add_section (first_section_name, objs);
+			_pw->pg()->add_section (first_section_name, objs, _project.get());
 
 			auto first_tree_index = tree_selector(objs.front()).second;
 			bool all_same_tree_index = true;
@@ -944,14 +974,14 @@ public:
 			else
 				ss << " (multiple trees)";
 
-			_pw->pg()->add_section (ss.str().c_str(), trees);
+			_pw->pg()->add_section (ss.str().c_str(), trees, _project.get());
 		}
 		else if (all_of (objs.begin(), objs.end(), is_wire))
 		{
-			_pw->pg()->add_section("Wire Properties", objs);
+			_pw->pg()->add_section("Wire Properties", objs, _project.get());
 		}
 		else
-			assert(false); // not implemented
+			rassert(false); // not implemented
 	}
 };
 

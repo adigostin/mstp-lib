@@ -43,4 +43,3 @@
 #include <wincodec.h>
 #include <Windows.h>
 #include <windowsx.h>
-#include <winrt/Windows.UI.ViewManagement.h>

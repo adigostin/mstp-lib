@@ -18,16 +18,16 @@ namespace edge
 	class serializer : public xml_serializer_i
 	{
 		com_ptr<IXMLDOMDocument> const _doc;
-		void* const _context;
+		string_convert_context_i* const _context;
 
 	public:
-		serializer(IXMLDOMDocument* doc, void* context)
+		serializer(IXMLDOMDocument* doc, string_convert_context_i* context)
 			: _doc(doc), _context(context)
 		{ }
 
 		virtual IXMLDOMDocument* doc() const override final { return _doc; }
 
-		virtual void* context() const override final { return _context; }
+		virtual string_convert_context_i* context() const override final { return _context; }
 
 		com_ptr<IXMLDOMElement> serialize_object_collection (const object* obj, const object_collection_property* prop)
 		{
@@ -97,7 +97,7 @@ namespace edge
 			std::string value;
 			for (size_t i = 0; i < size; i++)
 			{
-				value = prop->get_to_string(obj, i);
+				value = prop->get_to_string(obj, i, _context);
 				com_ptr<IXMLDOMElement> entry_element;
 				hr = _doc->createElement (entry_elem_name, &entry_element); rassert(SUCCEEDED(hr));
 				hr = entry_element->setAttribute (index_attr_name, _variant_t(i)); rassert(SUCCEEDED(hr));
@@ -157,7 +157,7 @@ namespace edge
 				if (is_factory_prop || (value_prop->can_set(obj) && value_prop->changed_from_default(obj)))
 				{
 					auto object_element = object_element_getter();
-					auto value = value_prop->get_to_string(obj);
+					auto value = value_prop->get_to_string(obj, _context);
 					auto hr = object_element->setAttribute(_bstr_t(value_prop->name), _variant_t(value.c_str()));
 					throw_if_failed(hr);
 				}
@@ -191,7 +191,7 @@ namespace edge
 		}
 	};
 
-	std::unique_ptr<xml_serializer_i> create_serializer (IXMLDOMDocument* doc, void* context)
+	std::unique_ptr<xml_serializer_i> create_serializer (IXMLDOMDocument* doc, string_convert_context_i* context)
 	{
 		return std::make_unique<serializer>(doc, context);
 	}
@@ -201,17 +201,17 @@ namespace edge
 	class deserializer : public xml_deserializer_i
 	{
 		std::span<const concrete_type* const> const _known_types;
-		void* const _context;
+		string_convert_context_i* const _context;
 
 	public:
-		deserializer (std::span<const concrete_type* const> known_types, void* context)
+		deserializer (std::span<const concrete_type* const> known_types, string_convert_context_i* context)
 			: _known_types(known_types)
 			, _context(context)
 		{ }
 
 		//static void deserialize_to_internal (IXMLDOMElement* element, object* obj, bool ignore_index_attribute, std::span<const concrete_type* const> known_types);
 
-		static std::unique_ptr<object> create_object (IXMLDOMElement* elem, const concrete_type* type)
+		static std::unique_ptr<object> create_object (IXMLDOMElement* elem, const concrete_type* type, string_convert_context_i* context)
 		{
 			HRESULT hr;
 
@@ -231,7 +231,7 @@ namespace edge
 			std::vector<std::string_view> factory_params;
 			for (auto& str : factory_param_strings)
 				factory_params.push_back(str);
-			auto obj = type->create({ factory_params.data(), factory_params.data() + factory_params.size() });
+			auto obj = type->create({ factory_params.data(), factory_params.data() + factory_params.size() }, context);
 			return obj;
 		}
 
@@ -240,15 +240,15 @@ namespace edge
 			_bstr_t namebstr;
 			auto hr = elem->get_nodeName(namebstr.GetAddress()); rassert(SUCCEEDED(hr));
 			auto name = bstr_to_utf8(namebstr);
-			auto it = std::find_if(_known_types.begin(), _known_types.end(), [&name](const type* t) { return t && (strcmp(t->name, name.c_str()) == 0); });
+			auto it = std::find_if(_known_types.begin(), _known_types.end(), [&name](const concrete_type* t) { return t && (strcmp(t->name, name.c_str()) == 0); });
 			if (it == _known_types.end())
 				rassert(false); // error handling for this not implemented
-			auto obj = create_object(elem, *it);
+			auto obj = create_object(elem, *it, _context);
 			deserialize_to_internal (elem, obj.get());
 			return obj;
 		}
 
-		virtual void* context() const override final
+		virtual string_convert_context_i* context() const override final
 		{
 			return _context;
 		}
@@ -266,10 +266,10 @@ namespace edge
 				_bstr_t namebstr;
 				auto hr = child_elem->get_nodeName(namebstr.GetAddress()); rassert(SUCCEEDED(hr));
 				auto name = bstr_to_utf8(namebstr);
-				auto it = std::find_if(_known_types.begin(), _known_types.end(), [&name](const type* t) { return strcmp(t->name, name.c_str()) == 0; });
+				auto it = std::find_if(_known_types.begin(), _known_types.end(), [&name](const concrete_type* t) { return strcmp(t->name, name.c_str()) == 0; });
 				if (it == _known_types.end())
 					rassert(false); // error handling for this not implemented
-				auto child = create_object(child_elem, *it);
+				auto child = create_object(child_elem, *it, _context);
 				auto child_raw = child.get();
 				collection->append(std::move(child));
 				deserialize_to_internal (child_elem, child_raw);
@@ -292,8 +292,9 @@ namespace edge
 				hr = child_elem->getAttribute(index_attr_name, index_attr_value.GetAddress());
 				if (hr == S_OK)
 				{
-					size_property_traits::from_string(bstr_to_utf8(index_attr_value.bstrVal), index);
-
+					hr = ::VariantChangeType(&index_attr_value, &index_attr_value, VARIANT_NOUSEROVERRIDE, VT_UI4);
+					throw_if_failed(hr);
+					index = index_attr_value.uintVal;
 					hr = child_elem->removeAttribute(index_attr_name);
 					throw_if_failed(hr);
 				}
@@ -306,7 +307,7 @@ namespace edge
 			}
 		}
 
-		static void deserialize_value_collection (IXMLDOMElement* collection_elem, object* obj, const value_collection_property* prop)
+		void deserialize_value_collection (IXMLDOMElement* collection_elem, object* obj, const value_collection_property* prop)
 		{
 			com_ptr<IXMLDOMNode> entry_node;
 			auto hr = collection_elem->get_firstChild(&entry_node); rassert(SUCCEEDED(hr));
@@ -315,17 +316,18 @@ namespace edge
 				com_ptr<IXMLDOMElement> entry_elem = entry_node;
 				_variant_t index_attr_value;
 				hr = entry_elem->getAttribute(index_attr_name, index_attr_value.GetAddress()); rassert(SUCCEEDED(hr));
-				size_t index;
-				size_property_traits::from_string(bstr_to_utf8(index_attr_value.bstrVal), index);
+				hr = ::VariantChangeType(&index_attr_value, &index_attr_value, VARIANT_NOUSEROVERRIDE, VT_UI4);
+				throw_if_failed(hr);
+				size_t index = index_attr_value.uintVal;
 
 				_variant_t value_attr_value;
 				hr = entry_elem->getAttribute(value_attr_name, value_attr_value.GetAddress()); rassert(SUCCEEDED(hr));
 
 				auto value_utf8 = bstr_to_utf8(value_attr_value.bstrVal);
 				if (prop->can_insert_remove())
-					prop->insert_value (value_utf8, obj, index);
+					prop->insert_value (value_utf8, obj, index, _context);
 				else
-					prop->set_value (value_utf8, obj, index);
+					prop->set_value (value_utf8, obj, index, _context);
 
 				hr = entry_node->get_nextSibling(&entry_node); rassert(SUCCEEDED(hr));
 			}
@@ -365,7 +367,7 @@ namespace edge
 					else
 					{
 						auto type = static_cast<const concrete_type*>(obj->type());
-						assert (type == dynamic_cast<const concrete_type*>(obj->type()));
+						rassert (type == dynamic_cast<const concrete_type*>(obj->type()));
 						//bool is_factory_property = std::any_of (type->factory_props().begin(), type->factory_props().end(),
 						//	[&name](const value_property* fp) { return strcmp(name.c_str(), fp->name) == 0; });
 						//if (is_factory_property)
@@ -374,10 +376,10 @@ namespace edge
 						auto value_prop = dynamic_cast<const value_property*>(prop);
 						if (value_prop == nullptr)
 							rassert(false); // error handling for this not implemented
-						value_prop->set_from_string(value, obj);
+						value_prop->set_from_string(value, obj, _context);
 					}
 				}
-				else if (cs && cs->try_deserialize_xml_attribute(name, value))
+				else if (cs && cs->try_deserialize_xml_attribute(this, name, value))
 				{
 				}
 				else
@@ -419,7 +421,7 @@ namespace edge
 					else
 						rassert(false); // error handling for this not implemented
 				}
-				else if (cs && cs->try_deserialize_xml_element(child_elem))
+				else if (cs && cs->try_deserialize_xml_element(this, child_elem))
 				{
 				}
 				else
@@ -556,7 +558,7 @@ namespace edge
 		return hr;
 	}
 
-	std::unique_ptr<xml_deserializer_i> create_deserializer (std::span<const concrete_type* const> known_types, void* context)
+	std::unique_ptr<xml_deserializer_i> create_deserializer (std::span<const concrete_type* const> known_types, string_convert_context_i* context)
 	{
 		return std::make_unique<deserializer>(known_types, context);
 	}

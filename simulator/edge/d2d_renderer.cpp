@@ -3,12 +3,11 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #include "pch.h"
-#include "d2d_window.h"
+#include "d2d_renderer.h"
 #include "utility_functions.h"
 #include "text_layout.h"
 
 using namespace D2D1;
-using namespace winrt::Windows::UI::ViewManagement;
 
 #pragma comment (lib, "d2d1.lib")
 #pragma comment (lib, "dwrite.lib")
@@ -17,26 +16,24 @@ using namespace winrt::Windows::UI::ViewManagement;
 
 namespace edge
 {
-	d2d_window::d2d_window (DWORD exStyle, DWORD style,
-						  const RECT& rect, HWND hWndParent, int child_control_id,
-						  ID3D11DeviceContext* d3d_dc, IDWriteFactory* dwrite_factory)
-		: window(exStyle, style, rect, hWndParent, child_control_id)
+	d2d_renderer::d2d_renderer (win32_window_i* window, ID3D11DeviceContext* d3d_dc, IDWriteFactory* dwrite_factory)
+		: _window(window)
 		, _d3d_dc(d3d_dc)
 		, _dwrite_factory(dwrite_factory)
 	{
 		com_ptr<ID3D11Device> device;
 		d3d_dc->GetDevice(&device);
-		auto hr = device->QueryInterface(IID_PPV_ARGS(&_d3d_device)); assert(SUCCEEDED(hr));
+		auto hr = device->QueryInterface(IID_PPV_ARGS(&_d3d_device)); rassert(SUCCEEDED(hr));
 
-		hr = device->QueryInterface(IID_PPV_ARGS(&_dxgi_device)); assert(SUCCEEDED(hr));
+		hr = device->QueryInterface(IID_PPV_ARGS(&_dxgi_device)); rassert(SUCCEEDED(hr));
 
-		hr = _dxgi_device->GetAdapter(&_dxgi_adapter); assert(SUCCEEDED(hr));
+		hr = _dxgi_device->GetAdapter(&_dxgi_adapter); rassert(SUCCEEDED(hr));
 
-		hr = _dxgi_adapter->GetParent(IID_PPV_ARGS(&_dxgi_factory)); assert(SUCCEEDED(hr));
+		hr = _dxgi_adapter->GetParent(IID_PPV_ARGS(&_dxgi_factory)); rassert(SUCCEEDED(hr));
 
 		DXGI_SWAP_CHAIN_DESC1 desc;
-		desc.Width = std::max (8l, client_width_pixels());
-		desc.Height = std::max (8l, client_height_pixels());
+		desc.Width = std::max (8l, window->client_width_pixels());
+		desc.Height = std::max (8l, window->client_height_pixels());
 		desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
 		desc.Stereo = FALSE;
 		desc.SampleDesc.Count = 1;
@@ -47,62 +44,64 @@ namespace edge
 		desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
 		desc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 		desc.Flags = 0;
-		hr = _dxgi_factory->CreateSwapChainForHwnd (_d3d_device, hwnd(), &desc, nullptr, nullptr, &_swap_chain); assert(SUCCEEDED(hr));
+		hr = _dxgi_factory->CreateSwapChainForHwnd (_d3d_device, window->hwnd(), &desc, nullptr, nullptr, &_swap_chain); rassert(SUCCEEDED(hr));
 		_forceFullPresentation = true;
 
 		create_d2d_dc();
 
 		QueryPerformanceFrequency(&_performance_counter_frequency);
 
-		float font_size = 11.0f * 96 / ::GetDpiForWindow(hwnd());
-		hr = dwrite_factory->CreateTextFormat (L"Courier New", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_CONDENSED, font_size, L"en-US", &_debug_text_format); assert(SUCCEEDED(hr));
+		hr = dwrite_factory->CreateTextFormat (L"Courier New", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_CONDENSED, 11, L"en-US", &_debug_text_format); rassert(SUCCEEDED(hr));
+
+		_window->window_proc().add_handler<&d2d_renderer::on_window_proc>(this);
 	}
 
-	d2d_window::~d2d_window()
+	d2d_renderer::~d2d_renderer()
 	{
+		_window->window_proc().remove_handler<&d2d_renderer::on_window_proc>(this);
 		release_d2d_dc();
 	}
 
-	void d2d_window::create_d2d_dc()
+	void d2d_renderer::create_d2d_dc()
 	{
-		assert (_d2d_dc == nullptr);
+		rassert (_d2d_dc == nullptr);
 
 		com_ptr<IDXGISurface2> dxgiSurface;
-		auto hr = _swap_chain->GetBuffer (0, IID_PPV_ARGS(&dxgiSurface)); assert(SUCCEEDED(hr));
+		auto hr = _swap_chain->GetBuffer (0, IID_PPV_ARGS(&dxgiSurface)); rassert(SUCCEEDED(hr));
 
 		D2D1_CREATION_PROPERTIES cps = { };
 		cps.debugLevel = D2D1_DEBUG_LEVEL_ERROR;
 		cps.options = D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS;
-		hr = D2D1CreateDeviceContext (dxgiSurface, &cps, &_d2d_dc); assert(SUCCEEDED(hr));
+		hr = D2D1CreateDeviceContext (dxgiSurface, &cps, &_d2d_dc); rassert(SUCCEEDED(hr));
 
 		_d2d_dc->SetTextAntialiasMode (D2D1_TEXT_ANTIALIAS_MODE_CLEARTYPE);
 	}
 
-	void d2d_window::release_d2d_dc()
+	void d2d_renderer::release_d2d_dc()
 	{
-		assert (_d2d_dc != nullptr);
+		rassert (_d2d_dc != nullptr);
 		_d2d_dc = nullptr;
 	}
 
-	void d2d_window::render (const d2d_render_args& ra) const
+	void d2d_renderer::render_no_handlers(ID2D1DeviceContext* dc) const
 	{
-		ra.dc->Clear(ra.back_brush->GetColor());
+		dc->Clear({ 0, 0, 0, 1 });
 
-		ra.dc->SetTransform(dpi_transform());
+		dc->SetTransform(_window->dpi_transform());
 
 		com_ptr<ID2D1SolidColorBrush> brush;
 		static constexpr D2D1_COLOR_F red = { 1, 0, 0, 1 };
-		ra.dc->CreateSolidColorBrush (&red, nullptr, &brush);
+		dc->CreateSolidColorBrush (&red, nullptr, &brush);
 
-		auto pw = pixel_width();
+		auto pw = _window->pixel_width();
 
-		auto rect = inflate(client_rect(), -pw);
-		ra.dc->DrawRectangle (&rect, brush, 2 * pw);
-		ra.dc->DrawLine ({ rect.left, rect.top }, { rect.right, rect.bottom }, brush, 2 * pw);
-		ra.dc->DrawLine ({ rect.left, rect.bottom }, { rect.right, rect.top }, brush, 2 * pw);
+		auto rect = inflate(_window->client_rect(), -pw);
+		dc->DrawRectangle (&rect, brush, 2 * pw);
+		dc->DrawLine ({ rect.left, rect.top }, { rect.right, rect.bottom }, brush, 2 * pw);
+		dc->DrawLine ({ rect.left, rect.bottom }, { rect.right, rect.top }, brush, 2 * pw);
 	}
 
-	void d2d_window::process_wm_size (SIZE client_size_pixels, D2D1_SIZE_F client_size_dips)
+	void d2d_renderer::process_wm_size (SIZE client_size_pixels, D2D1_SIZE_F client_size_dips)
 	{
 		if (_swap_chain)
 		{
@@ -113,26 +112,22 @@ namespace edge
 			_swap_chain->GetDesc1(&desc1);
 			if ((desc1.Width != width) || (desc1.Height != height))
 			{
-				this->d2d_dc_releasing(_d2d_dc);
+				_em.event_invoker<dc_releasing_e>()(_d2d_dc);
 				release_d2d_dc();
-				auto hr = _swap_chain->ResizeBuffers (0, width, height, DXGI_FORMAT_UNKNOWN, 0); assert(SUCCEEDED(hr));
+				auto hr = _swap_chain->ResizeBuffers (0, width, height, DXGI_FORMAT_UNKNOWN, 0); rassert(SUCCEEDED(hr));
 				create_d2d_dc();
-				this->d2d_dc_recreated(_d2d_dc);
+				_em.event_invoker<dc_recreated_e>()(_d2d_dc);
 			}
 		}
 	}
 
-	std::optional<LRESULT> d2d_window::window_proc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+	std::optional<LRESULT> d2d_renderer::on_window_proc (HWND, UINT msg, WPARAM wparam, LPARAM lparam)
 	{
-		auto res = base::window_proc(hwnd, msg, wParam, lParam);
-		if (res)
-			return res;
-
 		if (msg == WM_SIZE)
 		{
-			SIZE client_size_pixels = { LOWORD(lParam), HIWORD(lParam) };
-			D2D1_SIZE_F client_size_dips = sizep_to_sized(client_size_pixels);
-			this->process_wm_size(client_size_pixels, client_size_dips);
+			SIZE client_size_pixels = { LOWORD(lparam), HIWORD(lparam) };
+			D2D1_SIZE_F client_size_dips = _window->sizep_to_sized(client_size_pixels);
+			process_wm_size(client_size_pixels, client_size_dips);
 			return std::nullopt;
 		}
 
@@ -160,52 +155,24 @@ namespace edge
 		return std::nullopt;
 	}
 
-	void d2d_window::process_wm_paint()
+	void d2d_renderer::process_wm_paint()
 	{
 		HRESULT hr;
 
-		if (_painting)
-		{
-			// We get here when we're called recursively. The only such case I've seen so far is when
-			// an assertion fails in code called from this function. We don't want to restart painting
-			// cause we'll end up with a stack overflow, so let's return without attempting anything "smart".
-			return;
-		}
-
-		UISettings ui_settings;
-
-		d2d_render_args ra;
-		ra.dc = _d2d_dc;
-		ra.dpi = ::GetDpiForWindow(hwnd());
-
-		auto cv = ui_settings.GetColorValue(UIColorType::Background);
-		D2D1_COLOR_F back = { cv.R / 255.0f, cv.G / 255.0f, cv.B / 255.0f, cv.A / 255.0f };
-		_d2d_dc->CreateSolidColorBrush (back, &ra.back_brush);
-
-		cv = ui_settings.GetColorValue(UIColorType::Foreground);
-		D2D1_COLOR_F fore = { cv.R / 255.0f, cv.G / 255.0f, cv.B / 255.0f, cv.A / 255.0f };
-		_d2d_dc->CreateSolidColorBrush (fore, &ra.fore_brush);
-
-		cv = ui_settings.GetColorValue(UIColorType::Accent);
-		D2D1_COLOR_F back_selected = { cv.R / 255.0f, cv.G / 255.0f, cv.B / 255.0f, cv.A / 255.0f };
-		_d2d_dc->CreateSolidColorBrush (back_selected, &ra.selected_back_brush_focused);
-
-		_d2d_dc->CreateSolidColorBrush (interpolate(back, fore, 75), &ra.selected_back_brush_not_focused);
-
-		// Call this before calculating the update rects, to allow derived classed to invalidate stuff.
-		this->create_render_resources (ra);
+		// Call this before calculating the update rects, to allow listeners to invalidate stuff before rendering.
+		_em.event_invoker<before_render_e>()(_d2d_dc);
 
 		LARGE_INTEGER start_time;
-		BOOL bRes = QueryPerformanceCounter(&start_time); assert(bRes);
+		BOOL bRes = QueryPerformanceCounter(&start_time); rassert(bRes);
 
 		D2D1_RECT_F frameDurationAndFpsRect;
-		auto _clientSizeDips = client_size();
+		auto _clientSizeDips = _window->client_size();
 		frameDurationAndFpsRect.left   = round (_clientSizeDips.width - 75) + 0.5f;
 		frameDurationAndFpsRect.top    = round (_clientSizeDips.height - 28) + 0.5f;
 		frameDurationAndFpsRect.right  = _clientSizeDips.width - 0.5f;
 		frameDurationAndFpsRect.bottom = _clientSizeDips.height - 0.5f;
 		if ((int) _debug_flags & (int) debug_flag::render_frame_durations_and_fps)
-			this->invalidate (frameDurationAndFpsRect);
+			_window->invalidate (frameDurationAndFpsRect);
 		/*
 		#pragma region Calculate _updateRects
 		{
@@ -292,7 +259,7 @@ namespace edge
 		// wait for the user to press Alt before finally displaying it (go figure!)
 
 		PAINTSTRUCT ps;
-		::BeginPaint(hwnd(), &ps); // this will also hide the caret, if shown.
+		::BeginPaint(_window->hwnd(), &ps); // this will also hide the caret, if shown.
 
 		_painting = true;
 
@@ -343,8 +310,11 @@ namespace edge
 			#pragma endregion
 		}
 		*/
-
-		this->render (ra);
+		auto invoker = _em.event_invoker<render_e>();
+		if (invoker.has_handlers())
+			invoker(_d2d_dc);
+		else
+			this->render_no_handlers(_d2d_dc);
 		/*
 		_updateGeometry = nullptr;
 
@@ -388,25 +358,25 @@ namespace edge
 		}
 		*/
 
-		if (_caret_on && (::GetFocus() == hwnd()) && _caret_blink_on)
+		if (_caret_on && (::GetFocus() == _window->hwnd()) && _caret_blink_on)
 		{
-			_d2d_dc->SetTransform(dpi_transform() * _caret_bounds.second);
+			_d2d_dc->SetTransform(_window->dpi_transform() * _caret_bounds.second);
 			com_ptr<ID2D1SolidColorBrush> b;
 			_d2d_dc->CreateSolidColorBrush(_caret_color, &b);
 			_d2d_dc->FillRectangle (&_caret_bounds.first, b);
 		}
 
-		hr = _d2d_dc->EndDraw(); assert(SUCCEEDED(hr));
+		hr = _d2d_dc->EndDraw(); rassert(SUCCEEDED(hr));
 
 		DXGI_PRESENT_PARAMETERS pp = {};
-		hr = _swap_chain->Present1(0, 0, &pp); assert(SUCCEEDED(hr));
+		hr = _swap_chain->Present1(0, 0, &pp); rassert(SUCCEEDED(hr));
 
-		::EndPaint(hwnd(), &ps); // this will show the caret in case BeginPaint above hid it.
+		::EndPaint(_window->hwnd(), &ps); // this will show the caret in case BeginPaint above hid it.
 
 		#pragma region Calculate performance data.
 		LARGE_INTEGER timeNow;
 		bRes = QueryPerformanceCounter(&timeNow);
-		assert(bRes);
+		rassert(bRes);
 
 		render_perf_info perfInfo;
 		perfInfo.start_time = start_time;
@@ -417,13 +387,13 @@ namespace edge
 			perf_info_queue.pop_front();
 		#pragma endregion
 
-		this->release_render_resources (ra);
+		_em.event_invoker<after_render_e>()(_d2d_dc);
 
-		assert(_painting);
+		rassert(_painting);
 		_painting = false;
 	}
 
-	float d2d_window::fps ()
+	float d2d_renderer::fps ()
 	{
 		if (perf_info_queue.empty())
 			return 0;
@@ -440,7 +410,7 @@ namespace edge
 		return fps;
 	}
 
-	float d2d_window::average_render_duration()
+	float d2d_renderer::average_render_duration()
 	{
 		if (perf_info_queue.empty())
 			return 0;
@@ -457,84 +427,84 @@ namespace edge
 	}
 
 	#pragma region Caret methods
-	void d2d_window::process_wm_set_focus()
+	void d2d_renderer::process_wm_set_focus()
 	{
 		if (_caret_on && _caret_blink_on)
 			invalidate_caret();
 	}
 
-	void d2d_window::process_wm_kill_focus()
+	void d2d_renderer::process_wm_kill_focus()
 	{
 		if (_caret_on && _caret_blink_on)
 			invalidate_caret();
 	}
 
-	void d2d_window::invalidate_caret()
+	void d2d_renderer::invalidate_caret()
 	{
 		auto points = corners(_caret_bounds.first);
 		auto matrix = D2D1::Matrix3x2F::ReinterpretBaseType(&_caret_bounds.second);
 		for (auto& point : points)
 			point = matrix->TransformPoint(point);
 		auto bounds = polygon_bounds(points);
-		invalidate(bounds);
+		_window->invalidate(bounds);
 	}
 
-	UINT_PTR d2d_window::timer_id_from_window() const
+	UINT_PTR d2d_renderer::timer_id_from_window() const
 	{
 		// Let's generate a timer ID that should be unique throughout the process.
 		// This would be a pointer to some private data of this class within this object.
-		return (UINT_PTR)this + offsetof(d2d_window, _caret_on);
+		return (UINT_PTR)this + offsetof(d2d_renderer, _caret_on);
 	}
 
 	//static
-	d2d_window* d2d_window::window_from_timer_id (UINT_PTR timer_id)
+	d2d_renderer* d2d_renderer::window_from_timer_id (UINT_PTR timer_id)
 	{
-		return (d2d_window*)(timer_id - offsetof(d2d_window, _caret_on));
+		return (d2d_renderer*)(timer_id - offsetof(d2d_renderer, _caret_on));
 	}
 
 	// This is allowed to be called repeatedly, first to show the caret, and then to move it.
-	void d2d_window::show_caret (const D2D1_RECT_F& bounds, const D2D1_COLOR_F& color, const D2D1_MATRIX_3X2_F* transform)
+	void d2d_renderer::show_caret (const D2D1_RECT_F& bounds, const D2D1_COLOR_F& color, const D2D1_MATRIX_3X2_F* transform)
 	{
-		assert (!_painting);
+		rassert (!_painting);
 
 		auto new_bounds = std::make_pair (bounds, (transform != nullptr) ? *transform : IdentityMatrix());
 
 		if ((_caret_bounds != new_bounds) || (_caret_color != color))
 		{
-			if (::GetFocus() == hwnd())
+			if (::GetFocus() == _window->hwnd())
 				invalidate_caret();
 
 			_caret_bounds = new_bounds;
 			_caret_color = color;
 
-			if (::GetFocus() == hwnd())
+			if (::GetFocus() == _window->hwnd())
 				invalidate_caret();
 		}
 
-		UINT_PTR timer_res = ::SetTimer (hwnd(), timer_id_from_window(), GetCaretBlinkTime(), on_blink_timer);
-		assert (timer_res == timer_id_from_window());
+		UINT_PTR timer_res = ::SetTimer (_window->hwnd(), timer_id_from_window(), GetCaretBlinkTime(), on_blink_timer);
+		rassert (timer_res == timer_id_from_window());
 		_caret_on = true;
 		_caret_blink_on = true;
 	}
 
-	void d2d_window::hide_caret()
+	void d2d_renderer::hide_caret()
 	{
-		assert (!_painting); // "This function may not be called during paiting.
+		rassert (!_painting); // "This function may not be called during paiting.
 
-		assert(_caret_on);
-		BOOL bres = ::KillTimer(hwnd(), timer_id_from_window()); assert(bres);
+		rassert(_caret_on);
+		BOOL bres = ::KillTimer(_window->hwnd(), timer_id_from_window()); rassert(bres);
 		_caret_on = false;
 
-		if ((::GetFocus() == hwnd()) && _caret_blink_on)
+		if ((::GetFocus() == _window->hwnd()) && _caret_blink_on)
 			invalidate_caret();
 	}
 
 	// static
-	void CALLBACK d2d_window::on_blink_timer (HWND Arg1, UINT Arg2, UINT_PTR Arg3, DWORD Arg4)
+	void CALLBACK d2d_renderer::on_blink_timer (HWND Arg1, UINT Arg2, UINT_PTR Arg3, DWORD Arg4)
 	{
 		auto window = window_from_timer_id(Arg3);
-		assert(window->hwnd() == Arg1);
-		assert(window->_caret_on);
+		rassert(window->_window->hwnd() == Arg1);
+		rassert(window->_caret_on);
 		window->_caret_blink_on = !window->_caret_blink_on;
 		window->invalidate_caret();
 	}

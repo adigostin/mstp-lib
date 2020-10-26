@@ -9,7 +9,9 @@
 #include "bridge.h"
 #include "port.h"
 #include "wire.h"
-#include "zoomable_window.h"
+#include "zoomer.h"
+#include "window.h"
+#include "d2d_renderer.h"
 
 using namespace D2D1;
 using namespace edge;
@@ -26,18 +28,17 @@ static const D2D1_COLOR_F RegionColors[] =
 	ColorF(ColorF::DarkMagenta),
 };
 
-#pragma warning (disable: 4250)
-
-class edit_window : public zoomable_window, public edit_window_i
+class edit_window : public event_manager, public edit_window_i
 {
-	typedef zoomable_window base;
-
 	using ht_result = renderable_object::ht_result;
 
 	simulator_app_i*  const _app;
 	project_window_i* const _pw;
 	project_i*        const _project;
 	selection_i*      const _selection;
+	edge::window       _window;   // this one first, to be constructed first
+	edge::d2d_renderer _renderer; // this one second, cause it uses _window
+	edge::zoomer       _zoomer;   // this one last, cause it uses _renderer
 	com_ptr<IDWriteTextFormat> _legendFont;
 	struct drawing_resources _drawing_resources;
 	std::unique_ptr<edit_state> _state;
@@ -45,7 +46,9 @@ class edit_window : public zoomable_window, public edit_window_i
 
 public:
 	edit_window (const edit_window_create_params& cps)
-		: base(WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, cps.rect, cps.hWndParent, 0, cps.d3d_dc, cps.dWriteFactory)
+		: _window(WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, cps.hWndParent, cps.rect)
+		, _renderer(this, cps.d3d_dc, cps.dWriteFactory)
+		, _zoomer(this)
 		, _app(cps.app)
 		, _pw(cps.pw)
 		, _project(cps.project)
@@ -53,33 +56,58 @@ public:
 	{
 		HRESULT hr;
 
-		_drawing_resources._dWriteFactory = dwrite_factory();
-		hr = dwrite_factory()->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
-			DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_drawing_resources._regularTextFormat); assert(SUCCEEDED(hr));
-		hr = dwrite_factory()->CreateTextFormat (L"Tahoma", nullptr, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
-			DWRITE_FONT_STRETCH_NORMAL, 9.5f, L"en-US", &_drawing_resources._smallTextFormat); assert(SUCCEEDED(hr));
-		hr = dwrite_factory()->CreateTextFormat (L"Tahoma", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL,
-			DWRITE_FONT_STRETCH_NORMAL, 9.5f, L"en-US", &_drawing_resources._smallBoldTextFormat); assert(SUCCEEDED(hr));
-		dwrite_factory()->CreateTextFormat (L"Tahoma", nullptr,  DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
-			DWRITE_FONT_STRETCH_CONDENSED, 11, L"en-US", &_legendFont); assert(SUCCEEDED(hr));
+		_drawing_resources._dWriteFactory = cps.dWriteFactory;
+		hr = cps.dWriteFactory->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
+			DWRITE_FONT_STRETCH_NORMAL, 12, L"en-US", &_drawing_resources._regularTextFormat); rassert(SUCCEEDED(hr));
+		hr = cps.dWriteFactory->CreateTextFormat (L"Tahoma", nullptr, DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
+			DWRITE_FONT_STRETCH_NORMAL, 9.5f, L"en-US", &_drawing_resources._smallTextFormat); rassert(SUCCEEDED(hr));
+		hr = cps.dWriteFactory->CreateTextFormat (L"Tahoma", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL,
+			DWRITE_FONT_STRETCH_NORMAL, 9.5f, L"en-US", &_drawing_resources._smallBoldTextFormat); rassert(SUCCEEDED(hr));
+		cps.dWriteFactory->CreateTextFormat (L"Tahoma", nullptr,  DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_STYLE_NORMAL,
+			DWRITE_FONT_STRETCH_CONDENSED, 11, L"en-US", &_legendFont); rassert(SUCCEEDED(hr));
 
 		_selection->changed().add_handler<&edit_window::on_selection_changed>(this);
 		_project->property_changing().add_handler<&edit_window::on_project_property_changing>(this);
 		_project->invalidated().add_handler<&edit_window::on_project_invalidated>(this);
 		_pw->selected_vlan_number_changed().add_handler<&edit_window::on_selected_vlan_changed>(this);
+
+		_window.window_proc().add_handler<&edit_window::on_window_proc>(this);
+
+		_renderer.render().add_handler<&edit_window::on_render>(this);
+		create_render_resources(_renderer.dc());
+		_renderer.dc_releasing().add_handler<&edit_window::release_render_resources>(this);
+		_renderer.dc_recreated().add_handler<&edit_window::create_render_resources>(this);
 	}
 
 	virtual ~edit_window()
 	{
+		_renderer.dc_recreated().remove_handler<&edit_window::create_render_resources>(this);
+		_renderer.dc_releasing().remove_handler<&edit_window::release_render_resources>(this);
+		release_render_resources(_renderer.dc());
+		_renderer.render().remove_handler<&edit_window::on_render>(this);
+
+		_window.window_proc().remove_handler<&edit_window::on_window_proc>(this);
+
 		_pw->selected_vlan_number_changed().remove_handler<&edit_window::on_selected_vlan_changed>(this);
 		_project->invalidated().remove_handler<&edit_window::on_project_invalidated>(this);
 		_project->property_changing().remove_handler<&edit_window::on_project_property_changing>(this);
 		_selection->changed().remove_handler<&edit_window::on_selection_changed>(this);
 	}
 
-	virtual HWND hwnd() const override { return base::hwnd(); }
+	// win32_window_i
+	virtual HWND hwnd() const override { return _window.hwnd(); }
+	virtual window_proc_e::subscriber window_proc() override { return _window.window_proc(); }
 
-	using base::invalidate;
+	// d2d_window_i
+	virtual d2d_renderer& renderer() override final { return _renderer; }
+	virtual void show_caret (const D2D1_RECT_F& bounds, const D2D1_COLOR_F& color, const D2D1_MATRIX_3X2_F* transform = nullptr) override { _renderer.show_caret(bounds, color, transform); }
+	virtual void hide_caret() override { _renderer.hide_caret(); }
+
+	// zoomable_window_i
+	virtual D2D1_POINT_2F aimpoint() const override { return _zoomer.aimpoint(); }
+	virtual float zoom() const override { return _zoomer.zoom(); }
+	virtual zoom_transform_changed_e::subscriber zoom_transform_changed() override { return _zoomer.zoom_transform_changed(); }
+	virtual void zoom_to (const D2D1_RECT_F& rect, float min_margin, float min_zoom, float max_zoom, bool smooth) override { _zoomer.zoom_to(rect, min_margin, min_zoom, max_zoom, smooth); }
 
 	void on_selected_vlan_changed (project_window_i* pw, unsigned int vlanNumber)
 	{
@@ -144,14 +172,14 @@ public:
 		{ L"Backup discarding",      STP_PORT_ROLE_BACKUP,     false, false, false },
 	};
 
-	void render_legend (ID2D1RenderTarget* dc) const
+	void render_legend (ID2D1DeviceContext* dc) const
 	{
 		float maxLineWidth = 0;
 		float maxLineHeight = 0;
 		std::vector<text_layout> layouts;
 		for (auto& info : LegendInfo)
 		{
-			auto tl = text_layout (dwrite_factory(), _legendFont, info.text);
+			auto tl = text_layout (_renderer.dwrite_factory(), _legendFont, info.text);
 
 			DWRITE_TEXT_METRICS metrics;
 			tl->GetMetrics (&metrics);
@@ -175,11 +203,10 @@ public:
 
 		auto oldaa = dc->GetAntialiasMode();
 		dc->SetAntialiasMode (D2D1_ANTIALIAS_MODE_ALIASED);
-		com_ptr<ID2D1SolidColorBrush> brush;
-		dc->CreateSolidColorBrush (GetD2DSystemColor(COLOR_INFOBK), &brush);
-		brush->SetOpacity (0.8f);
-		dc->FillRectangle (D2D1_RECT_F { lineX, y, client_width(), client_height() }, brush);
-		dc->DrawLine ({ lineX, y }, { lineX, client_height() }, _drawing_resources._brushWindowText, lineWidth);
+		auto tooltip_back_brush = _app->make_brush(dc, theme_color::tooltip_back, 0.8f);
+		dc->FillRectangle (D2D1_RECT_F { lineX, y, client_width(), client_height() }, tooltip_back_brush);
+		auto tooltip_fore_brush = _app->make_brush(dc, theme_color::tooltip_fore);
+		dc->DrawLine ({ lineX, y }, { lineX, client_height() }, tooltip_fore_brush, lineWidth);
 		dc->SetAntialiasMode (oldaa);
 
 		Matrix3x2F oldtr;
@@ -191,10 +218,10 @@ public:
 
 			auto oldaa = dc->GetAntialiasMode();
 			dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-			dc->DrawLine (Point2F (lineX, y), Point2F (client_width(), y), _drawing_resources._brushWindowText, lineWidth);
+			dc->DrawLine (Point2F (lineX, y), Point2F (client_width(), y), tooltip_fore_brush, lineWidth);
 			dc->SetAntialiasMode(oldaa);
 
-			dc->DrawTextLayout (Point2F (textX, y + 1), layouts[i], _drawing_resources._brushWindowText);
+			dc->DrawTextLayout (Point2F (textX, y + 1), layouts[i], tooltip_fore_brush);
 
 			// Rotate 270 degrees and then translate.
 			Matrix3x2F tr (0, -1, 1, 0, bitmapX, y + rowHeight / 2);
@@ -206,7 +233,7 @@ public:
 		}
 	}
 
-	void render_config_id_list (ID2D1RenderTarget* dc, const std::set<STP_MST_CONFIG_ID>& configIds) const
+	void render_config_id_list (ID2D1DeviceContext* dc, const std::set<STP_MST_CONFIG_ID>& configIds) const
 	{
 		size_t colorIndex = 0;
 
@@ -220,7 +247,7 @@ public:
 				<< std::uppercase << std::setfill('0') << std::hex
 				<< std::setw(2) << (int)configId.ConfigurationDigest[0] << std::setw(2) << (int)configId.ConfigurationDigest[1] << ".."
 				<< std::setw(2) << (int)configId.ConfigurationDigest[14] << std::setw(2) << (int)configId.ConfigurationDigest[15];
-			auto tl = text_layout_with_metrics (dwrite_factory(), _legendFont, ss.str());
+			auto tl = text_layout_with_metrics (_renderer.dwrite_factory(), _legendFont, ss.str());
 
 			if (tl.width() > maxLineWidth)
 				maxLineWidth = tl.width();
@@ -236,23 +263,23 @@ public:
 		float UpDownPadding = 2;
 		float coloredRectWidth = lineHeight * 2;
 
-		auto title = text_layout_with_metrics (dwrite_factory(), _legendFont, "MST Regions:");
+		auto title = text_layout_with_metrics (_renderer.dwrite_factory(), _legendFont, "MST Regions:");
 
 		float y = client_height() - lines.size() * (lineHeight + 2 * UpDownPadding) - title.height() - 2 * UpDownPadding;
+
+		auto fore_brush = _app->make_brush(dc, theme_color::foreground);
 
 		auto oldaa = dc->GetAntialiasMode();
 		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
 		float lineWidth = pixel_width();
 		float lineX = LeftRightPadding + coloredRectWidth + LeftRightPadding + maxLineWidth + LeftRightPadding;
-		com_ptr<ID2D1SolidColorBrush> brush;
-		dc->CreateSolidColorBrush (GetD2DSystemColor(COLOR_INFOBK), &brush);
-		brush->SetOpacity (0.8f);
+		auto brush = _app->make_brush(dc, theme_color::tooltip_back, 0.8f);
 		dc->FillRectangle ({ 0, y, lineX, client_height() }, brush);
-		dc->DrawLine ({ 0, y }, { lineX, y }, _drawing_resources._brushWindowText, lineWidth);
-		dc->DrawLine ({ lineX, y }, { lineX, client_height() }, _drawing_resources._brushWindowText, lineWidth);
+		dc->DrawLine ({ 0, y }, { lineX, y }, fore_brush, lineWidth);
+		dc->DrawLine ({ lineX, y }, { lineX, client_height() }, fore_brush, lineWidth);
 		dc->SetAntialiasMode(oldaa);
 
-		dc->DrawTextLayout ({ LeftRightPadding, y + UpDownPadding }, title.layout(), _drawing_resources._brushWindowText);
+		dc->DrawTextLayout ({ LeftRightPadding, y + UpDownPadding }, title.layout(), fore_brush);
 		y += (title.height() + 2 * UpDownPadding);
 
 		for (auto& p : lines)
@@ -262,24 +289,24 @@ public:
 			D2D1_RECT_F rect = { LeftRightPadding, y + UpDownPadding, LeftRightPadding + coloredRectWidth, y + UpDownPadding + lineHeight };
 			dc->FillRectangle (&rect, brush);
 			D2D1_POINT_2F pt = { LeftRightPadding + coloredRectWidth + LeftRightPadding, y + UpDownPadding };
-			dc->DrawTextLayout (pt, p.first.layout(), _drawing_resources._brushWindowText);
+			dc->DrawTextLayout (pt, p.first.layout(), fore_brush);
 			y += (lineHeight + 2 * UpDownPadding);
 		}
 	}
 
-	virtual void RenderSnapRect (ID2D1RenderTarget* rt, D2D1_POINT_2F wLocation) const override final
+	virtual void RenderSnapRect (ID2D1DeviceContext* dc, D2D1_POINT_2F wLocation) const override final
 	{
-		auto oldaa = rt->GetAntialiasMode();
-		rt->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
+		auto oldaa = dc->GetAntialiasMode();
+		dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
 
 		auto cpd = pointw_to_pointd(wLocation);
 		auto rect = RectF (cpd.x - SnapDistance, cpd.y - SnapDistance, cpd.x + SnapDistance, cpd.y + SnapDistance);
-		rt->DrawRectangle (rect, _drawing_resources._brushHighlight, 2);
+		dc->DrawRectangle (rect, _drawing_resources._brushHighlight, 2);
 
-		rt->SetAntialiasMode(oldaa);
+		dc->SetAntialiasMode(oldaa);
 	}
 
-	virtual void render_hint (ID2D1RenderTarget* rt,
+	virtual void render_hint (ID2D1DeviceContext* dc,
 							 D2D1_POINT_2F dLocation,
 							 std::string_view text,
 							 DWRITE_TEXT_ALIGNMENT ha,
@@ -313,18 +340,15 @@ public:
 		right  = roundf (right  / pixelWidthDips) * pixelWidthDips + lineWidthDips / 2;
 		bottom = roundf (bottom / pixelWidthDips) * pixelWidthDips + lineWidthDips / 2;
 
+		auto back_brush = _app->make_brush(dc, theme_color::tooltip_back);
+		auto fore_brush = _app->make_brush(dc, theme_color::tooltip_fore);
 		D2D1_ROUNDED_RECT rr = { { left, top, right, bottom }, 4, 4 };
-		com_ptr<ID2D1SolidColorBrush> brush;
-		rt->CreateSolidColorBrush (GetD2DSystemColor(COLOR_INFOBK), &brush);
-		rt->FillRoundedRectangle (&rr, brush);
-
-		brush->SetColor (GetD2DSystemColor(COLOR_INFOTEXT));
-		rt->DrawRoundedRectangle (&rr, brush, lineWidthDips);
-
-		rt->DrawTextLayout ({ rr.rect.left + leftRightPadding, rr.rect.top + topBottomPadding }, tl.layout(), brush);
+		dc->FillRoundedRectangle (&rr, back_brush);
+		dc->DrawRoundedRectangle (&rr, fore_brush, lineWidthDips);
+		dc->DrawTextLayout ({ rr.rect.left + leftRightPadding, rr.rect.top + topBottomPadding }, tl.layout(), fore_brush);
 	}
 
-	void render_bridges (ID2D1RenderTarget* dc, const std::set<STP_MST_CONFIG_ID>& configIds) const
+	void render_bridges (ID2D1DeviceContext* dc, const std::set<STP_MST_CONFIG_ID>& configIds) const
 	{
 		Matrix3x2F oldtr;
 		dc->GetTransform(&oldtr);
@@ -349,7 +373,7 @@ public:
 		dc->SetTransform(oldtr);
 	}
 
-	void render_wires (ID2D1RenderTarget* dc) const
+	void render_wires (ID2D1DeviceContext* dc) const
 	{
 		Matrix3x2F oldtr;
 		dc->GetTransform(&oldtr);
@@ -364,6 +388,7 @@ public:
 
 		dc->SetTransform(oldtr);
 
+		// TODO: move this out of this function
 		if (_project->bridges().empty())
 		{
 			render_hint (dc, { client_width() / 2, client_height() / 2 }, "No bridges created. Right-click to create some.", DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, false);
@@ -390,7 +415,7 @@ public:
 		}
 	}
 
-	void render_hover (ID2D1RenderTarget* dc) const
+	void render_hover (ID2D1DeviceContext* dc) const
 	{
 		if (dynamic_cast<port*>(_htResult.object) != nullptr)
 		{
@@ -404,43 +429,41 @@ public:
 		}
 	}
 
-	virtual void create_render_resources (const d2d_render_args& ra) override final
+	void create_render_resources (ID2D1DeviceContext* dc)
 	{
-		base::create_render_resources(ra);
-
 		HRESULT hr;
-		hr = ra.dc->CreateSolidColorBrush (ColorF (ColorF::PaleGreen), &_drawing_resources._poweredFillBrush     ); assert(SUCCEEDED(hr));
-		hr = ra.dc->CreateSolidColorBrush (ColorF (ColorF::Gray),      &_drawing_resources._unpoweredBrush       ); assert(SUCCEEDED(hr));
-		hr = ra.dc->CreateSolidColorBrush (ColorF (ColorF::Gray),      &_drawing_resources._brushDiscardingPort  ); assert(SUCCEEDED(hr));
-		hr = ra.dc->CreateSolidColorBrush (ColorF (ColorF::Gold),      &_drawing_resources._brushLearningPort    ); assert(SUCCEEDED(hr));
-		hr = ra.dc->CreateSolidColorBrush (ColorF (ColorF::Green),     &_drawing_resources._brushForwarding      ); assert(SUCCEEDED(hr));
-		hr = ra.dc->CreateSolidColorBrush (ColorF (ColorF::Gray),      &_drawing_resources._brushNoForwardingWire); assert(SUCCEEDED(hr));
-		hr = ra.dc->CreateSolidColorBrush (ColorF (ColorF::Red),       &_drawing_resources._brushLoop            ); assert(SUCCEEDED(hr));
-		hr = ra.dc->CreateSolidColorBrush (ColorF (ColorF::Blue),      &_drawing_resources._brushTempWire        ); assert(SUCCEEDED(hr));
-		hr = ra.dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOWTEXT), &_drawing_resources._brushWindowText); assert(SUCCEEDED(hr));
-		hr = ra.dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_WINDOW    ), &_drawing_resources._brushWindow    ); assert(SUCCEEDED(hr));
-		hr = ra.dc->CreateSolidColorBrush (GetD2DSystemColor (COLOR_HIGHLIGHT ), &_drawing_resources._brushHighlight ); assert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::PaleGreen), &_drawing_resources._poweredFillBrush     ); rassert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray),      &_drawing_resources._unpoweredBrush       ); rassert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray),      &_drawing_resources._brushDiscardingPort  ); rassert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gold),      &_drawing_resources._brushLearningPort    ); rassert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Green),     &_drawing_resources._brushForwarding      ); rassert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Gray),      &_drawing_resources._brushNoForwardingWire); rassert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Red),       &_drawing_resources._brushLoop            ); rassert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (ColorF (ColorF::Blue),      &_drawing_resources._brushTempWire        ); rassert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (_app->color_d2d(theme_color::foreground), &_drawing_resources._brushWindowText); rassert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (_app->color_d2d(theme_color::background), &_drawing_resources._brushWindow    ); rassert(SUCCEEDED(hr));
+		hr = dc->CreateSolidColorBrush (_app->color_d2d(theme_color::selected_back_focused), &_drawing_resources._brushHighlight ); rassert(SUCCEEDED(hr));
 
 		com_ptr<ID2D1Factory> factory;
-		ra.dc->GetFactory(&factory);
+		dc->GetFactory(&factory);
 
 		D2D1_STROKE_STYLE_PROPERTIES ssprops = {};
 		ssprops.dashStyle = D2D1_DASH_STYLE_DASH;
-		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawing_resources._strokeStyleSelectionRect); assert(SUCCEEDED(hr));
+		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawing_resources._strokeStyleSelectionRect); rassert(SUCCEEDED(hr));
 
 		ssprops = { };
 		ssprops.dashStyle = D2D1_DASH_STYLE_DASH;
 		ssprops.startCap = D2D1_CAP_STYLE_ROUND;
 		ssprops.endCap = D2D1_CAP_STYLE_ROUND;
-		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawing_resources._strokeStyleNoForwardingWire); assert(SUCCEEDED(hr));
+		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawing_resources._strokeStyleNoForwardingWire); rassert(SUCCEEDED(hr));
 
 		ssprops = { };
 		ssprops.startCap = D2D1_CAP_STYLE_ROUND;
 		ssprops.endCap = D2D1_CAP_STYLE_ROUND;
-		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawing_resources._strokeStyleForwardingWire); assert(SUCCEEDED(hr));
+		hr = factory->CreateStrokeStyle (&ssprops, nullptr, 0, &_drawing_resources._strokeStyleForwardingWire); rassert(SUCCEEDED(hr));
 	}
 
-	virtual void release_render_resources (const d2d_render_args& ra) override final
+	void release_render_resources (ID2D1DeviceContext* dc)
 	{
 		_drawing_resources._strokeStyleForwardingWire = nullptr;
 		_drawing_resources._strokeStyleNoForwardingWire = nullptr;
@@ -457,11 +480,9 @@ public:
 		_drawing_resources._brushWindowText       = nullptr;
 		_drawing_resources._brushWindow           = nullptr;
 		_drawing_resources._brushHighlight        = nullptr;
-
-		base::release_render_resources(ra);
 	}
 
-	virtual void render (const d2d_render_args& ra) const override final
+	void on_render (ID2D1DeviceContext* dc)
 	{
 		std::set<STP_MST_CONFIG_ID> configIds;
 		for (auto& bridge : _project->bridges())
@@ -471,76 +492,62 @@ public:
 				configIds.insert (*STP_GetMstConfigId(stpb));
 		}
 
-		ra.dc->Clear(GetD2DSystemColor(COLOR_WINDOW));
+		dc->Clear(_app->color_d2d(theme_color::background));
 
-		ra.dc->SetTransform(dpi_transform());
+		dc->SetTransform(dpi_transform());
 
-		render_legend(ra.dc);
+		render_legend(dc);
 
-		render_bridges (ra.dc, configIds);
+		render_bridges (dc, configIds);
 
-		render_wires (ra.dc);
+		render_wires (dc);
 
 		for (object* o : _selection->objects())
 		{
 			if (auto ro = dynamic_cast<renderable_object*>(o))
-				ro->render_selection(this, ra.dc, _drawing_resources);
+				ro->render_selection(this, dc, _drawing_resources);
 		}
 
 		if (!configIds.empty())
-			render_config_id_list (ra.dc, configIds);
+			render_config_id_list (dc, configIds);
 
 		if (_htResult.object != nullptr)
-			render_hover(ra.dc);
+			render_hover(dc);
 
-		render_hint (ra.dc, { client_width() / 2, client_height() },
+		render_hint (dc, { client_width() / 2, client_height() },
 					"Rotate mouse wheel for zooming, press wheel and drag for panning.",
 					DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_FAR, true);
 
 		if (_project->simulation_paused())
-			render_hint (ra.dc, { client_width() / 2, 10 },
+			render_hint (dc, { client_width() / 2, 10 },
 						"Simulation is paused. Right-click to resume.",
 						DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, true);
 
 		if (_state != nullptr)
-			_state->render(ra.dc);
+			_state->render(dc);
 	}
 
-	static UINT GetModifierKeys()
+	std::optional<LRESULT> on_window_proc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 	{
-		UINT modifierKeys = 0;
-
-		if (GetKeyState (VK_SHIFT) < 0)
-			modifierKeys |= MK_SHIFT;
-
-		if (GetKeyState (VK_CONTROL) < 0)
-			modifierKeys |= MK_CONTROL;
-
-		if (GetKeyState (VK_MENU) < 0)
-			modifierKeys |= MK_ALT;
-
-		return modifierKeys;
-	}
-
-	virtual std::optional<LRESULT> window_proc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) override
-	{
-		auto result_base = base::window_proc (hwnd, msg, wparam, lparam);
-		if (result_base)
-			return result_base;
-
 		if ((msg == WM_LBUTTONDOWN) || (msg == WM_RBUTTONDOWN))
 		{
 			auto button = (msg == WM_LBUTTONDOWN) ? mouse_button::left : mouse_button::right;
 			auto handled = process_mouse_button_down (hwnd, button, (modifier_key)wparam, { GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam) });
-			return handled ? (std::optional<LRESULT>)0 : std::nullopt;
+			if (handled)
+				return 0;
+			return std::nullopt;
 		}
-		else if ((msg == WM_LBUTTONUP) || (msg == WM_RBUTTONUP))
+
+		if ((msg == WM_LBUTTONUP) || (msg == WM_RBUTTONUP))
 		{
 			auto button = (msg == WM_LBUTTONUP) ? mouse_button::left : mouse_button::right;
 			auto handled = process_mouse_button_up (button, (modifier_key)wparam, { GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam) });
-			return handled ? (std::optional<LRESULT>)0 : std::nullopt;
+			if (handled)
+				return 0;
+			return std::nullopt;
 		}
-		else if (msg == WM_SETCURSOR)
+
+		if (msg == WM_SETCURSOR)
 		{
 			if (((HWND) wparam == hwnd) && (LOWORD (lparam) == HTCLIENT))
 			{
@@ -559,24 +566,36 @@ public:
 
 			return std::nullopt;
 		}
-		else if (msg == WM_MOUSEMOVE)
+
+		if (msg == WM_MOUSEMOVE)
 		{
 			process_mouse_move (hwnd, (modifier_key)wparam, { GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam) });
 			return std::nullopt;
 		}
-		else if (msg == WM_CONTEXTMENU)
+
+		if (msg == WM_CONTEXTMENU)
 		{
-			return ProcessWmContextMenu (hwnd, POINT{ GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam) });
+			ProcessWmContextMenu (hwnd, POINT{ GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam) });
+			return 0;
 		}
-		else if ((msg == WM_KEYDOWN) || (msg == WM_SYSKEYDOWN))
+
+		if ((msg == WM_KEYDOWN) || (msg == WM_SYSKEYDOWN))
 		{
-			return process_key_or_syskey_down ((UINT) wparam, get_modifier_keys());
+			auto handled = process_key_or_syskey_down ((UINT) wparam, get_modifier_keys());
+			if (handled)
+				return 0;
+			return std::nullopt;
 		}
-		else if ((msg == WM_KEYUP) || (msg == WM_SYSKEYUP))
+
+		if ((msg == WM_KEYUP) || (msg == WM_SYSKEYUP))
 		{
-			return process_key_or_syskey_up ((UINT) wparam, get_modifier_keys());
+			auto handled = process_key_or_syskey_up ((UINT) wparam, get_modifier_keys());
+			if (handled)
+				return 0;
+			return std::nullopt;
 		}
-		else if (msg == WM_COMMAND)
+
+		if (msg == WM_COMMAND)
 		{
 			if (wparam == ID_NEW_BRIDGE)
 			{
@@ -668,7 +687,7 @@ public:
 			else if (auto b = dynamic_cast<bridge*>(o); b != nullptr)
 				bridgesToRemove.insert(b);
 			else
-				assert(false);
+				rassert(false);
 		}
 
 		for (auto& w : _project->wires())
@@ -949,7 +968,7 @@ public:
 		}
 	}
 
-	std::optional<LRESULT> ProcessWmContextMenu (HWND hwnd, POINT pt)
+	void ProcessWmContextMenu (HWND hwnd, POINT pt)
 	{
 		//D2D1_POINT_2F dipLocation = pointp_to_pointd(pt);
 		//_elementsAtContextMenuLocation.clear();
@@ -975,13 +994,9 @@ public:
 
 		if (menu)
 			TrackPopupMenuEx (GetSubMenu(menu, 0), 0, pt.x, pt.y, hwnd, nullptr);
-
-		return 0;
 	}
 
 	virtual const struct drawing_resources& drawing_resources() const override final { return _drawing_resources; }
-
-	virtual D2D1::Matrix3x2F zoom_transform() const override final { return base::zoom_transform(); }
 
 	virtual void zoom_all() override
 	{

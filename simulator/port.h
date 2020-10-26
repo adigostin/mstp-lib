@@ -52,7 +52,7 @@ class port : public renderable_object, public edge::typed_object_collection_i<po
 	uint32_t _missedLinkPulseCounter = MissedLinkPulseCounterMax;
 
 	virtual void children_store (std::vector<std::unique_ptr<port_tree>>** out) override final { *out = &_trees; }
-	virtual void collection_property (const typed_object_collection_property<port_tree>** out) const override final { *out = &trees_property; }
+	virtual void collection_property (const edge::typed_object_collection_property<port_tree>** out) const override final { *out = &trees_property; }
 	virtual void call_property_changing (const property_change_args& args) override final { this->on_property_changing(args); }
 	virtual void call_property_changed  (const property_change_args& args) override final { this->on_property_changed(args); }
 
@@ -100,7 +100,7 @@ public:
 
 	virtual void render_selection (const edge::zoomable_window_i* window, ID2D1RenderTarget* rt, const drawing_resources& dos) const override final;
 	virtual ht_result hit_test (const edge::zoomable_window_i* window, D2D1_POINT_2F dLocation, float tolerance) override final;
-	virtual D2D1_RECT_F extent() const override { assert(false); return { }; }
+	virtual D2D1_RECT_F extent() const override { rassert(false); return { }; }
 
 	void invalidate();
 
@@ -145,9 +145,9 @@ public:
 	static const admin_p2p_p admin_p2p_property;
 	static const bool_p detected_p2p_property;
 	static const bool_p oper_p2p_property;
-	static const typed_object_collection_property<port_tree> trees_property;
+	static const edge::typed_object_collection_property<port_tree> trees_property;
 
 	static const property* const _properties[];
-	static const xtype<> _type;
+	static const xtype<port> _type;
 	virtual const concrete_type* type() const { return &_type; }
 };

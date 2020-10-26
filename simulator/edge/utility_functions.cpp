@@ -88,13 +88,6 @@ namespace edge
 			rr->radiusY = 0;
 	}
 
-	ColorF GetD2DSystemColor (int sysColorIndex)
-	{
-		DWORD brg = GetSysColor (sysColorIndex);
-		DWORD rgb = ((brg & 0xff0000) >> 16) | (brg & 0xff00) | ((brg & 0xff) << 16);
-		return ColorF (rgb);
-	}
-
 	std::string get_window_text (HWND hwnd)
 	{
 		int char_count = ::GetWindowTextLength(hwnd);
@@ -133,12 +126,26 @@ namespace edge
 
 	D2D1_COLOR_F interpolate (const D2D1_COLOR_F& first, const D2D1_COLOR_F& second, uint32_t percent_first)
 	{
-		assert (percent_first <= 100);
+		rassert (percent_first <= 100);
 		float r = (first.r * percent_first + second.r * (100 - percent_first)) / 100;
 		float g = (first.g * percent_first + second.g * (100 - percent_first)) / 100;
 		float b = (first.b * percent_first + second.b * (100 - percent_first)) / 100;
 		float a = (first.a * percent_first + second.a * (100 - percent_first)) / 100;
 		return { r, g, b, a };
+	}
+
+	uint32_t interpolate (uint32_t first, uint32_t second, uint32_t percent_first)
+	{
+		rassert (percent_first <= 100);
+		static constexpr auto a = [](uint32_t argb) -> uint32_t { return (argb >> 24) & 0xff; };
+		static constexpr auto r = [](uint32_t argb) -> uint32_t { return (argb >> 16) & 0xff; };
+		static constexpr auto g = [](uint32_t argb) -> uint32_t { return (argb >> 8) & 0xff; };
+		static constexpr auto b = [](uint32_t argb) -> uint32_t { return argb & 0xff; };
+		uint32_t aa = (a(first) * percent_first + a(second) * (100 - percent_first)) / 100;
+		uint32_t rr = (r(first) * percent_first + r(second) * (100 - percent_first)) / 100;
+		uint32_t gg = (g(first) * percent_first + g(second) * (100 - percent_first)) / 100;
+		uint32_t bb = (b(first) * percent_first + b(second) * (100 - percent_first)) / 100;
+		return (aa << 24) | (rr << 16) | (gg << 8) | bb;
 	}
 
 	D2D1_RECT_F align_to_pixel (const D2D1_RECT_F& rect, uint32_t dpi)
@@ -198,6 +205,30 @@ namespace edge
 		float r = std::max (aa.right, bb.right);
 		float b = std::max (aa.bottom, bb.bottom);
 		return { l, t, r, b };
+	}
+
+	bool hit_test_line (D2D1_POINT_2F dLocation, float tolerance, D2D1_POINT_2F p0, D2D1_POINT_2F p1, float line_width)
+	{
+		auto fd = p0;
+		auto td = p1;
+
+		float halfw = line_width / 2.0f;
+		if (halfw < tolerance)
+			halfw = tolerance;
+
+		float angle = atan2(td.y - fd.y, td.x - fd.x);
+		float s = sin(angle);
+		float c = cos(angle);
+
+		std::array<D2D1_POINT_2F, 4> vertices =
+		{
+			D2D1_POINT_2F { fd.x + s * halfw, fd.y - c * halfw },
+			D2D1_POINT_2F { fd.x - s * halfw, fd.y + c * halfw },
+			D2D1_POINT_2F { td.x - s * halfw, td.y + c * halfw },
+			D2D1_POINT_2F { td.x + s * halfw, td.y - c * halfw }
+		};
+
+		return point_in_polygon (vertices, dLocation);
 	}
 
 	// ========================================================================

@@ -3,8 +3,8 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "collections.h"
-#include "edge_win32.h"
+#include "object.h"
+#include "edge.h"
 
 using edge::size_p;
 using edge::size_property_traits;
@@ -21,8 +21,6 @@ using edge::type;
 using edge::concrete_type;
 using edge::xtype;
 using edge::value_property;
-using edge::typed_object_collection_i;
-using edge::typed_object_collection_property;
 using edge::property_change_args;
 using edge::side;
 using edge::out_sstream_i;

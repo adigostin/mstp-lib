@@ -18,7 +18,7 @@ namespace edge
 		operator IDWriteTextLayout*() const { return _layout.get(); }
 		IDWriteTextLayout* operator->() const { return _layout.get(); }
 		void clear() { _layout = nullptr; }
-		text_layout& operator= (nullptr_t) { _layout = nullptr; return *this; }
+		bool empty() const { return !_layout; }
 		IDWriteTextLayout* layout() const { return _layout; }
 		operator bool() const { return _layout != nullptr; }
 	};
@@ -31,7 +31,6 @@ namespace edge
 		text_layout_with_metrics() = default;
 		text_layout_with_metrics (IDWriteFactory* dwrite_factory, IDWriteTextFormat* format, std::string_view str, float maxWidth = 0);
 		text_layout_with_metrics (IDWriteFactory* dwrite_factory, IDWriteTextFormat* format, std::wstring_view str, float maxWidth = 0);
-		text_layout_with_metrics& operator= (nullptr_t np) { text_layout::operator=(np); return *this; }
 		float left() const;
 		float width() const;
 		float height() const;
@@ -46,7 +45,6 @@ namespace edge
 		text_layout_with_line_metrics() = default;
 		text_layout_with_line_metrics (IDWriteFactory* dwrite_factory, IDWriteTextFormat* format, std::string_view str, float maxWidth = 0);
 		text_layout_with_line_metrics (IDWriteFactory* dwrite_factory, IDWriteTextFormat* format, std::wstring_view str, float maxWidth = 0);
-		text_layout_with_line_metrics& operator= (nullptr_t np) { text_layout_with_metrics::operator=(np); return *this; }
 		float baseline() const { return _line_metrics.baseline; }
 	};
 }

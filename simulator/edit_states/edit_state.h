@@ -3,7 +3,6 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "edge_win32.h"
 #include "simulator.h"
 
 using edge::handled;

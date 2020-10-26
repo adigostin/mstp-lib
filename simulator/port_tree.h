@@ -71,6 +71,6 @@ public:
 	static const uint32_p admin_internal_port_path_cost_property;
 	static const uint32_p internal_port_path_cost_property;
 	static const property* const _properties[];
-	static const xtype<> _type;
+	static const xtype<port_tree> _type;
 	virtual const edge::concrete_type* type() const override final;
 };

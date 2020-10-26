@@ -61,7 +61,7 @@ public:
 			if (_stateMoveThreshold != nullptr)
 			{
 				_stateMoveThreshold->process_mouse_button_down (_button, _modifierKeysDown, _location);
-				assert (!_stateMoveThreshold->completed());
+				rassert (!_stateMoveThreshold->completed());
 				_stateMoveThreshold->process_mouse_move (ml);
 				if (!_stateMoveThreshold->completed())
 					_ew->EnterState(move(_stateMoveThreshold));
