@@ -236,7 +236,6 @@ struct __declspec(novtable) simulator_app_i : edge::theme_color_provider_i
 	struct project_window_removing_e : edge::event<project_window_removing_e, project_window_i*> { };
 	struct project_window_removed_e  : edge::event<project_window_removed_e, project_window_i*> { };
 
-	virtual HINSTANCE GetHInstance() const = 0;
 	virtual const wchar_t* GetRegKeyPath() const = 0;
 	virtual void add_project_window (std::unique_ptr<project_window_i>&& pw) = 0;
 	virtual const std::vector<std::unique_ptr<project_window_i>>& project_windows() const = 0;

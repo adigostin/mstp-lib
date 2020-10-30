@@ -62,10 +62,10 @@ public:
 	{
 		rassert (create_params.selectedVlan >= 1);
 
-		register_class(_app->GetHInstance());
+		register_class();
 		_hwnd = ::CreateWindowEx(0, ProjectWindowWndClassName, L"", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
 			CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr,
-			_app->GetHInstance(), nullptr); rassert(_hwnd);
+			(HINSTANCE)&__ImageBase, nullptr); rassert(_hwnd);
 		SetWindowLongPtr(_hwnd, GWLP_USERDATA, (LONG_PTR)this);
 
 		int nCmdShow = create_params.nCmdShow;
@@ -128,8 +128,9 @@ public:
 		_selection = nullptr;
 	}
 
-	static void register_class(HINSTANCE hinstance)
+	static void register_class()
 	{
+		auto hinstance = (HINSTANCE)&__ImageBase;
 		WNDCLASSEX wcex;
 		BOOL bRes = ::GetClassInfoEx (hinstance, ProjectWindowWndClassName, &wcex);
 		if (!bRes)

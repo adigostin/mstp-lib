@@ -64,20 +64,16 @@ port* project_i::find_connected_port (port* tx_port) const
 
 class SimulatorApp : public event_manager, public simulator_app_i
 {
-	HINSTANCE const _hInstance;
 	std::wstring _regKeyPath;
 	std::vector<std::unique_ptr<project_window_i>> _projectWindows;
 
 public:
-	SimulatorApp (HINSTANCE hInstance)
-		: _hInstance(hInstance)
+	SimulatorApp()
 	{
 		std::wstringstream ss;
 		ss << L"SOFTWARE\\" << company_name << L"\\" << ::app_name << L"\\" << ::app_version_string;
 		_regKeyPath = ss.str();
 	}
-
-	virtual HINSTANCE GetHInstance() const override final { return _hInstance; }
 
 	virtual void add_project_window (std::unique_ptr<project_window_i>&& pw) override final
 	{
@@ -156,7 +152,8 @@ public:
 
 	WPARAM RunMessageLoop()
 	{
-		auto accelerators = LoadAccelerators (_hInstance, MAKEINTRESOURCE(IDR_ACCELERATOR1));
+		auto hinstance = (HINSTANCE)&__ImageBase;
+		auto accelerators = LoadAccelerators (hinstance, MAKEINTRESOURCE(IDR_ACCELERATOR1));
 
 		MSG msg;
 		while (GetMessage(&msg, nullptr, 0, 0))
@@ -316,7 +313,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 
 	int processExitValue;
 	{
-		SimulatorApp app (hInstance);
+		SimulatorApp app;
 
 		auto project = project_factory();
 		project_window_create_params params =

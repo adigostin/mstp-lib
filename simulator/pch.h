@@ -48,3 +48,5 @@
 #include <Windows.h>
 #include <windowsx.h>
 #undef DrawText
+
+extern "C" IMAGE_DOS_HEADER __ImageBase;
