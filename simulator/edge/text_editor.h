@@ -4,6 +4,7 @@
 
 #pragma once
 #include "com_ptr.h"
+#include "d2d_renderer.h"
 #include "edge.h"
 
 namespace edge
@@ -12,7 +13,6 @@ namespace edge
 	{
 		virtual ~text_editor_i() { }
 
-		virtual void render (ID2D1DeviceContext* dc) const = 0;
 		virtual std::wstring_view wstr() const = 0;
 		virtual void select_all() = 0;
 		virtual const D2D1_RECT_F& rect() const = 0;

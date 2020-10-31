@@ -3,10 +3,12 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "edge.h"
+#include "d2d_renderer.h"
 
 namespace edge
 {
+	struct zoom_transform_changed_e : event<zoom_transform_changed_e> { };
+
 	class zoomer : event_manager
 	{
 		d2d_window_i* const _window;
@@ -40,13 +42,11 @@ namespace edge
 
 	public:
 		zoomer(d2d_window_i* window);
-		~zoomer();
-
 		zoomer(const zoomer&) = delete;
 		zoomer& operator=(const zoomer&) = delete;
+		~zoomer();
 
 		void zoom_to (D2D1_POINT_2F aimpoint, float zoom, bool smooth);
-
 		D2D1_POINT_2F aimpoint() const { return _aimpoint; }
 		float zoom() const { return _zoom; }
 		zoom_transform_changed_e::subscriber zoom_transform_changed() { return zoom_transform_changed_e::subscriber(this); }
@@ -64,5 +64,19 @@ namespace edge
 		void process_wm_mbuttonup   (WPARAM wparam, LPARAM lparam);
 		void process_wm_mousewheel  (WPARAM wparam, LPARAM lparam);
 		void process_wm_mousemove   (WPARAM wparam, LPARAM lparam);
+	};
+
+	struct __declspec(novtable) zoomable_window_i : d2d_window_i
+	{
+		virtual class zoomer& zoomer() = 0;
+		const class zoomer& zoomer() const { return const_cast<zoomable_window_i*>(this)->zoomer(); }
+
+		D2D1_POINT_2F pointd_to_pointw (D2D1_POINT_2F dlocation) const;
+		void pointw_to_pointd (std::span<D2D1_POINT_2F> locations) const;
+		float lengthw_to_lengthd (float lengthw) const { return lengthw * zoomer().zoom(); }
+		D2D1_SIZE_F pixel_aligned_window_center() const;
+		D2D1_POINT_2F pointw_to_pointd (D2D1_POINT_2F location) const;
+		D2D1_RECT_F rectw_to_rectd (const D2D1_RECT_F& r) const;
+		D2D1::Matrix3x2F zoom_transform() const;
 	};
 }

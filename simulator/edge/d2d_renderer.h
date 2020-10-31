@@ -3,7 +3,7 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "win32_window_i.h"
+#include "window.h"
 #include "com_ptr.h"
 
 namespace edge
@@ -86,5 +86,11 @@ namespace edge
 		void process_wm_kill_focus();
 		void process_wm_size (SIZE client_size_pixels, D2D1_SIZE_F client_size_dips);
 		std::optional<LRESULT> on_window_proc (HWND, UINT msg, WPARAM wparam, LPARAM lparam);
+	};
+
+	struct __declspec(novtable) d2d_window_i : win32_window_i
+	{
+		virtual d2d_renderer& renderer() = 0;
+		const d2d_renderer& renderer() const { return const_cast<d2d_window_i*>(this)->renderer(); }
 	};
 }

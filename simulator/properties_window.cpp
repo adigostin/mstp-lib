@@ -15,19 +15,23 @@ class properties_window : event_manager, public properties_window_i
 	d2d_renderer _renderer;
 	std::unique_ptr<edge::property_grid_i> const _pg;
 
+	static const inline WNDCLASSEX wnd_class = {
+		.style = CS_DBLCLKS | CS_HREDRAW | CS_VREDRAW,
+		.hCursor = ::LoadCursor(nullptr, IDC_ARROW),
+		.lpszClassName = L"properties_window",
+	};
+
 public:
 	properties_window (const properties_window_create_params& cps)
-		: _window(WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, cps.hwnd_parent, cps.rect)
+		: _window(wnd_class, WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, cps.hwnd_parent, cps.rect)
 		, _renderer(this, cps.d3d_dc, cps.dwrite_factory)
 		, _pg(property_grid_factory(this, this->client_rect(), cps.tcp))
 	{
 		_window.window_proc().add_handler<&properties_window::on_window_proc>(this);
-		_renderer.render().add_handler<&properties_window::on_render>(this);
 	}
 
 	~properties_window()
 	{
-		_renderer.render().remove_handler<&properties_window::on_render>(this);
 		_window.window_proc().remove_handler<&properties_window::on_window_proc>(this);
 	}
 
@@ -37,8 +41,6 @@ public:
 
 	// d2d_window_i
 	virtual d2d_renderer& renderer() override final { return _renderer; }
-	virtual void show_caret (const D2D1_RECT_F& bounds, const D2D1_COLOR_F& color, const D2D1_MATRIX_3X2_F* transform = nullptr) override { _renderer.show_caret(bounds, color, transform); }
-	virtual void hide_caret() override { _renderer.hide_caret(); }
 
 	// properties_window_i
 	virtual property_grid_i* pg() const override { return _pg.get(); }
@@ -116,32 +118,7 @@ public:
 			return handled ? std::optional<LRESULT>(0) : std::nullopt;
 		}
 
-		if (msg == WM_SETCURSOR)
-		{
-			if (((HWND) wparam == hwnd) && (LOWORD (lparam) == HTCLIENT))
-			{
-				POINT pt;
-				if (::GetCursorPos (&pt))
-				{
-					if (::ScreenToClient (hwnd, &pt))
-					{
-						auto pd = pointp_to_pointd(pt);
-						auto cursor = _pg->cursor_at(pt, pd);
-						::SetCursor (cursor);
-						return TRUE;
-					}
-				}
-			}
-
-			return std::nullopt;
-		}
-
 		return std::nullopt;
-	}
-
-	void on_render (ID2D1DeviceContext* dc)
-	{
-		_pg->render(dc);
 	}
 };
 

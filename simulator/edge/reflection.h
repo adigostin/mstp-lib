@@ -3,12 +3,6 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include <exception>
-#include <string_view>
-#include <memory>
-#include <optional>
-#include <span>
-#include <vector>
 #include "rassert.h"
 
 namespace edge
@@ -62,10 +56,6 @@ namespace edge
 		{ }
 		property (const property&) = delete;
 		property& operator= (const property&) = delete;
-
-		virtual const value_property* as_value_prop() const { return nullptr; }
-		virtual const object_collection_property* as_oc_prop() const { return nullptr; }
-
 	private:
 		virtual void dummy_to_make_polymorphic() { }
 	};
@@ -87,7 +77,6 @@ namespace edge
 	{
 		using property::property;
 
-		virtual const value_property* as_value_prop() const override final { return this; }
 		virtual const char* type_name() const = 0;
 		virtual bool can_set (const object* obj) const = 0;
 		virtual void get_to_string (const object* from, out_sstream_i* to, const string_convert_context_i* context) const = 0;
@@ -442,8 +431,15 @@ namespace edge
 	{
 		using base = property;
 
+		const type* const _child_type;
+
 	public:
-		using base::base;
+		object_property (const char* name, const property_group* group, const char* description, bool ui_visible, const type* child_type)
+			: base (name, group, description, ui_visible), _child_type(child_type)
+		{ }
+
+		const type* child_type() const { return _child_type; }
+
 		virtual object* get (const object* obj) const = 0;
 		virtual std::unique_ptr<object> set (object* obj, std::unique_ptr<object>&& value) const = 0;
 	};
@@ -459,8 +455,8 @@ namespace edge
 		getter_t const _getter;
 		setter_t const _setter;
 
-		typed_object_property (const char* name, const property_group* group, const char* description, bool ui_visible, getter_t getter, setter_t setter)
-			: base (name, group, description, ui_visible), _getter(getter), _setter(setter)
+		typed_object_property (const char* name, const property_group* group, const char* description, bool ui_visible, const type* base_type, getter_t getter, setter_t setter)
+			: base (name, group, description, ui_visible, base_type), _getter(getter), _setter(setter)
 		{
 			static_assert (std::is_base_of<object, object_t>::value);
 		}

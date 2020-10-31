@@ -4,7 +4,7 @@
 
 #pragma once
 #include "object.h"
-#include "edge.h"
+#include "zoomer.h"
 
 using edge::size_p;
 using edge::size_property_traits;

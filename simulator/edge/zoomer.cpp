@@ -255,4 +255,65 @@ namespace edge
 
 		return std::nullopt;
 	}
+
+	#pragma region zoomable_window_i interface
+	D2D1_POINT_2F zoomable_window_i::pointd_to_pointw (D2D1_POINT_2F dlocation) const
+	{
+		auto center = pixel_aligned_window_center();
+		auto aimpoint = zoomer().aimpoint();
+		auto zoom = zoomer().zoom();
+		float x = (dlocation.x - center.width) / zoom + aimpoint.x;
+		float y = (dlocation.y - center.height) / zoom + aimpoint.y;
+		return { x, y };
+	}
+
+	void zoomable_window_i::pointw_to_pointd (std::span<D2D1_POINT_2F> locations) const
+	{
+		auto center = pixel_aligned_window_center();
+		auto aimpoint = zoomer().aimpoint();
+		auto zoom = zoomer().zoom();
+		for (auto& l : locations)
+		{
+			l.x = (l.x - aimpoint.x) * zoom + center.width;
+			l.y = (l.y - aimpoint.y) * zoom + center.height;
+		}
+	}
+
+	D2D1_RECT_F zoomable_window_i::rectw_to_rectd (const D2D1_RECT_F& r) const
+	{
+		D2D1_POINT_2F tl = pointw_to_pointd({ r.left, r.top });
+		D2D1_POINT_2F br = pointw_to_pointd({ r.right, r.bottom });
+		return { tl.x, tl.y, br.x, br.y };
+	}
+
+	// The implementor should align the aimpoint to a pixel center so that graphics will look crisp at integer zoom factors.
+	D2D1_SIZE_F zoomable_window_i::pixel_aligned_window_center() const
+	{
+		float pw = pixel_width();
+
+		float center_x = client_width() / 2;
+		center_x = roundf(center_x / pw) * pw;
+
+		float center_y = client_height() / 2;
+		center_y = roundf(center_y / pw) * pw;
+
+		return { center_x, center_y };
+	}
+
+	D2D1_POINT_2F zoomable_window_i::pointw_to_pointd (D2D1_POINT_2F location) const
+	{
+		pointw_to_pointd ({ &location, 1 });
+		return location;
+	}
+
+	D2D1::Matrix3x2F zoomable_window_i::zoom_transform() const
+	{
+		auto aimpoint = zoomer().aimpoint();
+		auto zoom = zoomer().zoom();
+
+		return D2D1::Matrix3x2F::Translation(-aimpoint.x, -aimpoint.y)
+			* D2D1::Matrix3x2F::Scale(zoom, zoom)
+			* D2D1::Matrix3x2F::Translation(pixel_aligned_window_center());
+	}
+	#pragma endregion
 }

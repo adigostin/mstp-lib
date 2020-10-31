@@ -3,15 +3,15 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "edge.h"
+#include "win32_window_i.h"
 
 namespace edge
 {
-	class window : public win32_window_i
+	class window
 	{
 	public:
-		window (DWORD ex_style, DWORD style, HWND parent, int x, int y, int width, int height);
-		window (DWORD ex_style, DWORD style, HWND parent, const RECT& rect);
+		window (const WNDCLASSEX& wcex, DWORD ex_style, DWORD style, HWND parent, int x, int y, int width, int height);
+		window (const WNDCLASSEX& wcex, DWORD ex_style, DWORD style, HWND parent, const RECT& rect);
 
 		window (const window&) = delete;
 		window& operator= (const window&) = delete;

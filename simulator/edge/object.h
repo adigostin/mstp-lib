@@ -5,9 +5,6 @@
 #pragma once
 #include "reflection.h"
 #include "events.h"
-#include <vector>
-#include <array>
-#include <tuple>
 
 namespace edge
 {
@@ -116,6 +113,10 @@ namespace edge
 
 		property_change_args (const value_collection_property* property, size_t index, collection_property_change_type type)
 			: property(property), index(index), type(type)
+		{ }
+
+		property_change_args (const object_property* property)
+			: property(property)
 		{ }
 	};
 

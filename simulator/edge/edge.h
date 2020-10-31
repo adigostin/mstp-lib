@@ -3,10 +3,7 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "events.h"
 #include "com_ptr.h"
-#include "win32_window_i.h"
-#include "d2d_renderer.h"
 
 namespace edge
 {
@@ -54,33 +51,6 @@ namespace edge
 		void operator() (HGDIOBJ object) { ::DeleteObject(object); }
 	};
 	using HFONT_unique_ptr = std::unique_ptr<std::remove_pointer<HFONT>::type, gdi_object_deleter>;
-
-	struct __declspec(novtable) d2d_window_i : win32_window_i
-	{
-		virtual d2d_renderer& renderer() = 0;
-		const d2d_renderer& renderer() const { return const_cast<d2d_window_i*>(this)->renderer(); }
-
-		virtual void show_caret (const D2D1_RECT_F& bounds, const D2D1_COLOR_F& color, const D2D1_MATRIX_3X2_F* transform = nullptr) = 0;
-		virtual void hide_caret() = 0;
-	};
-
-	struct zoom_transform_changed_e : event<zoom_transform_changed_e> { };
-
-	struct __declspec(novtable) zoomable_window_i : d2d_window_i
-	{
-		virtual D2D1_POINT_2F aimpoint() const = 0;
-		virtual float zoom() const = 0;
-		virtual zoom_transform_changed_e::subscriber zoom_transform_changed() = 0;
-		virtual void zoom_to (const D2D1_RECT_F& rect, float min_margin, float min_zoom, float max_zoom, bool smooth) = 0;
-
-		D2D1_POINT_2F pointd_to_pointw (D2D1_POINT_2F dlocation) const;
-		void pointw_to_pointd (std::span<D2D1_POINT_2F> locations) const;
-		float lengthw_to_lengthd (float lengthw) const { return lengthw * zoom(); }
-		D2D1_SIZE_F pixel_aligned_window_center() const;
-		D2D1_POINT_2F pointw_to_pointd (D2D1_POINT_2F location) const;
-		D2D1_RECT_F rectw_to_rectd (const D2D1_RECT_F& r) const;
-		D2D1::Matrix3x2F zoom_transform() const;
-	};
 
 	enum class theme_color
 	{

@@ -6,12 +6,12 @@
 #include "property_grid.h"
 #include "utility_functions.h"
 #include "collections.h"
-
-using namespace edge;
+#include "window.h"
 
 namespace edge
 {
-	std::unique_ptr<root_item_i> make_root_item (property_grid_i* grid, const char* heading, std::span<object* const> objects, pg_app_context_i* app_context);
+	static std::unique_ptr<root_item_i> make_root_item (property_grid_i* grid, const char* heading, std::span<object* const> objects, pg_app_context_i* app_context);
+	static std::vector<std::unique_ptr<group_item_i>> make_group_items (object_item_i* parent, const concrete_type* type);
 
 	#pragma warning (push)
 	#pragma warning (disable: 4250)
@@ -67,12 +67,15 @@ namespace edge
 			hr = window->renderer().dwrite_factory()->CreateTextFormat (L"Wingdings", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
 												  DWRITE_FONT_STRETCH_NORMAL, font_size, L"en-US", &_wingdings); rassert(SUCCEEDED(hr));
 			_window->window_proc().add_handler<&property_grid::on_window_proc>(this);
+			_window->renderer().render().add_handler<&property_grid::on_render>(this);
+			this->invalidate();
 		}
 
 		virtual ~property_grid()
 		{
+			_window->renderer().render().remove_handler<&property_grid::on_render>(this);
 			_window->window_proc().remove_handler<&property_grid::on_window_proc>(this);
-			_window->invalidate();
+			this->invalidate();
 			::DestroyWindow(_tooltip);
 		}
 
@@ -89,12 +92,15 @@ namespace edge
 
 		void invalidate()
 		{
-			// TODO: optimize
-			::InvalidateRect (_window->hwnd(), nullptr, FALSE);
+			RECT r = _window->rectd_to_rectp(_rectd, 1);
+			::InvalidateRect (_window->hwnd(), &r, FALSE);
 		}
 
 		std::optional<LRESULT> on_window_proc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		{
+			if (msg == WM_SETCURSOR)
+				return process_wm_setcursor (wparam, lparam);
+
 			/*
 			if (msg == WM_GETDLGCODE)
 			{
@@ -113,16 +119,40 @@ namespace edge
 			return std::nullopt;
 		}
 
-		virtual HCURSOR cursor_at (POINT pp, D2D1_POINT_2F pd) const override
+		std::optional<LRESULT> process_wm_setcursor (WPARAM wparam, LPARAM lparam)
 		{
-			if ((pd.x >= value_column_x()) && (pd.x < _rectd.right))
+			if (((HWND)wparam == _window->hwnd()) && (LOWORD(lparam) == HTCLIENT))
 			{
-				auto htr = hit_test(pd);
-				if (htr.item)
-					return htr.item->cursor_at(pd, htr.y);
+				POINT pt;
+				if (::GetCursorPos(&pt) && ::ScreenToClient (_window->hwnd(), &pt))
+				{
+					auto pd = _window->pointp_to_pointd(pt);
+
+					if (point_in_rect(_rectd, pd))
+					{
+						HCURSOR cursor = nullptr;
+						//if ((pd.x >= value_column_x()) && (pd.x < _rectd.right))
+						{
+							auto htr = hit_test(pd);
+							if (htr.item)
+							{
+								if (htr.code == htcode::input)
+									cursor = ::LoadCursor(nullptr, IDC_CROSS);
+								else if (htr.code == htcode::value)
+									cursor = htr.item->cursor_at(pd, htr.y);
+							}
+						}
+
+						if (!cursor)
+							cursor = ::LoadCursor(nullptr, IDC_ARROW);
+
+						::SetCursor(cursor);
+						return TRUE;
+					}
+				}
 			}
 
-			return ::LoadCursor(nullptr, IDC_ARROW);
+			return std::nullopt;
 		}
 
 		void enum_items (const std::function<void(pgitem_i*, float y, bool& cancel)>& callback) const
@@ -235,7 +265,7 @@ namespace edge
 			return rc;
 		}
 
-		virtual void render (ID2D1DeviceContext* dc) const override
+		void on_render (ID2D1DeviceContext* dc) const
 		{
 			auto rc = make_render_context(dc);
 
@@ -268,16 +298,13 @@ namespace edge
 
 				bool selected = (item == _selected_item);
 				item->render (rc, { _rectd.left, y }, selected, focused);
-
-				if (selected && _text_editor)
-					_text_editor->render(dc);
 			});
 			dc->PopAxisAlignedClip();
 		}
 
 		virtual d2d_window_i* window() const override { return _window; }
 
-		virtual D2D1_RECT_F rectd() const override { return _rectd; }
+		virtual const D2D1_RECT_F& bounds() const override { return _rectd; }
 
 		virtual void set_bounds (const D2D1_RECT_F& bounds) override
 		{
@@ -710,9 +737,22 @@ namespace edge
 
 			if (pe_has_handlers)
 			{
-				property_edited_args args = { objects, std::move(old_values), std::string(new_value_str) };
+				value_property_edited_args args = { prop, objects, std::move(old_values) };
 				pe_invoker(std::move(args));
 			}
+		}
+
+		virtual void change_property (const std::vector<object*>& objects, const object_property* prop, const concrete_type* type) override final
+		{
+			property_grid_i::object_property_edited_args args;
+			args.prop = prop;
+			args.objects = objects;
+			for (object* obj : objects)
+			{
+				auto old_value = prop->set(obj, type->create());
+				args.old_values.push_back(std::move(old_value));
+			}
+			this->event_invoker<property_edited_e>()(std::move(args));
 		}
 
 		virtual float border_width() const override
@@ -749,7 +789,11 @@ namespace edge
 			return x;
 		}
 
-		virtual float indent_width() const override final { return 10; }
+		virtual float indent_width() const override final
+		{
+			float pw = _window->pixel_width();
+			return std::round(10 / pw) * pw;
+		}
 
 		virtual const theme_color_provider_i* tcp() const override final { return _tcp; }
 
@@ -803,6 +847,34 @@ namespace edge
 		{
 			return _text_editor != nullptr;
 		}
+
+		virtual RECT calc_popup_window_pos (pgitem_i* item, float item_y, D2D1_SIZE_F client_size_requested, DWORD style, DWORD ex_style) const override final
+		{
+			D2D1_RECT_F item_rect = _rectd;
+			item_rect.top = item_y;
+			item_rect.bottom = item_y + item->content_height_aligned();
+			RECT item_rect_pixels = _window->rectd_to_rectp(item_rect, 1);
+			::ClientToScreen(_window->hwnd(), (LPPOINT)&item_rect_pixels.left);
+			::ClientToScreen(_window->hwnd(), (LPPOINT)&item_rect_pixels.right);
+
+			POINT anchor_point = { (item_rect_pixels.left + item_rect_pixels.right) / 2, (item_rect_pixels.top + item_rect_pixels.bottom) / 2 };
+
+			RECT window_rect = { 0, 0, _window->lengthd_to_lengthp(client_size_requested.width, 0), _window->lengthd_to_lengthp(client_size_requested.height, 0) };
+
+			if (auto proc_addr = GetProcAddress(GetModuleHandleA("User32.dll"), "AdjustWindowRectExForDpi"))
+			{
+				auto proc = reinterpret_cast<BOOL(WINAPI*)(LPRECT,DWORD,BOOL,DWORD,UINT)>(proc_addr);
+				proc (&window_rect, style, FALSE, ex_style, _window->dpi());
+			}
+			else
+				AdjustWindowRectEx(&window_rect, style, FALSE, ex_style);
+
+			SIZE size = { window_rect.right - window_rect.left, window_rect.bottom - window_rect.top };
+
+			RECT popup_window_pos;
+			BOOL bres = ::CalculatePopupWindowPosition (&anchor_point, &size, 0, &item_rect_pixels, &popup_window_pos); rassert(bres);
+			return popup_window_pos;
+		}
 	};
 
 	#pragma warning (pop)
@@ -826,11 +898,6 @@ namespace edge
 		return std::ceilf (content_height() / pixel_width) * pixel_width + grid->line_thickness();
 	}
 
-	HCURSOR pgitem_i::cursor_at(D2D1_POINT_2F pd, float item_y) const
-	{
-		return LoadCursor(nullptr, IDC_ARROW);
-	}
-
 	root_item_i* pgitem_i::root()
 	{
 		if (auto r = this->as_root())
@@ -839,6 +906,35 @@ namespace edge
 	}
 	#pragma endregion
 
+	#pragma region expandable_item_i
+	void expandable_item_i::render_expand_button (const pg_render_context& rc, float item_y) const
+	{
+		auto grid = root()->grid();
+		float height = content_height_aligned();
+		float name_line_x = grid->bounds().left + grid->border_width() + indent() * grid->indent_width();
+
+		com_ptr<ID2D1Factory> f;
+		rc.dc->GetFactory(&f);
+		com_ptr<ID2D1StrokeStyle> ss;
+		f->CreateStrokeStyle (D2D1::StrokeStyleProperties(D2D1_CAP_STYLE_ROUND, D2D1_CAP_STYLE_ROUND), nullptr, 0, &ss);
+
+		float lw = 2.5f;
+		float size = std::min(height, grid->indent_width()) - lw;
+		if (!expanded())
+		{
+			D2D1_POINT_2F tip = { name_line_x - grid->indent_width() / 2 + size / 4, item_y + height / 2 };
+			rc.dc->DrawLine (tip, { tip.x - size / 2, tip.y - size / 2 }, rc.fore, lw, ss);
+			rc.dc->DrawLine (tip, { tip.x - size / 2, tip.y + size / 2 }, rc.fore, lw, ss);
+		}
+		else
+		{
+			D2D1_POINT_2F tip = { name_line_x - grid->indent_width() / 2, item_y + height / 2 + size / 4 };
+			rc.dc->DrawLine (tip, { tip.x - size / 2, tip.y - size / 2 }, rc.fore, lw, ss);
+			rc.dc->DrawLine (tip, { tip.x + size / 2, tip.y - size / 2 }, rc.fore, lw, ss);
+		}
+	}
+	#pragma endregion
+	/*
 	#pragma region value_item_i
 	float value_item_i::content_height() const
 	{
@@ -853,7 +949,7 @@ namespace edge
 		this->perform_value_layout();
 	}
 	#pragma endregion
-
+	*/
 	#pragma region value_property_item_i
 	bool value_property_item_i::multiple_values() const
 	{
@@ -906,7 +1002,7 @@ namespace edge
 	{
 		auto grid = root()->grid();
 
-		float width = grid->rectd().right - grid->border_width() - grid->value_column_x() - grid->line_thickness() - 2 * text_lr_padding;
+		float width = grid->bounds().right - grid->border_width() - grid->value_column_x() - grid->line_thickness() - 2 * text_lr_padding;
 		if (width <= 0)
 			return { };
 
@@ -940,7 +1036,7 @@ namespace edge
 		auto grid = root()->grid();
 		auto lt = grid->line_thickness();
 		float bw = grid->border_width();
-		auto rectd = grid->rectd();
+		auto rectd = grid->bounds();
 		float height = content_height_aligned();
 
 		D2D1_RECT_F fill_rect = { rectd.left + bw, pd.y, rectd.right - bw, pd.y + height };
@@ -985,8 +1081,8 @@ namespace edge
 			rc.dc->SetTransform(&oldtr);
 		}
 
-		float name_line_x = rectd.left + bw + indent() * grid->indent_width() + lt / 2;
-		rc.dc->DrawLine ({ name_line_x, pd.y }, { name_line_x, pd.y + height }, rc.disabled_fore, lt);
+		float name_line_x = rectd.left + bw + indent() * grid->indent_width();
+		rc.dc->DrawLine ({ name_line_x + lt / 2, pd.y }, { name_line_x + lt / 2, pd.y + height }, rc.disabled_fore, lt);
 		auto fore = bound ? rc.data_bind_fore.get() : rc.fore.get();
 		rc.dc->DrawTextLayout ({ rectd.left + bw + indent() * grid->indent_width() + lt + text_lr_padding, pd.y }, name(), fore);
 
@@ -1069,7 +1165,7 @@ namespace edge
 		}
 		else
 		{
-			D2D1_RECT_F editor_rect = { vcx + grid->line_thickness(), item_y, grid->rectd().right - grid->border_width(), item_y + content_height_aligned() };
+			D2D1_RECT_F editor_rect = { vcx + grid->line_thickness(), item_y, grid->bounds().right - grid->border_width(), item_y + content_height_aligned() };
 			bool bold = changed_from_default();
 			std::string str = multiple_values() ? std::string() : property()->get_to_string(parent()->parent()->objects().front(), root()->app_context());
 			auto editor = grid->show_text_editor (editor_rect, bold, text_lr_padding, str);
@@ -1088,7 +1184,7 @@ namespace edge
 		const property_group* const _group;
 		text_layout_with_metrics _layout;
 		bool _expanded = false;
-		std::vector<std::unique_ptr<pgitem_i>> _children;
+		std::vector<std::unique_ptr<property_item_i>> _children;
 
 	public:
 		group_item (object_item_i* parent, const property_group* group)
@@ -1099,6 +1195,8 @@ namespace edge
 		}
 
 		virtual object_item_i* parent() const override final { return _parent; }
+
+		virtual const std::vector<std::unique_ptr<property_item_i>>& children() const override final { return _children; }
 
 		virtual bool selectable() const override final { return false; }
 
@@ -1112,7 +1210,7 @@ namespace edge
 
 		virtual size_t child_count() const override final { return _children.size(); }
 
-		virtual pgitem_i* child_at(size_t index) const override final { return _children[index].get(); }
+		virtual pgitem_i* child_at(size_t index) const override final { return _children[index]->as_item(); }
 
 		virtual void expand() override final
 		{
@@ -1129,12 +1227,12 @@ namespace edge
 
 		virtual bool expanded() const override final { return _expanded; }
 
-		std::unique_ptr<pgitem_i> make_child_item (const property* prop);
+		std::unique_ptr<property_item_i> make_child_item (const property* prop);
 
 		void create_children()
 		{
 			rassert (_children.empty());
-			auto type = parent()->objects().front()->type();
+			auto type = _parent->objects().front()->type();
 
 			for (auto prop : type->make_property_list())
 			{
@@ -1159,7 +1257,7 @@ namespace edge
 			{
 				auto grid = root()->grid();
 				float bw = grid->border_width();
-				auto rectd = grid->rectd();
+				auto rectd = grid->bounds();
 				rc.dc->FillRectangle ({ rectd.left + bw, pd.y, rectd.right - bw, pd.y + content_height_aligned() }, rc.back);
 				rc.dc->DrawTextLayout ({ rectd.left + bw + indent() * grid->indent_width() + text_lr_padding, pd.y }, _layout, rc.fore);
 			}
@@ -1169,6 +1267,8 @@ namespace edge
 		{
 			return _layout ? _layout.height() : 0;
 		}
+
+		HCURSOR cursor_at(D2D1_POINT_2F pd, float item_y) const final { return ::LoadCursor(nullptr, IDC_ARROW); }
 	};
 
 	class root_item : public root_item_i
@@ -1177,7 +1277,7 @@ namespace edge
 		std::string const _heading;
 		pg_app_context_i* const _app_context;
 		std::vector<object*> const _objects;
-		std::vector<std::unique_ptr<group_item>> _children;
+		std::vector<std::unique_ptr<group_item_i>> _children;
 		bool _expanded = false;
 		text_layout_with_metrics _text_layout;
 
@@ -1246,9 +1346,9 @@ namespace edge
 			if (_text_layout)
 			{
 				D2D1_RECT_F rect = {
-					_grid->rectd().left + _grid->border_width(),
+					_grid->bounds().left + _grid->border_width(),
 					pd.y,
-					_grid->rectd().right - _grid->border_width(),
+					_grid->bounds().right - _grid->border_width(),
 					pd.y + content_height_aligned()
 				};
 				rc.dc->FillRectangle (&rect, rc.root_item_back);
@@ -1263,6 +1363,8 @@ namespace edge
 			else
 				return 0;
 		}
+
+		HCURSOR cursor_at(D2D1_POINT_2F pd, float item_y) const final { return ::LoadCursor(nullptr, IDC_ARROW); }
 
 		virtual void expand() override final
 		{
@@ -1280,38 +1382,31 @@ namespace edge
 
 		void on_property_changing (object* obj, const property_change_args& args)
 		{
+			for (auto& gi : _children)
+			{
+				for (auto& pi : gi->children())
+				{
+					if (pi->property() == args.property)
+					{
+						pi->on_property_changing (obj, args);
+						return;
+					}
+				}
+			}
 		}
 
 		void on_property_changed (object* obj, const property_change_args& args)
 		{
-			if (!args.property->ui_visible)
-				return;
-
-			auto root_item = this->root();
-
-			if (auto prop = dynamic_cast<const value_property*>(args.property))
+			for (auto& gi : _children)
 			{
-				for (auto& gi : _children)
+				for (auto& pi : gi->children())
 				{
-					for (size_t i = 0; i < gi->child_count(); i++)
+					if (pi->property() == args.property)
 					{
-						auto child_item = gi->child_at(i);
-						if (auto vi = dynamic_cast<value_property_item_i*>(child_item); vi->property() == prop)
-						{
-							vi->perform_value_layout();
-							root_item->grid()->invalidate();
-							break;
-						}
+						pi->on_property_changed (obj, args);
+						return;
 					}
 				}
-			}
-			else if (auto prop = dynamic_cast<const value_collection_property*>(args.property))
-			{
-				rassert(false); // not implemented
-			}
-			else
-			{
-				rassert(false); // not implemented
 			}
 		}
 
@@ -1324,21 +1419,7 @@ namespace edge
 				// TODO: some "(multiple types selected)" pg item
 				return;
 
-			struct group_comparer
-			{
-				bool operator() (const property_group* g1, const property_group* g2) const { return g1->prio < g2->prio; }
-			};
-
-			std::set<const property_group*, group_comparer> groups;
-
-			for (auto prop : type->make_property_list())
-			{
-				if (groups.find(prop->group) == groups.end())
-					groups.insert(prop->group);
-			}
-
-			for (const property_group* g : groups)
-				_children.push_back (std::make_unique<group_item>(this, g));
+			_children = make_group_items(this, type);
 		}
 	};
 
@@ -1356,9 +1437,20 @@ namespace edge
 			this->perform_layout();
 		}
 
-		virtual void perform_name_layout() override final { _name = make_name_layout(); }
+		void perform_layout() final
+		{
+			_name = make_name_layout();
+			_value = make_value_layout();
+		}
 
-		virtual void perform_value_layout() override final { _value = make_value_layout(); }
+		//virtual void perform_name_layout() override final { _name = make_name_layout(); }
+
+		//virtual void perform_value_layout() override final { _value = make_value_layout(); }
+
+		float content_height() const final
+		{
+			return std::max (name() ? name().height() : 0, value().tl ? value().tl.height() : 0);
+		}
 
 		virtual const text_layout_with_metrics& name() const override final { return _name; }
 
@@ -1383,6 +1475,14 @@ namespace edge
 				rc.dc->DrawTextLayout ({ pd.x + root()->grid()->line_thickness() + text_lr_padding, pd.y }, value().tl, brush);
 			}
 		}
+
+		void on_property_changing (object* obj, const property_change_args& args) final { }
+
+		void on_property_changed (object* obj, const property_change_args& args) final
+		{
+			_value = make_value_layout();
+			root()->grid()->invalidate();
+		}
 	};
 
 	class object_collection_item : public object_collection_item_i
@@ -1392,6 +1492,7 @@ namespace edge
 		bool const _multiple_selection;
 		text_layout_with_metrics _name_layout;
 		text_layout_with_metrics _value_layout;
+		bool _expanded = false;
 
 	public:
 		object_collection_item (group_item_i* parent, const object_collection_property* prop)
@@ -1436,7 +1537,7 @@ namespace edge
 			auto grid = root()->grid();
 			auto lw = grid->line_thickness();
 			float bw = grid->border_width();
-			auto rectd = grid->rectd();
+			auto rectd = grid->bounds();
 			float height = content_height_aligned();
 
 			D2D1_RECT_F fill_rect = { rectd.left + bw, pd.y, rectd.right - bw, pd.y + height };
@@ -1452,9 +1553,9 @@ namespace edge
 				rc.dc->FillRectangle (&fill_rect, rc.item_gradient_brush);
 			}
 
-			float name_line_x = rectd.left + bw + indent() * grid->indent_width() + lw / 2;
-			rc.dc->DrawLine ({ name_line_x, pd.y }, { name_line_x, pd.y + height }, rc.disabled_fore, lw);
-			rc.dc->DrawTextLayout ({ rectd.left + bw + indent() * grid->indent_width() + lw + text_lr_padding, pd.y }, _name_layout, rc.fore);
+			float name_line_x = rectd.left + bw + indent() * grid->indent_width();
+			rc.dc->DrawLine ({ name_line_x + lw / 2, pd.y }, { name_line_x + lw / 2, pd.y + height }, rc.disabled_fore, lw);
+			rc.dc->DrawTextLayout ({ name_line_x + lw + text_lr_padding, pd.y }, _name_layout, rc.fore);
 
 			float linex = grid->value_column_x() + lw / 2;
 			rc.dc->DrawLine ({ linex, pd.y }, { linex, pd.y + height }, rc.disabled_fore, lw);
@@ -1470,8 +1571,6 @@ namespace edge
 			return ::LoadCursor(nullptr, read_only() ? IDC_ARROW : IDC_HAND);
 		}
 
-		virtual bool selectable() const override final { return true; }
-
 		virtual void on_mouse_down (const mouse_ud_args& ma, float item_y) override final { }
 
 		virtual void on_mouse_up (const mouse_ud_args& ma, float item_y) override final { }
@@ -1482,9 +1581,342 @@ namespace edge
 		{
 			return _prop->description ? std::string(_prop->description) : std::string();
 		}
+
+		// expandable_item_i
+		size_t child_count() const final { return 0; }
+		pgitem_i* child_at(size_t index) const final { return nullptr; }
+		void expand() final { throw not_implemented_exception(); }
+		void collapse() final { throw not_implemented_exception(); }
+		bool expanded() const final { return _expanded; }
+
+		// property_item_i
+		pgitem_i* as_item() final { return this; }
+		void on_property_changing (object* obj, const property_change_args& args) final { rassert(false); }
+		void on_property_changed (object* obj, const property_change_args& args) final { rassert(false); }
+
+		// object_collection_item_i
+		const object_collection_property* property() const final { return _prop; }
 	};
 
-	std::unique_ptr<pgitem_i> group_item::make_child_item (const property* prop)
+	class object_picker_popup : public win32_window_i
+	{
+		static constexpr DWORD style = WS_POPUPWINDOW;
+		static constexpr DWORD ex_style = WS_EX_NOACTIVATE;
+		static constexpr char bottom_hint[] = "Click a color name to select it, click a colored cell to edit the color.";
+
+		static inline const WNDCLASSEX wnd_class = {
+			.cbSize = sizeof(WNDCLASSEX),
+			.style = CS_DBLCLKS | CS_DROPSHADOW,
+			.hCursor = ::LoadCursor (nullptr, IDC_ARROW),
+			.lpszClassName = L"object_picker_popup",
+		};
+
+		object_property_item_i*  const _item;
+		std::function<void(const concrete_type*)> const _callback;
+		property_grid_i*         const _grid;
+		float                    const _client_width = 200;
+		float                    const _client_height = 400;
+		window                   _window;
+		d2d_renderer             _renderer;
+		float                    const _lrpadding;
+		//text_layout_with_metrics const _bottom_hint_text;
+		HHOOK _mouse_hook = nullptr;
+		std::vector<const concrete_type*> _types;
+
+	public:
+		object_picker_popup (object_property_item_i* item, float item_y, std::function<void(const concrete_type*)> callback)
+			: _item(item)
+			, _callback(callback)
+			, _grid(item->root()->grid())
+			, _window(wnd_class, ex_style, style, _grid->window()->hwnd(), _grid->calc_popup_window_pos(item, item_y, { _client_width, _client_height }, style, ex_style))
+			, _renderer(this, _grid->window()->renderer().d3d_dc(), _grid->window()->renderer().dwrite_factory())
+			, _lrpadding(std::round(5 / pixel_width()) * pixel_width())
+		{
+			_window.window_proc().add_handler<&object_picker_popup::on_window_proc>(this);
+			_renderer.render().add_handler<&object_picker_popup::on_render>(this);
+			::ShowWindow (hwnd(), SW_SHOWNOACTIVATE);
+
+			for (auto t : concrete_type::known_types())
+			{
+				if (t->is_same_or_derived_from(item->property()->child_type()))
+					_types.push_back(t);
+			}
+		}
+
+		~object_picker_popup()
+		{
+			::ShowWindow (hwnd(), SW_HIDE);
+			_renderer.render().remove_handler<&object_picker_popup::on_render>(this);
+			_window.window_proc().remove_handler<&object_picker_popup::on_window_proc>(this);
+		}
+
+	private:
+
+		HWND hwnd() const final { return _window.hwnd(); }
+
+		window_proc_e::subscriber window_proc() final { return _window.window_proc(); }
+
+		std::optional<LRESULT> on_window_proc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+		{
+			if (msg == WM_LBUTTONDOWN)
+			{
+				_callback(_types.front());
+				return 0;
+			}
+
+			return std::nullopt;
+		}
+
+		void on_render (ID2D1DeviceContext* dc) const
+		{
+			auto rc = _grid->make_render_context(dc);
+			dc->SetTransform(dpi_transform());
+			dc->Clear(rc.back->GetColor());
+			float layout_width = _client_width - 2 * _lrpadding;
+			float y = 0;
+			for (const concrete_type* t : _types)
+			{
+				text_layout_with_metrics name (_renderer.dwrite_factory(), _grid->bold_text_format(), t->name, layout_width);
+				dc->DrawTextLayout ({ _lrpadding, y }, name, rc.fore);
+				y += (name.height() * 1.2f);
+			}
+		}
+
+		static LRESULT CALLBACK mouse_hook_proc(int Code, WPARAM wParam, LPARAM lParam);
+	};
+
+	class object_property_item : public object_property_item_i
+	{
+		group_item_i* const _parent;
+		const object_property* const _prop;
+		bool _expanded = false;
+		text_layout_with_metrics _name;
+		std::vector<object*> _objects;
+		std::vector<std::unique_ptr<group_item_i>> _children;
+		size_t _property_changing_count = 0;
+
+		enum class value_state { all_null, multiple_selection, all_same_type };
+		std::pair<value_state, text_layout_with_metrics> _value;
+
+		static inline std::optional<object_picker_popup> _popup;
+
+	public:
+		object_property_item (group_item_i* parent, const object_property* prop)
+			: _parent(parent)
+			, _prop(prop)
+			, _name (make_name_layout())
+			, _value (make_value_layout())
+		{
+			_objects.reserve(parent->parent()->objects().size());
+			for (auto obj : parent->parent()->objects())
+				_objects.push_back(prop->get(obj));
+		}
+
+		~object_property_item()
+		{
+			_popup.reset();
+		}
+
+		// pgitem_i
+		group_item_i* parent() const final { return _parent; }
+
+		text_layout_with_metrics make_name_layout() const
+		{
+			auto grid = root()->grid();
+			auto dwf = grid->window()->renderer().dwrite_factory();
+			float ncx = grid->name_column_x(indent());
+			float name_width = grid->value_column_x() - ncx;
+			return text_layout_with_metrics(dwf, grid->text_format(), _prop->name, name_width);
+		}
+
+		std::pair<value_state, text_layout_with_metrics> make_value_layout() const
+		{
+			auto grid = root()->grid();
+			auto dwf = grid->window()->renderer().dwrite_factory();
+			float ncx = grid->name_column_x(indent());
+
+			float value_width = grid->bounds().right - ncx;
+			auto& objs = _parent->parent()->objects();
+			if (std::all_of(objs.begin(), objs.end(), [prop=_prop](object* o) { return !prop->get(o); }))
+				return { value_state::all_null, text_layout_with_metrics(dwf, grid->text_format(), "(not set)", value_width) };
+
+			auto type = _prop->get(objs.front()) ? _prop->get(objs.front())->type() : nullptr;
+			bool all_same_type = std::all_of(objs.begin(), objs.end(), [prop=_prop,type](object* o) { return (prop->get(o) ? prop->get(o)->type() : nullptr) == type; });
+			if (!all_same_type)
+				return { value_state::multiple_selection, text_layout_with_metrics(dwf, grid->bold_text_format(), "(multiple selection)", value_width) };
+
+			return { value_state::all_same_type, text_layout_with_metrics(dwf, grid->bold_text_format(), type->name, value_width) };
+		}
+
+		void perform_layout() final
+		{
+			_name = make_name_layout();
+			_value = make_value_layout();
+		}
+
+		D2D1_RECT_F expand_button_click_rect (float item_y) const
+		{
+			rassert (_value.first == value_state::all_same_type);
+			auto grid = root()->grid();
+			auto rectd = grid->bounds();
+			float name_line_x = rectd.left + grid->border_width() + indent() * grid->indent_width();
+			return { name_line_x - grid->indent_width(), item_y, name_line_x, item_y + this->content_height_aligned() };
+		}
+
+		void render (const pg_render_context& rc, D2D1_POINT_2F pd, bool selected, bool focused) const final
+		{
+			auto grid = root()->grid();
+			auto lt = grid->line_thickness();
+			float bw = grid->border_width();
+			auto rectd = grid->bounds();
+			float height = content_height_aligned();
+
+			D2D1_RECT_F fill_rect = { rectd.left + bw, pd.y, rectd.right - bw, pd.y + height };
+
+			if (selected)
+			{
+				rc.dc->FillRectangle (&fill_rect, focused ? rc.selected_back_focused.get() : rc.selected_back_not_focused.get());
+			}
+			else
+			{
+				rc.item_gradient_brush->SetStartPoint ({ fill_rect.left, fill_rect.top });
+				rc.item_gradient_brush->SetEndPoint ({ fill_rect.left, fill_rect.bottom });
+				rc.dc->FillRectangle (&fill_rect, rc.item_gradient_brush);
+			}
+
+			float name_line_x = rectd.left + bw + indent() * grid->indent_width();
+
+			if (_value.first == value_state::all_same_type)
+				render_expand_button(rc, pd.y);
+
+			rc.dc->DrawLine ({ name_line_x + lt/2, pd.y }, { name_line_x + lt/2, pd.y + height }, rc.disabled_fore, lt);
+			rc.dc->DrawTextLayout ({ name_line_x + lt + text_lr_padding, pd.y }, _name, rc.fore);
+
+			float value_linex = grid->value_column_x();
+			rc.dc->DrawLine ({ value_linex + lt/2, pd.y }, { value_linex + lt/2, pd.y + height }, rc.disabled_fore, lt);
+			rc.dc->DrawTextLayout ({ grid->value_column_x() + lt + text_lr_padding, pd.y }, _value.second, rc.fore);
+
+//			rc.dc->DrawTextLayout(pd, _name, rc.fore);
+		}
+
+		float content_height() const final { return std::max(_name.height(), _value.second.height()); }
+
+		HCURSOR cursor_at (D2D1_POINT_2F pd, float item_y) const final
+		{
+			auto grid = root()->grid();
+			if (grid->read_only())
+				return ::LoadCursor(nullptr, IDC_ARROW);
+
+			return ::LoadCursor(nullptr, IDC_HAND);
+		}
+
+		void on_mouse_down (const mouse_ud_args& ma, float item_y) final
+		{
+			if (_value.first == value_state::all_same_type)
+			{
+				if (point_in_rect(expand_button_click_rect(item_y), ma.pd))
+				{
+					if (_expanded)
+						collapse();
+					else
+						expand();
+				}
+			}
+		}
+
+		void on_mouse_up (const mouse_ud_args& ma, float item_y) final
+		{
+			auto grid = root()->grid();
+			if (grid->read_only())
+				return;
+			auto vcx = grid->value_column_x();
+			if (ma.pd.x < vcx)
+				return;
+
+			_popup.emplace(this, item_y, std::bind(&object_property_item::on_object_picked, this, std::placeholders::_1));
+		}
+
+		std::string description_title() const final { return _prop->name; }
+
+		std::string description_text() const final { return _prop->description ? std::string(_prop->description) : std::string(); }
+
+		// expandable_item_i
+		size_t child_count() const final { return _children.size(); }
+
+		pgitem_i* child_at(size_t index) const final { return _children[index].get(); }
+
+		void expand() final
+		{
+			rassert (!_expanded);
+			if (_value.first != value_state::all_same_type)
+				return;
+
+			auto type = _prop->get(_parent->parent()->objects().front())->type();
+			_children = make_group_items(this, type);
+			_expanded = true;
+			root()->grid()->invalidate();
+		}
+
+		void collapse() final
+		{
+			rassert (_expanded);
+			_children.clear();
+			_expanded = false;
+			root()->grid()->invalidate();
+		}
+
+		bool expanded() const final { return _expanded; }
+
+		// object_item_i
+		const std::vector<object*>& objects() const final { return _objects; }
+
+		// property_item_i
+		pgitem_i* as_item() final { return this; }
+
+		void on_property_changing (object* obj, const property_change_args& args) final
+		{
+			if (_property_changing_count == 0)
+			{
+				_children.clear();
+				_expanded = false;
+			}
+
+			rassert (_property_changing_count < _objects.size());
+			_property_changing_count++;
+		}
+
+		void on_property_changed (object* obj, const property_change_args& args) final
+		{
+			rassert(_property_changing_count > 0);
+			_property_changing_count--;
+			if (_property_changing_count == 0)
+			{
+				_objects.clear();
+				for (auto obj : _parent->parent()->objects())
+					_objects.push_back(_prop->get(obj));
+				_value = make_value_layout(); // this one first cause expand() uses it (TODO: refactor this)
+				expand();
+				root()->grid()->invalidate();
+			}
+		}
+
+		// object_property_item_i
+		const object_property* property() const final { return _prop; }
+
+		void on_object_picked (const concrete_type* type)
+		{
+			auto& objs = parent()->parent()->objects();
+			if (std::any_of(objs.begin(), objs.end(),
+				[prop=_prop,type](object* o) { return (prop->get(o) ? prop->get(o)->type() : nullptr) != type; }))
+			{
+				root()->grid()->change_property (objs, _prop, type);
+			}
+
+			_popup.reset();
+		}
+	};
+
+	std::unique_ptr<property_item_i> group_item::make_child_item (const property* prop)
 	{
 		if (auto f = dynamic_cast<const pg_custom_item_i*>(prop))
 			return f->create_item(this, prop);
@@ -1494,12 +1926,37 @@ namespace edge
 
 		if (auto obj_coll_prop = dynamic_cast<const object_collection_property*>(prop))
 			return std::make_unique<object_collection_item>(this, obj_coll_prop);
+
+		if (auto obj_prop = dynamic_cast<const object_property*>(prop))
+			return std::make_unique<object_property_item>(this, obj_prop);
+
 		// TODO: placeholder pg item for unknown types of properties
 		throw not_implemented_exception();
 	}
 
-	std::unique_ptr<root_item_i> make_root_item (property_grid_i* grid, const char* heading, std::span<object* const> objects, pg_app_context_i* app_context)
+	static std::unique_ptr<root_item_i> make_root_item (property_grid_i* grid, const char* heading, std::span<object* const> objects, pg_app_context_i* app_context)
 	{
 		return std::make_unique<root_item>(grid, heading, objects, app_context);
+	}
+
+	static std::vector<std::unique_ptr<group_item_i>> make_group_items (object_item_i* parent, const concrete_type* type)
+	{
+		struct group_comparer
+		{
+			bool operator() (const property_group* g1, const property_group* g2) const { return g1->prio < g2->prio; }
+		};
+
+		std::set<const property_group*, group_comparer> groups;
+
+		for (auto prop : type->make_property_list())
+		{
+			if (groups.find(prop->group) == groups.end())
+				groups.insert(prop->group);
+		}
+
+		std::vector<std::unique_ptr<group_item_i>> group_items;
+		for (const property_group* g : groups)
+			group_items.push_back (std::make_unique<group_item>(parent, g));
+		return group_items;
 	}
 }

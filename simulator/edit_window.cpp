@@ -44,9 +44,14 @@ class edit_window : public event_manager, public edit_window_i
 	std::unique_ptr<edit_state> _state;
 	ht_result _htResult = { nullptr, 0 };
 
+	static const inline WNDCLASSEX wnd_class = {
+		.style = CS_DBLCLKS | CS_HREDRAW | CS_VREDRAW,
+		.hCursor = ::LoadCursor(nullptr, IDC_ARROW),
+		.lpszClassName = L"edit_window",
+	};
 public:
 	edit_window (const edit_window_create_params& cps)
-		: _window(WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, cps.hWndParent, cps.rect)
+		: _window(wnd_class, WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, cps.hWndParent, cps.rect)
 		, _renderer(this, cps.d3d_dc, cps.dWriteFactory)
 		, _zoomer(this)
 		, _app(cps.app)
@@ -100,14 +105,9 @@ public:
 
 	// d2d_window_i
 	virtual d2d_renderer& renderer() override final { return _renderer; }
-	virtual void show_caret (const D2D1_RECT_F& bounds, const D2D1_COLOR_F& color, const D2D1_MATRIX_3X2_F* transform = nullptr) override { _renderer.show_caret(bounds, color, transform); }
-	virtual void hide_caret() override { _renderer.hide_caret(); }
 
 	// zoomable_window_i
-	virtual D2D1_POINT_2F aimpoint() const override { return _zoomer.aimpoint(); }
-	virtual float zoom() const override { return _zoomer.zoom(); }
-	virtual zoom_transform_changed_e::subscriber zoom_transform_changed() override { return _zoomer.zoom_transform_changed(); }
-	virtual void zoom_to (const D2D1_RECT_F& rect, float min_margin, float min_zoom, float max_zoom, bool smooth) override { _zoomer.zoom_to(rect, min_margin, min_zoom, max_zoom, smooth); }
+	virtual edge::zoomer& zoomer() override final { return _zoomer; }
 
 	void on_selected_vlan_changed (project_window_i* pw, unsigned int vlanNumber)
 	{
@@ -1008,7 +1008,7 @@ public:
 			for (auto& w : _project->wires())
 				r = union_rects(r, w->extent());
 
-			this->zoom_to (r, 20, 0, 1.5f, false);
+			_zoomer.zoom_to (r, 20, 0, 1.5f, false);
 		}
 	}
 

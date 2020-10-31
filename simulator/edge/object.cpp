@@ -5,7 +5,6 @@
 #include "pch.h"
 #include "object.h"
 #include "collections.h"
-#include <cstring>
 
 namespace edge
 {
@@ -115,8 +114,8 @@ namespace edge
 		{
 			if (auto obj_prop = dynamic_cast<const edge::object_property*>(prop))
 			{
-				auto child = obj_prop->get(this);
-				child->walk_tree(f);
+				if (auto child = obj_prop->get(this))
+					child->walk_tree(f);
 			}
 			else if (auto oc_prop = dynamic_cast<const edge::object_collection_property*>(prop))
 			{

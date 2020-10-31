@@ -3,7 +3,7 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "object.h"
+#include "collections.h"
 #include "text_editor.h"
 #include "text_layout.h"
 
@@ -15,6 +15,7 @@ namespace edge
 	struct object_item_i;
 	struct root_item_i;
 	struct value_property_item_i;
+	struct property_item_i;
 
 	struct property_editor_i
 	{
@@ -30,7 +31,7 @@ namespace edge
 
 	struct __declspec(novtable) pg_custom_item_i
 	{
-		virtual std::unique_ptr<pgitem_i> create_item (group_item_i* parent, const property* prop) const = 0;
+		virtual std::unique_ptr<property_item_i> create_item (group_item_i* parent, const property* prop) const = 0;
 	};
 
 	struct __declspec(novtable) pg_bindable_property_i
@@ -86,7 +87,7 @@ namespace edge
 	{
 		virtual ~property_grid_i() = default;
 		virtual d2d_window_i* window() const = 0;
-		virtual D2D1_RECT_F rectd() const = 0;
+		virtual const D2D1_RECT_F& bounds() const = 0;
 		virtual void set_bounds (const D2D1_RECT_F& rectp) = 0;
 		virtual void set_border_width (float bw) = 0;
 		virtual float border_width() const = 0;
@@ -96,14 +97,12 @@ namespace edge
 		void add_section (const char* heading, object* obj, pg_app_context_i* app_context) { add_section(heading, { &obj, 1 }, app_context); }
 		virtual std::span<const std::unique_ptr<root_item_i>> sections() const = 0;
 		virtual bool read_only() const = 0;
-		virtual void render (ID2D1DeviceContext* dc) const = 0;
 		virtual handled on_mouse_down (const mouse_ud_args& args) = 0;
 		virtual handled on_mouse_up   (const mouse_ud_args& args) = 0;
 		virtual void    on_mouse_move (const mouse_move_args& args) = 0;
 		virtual handled on_key_down (uint32_t vkey, modifier_key mks) = 0;
 		virtual handled on_key_up (uint32_t vkey, modifier_key mks) = 0;
 		virtual handled on_char_key (uint32_t ch) = 0;
-		virtual HCURSOR cursor_at (POINT pp, D2D1_POINT_2F pd) const = 0;
 		virtual D2D1_POINT_2F input_of (value_property_item_i* vi) const = 0;
 		virtual D2D1_POINT_2F output_of (value_property_item_i* vi) const = 0;
 		virtual value_property_item_i* find_item (const value_property* prop) const = 0;
@@ -124,9 +123,18 @@ namespace edge
 
 		struct property_edited_args
 		{
-			const std::vector<object*>& objects;
+			const property* prop;
+			std::vector<object*> objects;
+		};
+
+		struct value_property_edited_args : property_edited_args
+		{
 			std::vector<std::string> old_values;
-			std::string new_value;
+		};
+
+		struct object_property_edited_args : property_edited_args
+		{
+			std::vector<std::unique_ptr<object>> old_values;
 		};
 
 		struct property_edited_e : event<property_edited_e, property_edited_args&&> { };
@@ -139,15 +147,17 @@ namespace edge
 		virtual text_editor_i* show_text_editor (const D2D1_RECT_F& rect, bool bold, float lr_padding, std::string_view str) = 0;
 		virtual int show_enum_editor (D2D1_POINT_2F dip, const nvp* nvps) = 0;
 		virtual void change_property (const std::vector<object*>& objects, const value_property* prop, std::string_view new_value_str, pg_app_context_i* app_context) = 0;
+		virtual void change_property (const std::vector<object*>& objects, const object_property* prop, const concrete_type* type) = 0;
 		virtual float line_thickness() const = 0;
 		virtual float name_column_x (size_t indent) const = 0;
 		virtual float value_column_x() const = 0;
 		virtual float indent_width() const = 0;
 		virtual const theme_color_provider_i* tcp() const = 0;
 		virtual pg_render_context make_render_context (ID2D1DeviceContext* dc) const = 0;
+		virtual RECT calc_popup_window_pos (pgitem_i* item, float item_y, D2D1_SIZE_F client_size_requested, DWORD style, DWORD ex_style) const = 0;
 
-		float width() const { auto r = rectd(); return r.right - r.left; }
-		float height() const { auto r = rectd(); return r.bottom - r.top; }
+		float width() const { auto r = bounds(); return r.right - r.left; }
+		float height() const { auto r = bounds(); return r.bottom - r.top; }
 	};
 
 	using property_grid_factory_t = std::unique_ptr<property_grid_i>(d2d_window_i* window, const D2D1_RECT_F& bounds, const theme_color_provider_i* tp);
@@ -167,7 +177,7 @@ namespace edge
 		virtual void perform_layout() = 0;
 		virtual void render (const pg_render_context& rc, D2D1_POINT_2F pd, bool selected, bool focused) const = 0;
 		virtual float content_height() const = 0;
-		virtual HCURSOR cursor_at(D2D1_POINT_2F pd, float item_y) const;
+		virtual HCURSOR cursor_at(D2D1_POINT_2F pd, float item_y) const = 0;
 		virtual bool selectable() const = 0;
 		virtual void on_mouse_down (const mouse_ud_args& ma, float item_y) = 0;
 		virtual void on_mouse_up   (const mouse_ud_args& ma, float item_y) = 0;
@@ -188,11 +198,25 @@ namespace edge
 		virtual void expand() = 0;
 		virtual void collapse() = 0;
 		virtual bool expanded() const = 0;
+
+		void render_expand_button (const pg_render_context& rc, float item_y) const;
 	};
 
 	struct __declspec(novtable) object_item_i : expandable_item_i
 	{
 		virtual const std::vector<object*>& objects() const = 0;
+	};
+
+	struct __declspec(novtable) property_item_i
+	{
+		virtual ~property_item_i() = default;
+		virtual const property* property() const = 0;
+		virtual pgitem_i* as_item() = 0;
+		const pgitem_i* as_item() const { return const_cast<property_item_i*>(this)->as_item(); }
+
+		// These two function are called by the root item, which listens to corresponding events.
+		virtual void on_property_changing (object* obj, const property_change_args& args) = 0;
+		virtual void on_property_changed (object* obj, const property_change_args& args) = 0;
 	};
 
 	struct __declspec(novtable) root_item_i : object_item_i
@@ -205,9 +229,10 @@ namespace edge
 	{
 		virtual root_item_i* as_root() override final { return nullptr; }
 		virtual object_item_i* parent() const = 0;
+		virtual const std::vector<std::unique_ptr<property_item_i>>& children() const = 0;
 	};
 
-	struct __declspec(novtable) value_item_i : pgitem_i
+	struct __declspec(novtable) value_item_i
 	{
 		struct value_layout
 		{
@@ -215,25 +240,28 @@ namespace edge
 			bool readable;
 		};
 
-		virtual root_item_i* as_root() override final { return nullptr; }
-		virtual float content_height() const override final;
-		virtual bool selectable() const override final { return true; }
-		virtual void perform_layout() override final;
+		//virtual root_item_i* as_root() override final { return nullptr; }
+		//virtual float content_height() const override final;
+		//virtual bool selectable() const override final { return true; }
+		//virtual void perform_layout() override final;
 
-		virtual void perform_name_layout() = 0;
-		virtual void perform_value_layout() = 0;
+		//virtual void perform_name_layout() = 0;
+		//virtual void perform_value_layout() = 0;
 		virtual const text_layout_with_metrics& name() const = 0;
 		virtual const value_layout& value() const = 0;
 	};
 
-	struct __declspec(novtable) value_property_item_i : value_item_i
+	struct __declspec(novtable) value_property_item_i : pgitem_i, value_item_i, property_item_i
 	{
+		bool selectable() const final { return true; }
+
 		virtual void render (const pg_render_context& rc, D2D1_POINT_2F pd, bool selected, bool focused) const override final;
 		virtual HCURSOR cursor_at(D2D1_POINT_2F pd, float item_y) const override;
 		virtual void on_mouse_down (const mouse_ud_args& ma, float item_y) override;
 		virtual void on_mouse_up   (const mouse_ud_args& ma, float item_y) override;
 		virtual std::string description_title() const override final;
 		virtual std::string description_text() const override final;
+		virtual pgitem_i* as_item() override final { return this; }
 
 		virtual group_item_i* parent() const = 0;
 		virtual const value_property* property() const = 0;
@@ -246,16 +274,31 @@ namespace edge
 		value_layout make_value_layout() const;
 	};
 
-	struct __declspec(novtable) object_collection_item_i : pgitem_i // expandable_item_i
+	struct __declspec(novtable) object_collection_item_i : expandable_item_i, property_item_i
 	{
+		bool selectable() const final { return true; }
+		virtual const object_collection_property* property() const = 0;
 	};
 
-	struct __declspec(novtable) object_collection_child_item_i : pgitem_i // expandable_item_i
+	struct __declspec(novtable) object_collection_child_item_i : object_item_i
 	{
+		bool selectable() const final { return true; }
 	};
 
-	struct __declspec(novtable) value_collection_entry_item_i : value_item_i
+	struct __declspec(novtable) value_collection_item_i : expandable_item_i, property_item_i
 	{
+		bool selectable() const final { return true; }
+		virtual const value_collection_property* property() const = 0;
 	};
 
+	struct __declspec(novtable) value_collection_child_item_i : pgitem_i, value_item_i
+	{
+		bool selectable() const final { return true; }
+	};
+
+	struct __declspec(novtable) object_property_item_i : object_item_i, property_item_i
+	{
+		bool selectable() const final { return true; }
+		virtual const object_property* property() const = 0;
+	};
 }

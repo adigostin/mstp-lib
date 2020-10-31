@@ -103,12 +103,21 @@ namespace edge
 				return (c->*member_callback)(std::forward<args_t>(args)...);
 			}
 
+			template<class target_class, return_t(target_class::*member_callback)(args_t...) const>
+			static return_t proxy (void* arg, args_t... args)
+			{
+				auto c = static_cast<const target_class*>(arg);
+				return (c->*member_callback)(std::forward<args_t>(args)...);
+			}
+
 		public:
 			template<auto member_callback, typename class_type = extract_class<decltype(member_callback)>::class_type>
 			std::enable_if_t<std::is_member_function_pointer_v<decltype(member_callback)>>
 			add_handler (class_type* target)
 			{
-				static_assert(std::is_convertible_v<decltype(member_callback), return_t(class_type::*)(args_t...)>, "types of parameters and/or return value don't match");
+				static_assert(std::is_convertible_v<decltype(member_callback), return_t(class_type::*)(args_t...)>
+				           || std::is_convertible_v<decltype(member_callback), return_t(class_type::*)(args_t...)const>
+					, "types of parameters and/or return value don't match");
 				add_handler (&subscriber::proxy<class_type, member_callback>, target);
 			}
 
@@ -116,7 +125,9 @@ namespace edge
 			std::enable_if_t<std::is_member_function_pointer_v<decltype(member_callback)>>
 			remove_handler (class_type* target)
 			{
-				static_assert(std::is_convertible_v<decltype(member_callback), return_t(class_type::*)(args_t...)>, "types of parameters and/or return value don't match");
+				static_assert(std::is_convertible_v<decltype(member_callback), return_t(class_type::*)(args_t...)>
+				           || std::is_convertible_v<decltype(member_callback), return_t(class_type::*)(args_t...)const>
+					, "types of parameters and/or return value don't match");
 				remove_handler (&subscriber::proxy<class_type, member_callback>, target);
 			}
 		};

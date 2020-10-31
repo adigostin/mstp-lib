@@ -29,6 +29,8 @@
 #include <variant>
 #include <vector>
 
+// Windows
+#define _COM_NO_STANDARD_GUIDS_
 #include <comdef.h>
 #include <CommCtrl.h>
 #include <d2d1_1helper.h>
@@ -43,3 +45,5 @@
 #include <wincodec.h>
 #include <Windows.h>
 #include <windowsx.h>
+
+extern "C" const IMAGE_DOS_HEADER __ImageBase;

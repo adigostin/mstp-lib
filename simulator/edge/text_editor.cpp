@@ -46,13 +46,15 @@ namespace edge
 			set_caret_pos (_text.size(), true);
 			set_caret_screen_location_from_caret_pos();
 
-			invalidate ();
+			_window->renderer().render().add_handler<&text_editor::on_render>(this);
+			invalidate();
 		}
 
 		~text_editor()
 		{
-			_window->invalidate(_editorBounds);
-			_window->hide_caret();
+			_window->renderer().render().remove_handler<&text_editor::on_render>(this);
+			_window->renderer().hide_caret();
+			invalidate();
 		}
 
 		void set_caret_pos (size_t pos, bool keepSelectionOrigin)
@@ -101,7 +103,7 @@ namespace edge
 			b.right = b.left + caret_width;
 			b.bottom = roundf ((b.top + _text_layout.height()) / pixel_width) * pixel_width;
 			b = align_to_pixel(b, dpi);
-			_window->show_caret(b, D2D1::ColorF(_text_argb & 0x00FF'FFFF));
+			_window->renderer().show_caret(b, D2D1::ColorF(_text_argb & 0x00FF'FFFF));
 		}
 
 		size_t text_pos_at (D2D1_POINT_2F dLocation, bool* isInside = nullptr)
@@ -500,7 +502,7 @@ namespace edge
 			*/
 		}
 
-		virtual void render (ID2D1DeviceContext* dc) const override
+		void on_render (ID2D1DeviceContext* dc) const
 		{
 			com_ptr<ID2D1SolidColorBrush> fill_brush;
 			dc->CreateSolidColorBrush (D2D1::ColorF(_fill_argb & 0xFFFFFF, (_fill_argb >> 24) / 255.0f), &fill_brush);

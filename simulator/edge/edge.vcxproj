@@ -72,6 +72,7 @@
     <ClCompile Include="text_editor.cpp" />
     <ClCompile Include="text_layout.cpp" />
     <ClCompile Include="utility_functions.cpp" />
+    <ClCompile Include="win32_window_i.cpp" />
     <ClCompile Include="window.cpp" />
     <ClCompile Include="xml_serializer.cpp" />
     <ClCompile Include="zoomer.cpp" />

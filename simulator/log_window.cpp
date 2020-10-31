@@ -33,10 +33,16 @@ class log_window : public event_manager, public log_window_i
 	static constexpr UINT AnimationDurationMilliseconds = 75;
 	static constexpr UINT AnimationScrollFramesMax = 10;
 
+	static const inline WNDCLASSEX wnd_class = {
+		.style = CS_DBLCLKS | CS_HREDRAW | CS_VREDRAW,
+		.hCursor = ::LoadCursor(nullptr, IDC_ARROW),
+		.lpszClassName = L"log_window",
+	};
+
 public:
 	log_window (HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dwrite_factory, selection_i* selection, const std::shared_ptr<project_i>& project, edge::theme_color_provider_i* tcp)
 		: _tcp(tcp)
-		, _window (WS_EX_CLIENTEDGE, WS_VISIBLE | WS_CHILD | WS_HSCROLL | WS_VSCROLL, hWndParent, rect)
+		, _window (wnd_class, WS_EX_CLIENTEDGE, WS_VISIBLE | WS_CHILD | WS_HSCROLL | WS_VSCROLL, hWndParent, rect)
 		, _renderer(this, d3d_dc, dwrite_factory)
 		, _dwrite_factory(dwrite_factory)
 		, _selection(selection)
