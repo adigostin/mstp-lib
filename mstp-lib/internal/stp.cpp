@@ -205,13 +205,13 @@ void STP_StopBridge (STP_BRIDGE* bridge, unsigned int timestamp, bool fallbackLe
 		{
 			PORT_TREE* tree = port->trees[ti];
 
-			if (!tree->learning)
+			if ((!tree->learning && fallbackLearning) || (tree->learning && !fallbackLearning))
 			{
 				bridge->callbacks.enableLearning(bridge, pi, ti, fallbackLearning, timestamp);
 				tree->learning = fallbackLearning;
 			}
 
-			if (!tree->forwarding)
+			if ((!tree->forwarding && fallbackForwarding) || (tree->forwarding && !fallbackForwarding))
 			{
 				bridge->callbacks.enableForwarding(bridge, pi, ti, fallbackForwarding, timestamp);
 				tree->forwarding = fallbackForwarding;
