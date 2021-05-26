@@ -192,7 +192,7 @@ void STP_StartBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 
 // ============================================================================
 
-void STP_StopBridge (STP_BRIDGE* bridge, unsigned int timestamp)
+void STP_StopBridge (STP_BRIDGE* bridge, unsigned int timestamp, bool fallbackLearning, bool fallbackForwarding)
 {
 	assert (bridge->started);
 
@@ -207,14 +207,14 @@ void STP_StopBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 
 			if (!tree->learning)
 			{
-				bridge->callbacks.enableLearning(bridge, pi, ti, true, timestamp);
-				tree->learning = true;
+				bridge->callbacks.enableLearning(bridge, pi, ti, fallbackLearning, timestamp);
+				tree->learning = fallbackLearning;
 			}
 
 			if (!tree->forwarding)
 			{
-				bridge->callbacks.enableForwarding(bridge, pi, ti, true, timestamp);
-				tree->forwarding = true;
+				bridge->callbacks.enableForwarding(bridge, pi, ti, fallbackForwarding, timestamp);
+				tree->forwarding = fallbackForwarding;
 			}
 		}
 	}
@@ -1399,4 +1399,3 @@ extern "C" unsigned int STP_GetTxCount (const struct STP_BRIDGE* bridge, unsigne
 {
 	return bridge->ports[portIndex]->txCount;
 }
-

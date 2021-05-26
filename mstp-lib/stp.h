@@ -116,7 +116,7 @@ struct STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 void STP_DestroyBridge (struct STP_BRIDGE* bridge);
 
 void STP_StartBridge (struct STP_BRIDGE* bridge, unsigned int timestamp);
-void STP_StopBridge (struct STP_BRIDGE* bridge, unsigned int timestamp);
+void STP_StopBridge (struct STP_BRIDGE* bridge, unsigned int timestamp, bool fallbackLearning, bool fallbackForwarding);
 bool STP_IsBridgeStarted (const struct STP_BRIDGE* bridge);
 
 void STP_EnableLogging (struct STP_BRIDGE* bridge, bool enable);
