@@ -5,7 +5,7 @@
 #include "pch.h"
 #include "port.h"
 #include "bridge.h"
-#include "utility_functions.h"
+#include "edge/utility_functions.h"
 
 using namespace D2D1;
 using namespace edge;
@@ -29,58 +29,50 @@ const nvp port_speed_nvps[] = {
 	{ 0, 0 },
 };
 
-port::port (size_t port_index, edge::side side, float offset)
-	: _port_index(port_index), _side(side), _offset(offset)
-{ }
-
-
-::bridge* port::bridge() const
+port::port (::bridge* parent, size_t port_index, edge::side side, float offset)
+	: _parent(parent), _port_index(port_index), _side(side), _offset(offset)
 {
-	return static_cast<::bridge*>(static_cast<port_collection_i*>(base::parent()));
-}
-
-void port::on_inserted_into_parent()
-{
-	base::on_inserted_into_parent();
-
 	size_t tree_count = bridge()->trees().size();
-
 	for (size_t treeIndex = 0; treeIndex < tree_count; treeIndex++)
-		this->append(std::make_unique<port_tree>(treeIndex));
+		_trees.push_back(std::make_unique<port_tree>(this, treeIndex));
 
-	bridge()->property_changing().add_handler(&port::on_bridge_property_changing, this);
-	bridge()->property_changed().add_handler(&port::on_bridge_property_changed, this);
-
+	parent->property_changing().add_handler(&port::on_bridge_property_changing, this);
+	parent->property_changed().add_handler(&port::on_bridge_property_changed, this);
 }
 
-void port::on_removing_from_parent()
+port::~port()
 {
 	bridge()->property_changed().remove_handler(port::on_bridge_property_changed, this);
 	bridge()->property_changing().remove_handler(port::on_bridge_property_changing, this);
+}
 
-	while (!_trees.empty())
-		this->remove_last();
+object* port::parent() const
+{
+	return _parent;
+}
 
-	base::on_removing_from_parent();
+::bridge* port::bridge() const
+{
+	return _parent;
 }
 
 void port::on_bridge_property_changing (void* arg, object* obj, const property_change_args& args)
 {
-	auto bt = static_cast<port*>(arg);
+	auto p = static_cast<port*>(arg);
 	if (args.property == &bridge::stp_enabled_property)
 	{
-		bt->event_invoker<stp_enabled_changing_e>()(args);
+		stp_enabled_changing_e::invoker(p->_em).invoke(args);
 		// Currently no port property needs to change when STP is enabled/disabled.
 	}
 }
 
 void port::on_bridge_property_changed (void* arg, object* obj, const property_change_args& args)
 {
-	auto bt = static_cast<port*>(arg);
+	auto p = static_cast<port*>(arg);
 	if (args.property == &bridge::stp_enabled_property)
 	{
 		// Currently no port property needs to change when STP is enabled/disabled.
-		bt->event_invoker<stp_enabled_changed_e>()(args);
+		stp_enabled_changed_e::invoker(p->_em).invoke(args);
 	}
 }
 
@@ -330,51 +322,47 @@ D2D1_RECT_F port::GetInnerOuterRect() const
 	return { std::min(tl.x, br.x), std::min (tl.y, br.y), std::max(tl.x, br.x), std::max(tl.y, br.y) };
 }
 
-void port::render_selection (const edge::zoomable_window_i* window, ID2D1RenderTarget* rt, const drawing_resources& dos) const
+void port::render_selection (const edge::zoomer* zoomer, const drawing_resources& dos) const
 {
 	auto ir = GetInnerOuterRect();
+	auto rt = zoomer->renderer()->dc();
 
 	auto oldaa = rt->GetAntialiasMode();
 	rt->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
 
-	auto lt = window->pointw_to_pointd ({ ir.left, ir.top });
-	auto rb = window->pointw_to_pointd ({ ir.right, ir.bottom });
+	auto lt = zoomer->pointw_to_pointd ({ ir.left, ir.top });
+	auto rb = zoomer->pointw_to_pointd ({ ir.right, ir.bottom });
 	rt->DrawRectangle ({ lt.x - 10, lt.y - 10, rb.x + 10, rb.y + 10 }, dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
 
 	rt->SetAntialiasMode(oldaa);
 }
 
-bool port::HitTestCP (const edge::zoomable_window_i* window, D2D1_POINT_2F dLocation, float tolerance) const
+bool port::HitTestCP (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) const
 {
 	auto cpWLocation = GetCPLocation();
-	auto cpDLocation = window->pointw_to_pointd(cpWLocation);
+	auto cpDLocation = wtr.TransformPoint(cpWLocation);
 
 	return (abs (cpDLocation.x - dLocation.x) <= tolerance)
 		&& (abs (cpDLocation.y - dLocation.y) <= tolerance);
 }
 
-bool port::HitTestInnerOuter (const edge::zoomable_window_i* window, D2D1_POINT_2F dLocation, float tolerance) const
+bool port::HitTestInnerOuter (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) const
 {
 	auto ir = GetInnerOuterRect();
-	auto lt = window->pointw_to_pointd ({ ir.left, ir.top });
-	auto rb = window->pointw_to_pointd ({ ir.right, ir.bottom });
+	auto lt = wtr.TransformPoint ({ ir.left, ir.top });
+	auto rb = wtr.TransformPoint ({ ir.right, ir.bottom });
 	return (dLocation.x >= lt.x) && (dLocation.y >= lt.y) && (dLocation.x < rb.x) && (dLocation.y < rb.y);
 }
 
-renderable_object::ht_result port::hit_test (const edge::zoomable_window_i* window, D2D1_POINT_2F dLocation, float tolerance)
+int port::hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance)
 {
-	if (HitTestCP (window, dLocation, tolerance))
-		return { this, HTCodeCP };
+	if (HitTestCP (wtr, dLocation, tolerance))
+		return HTCodeCP;
 
-	if (HitTestInnerOuter (window, dLocation, tolerance))
-		return { this, HTCodeInnerOuter };
+	if (HitTestInnerOuter (wtr, dLocation, tolerance))
+		return HTCodeInnerOuter;
 
-	return { };
-}
-
-void port::invalidate()
-{
-	this->event_invoker<invalidate_e>()(this);
+	return -1;
 }
 
 bool port::IsForwarding (unsigned int vlanNumber) const
@@ -393,7 +381,7 @@ void port::SetSideAndOffset (edge::side side, float offset)
 	{
 		_side = side;
 		_offset = offset;
-		event_invoker<invalidate_e>()(this);
+		invalidate_e::invoker(_em).invoke(this);
 	}
 }
 
@@ -431,11 +419,11 @@ unsigned int port::GetAdminExternalPortPathCost() const
 
 void port::SetAdminExternalPortPathCost(unsigned int adminExternalPortPathCost)
 {
-	this->on_property_changing (&admin_external_port_path_cost_property);
-	this->on_property_changing (&external_port_path_cost_property);
+	edge::property_changing_e::invoker(_em).invoke(this, value_property_change_args(admin_external_port_path_cost_property));
+	edge::property_changing_e::invoker(_em).invoke(this, value_property_change_args(external_port_path_cost_property));
 	STP_SetAdminExternalPortPathCost (bridge()->stp_bridge(), (unsigned int)_port_index, adminExternalPortPathCost, GetMessageTime());
-	this->on_property_changed (&external_port_path_cost_property);
-	this->on_property_changed (&admin_external_port_path_cost_property);
+	edge::property_changed_e::invoker(_em).invoke(this, value_property_change_args(external_port_path_cost_property));
+	edge::property_changed_e::invoker(_em).invoke(this, value_property_change_args(admin_external_port_path_cost_property));
 }
 
 unsigned int port::GetExternalPortPathCost() const
@@ -458,9 +446,9 @@ void port::set_supported_speed (uint32_t value)
 {
 	if (_supported_speed != value)
 	{
-		this->on_property_changing (&supported_speed_property);
+		edge::property_changing_e::invoker(_em).invoke(this, value_property_change_args(supported_speed_property));
 		_supported_speed = value;
-		this->on_property_changed (&supported_speed_property);
+		edge::property_changed_e::invoker(_em).invoke(this, value_property_change_args(supported_speed_property));
 	};
 }
 
@@ -472,21 +460,22 @@ void port::set_actual_speed (uint32_t value)
 		// or it should be transitioning from non-zero to zero (MAC_Operational becoming False).
 		rassert (_actual_speed ^ value);
 
-		this->on_property_changing (&actual_speed_property);
-		this->on_property_changing (&mac_operational_property);
+		edge::property_changing_e::invoker(_em).invoke(this, edge::value_property_change_args(mac_operational_property));
+		edge::property_changing_e::invoker(_em).invoke(this, edge::value_property_change_args(actual_speed_property));
 		_actual_speed = value;
-		this->on_property_changed (&mac_operational_property);
-		this->on_property_changed (&actual_speed_property);
+		edge::property_changed_e::invoker(_em).invoke(this, edge::value_property_change_args(actual_speed_property));
+		edge::property_changed_e::invoker(_em).invoke(this, edge::value_property_change_args(mac_operational_property));
 	}
 }
 
 void port::set_admin_p2p (STP_ADMIN_P2P admin_p2p)
 {
-	this->on_property_changing (&admin_p2p_property);
-	this->on_property_changing (&oper_p2p_property);
-	STP_SetAdminPointToPointMAC (bridge()->stp_bridge(), (unsigned int)_port_index, admin_p2p, ::GetMessageTime());
-	this->on_property_changed (&oper_p2p_property);
-	this->on_property_changed (&admin_p2p_property);
+	rassert(false);
+	//this->on_property_changing (&admin_p2p_property);
+	//this->on_property_changing (&oper_p2p_property);
+	//STP_SetAdminPointToPointMAC (bridge()->stp_bridge(), (unsigned int)_port_index, admin_p2p, ::GetMessageTime());
+	//this->on_property_changed (&oper_p2p_property);
+	//this->on_property_changed (&admin_p2p_property);
 }
 
 bool port::oper_p2p() const
@@ -498,7 +487,7 @@ const side_p port::side_property = { "Side", nullptr, nullptr, false, &side, &se
 
 const float_p port::offset_property = { "Offset", nullptr, nullptr, false, &offset, &set_offset };
 
-static constexpr property_group link_group = { -1, "Link" };
+static const pg::property_group link_group = { -1, "Link" };
 
 const port_speed_p port::supported_speed_property {
 	"SupportedSpeed", &link_group, "Maximum supported speed. The Simulator reads this at the instant the link is established (cable connected).", true,
@@ -552,7 +541,7 @@ const bool_p port::mac_operational_property {
 	false,
 };
 
-static const edge::property_group port_path_cost_group = { 5, "Port Path Cost" };
+static const pg::property_group port_path_cost_group = { 5, "Port Path Cost" };
 
 const uint32_p port::detected_port_path_cost_property {
 	"DetectedPortPathCost",
@@ -603,7 +592,7 @@ const admin_p2p_p port::admin_p2p_property {
 	STP_ADMIN_P2P_AUTO,
 };
 
-const edge::bool_p port::oper_p2p_property {
+const bool_p port::oper_p2p_property {
 	"operPointToPointMAC",
 	&link_group,
 	nullptr,
@@ -612,10 +601,13 @@ const edge::bool_p port::oper_p2p_property {
 	nullptr,
 };
 
-const typed_object_collection_property<port_tree> port::trees_property
+const typed_object_collection_property1<port_tree> port::trees_property =
 {
-	"PortTrees", nullptr, nullptr, false,
-	true, [](object* o) -> typed_object_collection_i<port_tree>* { return static_cast<port*>(o); }
+	"PortTrees",
+	[](const object* obj) { return static_cast<const port*>(obj)->_trees.size(); },
+	[](const object* obj, size_t i) { return static_cast<const port*>(obj)->_trees[i].get(); },
+	nullptr, // inserter
+	nullptr, // remover
 };
 
 const edge::property* const port::_properties[] =
@@ -636,4 +628,4 @@ const edge::property* const port::_properties[] =
 	&trees_property,
 };
 
-const edge::xtype<port> port::_type = { "Port", &base::_type, _properties };
+const edge::xtype<port> port::_type = { "Port", nullptr, _properties };

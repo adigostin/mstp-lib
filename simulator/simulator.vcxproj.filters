@@ -19,6 +19,7 @@
     <ClInclude Include="bridge_tree.h" />
     <ClInclude Include="port.h" />
     <ClInclude Include="port_tree.h" />
+    <ClInclude Include="simulator_props.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />

@@ -2,9 +2,9 @@
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
-#include "pch.h"
 #include "edit_state.h"
-#include "bridge.h"
+#include "..\bridge.h"
+#include "edge\utility_functions.h"
 
 class move_bridges_es : public edit_state
 {
@@ -61,7 +61,7 @@ public:
 				_infos[i].b->set_location (_first_bridge_initial_location + _infos[i].offset_from_first);
 
 			_completed = true;
-			::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
+			_ew->invalidate();
 			return handled(true);
 		}
 

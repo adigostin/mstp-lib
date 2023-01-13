@@ -2,9 +2,8 @@
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
-#include "pch.h"
 #include "edit_state.h"
-#include "bridge.h"
+#include "../bridge.h"
 
 class create_bridge_es : public edit_state
 {
@@ -27,7 +26,7 @@ class create_bridge_es : public edit_state
 			_bridge = make_temp_bridge(4, 4, ml.w);
 
 		_bridge->set_location (ml.w.x - _bridge->width() / 2, ml.w.y - _bridge->height() / 2);
-		::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
+		_ew->invalidate();
 	}
 
 	virtual handled process_mouse_button_up (mouse_button button, modifier_key mks, const mouse_location& ml) override final
@@ -35,17 +34,15 @@ class create_bridge_es : public edit_state
 		if (button != mouse_button::left)
 			return handled(true); // discard it
 
-		if (_bridge != nullptr)
+		if (_bridge)
 		{
 			size_t number_of_addresses_to_reserve = (_bridge->port_count() + 15) / 16 * 16;
 			auto bridge_address = _project->alloc_mac_address_range(number_of_addresses_to_reserve);
-			auto b = std::make_unique<bridge>(_bridge->port_count(), _bridge->msti_count(), bridge_address);
-			b->set_stp_enabled(true);
-			b->set_location(_bridge->location());
-
-			_project->bridge_collection_i::append(std::move(b));
+			_bridge->set_bridge_address(bridge_address);
+			_bridge->set_stp_enabled(true);
+			_project->bridges_property()->append(_project, std::move(_bridge));
 			_project->SetChangedFlag(true);
-			_selection->select(_project->bridges().back().get());
+			_selection->select(_project->bridge_at(_project->bridge_count() - 1));
 		}
 
 		_completed = true;
@@ -115,7 +112,7 @@ class create_bridge_es : public edit_state
 		{
 			D2D1::Matrix3x2F oldtr;
 			dc->GetTransform(&oldtr);
-			dc->SetTransform (_ew->zoom_transform() * oldtr);
+			dc->SetTransform (_ew->zoomer()->zoom_transform() * oldtr);
 
 			_bridge->render (dc, _ew->drawing_resources(), _pw->selected_vlan_number(), D2D1::ColorF(D2D1::ColorF::LightGreen));
 
@@ -123,7 +120,7 @@ class create_bridge_es : public edit_state
 
 			auto x = _bridge->left() + _bridge->width() / 2;
 			auto y = _bridge->bottom() + port::ExteriorHeight * 1.1f;
-			auto centerD = _ew->zoom_transform().TransformPoint({ x, y });
+			auto centerD = _ew->zoomer()->zoom_transform().TransformPoint({ x, y });
 			std::stringstream ss;
 			ss << "Port Count = " << _bridge->port_count() << ", MSTI Count = " << _bridge->msti_count() << "\r\n"
 				<< "Press Arrow Left / Right to change the number of ports.\r\n"

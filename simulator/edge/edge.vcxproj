@@ -19,92 +19,78 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="rassert.h" />
-    <ClInclude Include="collections.h" />
-    <ClInclude Include="object.h" />
-    <ClInclude Include="events.h" />
-    <ClInclude Include="edge.h" />
-    <ClInclude Include="pch.h" />
-    <ClInclude Include="reflection.h" />
-    <ClInclude Include="com_ptr.h" />
-    <ClInclude Include="d2d_renderer.h" />
-    <ClInclude Include="property_grid.h" />
-    <ClInclude Include="targetver.h" />
-    <ClInclude Include="text_editor.h" />
-    <ClInclude Include="text_layout.h" />
-    <ClInclude Include="utility_functions.h" />
-    <ClInclude Include="win32_window_i.h" />
-    <ClInclude Include="window.h" />
-    <ClInclude Include="xml_serializer.h" />
-    <ClInclude Include="zoomer.h" />
+    <ClInclude Include="edge\om\collection_property.h" />
+    <ClInclude Include="edge\om\enumerator.h" />
+    <ClInclude Include="edge\om\hierarchy_object.h" />
+    <ClInclude Include="edge\om\object_property.h" />
+    <ClInclude Include="edge\om\property.h" />
+    <ClInclude Include="edge\om\property_accessors.h" />
+    <ClInclude Include="edge\om\value_collection_property.h" />
+    <ClInclude Include="edge\om\value_property.h" />
+    <ClInclude Include="edge\rassert.h" />
+    <ClInclude Include="edge\om\object_collection_property.h" />
+    <ClInclude Include="edge\om\object.h" />
+    <ClInclude Include="edge\events.h" />
+    <ClInclude Include="edge\edge.h" />
+    <ClInclude Include="pch\pch.h" />
+    <ClInclude Include="edge\referenced_object.h" />
+    <ClInclude Include="edge\com_ptr.h" />
+    <ClInclude Include="edge\d2d_renderer.h" />
+    <ClInclude Include="edge\text_editor.h" />
+    <ClInclude Include="edge\text_layout.h" />
+    <ClInclude Include="edge\utility_functions.h" />
+    <ClInclude Include="edge\win32_window_i.h" />
+    <ClInclude Include="edge\window.h" />
+    <ClInclude Include="edge\xml_serializer.h" />
+    <ClInclude Include="edge\zoomer.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="rassert.cpp" />
-    <ClCompile Include="object.cpp">
-      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-      </ForcedIncludeFiles>
-      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-      </ForcedIncludeFiles>
-      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </ForcedIncludeFiles>
-      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </ForcedIncludeFiles>
+    <ClCompile Include="edge\com_ptr.cpp" />
+    <ClCompile Include="edge\events.cpp" />
+    <ClCompile Include="edge\om\value_property.cpp" />
+    <ClCompile Include="edge\rassert.cpp" />
+    <ClCompile Include="edge\om\object.cpp" />
+    <ClCompile Include="edge\edge.cpp" />
+    <ClCompile Include="pch\pch.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="edge.cpp" />
-    <ClCompile Include="pch.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="reflection.cpp">
-      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-      </ForcedIncludeFiles>
-      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-      </ForcedIncludeFiles>
-      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </ForcedIncludeFiles>
-      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </ForcedIncludeFiles>
-    </ClCompile>
-    <ClCompile Include="d2d_renderer.cpp" />
-    <ClCompile Include="property_grid.cpp" />
-    <ClCompile Include="text_editor.cpp" />
-    <ClCompile Include="text_layout.cpp" />
-    <ClCompile Include="utility_functions.cpp" />
-    <ClCompile Include="win32_window_i.cpp" />
-    <ClCompile Include="window.cpp" />
-    <ClCompile Include="xml_serializer.cpp" />
-    <ClCompile Include="zoomer.cpp" />
+    <ClCompile Include="edge\d2d_renderer.cpp" />
+    <ClCompile Include="edge\text_editor.cpp" />
+    <ClCompile Include="edge\text_layout.cpp" />
+    <ClCompile Include="edge\utility_functions.cpp" />
+    <ClCompile Include="edge\win32_window_i.cpp" />
+    <ClCompile Include="edge\window.cpp" />
+    <ClCompile Include="edge\xml_serializer.cpp" />
+    <ClCompile Include="edge\zoomer.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{C4C530F1-E67C-48A2-81ED-41E428F17ED9}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>dash</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -134,12 +120,14 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <StringPooling>true</StringPooling>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>$(ProjectDir)pch\pch.h</PrecompiledHeaderFile>
       <BufferSecurityCheck>false</BufferSecurityCheck>
+      <ForcedIncludeFiles>$(ProjectDir)pch\pch.h</ForcedIncludeFiles>
+      <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -153,12 +141,14 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <StringPooling>true</StringPooling>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>$(ProjectDir)pch\pch.h</PrecompiledHeaderFile>
       <BufferSecurityCheck>false</BufferSecurityCheck>
+      <ForcedIncludeFiles>$(ProjectDir)pch\pch.h</ForcedIncludeFiles>
+      <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -179,11 +169,13 @@
       <WarningLevel>Level3</WarningLevel>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>$(ProjectDir)pch\pch.h</PrecompiledHeaderFile>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
+      <ForcedIncludeFiles>$(ProjectDir)pch\pch.h</ForcedIncludeFiles>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -200,11 +192,13 @@
       <WarningLevel>Level3</WarningLevel>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>$(ProjectDir)pch\pch.h</PrecompiledHeaderFile>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
+      <ForcedIncludeFiles>$(ProjectDir)pch\pch.h</ForcedIncludeFiles>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

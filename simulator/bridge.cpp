@@ -6,6 +6,8 @@
 #include "bridge.h"
 #include "wire.h"
 #include "simulator.h"
+#include "bridge_tree.h"
+#include "edge/utility_functions.h"
 
 using namespace D2D1;
 
@@ -75,13 +77,13 @@ std::unordered_set<bridge*> bridge::_created_bridges;
 bridge::bridge (size_t port_count, size_t msti_count, mac_address macAddress)
 {
 	for (size_t i = 0; i < 1 + msti_count; i++)
-		this->bridge_tree_collection_i::append(std::make_unique<bridge_tree>(i));
+		_trees.push_back(std::make_unique<bridge_tree>(this, i));
 
 	float offset = 0;
-	for (size_t portIndex = 0; portIndex < port_count; portIndex++)
+	for (size_t port_index = 0; port_index < port_count; port_index++)
 	{
 		offset += (port::PortToPortSpacing / 2 + port::InteriorWidth / 2);
-		this->port_collection_i::append(std::make_unique<port>(portIndex, side::bottom, offset));
+		_ports.push_back(std::make_unique<port>(this, port_index, side::bottom, offset));
 		offset += (port::InteriorWidth / 2 + port::PortToPortSpacing / 2);
 	}
 
@@ -95,7 +97,7 @@ bridge::bridge (size_t port_count, size_t msti_count, mac_address macAddress)
 	STP_SetApplicationContext (_stpBridge, this);
 
 	for (auto& port : _ports)
-		port->invalidated().add_handler(&bridge::on_port_invalidated, this);
+		port->invalidate().add_handler(&bridge::on_port_invalidated, this);
 
 	// ----------------------------------------------------------------------------
 
@@ -126,11 +128,10 @@ bridge::bridge (size_t port_count, size_t msti_count, mac_address macAddress)
 		{
 			if (msg == WM_PACKET_RECEIVED)
 			{
-				auto bridge = (class bridge*) ::GetWindowLongPtr (hwnd, GWLP_USERDATA);
+				auto bridge = reinterpret_cast<::bridge*>(::GetWindowLongPtr (hwnd, GWLP_USERDATA));
 				bridge->ProcessReceivedPackets();
 				return 0;
 			}
-
 			return ::DefWindowProc (hwnd, msg, wparam, lparam);
 		};
 		BOOL bRes = ::GetModuleHandleExW (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR)helper_window_proc, &_hinstance); rassert(bRes);
@@ -141,7 +142,7 @@ bridge::bridge (size_t port_count, size_t msti_count, mac_address macAddress)
 		wc.lpszClassName = helper_window_class_name;
 		ATOM atom = ::RegisterClass(&wc);
 	}
-
+	
 	rassert (_helper_window == nullptr);
 	_helper_window = ::CreateWindow (helper_window_class_name, L"", 0, 0, 0, 0, 0, HWND_MESSAGE, 0, _hinstance, 0); rassert (_helper_window != nullptr);
 	::SetWindowLongPtr (_helper_window, GWLP_USERDATA, (LONG_PTR)this);
@@ -169,27 +170,34 @@ bridge::~bridge()
 
 	// ----------------------------------------------------------------
 
-	while (!_ports.empty())
-	{
-		this->port_collection_i::last()->invalidated().remove_handler(&bridge::on_port_invalidated, this);
-		this->port_collection_i::remove_last();
-	}
+	for (auto& port : _ports)
+		port->invalidate().remove_handler(&bridge::on_port_invalidated, this);
 
-	while (!_trees.empty())
-		this->bridge_tree_collection_i::remove_last();
+	//while (!_trees.empty())
+	//	this->bridge_tree_collection_i::remove_last();
 
 	STP_DestroyBridge (_stpBridge);
 }
 
-project_i* bridge::project() const
+edge::hierarchy_object_i* bridge::parent() const
 {
-	return static_cast<project_i*>(static_cast<bridge_collection_i*>(base::parent()));
+	return _project;
 }
 
-void bridge::on_port_invalidated (void* arg, renderable_object* object)
+void bridge::set_parent (project_i* parent)
+{
+	_project = parent;
+}
+
+project_i* bridge::project() const
+{
+	return _project;
+}
+
+void bridge::on_port_invalidated (void* arg, port* p)
 {
 	auto bridge = static_cast<class bridge*>(arg);
-	bridge->event_invoker<invalidate_e>()(bridge);
+	invalidate_e::invoker(bridge->_em).invoke(bridge);
 }
 
 // Checks the wires and computes macOperational for each port on this bridge.
@@ -212,11 +220,11 @@ void bridge::OnLinkPulseTick()
 			}
 		}
 
-		this->event_invoker<packet_transmit_e>()(this, portIndex, link_pulse_t { now, port->supported_speed() });
+		packet_transmit_e::invoker(_em).invoke(this, portIndex, link_pulse_t { now, port->supported_speed() });
 	}
 
 	if (invalidate)
-		this->event_invoker<invalidate_e>()(this);
+		invalidate_e::invoker(_em).invoke(this);
 }
 
 void bridge::enqueue_received_packet (packet_t&& packet, size_t rxPortIndex)
@@ -244,7 +252,7 @@ void bridge::ProcessReceivedPackets()
 			if (oldMacOperational == false)
 			{
 				// Send a link pulse right away, to make sure the other port goes up before we send it any frame.
-				this->event_invoker<packet_transmit_e>()(this, rxPortIndex, link_pulse_t { lpsd.timestamp, port->supported_speed() });
+				packet_transmit_e::invoker(_em).invoke(this, rxPortIndex, link_pulse_t { lpsd.timestamp, port->supported_speed() });
 
 				auto actual_speed = std::min (lpsd.sender_supported_speed, port->supported_speed());
 				port->set_actual_speed(actual_speed);
@@ -295,7 +303,7 @@ void bridge::ProcessReceivedPackets()
 								f.tx_path_taken = fsd.tx_path_taken;
 								f.tx_path_taken.push_back (txPortAddress);
 
-								this->event_invoker<packet_transmit_e>()(this, txPortIndex, std::move(f));
+								packet_transmit_e::invoker(_em).invoke(this, txPortIndex, std::move(f));
 							}
 						}
 					}
@@ -309,7 +317,7 @@ void bridge::ProcessReceivedPackets()
 	}
 
 	if (invalidate)
-		this->event_invoker<invalidate_e>()(this);
+		invalidate_e::invoker(_em).invoke(this);
 }
 
 void bridge::set_location(float x, float y)
@@ -318,7 +326,7 @@ void bridge::set_location(float x, float y)
 	{
 		_x = x;
 		_y = y;
-		this->event_invoker<invalidate_e>()(this);
+		invalidate_e::invoker(_em).invoke(this);
 	}
 }
 
@@ -365,7 +373,7 @@ void bridge::render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsign
 	edge::inflate (&rr, -bridgeOutlineWidth / 2);
 	com_ptr<ID2D1SolidColorBrush> brush;
 	dc->CreateSolidColorBrush (configIdColor, &brush);
-	dc->FillRoundedRectangle (&rr, brush/*_powered ? dos._poweredFillBrush : dos._unpoweredBrush*/);
+	dc->FillRoundedRectangle (&rr, brush);//_powered ? dos._poweredFillBrush : dos._unpoweredBrush*
 	dc->DrawRoundedRectangle (&rr, dos._brushWindowText, bridgeOutlineWidth);
 
 	// Draw bridge text.
@@ -376,29 +384,30 @@ void bridge::render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsign
 		port->render (dc, dos, vlanNumber);
 }
 
-void bridge::render_selection (const edge::zoomable_window_i* window, ID2D1RenderTarget* rt, const drawing_resources& dos) const
+void bridge::render_selection (const edge::zoomer* zoomer, const drawing_resources& dos) const
 {
+	auto rt = zoomer->renderer()->dc();
 	auto oldaa = rt->GetAntialiasMode();
 	rt->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
 
-	auto tl = window->pointw_to_pointd ({ _x - OutlineWidth / 2, _y - OutlineWidth / 2 });
-	auto br = window->pointw_to_pointd ({ _x + _width + OutlineWidth / 2, _y + _height + OutlineWidth / 2 });
+	auto tl = zoomer->pointw_to_pointd ({ _x - OutlineWidth / 2, _y - OutlineWidth / 2 });
+	auto br = zoomer->pointw_to_pointd ({ _x + _width + OutlineWidth / 2, _y + _height + OutlineWidth / 2 });
 	rt->DrawRectangle ({ tl.x - 10, tl.y - 10, br.x + 10, br.y + 10 }, dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
 
 	rt->SetAntialiasMode(oldaa);
 }
 
-renderable_object::ht_result bridge::hit_test (const edge::zoomable_window_i* window, D2D1_POINT_2F dLocation, float tolerance)
+renderable_object_i::ht_result bridge::hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance)
 {
 	for (auto& p : _ports)
 	{
-		auto ht = p->hit_test (window, dLocation, tolerance);
-		if (ht.object != nullptr)
-			return ht;
+		int htcode = p->hit_test (wtr, dLocation, tolerance);
+		if (htcode != -1)
+			return { p.get(), htcode };
 	}
 
-	auto tl = window->pointw_to_pointd ({ _x, _y });
-	auto br = window->pointw_to_pointd ({ _x + _width, _y + _height });
+	auto tl = wtr.TransformPoint({ _x, _y });
+	auto br = wtr.TransformPoint({ _x + _width, _y + _height });
 
 	if ((dLocation.x >= tl.x) && (dLocation.y >= tl.y) && (dLocation.x < br.x) && (dLocation.y < br.y))
 		return { this, HTCodeInner };
@@ -436,9 +445,10 @@ void bridge::set_bridge_address (mac_address address)
 {
 	if (memcmp(STP_GetBridgeAddress(_stpBridge)->bytes, address.data(), 6) != 0)
 	{
-		this->on_property_changing(&bridge_address_property);
+		edge::value_property_change_args args = { bridge_address_property };
+		edge::property_changing_e::invoker(_em).invoke(this, args);
 		STP_SetBridgeAddress(_stpBridge, address.data(), GetMessageTime());
-		this->on_property_changed(&bridge_address_property);
+		edge::property_changed_e::invoker(_em).invoke(this, args);
 	}
 }
 
@@ -501,14 +511,14 @@ void bridge::move_port (class port* _port, D2D1_POINT_2F proposedLocation)
 			_port->_offset = mouseY;
 	}
 
-	this->event_invoker<invalidate_e>()(this);
+	invalidate_e::invoker(_em).invoke(this);
 }
 
 void bridge::clear_log()
 {
 	_logLines.clear();
 	_currentLogLine.text.clear();
-	this->event_invoker<log_cleared_e>()(this);
+	log_cleared_e::invoker(_em).invoke(this);
 }
 
 std::string bridge::mst_config_id_name() const
@@ -523,13 +533,10 @@ void bridge::set_mst_config_id_name (std::string value)
 	if (value.size() > 32)
 		throw std::invalid_argument("Invalid MST Config Name: more than 32 characters.");
 
-	char null_terminated[33];
-	memcpy (null_terminated, value.data(), value.size());
-	null_terminated[value.size()] = 0;
-
-	this->on_property_changing(&mst_config_id_name_property);
-	STP_SetMstConfigName (_stpBridge, null_terminated, GetMessageTime());
-	this->on_property_changed(&mst_config_id_name_property);
+	rassert(false);
+	//this->on_property_changing(&mst_config_id_name_property);
+	//STP_SetMstConfigName (_stpBridge, value.c_str(), GetMessageTime());
+	//this->on_property_changed(&mst_config_id_name_property);
 }
 
 uint32_t bridge::GetMstConfigIdRevLevel() const
@@ -542,9 +549,10 @@ void bridge::SetMstConfigIdRevLevel (uint32_t revLevel)
 {
 	if (GetMstConfigIdRevLevel() != revLevel)
 	{
-		this->on_property_changing(&mst_config_id_rev_level);
-		STP_SetMstConfigRevisionLevel (_stpBridge, revLevel, GetMessageTime());
-		this->on_property_changed(&mst_config_id_rev_level);
+		rassert(false);
+		//this->on_property_changing(&mst_config_id_rev_level);
+		//STP_SetMstConfigRevisionLevel (_stpBridge, revLevel, GetMessageTime());
+		//this->on_property_changed(&mst_config_id_rev_level);
 	}
 }
 
@@ -562,9 +570,10 @@ std::string bridge::GetMstConfigIdDigest() const
 
 void bridge::SetMstConfigTable (const STP_CONFIG_TABLE_ENTRY* entries, size_t entryCount)
 {
-	this->on_property_changing (&mst_config_id_digest);
-	STP_SetMstConfigTable (_stpBridge, &entries[0], (unsigned int) entryCount, GetMessageTime());
-	this->on_property_changed (&mst_config_id_digest);
+	rassert(false);
+	//this->on_property_changing (&mst_config_id_digest);
+	//STP_SetMstConfigTable (_stpBridge, &entries[0], (unsigned int) entryCount, GetMessageTime());
+	//this->on_property_changed (&mst_config_id_digest);
 }
 
 void bridge::set_stp_enabled (bool value)
@@ -577,17 +586,19 @@ void bridge::set_stp_enabled (bool value)
 
 	if (value && !STP_IsBridgeStarted(_stpBridge))
 	{
-		this->on_property_changing(&stp_enabled_property);
+		edge::value_property_change_args args = { stp_enabled_property };
+		edge::property_changing_e::invoker(_em).invoke(this, args);
 		STP_StartBridge (_stpBridge, GetMessageTime());
-		this->on_property_changed(&stp_enabled_property);
-		this->event_invoker<invalidate_e>()(this);
+		edge::property_changed_e::invoker(_em).invoke(this, args);
+		invalidate_e::invoker(_em).invoke(this);
 	}
 	else if (!value && STP_IsBridgeStarted(_stpBridge))
 	{
-		this->on_property_changing(&stp_enabled_property);
-		STP_StopBridge (_stpBridge, GetMessageTime());
-		this->on_property_changed(&stp_enabled_property);
-		this->event_invoker<invalidate_e>()(this);
+		rassert(false);
+		//this->on_property_changing(&stp_enabled_property);
+		//STP_StopBridge (_stpBridge, GetMessageTime());
+		//this->on_property_changed(&stp_enabled_property);
+		invalidate_e::invoker(_em).invoke(this);
 	}
 }
 
@@ -595,9 +606,10 @@ void bridge::set_stp_version (STP_VERSION stp_version)
 {
 	if (STP_GetStpVersion(_stpBridge) != stp_version)
 	{
-		this->on_property_changing(&stp_version_property);
-		STP_SetStpVersion(_stpBridge, stp_version, GetMessageTime());
-		this->on_property_changed(&stp_version_property);
+		rassert(false);
+		//this->on_property_changing(&stp_version_property);
+		//STP_SetStpVersion(_stpBridge, stp_version, GetMessageTime());
+		//this->on_property_changed(&stp_version_property);
 	}
 }
 
@@ -608,9 +620,10 @@ void bridge::set_bridge_max_age (uint32_t value)
 
 	if (bridge_max_age() != value)
 	{
-		this->on_property_changing (&bridge_max_age_property);
-		STP_SetBridgeMaxAge (_stpBridge, value, ::GetMessageTime());
-		this->on_property_changed (&bridge_max_age_property);
+		rassert(false);
+		//this->on_property_changing (&bridge_max_age_property);
+		//STP_SetBridgeMaxAge (_stpBridge, value, ::GetMessageTime());
+		//this->on_property_changed (&bridge_max_age_property);
 	}
 }
 
@@ -618,9 +631,10 @@ void bridge::set_bridge_forward_delay (uint32_t value)
 {
 	if (bridge_forward_delay() != value)
 	{
-		this->on_property_changing (&bridge_forward_delay_property);
-		STP_SetBridgeForwardDelay (_stpBridge, value, ::GetMessageTime());
-		this->on_property_changed (&bridge_forward_delay_property);
+		rassert(false);
+		//this->on_property_changing (&bridge_forward_delay_property);
+		//STP_SetBridgeForwardDelay (_stpBridge, value, ::GetMessageTime());
+		//this->on_property_changed (&bridge_forward_delay_property);
 	}
 }
 
@@ -628,13 +642,52 @@ void bridge::set_tx_hold_count (uint32_t value)
 {
 	if (tx_hold_count() != value)
 	{
-		this->on_property_changing(&tx_hold_count_property);
 		STP_SetTxHoldCount(_stpBridge, value, ::GetMessageTime());
-		this->on_property_changed(&tx_hold_count_property);
+		invalidate_e::invoker(_em).invoke(this);
 	}
 }
 
 #pragma region properties
+void bridge::set_x (float x)
+{ 
+	if (_x != x)
+	{
+		invalidate_e::invoker(_em).invoke(this);
+		_x = x;
+		invalidate_e::invoker(_em).invoke(this);
+	}
+}
+
+void bridge::set_y (float y)
+{
+	if (_y != y)
+	{
+		invalidate_e::invoker(_em).invoke(this);
+		_y = y;
+		invalidate_e::invoker(_em).invoke(this);
+	}
+}
+
+void bridge::set_width (float width)
+{
+	if (_width != width)
+	{
+		invalidate_e::invoker(_em).invoke(this);
+		_width = width;
+		invalidate_e::invoker(_em).invoke(this);
+	}
+}
+
+void bridge::set_height (float height)
+{
+	if (_height != height)
+	{
+		invalidate_e::invoker(_em).invoke(this);
+		_height = height;
+		invalidate_e::invoker(_em).invoke(this);
+	}
+}
+
 size_t bridge::mst_config_table_get_value_count() const
 {
 	unsigned int entry_count;
@@ -656,43 +709,37 @@ void bridge::mst_config_table_set_value(size_t i, uint32_t value)
 	rassert (i < entry_count);
 	if (table->treeIndex != value)
 	{
-		property_change_args args = { &mst_config_table_property, i, edge::collection_property_change_type::set };
-		this->on_property_changing(args);
-		STP_SetMstConfigTableEntry (_stpBridge, (unsigned int)i, value, ::GetMessageTime());
-		this->on_property_changed(args);
+		edge::value_collection_property_change_args args = { &mst_config_table_property, i, edge::collection_property_change_type::set };
+		rassert(false);
+		//this->on_property_changing(args);
+		//STP_SetMstConfigTableEntry (_stpBridge, (unsigned int)i, value, ::GetMessageTime());
+		//this->on_property_changed(args);
 	}
 }
 
-bool bridge::mst_config_table_changed() const
+bool bridge::mst_config_table_changed (size_t i) const
 {
 	unsigned int entry_count;
 	const STP_CONFIG_TABLE_ENTRY* entries = STP_GetMstConfigTable (_stpBridge, &entry_count);
-
-	static constexpr STP_CONFIG_TABLE_ENTRY zero = { };
-	for (auto e = entries; e < &entries[entry_count]; e++)
-	{
-		if (memcmp(e, &zero, sizeof(zero)))
-			return true; // changed from default
-	}
-
-	return false; // not changed
+	rassert(i < entry_count);
+	return entries[i].treeIndex != 0;
 }
 
-void bridge::deserialize_before_reflection (edge::xml_deserializer_i* de, IXMLDOMElement* obj_element)
+void bridge::on_deserializing (edge::xml_deserializer_i* de)
 {
 	_deserializing = true;
-	_enable_stp_after_deserialize = stp_enabled_property.default_value.value();
+	_enable_stp_after_deserialize = stp_enabled_property.default_value().value();
 }
 
-void bridge::deserialize_after_reflection (edge::xml_deserializer_i* de, IXMLDOMElement* obj_element)
+void bridge::on_deserialized  (edge::xml_deserializer_i* de)
 {
 	if (_enable_stp_after_deserialize)
 		STP_StartBridge (_stpBridge, ::GetMessageTime());
 	_deserializing = false;
 }
 
-static const edge::property_group bridge_times_group = { 5, "Timer Params (Table 13-5)" };
-static const edge::property_group mst_group = { 10, "MST Config Id" };
+static const pg::property_group bridge_times_group = { 5, "Timer Params (Table 13-5)" };
+static const pg::property_group mst_group = { 10, "MST Config Id" };
 
 const mac_address_p bridge::bridge_address_property {
 	"Address", nullptr, nullptr, true,
@@ -707,12 +754,7 @@ const bool_p bridge::stp_enabled_property {
 	false, // default_value
 };
 
-const stp_version_p bridge::stp_version_property {
-	"StpVersion", nullptr, nullptr, true,
-	&stp_version,
-	&set_stp_version,
-	STP_VERSION_RSTP, // default_value
-};
+const stp_version_p bridge::stp_version_property { "StpVersion", &stp_version, &set_stp_version, STP_VERSION_RSTP };
 
 const size_p bridge::port_count_property {
 	"PortCount", nullptr, nullptr, true,
@@ -726,23 +768,21 @@ const size_p bridge::msti_count_property {
 	nullptr,
 };
 
-const temp_string_p bridge::mst_config_id_name_property {
+const string_p bridge::mst_config_id_name_property {
 	"MstConfigName", &mst_group, nullptr, true,
 	&mst_config_id_name,
 	&set_mst_config_id_name,
 };
 
-const typed_value_collection_property<bridge, uint32_property_traits> bridge::mst_config_table_property = {
-	"MstConfigTable", nullptr, nullptr, false,
+const edge::typed_value_collection_property<edge::uint32_property_traits> bridge::mst_config_table_property = {
+	"MstConfigTable",
 	&mst_config_table_get_value_count,
 	&mst_config_table_get_value,
 	&mst_config_table_set_value,
-	nullptr, // insert
-	nullptr, // remove
 	&mst_config_table_changed,
 };
 
-const edge::uint32_p bridge::mst_config_id_rev_level {
+const uint32_p bridge::mst_config_id_rev_level {
 	"MstConfigRevLevel", &mst_group, nullptr, true,
 	&GetMstConfigIdRevLevel,
 	&SetMstConfigIdRevLevel,
@@ -750,19 +790,19 @@ const edge::uint32_p bridge::mst_config_id_rev_level {
 };
 
 const config_id_digest_p bridge::mst_config_id_digest
-	= { "MstConfigDigest", &mst_group, nullptr, true, &GetMstConfigIdDigest, nullptr, };
+	= { "MstConfigDigest", &mst_group, nullptr, &GetMstConfigIdDigest, nullptr, };
 
 #pragma region Timer and related parameters from Table 13-5
 const uint32_p bridge::migrate_time_property {
 	"MigrateTime", &bridge_times_group, nullptr, true,
-	[](const object* o) { return 3u; },
+	&bridge_migrate_time,
 	nullptr,
 	3, // default_value
 };
 
 const uint32_p bridge::bridge_hello_time_property {
 	"BridgeHelloTime", &bridge_times_group, nullptr, true,
-	[](const object* o) { return 2u; },
+	&bridge_hello_time,
 	nullptr,
 	2, // default_value
 };
@@ -793,30 +833,39 @@ const uint32_p bridge::max_hops_property {
 	&bridge_times_group,
 	"Setting this is not yet implemented in the library",
 	true,
-	[](const object* o) { return 20u; },
+	&max_hops,
 	nullptr,
 	20 // default_value
 };
 
-const float_p bridge::x_property
-	= { "X", nullptr, nullptr, false, &x, &set_x };
+const edge::static_value_property<edge::float_property_traits> bridge::x_property
+	= { "X", &x, &set_x };
 
-const float_p bridge::y_property
-	= { "Y", nullptr, nullptr, false, &y, &set_y };
+const edge::static_value_property<edge::float_property_traits> bridge::y_property
+	= { "Y", &y, &set_y };
 
-const float_p bridge::width_property
-	= { "Width", nullptr, nullptr, false, &width, &set_width };
+const edge::static_value_property<edge::float_property_traits> bridge::width_property
+	= { "Width", &width, &set_width };
 
-const float_p bridge::height_property
-	= { "Height", nullptr, nullptr, false, &height, &set_height };
+const edge::static_value_property<edge::float_property_traits> bridge::height_property
+	= { "Height", &height, &set_height };
 
-const typed_object_collection_property<bridge_tree> bridge::trees_prop
-	= { "BridgeTrees", nullptr, nullptr, false,
-	true, [](object* obj) -> typed_object_collection_i<bridge_tree>* { return static_cast<bridge*>(obj); } };
+const edge::typed_object_collection_property1<bridge_tree> bridge::trees_prop = {
+	"BridgeTrees",
+	[](const edge::object* obj) { return checked_static_cast<const bridge*>(obj)->_trees.size(); },
+	[](const edge::object* obj, size_t i) { return checked_static_cast<const bridge*>(obj)->_trees[i].get(); },
+	nullptr, // inserter
+	nullptr, // remover
+};
 
-const typed_object_collection_property<port> bridge::ports_prop
-	= { "Ports", nullptr, nullptr, false,
-	true, [](object* obj) -> typed_object_collection_i<port>* { return static_cast<bridge*>(obj); } };
+const edge::typed_object_collection_property1<port> bridge::ports_prop = { 
+	"Ports", 
+	nullptr, // size_getter
+	nullptr, // getter
+	nullptr, // inserter
+	nullptr, // remover
+};
+
 #pragma endregion
 
 const edge::property* const bridge::_properties[] = {
@@ -840,9 +889,9 @@ const edge::property* const bridge::_properties[] = {
 	&ports_prop,
 };
 
-const xtype<bridge, size_property_traits, size_property_traits, mac_address_property_traits> bridge::_type = {
+const xtype<bridge, edge::size_t_property_traits, edge::size_t_property_traits, mac_address_property_traits> bridge::_type = {
 	"Bridge",
-	&base::_type,
+	nullptr,
 	_properties,
 	&std::make_unique,
 	&port_count_property,
@@ -899,7 +948,7 @@ void bridge::StpCallback_TransmitReleaseBuffer (const STP_BRIDGE* bridge, void* 
 	frame_t info;
 	info.data = std::move(b->_txPacketData);
 	info.timestamp = b->_txTimestamp;
-	b->event_invoker<packet_transmit_e>()(b, b->_txTransmittingPort->port_index(), std::move(info));
+	packet_transmit_e::invoker(b->_em).invoke(b, b->_txTransmittingPort->port_index(), std::move(info));
 }
 
 void bridge::StpCallback_EnableBpduTrapping (const STP_BRIDGE* bridge, bool enable, unsigned int timestamp)
@@ -911,13 +960,13 @@ void bridge::StpCallback_EnableBpduTrapping (const STP_BRIDGE* bridge, bool enab
 void bridge::StpCallback_EnableLearning (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable, unsigned int timestamp)
 {
 	auto b = static_cast<class bridge*>(STP_GetApplicationContext(bridge));
-	b->event_invoker<invalidate_e>()(b);
+	invalidate_e::invoker(b->_em).invoke(b);
 }
 
 void bridge::StpCallback_EnableForwarding (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, bool enable, unsigned int timestamp)
 {
 	auto b = static_cast<class bridge*>(STP_GetApplicationContext(bridge));
-	b->event_invoker<invalidate_e>()(b);
+	invalidate_e::invoker(b->_em).invoke(b);
 }
 
 void bridge::StpCallback_FlushFdb (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_FLUSH_FDB_TYPE flushType, unsigned int timestamp)
@@ -943,7 +992,7 @@ void bridge::StpCallback_DebugStrOut (const STP_BRIDGE* bridge, int portIndex, i
 			if ((b->_currentLogLine.portIndex != portIndex) || (b->_currentLogLine.treeIndex != treeIndex))
 			{
 				b->_logLines.push_back(std::make_unique<BridgeLogLine>(std::move(b->_currentLogLine)));
-				b->event_invoker<log_line_generated_e>()(b, b->_logLines.back().get());
+				log_line_generated_e::invoker(b->_em).invoke(b, b->_logLines.back().get());
 			}
 
 			b->_currentLogLine.text.append (nullTerminatedString, (size_t) stringLength);
@@ -952,14 +1001,14 @@ void bridge::StpCallback_DebugStrOut (const STP_BRIDGE* bridge, int portIndex, i
 		if (!b->_currentLogLine.text.empty() && (b->_currentLogLine.text.back() == L'\n'))
 		{
 			b->_logLines.push_back(std::make_unique<BridgeLogLine>(std::move(b->_currentLogLine)));
-			b->event_invoker<log_line_generated_e>()(b, b->_logLines.back().get());
+			log_line_generated_e::invoker(b->_em).invoke(b, b->_logLines.back().get());
 		}
 	}
 
 	if (flush && !b->_currentLogLine.text.empty())
 	{
 		b->_logLines.push_back(std::make_unique<BridgeLogLine>(std::move(b->_currentLogLine)));
-		b->event_invoker<log_line_generated_e>()(b, b->_logLines.back().get());
+		log_line_generated_e::invoker(b->_em).invoke(b, b->_logLines.back().get());
 	}
 }
 
@@ -972,6 +1021,6 @@ void bridge::StpCallback_OnTopologyChange (const STP_BRIDGE* bridge, unsigned in
 void bridge::StpCallback_OnPortRoleChanged (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role, unsigned int timestamp)
 {
 	auto b = static_cast<class bridge*>(STP_GetApplicationContext(bridge));
-	b->event_invoker<invalidate_e>()(b);
+	invalidate_e::invoker(b->_em).invoke(b);
 }
 #pragma endregion

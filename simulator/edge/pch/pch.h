@@ -1,0 +1,53 @@
+﻿
+#pragma once
+
+#define NOMINMAX
+#define _USE_MATH_DEFINES
+#define WIN32_LEAN_AND_MEAN   // Exclude rarely-used stuff from Windows headers
+#define _WIN7_PLATFORM_UPDATE // Needed by wincodec.h
+
+#include <WinSDKVer.h>
+#define _WIN32_WINNT _WIN32_WINNT_WIN7
+#include <SDKDDKVer.h>
+
+// C/C++
+#include <array>
+#include <cstdint>
+#include <cmath>
+#include <deque>
+#include <exception>
+#include <functional>
+#include <intrin.h>
+#include <iomanip>
+#include <map>
+#include <memory>
+#include <optional>
+#include <queue>
+#include <set>
+#include <span>
+#include <sstream>
+#include <stdexcept>
+#include <string_view>
+#include <typeindex>
+#include <unordered_map>
+#include <variant>
+#include <vector>
+
+// Windows
+#define _COM_NO_STANDARD_GUIDS_
+#include <comdef.h>
+#include <CommCtrl.h>
+#include <d2d1_1helper.h>
+#include <d3d11_1.h>
+#include <dwrite.h>
+#include <MsXml6.h>
+#include <ShlObj_core.h>
+#include <Shlwapi.h>
+#include <ShObjIdl_core.h>
+#include <Unknwn.h>
+#include <VersionHelpers.h>
+#include <wincodec.h>
+#include <Windows.h>
+#include <windowsx.h>
+
+extern "C" const IMAGE_DOS_HEADER __ImageBase;

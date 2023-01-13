@@ -4,8 +4,8 @@
 
 #pragma once
 #include "renderable_object.h"
-#include "utility_functions.h"
-#include "xml_serializer.h"
+#include "simulator_props.h"
+#include "edge/xml_serializer.h"
 
 class port;
 struct project_i;
@@ -18,35 +18,40 @@ using edge::xtype;
 using edge::com_ptr;
 using edge::type;
 using edge::static_value_property;
-using edge::uint32_p;
 using edge::object;
 
 struct wire_end_p : edge::property, edge::custom_serialize_property_i
 {
 	size_t const _index;
-	_bstr_t const _name_bstr;
+	const char* const _name;
 
 	wire_end_p (const char* name, size_t index);
+
+	virtual const char* name() const override { return _name; }
+
 	// custom_serialize_property_i
-	virtual void serialize (edge::xml_serializer_i* serializer, const object* obj, const edge::serialize_element_getter& element_getter) const override;
-	virtual void deserialize (edge::xml_deserializer_i* deserializer, IXMLDOMElement* element, object* obj) const override;
-	virtual void deserialize (edge::xml_deserializer_i* deserializer, std::string_view attr_value, object* obj) const override;
+	virtual void serialize (edge::xml_serializer_i* serializer, const object* obj, const property* prop, const edge::serialize_element_getter& element_getter) const override;
+	virtual void deserialize (edge::xml_deserializer_i* deserializer, IXMLDOMElement* element, object* obj, const property* prop) const override;
+	virtual void deserialize (edge::xml_deserializer_i* deserializer, std::string_view attr_value, object* obj, const property* prop) const override;
 };
 
-class wire : public renderable_object
+class wire : public renderable_object_i
 {
-	using base = renderable_object;
-
+	edge::event_manager _em;
+	project_i* _parent = nullptr;
 	std::array<wire_end, 2> _points;
 
 public:
 	wire() = default;
 	wire (wire_end firstEnd, wire_end secondEnd);
 
+	virtual object* parent() const override;
+	void set_parent (project_i* parent);
 	project_i* project() const;
 
 	const std::array<wire_end, 2>& points() const { return _points; }
-	wire_end point (size_t i) const { return _points[i]; }
+	const wire_end& point (size_t i) const { return _points[i]; }
+	wire_end& point (size_t i) { return _points[i]; }
 	void set_point (size_t i, wire_end point);
 
 	wire_end p0() const { return _points[0]; }
@@ -60,8 +65,11 @@ public:
 
 	void render (ID2D1RenderTarget* rt, const drawing_resources& dos, bool forwarding, bool hasLoop) const;
 
-	virtual void render_selection (const edge::zoomable_window_i* window, ID2D1RenderTarget* rt, const drawing_resources& dos) const override final;
-	virtual ht_result hit_test (const edge::zoomable_window_i* window, D2D1_POINT_2F dLocation, float tolerance) override final;
+	struct invalidate_e : public edge::event<invalidate_e, wire*> { };
+	invalidate_e::subscriber invalidate() { return invalidate_e::subscriber(_em); }
+
+	virtual void render_selection (const edge::zoomer* zoomer, const drawing_resources& dos) const override final;
+	virtual ht_result hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) override final;
 	virtual D2D1_RECT_F extent() const override;
 
 	static const wire_end_p p0_property;

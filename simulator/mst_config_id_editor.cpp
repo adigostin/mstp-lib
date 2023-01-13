@@ -6,19 +6,21 @@
 #include "simulator.h"
 #include "resource.h"
 #include "bridge.h"
-#include "utility_functions.h"
+#include "edge/utility_functions.h"
 
 static constexpr UINT WM_SHOWN = WM_APP + 1;
 
-class mst_config_id_editor : public edge::property_editor_i
+class mst_config_id_editor : public pg::property_editor_i
 {
 	project_i* _project;
 	std::unordered_set<bridge*> _bridges;
 	HWND _hwnd = nullptr;
 
 public:
-	mst_config_id_editor (std::span<object* const> objects)
+	mst_config_id_editor (pg::object_list_i& objects)
 	{
+		rassert(false);
+		/*
 		rassert (!objects.empty());
 
 		if (auto first = dynamic_cast<bridge*>(objects[0]))
@@ -45,7 +47,7 @@ public:
 		}
 		else
 			rassert(false);
-
+		*/
 		_project->property_changing().add_handler<&mst_config_id_editor::on_project_property_changing>(this);
 	}
 
@@ -54,13 +56,17 @@ public:
 		_project->property_changing().remove_handler<&mst_config_id_editor::on_project_property_changing>(this);
 	}
 
-	void on_project_property_changing (object* o, const edge::property_change_args& e)
+	void on_project_property_changing (object* o, const edge::property_change_args& args)
 	{
-		if ((e.property == _project->bridges_prop()) && (e.type == edge::collection_property_change_type::remove))
+		if (args.property == _project->bridges_property())
 		{
-			auto bridge_being_removed = _project->bridges()[e.index].get();
-			if (_bridges.count(bridge_being_removed))
-				::EndDialog (_hwnd, IDCANCEL);
+			auto& cpargs = dynamic_cast<const edge::collection_property_change_args&>(args);
+			if (cpargs.type == edge::collection_property_change_type::remove)
+			{
+				auto bridge_being_removed = _project->bridges()[cpargs.index].get();
+				if (_bridges.count(bridge_being_removed))
+					::EndDialog (_hwnd, IDCANCEL);
+			}
 		}
 	}
 
@@ -287,7 +293,7 @@ public:
 	}
 };
 
-std::unique_ptr<edge::property_editor_i> create_config_id_editor (std::span<object* const> objects)
+std::unique_ptr<pg::property_editor_i> create_config_id_editor (pg::object_list_i& objects)
 {
 	return std::make_unique<mst_config_id_editor>(objects);
 }

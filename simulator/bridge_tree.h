@@ -3,46 +3,38 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "object.h"
-#include "com_ptr.h"
-
-class bridge;
-
-using edge::object;
-using edge::uint32_p;
-using edge::temp_string_p;
-using edge::property_change_args;
+#include "edge/om/object.h"
+#include "edge/om/value_property.h"
+#include "edge/com_ptr.h"
+#include "pg/item.h"
+#include "simulator_props.h"
+#include "bridge.h"
 
 extern const edge::nvp bridge_priority_nvps[];
 extern const char bridge_priority_type_name[];
 using bridge_priority_traits = edge::enum_property_traits<uint32_t, bridge_priority_type_name, bridge_priority_nvps, true>;
-using bridge_priority_p = edge::static_value_property<bridge_priority_traits>;
+using bridge_priority_p = static_ui_prop<bridge_priority_traits>;
 
-class bridge_tree : public object
+class bridge_tree : public edge::object
 {
-	using base = object;
+	friend class bridge;
 
+	edge::event_manager _em;
+	bridge* const _parent;
 	size_t const _tree_index;
-
 	SYSTEMTIME _last_topology_change;
 	uint32_t _topology_change_count;
 
-	friend class bridge;
-
 	void on_topology_change (unsigned int timestamp);
-	static void on_bridge_property_changing (void* arg, object* obj, const property_change_args& args);
-	static void on_bridge_property_changed (void* arg, object* obj, const property_change_args& args);
+	void on_bridge_property_changing (edge::object* obj, const property_change_args& args);
+	void on_bridge_property_changed (edge::object* obj, const property_change_args& args);
 
 public:
-	bridge_tree (size_t tree_index);
+	bridge_tree (bridge* parent, size_t tree_index);
+	~bridge_tree();
 
-	bridge* parent() const;
+	virtual ::bridge* parent() const override { return _parent; }
 
-protected:
-	virtual void on_inserted_into_parent() override;
-	virtual void on_removing_from_parent() override;
-
-public:
 	uint32_t bridge_priority() const;
 	void set_bridge_priority (uint32_t priority);
 
@@ -63,14 +55,16 @@ public:
 
 	uint32_t topology_change_count() const { return _topology_change_count; }
 
+	static const value_property* const properties_changed_on_stp_enable_disable[];
+
 	static const bridge_priority_p bridge_priority_property;
-	static const temp_string_p root_id_property;
+	static const string_p      root_id_property;
 	static const uint32_p      external_root_path_cost_property;
-	static const temp_string_p regional_root_id_property;
+	static const string_p      regional_root_id_property;
 	static const uint32_p      internal_root_path_cost_property;
-	static const temp_string_p designated_bridge_id_property;
-	static const temp_string_p designated_port_id_property;
-	static const temp_string_p receiving_port_id_property;
+	static const string_p      designated_bridge_id_property;
+	static const string_p      designated_port_id_property;
+	static const string_p      receiving_port_id_property;
 	static const uint32_p      hello_time_property;
 	static const uint32_p      max_age_property;
 	static const uint32_p      forward_delay_property;

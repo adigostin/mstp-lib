@@ -29,12 +29,13 @@ extern properties_window_factory_t properties_window_factory;
 #pragma region project_i
 std::pair<wire*, size_t> project_i::GetWireConnectedToPort (const class port* port) const
 {
-	for (auto& w : wires())
+	for (size_t i = 0; i < this->wire_count(); i++)
 	{
+		wire* w = this->wire_at(i);
 		if (std::holds_alternative<connected_wire_end>(w->p0()) && (std::get<connected_wire_end>(w->p0()) == port))
-			return { w.get(), 0 };
+			return { w, 0 };
 		else if (std::holds_alternative<connected_wire_end>(w->p1()) && (std::get<connected_wire_end>(w->p1()) == port))
-			return { w.get(), 1 };
+			return { w, 1 };
 	}
 
 	return { };
@@ -42,8 +43,9 @@ std::pair<wire*, size_t> project_i::GetWireConnectedToPort (const class port* po
 
 port* project_i::find_connected_port (port* tx_port) const
 {
-	for (auto& w : wires())
+	for (size_t i = 0; i < this->wire_count(); i++)
 	{
+		wire* w = this->wire_at(i);
 		for (size_t i = 0; i < 2; i++)
 		{
 			auto& thisEnd = w->points()[i];
@@ -62,8 +64,9 @@ port* project_i::find_connected_port (port* tx_port) const
 }
 #pragma endregion
 
-class SimulatorApp : public event_manager, public simulator_app_i
+class SimulatorApp : public simulator_app_i
 {
+	event_manager _em;
 	std::wstring _regKeyPath;
 	std::vector<std::unique_ptr<project_window_i>> _projectWindows;
 
@@ -77,21 +80,21 @@ public:
 
 	virtual void add_project_window (std::unique_ptr<project_window_i>&& pw) override final
 	{
-		pw->destroying().add_handler<&SimulatorApp::on_project_window_destroying>(this);
+		pw->closed().add_handler<&SimulatorApp::on_project_window_closed>(this);
 		_projectWindows.push_back(std::move(pw));
-		this->event_invoker<project_window_added_e>()(_projectWindows.back().get());
+		project_window_added_e::invoker(_em).invoke(_projectWindows.back().get());
 	}
 
-	void on_project_window_destroying (project_window_i* pw)
+	void on_project_window_closed (project_window_i* pw)
 	{
-		pw->destroying().remove_handler<&SimulatorApp::on_project_window_destroying>(this);
+		pw->closed().remove_handler<&SimulatorApp::on_project_window_closed>(this);
 
 		auto it = find_if (_projectWindows.begin(), _projectWindows.end(), [pw](auto& p) { return p.get() == pw; });
 		rassert (it != _projectWindows.end());
-		event_invoker<project_window_removing_e>()(pw);
+		project_window_removing_e::invoker(_em).invoke(pw);
 		auto pwLastRef = std::move(*it);
 		_projectWindows.erase(it);
-		event_invoker<project_window_removed_e>()(pwLastRef.get());
+		project_window_removed_e::invoker(_em).invoke(pwLastRef.get());
 		if (_projectWindows.empty())
 			PostQuitMessage(0);
 	}
@@ -106,11 +109,11 @@ public:
 
 	virtual const char* app_version_string() const override final { return ::app_version_string; }
 
-	virtual project_window_added_e::subscriber project_window_added() override final { return project_window_added_e::subscriber(this); }
+	virtual project_window_added_e::subscriber project_window_added() override final { return project_window_added_e::subscriber(_em); }
 
-	virtual project_window_removing_e::subscriber project_window_removing() override final { return project_window_removing_e::subscriber(this); }
+	virtual project_window_removing_e::subscriber project_window_removing() override final { return project_window_removing_e::subscriber(_em); }
 
-	virtual project_window_removed_e::subscriber project_window_removed() override final { return project_window_removed_e::subscriber(this); }
+	virtual project_window_removed_e::subscriber project_window_removed() override final { return project_window_removed_e::subscriber(_em); }
 
 	virtual selection_factory_t* selection_factory() const override final { return &::selection_factory; }
 
@@ -149,6 +152,8 @@ public:
 				return 0;
 		}
 	}
+
+	virtual theme_colors_changed_e::subscriber theme_colors_changed() override { return theme_colors_changed_e::subscriber(_em); }
 
 	WPARAM RunMessageLoop()
 	{
@@ -311,6 +316,21 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 	com_ptr<IDWriteFactory> dwrite_factory;
 	hr = DWriteCreateFactory (DWRITE_FACTORY_TYPE_SHARED, __uuidof (IDWriteFactory), reinterpret_cast<IUnknown**>(&dwrite_factory)); rassert(SUCCEEDED(hr));
 
+	com_ptr<ID2D1Factory1> d2d_factory;
+
+	if (tryDebugFirst)
+	{
+		D2D1_FACTORY_OPTIONS fo = { D2D1_DEBUG_LEVEL_WARNING };
+		hr = D2D1CreateFactory (D2D1_FACTORY_TYPE_MULTI_THREADED, __uuidof(**(&d2d_factory)), &fo, (void**) &d2d_factory);
+	}
+
+	if (!tryDebugFirst || FAILED(hr))
+	{
+		D2D1_FACTORY_OPTIONS fo = { D2D1_DEBUG_LEVEL_NONE };
+		hr = D2D1CreateFactory (D2D1_FACTORY_TYPE_MULTI_THREADED, __uuidof(**(&d2d_factory)), &fo, (void**) &d2d_factory);
+		rassert(SUCCEEDED(hr));
+	}
+
 	int processExitValue;
 	{
 		SimulatorApp app;
@@ -318,7 +338,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 		auto project = project_factory();
 		project_window_create_params params =
 		{
-			&app, project, true, true, 1, SW_SHOW, d3d_dc, dwrite_factory
+			&app, project, true, true, 1, SW_SHOW, d3d_dc, dwrite_factory, d2d_factory
 		};
 
 		auto projectWindow = project_window_factory (params);

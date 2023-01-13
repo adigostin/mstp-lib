@@ -7,7 +7,7 @@
 #include "port.h"
 #include "bridge.h"
 #include "stp.h"
-#include "xml_serializer.h"
+#include "edge/xml_serializer.h"
 
 using namespace edge;
 
@@ -48,54 +48,53 @@ const char stp_disabled_text[] = "(STP disabled)";
 UINT_PTR                       port_tree::_flush_timer;
 std::unordered_set<port_tree*> port_tree::_trees;
 
-port_tree::port_tree (size_t tree_index)
-	: _tree_index(tree_index)
-{ }
-
-::port* port_tree::port() const
+port_tree::port_tree (::port* parent, size_t tree_index)
+	: _parent(parent), _tree_index(tree_index)
 {
-	return static_cast<::port*>(static_cast<typed_object_collection_i<port_tree>*>(base::parent()));
-}
-
-void port_tree::on_inserted_into_parent()
-{
-	base::on_inserted_into_parent();
-
-	port()->stp_enabled_changing().add_handler<&port_tree::on_stp_enabled_changing>(this);
-	port()->stp_enabled_changed().add_handler<&port_tree::on_stp_enabled_changed>(this);
+	_parent->stp_enabled_changing().add_handler<&port_tree::on_stp_enabled_changing>(this);
+	_parent->stp_enabled_changed().add_handler<&port_tree::on_stp_enabled_changed>(this);
 
 	if (_trees.empty())
 		_flush_timer = ::SetTimer (nullptr, 0, 100, flush_timer_proc);
 	_trees.insert(this);
 }
 
-void port_tree::on_removing_from_parent()
+port_tree::~port_tree()
 {
 	_trees.erase(this);
 	if (_trees.empty())
 		::KillTimer (nullptr, _flush_timer);
 
-	port()->stp_enabled_changed().remove_handler<&port_tree::on_stp_enabled_changed>(this);
-	port()->stp_enabled_changing().remove_handler<&port_tree::on_stp_enabled_changing>(this);
+	_parent->stp_enabled_changed().remove_handler<&port_tree::on_stp_enabled_changed>(this);
+	_parent->stp_enabled_changing().remove_handler<&port_tree::on_stp_enabled_changing>(this);
+}
 
-	base::on_removing_from_parent();
+object* port_tree::parent() const
+{
+	return _parent;
+}
+
+::port* port_tree::port() const
+{
+	return _parent;
 }
 
 void port_tree::on_stp_enabled_changing (const property_change_args& args)
 {
-	on_property_changing(&learning_property);
-	on_property_changing(&forwarding_property);
-	on_property_changing(&role_property);
+	edge::property_changing_e::invoker(_em).invoke(this, value_property_change_args(learning_property));
+	edge::property_changing_e::invoker(_em).invoke(this, value_property_change_args(forwarding_property));
+	edge::property_changing_e::invoker(_em).invoke(this, value_property_change_args(role_property));
 }
 
 void port_tree::on_stp_enabled_changed (const property_change_args& args)
 {
-	on_property_changed(&role_property);
-	on_property_changed(&forwarding_property);
-	on_property_changed(&learning_property);
+	edge::property_changed_e::invoker(_em).invoke(this, value_property_change_args(role_property));
+	edge::property_changed_e::invoker(_em).invoke(this, value_property_change_args(forwarding_property));
+	edge::property_changed_e::invoker(_em).invoke(this, value_property_change_args(learning_property));
 	port()->invalidate();
 }
 
+// static
 void port_tree::flush_timer_proc (HWND hwnd, UINT, UINT_PTR timer_id, DWORD)
 {
 	auto now = ::GetTickCount64();
@@ -131,9 +130,9 @@ void port_tree::set_priority (uint32_t priority)
 {
 	if (this->priority() != priority)
 	{
-		this->on_property_changing(&priority_property);
+		edge::property_changing_e::invoker(_em).invoke(this, value_property_change_args(priority_property));
 		STP_SetPortPriority (port()->bridge()->stp_bridge(), (unsigned int)port()->port_index(), (unsigned int)_tree_index, (unsigned char) priority, GetMessageTime());
-		this->on_property_changed(&priority_property);
+		edge::property_changed_e::invoker(_em).invoke(this, value_property_change_args(priority_property));
 	}
 }
 
@@ -151,11 +150,12 @@ void port_tree::set_admin_internal_port_path_cost (uint32_t value)
 {
 	if (STP_GetAdminInternalPortPathCost (port()->bridge()->stp_bridge(), (unsigned int)port()->port_index(), (unsigned int)_tree_index) != value)
 	{
-		this->on_property_changing (&admin_internal_port_path_cost_property);
-		this->on_property_changing (&internal_port_path_cost_property);
-		STP_SetAdminInternalPortPathCost (port()->bridge()->stp_bridge(), (unsigned int)port()->port_index(), (unsigned int)_tree_index, value, ::GetMessageTime());
-		this->on_property_changed (&internal_port_path_cost_property);
-		this->on_property_changed (&admin_internal_port_path_cost_property);
+		rassert(false);
+		//this->on_property_changing (&admin_internal_port_path_cost_property);
+		//this->on_property_changing (&internal_port_path_cost_property);
+		//STP_SetAdminInternalPortPathCost (port()->bridge()->stp_bridge(), (unsigned int)port()->port_index(), (unsigned int)_tree_index, value, ::GetMessageTime());
+		//this->on_property_changed (&internal_port_path_cost_property);
+		//this->on_property_changed (&admin_internal_port_path_cost_property);
 	}
 }
 
@@ -180,7 +180,7 @@ STP_PORT_ROLE port_tree::role() const
 	return STP_GetPortRole (port()->bridge()->stp_bridge(), (unsigned int)port()->port_index(), (unsigned int)_tree_index);
 }
 
-const edge::size_p port_tree::tree_index_property {
+const size_p port_tree::tree_index_property {
 	"TreeIndex", nullptr, nullptr, false,
 	&tree_index,
 	nullptr,
@@ -197,7 +197,7 @@ const port_priority_p port_tree::priority_property {
 	0x80,
 };
 
-const edge::bool_p port_tree::learning_property {
+const bool_p port_tree::learning_property {
 	"learning",
 	nullptr,
 	nullptr,
@@ -206,7 +206,7 @@ const edge::bool_p port_tree::learning_property {
 	nullptr,
 };
 
-const edge::bool_p port_tree::forwarding_property {
+const bool_p port_tree::forwarding_property {
 	"forwarding",
 	nullptr,
 	nullptr,
@@ -224,7 +224,7 @@ const port_role_p port_tree::role_property {
 	nullptr,
 };
 
-static const edge::property_group port_path_cost_group = { 5, "Port Path Cost" };
+static const pg::property_group port_path_cost_group = { 5, "Port Path Cost" };
 
 const uint32_p port_tree::admin_internal_port_path_cost_property {
 	"AdminInternalPortPathCost",
@@ -256,6 +256,6 @@ const edge::property* const port_tree::_properties[] = {
 	&internal_port_path_cost_property,
 };
 
-const xtype<port_tree> port_tree::_type = { "PortTree", &base::_type, _properties };
+const xtype<port_tree> port_tree::_type = { "PortTree", nullptr, _properties };
 
 const concrete_type* port_tree::type() const { return &_type; }

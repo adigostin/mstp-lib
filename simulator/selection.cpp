@@ -7,12 +7,13 @@
 #include "bridge.h"
 #include "wire.h"
 #include "port.h"
-#include "events.h"
+#include "edge/events.h"
 
 using namespace edge;
 
-class selection : public event_manager, public selection_i
+class selection : public selection_i
 {
+	event_manager _em;
 	project_i* const _project;
 	std::vector<object*> _objects;
 
@@ -32,60 +33,58 @@ public:
 	void on_project_property_changing (object* project_obj, const property_change_args& args)
 	{
 		auto project = dynamic_cast<project_i*>(project_obj);
-		if ((args.property == project->bridges_prop()) && (args.type == collection_property_change_type::remove))
+		if (args.property == project->bridges_property())
 		{
-			bridge* b = project->bridges()[args.index].get();
-
-			for (size_t i = 0; i < _objects.size(); )
+			auto& oc_args = dynamic_cast<const edge::object_collection_property_change_args&>(args);
+			if (oc_args.type == collection_property_change_type::remove)
 			{
-				auto so = _objects[i];
-				if ((so == b) || ((dynamic_cast<port*>(so) != nullptr) && (static_cast<port*>(so)->bridge() == b)))
-					remove_internal(i);
-				else
-					i++;
+				bridge* b = project->bridges()[oc_args.index].get();
+				size_t i = this->index_of(b);
+				remove_internal(i, 1);
 			}
-
-			event_invoker<changed_e>()(this);
 		}
-		else if ((args.property == project->wires_prop()) && (args.type == collection_property_change_type::remove))
+		else if (args.property == project->wires_property())
 		{
-			wire* w = project->wires()[args.index].get();
-
-			for (size_t i = 0; i < _objects.size(); )
+			auto& oc_args = dynamic_cast<const edge::object_collection_property_change_args&>(args);
+			if (oc_args.type == collection_property_change_type::remove)
 			{
-				auto so = _objects[i];
-				if (so == w)
-					remove_internal(i);
-				else
-					i++;
+				wire* w = project->wires()[oc_args.index].get();
+				size_t i = this->index_of(w);
+				remove_internal(i, 1);
 			}
-
-			event_invoker<changed_e>()(this);
 		}
 	}
+
+	virtual size_t size() const override { return _objects.size(); }
+	
+	virtual edge::object* operator[](size_t index) const override { return _objects[index]; }
+
+	virtual change_e::subscriber objects_change() override { return change_e::subscriber(_em); }
 
 	virtual const std::vector<object*>& objects() const override final { return _objects; }
 
 	void add_internal (object* o)
 	{
+		change_e::invoker(_em).invoke(inserting_args{ { &o, 1 } });
 		_objects.push_back(o);
-		event_invoker<added_e>()(this, o);
+		change_e::invoker(_em).invoke(inserted_args{ _objects.size() - 1, 1 });
 	}
 
-	void remove_internal (size_t index)
+	void remove_internal (size_t index, size_t size)
 	{
-		event_invoker<removing_e>()(this, _objects[index]);
-		_objects.erase(_objects.begin() + index);
+		if (size)
+		{
+			change_e::invoker(_em).invoke(removing_args{ index, size });
+			std::vector<object*> removed;
+			std::copy(_objects.begin() + index, _objects.begin() + index + size, std::back_inserter(removed));
+			_objects.erase(_objects.begin() + index, _objects.begin() + index + size);
+			change_e::invoker(_em).invoke(removed_args{ removed });
+		}
 	}
 
 	virtual void clear() override final
 	{
-		if (!_objects.empty())
-		{
-			while (!_objects.empty())
-				remove_internal (_objects.size() - 1);
-			event_invoker<changed_e>()(this);
-		}
+		remove_internal(0, _objects.size());
 	}
 
 	virtual void select (object* o) override final
@@ -95,10 +94,8 @@ public:
 
 		if ((_objects.size() != 1) || (_objects[0] != o))
 		{
-			while (!_objects.empty())
-				remove_internal(_objects.size() - 1);
+			remove_internal (0, _objects.size());
 			add_internal(o);
-			event_invoker<changed_e>()(this);
 		}
 	}
 
@@ -111,7 +108,6 @@ public:
 			throw std::invalid_argument("Object already in selection.");
 
 		add_internal(o);
-		event_invoker<changed_e>()(this);
 	}
 
 	virtual void remove (object* o) override final
@@ -124,15 +120,8 @@ public:
 			throw std::invalid_argument("Object not in selection.");
 		size_t index = it - _objects.begin();
 
-		remove_internal(index);
-		event_invoker<changed_e>()(this);
+		remove_internal(index, 1);
 	}
-
-	virtual added_e::subscriber added() override final { return added_e::subscriber(this); }
-
-	virtual removing_e::subscriber removing() override final { return removing_e::subscriber(this); }
-
-	virtual changed_e::subscriber changed() override final { return changed_e::subscriber(this); }
 };
 
 extern std::unique_ptr<selection_i> selection_factory(project_i* project)

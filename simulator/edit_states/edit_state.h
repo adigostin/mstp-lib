@@ -3,7 +3,7 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "simulator.h"
+#include "..\simulator.h"
 
 using edge::handled;
 using edge::modifier_key;
@@ -47,7 +47,7 @@ std::unique_ptr<edit_state> create_state_create_bridge (const edit_state_deps& d
 std::unique_ptr<edit_state> create_state_create_wire (const edit_state_deps& deps);
 std::unique_ptr<edit_state> CreateStateMoveWirePoint (const edit_state_deps& deps, wire* wire, size_t pointIndex);
 std::unique_ptr<edit_state> CreateStateBeginningDrag (const edit_state_deps& deps,
-	renderable_object* clickedObject,
+	edge::object* clickedObject,
 	mouse_button button,
 	modifier_key mks,
 	const mouse_location& ml,

@@ -16,6 +16,7 @@ class vlan_window : public vlan_window_i
 	selection_i*    const _selection;
 	ID3D11DeviceContext1* const _d3d_dc;
 	IDWriteFactory* const _dwrite_factory;
+	ID2D1Factory1* const _d2d_factory;
 	HWND _hwnd = nullptr;
 
 public:
@@ -26,13 +27,15 @@ public:
 				HWND hWndParent,
 				POINT location,
 				ID3D11DeviceContext1* d3d_dc,
-				IDWriteFactory* dwrite_factory)
+				IDWriteFactory* dwrite_factory,
+				ID2D1Factory1* d2d_factory)
 		: _app(app)
 		, _pw(pw)
 		, _project(project)
 		, _selection(selection)
 		, _d3d_dc(d3d_dc)
 		, _dwrite_factory(dwrite_factory)
+		, _d2d_factory(d2d_factory)
 	{
 		HINSTANCE hInstance;
 		BOOL bRes = GetModuleHandleEx (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCWSTR) &DialogProcStatic, &hInstance); rassert(bRes);
@@ -43,9 +46,7 @@ public:
 		::GetWindowRect(_hwnd, &rc);
 		::MoveWindow (_hwnd, location.x, location.y, rc.right - rc.left, rc.bottom - rc.top, TRUE);
 
-		_selection->added().add_handler<&vlan_window::on_added_to_selection>(this);
-		_selection->removing().add_handler<&vlan_window::on_removing_from_selection>(this);
-		_selection->changed().add_handler<&vlan_window::on_selection_changed>(this);
+		_selection->objects_change().add_handler<&vlan_window::on_selection_change>(this);
 		_pw->selected_vlan_number_changed().add_handler<&vlan_window::on_selected_vlan_changed>(this);
 
 		for (auto o : _selection->objects())
@@ -64,9 +65,7 @@ public:
 		}
 
 		_pw->selected_vlan_number_changed().remove_handler<&vlan_window::on_selected_vlan_changed>(this);
-		_selection->changed().remove_handler<&vlan_window::on_selection_changed>(this);
-		_selection->removing().remove_handler<&vlan_window::on_removing_from_selection>(this);
-		_selection->added().remove_handler<&vlan_window::on_added_to_selection>(this);
+		_selection->objects_change().remove_handler<&vlan_window::on_selection_change>(this);
 
 		if (_hwnd != nullptr)
 			::DestroyWindow(_hwnd);
@@ -194,16 +193,17 @@ public:
 			{
 				if (std::all_of (_selection->objects().begin(), _selection->objects().end(), is_bridge))
 				{
-					auto editor = create_config_id_editor(_selection->objects());
+					auto editor = create_config_id_editor(*_selection);
 					editor->show(static_cast<win32_window_i*>(this));
 				}
 				else if (std::all_of (_selection->objects().begin(), _selection->objects().end(), is_port))
 				{
-					std::vector<edge::object*> objects;
-					std::transform (_selection->objects().begin(), _selection->objects().end(), std::back_inserter(objects),
-									[](edge::object* o) { return (edge::object*) static_cast<port*>(o)->bridge(); });
-					auto editor = create_config_id_editor(objects);
-					editor->show(static_cast<win32_window_i*>(this));
+					rassert(false);
+					//std::vector<edge::object*> objects;
+					//std::transform (_selection->objects().begin(), _selection->objects().end(), std::back_inserter(objects),
+					//				[](edge::object* o) { return (edge::object*) static_cast<port*>(o)->bridge(); });
+					//auto editor = create_config_id_editor(objects);
+					//editor->show(static_cast<win32_window_i*>(this));
 				}
 				else
 					MessageBoxA (_hwnd, "Select some bridges or ports first.", _app->app_name(), 0);
@@ -217,28 +217,32 @@ public:
 		return { FALSE, 0 };
 	}
 
-	void on_added_to_selection (selection_i* selection, edge::object* obj)
-	{
-		auto b = dynamic_cast<bridge*>(obj);
-		if (b != nullptr)
-			b->property_changed().add_handler<&vlan_window::on_bridge_property_changed>(this);
-	}
-
-	void on_removing_from_selection (selection_i* selection, edge::object* obj)
-	{
-		auto b = dynamic_cast<bridge*>(obj);
-		if (b != nullptr)
-			b->property_changed().remove_handler<&vlan_window::on_bridge_property_changed>(this);
-	}
-
 	void on_bridge_property_changed (edge::object* o, const edge::property_change_args& args)
 	{
 		LoadSelectedTreeEdit();
 	}
 
-	void on_selection_changed (selection_i* selection)
+	void on_selection_change (const selection_i::change_args& args)
 	{
-		LoadSelectedTreeEdit();
+		if (auto* inserted = std::get_if<selection_i::inserted_args>(&args))
+		{
+			for (size_t i = inserted->index; i < inserted->index + inserted->size; i++)
+			{
+				if (auto b = dynamic_cast<bridge*>(_selection->operator[](i)))
+					b->property_changed().add_handler<&vlan_window::on_bridge_property_changed>(this);
+			}
+		}
+		else if (auto* removing = std::get_if<selection_i::removing_args>(&args))
+		{
+			for (size_t i = removing->index; i < removing->index + removing->size; i++)
+			{
+				if (auto b = dynamic_cast<bridge*>(_selection->operator[](i)))
+					b->property_changed().remove_handler<&vlan_window::on_bridge_property_changed>(this);
+			}
+		}
+
+		if (selection_i::is_changed_event(args))
+			LoadSelectedTreeEdit();
 	}
 
 	void on_selected_vlan_changed (project_window_i* pw, unsigned int vlanNumber)
@@ -267,7 +271,7 @@ public:
 		else
 		{
 			project_window_create_params create_params =
-				{ _app, _project, false, false, vlanNumber, SW_SHOW, _d3d_dc, _dwrite_factory };
+				{ _app, _project, false, false, vlanNumber, SW_SHOW, _d3d_dc, _dwrite_factory, _d2d_factory };
 			auto pw = _app->project_window_factory()(create_params);
 			_app->add_project_window(std::move(pw));
 		}

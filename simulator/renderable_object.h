@@ -3,17 +3,12 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "object.h"
-#include "zoomer.h"
+#include "edge/om/object.h"
+#include "edge/com_ptr.h"
+#include "edge/zoomer.h"
 
-using edge::size_p;
-using edge::size_property_traits;
-using edge::uint32_p;
-using edge::bool_p;
-using edge::float_p;
 using edge::backed_string_p;
 using edge::temp_string_p;
-using edge::side_p;
 using edge::property;
 using edge::event;
 using edge::object;
@@ -50,31 +45,31 @@ struct drawing_resources
 	com_ptr<ID2D1StrokeStyle> _strokeStyleSelectionRect;
 };
 
-class renderable_object : public object
+struct __declspec(novtable) renderable_object_i : edge::object
 {
 public:
 	struct ht_result
 	{
-		renderable_object* object;
+		edge::object* object;
 		int code;
 		bool operator==(const ht_result& other) const { return (this->object == other.object) && (this->code == other.code); }
 		bool operator!=(const ht_result& other) const { return (this->object != other.object) || (this->code != other.code); }
 	};
 
-	struct invalidate_e : public edge::event<invalidate_e, renderable_object*> { };
-	invalidate_e::subscriber invalidated() { return invalidate_e::subscriber(this); }
-
-	virtual void render_selection (const edge::zoomable_window_i* window, ID2D1RenderTarget* rt, const drawing_resources& dos) const = 0;
-	virtual ht_result hit_test (const edge::zoomable_window_i* window, D2D1_POINT_2F dLocation, float tolerance) = 0;
+	// This is called without any transformation applied to the render target, not even the DPI transformation.
+	virtual void render_selection (const edge::zoomer* zoomer, const drawing_resources& dos) const = 0;
+	virtual ht_result hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) = 0;
 	virtual D2D1_RECT_F extent() const = 0;
-
+	/*
 protected:
 	template<typename tpd_>
 	void set_and_invalidate (const tpd_* pd, typename tpd_::value_t& field, const typename tpd_::value_t& value)
 	{
-		this->on_property_changing(pd);
+		edge::value_property_change_args args { pd };
+		this->on_property_changing(args);
 		field = value;
-		this->on_property_changed(pd);
-		this->event_invoker<invalidate_e>()(this);
+		this->on_property_changed(args);
+		invalidate_e::invoker(em()).invoke(this);
 	}
+	*/
 };

@@ -2,10 +2,9 @@
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
-#include "pch.h"
 #include "edit_state.h"
-#include "bridge.h"
-#include "port.h"
+#include "../bridge.h"
+#include "../port.h"
 
 class move_port_es : public edit_state
 {

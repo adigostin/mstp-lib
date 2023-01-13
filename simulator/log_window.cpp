@@ -5,8 +5,8 @@
 #include "pch.h"
 #include "simulator.h"
 #include "resource.h"
-#include "d2d_renderer.h"
-#include "window.h"
+#include "edge/d2d_renderer.h"
+#include "edge/utility_functions.h"
 
 using namespace D2D1;
 using namespace edge;
@@ -16,8 +16,8 @@ class log_window : public event_manager, public log_window_i
 	edge::theme_color_provider_i* const _tcp;
 	selection_i* const _selection;
 	std::shared_ptr<project_i> const _project;
-	window       _window;
-	d2d_renderer _renderer;
+	std::unique_ptr<win32_window_i> const _window;
+	std::unique_ptr<d2d_renderer_i> const _renderer;
 	com_ptr<IDWriteFactory> const _dwrite_factory;
 	com_ptr<IDWriteTextFormat> _textFormat;
 	bridge* _bridge = nullptr;
@@ -40,10 +40,13 @@ class log_window : public event_manager, public log_window_i
 	};
 
 public:
-	log_window (HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dwrite_factory, selection_i* selection, const std::shared_ptr<project_i>& project, edge::theme_color_provider_i* tcp)
+	log_window (HWND hWndParent, const RECT& rect, 
+		ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dwrite_factory, ID2D1Factory1* d2d_factory,
+		selection_i* selection, const std::shared_ptr<project_i>& project, edge::theme_color_provider_i* tcp
+	)
 		: _tcp(tcp)
-		, _window (wnd_class, WS_EX_CLIENTEDGE, WS_VISIBLE | WS_CHILD | WS_HSCROLL | WS_VSCROLL, hWndParent, rect)
-		, _renderer(this, d3d_dc, dwrite_factory)
+		, _window (edge::make_window(wnd_class, WS_EX_CLIENTEDGE, WS_VISIBLE | WS_CHILD | WS_HSCROLL | WS_VSCROLL, hWndParent, rect))
+		, _renderer (edge::make_d2d_renderer(*_window, d3d_dc, dwrite_factory, d2d_factory))
 		, _dwrite_factory(dwrite_factory)
 		, _selection(selection)
 		, _project(project)
@@ -53,30 +56,30 @@ public:
 
 		_numberOfLinesFitting = CalcNumberOfLinesFitting();
 
-		_selection->changed().add_handler<&log_window::on_selection_changed>(this);
-		_window.window_proc().add_handler<&log_window::on_window_proc>(this);
-		_renderer.render().add_handler<&log_window::render>(this);
+		_selection->objects_change().add_handler<&log_window::on_selection_change>(this);
+		_window->window_proc().add_handler<&log_window::on_window_proc>(this);
+		_renderer->render().add_handler<&log_window::render>(this);
 	}
 
 	~log_window()
 	{
-		_renderer.render().remove_handler<&log_window::render>(this);
-		_window.window_proc().remove_handler<&log_window::on_window_proc>(this);
-		_selection->changed().remove_handler<&log_window::on_selection_changed>(this);
+		_renderer->render().remove_handler<&log_window::render>(this);
+		_window->window_proc().remove_handler<&log_window::on_window_proc>(this);
+		_selection->objects_change().remove_handler<&log_window::on_selection_change>(this);
 		select_bridge(nullptr);
 	}
 
 	// win32_window_i
-	virtual HWND hwnd() const override { return _window.hwnd(); }
-	virtual window_proc_e::subscriber window_proc() override { return _window.window_proc(); }
+	virtual HWND hwnd() const override { return _window->hwnd(); }
+	virtual window_proc_e::subscriber window_proc() override { return _window->window_proc(); }
 
-	void on_selection_changed (selection_i* selection)
+	void on_selection_change (const selection_i::change_args& args)
 	{
-		if (selection->objects().size() != 1)
+		if (_selection->objects().size() != 1)
 			select_bridge(nullptr);
 		else
 		{
-			auto o = selection->objects().front();
+			auto o = _selection->objects().front();
 			if (auto b = dynamic_cast<bridge*>(o))
 				select_bridge(b);
 			else if (auto p = dynamic_cast<port*>(o))
@@ -84,11 +87,11 @@ public:
 		}
 	}
 
-	void render (ID2D1DeviceContext* dc)
+	void render (HWND hwnd, ID2D1DeviceContext* dc)
 	{
 		dc->Clear(_tcp->color_d2d(edge::theme_color::background));
 
-		dc->SetTransform(dpi_transform());
+		dc->SetTransform(dpi_transform(hwnd));
 
 		com_ptr<ID2D1SolidColorBrush> text_brush = _tcp->make_brush(dc, edge::theme_color::foreground);
 
@@ -277,8 +280,8 @@ public:
 		{
 			if (wParam == ID_CLEAR_ALL_LOGS)
 			{
-				for (auto& b : _project->bridges())
-					b->clear_log();
+				for (size_t i = 0; i < _project->bridge_count(); i++)
+					_project->bridge_at(i)->clear_log();
 				return 0; // consume it
 			}
 
@@ -467,10 +470,9 @@ public:
 	}
 };
 
-template<typename... Args>
-static std::unique_ptr<log_window_i> Create (Args... args)
+std::unique_ptr<log_window_i> make_log_window (HWND hWndParent, const RECT& rect, 
+	ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dwrite_factory, ID2D1Factory1* d2d_factory,
+	selection_i* selection, const std::shared_ptr<project_i>& project, edge::theme_color_provider_i* tcp)
 {
-	return std::make_unique<log_window>(std::forward<Args>(args)...);
+	return std::make_unique<log_window>(hWndParent, rect, d3d_dc, dwrite_factory, d2d_factory, selection, project, tcp);
 }
-
-extern const log_window_factory_t log_window_factory = &Create;

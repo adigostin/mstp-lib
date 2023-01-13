@@ -3,6 +3,7 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
+#include "edge/om/object_collection_property.h"
 #include "renderable_object.h"
 #include "port_tree.h"
 #include "stp.h"
@@ -27,43 +28,38 @@ using packet_t = std::variant<link_pulse_t, frame_t>;
 extern const char admin_p2p_type_name[];
 extern const edge::nvp admin_p2p_nvps[];
 using admin_p2p_traits = edge::enum_property_traits<STP_ADMIN_P2P, admin_p2p_type_name, admin_p2p_nvps>;
-using admin_p2p_p = edge::static_value_property<admin_p2p_traits>;
+using admin_p2p_p = static_ui_prop<admin_p2p_traits>;
 
 extern const char port_speed_type_name[];
 extern const char port_speed_unknown_str[];
 extern const nvp port_speed_nvps[];
 using port_speed_traits = edge::enum_property_traits<uint32_t, port_speed_type_name, port_speed_nvps, false, port_speed_unknown_str>;
-using port_speed_p = edge::static_value_property<port_speed_traits>;
+using port_speed_p = static_ui_prop<port_speed_traits>;
 
-class port : public renderable_object, public edge::typed_object_collection_i<port_tree>
+class port : public edge::object
 {
-	using base = renderable_object;
-
 	friend class bridge;
 
+	edge::event_manager _em;
+	bridge* const _parent;
 	size_t  const _port_index;
-	side _side = side_property.default_value.value();
+	edge::side _side = side_property.default_value().value();
 	float _offset;
-	uint32_t _supported_speed = supported_speed_property.default_value.value();
+	uint32_t _supported_speed = supported_speed_property.default_value().value();
 	uint32_t _actual_speed = 0;
 	std::vector<std::unique_ptr<port_tree>> _trees;
 
 	static constexpr uint32_t MissedLinkPulseCounterMax = 3;
 	uint32_t _missedLinkPulseCounter = MissedLinkPulseCounterMax;
 
-	virtual void children_store (std::vector<std::unique_ptr<port_tree>>** out) override final { *out = &_trees; }
-	virtual void collection_property (const edge::typed_object_collection_property<port_tree>** out) const override final { *out = &trees_property; }
-	virtual void call_property_changing (const property_change_args& args) override final { this->on_property_changing(args); }
-	virtual void call_property_changed  (const property_change_args& args) override final { this->on_property_changed(args); }
-
-	virtual void on_inserted_into_parent() override;
-	virtual void on_removing_from_parent() override;
-
 	static void on_bridge_property_changing (void* arg, object* obj, const property_change_args& args);
 	static void on_bridge_property_changed  (void* arg, object* obj, const property_change_args& args);
 
 public:
-	port (size_t port_index, side side, float offset);
+	port (bridge* parent, size_t port_index, side side, float offset);
+	~port();
+
+	virtual object* parent() const override;
 
 	static constexpr int HTCodeInnerOuter = 1;
 	static constexpr int HTCodeCP = 2;
@@ -90,22 +86,23 @@ public:
 	struct stp_enabled_changing_e : event<stp_enabled_changing_e, const property_change_args&> { };
 	struct stp_enabled_changed_e  : event<stp_enabled_changed_e,  const property_change_args&> { };
 
-	stp_enabled_changing_e::subscriber stp_enabled_changing() { return stp_enabled_changing_e::subscriber(this); }
-	stp_enabled_changed_e ::subscriber stp_enabled_changed () { return stp_enabled_changed_e ::subscriber(this); }
+	stp_enabled_changing_e::subscriber stp_enabled_changing() { return stp_enabled_changing_e::subscriber(_em); }
+	stp_enabled_changed_e ::subscriber stp_enabled_changed () { return stp_enabled_changed_e ::subscriber(_em); }
 
 	static void RenderExteriorNonStpPort (ID2D1RenderTarget* dc, const drawing_resources& dos, bool macOperational);
 	static void RenderExteriorStpPort (ID2D1RenderTarget* dc, const drawing_resources& dos, STP_PORT_ROLE role, bool learning, bool forwarding, bool operEdge);
 
+	struct invalidate_e : public edge::event<invalidate_e, port*> { };
+	invalidate_e::subscriber invalidate() { return invalidate_e::subscriber(_em); }
+
 	void render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsigned int vlanNumber) const;
 
-	virtual void render_selection (const edge::zoomable_window_i* window, ID2D1RenderTarget* rt, const drawing_resources& dos) const override final;
-	virtual ht_result hit_test (const edge::zoomable_window_i* window, D2D1_POINT_2F dLocation, float tolerance) override final;
-	virtual D2D1_RECT_F extent() const override { rassert(false); return { }; }
+	void render_selection (const edge::zoomer* zoomer, const drawing_resources& dos) const;
+	int hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance);
+	D2D1_RECT_F extent() const { rassert(false); return { }; }
 
-	void invalidate();
-
-	bool HitTestInnerOuter (const edge::zoomable_window_i* window, D2D1_POINT_2F dLocation, float tolerance) const;
-	bool HitTestCP (const edge::zoomable_window_i* window, D2D1_POINT_2F dLocation, float tolerance) const;
+	bool HitTestInnerOuter (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) const;
+	bool HitTestCP (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) const;
 
 	bool auto_edge() const;
 	void set_auto_edge (bool autoEdge);
@@ -145,7 +142,7 @@ public:
 	static const admin_p2p_p admin_p2p_property;
 	static const bool_p detected_p2p_property;
 	static const bool_p oper_p2p_property;
-	static const edge::typed_object_collection_property<port_tree> trees_property;
+	static const edge::typed_object_collection_property1<port_tree> trees_property;
 
 	static const property* const _properties[];
 	static const xtype<port> _type;

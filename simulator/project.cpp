@@ -7,54 +7,61 @@
 #include "wire.h"
 #include "bridge.h"
 #include "port.h"
-#include "xml_serializer.h"
+#include "bridge_tree.h"
+#include "edge/xml_serializer.h"
 
 using edge::com_exception;
 using edge::throw_if_failed;
 
 static const _bstr_t NextMacAddressString = "NextMacAddress";
 
-class project : public edge::object, public project_i
+class project : public project_i
 {
-	using base = edge::object;
-
+	edge::event_manager _em;
 	std::wstring _path;
 	std::vector<std::unique_ptr<bridge>> _bridges;
 	std::vector<std::unique_ptr<wire>> _wires;
-	mac_address _next_mac_address = next_mac_address_property.default_value.value();
+	mac_address _next_mac_address = next_mac_address_property.default_value().value();
 	bool _simulationPaused = false;
 	bool _changedFlag = false;
 
 public:
 	~project()
 	{
+		// Need to call remove_bridge explicitly in order to unregister the event handlers that we registered in insert_bridge.
 		while(!_wires.empty())
-			wire_collection_i::remove_last();
+			remove_wire(_wires.size() - 1);
 		while(!_bridges.empty())
-			bridge_collection_i::remove_last();
+			remove_bridge(_bridges.size() - 1);
 	}
 
-private:
-	// object_collection_i
-	virtual void call_property_changing (const property_change_args& args) override final { this->on_property_changing(args); }
-	virtual void call_property_changed  (const property_change_args& args) override final { this->on_property_changed(args); }
+	virtual hierarchy_object_i* parent() const override { return nullptr; }
 
-	// bridge_collection_i
-	virtual void children_store (std::vector<std::unique_ptr<bridge>>** out) override final { *out = &_bridges; }
+	virtual const std::vector<std::unique_ptr<bridge>>& bridges() const override { return _bridges; }
 
-	virtual void collection_property (const typed_object_collection_property<bridge>** out) const override final { *out = &bridges_property; }
+	virtual size_t bridge_count() const override { return _bridges.size(); }
 
-	virtual void on_child_inserted (size_t index, bridge* b) override
+	virtual bridge* bridge_at(size_t index) const override { return _bridges[index].get(); }
+
+	void insert_bridge (size_t i, std::unique_ptr<bridge> b)
 	{
-		bridge_collection_i::on_child_inserted(index, b);
+		bridge* raw = b.get();
 
-		b->invalidated().add_handler<&project::on_project_child_invalidated>(this);
-		b->packet_transmit().add_handler<&project::on_packet_transmit>(this);
-		this->event_invoker<invalidate_e>()(this);
+		edge::object_collection_property_change_args args = { &bridges_prop, i, edge::collection_property_change_type::insert, raw };
+		edge::property_changing_e::invoker(_em).invoke(this, args);
+		raw->set_parent(this);
+		_bridges.insert(_bridges.begin() + i, std::move(b));
+		args.child = nullptr;
+		edge::property_changed_e::invoker(_em).invoke(this, args);
+
+		raw->invalidate().add_handler<&project::on_bridge_invalidate>(this);
+		raw->packet_transmit().add_handler<&project::on_packet_transmit>(this);
+		invalidate_e::invoker(_em).invoke(this);
 	}
 
-	virtual void on_child_removing (size_t index, bridge* b) override
+	std::unique_ptr<bridge> remove_bridge (size_t i)
 	{
+		bridge* b = _bridges[i].get();
 		if (std::any_of (_wires.begin(), _wires.end(), [b, this](const std::unique_ptr<wire>& w) {
 			return any_of (w->points().begin(), w->points().end(), [b, this] (wire_end p) {
 				return std::holds_alternative<connected_wire_end>(p) && (std::get<connected_wire_end>(p)->bridge() == b);
@@ -63,51 +70,84 @@ private:
 			rassert(false); // can't remove a connected bridge
 
 		b->packet_transmit().remove_handler<&project::on_packet_transmit>(this);
-		b->invalidated().remove_handler<&project::on_project_child_invalidated>(this);
+		b->invalidate().remove_handler<&project::on_bridge_invalidate>(this);
+		
+		edge::object_collection_property_change_args args = { &bridges_prop, i, edge::collection_property_change_type::remove, nullptr };
+		edge::property_changing_e::invoker(_em).invoke(this, args);
+		auto res = std::move(_bridges[i]);
+		_bridges.erase(_bridges.begin() + i);
+		b->set_parent(nullptr);
+		args.child = b;
+		edge::property_changed_e::invoker(_em).invoke(this, args);
 
-		this->event_invoker<invalidate_e>()(this);
+		invalidate_e::invoker(_em).invoke(this);
 
-		bridge_collection_i::on_child_removing(index, b);
+		return res;
 	}
 
-	// wire_collection_i
-	virtual void children_store (std::vector<std::unique_ptr<wire>>** out) override final {*out = &_wires; }
+	virtual const std::vector<std::unique_ptr<wire>>& wires() const override { return _wires; }
 
-	virtual void collection_property (const typed_object_collection_property<wire>** out) const override final { *out = &wires_property; }
+	virtual size_t wire_count() const override { return _wires.size(); }
 
-	virtual void on_child_inserted (size_t index, wire* wire) override
+	virtual wire* wire_at(size_t index) const override { return _wires[index].get(); }
+
+	void insert_wire (size_t i, std::unique_ptr<wire> w)
 	{
-		wire_collection_i::on_child_inserted (index, wire);
-		wire->invalidated().add_handler<&project::on_project_child_invalidated>(this);
-		this->event_invoker<invalidate_e>()(this);
+		wire* raw = w.get();
+		edge::object_collection_property_change_args args = { &wires_prop, i, edge::collection_property_change_type::insert, raw };
+		edge::property_changing_e::invoker(_em).invoke(this, args);
+		raw->set_parent(this);
+		_wires.insert(_wires.begin() + i, std::move(w));
+		args.child = nullptr;
+		edge::property_changed_e::invoker(_em).invoke(this, args);
+		raw->invalidate().add_handler<&project::on_wire_invalidated>(this);
+		invalidate_e::invoker(_em).invoke(this);
 	}
 
-	virtual void on_child_removing (size_t index, wire* wire) override
+	std::unique_ptr<wire> remove_wire (size_t i)
 	{
-		wire->invalidated().remove_handler<&project::on_project_child_invalidated>(this);
-		this->event_invoker<invalidate_e>()(this);
-		wire_collection_i::on_child_removing (index, wire);
+		auto raw = _wires[i].get();
+		raw->invalidate().remove_handler<&project::on_wire_invalidated>(this);
+		edge::object_collection_property_change_args args = { &wires_prop, i, edge::collection_property_change_type::remove, nullptr };
+		edge::property_changing_e::invoker(_em).invoke(this, args);
+		auto res = std::move(_wires[i]);
+		_wires.erase(_wires.begin() + i);
+		raw->set_parent(nullptr);
+		args.child = raw;
+		edge::property_changing_e::invoker(_em).invoke(this, args);
+		invalidate_e::invoker(_em).invoke(this);
+		return res;
 	}
 
-	void on_packet_transmit (bridge* bridge, size_t txPortIndex, packet_t&& pi)
+	bool on_packet_transmit (bridge* bridge, size_t txPortIndex, packet_t&& pi)
 	{
 		auto tx_port = bridge->ports().at(txPortIndex).get();
 		auto rx_port = find_connected_port(tx_port);
 		if (rx_port != nullptr)
+		{
 			rx_port->bridge()->enqueue_received_packet(std::move(pi), rx_port->port_index());
+			return true;
+		}
+
+		return false;
 	}
 
-	void on_project_child_invalidated (renderable_object* object)
+	void on_bridge_invalidate (bridge* b)
 	{
-		event_invoker<invalidate_e>()(this);
+		invalidate_e::invoker(_em).invoke(this);
+	}
+
+	void on_wire_invalidated (wire* w)
+	{
+		invalidate_e::invoker(_em).invoke(this);
 	}
 
 	// project_i
-	virtual invalidate_e::subscriber invalidated() override final { return invalidate_e::subscriber(this); }
+	virtual invalidate_e::subscriber invalidated() override final { return invalidate_e::subscriber(_em); }
 
-	virtual loaded_e::subscriber loaded() override final { return loaded_e::subscriber(this); }
+	virtual loaded_e::subscriber loaded() override final { return loaded_e::subscriber(_em); }
 
-	virtual saved_e::subscriber saved() override final { return saved_e::subscriber(this); }
+	virtual saved_e::subscriber saved() override final { return saved_e::subscriber(_em); }
 
 	virtual bool IsWireForwarding (wire* wire, unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const override final
 	{
@@ -201,7 +241,7 @@ private:
 			_path = path;
 
 		this->SetChangedFlag(false);
-		this->event_invoker<saved_e>()(this);
+		saved_e::invoker(_em).invoke(this);
 	}
 
 	static constexpr const concrete_type* const known_types[]
@@ -240,23 +280,23 @@ private:
 			throw com_exception(E_FAIL);
 		com_ptr<IXMLDOMElement> projectElement = projectNode;
 
-		auto de = create_deserializer(known_types, static_cast<project_i*>(this));
-		de->deserialize_to (projectElement, this);
+		auto de = create_deserializer(known_types, this);
+		de->deserialize_object (projectElement, this);
 
 		_path = filePath;
-		this->event_invoker<loaded_e>()(this);
+		loaded_e::invoker(_em).invoke(this);
 	}
 
 	virtual void pause_simulation() override final
 	{
 		_simulationPaused = true;
-		this->event_invoker<invalidate_e>()(this);
+		invalidate_e::invoker(_em).invoke(this);
 	}
 
 	virtual void resume_simulation() override final
 	{
 		_simulationPaused = false;
-		this->event_invoker<invalidate_e>()(this);
+		invalidate_e::invoker(_em).invoke(this);
 	}
 
 	virtual bool simulation_paused() const override final { return _simulationPaused; }
@@ -267,28 +307,28 @@ private:
 	{
 		if (changedFlag)
 		{
-			this->event_invoker<ChangedEvent>()(this);
-			this->event_invoker<invalidate_e>()(this);
+			ChangedEvent::invoker(_em).invoke(this);
+			invalidate_e::invoker(_em).invoke(this);
 		}
 
 		if (_changedFlag != changedFlag)
 		{
 			_changedFlag = changedFlag;
-			this->event_invoker<changed_flag_changed_event>()(this);
+			changed_flag_changed_event::invoker(_em).invoke(this);
 		}
 	}
 
-	virtual changed_flag_changed_event::subscriber changed_flag_changed() override final { return changed_flag_changed_event::subscriber(this); }
+	virtual changed_flag_changed_event::subscriber changed_flag_changed() override final { return changed_flag_changed_event::subscriber(_em); }
 
-	virtual ChangedEvent::subscriber GetChangedEvent() override final { return ChangedEvent::subscriber(this); }
+	virtual ChangedEvent::subscriber GetChangedEvent() override final { return ChangedEvent::subscriber(_em); }
 
-	virtual const typed_object_collection_property<bridge>* bridges_prop() const override final { return &bridges_property; }
+	virtual const edge::typed_object_collection_property1<bridge>* bridges_property() const override final { return &bridges_prop; }
 
-	virtual const typed_object_collection_property<wire>* wires_prop() const override final { return &wires_property; }
+	virtual const edge::typed_object_collection_property1<wire>* wires_property() const override final { return &wires_prop; }
 
-	virtual property_changing_e::subscriber property_changing() override final { return property_changing_e::subscriber(this); }
+	virtual edge::property_changing_e::subscriber property_changing() override final { return edge::property_changing_e::subscriber(_em); }
 
-	virtual property_changed_e::subscriber property_changed() override final { return property_changed_e::subscriber(this); }
+	virtual edge::property_changed_e::subscriber property_changed() override final { return edge::property_changed_e::subscriber(_em); }
 
 	mac_address next_mac_address() const { return _next_mac_address; }
 
@@ -296,35 +336,42 @@ private:
 	{
 		if (_next_mac_address != value)
 		{
-			this->on_property_changing(&next_mac_address_property);
+			edge::value_property_change_args args(next_mac_address_property);
+			edge::property_changing_e::invoker(_em).invoke(this, args);
 			_next_mac_address = value;
-			this->on_property_changed(&next_mac_address_property);
+			edge::property_changed_e::invoker(_em).invoke(this, args);
 		}
 	}
 
-	static constexpr mac_address_p next_mac_address_property = {
+	static inline const mac_address_p next_mac_address_property = {
 		"NextMacAddress", nullptr, nullptr, false,
 		&next_mac_address,
 		&set_next_mac_address,
 		mac_address{ 0x00, 0xAA, 0x55, 0xAA, 0x55, 0x80 },
 	};
 
-	static const typed_object_collection_property<bridge> bridges_property;
-	static const typed_object_collection_property<wire> wires_property;
-	static constexpr const property* const _properties[] = { &next_mac_address_property, &bridges_property, &wires_property };
+	static const edge::typed_object_collection_property1<bridge> bridges_prop;
+	static const edge::typed_object_collection_property1<wire> wires_prop;
+	static inline const property* const _properties[] = { &next_mac_address_property, &bridges_prop, &wires_prop };
 public:
-	static inline const xtype<project> _type = { "Project", &base::_type, _properties };
+	static inline const xtype<project> _type = { "Project", nullptr, _properties };
 	virtual const concrete_type* type() const { return &_type; }
 };
 
-const typed_object_collection_property<bridge> project::bridges_property = {
-	"Bridges", nullptr, nullptr, false,
-	false, [](object* o) -> typed_object_collection_i<bridge>* { return static_cast<project*>(o); }
+const edge::typed_object_collection_property1<bridge> project::bridges_prop = {
+	"Bridges",
+	&project::bridge_count,
+	&project::bridge_at,
+	&project::insert_bridge,
+	&project::remove_bridge,
 };
 
-const typed_object_collection_property<wire> project::wires_property {
-	"Wires", nullptr, nullptr, false,
-	false, [](object* o) -> typed_object_collection_i<wire>* { return static_cast<project*>(o); }
+const edge::typed_object_collection_property1<wire> project::wires_prop {
+	"Wires",
+	&project::wire_count,
+	&project::wire_at,
+	&project::insert_wire,
+	&project::remove_wire,
 };
 
 extern std::shared_ptr<project_i> project_factory() { return std::make_shared<project>(); };

@@ -3,10 +3,10 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "bridge_tree.h"
 #include "port.h"
-#include "xml_serializer.h"
-#include "property_grid.h"
+#include "edge/xml_serializer.h"
+#include "pg/include/pg/property_grid.h"
+#include "edge/om/value_collection_property.h"
 
 struct BridgeLogLine
 {
@@ -27,35 +27,42 @@ struct mac_address_property_traits
 	static void to_string (mac_address from, edge::out_sstream_i* to, const edge::string_convert_context_i*);
 	static void from_string (std::string_view from, mac_address& to, const edge::string_convert_context_i*);
 };
-using mac_address_p = edge::static_value_property<mac_address_property_traits>;
+using mac_address_p = static_ui_prop<mac_address_property_traits>;
 
-extern std::unique_ptr<edge::property_editor_i> create_config_id_editor (std::span<object* const> objects);
+extern std::unique_ptr<pg::property_editor_i> create_config_id_editor (pg::object_list_i& objects);
 
-struct config_id_digest_p : edge::static_value_property<edge::temp_string_property_traits>, edge::pg_custom_editor_i
+struct config_id_digest_p : edge::static_value_property<edge::temp_string_property_traits>, pg::ui_property_i, pg::pg_custom_editor_i
 {
 	using base = edge::static_value_property<edge::temp_string_property_traits>;
-	using base::base;
+	
+	const pg::property_group* const _group;
+	const char* const _description;
 
-	virtual std::unique_ptr<edge::property_editor_i> create_editor (std::span<object* const> objects) const override
+	config_id_digest_p (const char* name, const pg::property_group* group, const char* description, getter_t getter, setter_t setter, std::optional<value_t> default_value = std::nullopt)
+		: base (name, getter, setter, std::move(default_value))
+		, _group(group)
+		, _description(description)
+	{ }
+
+	virtual const char* description() const override { return _description; }
+
+	virtual const pg::property_group* group() const override { return _group; }
+
+	virtual std::unique_ptr<pg::property_editor_i> create_editor(pg::object_list_i& objects) const override
 	{
 		return create_config_id_editor(objects);
 	}
+
+	virtual bool ui_visible() const override { return true; }
 };
 
-using edge::object_collection_property;
-using edge::typed_object_collection_property;
-using edge::typed_value_collection_property;
-using edge::uint32_property_traits;
-
 struct project_i;
+class bridge_tree;
 
-using bridge_tree_collection_i = edge::typed_object_collection_i<bridge_tree>;
-using port_collection_i = edge::typed_object_collection_i<port>;
-
-class bridge : public renderable_object, public bridge_tree_collection_i, public port_collection_i, public edge::custom_serialize_object_i
+class bridge : public renderable_object_i, public edge::custom_serialize_object_i
 {
-	using base = renderable_object;
-
+	edge::event_manager _em;
+	project_i* _project = nullptr;
 	float _x;
 	float _y;
 	float _width;
@@ -83,18 +90,16 @@ class bridge : public renderable_object, public bridge_tree_collection_i, public
 	port*                _txTransmittingPort;
 	unsigned int         _txTimestamp;
 
-	virtual void children_store (std::vector<std::unique_ptr<bridge_tree>>** out) override final { *out = &_trees; }
-	virtual void collection_property (const typed_object_collection_property<bridge_tree>** out) const override final { *out = &trees_prop; }
-	virtual void children_store (std::vector<std::unique_ptr<class port>>** out) override final { *out = &_ports; }
-	virtual void collection_property (const typed_object_collection_property<class port>** out) const override final { *out = &ports_prop; }
-	virtual void call_property_changing (const property_change_args& args) override final { this->on_property_changing(args); }
-	virtual void call_property_changed  (const property_change_args& args) override final { this->on_property_changed(args); }
-
 public:
 	bridge (size_t port_count, size_t msti_count, mac_address macAddress);
 	virtual ~bridge();
 
+	virtual edge::hierarchy_object_i* parent() const override;
+	void set_parent (project_i* parent);
 	project_i* project() const;
+
+	edge::property_changing_e::subscriber property_changing() { return edge::property_changing_e::subscriber(_em); }
+	edge::property_changed_e::subscriber property_changed() { return edge::property_changed_e::subscriber(_em); }
 
 	static constexpr int HTCodeInner = 1;
 
@@ -119,19 +124,22 @@ public:
 
 	void render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsigned int vlanNumber, const D2D1_COLOR_F& configIdColor) const;
 
-	virtual void render_selection (const edge::zoomable_window_i* window, ID2D1RenderTarget* rt, const drawing_resources& dos) const override final;
-	virtual ht_result hit_test (const edge::zoomable_window_i* window, D2D1_POINT_2F dLocation, float tolerance) override final;
+	struct invalidate_e : public edge::event<invalidate_e, bridge*> { };
+	invalidate_e::subscriber invalidate() { return invalidate_e::subscriber(_em); }
+
+	virtual void render_selection (const edge::zoomer* zoomer, const drawing_resources& dos) const override final;
+	virtual ht_result hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) override final;
 	virtual D2D1_RECT_F extent() const override { return bounds(); }
 
 	STP_BRIDGE* stp_bridge() const { return _stpBridge; }
 
 	struct log_line_generated_e : public edge::event<log_line_generated_e, bridge*, const BridgeLogLine*> { };
 	struct log_cleared_e : public edge::event<log_cleared_e, bridge*> { };
-	struct packet_transmit_e : public edge::event<packet_transmit_e, bridge*, size_t, packet_t&&> { };
+	struct packet_transmit_e : public edge::cancelable_event<packet_transmit_e, bool, bridge*, size_t, packet_t&&> { };
 
-	log_line_generated_e::subscriber log_line_generated() { return log_line_generated_e::subscriber(this); }
-	log_cleared_e::subscriber log_cleared() { return log_cleared_e::subscriber(this); }
-	packet_transmit_e::subscriber packet_transmit() { return packet_transmit_e::subscriber(this); }
+	log_line_generated_e::subscriber log_line_generated() { return log_line_generated_e::subscriber(_em); }
+	log_cleared_e::subscriber log_cleared() { return log_cleared_e::subscriber(_em); }
+	packet_transmit_e::subscriber packet_transmit() { return packet_transmit_e::subscriber(_em); }
 
 	void enqueue_received_packet (packet_t&& packet, size_t rxPortIndex);
 
@@ -161,7 +169,7 @@ public:
 	uint32_t tx_hold_count() const { return STP_GetTxHoldCount(_stpBridge); }
 	void set_tx_hold_count (uint32_t value);
 private:
-	static void on_port_invalidated (void* arg, renderable_object* object);
+	static void on_port_invalidated (void* arg, port* p);
 	void OnLinkPulseTick();
 	void ProcessReceivedPackets();
 
@@ -178,24 +186,29 @@ private:
 	static void  StpCallback_OnPortRoleChanged        (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role, unsigned int timestamp);
 
 	// custom_serialize_object_i
-	virtual void deserialize_before_reflection (edge::xml_deserializer_i* de, IXMLDOMElement* obj_element) override;
-	virtual void deserialize_after_reflection (edge::xml_deserializer_i* de, IXMLDOMElement* obj_element) override;
+	virtual void sort_xml_properties (std::vector<const property*>& props) const override { }
+	virtual void on_deserializing (edge::xml_deserializer_i* de) override;
+	virtual void on_deserialized  (edge::xml_deserializer_i* de) override;
 
 public:
 	float x() const { return _x; }
-	void set_x (float x) { base::set_and_invalidate(&x_property, _x, x); }
+	void set_x (float x);
 	float y() const { return _y; }
-	void set_y (float y) { base::set_and_invalidate(&y_property, _y, y); }
+	void set_y (float y);
 	float width() const { return _width; }
-	void set_width (float width) { base::set_and_invalidate(&width_property, _width, width); }
+	void set_width (float width);
 	float height() const { return _height; }
-	void set_height (float height) { base::set_and_invalidate(&height_property, _height, height); }
+	void set_height (float height);
 
 private:
 	size_t mst_config_table_get_value_count() const;
 	uint32_t mst_config_table_get_value(size_t i) const;
 	void mst_config_table_set_value(size_t i, uint32_t value);
-	bool mst_config_table_changed() const;
+	bool mst_config_table_changed(size_t i) const;
+
+	uint32_t bridge_migrate_time() const { return migrate_time_property.default_value().value(); }
+	uint32_t bridge_hello_time() const { return bridge_hello_time_property.default_value().value(); }
+	uint32_t max_hops() const { return max_hops_property.default_value().value(); }
 
 public:
 	static const mac_address_p bridge_address_property;
@@ -203,8 +216,8 @@ public:
 	static const stp_version_p stp_version_property;
 	static const size_p        port_count_property;
 	static const size_p        msti_count_property;
-	static const temp_string_p mst_config_id_name_property;
-	static const typed_value_collection_property<bridge, uint32_property_traits> mst_config_table_property;
+	static const string_p      mst_config_id_name_property;
+	static const edge::typed_value_collection_property<edge::uint32_property_traits> mst_config_table_property;
 	static const uint32_p      mst_config_id_rev_level;
 	static const config_id_digest_p  mst_config_id_digest;
 	static const uint32_p      migrate_time_property;
@@ -213,14 +226,14 @@ public:
 	static const uint32_p      bridge_forward_delay_property;
 	static const uint32_p      tx_hold_count_property;
 	static const uint32_p      max_hops_property;
-	static const float_p x_property;
-	static const float_p y_property;
-	static const float_p width_property;
-	static const float_p height_property;
-	static const typed_object_collection_property<bridge_tree> trees_prop;
-	static const typed_object_collection_property<port> ports_prop;
+	static const edge::static_value_property<edge::float_property_traits> x_property;
+	static const edge::static_value_property<edge::float_property_traits> y_property;
+	static const edge::static_value_property<edge::float_property_traits> width_property;
+	static const edge::static_value_property<edge::float_property_traits> height_property;
+	static const edge::typed_object_collection_property1<bridge_tree> trees_prop;
+	static const edge::typed_object_collection_property1<port> ports_prop;
 
 	static const property* const _properties[];
-	static const xtype<bridge, size_property_traits, size_property_traits, mac_address_property_traits> _type;
+	static const xtype<bridge, edge::size_t_property_traits, edge::size_t_property_traits, mac_address_property_traits> _type;
 	virtual const edge::concrete_type* type() const override { return &_type; }
 };

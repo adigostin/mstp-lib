@@ -8,12 +8,12 @@
 #include "bridge.h"
 #include "port.h"
 #include "wire.h"
-#include "property_grid.h"
-#include "window.h"
+#include "pg/property_grid.h"
+#include "edge/win32_window_i.h"
+#include "edge/utility_functions.h"
 
 using namespace edge;
 
-static constexpr wchar_t ProjectWindowWndClassName[] = L"project_window-{24B42526-2970-4B3C-A753-2DABD22C4BB0}";
 static constexpr wchar_t RegValueNameShowCmd[] = L"WindowShowCmd";
 static constexpr wchar_t RegValueNameWindowLeft[] = L"WindowLeft";
 static constexpr wchar_t RegValueNameWindowTop[] = L"WindowTop";
@@ -29,15 +29,18 @@ static COMDLG_FILTERSPEC const ProjectFileDialogFileTypes[] =
 };
 static const wchar_t ProjectFileExtensionWithoutDot[] = L"stp";
 
-class project_window : event_manager, public project_window_i
+class project_window : public project_window_i
 {
+	std::shared_ptr<edge::event_manager> _em = std::make_shared<edge::event_manager>();
+
 	simulator_app_i*               const _app;
 	com_ptr<ID3D11DeviceContext1>  const _d3d_dc;
 	com_ptr<IDWriteFactory>        const _dwrite_factory;
+	com_ptr<ID2D1Factory1>         const _d2d_factory;
 	std::shared_ptr<project_i>     const _project;
 	std::unique_ptr<selection_i>         _selection;
 	uint32_t                             _selectedVlanNumber;
-	edge::window                         _window;
+	HWND                                 _hwnd;
 
 	std::unique_ptr<edit_window_i>       _edit_window;
 	std::unique_ptr<properties_window_i> _pw;
@@ -52,45 +55,52 @@ class project_window : event_manager, public project_window_i
 	tool_window _window_being_resized = tool_window::none;
 	LONG _resize_offset;
 
-	static const inline WNDCLASSEX wnd_class = {
-		.style = CS_DBLCLKS,
-		.hIcon = ::LoadIcon((HINSTANCE)&__ImageBase, MAKEINTRESOURCE(IDI_DESIGNER)),
-		.hCursor = ::LoadCursor (nullptr, IDC_ARROW),
-		.lpszMenuName = MAKEINTRESOURCE(IDR_MAIN_MENU),
-		.lpszClassName = ProjectWindowWndClassName,
-		.hIconSm = ::LoadIcon((HINSTANCE)&__ImageBase, MAKEINTRESOURCE(IDI_DESIGNER)),
-	};
+	static inline uint32_t wnd_class_ref_count = 0;
+	static const WNDCLASSEX wnd_class;
 
 public:
 	project_window (const project_window_create_params& create_params)
 		: _app(create_params.app)
 		, _d3d_dc(create_params.d3d_dc)
 		, _dwrite_factory(create_params.dwrite_factory)
+		, _d2d_factory(create_params.d2d_factory)
 		, _project(create_params.project)
 		, _selection(create_params.app->selection_factory()(create_params.project.get()))
 		, _selectedVlanNumber(create_params.selectedVlan)
-		, _window(wnd_class, 0, WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-			nullptr, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT)
 	{
+		if (!wnd_class_ref_count)
+		{
+			ATOM wnd_class_atom = RegisterClassEx(&wnd_class);
+			rassert(wnd_class_atom);
+		}
+		wnd_class_ref_count++;
+		_hwnd = CreateWindowEx(0, wnd_class.lpszClassName, L"", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+			CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr, (HINSTANCE)&__ImageBase, nullptr);
+
 		rassert (create_params.selectedVlan >= 1);
 
-		_window.window_proc().add_handler<&project_window::on_window_proc>(this);
+		SetWindowLongPtr (_hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
 
 		int nCmdShow = create_params.nCmdShow;
 		bool read = TryGetSavedWindowLocation (&_restore_bounds, &nCmdShow);
 		if (!read)
-			::GetWindowRect(hwnd(), &_restore_bounds);
+			::GetWindowRect(_hwnd, &_restore_bounds);
 		else
 		{
 			_restoring_size_from_registry = true;
-			this->move_window (_restore_bounds);
+			::MoveWindow(_hwnd, _restore_bounds.left, _restore_bounds.top, 
+				_restore_bounds.right - _restore_bounds.left, _restore_bounds.bottom - _restore_bounds.top, FALSE);
 			_restoring_size_from_registry = false;
 		}
-		::ShowWindow (hwnd(), nCmdShow);
+		::ShowWindow (_hwnd, nCmdShow);
 
-		_pw_desired_width_dips = client_width() * 20 / 100;
+		RECT client_rect_pixels;
+		::GetClientRect(_hwnd, &client_rect_pixels);
+		uint32_t dpi = edge::dpi(_hwnd);
+		float client_width = client_rect_pixels.right * 96.0f / dpi;
+		_pw_desired_width_dips = client_width * 20 / 100;
 		TryReadRegFloat (RegValueNamePropertiesWindowWidth, _pw_desired_width_dips);
-		_log_desired_width_dips = client_width() * 30 / 100;
+		_log_desired_width_dips = client_width * 30 / 100;
 		TryReadRegFloat (RegValueNameLogWindowWidth, _log_desired_width_dips);
 
 		if (create_params.show_property_grid)
@@ -99,10 +109,10 @@ public:
 		if (create_params.showLogWindow)
 			create_log_window();
 
-		_vlanWindow = vlan_window_factory (_app, this, _project, _selection.get(), hwnd(), { GetVlanWindowLeft(), 0 }, _d3d_dc, _dwrite_factory);
+		_vlanWindow = vlan_window_factory (_app, this, _project, _selection.get(), _hwnd, { GetVlanWindowLeft(), 0 }, _d3d_dc, _dwrite_factory, _d2d_factory);
 		SetMainMenuItemCheck (ID_VIEW_VLANS, true);
 
-		edit_window_create_params cps = { _app, this, _project.get(), _selection.get(), hwnd(), edit_window_rect(), create_params.d3d_dc, create_params.dwrite_factory };
+		edit_window_create_params cps = { _app, this, _project.get(), _selection.get(), _hwnd, edit_window_rect(), _d3d_dc, _dwrite_factory, _d2d_factory };
 		_edit_window = _app->edit_window_factory()(cps);
 		_edit_window->zoom_all();
 
@@ -114,12 +124,10 @@ public:
 		_app->project_window_removed().add_handler<&project_window::on_project_window_removed>(this);
 		_project->loaded().add_handler<&project_window::on_project_loaded>(this);
 		_project->saved().add_handler<&project_window::on_project_saved>(this);
-		_selection->changed().add_handler<&project_window::on_selection_changed>(this);
 	}
 
 	~project_window()
 	{
-		_selection->changed().remove_handler<&project_window::on_selection_changed>(this);
 		_project->saved().remove_handler<&project_window::on_project_saved>(this);
 		_project->loaded().remove_handler<&project_window::on_project_loaded>(this);
 		_app->project_window_removed().remove_handler<&project_window::on_project_window_removed>(this);
@@ -135,30 +143,40 @@ public:
 		_edit_window = nullptr;
 		_selection = nullptr;
 
-		_window.window_proc().remove_handler<&project_window::on_window_proc>(this);
+		rassert (reinterpret_cast<project_window*>(GetWindowLongPtr(_hwnd, GWLP_USERDATA)) == this);
+		::SetWindowLongPtr (_hwnd, GWLP_USERDATA, 0);
+		::DestroyWindow(_hwnd);
+		rassert(wnd_class_ref_count);
+		wnd_class_ref_count--;
+		if (!wnd_class_ref_count)
+		{
+			BOOL bres = UnregisterClass(wnd_class.lpszClassName, (HINSTANCE)&__ImageBase);
+			rassert(bres);
+		}
 	}
-
-	virtual HWND hwnd() const override final { return _window.hwnd(); }
 
 	LONG splitter_width_pixels() const
 	{
 		static constexpr float splitter_width_dips = 5;
-		return lengthd_to_lengthp(splitter_width_dips, 0);
+		uint32_t dpi = edge::dpi(_hwnd);
+		return lengthd_to_lengthp(splitter_width_dips, dpi, 0);
 	}
 
 	RECT pg_restricted_rect() const
 	{
-		LONG pg_desired_width_pixels = lengthd_to_lengthp(_pw_desired_width_dips, 0);
-		LONG w = std::min (pg_desired_width_pixels, client_width_pixels() * 40 / 100);
+		uint32_t dpi = edge::dpi(_hwnd);
+		SIZE client_size_pixels = edge::client_size_pixels(_hwnd);
+		LONG pg_desired_width_pixels = lengthd_to_lengthp(_pw_desired_width_dips, dpi, 0);
+		LONG w = std::min (pg_desired_width_pixels, client_size_pixels.cx * 40 / 100);
 		w = std::max(w, 100l);
-		return RECT{ 0, 0, w, client_height_pixels() };
+		return RECT{ 0, 0, w, client_size_pixels.cy };
 	}
 
 	void create_property_grid()
 	{
-		properties_window_create_params cps = { hwnd(), pg_restricted_rect(), _app, _d3d_dc, _dwrite_factory };
+		properties_window_create_params cps = { _hwnd, pg_restricted_rect(), _app, _d3d_dc, _dwrite_factory, _d2d_factory };
 		_pw = _app->properties_window_factory()(cps);
-		set_selection_to_pg();
+		_pw->pg()->add_section("Properties", *_selection, _project.get());
 		SetMainMenuItemCheck (ID_VIEW_PROPERTIES, true);
 	}
 
@@ -170,15 +188,17 @@ public:
 
 	RECT log_restricted_rect() const
 	{
-		LONG log_desired_width_pixels = lengthd_to_lengthp(_log_desired_width_dips, 0);
-		LONG w = std::min (log_desired_width_pixels, client_width_pixels() * 40 / 100);
+		uint32_t dpi = edge::dpi(_hwnd);
+		LONG log_desired_width_pixels = lengthd_to_lengthp(_log_desired_width_dips, dpi, 0);
+		SIZE client_size_pixels = edge::client_size_pixels(_hwnd);
+		LONG w = std::min (log_desired_width_pixels, client_size_pixels.cx * 40 / 100);
 		w = std::max(w, 100l);
-		return RECT{ client_width_pixels() - w, 0, client_width_pixels(), client_height_pixels() };
+		return RECT{ client_size_pixels.cx - w, 0, client_size_pixels.cx, client_size_pixels.cy };
 	}
 
 	void create_log_window()
 	{
-		_log_window = log_window_factory (hwnd(), log_restricted_rect(), _d3d_dc, _dwrite_factory, _selection.get(), _project, _app);
+		_log_window = make_log_window (_hwnd, log_restricted_rect(), _d3d_dc, _dwrite_factory, _d2d_factory, _selection.get(), _project, _app);
 		SetMainMenuItemCheck (ID_VIEW_STPLOG, true);
 	}
 
@@ -216,12 +236,6 @@ public:
 		SetWindowTitle();
 	}
 
-	void on_selection_changed (selection_i* selection)
-	{
-		if (_pw)
-			set_selection_to_pg();
-	}
-
 	LONG GetVlanWindowLeft() const
 	{
 		if (_pw)
@@ -232,15 +246,16 @@ public:
 
 	LONG GetVlanWindowRight() const
 	{
+		SIZE cs = edge::client_size_pixels(_hwnd);
 		if (_log_window != nullptr)
-			return client_width_pixels() - _log_window->width_pixels() - splitter_width_pixels();
+			return cs.cx - _log_window->width_pixels() - splitter_width_pixels();
 		else
-			return client_width_pixels();
+			return cs.cx;
 	}
 
 	RECT edit_window_rect() const
 	{
-		auto rect = client_rect_pixels();
+		auto rect = edge::client_rect_pixels(_hwnd);
 
 		if (_pw)
 			rect.left += _pw->width_pixels() + splitter_width_pixels();
@@ -275,16 +290,31 @@ public:
 		if (any_of (pws.begin(), pws.end(), [this](const std::unique_ptr<project_window_i>& pw) { return (pw.get() != this) && (pw->project() == _project); }))
 			windowTitle << L" - VLAN " << _selectedVlanNumber;
 
-		::SetWindowText (hwnd(), windowTitle.str().c_str());
+		::SetWindowText (_hwnd, windowTitle.str().c_str());
 	}
 
 	void SetMainMenuItemCheck (UINT item, bool checked)
 	{
-		auto menu = ::GetMenu(hwnd());
+		auto menu = ::GetMenu(_hwnd);
 		MENUITEMINFO mii = { sizeof(mii) };
 		mii.fMask = MIIM_STATE;
 		mii.fState = checked ? MFS_CHECKED : MFS_UNCHECKED;
 		::SetMenuItemInfo (menu, item, FALSE, &mii);
+	}
+
+	static LRESULT CALLBACK window_proc_static (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+	{
+		if (!assert_function_running)
+		{
+			if (auto w = reinterpret_cast<project_window*>(GetWindowLongPtr(hwnd, GWLP_USERDATA)))
+			{
+				std::optional<LRESULT> result = w->on_window_proc(hwnd, msg, wparam, lparam);
+				if (result)
+					return result.value();
+			}
+		}
+
+		return DefWindowProc (hwnd, msg, wparam, lparam);
 	}
 
 	std::optional<LRESULT> on_window_proc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -301,14 +331,13 @@ public:
 
 		if (msg == WM_CLOSE)
 		{
-			try_close_window();
-			return 0;
-		}
+			if (try_close_window())
+			{
+				SaveWindowLocation();
+				closed_e::invoker(_em).invoke(this);
+			}
 
-		if (msg == WM_DESTROY)
-		{
-			this->event_invoker<destroying_e>()(this);
-			return std::nullopt;
+			return 0;
 		}
 
 		if (msg == WM_SIZE)
@@ -402,14 +431,14 @@ public:
 		{
 			_window_being_resized = tool_window::props;
 			_resize_offset = pp.x - _pw->width_pixels();
-			::SetCapture(hwnd());
+			::SetCapture(_hwnd);
 			return handled(true);
 		}
 		else if ((_log_window != nullptr) && (pp.x >= _log_window->x_pixels() - splitter_width_pixels()) && (pp.x < _log_window->x_pixels()))
 		{
 			_window_being_resized = tool_window::log;
 			_resize_offset = _log_window->x_pixels() - pp.x;
-			::SetCapture(hwnd());
+			::SetCapture(_hwnd);
 			return handled(true);
 		}
 
@@ -418,12 +447,14 @@ public:
 
 	void ProcessWmMouseMove (POINT pp, UINT modifierKeysDown)
 	{
+		uint32_t dpi = edge::dpi(_hwnd);
+		SIZE cs = edge::client_size_pixels(_hwnd);
 		if (_window_being_resized == tool_window::props)
 		{
 			LONG pg_desired_width_pixels = pp.x - _resize_offset;
 			pg_desired_width_pixels = std::max (pg_desired_width_pixels, 0l);
-			pg_desired_width_pixels = std::min (pg_desired_width_pixels, client_width_pixels());
-			float new_pg_desired_width_dips = lengthp_to_lengthd(pg_desired_width_pixels);
+			pg_desired_width_pixels = std::min (pg_desired_width_pixels, cs.cx);
+			float new_pg_desired_width_dips = edge::lengthp_to_lengthd(pg_desired_width_pixels, dpi);
 			if (_pw_desired_width_dips != new_pg_desired_width_dips)
 			{
 				_pw_desired_width_dips = new_pg_desired_width_dips;
@@ -437,10 +468,10 @@ public:
 		}
 		else if (_window_being_resized == tool_window::log)
 		{
-			LONG log_desired_width_pixels = client_width_pixels() - pp.x - _resize_offset;
+			LONG log_desired_width_pixels = cs.cx - pp.x - _resize_offset;
 			log_desired_width_pixels = std::max (log_desired_width_pixels, 0l);
-			log_desired_width_pixels = std::min (log_desired_width_pixels, client_width_pixels());
-			float new_log_desired_width_dips = lengthp_to_lengthd(log_desired_width_pixels);
+			log_desired_width_pixels = std::min (log_desired_width_pixels, cs.cx);
+			float new_log_desired_width_dips = edge::lengthp_to_lengthd(log_desired_width_pixels, dpi);
 			if (_log_desired_width_dips != new_log_desired_width_dips)
 			{
 				_log_desired_width_dips = new_log_desired_width_dips;
@@ -488,29 +519,31 @@ public:
 	void ProcessWmPaint()
 	{
 		PAINTSTRUCT ps;
-		BeginPaint(hwnd(), &ps);
+		BeginPaint(_hwnd, &ps);
 
-		RECT rect;
+		SIZE cs = edge::client_size_pixels(_hwnd);
 
 		if (_pw)
 		{
+			RECT rect;
 			rect.left = _pw->width_pixels();
 			rect.top = 0;
 			rect.right = rect.left + splitter_width_pixels();
-			rect.bottom = client_height_pixels();
+			rect.bottom = cs.cy;
 			FillRect (ps.hdc, &rect, GetSysColorBrush(COLOR_3DFACE));
 		}
 
 		if (_log_window != nullptr)
 		{
+			RECT rect;
 			rect.right = _log_window->x_pixels();
 			rect.left = rect.right - splitter_width_pixels();
 			rect.top = 0;
-			rect.bottom = client_height_pixels();
+			rect.bottom = cs.cy;
 			FillRect (ps.hdc, &rect, GetSysColorBrush(COLOR_3DFACE));
 		}
 
-		EndPaint(hwnd(), &ps);
+		EndPaint(_hwnd, &ps);
 	}
 
 	std::optional<LRESULT> ProcessWmCommand (WPARAM wParam, LPARAM lParam)
@@ -547,7 +580,7 @@ public:
 			{
 				if ((LOWORD(wParam) == ID_FILE_SAVEAS) || _project->file_path().empty())
 				{
-					auto path = try_choose_save_path (hwnd(), nullptr, ProjectFileDialogFileTypes, ProjectFileExtensionWithoutDot);
+					auto path = edge::try_choose_save_path (_hwnd, nullptr, ProjectFileDialogFileTypes, ProjectFileExtensionWithoutDot);
 					_project->save(path.c_str());
 				}
 				else
@@ -557,7 +590,7 @@ public:
 			{ }
 			catch (const std::exception& ex)
 			{
-				TaskDialog (hwnd(), nullptr, _app->app_namew(), L"Can't save", utf8_to_utf16(ex.what()).c_str(), 0, TD_ERROR_ICON, nullptr);
+				TaskDialog (_hwnd, nullptr, _app->app_namew(), L"Can't save", utf8_to_utf16(ex.what()).c_str(), 0, TD_ERROR_ICON, nullptr);
 			}
 
 			return 0;
@@ -567,14 +600,14 @@ public:
 		{
 			try
 			{
-				auto path = try_choose_open_path (hwnd(), nullptr, ProjectFileDialogFileTypes, ProjectFileExtensionWithoutDot);
+				auto path = try_choose_open_path (_hwnd, nullptr, ProjectFileDialogFileTypes, ProjectFileExtensionWithoutDot);
 				open (path.c_str());
 			}
 			catch (const canceled_by_user_exception&)
 			{ }
 			catch (const std::exception& ex)
 			{
-				TaskDialog (hwnd(), nullptr, _app->app_namew(), L"Can't open", utf8_to_utf16(ex.what()).c_str(), 0, TD_ERROR_ICON, nullptr);
+				TaskDialog (_hwnd, nullptr, _app->app_namew(), L"Can't open", utf8_to_utf16(ex.what()).c_str(), 0, TD_ERROR_ICON, nullptr);
 			}
 
 			return 0;
@@ -595,14 +628,14 @@ public:
 
 		if (wParam == ID_FILE_EXIT)
 		{
-			PostMessage (hwnd(), WM_CLOSE, 0, 0);
+			PostMessage (_hwnd, WM_CLOSE, 0, 0);
 			return 0;
 		}
 
 		if ((wParam >= ID_RECENT_FILE_FIRST) && (wParam <= ID_RECENT_FILE_LAST))
 		{
 			UINT recentFileIndex = (UINT)wParam - ID_RECENT_FILE_FIRST;
-			auto mainMenu = ::GetMenu(hwnd());
+			auto mainMenu = ::GetMenu(_hwnd);
 			auto fileMenu = ::GetSubMenu (mainMenu, 0);
 			int charCount = ::GetMenuString (fileMenu, (UINT)wParam, nullptr, 0, MF_BYCOMMAND);
 			if (charCount > 0)
@@ -615,7 +648,7 @@ public:
 				}
 				catch (const std::exception& ex)
 				{
-					TaskDialog (hwnd(), nullptr, _app->app_namew(), L"Can't open", utf8_to_utf16(ex.what()).c_str(), 0, TD_ERROR_ICON, nullptr);
+					TaskDialog (_hwnd, nullptr, _app->app_namew(), L"Can't open", utf8_to_utf16(ex.what()).c_str(), 0, TD_ERROR_ICON, nullptr);
 				}
 			}
 		}
@@ -623,7 +656,7 @@ public:
 		if (wParam == ID_HELP_ABOUT)
 		{
 			auto text = std::string(_app->app_name()) + " v" + _app->app_version_string();
-			MessageBoxA (hwnd(), text.c_str(), _app->app_name(), 0);
+			MessageBoxA (_hwnd, text.c_str(), _app->app_name(), 0);
 			return 0;
 		}
 
@@ -655,7 +688,7 @@ public:
 		_app->add_project_window(std::move(new_window));
 	}
 
-	void try_close_window()
+	bool try_close_window()
 	{
 		auto count = count_if (_app->project_windows().begin(), _app->project_windows().end(),
 							   [this] (const std::unique_ptr<project_window_i>& pw) { return pw->project() == _project; });
@@ -674,17 +707,16 @@ public:
 			}
 			catch (const canceled_by_user_exception&)
 			{
-				return;
+				return false;
 			}
 			catch (const std::exception& ex)
 			{
 				TaskDialog (hwnd(), nullptr, _app->app_namew(), L"Can't save", utf8_to_utf16(ex.what()).c_str(), 0, TD_ERROR_ICON, nullptr);
-				return;
+				return false;
 			}
 		}
 
-		SaveWindowLocation();
-		::DestroyWindow (hwnd());
+		return true;
 	}
 
 	bool TryReadRegFloat (const wchar_t* valueName, float& value)
@@ -774,6 +806,8 @@ public:
 		}
 	}
 
+	virtual HWND hwnd() const override { return _hwnd; }
+
 	virtual void select_vlan (uint32_t vlanNumber) override final
 	{
 		rassert ((vlanNumber > 0) && (vlanNumber <= 4094));
@@ -781,7 +815,7 @@ public:
 		if (_selectedVlanNumber != vlanNumber)
 		{
 			_selectedVlanNumber = vlanNumber;
-			event_invoker<selected_vlan_number_changed_e>()(this, vlanNumber);
+			selected_vlan_number_changed_e::invoker(_em).invoke(this, vlanNumber);
 			::InvalidateRect (hwnd(), nullptr, FALSE);
 			if (_pw)
 				set_selection_to_pg();
@@ -791,11 +825,11 @@ public:
 
 	virtual uint32_t selected_vlan_number() const override final { return _selectedVlanNumber; }
 
-	virtual selected_vlan_number_changed_e::subscriber selected_vlan_number_changed() override final { return selected_vlan_number_changed_e::subscriber(this); }
+	virtual selected_vlan_number_changed_e::subscriber selected_vlan_number_changed() override final { return selected_vlan_number_changed_e::subscriber(_em); }
 
 	virtual const std::shared_ptr<project_i>& project() const override final { return _project; }
 
-	virtual destroying_e::subscriber destroying() override final { return destroying_e::subscriber(this); }
+	virtual closed_e::subscriber closed() override final { return closed_e::subscriber(_em); }
 
 	static std::vector<std::wstring> GetRecentFileList()
 	{
@@ -881,7 +915,7 @@ public:
 	{
 		const auto& objs = _selection->objects();
 
-		_pw->pg()->clear();
+		_pw->pg()->clear_sections();
 
 		if (objs.empty())
 			return;
@@ -921,7 +955,7 @@ public:
 				};
 			}
 
-			_pw->pg()->add_section (first_section_name, objs, _project.get());
+			//_pw->pg()->add_section (first_section_name, objs, _project.get());
 
 			auto first_tree_index = tree_selector(objs.front()).second;
 			bool all_same_tree_index = true;
@@ -944,15 +978,28 @@ public:
 			else
 				ss << " (multiple trees)";
 
-			_pw->pg()->add_section (ss.str().c_str(), trees, _project.get());
+			//_pw->pg()->add_section (ss.str().c_str(), trees, _project.get());
 		}
 		else if (all_of (objs.begin(), objs.end(), is_wire))
 		{
-			_pw->pg()->add_section("Wire Properties", objs, _project.get());
+			//_pw->pg()->add_section("Wire Properties", objs, _project.get());
 		}
 		else
 			rassert(false); // not implemented
 	}
+};
+
+//static
+const WNDCLASSEX project_window::wnd_class = {
+	.cbSize = sizeof(WNDCLASSEX),
+	.style = CS_DBLCLKS,
+	.lpfnWndProc = &project_window::window_proc_static,
+	.hInstance = (HINSTANCE)&__ImageBase,
+	.hIcon = ::LoadIcon((HINSTANCE)&__ImageBase, MAKEINTRESOURCE(IDI_DESIGNER)),
+	.hCursor = ::LoadCursor (nullptr, IDC_ARROW),
+	.lpszMenuName = MAKEINTRESOURCE(IDR_MAIN_MENU),
+	.lpszClassName = L"project_window-{24B42526-2970-4B3C-A753-2DABD22C4BB0}",
+	.hIconSm = ::LoadIcon((HINSTANCE)&__ImageBase, MAKEINTRESOURCE(IDI_DESIGNER)),
 };
 
 extern std::unique_ptr<project_window_i> project_window_factory (const project_window_create_params& create_params)

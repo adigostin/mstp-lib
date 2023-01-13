@@ -4,16 +4,17 @@
 
 #include "pch.h"
 #include "simulator.h"
-#include "window.h"
-#include "property_grid.h"
+#include "edge/window.h"
+#include "pg/property_grid.h"
+#include "edge/utility_functions.h"
 
 using namespace edge;
 
 class properties_window : event_manager, public properties_window_i
 {
-	window _window;
-	d2d_renderer _renderer;
-	std::unique_ptr<edge::property_grid_i> const _pg;
+	std::unique_ptr<edge::win32_window_i> const _window;
+	std::unique_ptr<d2d_renderer_i> const _renderer;
+	std::unique_ptr<pg::property_grid_i> const _pg;
 
 	static const inline WNDCLASSEX wnd_class = {
 		.style = CS_DBLCLKS | CS_HREDRAW | CS_VREDRAW,
@@ -23,99 +24,32 @@ class properties_window : event_manager, public properties_window_i
 
 public:
 	properties_window (const properties_window_create_params& cps)
-		: _window(wnd_class, WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, cps.hwnd_parent, cps.rect)
-		, _renderer(this, cps.d3d_dc, cps.dwrite_factory)
-		, _pg(property_grid_factory(this, this->client_rect(), cps.tcp))
+		: _window(edge::make_window(wnd_class, WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, cps.hwnd_parent, cps.rect))
+		, _renderer(edge::make_d2d_renderer(*_window, cps.d3d_dc, cps.dwrite_factory, cps.d2d_factory))
+		, _pg(pg::property_grid_factory(_renderer.get(), edge::client_rect(_window->hwnd()), cps.tcp))
 	{
-		_window.window_proc().add_handler<&properties_window::on_window_proc>(this);
+		_window->window_proc().add_handler<&properties_window::on_window_proc>(this);
 	}
 
 	~properties_window()
 	{
-		_window.window_proc().remove_handler<&properties_window::on_window_proc>(this);
+		_window->window_proc().remove_handler<&properties_window::on_window_proc>(this);
 	}
 
 	// win32_window_i
-	virtual HWND hwnd() const override { return _window.hwnd(); }
-	virtual window_proc_e::subscriber window_proc() override { return _window.window_proc(); }
-
-	// d2d_window_i
-	virtual d2d_renderer& renderer() override final { return _renderer; }
+	virtual HWND hwnd() const override { return _window->hwnd(); }
+	virtual window_proc_e::subscriber window_proc() override { return _window->window_proc(); }
 
 	// properties_window_i
-	virtual property_grid_i* pg() const override { return _pg.get(); }
+	virtual pg::property_grid_i* pg() const override { return _pg.get(); }
 
 	std::optional<LRESULT> on_window_proc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 	{
 		if (msg == WM_SIZE)
 		{
-			_pg->set_bounds(client_rect());
+			_pg->set_bounds(edge::client_rect(hwnd));
 			::UpdateWindow(hwnd);
 			return std::nullopt;
-		}
-
-		if (msg == 0x02E3) // WM_DPICHANGED_AFTERPARENT
-		{
-			_pg->set_bounds(this->client_rect());
-			_pg->on_dpi_changed();
-			return std::nullopt;
-		}
-
-		if ((msg == WM_LBUTTONDOWN) || (msg == WM_RBUTTONDOWN))
-		{
-			::SetFocus(hwnd);
-			if (::GetFocus() != hwnd)
-				return std::nullopt;
-
-			mouse_button button = (msg == WM_LBUTTONDOWN) ? edge::mouse_button::left : edge::mouse_button::right;
-			modifier_key mks = get_modifier_keys();
-			auto pp = POINT{ GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam) };
-			auto pd = this->pointp_to_pointd(pp);
-			edge::mouse_ud_args ma = { button, mks, pp, pd };
-			bool handled = _pg->on_mouse_down(ma);
-			if (handled)
-				return 0;
-			return std::nullopt;
-		}
-
-		if ((msg == WM_LBUTTONUP) || (msg == WM_RBUTTONUP))
-		{
-			mouse_button button = (msg == WM_LBUTTONUP) ? edge::mouse_button::left : edge::mouse_button::right;
-			modifier_key mks = get_modifier_keys();
-			auto pp = POINT{ GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam) };
-			auto pd = this->pointp_to_pointd(pp);
-			edge::mouse_ud_args ma = { button, mks, pp, pd };
-			bool handled = _pg->on_mouse_up(ma);
-			if (handled)
-				return 0;
-			return std::nullopt;
-		}
-
-		if (msg == WM_MOUSEMOVE)
-		{
-			modifier_key mks = (modifier_key)wparam;
-			auto pd = this->pointp_to_pointd(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
-			edge::mouse_move_args ma = { mks, pd };
-			_pg->on_mouse_move(ma);
-			return std::nullopt;
-		}
-
-		if (msg == WM_KEYDOWN)
-		{
-			auto handled = _pg->on_key_down ((uint32_t)wparam, get_modifier_keys());
-			return handled ? std::optional<LRESULT>(0) : std::nullopt;
-		}
-
-		if (msg == WM_KEYUP)
-		{
-			auto handled = _pg->on_key_up ((uint32_t) wparam, get_modifier_keys());
-			return handled ? std::optional<LRESULT>(0) : std::nullopt;
-		}
-
-		if (msg == WM_CHAR)
-		{
-			auto handled = _pg->on_char_key ((uint32_t)wparam);
-			return handled ? std::optional<LRESULT>(0) : std::nullopt;
 		}
 
 		return std::nullopt;

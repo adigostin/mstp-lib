@@ -17,10 +17,6 @@ class bridge;
 class port;
 class wire;
 
-using edge::property_changing_e;
-using edge::property_changed_e;
-using edge::property_change_args;
-
 static constexpr unsigned char DefaultConfigTableDigest[16] = { 0xAC, 0x36, 0x17, 0x7F, 0x50, 0x28, 0x3C, 0xD4, 0xB8, 0x38, 0x21, 0xD8, 0xAB, 0x26, 0xDE, 0x62 };
 
 // Maximum VLAN number supported by the simulator (too large a number would complicate the UI).
@@ -34,26 +30,13 @@ static constexpr char app_version_string[] = "2.2";
 
 // ============================================================================
 
-struct __declspec(novtable) selection_i
+struct __declspec(novtable) selection_i : pg::object_list_i
 {
-	virtual ~selection_i() { }
-
 	virtual const std::vector<edge::object*>& objects() const = 0;
 	virtual void select (edge::object* o) = 0;
 	virtual void clear() = 0;
 	virtual void add (edge::object* o) = 0;
 	virtual void remove (edge::object* o) = 0;
-
-	bool contains (edge::object* o) const { return std::find (objects().begin(), objects().end(), o) != objects().end(); }
-
-	struct added_e : public edge::event<added_e, selection_i*, edge::object*> { };
-	virtual added_e::subscriber added() = 0;
-
-	struct removing_e : public edge::event<removing_e, selection_i*, edge::object*> { };
-	virtual removing_e::subscriber removing() = 0;
-
-	struct changed_e : public edge::event<changed_e, selection_i*> { };
-	virtual changed_e::subscriber changed() = 0;
 };
 using selection_factory_t = std::unique_ptr<selection_i>(project_i* project);
 
@@ -62,8 +45,10 @@ using selection_factory_t = std::unique_ptr<selection_i>(project_i* project);
 struct __declspec(novtable) log_window_i : edge::win32_window_i
 {
 };
-using log_window_factory_t = std::unique_ptr<log_window_i>(*const)(HWND hWndParent, const RECT& rect, ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dWriteFactory, selection_i* selection, const std::shared_ptr<project_i>& project, edge::theme_color_provider_i* tcp);
-extern const log_window_factory_t log_window_factory;
+
+std::unique_ptr<log_window_i> make_log_window (HWND hWndParent, const RECT& rect, 
+	ID3D11DeviceContext1* d3d_dc, IDWriteFactory* dwrite_factory, ID2D1Factory1* d2d_factory,
+	selection_i* selection, const std::shared_ptr<project_i>& project, edge::theme_color_provider_i* tcp);
 
 // ============================================================================
 
@@ -84,8 +69,11 @@ struct mouse_location
 	D2D1_POINT_2F w;
 };
 
-struct __declspec(novtable) edit_window_i : edge::zoomable_window_i
+struct __declspec(novtable) edit_window_i : edge::win32_window_i
 {
+	//virtual edge::win32_window_i* window() = 0;
+	virtual edge::d2d_renderer_i* renderer() = 0;
+	virtual edge::zoomer* zoomer() = 0;
 	virtual const struct drawing_resources& drawing_resources() const = 0;
 	virtual void EnterState (std::unique_ptr<edit_state>&& state) = 0;
 	virtual port* GetCPAt (D2D1_POINT_2F dLocation, float tolerance) const = 0;
@@ -98,6 +86,7 @@ struct __declspec(novtable) edit_window_i : edge::zoomable_window_i
 							 bool smallFont = false) const = 0;
 	virtual void zoom_all() = 0;
 };
+
 struct edit_window_create_params
 {
 	simulator_app_i* app;
@@ -108,6 +97,7 @@ struct edit_window_create_params
 	RECT rect;
 	ID3D11DeviceContext1* d3d_dc;
 	IDWriteFactory* dWriteFactory;
+	ID2D1Factory1* d2d_factory;
 };
 using edit_window_factory_t = std::unique_ptr<edit_window_i>(const edit_window_create_params& cps);
 
@@ -120,27 +110,29 @@ struct properties_window_create_params
 	edge::theme_color_provider_i* tcp;
 	ID3D11DeviceContext* d3d_dc;
 	IDWriteFactory* dwrite_factory;
+	ID2D1Factory1* d2d_factory;
 };
 
-struct __declspec(novtable) properties_window_i : edge::d2d_window_i
+struct __declspec(novtable) properties_window_i : edge::win32_window_i
 {
-	virtual edge::property_grid_i* pg() const = 0;
+	virtual pg::property_grid_i* pg() const = 0;
 };
 
 using properties_window_factory_t = std::unique_ptr<properties_window_i>(const properties_window_create_params& cps);
 
 // ============================================================================
 
-struct __declspec(novtable) project_window_i : edge::hwnd_i
+struct __declspec(novtable) project_window_i
 {
-	struct selected_vlan_number_changed_e : public edge::event<selected_vlan_number_changed_e, project_window_i*, uint32_t> { };
-	struct destroying_e : public edge::event<destroying_e, project_window_i*> { };
-
+	virtual ~project_window_i() = default;
+	virtual HWND hwnd() const = 0;
 	virtual const std::shared_ptr<project_i>& project() const = 0;
 	virtual void select_vlan (uint32_t vlanNumber) = 0;
 	virtual uint32_t selected_vlan_number() const = 0;
+	struct selected_vlan_number_changed_e : public edge::event<selected_vlan_number_changed_e, project_window_i*, uint32_t> { };
 	virtual selected_vlan_number_changed_e::subscriber selected_vlan_number_changed() = 0;
-	virtual destroying_e::subscriber destroying() = 0;
+	struct closed_e : public edge::event<closed_e, project_window_i*> { };
+	virtual closed_e::subscriber closed() = 0;
 };
 
 struct project_window_create_params
@@ -153,6 +145,7 @@ struct project_window_create_params
 	int      nCmdShow;
 	ID3D11DeviceContext1* d3d_dc;
 	IDWriteFactory*       dwrite_factory;
+	ID2D1Factory1*        d2d_factory;
 };
 
 using project_window_factory_t = std::unique_ptr<project_window_i>(const project_window_create_params& create_params);
@@ -161,11 +154,7 @@ using project_window_factory_t = std::unique_ptr<project_window_i>(const project
 
 enum class save_project_option { save_unconditionally, save_if_changed_ask_user_first };
 
-using bridge_collection_i = edge::typed_object_collection_i<bridge>;
-
-using wire_collection_i = edge::typed_object_collection_i<wire>;
-
-struct __declspec(novtable) project_i : bridge_collection_i, wire_collection_i, edge::pg_app_context_i
+struct __declspec(novtable) project_i : edge::object, edge::notify_property_change, edge::hierarchy_root_i, edge::string_convert_context_i
 {
 	virtual ~project_i() = default;
 
@@ -175,6 +164,7 @@ struct __declspec(novtable) project_i : bridge_collection_i, wire_collection_i, 
 	struct changed_flag_changed_event : public edge::event<changed_flag_changed_event, project_i*> { };
 	struct ChangedEvent : public edge::event<ChangedEvent, project_i*> { };
 
+	//virtual object* as_object() = 0;
 	virtual invalidate_e::subscriber invalidated() = 0;
 	virtual loaded_e::subscriber loaded() = 0;
 	virtual saved_e::subscriber saved() = 0;
@@ -190,20 +180,14 @@ struct __declspec(novtable) project_i : bridge_collection_i, wire_collection_i, 
 	virtual void SetChangedFlag (bool projectChangedFlag) = 0;
 	virtual changed_flag_changed_event::subscriber changed_flag_changed() = 0;
 	virtual ChangedEvent::subscriber GetChangedEvent() = 0;
-	virtual const typed_object_collection_property<bridge>* bridges_prop() const = 0;
-	virtual const typed_object_collection_property<wire>* wires_prop() const = 0;
-	virtual property_changing_e::subscriber property_changing() = 0;
-	virtual property_changed_e::subscriber property_changed() = 0;
-
-	const std::vector<std::unique_ptr<bridge>>& bridges() const
-	{
-		return this->edge::typed_object_collection_i<bridge>::children();
-	}
-
-	const std::vector<std::unique_ptr<wire>>& wires() const
-	{
-		return this->edge::typed_object_collection_i<wire>::children();
-	}
+	virtual const edge::typed_object_collection_property1<bridge>* bridges_property() const = 0;
+	virtual const edge::typed_object_collection_property1<wire>* wires_property() const = 0;
+	virtual size_t bridge_count() const = 0;
+	virtual bridge* bridge_at(size_t index) const = 0;
+	virtual size_t wire_count() const = 0;
+	virtual wire* wire_at(size_t index) const = 0;
+	virtual const std::vector<std::unique_ptr<bridge>>& bridges() const = 0;
+	virtual const std::vector<std::unique_ptr<wire>>& wires() const = 0;
 
 	std::pair<wire*, size_t> GetWireConnectedToPort (const port* port) const;
 	port* find_connected_port (port* txPort) const;
@@ -224,7 +208,8 @@ using vlan_window_factory_t = std::unique_ptr<vlan_window_i>(*const)(
 	HWND hWndParent,
 	POINT location,
 	ID3D11DeviceContext1* d3d_dc,
-	IDWriteFactory* dwrite_factory);
+	IDWriteFactory* dwrite_factory,
+	ID2D1Factory1* d2d_factory);
 extern const vlan_window_factory_t vlan_window_factory;
 
 // ============================================================================

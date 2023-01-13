@@ -4,6 +4,7 @@
 
 #include "pch.h"
 #include "simulator.h"
+#include "edge/utility_functions.h"
 
 static constexpr float thickness = 2;
 
@@ -11,12 +12,11 @@ static constexpr float thickness = 2;
 // wire_end_p
 
 wire_end_p::wire_end_p (const char* name, size_t index)
-	: property(name, nullptr, nullptr, false)
-	, _index(index)
-	, _name_bstr(name)
+	: _index(index)
+	, _name(name)
 { }
 
-void wire_end_p::serialize (edge::xml_serializer_i* serializer, const object* obj, const edge::serialize_element_getter& element_getter) const
+void wire_end_p::serialize (edge::xml_serializer_i* serializer, const object* obj, const property* prop, const edge::serialize_element_getter& element_getter) const
 {
 	auto w = static_cast<const wire*>(obj);
 	auto& from = w->point(_index);
@@ -31,15 +31,15 @@ void wire_end_p::serialize (edge::xml_serializer_i* serializer, const object* ob
 		//auto value = std::string("Connected;") + std::to_string(bi) + ";" + std::to_string(pi);
 		//element_getter()->setAttribute(_name_bstr, _variant_t(value.c_str()));
 		port* p = std::get<connected_wire_end>(from);
-		for (size_t bi = 0; bi < p->bridge()->project()->bridges().size(); bi++)
+		for (size_t bi = 0; bi < p->bridge()->project()->bridge_count(); bi++)
 		{
-			auto b = p->bridge()->project()->bridges()[bi].get();
+			auto b = p->bridge()->project()->bridge_at(bi);
 			for (size_t pi = 0; pi < b->ports().size(); pi++)
 			{
 				if (b->ports()[pi].get() == p)
 				{
 					ss << "Connected;" << bi << ";" << pi;
-					element_getter()->setAttribute(_name_bstr, _variant_t(ss.str().c_str()));
+					element_getter()->setAttribute(_bstr_t(_name), _variant_t(ss.str().c_str()));
 					return;
 				}
 			}
@@ -54,17 +54,17 @@ void wire_end_p::serialize (edge::xml_serializer_i* serializer, const object* ob
 		//element_getter()->setAttribute(_name_bstr, _variant_t(value.c_str()));
 		auto location = std::get<loose_wire_end>(from);
 		ss << "Loose;" << location.x << ";" << location.y;
-		element_getter()->setAttribute(_name_bstr, _variant_t(ss.str().c_str()));
+		element_getter()->setAttribute(_bstr_t(_name), _variant_t(ss.str().c_str()));
 		return;
 	}
 }
 
-void wire_end_p::deserialize (edge::xml_deserializer_i* deserializer, IXMLDOMElement* element, object* obj) const
+void wire_end_p::deserialize (edge::xml_deserializer_i* deserializer, IXMLDOMElement* element, object* obj, const property* prop) const
 {
 	rassert(false);
 }
 
-void wire_end_p::deserialize (edge::xml_deserializer_i* deserializer, std::string_view attr_value, object* obj) const
+void wire_end_p::deserialize (edge::xml_deserializer_i* deserializer, std::string_view attr_value, object* obj, const property* prop) const
 {
 	auto w = static_cast<wire*>(obj);
 	auto project = static_cast<project_i*>(deserializer->context());
@@ -77,7 +77,7 @@ void wire_end_p::deserialize (edge::xml_deserializer_i* deserializer, std::strin
 		size_t bridge_index, port_index;
 		std::from_chars (from.data() + s1 + 1, from.data() + s2, bridge_index);
 		std::from_chars (from.data() + s2 + 1, from.data() + from.size(), port_index);
-		auto port = project->bridges()[bridge_index]->ports()[port_index].get();
+		auto port = project->bridge_at(bridge_index)->ports()[port_index].get();
 		w->set_point(_index, port);
 		return;
 	}
@@ -100,10 +100,21 @@ wire::wire (wire_end firstEnd, wire_end secondEnd)
 	: _points({ firstEnd, secondEnd })
 { }
 
+object* wire::parent() const
+{
+	rassert(false); return { };
+}
+
+void wire::set_parent (project_i* parent)
+{
+	_parent = parent;
+}
+
 project_i* wire::project() const
 {
-	auto bc = static_cast<edge::typed_object_collection_i<wire>*>(base::parent());
-	return static_cast<project_i*>(bc);
+	rassert(false); return { };
+	//auto bc = static_cast<edge::typed_object_collection_i<wire>*>(base::parent());
+	//return static_cast<project_i*>(bc);
 }
 
 void wire::set_point (size_t pointIndex, wire_end point)
@@ -111,7 +122,7 @@ void wire::set_point (size_t pointIndex, wire_end point)
 	if (_points[pointIndex] != point)
 	{
 		_points[pointIndex] = point;
-		event_invoker<invalidate_e>()(this);
+		invalidate_e::invoker(_em).invoke(this);
 	}
 }
 
@@ -142,10 +153,10 @@ void wire::render (ID2D1RenderTarget* rt, const drawing_resources& dos, bool for
 	rt->DrawLine (point_coords(0), point_coords(1), brush, width, ss);
 }
 
-void wire::render_selection (const edge::zoomable_window_i* window, ID2D1RenderTarget* rt, const drawing_resources& dos) const
+void wire::render_selection (const edge::zoomer* zoomer, const drawing_resources& dos) const
 {
-	auto fd = window->pointw_to_pointd(point_coords(0));
-	auto td = window->pointw_to_pointd(point_coords(1));
+	auto fd = zoomer->pointw_to_pointd(point_coords(0));
+	auto td = zoomer->pointw_to_pointd(point_coords(1));
 
 	float halfw = 10;
 	float angle = atan2(td.y - fd.y, td.x - fd.x);
@@ -160,14 +171,16 @@ void wire::render_selection (const edge::zoomable_window_i* window, ID2D1RenderT
 		D2D1_POINT_2F { td.x + s * halfw, td.y - c * halfw }
 	};
 
-	rt->DrawLine (vertices[0], vertices[1], dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
-	rt->DrawLine (vertices[1], vertices[2], dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
-	rt->DrawLine (vertices[2], vertices[3], dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
-	rt->DrawLine (vertices[3], vertices[0], dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
+	zoomer->renderer()->dc()->DrawLine (vertices[0], vertices[1], dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
+	zoomer->renderer()->dc()->DrawLine (vertices[1], vertices[2], dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
+	zoomer->renderer()->dc()->DrawLine (vertices[2], vertices[3], dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
+	zoomer->renderer()->dc()->DrawLine (vertices[3], vertices[0], dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
 }
 
-renderable_object::ht_result wire::hit_test (const edge::zoomable_window_i* window, D2D1_POINT_2F dLocation, float tolerance)
+renderable_object_i::ht_result wire::hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance)
 {
+	rassert(false);
+	/*
 	for (size_t i = 0; i < _points.size(); i++)
 	{
 		auto pointWLocation = this->point_coords(i);
@@ -183,7 +196,7 @@ renderable_object::ht_result wire::hit_test (const edge::zoomable_window_i* wind
 	auto lw  = window->lengthw_to_lengthd(thickness);
 	if (edge::hit_test_line(dLocation, tolerance, p0d, p1d, lw))
 		return { this, -1 };
-
+	*/
 	return { };
 }
 
@@ -207,4 +220,4 @@ const wire_end_p wire::p0_property("P0", 0);
 const wire_end_p wire::p1_property("P1", 1);
 const property* const wire::_properties[] = { &p0_property, &p1_property };
 
-const xtype<wire> wire::_type = { "Wire", &base::_type, _properties, std::make_unique };
+const xtype<wire> wire::_type = { "Wire", nullptr, _properties, &std::make_unique };

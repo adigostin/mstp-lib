@@ -3,10 +3,10 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "collections.h"
-#include "com_ptr.h"
+#include "edge/com_ptr.h"
 #include "stp.h"
 #include "renderable_object.h"
+#include "simulator_props.h"
 
 class bridge;
 class port;
@@ -14,19 +14,19 @@ class port;
 extern const edge::nvp port_priority_nvps[];
 extern const char port_priority_type_name[];
 using port_priority_traits = edge::enum_property_traits<uint32_t, port_priority_type_name, port_priority_nvps, true>;
-using port_priority_p = edge::static_value_property<port_priority_traits>;
+using port_priority_p = static_ui_prop<port_priority_traits>;
 
 extern const edge::nvp port_role_nvps[];
 extern const char port_role_type_name[];
 using port_role_traits = edge::enum_property_traits<STP_PORT_ROLE, port_role_type_name, port_role_nvps>;
-using port_role_p = edge::static_value_property<port_role_traits>;
+using port_role_p = static_ui_prop<port_role_traits>;
 
 extern const char stp_disabled_text[];
 
 class port_tree : public edge::object
 {
-	using base = edge::object;
-
+	edge::event_manager _em;
+	port* const _parent;
 	size_t const _tree_index;
 	ULONGLONG _flush_tick_count = 0;
 	bool _flush_text_visible = false;
@@ -38,12 +38,11 @@ class port_tree : public edge::object
 	void on_stp_enabled_changed  (const property_change_args& args);
 	static void CALLBACK flush_timer_proc (HWND hwnd, UINT, UINT_PTR, DWORD);
 
-	virtual void on_inserted_into_parent() override;
-	virtual void on_removing_from_parent() override;
-
 public:
-	port_tree (size_t tree_index);
+	port_tree (port* parent, size_t tree_index);
+	~port_tree();
 
+	virtual object* parent() const override;
 	::port* port() const;
 
 	uint32_t priority() const;

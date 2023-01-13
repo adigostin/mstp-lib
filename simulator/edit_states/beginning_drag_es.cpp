@@ -2,7 +2,6 @@
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
-#include "pch.h"
 #include "edit_state.h"
 
 using namespace std;
@@ -11,7 +10,7 @@ class BeginningDragES : public edit_state
 {
 	using base = edit_state;
 
-	renderable_object* const _clickedObject;
+	edge::object*      const _clickedObject;
 	mouse_button       const _button;
 	modifier_key       const _modifierKeysDown;
 	mouse_location     const _location;
@@ -22,7 +21,7 @@ class BeginningDragES : public edit_state
 
 public:
 	BeginningDragES (const edit_state_deps& deps,
-					 renderable_object* clickedObject,
+	                 edge::object* clickedObject,
 					 mouse_button button,
 					 modifier_key modifierKeysDown,
 					 const mouse_location& location,
@@ -109,7 +108,7 @@ public:
 };
 
 std::unique_ptr<edit_state> CreateStateBeginningDrag (const edit_state_deps& deps,
-													 renderable_object* clickedObject,
+                                                     edge::object* clickedObject,
 													 mouse_button button,
 													 modifier_key mks,
 													 const mouse_location& ml,

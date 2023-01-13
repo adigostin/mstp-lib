@@ -2,11 +2,10 @@
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
-#include "pch.h"
 #include "edit_state.h"
-#include "bridge.h"
-#include "wire.h"
-#include "port.h"
+#include "..\bridge.h"
+#include "..\wire.h"
+#include "..\port.h"
 
 class create_wire_es : public edit_state
 {
@@ -42,7 +41,7 @@ public:
 				newWire->set_p0 (fromPort);
 				newWire->set_p1 (fromPort->GetCPLocation());
 				_wire = newWire.get();
-				_project->wire_collection_i::append(std::move(newWire));
+				_project->wires_property()->append(_project, std::move(newWire));
 				_substate  = waiting_first_up;
 			}
 		}
@@ -67,7 +66,7 @@ public:
 		}
 		else
 			_wire->set_p1(location.w);
-		::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
+		_ew->invalidate();
 
 		if (_substate == waiting_first_up)
 			_substate = waiting_second_up;
@@ -97,12 +96,12 @@ public:
 		{
 			if (_wire != nullptr)
 			{
-				_project->wire_collection_i::remove_last();
+				_project->wires_property()->remove_back(_project);
 				_wire = nullptr;
 			}
 
 			_substate = down;
-			::InvalidateRect (_ew->hwnd(), nullptr, FALSE);
+			_ew->invalidate();
 			return handled(true);
 		}
 

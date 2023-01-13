@@ -8,33 +8,22 @@
 
 using namespace edge;
 
-bridge_tree::bridge_tree (size_t tree_index)
-	: _tree_index(tree_index)
+bridge_tree::bridge_tree (bridge* parent, size_t tree_index)
+	: _parent(parent), _tree_index(tree_index)
 {
 	::GetSystemTime(&_last_topology_change);
 	_topology_change_count = 0;
+	_parent->property_changing().add_handler<&bridge_tree::on_bridge_property_changing>(this);
+	_parent->property_changed().add_handler<&bridge_tree::on_bridge_property_changed>(this);
 }
 
-bridge* bridge_tree::parent() const
+bridge_tree::~bridge_tree()
 {
-	return static_cast<bridge*>(static_cast<bridge_tree_collection_i*>(base::parent()));
+	_parent->property_changed().remove_handler<&bridge_tree::on_bridge_property_changed>(this);
+	_parent->property_changing().remove_handler<&bridge_tree::on_bridge_property_changing>(this);
 }
 
-void bridge_tree::on_inserted_into_parent()
-{
-	base::on_inserted_into_parent();
-	parent()->property_changing().add_handler(&bridge_tree::on_bridge_property_changing, this);
-	parent()->property_changed().add_handler(&bridge_tree::on_bridge_property_changed, this);
-}
-
-void bridge_tree::on_removing_from_parent()
-{
-	parent()->property_changed().remove_handler(&bridge_tree::on_bridge_property_changed, this);
-	parent()->property_changing().remove_handler(&bridge_tree::on_bridge_property_changing, this);
-	base::on_removing_from_parent();
-}
-
-static const value_property* const properties_changed_on_stp_enable_disable[] = {
+const value_property* const bridge_tree::properties_changed_on_stp_enable_disable[] = {
 	&bridge_tree::root_id_property,
 	&bridge_tree::external_root_path_cost_property,
 	&bridge_tree::regional_root_id_property,
@@ -44,32 +33,31 @@ static const value_property* const properties_changed_on_stp_enable_disable[] = 
 	&bridge_tree::receiving_port_id_property,
 };
 
-void bridge_tree::on_bridge_property_changing (void* arg, object* obj, const property_change_args& args)
+void bridge_tree::on_bridge_property_changing (edge::object* obj, const property_change_args& args)
 {
-	auto bt = static_cast<bridge_tree*>(arg);
 	if (args.property == &bridge::stp_enabled_property)
 	{
 		for (auto prop : properties_changed_on_stp_enable_disable)
-			bt->on_property_changing(prop);
+			edge::property_changing_e::invoker(_em).invoke(this, value_property_change_args{ prop });
 	}
 }
 
-void bridge_tree::on_bridge_property_changed (void* arg, object* obj, const property_change_args& args)
+void bridge_tree::on_bridge_property_changed (edge::object* obj, const property_change_args& args)
 {
-	auto bt = static_cast<bridge_tree*>(arg);
 	if (args.property == &bridge::stp_enabled_property)
 	{
 		for (auto prop : properties_changed_on_stp_enable_disable)
-			bt->on_property_changed(prop);
+			edge::property_changed_e::invoker(_em).invoke(this, value_property_change_args{ prop });
 	}
 }
 
 void bridge_tree::on_topology_change (unsigned int timestamp)
 {
-	this->on_property_changing(&topology_change_count_property);
+	value_property_change_args args(topology_change_count_property);
+	edge::property_changing_e::invoker(_em).invoke(this, args);
 	::GetSystemTime(&_last_topology_change);
 	_topology_change_count++;
-	this->on_property_changed(&topology_change_count_property);
+	edge::property_changed_e::invoker(_em).invoke(this, args);
 }
 
 uint32_t bridge_tree::bridge_priority() const
@@ -79,11 +67,13 @@ uint32_t bridge_tree::bridge_priority() const
 
 void bridge_tree::set_bridge_priority (uint32_t priority)
 {
-	if (bridge_priority() != priority)
+	uint32_t old_prio = STP_GetBridgePriority (parent()->stp_bridge(), (unsigned int)_tree_index);
+	if (old_prio != priority)
 	{
-		this->on_property_changing(&bridge_priority_property);
+		value_property_change_args args(bridge_priority_property);
+		edge::property_changing_e::invoker(_em).invoke(this, args);
 		STP_SetBridgePriority (parent()->stp_bridge(), (unsigned int)_tree_index, (unsigned short) priority, GetMessageTime());
-		this->on_property_changed(&bridge_priority_property);
+		edge::property_changed_e::invoker(_em).invoke(this, args);
 	}
 }
 
@@ -215,8 +205,8 @@ uint32_t bridge_tree::remaining_hops() const
 
 // ============================================================================
 
-static const property_group rpv_group = { 4, "Root Priority Vector" };
-static const property_group root_times_group = { 5, "Root Times" };
+static const pg::property_group rpv_group = { 4, "Root Priority Vector" };
+static const pg::property_group root_times_group = { 5, "Root Times" };
 
 const nvp bridge_priority_nvps[] =
 {
@@ -244,43 +234,43 @@ const bridge_priority_p bridge_tree::bridge_priority_property = {
 	"BridgePriority", nullptr, nullptr, true,
 	&bridge_priority, &set_bridge_priority, 0x8000 };
 
-const temp_string_p bridge_tree::root_id_property = {
+const string_p bridge_tree::root_id_property = {
 	"RootID", &rpv_group, nullptr, true, &root_bridge_id, nullptr, };
 
 const uint32_p bridge_tree::external_root_path_cost_property = {
 	"ExternalRootPathCost", &rpv_group, nullptr, true, &external_root_path_cost, nullptr };
 
-const temp_string_p bridge_tree::regional_root_id_property = {
+const string_p bridge_tree::regional_root_id_property = {
 	"RegionalRootId", &rpv_group, nullptr, true, &regional_root_id, nullptr };
 
 const uint32_p bridge_tree::internal_root_path_cost_property =
 	{ "InternalRootPathCost", &rpv_group, nullptr, true, &internal_root_path_cost, nullptr };
 
-const temp_string_p bridge_tree::designated_bridge_id_property =
+const string_p bridge_tree::designated_bridge_id_property =
 	{ "DesignatedBridgeId", &rpv_group, nullptr, true, &designated_bridge_id, nullptr };
 
-const temp_string_p bridge_tree::designated_port_id_property =
+const string_p bridge_tree::designated_port_id_property =
 	{ "DesignatedPortId", &rpv_group, nullptr, true, &designated_port_id, nullptr };
 
-const temp_string_p bridge_tree::receiving_port_id_property =
+const string_p bridge_tree::receiving_port_id_property =
 	{ "ReceivingPortId", &rpv_group, nullptr, true, &receiving_port_id, nullptr };
 
-const edge::uint32_p bridge_tree::hello_time_property =
+const uint32_p bridge_tree::hello_time_property =
 	{ "HelloTime", &root_times_group, nullptr, true, &hello_time, nullptr };
 
-const edge::uint32_p bridge_tree::max_age_property =
+const uint32_p bridge_tree::max_age_property =
 	{ "MaxAge", &root_times_group, nullptr, true, &max_age, nullptr };
 
-const edge::uint32_p bridge_tree::forward_delay_property =
+const uint32_p bridge_tree::forward_delay_property =
 	{ "ForwardDelay", &root_times_group, nullptr, true, &bridge_forward_delay, nullptr };
 
-const edge::uint32_p bridge_tree::message_age_property =
+const uint32_p bridge_tree::message_age_property =
 	{ "MessageAge", &root_times_group, nullptr, true, &message_age, nullptr };
 
-const edge::uint32_p bridge_tree::remaining_hops_property =
+const uint32_p bridge_tree::remaining_hops_property =
 	{ "remainingHops", &root_times_group, nullptr, true, &remaining_hops, nullptr };
 
-const edge::uint32_p bridge_tree::topology_change_count_property =
+const uint32_p bridge_tree::topology_change_count_property =
 	{ "Topology Change Count", nullptr, nullptr, true, &topology_change_count, nullptr };
 
 const edge::property* const bridge_tree::_properties[] =
@@ -301,4 +291,4 @@ const edge::property* const bridge_tree::_properties[] =
 	&remaining_hops_property
 };
 
-const edge::xtype<bridge_tree> bridge_tree::_type = { "BridgeTree", &base::_type, _properties };
+const edge::xtype<bridge_tree> bridge_tree::_type = { "BridgeTree", nullptr, _properties };
