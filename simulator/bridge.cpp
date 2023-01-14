@@ -384,9 +384,8 @@ void bridge::render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsign
 		port->render (dc, dos, vlanNumber);
 }
 
-void bridge::render_selection (const edge::zoomer* zoomer, const drawing_resources& dos) const
+void bridge::render_selection (ID2D1DeviceContext* rt, const edge::zoomer* zoomer, const drawing_resources& dos) const
 {
-	auto rt = zoomer->renderer()->dc();
 	auto oldaa = rt->GetAntialiasMode();
 	rt->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
 

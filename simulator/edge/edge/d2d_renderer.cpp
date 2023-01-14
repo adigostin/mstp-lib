@@ -177,7 +177,7 @@ public:
 		if (msg == WM_PAINT)
 		{
 			process_wm_paint (hwnd);
-			return 0;
+			return std::nullopt;
 		}
 
 		if (msg == WM_SETFOCUS)

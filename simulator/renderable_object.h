@@ -57,7 +57,7 @@ public:
 	};
 
 	// This is called without any transformation applied to the render target, not even the DPI transformation.
-	virtual void render_selection (const edge::zoomer* zoomer, const drawing_resources& dos) const = 0;
+	virtual void render_selection (ID2D1DeviceContext* dc, const edge::zoomer* zoomer, const drawing_resources& dos) const = 0;
 	virtual ht_result hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) = 0;
 	virtual D2D1_RECT_F extent() const = 0;
 	/*

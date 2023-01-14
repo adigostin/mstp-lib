@@ -153,7 +153,7 @@ void wire::render (ID2D1RenderTarget* rt, const drawing_resources& dos, bool for
 	rt->DrawLine (point_coords(0), point_coords(1), brush, width, ss);
 }
 
-void wire::render_selection (const edge::zoomer* zoomer, const drawing_resources& dos) const
+void wire::render_selection (ID2D1DeviceContext* dc, const edge::zoomer* zoomer, const drawing_resources& dos) const
 {
 	auto fd = zoomer->pointw_to_pointd(point_coords(0));
 	auto td = zoomer->pointw_to_pointd(point_coords(1));
@@ -171,10 +171,10 @@ void wire::render_selection (const edge::zoomer* zoomer, const drawing_resources
 		D2D1_POINT_2F { td.x + s * halfw, td.y - c * halfw }
 	};
 
-	zoomer->renderer()->dc()->DrawLine (vertices[0], vertices[1], dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
-	zoomer->renderer()->dc()->DrawLine (vertices[1], vertices[2], dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
-	zoomer->renderer()->dc()->DrawLine (vertices[2], vertices[3], dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
-	zoomer->renderer()->dc()->DrawLine (vertices[3], vertices[0], dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
+	dc->DrawLine (vertices[0], vertices[1], dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
+	dc->DrawLine (vertices[1], vertices[2], dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
+	dc->DrawLine (vertices[2], vertices[3], dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
+	dc->DrawLine (vertices[3], vertices[0], dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
 }
 
 renderable_object_i::ht_result wire::hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance)

@@ -248,7 +248,7 @@ namespace edge
 		next_handler = std::nullopt;
 	}
 
-	void event_manager::add_handler (std::type_index event_id, void* callback, void* callback_arg)
+	void event_manager::add_handler (bool prepend, std::type_index event_id, void* callback, void* callback_arg)
 	{
 		// We don't allow registering the same handler twice for the same event id.
 		// This would complicate our event system; as for the application, it's more
@@ -267,7 +267,10 @@ namespace edge
 		if (!inv)
 		{
 			// no invoker currently running for this event_t
-			handlers[event_id].push_back({ callback, callback_arg });
+			if (prepend)
+				handlers[event_id].push_front({ callback, callback_arg });
+			else
+				handlers[event_id].push_back({ callback, callback_arg });
 		}
 		else
 		{

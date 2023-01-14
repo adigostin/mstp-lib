@@ -97,7 +97,7 @@ public:
 
 	void render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsigned int vlanNumber) const;
 
-	void render_selection (const edge::zoomer* zoomer, const drawing_resources& dos) const;
+	void render_selection (ID2D1DeviceContext* dc, const edge::zoomer* zoomer, const drawing_resources& dos) const;
 	int hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance);
 	D2D1_RECT_F extent() const { rassert(false); return { }; }
 

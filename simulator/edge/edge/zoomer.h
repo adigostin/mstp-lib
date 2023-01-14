@@ -3,16 +3,15 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "d2d_renderer.h"
+#include "window.h"
 
 namespace edge
 {
 	struct zoom_transform_changed_e : event<zoom_transform_changed_e> { };
 
-	// TODO: make this independent of d2d_renderer. All the zoomer needs is hooking WM_PAINT.
 	class zoomer : event_manager
 	{
-		d2d_renderer_i* const _renderer;
+		win32_window_i& _window;
 
 		D2D1_POINT_2F _aimpoint = { 0, 0 }; // workspace coordinate shown at the center of the client area
 		float _zoom = 1;
@@ -42,12 +41,12 @@ namespace edge
 		std::optional<zoomed_to_rect> _zoomed_to_rect;
 
 	public:
-		zoomer(d2d_renderer_i* renderer);
+		zoomer(win32_window_i& window);
 		zoomer(const zoomer&) = delete;
 		zoomer& operator=(const zoomer&) = delete;
 		~zoomer();
 
-		d2d_renderer_i* renderer() const { return _renderer; }
+		edge::win32_window_i& window() const { return _window; }
 		void zoom_to (D2D1_POINT_2F aimpoint, float zoom, bool smooth);
 		D2D1_POINT_2F aimpoint() const { return _aimpoint; }
 		float zoom() const { return _zoom; }
@@ -56,10 +55,10 @@ namespace edge
 
 	private:
 		std::optional<LRESULT> on_window_proc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
-		void create_render_resources (ID2D1DeviceContext* dc);
-		void release_render_resources (ID2D1DeviceContext* dc);
-		static void on_before_render (void* arg, ID2D1DeviceContext* dc) { static_cast<zoomer*>(arg)->create_render_resources(dc); }
-		static void on_after_render (void* arg, ID2D1DeviceContext* dc) { static_cast<zoomer*>(arg)->release_render_resources(dc); }
+		void create_render_resources (HWND hwnd);
+		void release_render_resources (HWND hwnd);
+		static std::optional<LRESULT> on_before_window_proc_static (void* arg, HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
+		static std::optional<LRESULT> on_window_proc_static (void* arg, HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 		void set_zoom_and_aimpoint_internal (float zoom, D2D1_POINT_2F aimpoint, bool smooth);
 		void process_wm_size        (HWND hwnd, WPARAM wparam, LPARAM lparam);
 		void process_wm_mbuttondown (HWND hwnd, WPARAM wparam, LPARAM lparam);

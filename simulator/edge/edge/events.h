@@ -94,7 +94,7 @@ namespace edge
 	private:
 		std::optional<handler_ref_t> find_handler (std::type_index event_id, void* callback, void* callback_arg);
 
-		void add_handler (std::type_index event_id, void* callback, void* callback_arg);
+		void add_handler (bool prepend, std::type_index event_id, void* callback, void* callback_arg);
 		void remove_handler (std::type_index event_id, void* callback, void* callback_arg);
 
 		struct pending_invoke
@@ -158,14 +158,25 @@ namespace edge
 		event_subscriber (const event_subscriber&) = delete;
 		event_subscriber & operator= (const event_subscriber &) = delete;
 
+		void prepend_handler (return_t(*callback)(void*, args_t...), void* callback_arg)
+		{
+			_em.add_handler(true, std::type_index(typeid(event_t)), reinterpret_cast<void*>(callback), callback_arg);
+		}
+
+		void append_handler (return_t(*callback)(void*, args_t...), void* callback_arg)
+		{
+			_em.add_handler(false, std::type_index(typeid(event_t)), reinterpret_cast<void*>(callback), callback_arg);
+		}
+
+		// Kept for backward compatibility, maybe we'll delete it later.
 		void add_handler (return_t(*callback)(void*, args_t...), void* callback_arg)
 		{
-			_em.add_handler (std::type_index(typeid(event_t)), reinterpret_cast<void*>(callback), callback_arg);
+			_em.add_handler (false, std::type_index(typeid(event_t)), reinterpret_cast<void*>(callback), callback_arg);
 		}
 
 		event_token add_auto_handler (return_t(*callback)(void*, args_t...), void* callback_arg)
 		{
-			_em.add_handler (std::type_index(typeid(event_t)), reinterpret_cast<void*>(callback), callback_arg);
+			_em.add_handler (false, std::type_index(typeid(event_t)), reinterpret_cast<void*>(callback), callback_arg);
 			return event_token{ _em, std::type_index(typeid(event_t)), callback, callback_arg };
 		}
 
@@ -330,9 +341,6 @@ namespace edge
 			return_t invoke (args_t... args) const { return invoke_internal(false, std::forward<args_t>(args)...); }
 
 			return_t reverse_invoke (args_t... args) const { return invoke_internal(true, std::forward<args_t>(args)...); }
-
-			template<bool reverse_invoke>
-			return_t invoke (args_t... args) const { return invoke_internal(reverse_invoke, std::forward<args_t>(args)...); }
 		};
 	};
 }

@@ -52,7 +52,7 @@ public:
 	edit_window (const edit_window_create_params& cps)
 		: _window(edge::make_window(wnd_class, WS_EX_CLIENTEDGE, WS_CHILD | WS_VISIBLE, cps.hWndParent, cps.rect))
 		, _renderer(make_d2d_renderer(*_window, cps.d3d_dc, cps.dWriteFactory, cps.d2d_factory))
-		, _zoomer(std::make_unique<edge::zoomer>(_renderer.get()))
+		, _zoomer(std::make_unique<edge::zoomer>(*_window))
 		, _app(cps.app)
 		, _pw(cps.pw)
 		, _project(cps.project)
@@ -507,7 +507,7 @@ public:
 		for (object* o : _selection->objects())
 		{
 			if (auto ro = dynamic_cast<renderable_object_i*>(o))
-				ro->render_selection(_zoomer.get(), _drawing_resources);
+				ro->render_selection(dc, _zoomer.get(), _drawing_resources);
 		}
 
 		if (!configIds.empty())

@@ -127,7 +127,7 @@ public:
 	struct invalidate_e : public edge::event<invalidate_e, bridge*> { };
 	invalidate_e::subscriber invalidate() { return invalidate_e::subscriber(_em); }
 
-	virtual void render_selection (const edge::zoomer* zoomer, const drawing_resources& dos) const override final;
+	virtual void render_selection (ID2D1DeviceContext* dc, const edge::zoomer* zoomer, const drawing_resources& dos) const override final;
 	virtual ht_result hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) override final;
 	virtual D2D1_RECT_F extent() const override { return bounds(); }
 

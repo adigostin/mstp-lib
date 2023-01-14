@@ -4,28 +4,35 @@
 
 #include "zoomer.h"
 #include "utility_functions.h"
+#include "rassert.h"
 
 using namespace std;
 using namespace D2D1;
 
 namespace edge
 {
-	zoomer::zoomer (d2d_renderer_i* renderer)
-		: _renderer(renderer)
+	zoomer::zoomer (win32_window_i& window)
+		: _window(window)
 	{
-		_renderer->before_render().add_handler(&on_before_render, this);
-		_renderer->after_render().add_handler(&on_after_render, this);
-		_renderer->window().window_proc().add_handler<&zoomer::on_window_proc>(this);
+		_window.window_proc().prepend_handler(on_before_window_proc_static, this);
+		_window.window_proc().append_handler(on_window_proc_static, this);
 	}
 
 	zoomer::~zoomer()
 	{
-		_renderer->window().window_proc().remove_handler<&zoomer::on_window_proc>(this);
-		_renderer->after_render().remove_handler(&on_after_render, this);
-		_renderer->before_render().remove_handler(&on_before_render, this);
+		_window.window_proc().remove_handler(on_window_proc_static, this);
+		_window.window_proc().remove_handler(on_before_window_proc_static, this);
 	}
 
-	void zoomer::create_render_resources (ID2D1DeviceContext* dc)
+	//static
+	std::optional<LRESULT> zoomer::on_before_window_proc_static (void* arg, HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+	{
+		if (msg == WM_PAINT)
+			static_cast<zoomer*>(arg)->create_render_resources(hwnd);
+		return std::nullopt;
+	}
+
+	void zoomer::create_render_resources(HWND hwnd)
 	{
 		if (_smooth_zoom_info)
 		{
@@ -72,14 +79,26 @@ namespace edge
 		}
 	}
 
-	void zoomer::release_render_resources (ID2D1DeviceContext* dc)
+	//static
+	std::optional<LRESULT> zoomer::on_window_proc_static (void* arg, HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+	{
+		if (msg == WM_PAINT)
+		{
+			static_cast<zoomer*>(arg)->release_render_resources(hwnd);
+			return 0;
+		}
+
+		return static_cast<zoomer*>(arg)->on_window_proc(hwnd, msg, wparam, lparam);
+	}
+
+	void zoomer::release_render_resources (HWND hwnd)
 	{
 		if (_smooth_zoom_info)
 		{
 			if ((_smooth_zoom_info->end_zoom != _zoom) || (_smooth_zoom_info->end_aimpoint != _aimpoint))
 			{
 				// zooming still in progress. paint again as soon as possible.
-				::InvalidateRect(_renderer->window().hwnd(), nullptr, TRUE);
+				::InvalidateRect(hwnd, nullptr, TRUE);
 			}
 			else
 			{
@@ -108,7 +127,7 @@ namespace edge
 	{
 		rassert((rect.right > rect.left) && (rect.bottom > rect.top));
 
-		HWND hwnd = _renderer->window().hwnd();
+		HWND hwnd = _window.hwnd();
 		auto clientSizeDips = edge::client_size(hwnd);
 
 		float horzZoom = (clientSizeDips.width - 2 * min_margin) / (rect.right - rect.left);
@@ -153,7 +172,7 @@ namespace edge
 		}
 
 		zoom_transform_changed_e::invoker(*this).invoke();
-		::InvalidateRect(_renderer->window().hwnd(), nullptr, FALSE);
+		::InvalidateRect(_window.hwnd(), nullptr, FALSE);
 	}
 
 	void zoomer::process_wm_mbuttondown (HWND hwnd, WPARAM wparam, LPARAM lparam)
@@ -286,7 +305,7 @@ namespace edge
 	// The implementor should align the aimpoint to a pixel center so that graphics will look crisp at integer zoom factors.
 	D2D1_SIZE_F zoomer::pixel_aligned_window_center() const
 	{
-		HWND hwnd = _renderer->window().hwnd();
+		HWND hwnd = _window.hwnd();
 		float pw = edge::pixel_width(hwnd);
 
 		D2D1_SIZE_F center = edge::client_size(hwnd) / 2;

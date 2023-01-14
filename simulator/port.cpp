@@ -322,10 +322,9 @@ D2D1_RECT_F port::GetInnerOuterRect() const
 	return { std::min(tl.x, br.x), std::min (tl.y, br.y), std::max(tl.x, br.x), std::max(tl.y, br.y) };
 }
 
-void port::render_selection (const edge::zoomer* zoomer, const drawing_resources& dos) const
+void port::render_selection (ID2D1DeviceContext* rt, const edge::zoomer* zoomer, const drawing_resources& dos) const
 {
 	auto ir = GetInnerOuterRect();
-	auto rt = zoomer->renderer()->dc();
 
 	auto oldaa = rt->GetAntialiasMode();
 	rt->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);

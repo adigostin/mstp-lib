@@ -68,7 +68,19 @@ namespace edge
 						rassert (false);
 					}
 
-					std::optional<LRESULT> result = window_proc_e::invoker(w->_em).reverse_invoke(hwnd, msg, wparam, lparam);
+					// We consider we have a Z order for handlers: those registered earlier are "in the back",
+					// and those registered later are "in the front". The keyboard and mouse messages should go
+					// first to the front, which means we need to invoke them in reverse order. The paint messages
+					// should go first to the back, which means normal order. For the rest of the messages
+					// the order of invocation shouldn't be important.
+					bool reverse_invoke = ((msg >= WM_KEYFIRST) && (msg <= WM_KEYLAST))
+						|| ((msg >= WM_MOUSEFIRST) && (msg <= WM_MOUSELAST));
+					std::optional<LRESULT> result;
+					if (reverse_invoke)
+						result = window_proc_e::invoker(w->_em).reverse_invoke(hwnd, msg, wparam, lparam);
+					else
+						result = window_proc_e::invoker(w->_em).invoke(hwnd, msg, wparam, lparam);
+
 					if (result)
 						return result.value();
 				}
