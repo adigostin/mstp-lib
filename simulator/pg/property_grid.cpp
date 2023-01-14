@@ -395,7 +395,7 @@ public:
 	{
 		auto rc = make_render_context(dc);
 		uint32_t dpi = edge::dpi(hwnd);
-		dc->SetTransform (edge::dpi_transform(dpi));
+		dc->SetDpi((float)dpi, (float)dpi);
 
 		dc->FillRectangle(_rectd, rc.back);
 

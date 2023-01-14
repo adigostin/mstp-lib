@@ -92,8 +92,9 @@ public:
 		if (!height)
 			return;
 
-		uint32_t dpi = edge::dpi(_grid->window().hwnd());
-		float pw = edge::pixel_width(dpi);
+		float dpi;
+		rc.dc->GetDpi(&dpi, &dpi);
+		float pw = 96 / dpi;
 		height = std::ceil(height / pw) * pw;
 
 		D2D1_RECT_F rect = { _grid->expand_column_left(dpi), y, _grid->value_column_right(dpi), y + height };
