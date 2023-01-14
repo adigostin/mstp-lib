@@ -3,7 +3,7 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "renderable_object.h"
+#include "selectable_object.h"
 #include "stp.h"
 #include "bridge.h"
 #include "wire.h"

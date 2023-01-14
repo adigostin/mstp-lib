@@ -3,7 +3,7 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "renderable_object.h"
+#include "selectable_object.h"
 #include "simulator_props.h"
 #include "edge/xml_serializer.h"
 
@@ -35,7 +35,7 @@ struct wire_end_p : edge::property, edge::custom_serialize_property_i
 	virtual void deserialize (edge::xml_deserializer_i* deserializer, std::string_view attr_value, object* obj, const property* prop) const override;
 };
 
-class wire : public renderable_object_i
+class wire : public selectable_object_i
 {
 	edge::event_manager _em;
 	project_i* _parent = nullptr;
@@ -68,8 +68,9 @@ public:
 	struct invalidate_e : public edge::event<invalidate_e, wire*> { };
 	invalidate_e::subscriber invalidate() { return invalidate_e::subscriber(_em); }
 
-	virtual void render_selection (ID2D1DeviceContext* dc, const edge::zoomer* zoomer, const drawing_resources& dos) const override final;
-	virtual ht_result hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) override final;
+	// selectable_object_i
+	virtual void render_selection (ID2D1DeviceContext* dc, const edge::zoomer* zoomer, const drawing_resources& dos) const override;
+	virtual uint8_t hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) override;
 	virtual D2D1_RECT_F extent() const override;
 
 	static const wire_end_p p0_property;

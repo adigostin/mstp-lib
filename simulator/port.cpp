@@ -353,7 +353,7 @@ bool port::HitTestInnerOuter (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocati
 	return (dLocation.x >= lt.x) && (dLocation.y >= lt.y) && (dLocation.x < rb.x) && (dLocation.y < rb.y);
 }
 
-int port::hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance)
+uint8_t port::hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance)
 {
 	if (HitTestCP (wtr, dLocation, tolerance))
 		return HTCodeCP;
@@ -361,7 +361,7 @@ int port::hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float 
 	if (HitTestInnerOuter (wtr, dLocation, tolerance))
 		return HTCodeInnerOuter;
 
-	return -1;
+	return 0;
 }
 
 bool port::IsForwarding (unsigned int vlanNumber) const

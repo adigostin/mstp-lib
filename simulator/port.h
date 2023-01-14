@@ -4,7 +4,7 @@
 
 #pragma once
 #include "edge/om/object_collection_property.h"
-#include "renderable_object.h"
+#include "selectable_object.h"
 #include "port_tree.h"
 #include "stp.h"
 
@@ -36,7 +36,7 @@ extern const nvp port_speed_nvps[];
 using port_speed_traits = edge::enum_property_traits<uint32_t, port_speed_type_name, port_speed_nvps, false, port_speed_unknown_str>;
 using port_speed_p = static_ui_prop<port_speed_traits>;
 
-class port : public edge::object
+class port : public selectable_object_i
 {
 	friend class bridge;
 
@@ -61,8 +61,8 @@ public:
 
 	virtual object* parent() const override;
 
-	static constexpr int HTCodeInnerOuter = 1;
-	static constexpr int HTCodeCP = 2;
+	static constexpr uint8_t HTCodeInnerOuter = 1;
+	static constexpr uint8_t HTCodeCP = 2;
 
 	static constexpr float InteriorWidth = 30;
 	static constexpr float InteriorDepth = 16;
@@ -97,9 +97,9 @@ public:
 
 	void render (ID2D1RenderTarget* dc, const drawing_resources& dos, unsigned int vlanNumber) const;
 
-	void render_selection (ID2D1DeviceContext* dc, const edge::zoomer* zoomer, const drawing_resources& dos) const;
-	int hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance);
-	D2D1_RECT_F extent() const { rassert(false); return { }; }
+	virtual void render_selection (ID2D1DeviceContext* dc, const edge::zoomer* zoomer, const drawing_resources& dos) const override;
+	virtual uint8_t hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) override;
+	virtual D2D1_RECT_F extent() const override { rassert(false); return { }; }
 
 	bool HitTestInnerOuter (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) const;
 	bool HitTestCP (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) const;

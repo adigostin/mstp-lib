@@ -177,7 +177,7 @@ void wire::render_selection (ID2D1DeviceContext* dc, const edge::zoomer* zoomer,
 	dc->DrawLine (vertices[3], vertices[0], dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
 }
 
-renderable_object_i::ht_result wire::hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance)
+uint8_t wire::hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance)
 {
 	rassert(false);
 	/*

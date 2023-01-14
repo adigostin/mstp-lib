@@ -14,7 +14,7 @@
       <Filter>edit_states</Filter>
     </ClInclude>
     <ClInclude Include="simulator.h" />
-    <ClInclude Include="renderable_object.h" />
+    <ClInclude Include="selectable_object.h" />
     <ClInclude Include="bridge.h" />
     <ClInclude Include="bridge_tree.h" />
     <ClInclude Include="port.h" />

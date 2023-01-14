@@ -45,31 +45,9 @@ struct drawing_resources
 	com_ptr<ID2D1StrokeStyle> _strokeStyleSelectionRect;
 };
 
-struct __declspec(novtable) renderable_object_i : edge::object
+struct __declspec(novtable) selectable_object_i : edge::object
 {
-public:
-	struct ht_result
-	{
-		edge::object* object;
-		int code;
-		bool operator==(const ht_result& other) const { return (this->object == other.object) && (this->code == other.code); }
-		bool operator!=(const ht_result& other) const { return (this->object != other.object) || (this->code != other.code); }
-	};
-
-	// This is called without any transformation applied to the render target, not even the DPI transformation.
 	virtual void render_selection (ID2D1DeviceContext* dc, const edge::zoomer* zoomer, const drawing_resources& dos) const = 0;
-	virtual ht_result hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) = 0;
+	virtual uint8_t hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) = 0;
 	virtual D2D1_RECT_F extent() const = 0;
-	/*
-protected:
-	template<typename tpd_>
-	void set_and_invalidate (const tpd_* pd, typename tpd_::value_t& field, const typename tpd_::value_t& value)
-	{
-		edge::value_property_change_args args { pd };
-		this->on_property_changing(args);
-		field = value;
-		this->on_property_changed(args);
-		invalidate_e::invoker(em()).invoke(this);
-	}
-	*/
 };

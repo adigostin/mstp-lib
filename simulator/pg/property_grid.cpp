@@ -394,12 +394,11 @@ public:
 	void on_render (HWND hwnd, ID2D1DeviceContext* dc) const
 	{
 		auto rc = make_render_context(dc);
-		
-		dc->SetTransform (edge::dpi_transform(hwnd));
+		uint32_t dpi = edge::dpi(hwnd);
+		dc->SetTransform (edge::dpi_transform(dpi));
 
 		dc->FillRectangle(_rectd, rc.back);
 
-		uint32_t dpi = edge::dpi(hwnd);
 		float bw = border_width(dpi);
 		if (bw > 0)
 			dc->DrawRectangle(inflate(_rectd, -bw / 2), rc.border, bw);
@@ -415,7 +414,7 @@ public:
 		bool focused = GetFocus() == hwnd;
 
 		dc->PushAxisAlignedClip (&_rectd, D2D1_ANTIALIAS_MODE_ALIASED);
-		enum_items ([dc, &rc, focused, this, bw=border_width(dpi)](item_i* item, float item_y, bool& cancel)
+		enum_items ([dc, &rc, focused, this, bw](item_i* item, float item_y, bool& cancel)
 		{
 			if (item_y + height_aligned(item) <= _top_y)
 			{

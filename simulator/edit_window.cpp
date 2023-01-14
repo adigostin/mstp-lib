@@ -29,7 +29,7 @@ static const D2D1_COLOR_F RegionColors[] =
 
 class edit_window : public event_manager, public edit_window_i
 {
-	using ht_result = renderable_object_i::ht_result;
+	using ht_result = std::pair<selectable_object_i*, uint8_t>;
 
 	simulator_app_i*  const _app;
 	project_window_i* const _pw;
@@ -116,7 +116,7 @@ public:
 		{
 			auto& oc_args = static_cast<const object_collection_property_change_args&>(args);
 			if ((oc_args.type == collection_property_change_type::remove)
-				&& (_htResult.object == project->bridge_at(oc_args.index)))
+				&& (_htResult.first == project->bridge_at(oc_args.index)))
 			{
 				_htResult = { nullptr, 0 };
 				_window->invalidate();
@@ -126,7 +126,7 @@ public:
 		{
 			auto& oc_args = static_cast<const object_collection_property_change_args&>(args);
 			if ((oc_args.type == collection_property_change_type::remove)
-				&& (_htResult.object == project->wire_at(oc_args.index)))
+				&& (_htResult.first == project->wire_at(oc_args.index)))
 			{
 				_htResult = { nullptr, 0 };
 				_window->invalidate();
@@ -419,15 +419,15 @@ public:
 
 	void render_hover (ID2D1DeviceContext* dc) const
 	{
-		if (dynamic_cast<port*>(_htResult.object) != nullptr)
+		if (auto p = dynamic_cast<port*>(_htResult.first))
 		{
-			if (_htResult.code == port::HTCodeCP)
-				RenderSnapRect (dc, static_cast<port*>(_htResult.object)->GetCPLocation());
+			if (_htResult.second == port::HTCodeCP)
+				RenderSnapRect (dc, p->GetCPLocation());
 		}
-		else if (dynamic_cast<wire*>(_htResult.object) != nullptr)
+		else if (auto w = dynamic_cast<wire*>(_htResult.first))
 		{
-			if (_htResult.code >= 0)
-				RenderSnapRect (dc, static_cast<wire*>(_htResult.object)->point_coords(_htResult.code));
+			if (_htResult.second >= 0)
+				RenderSnapRect (dc, w->point_coords(_htResult.second));
 		}
 	}
 
@@ -506,14 +506,14 @@ public:
 
 		for (object* o : _selection->objects())
 		{
-			if (auto ro = dynamic_cast<renderable_object_i*>(o))
-				ro->render_selection(dc, _zoomer.get(), _drawing_resources);
+			auto so = checked_static_cast<selectable_object_i*>(o);
+			so->render_selection(dc, _zoomer.get(), _drawing_resources);
 		}
 
 		if (!configIds.empty())
 			render_config_id_list (dc, configIds);
 
-		if (_htResult.object != nullptr)
+		if (_htResult.first)
 			render_hover(dc);
 
 		render_hint (dc, { _window->client_width() / 2, _window->client_height() },
@@ -634,14 +634,15 @@ public:
 		auto& bridges = _project->bridges();
 		for (auto it = bridges.rbegin(); it != bridges.rend(); it++)
 		{
-			auto ht = it->get()->hit_test(_zoomer->zoom_transform(), dLocation, tolerance);
-			if (ht.object != nullptr)
+			for (auto& port : it->get()->ports())
 			{
-				auto port = dynamic_cast<class port*>(ht.object);
-				if ((port != nullptr) && (ht.code == port::HTCodeCP))
-					return port;
-				else
-					return nullptr;
+				if (auto htcode = port->hit_test(_zoomer->zoom_transform(), dLocation, tolerance))
+				{
+					if (htcode == port::HTCodeCP)
+						return port.get();
+					else
+						return nullptr;
+				}
 			}
 		}
 
@@ -653,17 +654,22 @@ public:
 		auto& wires = _project->wires();
 		for (auto it = wires.rbegin(); it != wires.rend(); it++)
 		{
-			auto ht = it->get()->hit_test (_zoomer->zoom_transform(), pd, tolerance);
-			if (ht.object != nullptr)
-				return ht;
+			auto htcode = it->get()->hit_test (_zoomer->zoom_transform(), pd, tolerance);
+			if (htcode)
+				return { it->get(), htcode };
 		}
 
 		auto& bridges = _project->bridges();
 		for (auto it = bridges.rbegin(); it != bridges.rend(); it++)
 		{
-			auto ht = it->get()->hit_test(_zoomer->zoom_transform(), pd, tolerance);
-			if (ht.object != nullptr)
-				return ht;
+			for (auto& p : it->get()->ports())
+			{
+				if (uint8_t htcode = p->hit_test(_zoomer->zoom_transform(), pd, tolerance))
+					return { p.get(), htcode };
+			}
+
+			if (uint8_t htcode = it->get()->hit_test(_zoomer->zoom_transform(), pd, tolerance))
+				return { it->get(), htcode };
 		}
 
 		return { };
@@ -812,29 +818,29 @@ public:
 		}
 
 		auto ht = hit_test_objects (ml.d, SnapDistance);
-		if (ht.object == nullptr)
+		if (!ht.first)
 			_selection->clear();
 		else
 		{
 			if ((UINT)mks & MK_CONTROL)
 			{
-				if (_selection->contains(ht.object))
-					_selection->remove(ht.object);
-				else if (!_selection->objects().empty() && (typeid(*_selection->objects()[0]) == typeid(*ht.object)))
-					_selection->add(ht.object);
+				if (_selection->contains(ht.first))
+					_selection->remove(ht.first);
+				else if (!_selection->objects().empty() && (typeid(*_selection->objects()[0]) == typeid(*ht.first)))
+					_selection->add(ht.first);
 				else
-					_selection->select(ht.object);
+					_selection->select(ht.first);
 			}
 			else
 			{
-				if (!_selection->contains(ht.object))
-					_selection->select(ht.object);
+				if (!_selection->contains(ht.first))
+					_selection->select(ht.first);
 			}
 		}
 
 		if (button == mouse_button::left)
 		{
-			if (ht.object == nullptr)
+			if (!ht.first)
 			{
 				// TODO: area selection
 				//stateForMoveThreshold =
@@ -845,21 +851,19 @@ public:
 				std::unique_ptr<edit_state> stateMoveThreshold;
 				std::unique_ptr<edit_state> stateButtonUp;
 
-				if (dynamic_cast<bridge*>(ht.object) != nullptr)
+				if (dynamic_cast<bridge*>(ht.first))
 				{
 					if (button == mouse_button::left)
 						stateMoveThreshold = create_state_move_bridges (make_edit_state_deps());
 				}
-				else if (dynamic_cast<port*>(ht.object) != nullptr)
+				else if (auto port = dynamic_cast<::port*>(ht.first))
 				{
-					auto port = dynamic_cast<class port*>(ht.object);
-
-					if (ht.code == port::HTCodeInnerOuter)
+					if (ht.second == port::HTCodeInnerOuter)
 					{
 						if ((button == mouse_button::left) && (_selection->objects().size() == 1) && (dynamic_cast<class port*>(_selection->objects()[0]) != nullptr))
 							stateMoveThreshold = create_state_move_port (make_edit_state_deps());
 					}
-					else if (ht.code == port::HTCodeCP)
+					else if (ht.second == port::HTCodeCP)
 					{
 						auto alreadyConnectedWire = _project->GetWireConnectedToPort(port);
 						if (alreadyConnectedWire.first == nullptr)
@@ -869,17 +873,16 @@ public:
 						}
 					}
 				}
-				else if (dynamic_cast<wire*>(ht.object) != nullptr)
+				else if (auto w = dynamic_cast<wire*>(ht.first))
 				{
-					auto w = static_cast<wire*>(ht.object);
-					if (ht.code >= 0)
+					if (ht.second >= 0)
 					{
-						stateMoveThreshold = CreateStateMoveWirePoint(make_edit_state_deps(), w, ht.code);
-						stateButtonUp = CreateStateMoveWirePoint (make_edit_state_deps(), w, ht.code);
+						stateMoveThreshold = CreateStateMoveWirePoint(make_edit_state_deps(), w, ht.second);
+						stateButtonUp = CreateStateMoveWirePoint (make_edit_state_deps(), w, ht.second);
 					}
 				}
 
-				auto state = CreateStateBeginningDrag(make_edit_state_deps(), ht.object, button, mks, ml, ::GetCursor(), std::move(stateMoveThreshold), std::move(stateButtonUp));
+				auto state = CreateStateBeginningDrag(make_edit_state_deps(), ht.first, button, mks, ml, ::GetCursor(), std::move(stateMoveThreshold), std::move(stateButtonUp));
 				EnterState(std::move(state));
 				return handled(true);
 			}
@@ -915,7 +918,7 @@ public:
 	virtual void EnterState (std::unique_ptr<edit_state>&& state) override final
 	{
 		_state = std::move(state);
-		_htResult = { nullptr };
+		_htResult = { nullptr, 0 };
 	}
 
 	HCURSOR cursor_at (HWND hwnd, POINT pp) const
@@ -930,14 +933,14 @@ public:
 		auto ht = hit_test_objects (pd, SnapDistance);
 
 		LPCWSTR idc = IDC_ARROW;
-		if (dynamic_cast<port*>(ht.object))
+		if (dynamic_cast<port*>(ht.first))
 		{
-			if (ht.code == port::HTCodeCP)
+			if (ht.second == port::HTCodeCP)
 				idc = IDC_CROSS;
 		}
-		else if (dynamic_cast<wire*>(ht.object))
+		else if (dynamic_cast<wire*>(ht.first))
 		{
-			if (ht.code >= 0)
+			if (ht.second >= 0)
 				// wire point
 				idc = IDC_CROSS;
 			else

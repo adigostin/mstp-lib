@@ -5,7 +5,7 @@
 #pragma once
 #include "edge/com_ptr.h"
 #include "stp.h"
-#include "renderable_object.h"
+#include "selectable_object.h"
 #include "simulator_props.h"
 
 class bridge;

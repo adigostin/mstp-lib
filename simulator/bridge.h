@@ -59,7 +59,7 @@ struct config_id_digest_p : edge::static_value_property<edge::temp_string_proper
 struct project_i;
 class bridge_tree;
 
-class bridge : public renderable_object_i, public edge::custom_serialize_object_i
+class bridge : public selectable_object_i, public edge::custom_serialize_object_i
 {
 	edge::event_manager _em;
 	project_i* _project = nullptr;
@@ -101,7 +101,7 @@ public:
 	edge::property_changing_e::subscriber property_changing() { return edge::property_changing_e::subscriber(_em); }
 	edge::property_changed_e::subscriber property_changed() { return edge::property_changed_e::subscriber(_em); }
 
-	static constexpr int HTCodeInner = 1;
+	static constexpr uint8_t HTCodeInner = 1;
 
 	static constexpr float DefaultHeight = 100;
 	static constexpr float OutlineWidth = 2;
@@ -127,8 +127,9 @@ public:
 	struct invalidate_e : public edge::event<invalidate_e, bridge*> { };
 	invalidate_e::subscriber invalidate() { return invalidate_e::subscriber(_em); }
 
-	virtual void render_selection (ID2D1DeviceContext* dc, const edge::zoomer* zoomer, const drawing_resources& dos) const override final;
-	virtual ht_result hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) override final;
+	// selectable_object_i
+	virtual void render_selection (ID2D1DeviceContext* dc, const edge::zoomer* zoomer, const drawing_resources& dos) const override;
+	virtual uint8_t hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) override;
 	virtual D2D1_RECT_F extent() const override { return bounds(); }
 
 	STP_BRIDGE* stp_bridge() const { return _stpBridge; }

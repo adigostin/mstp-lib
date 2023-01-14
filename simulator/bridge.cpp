@@ -396,20 +396,13 @@ void bridge::render_selection (ID2D1DeviceContext* rt, const edge::zoomer* zoome
 	rt->SetAntialiasMode(oldaa);
 }
 
-renderable_object_i::ht_result bridge::hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance)
+uint8_t bridge::hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance)
 {
-	for (auto& p : _ports)
-	{
-		int htcode = p->hit_test (wtr, dLocation, tolerance);
-		if (htcode != -1)
-			return { p.get(), htcode };
-	}
-
 	auto tl = wtr.TransformPoint({ _x, _y });
 	auto br = wtr.TransformPoint({ _x + _width, _y + _height });
 
 	if ((dLocation.x >= tl.x) && (dLocation.y >= tl.y) && (dLocation.x < br.x) && (dLocation.y < br.y))
-		return { this, HTCodeInner };
+		return HTCodeInner;
 
 	return {};
 }
