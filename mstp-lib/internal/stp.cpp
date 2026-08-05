@@ -470,6 +470,7 @@ void STP_EnableLogging (STP_BRIDGE* bridge, bool enable)
 {
 	#if STP_USE_LOG
 		bridge->loggingEnabled = enable;
+		bridge->logLineStarting = true;
 	#endif
 }
 
