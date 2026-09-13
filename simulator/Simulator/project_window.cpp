@@ -51,6 +51,7 @@ class ProjectWindowImpl : public IProjectWindow, IConnectionPointContainer, IPro
 	enum class tool_window { none, props, vlan, log };
 	tool_window _window_being_resized = tool_window::none;
 	LONG _resize_offset;
+	HWND _lastFocusedWindow = nullptr;
 
 	static inline uint32_t wnd_class_ref_count = 0;
 	static const WNDCLASSEX wnd_class;
@@ -404,13 +405,13 @@ public:
 		::SetMenuItemInfo (menu, item, FALSE, &mii);
 	}
 
-	static LRESULT CALLBACK window_proc_static (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+	static LRESULT CALLBACK WndProcStatic (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 	{
 //		if (!assert_function_running)
 		{
 			if (auto w = reinterpret_cast<ProjectWindowImpl*>(GetWindowLongPtr(hwnd, GWLP_USERDATA)))
 			{
-				std::optional<LRESULT> result = w->on_window_proc(hwnd, msg, wparam, lparam);
+				std::optional<LRESULT> result = w->WndProc(hwnd, msg, wparam, lparam);
 				if (result)
 					return result.value();
 			}
@@ -419,7 +420,7 @@ public:
 		return DefWindowProc (hwnd, msg, wparam, lparam);
 	}
 
-	std::optional<LRESULT> on_window_proc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+	std::optional<LRESULT> WndProc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		if (msg == WM_DPICHANGED)
 		{
@@ -499,6 +500,30 @@ public:
 		{
 			auto handled = ProcessWmLButtonUp (POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) }, (UINT) wParam);
 			return handled ? std::optional<LRESULT>(0) : std::nullopt;
+		}
+
+		if (msg == WM_ACTIVATE)
+		{
+			const bool inactive = LOWORD(wParam) == WA_INACTIVE;
+			const bool minimized = HIWORD(wParam) != 0;
+
+			if (!minimized)
+			{
+				if (inactive)
+				{
+					HWND focus = GetFocus();
+
+					if (focus && IsChild(hwnd, focus))
+						_lastFocusedWindow = focus;
+				}
+				else
+				{
+					if (_lastFocusedWindow && IsWindow(_lastFocusedWindow))
+						SetFocus(_lastFocusedWindow);
+				}
+			}
+
+			return 0;
 		}
 
 		return std::nullopt;
@@ -1072,7 +1097,7 @@ public:
 const WNDCLASSEX ProjectWindowImpl::wnd_class = {
 	.cbSize = sizeof(WNDCLASSEX),
 	.style = CS_DBLCLKS,
-	.lpfnWndProc = &ProjectWindowImpl::window_proc_static,
+	.lpfnWndProc = &ProjectWindowImpl::WndProcStatic,
 	.hInstance = (HINSTANCE)&__ImageBase,
 	.hIcon = ::LoadIcon((HINSTANCE)&__ImageBase, MAKEINTRESOURCE(IDI_DESIGNER)),
 	.hCursor = ::LoadCursor (nullptr, IDC_ARROW),

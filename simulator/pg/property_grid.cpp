@@ -275,11 +275,7 @@ public:
 			return 0; // 0 means the window remains marked for erasing, so the fErase member of the PAINTSTRUCT structure will be TRUE.
 
 		if (uMsg == WM_PAINT)
-		{
-			//DefSubclassProc (hWnd, uMsg, wParam, lParam);
-			//::InvalidateRect (hWnd, nullptr, 0);
 			return pg->ProcessWmPaint(hWnd);
-		}
 
 		return DefSubclassProc (hWnd, uMsg, wParam, lParam);
 	}
@@ -729,8 +725,7 @@ public:
 			}
 			else if (wParam == VK_ESCAPE)
 			{
-				_ASSERT(false);
-				//pg->LoadInplace();
+				pg->_text_editor.reset();
 				return 0;
 			}
 		}
