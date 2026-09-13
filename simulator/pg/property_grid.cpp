@@ -286,7 +286,7 @@ public:
 
 	HRESULT MakePaintResources (HDC hdc, PaintResources& ctx)
 	{
-		ctx.dpi = GetDeviceCaps(hdc, LOGPIXELSX);
+		ctx.dpi = edge::dpi(_hWnd);
 
 		NONCLIENTMETRICS ncMetrics = { .cbSize = sizeof(NONCLIENTMETRICS) };
 		BOOL bRes = SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncMetrics, 0); RETURN_IF_WIN32_BOOL_FALSE(bRes);
