@@ -1,246 +1,387 @@
 
-// This file is part of the "edge" library, available at https://github.com/adigostin/edge
-// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License v2.0.
 
-#include "include/pg/property_grid.h"
-#include "edge/utility_functions.h"
-#include "edge/d2d_renderer.h"
+#include "pg_internal.h"
 
 using namespace edge;
 using namespace pg;
 
-extern std::unique_ptr<root_item_i> make_root_item (property_grid_i* grid, std::string_view heading, object_list_i& objects, edge::string_convert_context_i* scc);
-
-class property_grid : public property_grid_i
+enum IDS
 {
-	std::shared_ptr<event_manager> const _em = std::make_shared<event_manager>();
-	d2d_renderer_i* const _renderer;
-	theme_color_provider_i* const _tcp;
-	com_ptr<IDWriteTextFormat> _text_format;
-	com_ptr<IDWriteTextFormat> _bold_text_format;
-	com_ptr<IDWriteTextFormat> _wingdings;
-	std::unique_ptr<text_editor_i> _text_editor;
-	D2D1_RECT_F _rectd;
+	ID_INPLACE_EDIT = 103,
+};
+
+extern HRESULT MakeRootItem (IPGInternal* grid, bool showEmptySel, IObjectList* objects,
+							 edge::string_convert_context_i* scc, IRootItem** ppRootItem);
+
+class PropertyGridImpl : public IPGInternal, IThemeChangedEvents
+{
+	ULONG _refCount = 0;
+	HWND _hWnd;
+	IThemeColorProvider* _tcp;
+	wil::unique_hwnd _text_editor;
+	WNDPROC _oldInplaceProc;
+	RECT _bounds;
 	float _name_column_factor = 0.6f;
-	std::vector<std::unique_ptr<root_item_i>> _root_items;
+	vector_nothrow<com_ptr<IRootItem>> _root_items;
 	HWND _tooltip = nullptr;
-	std::optional<D2D1_POINT_2F> _last_tt_location;
-	float _border_width_not_aligned = 0;
+	std::optional<POINT> _last_tt_location;
+	float _borderWidthDIPs = 0;
 	bool _read_only = false;
 	bool _scroll_bar_visible = false;
-	float _top_y = 0;
+	LONG _top_y = 0;
+	WeakRefToThis _weakRefToThis;
+	AdviseSinkToken _themeChangedToken;
+	IItem* _selectedItem = nullptr;
+	IItem* _hotItem = nullptr;
+	PaintResources _paintres;
 
-	static constexpr float font_size = 13;
 	static constexpr float line_width_not_aligned = 0.6f;
 
 public:
-	property_grid (d2d_renderer_i* renderer, const D2D1_RECT_F& bounds, theme_color_provider_i* tcp)
-		: _renderer(renderer)
-		, _rectd(bounds)
-		, _tcp(tcp)
-		, _selected_item(this, std::bind(&property_grid::on_selected_item_changing, std::placeholders::_1))
-		, _hot_item(this, std::bind(&property_grid::on_hot_item_changing, std::placeholders::_1))
+	HRESULT InitInstance (HWND hWnd, const RECT& bounds, IThemeColorProvider* tcp)
 	{
-		auto hinstance = (HINSTANCE)::GetWindowLongPtr (renderer->window().hwnd(), GWLP_HINSTANCE);
+		HRESULT hr;
 
-		_tooltip = CreateWindowEx (WS_EX_TOPMOST, TOOLTIPS_CLASS, nullptr,
-			WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP,
-			CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-			renderer->window().hwnd(), nullptr, hinstance, nullptr);
+		hr = _weakRefToThis.InitInstance(AsUnknown()); RETURN_IF_FAILED(hr);
 
-		TOOLINFO ti = { sizeof(TOOLINFO) };
-		ti.uFlags   = TTF_SUBCLASS;
-		ti.hwnd     = _renderer->window().hwnd();
-		ti.lpszText = nullptr;
-		ti.rect     = tooltip_rect(ti.hwnd);
-		SendMessage(_tooltip, TTM_ADDTOOL, 0, (LPARAM) (LPTOOLINFO) &ti);
+		_hWnd = hWnd;
+		_bounds = bounds;
+		_tcp = tcp;
 
-		SendMessage (_tooltip, TTM_SETDELAYTIME, TTDT_INITIAL, 1500);
-		SendMessage (_tooltip, TTM_SETDELAYTIME, TTDT_AUTOPOP, (LPARAM)(LONG)MAXSHORT);
-		SendMessage (_tooltip, TTM_SETMAXTIPWIDTH, 0, ti.rect.right - ti.rect.left);
-
-		auto hr = _renderer->dwrite_factory()->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
-													DWRITE_FONT_STRETCH_NORMAL, font_size, L"en-US", &_text_format); rassert(SUCCEEDED(hr));
-
-		hr = _renderer->dwrite_factory()->CreateTextFormat (L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL,
-												DWRITE_FONT_STRETCH_NORMAL, font_size, L"en-US", &_bold_text_format); rassert(SUCCEEDED(hr));
-
-		hr = _renderer->dwrite_factory()->CreateTextFormat (L"Wingdings", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
-												DWRITE_FONT_STRETCH_NORMAL, font_size, L"en-US", &_wingdings); rassert(SUCCEEDED(hr));
-		_renderer->window().window_proc().add_handler<&property_grid::on_window_proc>(this);
-		_renderer->render().add_handler<&property_grid::on_render>(this);
-		_tcp->theme_colors_changed().add_handler(&on_theme_colors_changed, this);
-		this->invalidate();
-	}
-
-	virtual ~property_grid()
-	{
-		_tcp->theme_colors_changed().remove_handler(&on_theme_colors_changed, this);
-		_renderer->render().remove_handler<&property_grid::on_render>(this);
-		_renderer->window().window_proc().remove_handler<&property_grid::on_window_proc>(this);
-		this->invalidate();
-		::DestroyWindow(_tooltip);
-	}
-
-	static void on_theme_colors_changed (void* arg)
-	{
-		auto pg = static_cast<property_grid*>(arg);
-		pg->invalidate();
-	}
-
-	virtual IDWriteTextFormat* text_format() const override final { return _text_format; }
-
-	virtual IDWriteTextFormat* bold_text_format() const override final { return _bold_text_format; }
-
-	RECT tooltip_rect (HWND hwnd) const
-	{
-		uint32_t dpi = edge::dpi(hwnd);
-		auto tl = edge::pointd_to_pointp({ _rectd.left,  _rectd.top    }, dpi, -1);
-		auto br = edge::pointd_to_pointp({ _rectd.right, _rectd.bottom }, dpi, 1);
-		return { tl.x, tl.y, br.x, br.y };
-	}
-
-	virtual void invalidate() override final
-	{
-		edge::invalidate(_rectd, _renderer->window().hwnd());
-	}
-
-	virtual void invalidate_item (item_i* i) override final
-	{
-		// TODO: invalidate only area covered by the item.
-		invalidate();
-	}
-
-	std::optional<LRESULT> on_window_proc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
-	{
-		if (msg == WM_DPICHANGED_AFTERPARENT)
+		if (_hWnd)
 		{
-			process_dpi_changed();
-			::InvalidateRect (hwnd, nullptr, FALSE);
-			return std::nullopt;
+			_tooltip = CreateWindowEx (WS_EX_TOPMOST, TOOLTIPS_CLASS, nullptr,
+				WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP,
+				CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+				_hWnd, nullptr, (HINSTANCE)&__ImageBase, nullptr);
+
+			TOOLINFO ti = { sizeof(TOOLINFO) };
+			ti.uFlags   = TTF_SUBCLASS;
+			ti.hwnd     = _hWnd;
+			ti.lpszText = nullptr;
+			ti.rect     = _bounds;
+			SendMessage(_tooltip, TTM_ADDTOOL, 0, (LPARAM) (LPTOOLINFO) &ti);
+
+			SendMessage (_tooltip, TTM_SETDELAYTIME, TTDT_INITIAL, 1500);
+			SendMessage (_tooltip, TTM_SETDELAYTIME, TTDT_AUTOPOP, (LPARAM)(LONG)MAXSHORT);
+			SendMessage (_tooltip, TTM_SETMAXTIPWIDTH, 0, ti.rect.right - ti.rect.left);
+
+			BOOL bres = SetWindowSubclass (_hWnd, SubClassProc, 0, reinterpret_cast<DWORD_PTR>(this)); _ASSERT(bres);
 		}
 
-		if (msg == WM_SETCURSOR)
-			return process_wm_setcursor (hwnd, wparam, lparam);
-
-		if ((msg == WM_LBUTTONDOWN) || (msg == WM_RBUTTONDOWN))
+		if (tcp)
 		{
-			auto pp = POINT{ GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam) };
-			uint32_t dpi = edge::dpi(hwnd);
-			auto pd = edge::pointp_to_pointd(pp, dpi);
-			if (point_in_rect(_rectd, pd))
+			hr = AdviseSink<IThemeChangedEvents>(tcp, _weakRefToThis, &_themeChangedToken); RETURN_IF_FAILED(hr);
+		}
+
+		hr = MakePaintResources(wil::GetDC(_hWnd).get(), _paintres); RETURN_IF_FAILED(hr);
+
+		::InvalidateRect(_hWnd, &_bounds, FALSE);
+
+		return S_OK;
+	}
+
+	~PropertyGridImpl()
+	{
+		if (_hWnd)
+		{
+			BOOL bres = RemoveWindowSubclass (_hWnd, SubClassProc, 0);
+
+			::InvalidateRect(_hWnd, &_bounds, FALSE);
+			::DestroyWindow(_tooltip);
+		}
+	}
+
+	IUnknown* AsUnknown() { return static_cast<IPropertyGrid*>(this); }
+
+	#pragma region IUnknown
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override
+	{
+		RETURN_HR_IF(E_POINTER, !ppvObject);
+		*ppvObject = nullptr;
+
+		if (   TryQI<IUnknown>(AsUnknown(), riid, ppvObject)
+			|| TryQI<IPropertyGrid>(this, riid, ppvObject)
+			|| TryQI<IPGInternal>(this, riid, ppvObject)
+			|| TryQI<IThemeChangedEvents>(this, riid, ppvObject)
+		)
+			return S_OK;
+
+		if (riid == __uuidof(IWeakRef))
+			return _weakRefToThis.QueryIWeakRef(ppvObject);
+
+		return E_NOINTERFACE;
+	}
+
+	virtual ULONG STDMETHODCALLTYPE AddRef() override { return ++_refCount; }
+
+	virtual ULONG STDMETHODCALLTYPE Release() override { return ReleaseST(this, _refCount); }
+	#pragma endregion
+
+	#pragma region IThemeChangedEvents
+	virtual HRESULT STDMETHODCALLTYPE OnThemeChanged() override
+	{
+		::InvalidateRect(_hWnd, 0, 0);
+		return S_OK;
+	}
+	#pragma endregion
+
+	virtual void InvalidateItem (IItem* i) noexcept override
+	{
+		LONG dpi = edge::dpi(_hWnd);
+		LONG bwp = BorderWidth(dpi);
+
+		enum_items ([this,bwp,i](IItem* item, LONG item_y, bool& cancel) {
+			if (i == item)
 			{
-				auto button = (msg == WM_LBUTTONDOWN) ? mouse_button::left : mouse_button::right;
-				auto mks = (modifier_key)(UINT)wparam | ((::GetKeyState(VK_MENU) < 0) ? modifier_key::alt : modifier_key::none);
-				return process_mouse_button_down ({ button, mks, pp, pd });
+				LONG render_y = _bounds.top + bwp + item_y - _top_y;
+				RECT itemrc = { _bounds.left, render_y, _bounds.right, render_y + item->Height() };
+				::InvalidateRect(_hWnd, &itemrc, 0);
+				cancel = true;
+			}
+		});
+	}
+
+	static LRESULT CALLBACK SubClassProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+	{
+		auto pg = reinterpret_cast<PropertyGridImpl*>(dwRefData);
+
+		if (uMsg == WM_DPICHANGED_AFTERPARENT)
+		{
+			pg->process_dpi_changed();
+			return DefSubclassProc (hWnd, uMsg, wParam, lParam);
+		}
+
+		if (uMsg == WM_SETCURSOR)
+		{
+			if (pg->process_wm_setcursor (hWnd, wParam, lParam))
+				return TRUE;
+			return DefSubclassProc (hWnd, uMsg, wParam, lParam);
+		}
+
+		if ((uMsg == WM_LBUTTONDOWN) || (uMsg == WM_RBUTTONDOWN))
+		{
+			auto pp = POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+			uint32_t dpi = edge::dpi(hWnd);
+			if (PtInRect(&pg->_bounds, pp))
+			{
+				auto button = (uMsg == WM_LBUTTONDOWN) ? mouse_button::left : mouse_button::right;
+				auto mks = (UINT)(UINT)wParam | ((::GetKeyState(VK_MENU) < 0) ? MK_ALT : 0);
+				auto olr = pg->OnMouseButtonDown ({ button, mks, pp });
+				if (olr)
+					return *olr;
 			}
 
-			return std::nullopt;
+			return DefSubclassProc (hWnd, uMsg, wParam, lParam);
 		}
 
-		if ((msg == WM_LBUTTONUP) || (msg == WM_RBUTTONUP))
+		if ((uMsg == WM_LBUTTONUP) || (uMsg == WM_RBUTTONUP))
 		{
-			auto pp = POINT{ GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam) };
-			uint32_t dpi = edge::dpi(hwnd);
-			auto pd = pointp_to_pointd(pp, dpi);
-			if (point_in_rect(_rectd, pd))
+			auto pp = POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+			uint32_t dpi = edge::dpi(hWnd);
+			if (PtInRect(&pg->_bounds, pp))
 			{
-				auto button = (msg == WM_LBUTTONUP) ? mouse_button::left : mouse_button::right;
-				auto mks = (modifier_key)(UINT)wparam | ((::GetKeyState(VK_MENU) < 0) ? modifier_key::alt : modifier_key::none);
-				return process_mouse_button_up ({ button, mks, pp, pd });
+				auto button = (uMsg == WM_LBUTTONUP) ? mouse_button::left : mouse_button::right;
+				auto mks = (UINT)(UINT)wParam | ((::GetKeyState(VK_MENU) < 0) ? MK_ALT : 0);
+				auto olr = pg->OnMouseButtonUp ({ button, mks, pp });
+				if (olr)
+					return *olr;
 			}
 
-			return std::nullopt;
+			return DefSubclassProc (hWnd, uMsg, wParam, lParam);
 		}
 
-		if (msg == WM_MOUSEMOVE)
+		if (uMsg == WM_MOUSEMOVE)
 		{
-			TRACKMOUSEEVENT tme = { .cbSize = sizeof(tme), .dwFlags = TME_LEAVE, .hwndTrack = hwnd };
+			TRACKMOUSEEVENT tme = { .cbSize = sizeof(tme), .dwFlags = TME_LEAVE, .hwndTrack = hWnd };
 			BOOL bres = TrackMouseEvent (&tme);
 
-			auto pp = POINT{ GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam) };
-			uint32_t dpi = edge::dpi(hwnd);
+			auto pp = POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+			uint32_t dpi = edge::dpi(hWnd);
+			if (PtInRect(&pg->_bounds, pp))
+			{
+				auto mks = (UINT)(UINT)wParam | ((::GetKeyState(VK_MENU) < 0) ? MK_ALT : 0);
+				pg->OnMouseMove (hWnd, pp, mks);
+			}
+
+			return DefSubclassProc (hWnd, uMsg, wParam, lParam);
+		}
+/*
+		if (uMsg == WM_MOUSEWHEEL)
+		{
+			auto pp = POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+			::ScreenToClient(hWnd, &pp);
+			uint32_t dpi = edge::dpi(hWnd);
 			auto pd = pointp_to_pointd(pp, dpi);
 			if (point_in_rect(_rectd, pd))
 			{
-				auto mks = (modifier_key)(UINT)wparam | ((::GetKeyState(VK_MENU) < 0) ? modifier_key::alt : modifier_key::none);
-				process_mouse_move (hwnd, { mks, pd });
+				auto mks = (UINT)GET_KEYSTATE_WPARAM(wParam) | ((::GetKeyState(VK_MENU) < 0) ? MK_ALT : 0);
+				short delta = GET_WHEEL_DELTA_WPARAM(wParam);
+				return process_wm_mousewheel (hWnd, pd, mks, delta);
 			}
 
 			return std::nullopt;
 		}
-
-		if (msg == WM_MOUSEWHEEL)
+*/
+		if (uMsg == WM_MOUSELEAVE)
 		{
-			auto pp = POINT{ GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam) };
-			::ScreenToClient(hwnd, &pp);
-			uint32_t dpi = edge::dpi(hwnd);
-			auto pd = pointp_to_pointd(pp, dpi);
-			if (point_in_rect(_rectd, pd))
+			if (pg->_hotItem)
 			{
-				auto mks = (modifier_key)GET_KEYSTATE_WPARAM(wparam) | ((::GetKeyState(VK_MENU) < 0) ? modifier_key::alt : modifier_key::none);
-				short delta = GET_WHEEL_DELTA_WPARAM(wparam);
-				return process_wm_mousewheel (hwnd, pd, mks, delta);
+				pg->_hotItem = nullptr;
+				::InvalidateRect(pg->_hWnd, 0, 0);
 			}
 
-			return std::nullopt;
+			return DefSubclassProc (hWnd, uMsg, wParam, lParam);
 		}
-
-		if (msg == WM_MOUSELEAVE)
+		
+		if ((uMsg == WM_KEYDOWN) || (uMsg == WM_SYSKEYDOWN))
 		{
-			_hot_item = nullptr;
-			return std::nullopt;
+			if (pg->process_key_down ((UINT) wParam, get_modifier_keys()))
+				return 0;
+			return DefSubclassProc (hWnd, uMsg, wParam, lParam);
 		}
 
-		if ((msg == WM_KEYDOWN) || (msg == WM_SYSKEYDOWN))
-			return process_key_down ((UINT) wparam, get_modifier_keys());
+		if ((uMsg == WM_KEYUP) || (uMsg == WM_SYSKEYUP))
+		{
+			if (pg->process_key_up ((UINT) wParam, get_modifier_keys()))
+				return 0;
+			return DefSubclassProc (hWnd, uMsg, wParam, lParam);
+		}
 
-		if ((msg == WM_KEYUP) || (msg == WM_SYSKEYUP))
-			return process_key_up ((UINT) wparam, get_modifier_keys());
-
-		if (msg == WM_CHAR)
-			return process_char_key((uint32_t)wparam);
+		if (uMsg == WM_CHAR)
+		{
+			if (pg->process_char_key((uint32_t)wParam))
+				return 0;
+			return DefSubclassProc (hWnd, uMsg, wParam, lParam);
+		}
 		/*
-		if (msg == WM_GETDLGCODE)
+		if (uMsg == WM_GETDLGCODE)
 		{
 			if (_text_editor)
 				return DLGC_WANTALLKEYS;
 
 			return resultBaseClass;
 		}
-
-		if ((msg == WM_SETFOCUS) || (msg == WM_KILLFOCUS))
+		*/
+		if ((uMsg == WM_SETFOCUS) || (uMsg == WM_KILLFOCUS))
 		{
-			::InvalidateRect (hwnd, nullptr, 0);
+			::InvalidateRect (hWnd, nullptr, 0);
 			return 0;
 		}
-		*/
-		return std::nullopt;
+		
+		if (uMsg == WM_ERASEBKGND)
+			return 0; // 0 means the window remains marked for erasing, so the fErase member of the PAINTSTRUCT structure will be TRUE.
+
+		if (uMsg == WM_PAINT)
+		{
+			//DefSubclassProc (hWnd, uMsg, wParam, lParam);
+			//::InvalidateRect (hWnd, nullptr, 0);
+			return pg->ProcessWmPaint(hWnd);
+		}
+
+		return DefSubclassProc (hWnd, uMsg, wParam, lParam);
 	}
 
-	std::optional<LRESULT> process_wm_setcursor (HWND hwnd, WPARAM wparam, LPARAM lparam)
+	HRESULT MakePaintResources (HDC hdc, PaintResources& ctx)
+	{
+		ctx.dpi = GetDeviceCaps(hdc, LOGPIXELSX);
+
+		NONCLIENTMETRICS ncMetrics = { .cbSize = sizeof(NONCLIENTMETRICS) };
+		BOOL bRes = SystemParametersInfo (SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncMetrics, 0); RETURN_IF_WIN32_BOOL_FALSE(bRes);
+
+		ctx.normalFont = wil::unique_hfont (CreateFontIndirect(&ncMetrics.lfMessageFont)); RETURN_LAST_ERROR_IF_NULL(ctx.normalFont);
+		auto undo1 = wil::SelectObject(hdc, ctx.normalFont.get());
+		GetTextMetricsW(hdc, &ctx.tmNormalFont);
+
+		ncMetrics.lfMessageFont.lfWeight = FW_BOLD;
+		ctx.boldFont = wil::unique_hfont (CreateFontIndirect(&ncMetrics.lfMessageFont)); RETURN_LAST_ERROR_IF_NULL(ctx.boldFont);
+		auto undo2 = wil::SelectObject(hdc, ctx.boldFont.get());
+		GetTextMetricsW(hdc, &ctx.tmBoldFont);
+
+		ncMetrics.lfCaptionFont.lfWeight = FW_BOLD;
+		ctx.captionFont = wil::unique_hfont (CreateFontIndirect (&ncMetrics.lfCaptionFont)); RETURN_LAST_ERROR_IF_NULL(ctx.captionFont);
+		auto undo3 = wil::SelectObject(hdc, ctx.captionFont.get());
+		GetTextMetricsW(hdc, &ctx.tmCaptionFont);
+
+		if (_tcp)
+		{
+			ctx.backBrush.reset (::CreateSolidBrush(_tcp->color_win32(theme_color::background)));
+			ctx.disabledForeBrush.reset (::CreateSolidBrush(_tcp->color_win32(theme_color::disabled_fore)));
+		}
+
+		return S_OK;
+	}
+
+	LRESULT ProcessWmPaint (HWND hWnd)
+	{
+		PAINTSTRUCT ps;
+		HDC hdcOuter = ::BeginPaint(hWnd, &ps);
+		auto endpaint = wil::scope_exit([hWnd,&ps] { ::EndPaint(hWnd, &ps); });
+		
+		HDC hdc;
+		auto hpb = ::BeginBufferedPaint(hdcOuter, &ps.rcPaint, BPBF_COMPATIBLEBITMAP, nullptr, &hdc); RETURN_LAST_ERROR_IF_NULL(hpb);
+		auto endbp = wil::scope_exit([hpb] { ::EndBufferedPaint(hpb, TRUE); });
+
+		// TODO: once the grid gets focus, only an item should have focus.
+		bool focused = GetFocus() == hWnd;
+
+		LONG dpi = edge::dpi(hWnd);
+		LONG bwp = BorderWidth(dpi);
+
+		SetBkMode (hdc,TRANSPARENT);
+
+		auto[_, bottom_y] = enum_items ([&](IItem* item, LONG item_y, bool& cancel) {
+			if (item_y + item->Height() <= _top_y)
+			{
+				// item is scrolled above the visible area
+			}
+			else
+			{
+				LONG render_y = _bounds.top + bwp + item_y - _top_y;
+
+				if (render_y >= _bounds.bottom)
+				{
+					cancel = true;
+					return;
+				}
+
+				RECT itemrc = { _bounds.left, render_y, _bounds.right, render_y + item->Height() };
+				if (RectVisible(hdc, &itemrc))
+				{
+					PaintItemFlags flags = (PaintItemFlags)0;
+					if (item == _selectedItem)
+						flags |= PaintItemFlags::Selected;
+					if (item == _hotItem)
+						flags |= PaintItemFlags::Hot;
+					item->Paint (hdc, _paintres, flags, render_y, _tcp);
+				}
+			}
+		});
+
+		RECT rc = { _bounds.left, _bounds.top + bwp + bottom_y - _top_y, _bounds.right, _bounds.bottom };
+		FillRect (hdc, &rc, _paintres.backBrush.get());
+
+		return 0;
+	}
+
+	BOOL process_wm_setcursor (HWND hwnd, WPARAM wparam, LPARAM lparam)
 	{
 		if (((HWND)wparam == hwnd) && (LOWORD(lparam) == HTCLIENT))
 		{
 			POINT pt;
 			if (::GetCursorPos(&pt) && ::ScreenToClient (hwnd, &pt))
 			{
-				uint32_t dpi = edge::dpi(hwnd);
-				auto pd = pointp_to_pointd(pt, dpi);
-
-				if (point_in_rect(_rectd, pd))
+				if (PtInRect(&_bounds, pt))
 				{
 					HCURSOR cursor = nullptr;
 					//if ((pd.x >= value_column_x()) && (pd.x < _rectd.right))
 					{
-						if (auto htr = hit_test(pd); htr.item)
+						if (auto htr = hit_test(pt); htr.item)
 						{
-							cursor = item_set_cursor_e::invoker(_em).invoke(htr);
-							if (!cursor)
-							{
-								if (htr.code == htcode::value)
-									cursor = htr.item->cursor_at(pd, htr.render_y);
-							}
+							if (htr.code == htcode::value)
+								cursor = htr.item->cursor_at(pt, htr.render_y);
 						}
 					}
 
@@ -253,27 +394,27 @@ public:
 			}
 		}
 
-		return std::nullopt;
+		return FALSE;
 	}
 
 	// Returns the canceled item, or nullptr if no item was canceled.
-	template<typename callback_t> requires std::is_invocable_v<callback_t, item_i*, float, bool&>
-	item_i* enum_items (item_i* item, float& y, const callback_t& callback) const
+	template<typename callback_t> requires std::is_invocable_v<callback_t, IItem*, LONG, bool&>
+	IItem* enum_items_from (IItem* item, LONG& y, const callback_t& callback) const
 	{
 		bool cancel = false;
 		callback(item, y, cancel);
 		if (cancel)
 			return item;
 
-		y += height_aligned(item);
+		y += item->Height();
 
-		if (auto ei = dynamic_cast<expandable_item_i*>(item))
+		if (auto ei = item->AsExpandable())
 		{
-			size_t cc = ei->child_count();
-			for (size_t i = 0; i < cc; i++)
+			uint32_t cc = ei->child_count();
+			for (uint32_t i = 0; i < cc; i++)
 			{
 				auto child = ei->child_at(i);
-				auto canceled_item = enum_items(child, y, callback);
+				auto canceled_item = enum_items_from(child, y, callback);
 				if (canceled_item)
 					return canceled_item;
 			}
@@ -284,13 +425,13 @@ public:
 
 	// Returns the canceled item and its y (not the same as "render_y" due to vertical scrolling).
 	// If the callback doesn't cancel any item, returns nullptr and the total height.
-	template<typename callback_t> requires std::is_invocable_v<callback_t, item_i*, float, bool&>
-	std::pair<item_i*, float> enum_items (const callback_t& callback) const
+	template<typename callback_t> requires std::is_invocable_v<callback_t, IItem*, LONG, bool&>
+	std::pair<IItem*, LONG> enum_items (const callback_t& callback) const
 	{
-		float y = 0;
+		LONG y = 0;
 		for (auto& root_item : _root_items)
 		{
-			auto canceled_item = enum_items(root_item.get(), y, callback);
+			auto canceled_item = enum_items_from(root_item.get(), y, callback);
 			if (canceled_item)
 				return { canceled_item, y };
 		}
@@ -298,17 +439,21 @@ public:
 		return { nullptr, y };
 	}
 
-	void perform_layouts()
+	HRESULT perform_layouts()
 	{
+		HRESULT hr;
+
 		_scroll_bar_visible = false;
 
-		uint32_t dpi = edge::dpi(_renderer->window().hwnd());
-		float visible_height = _rectd.bottom - _rectd.top - 2 * border_width(dpi);
-		auto callback = [this, visible_height](item_i* i, float item_y, bool& cancel)
+		auto hdc = wil::GetDC(_hWnd);
+		PaintResources ctx;
+		hr = MakePaintResources(hdc.get(), ctx); RETURN_IF_FAILED(hr);
+		LONG visible_height = _bounds.bottom - _bounds.top - 2 * BorderWidth(ctx.dpi);
+		auto callback = [this,&ctx,visible_height](IItem* i, LONG item_y, bool& cancel)
 			{
-				i->perform_layout();
-				if (item_y + height_aligned(i) > visible_height)
-					// TODO: add new function "clear_layout" to item_i and call it for the remaining items.
+				i->PerformLayout(ctx);
+				if (item_y + i->Height() > visible_height)
+					// TODO: add new function "clear_layout" to IItem and call it for the remaining items.
 					cancel = true;
 			};
 
@@ -320,18 +465,19 @@ public:
 			enum_items (callback);
 		}
 
-		invalidate();
+		::InvalidateRect(_hWnd, 0, 0);
+
+		return S_OK;
 	}
 
-	float height_aligned (const item_i* item) const
-	{
-		float height = item->content_height();
-		uint32_t dpi = edge::dpi(_renderer->window().hwnd());
-		float pw = pixel_width(dpi);
-		height = std::ceil(height / pw) * pw;
-		return height;
-	}
-
+	//LONG height_pixels (const IItem* item) const
+	//{
+	//	LONG height = item->Height();
+	//	uint32_t dpi = edge::dpi(_hWnd);
+	//	LONG h = (LONG)std::ceil(height / 96.0f * dpi);
+	//	return h;
+	//}
+	/*
 	render_context make_render_context (ID2D1DeviceContext* dc) const
 	{
 		render_context rc;
@@ -381,182 +527,223 @@ public:
 		};
 
 		com_ptr<ID2D1GradientStopCollection> stop_collection;
-		auto hr = dc->CreateGradientStopCollection ((back_luminance > 0.6f) ? stops_light : stops_dark, 3, &stop_collection); rassert(SUCCEEDED(hr));
+		auto hr = dc->CreateGradientStopCollection ((back_luminance > 0.6f) ? stops_light : stops_dark, 3, &stop_collection); _ASSERT(SUCCEEDED(hr));
 		static constexpr D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES lgbp = { { 0, 0 }, { 1, 0 } };
-		hr = dc->CreateLinearGradientBrush (&lgbp, nullptr, stop_collection, &rc.item_gradient_brush); rassert(SUCCEEDED(hr));
+		hr = dc->CreateLinearGradientBrush (&lgbp, nullptr, stop_collection, &rc.item_gradient_brush); _ASSERT(SUCCEEDED(hr));
 
-		hr = dc->CreateGradientStopCollection ((back_luminance > 0.6f) ? stops_light_hot : stops_dark_hot, 3, &stop_collection); rassert(SUCCEEDED(hr));
-		hr = dc->CreateLinearGradientBrush (&lgbp, nullptr, stop_collection, &rc.item_gradient_brush_hot); rassert(SUCCEEDED(hr));
+		hr = dc->CreateGradientStopCollection ((back_luminance > 0.6f) ? stops_light_hot : stops_dark_hot, 3, &stop_collection); _ASSERT(SUCCEEDED(hr));
+		hr = dc->CreateLinearGradientBrush (&lgbp, nullptr, stop_collection, &rc.item_gradient_brush_hot); _ASSERT(SUCCEEDED(hr));
 
 		return rc;
 	}
+	*/
+	virtual HWND HWnd() const noexcept override { return _hWnd; }
 
-	void on_render (HWND hwnd, ID2D1DeviceContext* dc) const
+	virtual RECT Bounds() const noexcept override { return _bounds; }
+
+	virtual void SetBounds (const RECT& bounds) noexcept override
 	{
-		auto rc = make_render_context(dc);
-		uint32_t dpi = edge::dpi(hwnd);
-		dc->SetDpi((float)dpi, (float)dpi);
-
-		dc->FillRectangle(_rectd, rc.back);
-
-		float bw = border_width(dpi);
-		if (bw > 0)
-			dc->DrawRectangle(inflate(_rectd, -bw / 2), rc.border, bw);
-
-		if (_root_items.empty())
+		if (_bounds != bounds)
 		{
-			auto tl = text_layout_with_metrics (_renderer->dwrite_factory(), _text_format, "(no selection)");
-			D2D1_POINT_2F p = { (_rectd.left + _rectd.right) / 2 - tl.width() / 2, (_rectd.top + _rectd.bottom) / 2 - tl.height() / 2};
-			dc->DrawTextLayout (p, tl, rc.fore);
-			return;
-		}
-
-		bool focused = GetFocus() == hwnd;
-
-		dc->PushAxisAlignedClip (&_rectd, D2D1_ANTIALIAS_MODE_ALIASED);
-		enum_items ([dc, &rc, focused, this, bw](item_i* item, float item_y, bool& cancel)
-		{
-			if (item_y + height_aligned(item) <= _top_y)
-			{
-				// item is scrolled above the visible area
-			}
-			else
-			{
-				float render_y = _rectd.top + bw + item_y - _top_y;
-				if (render_y >= _rectd.bottom)
-				{
-					cancel = true;
-					return;
-				}
-
-				bool selected = (item == _selected_item.get());
-				bool hot = (item == _hot_item.get());
-				item->render (rc, render_y, selected, hot, focused);
-			}
-		});
-		dc->PopAxisAlignedClip();
-
-		if (_scroll_bar_visible)
-		{
-			D2D1_RECT_F r = {
-				_rectd.right - bw - scroll_bar_width(dpi),
-				_rectd.top + bw,
-				_rectd.right - bw,
-				_rectd.bottom - bw
-			};
-
-			dc->FillRectangle(r, rc.disabled_fore);
-		}
-	}
-
-	virtual d2d_renderer_i* renderer() const override { return _renderer; }
-
-	virtual win32_window_i& window() const override final { return _renderer->window(); }
-
-	virtual D2D1_RECT_F bounds() const override { return _rectd; }
-
-	virtual void set_bounds (const D2D1_RECT_F& bounds) override
-	{
-		auto rectd = bounds;
-
-		if (_rectd != rectd)
-		{
-			invalidate();
+			::InvalidateRect(_hWnd, 0, 0);
 			_text_editor = nullptr;
 
-			// When the grid is moved without resizing, the width still changes slightly
-			// due to floating point rounding errors, that's why the check.
-			// The limit is far less than a pixel width, so we shouldn't see any artifacts.
-			float old_width = _rectd.right - _rectd.left;
-			float new_width = rectd.right - rectd.left;
-			float limit = 0.01f;
-			bool layout_changed = fabsf(old_width - new_width) >= limit;
+			LONG old_width = _bounds.right - _bounds.left;
+			LONG new_width = bounds.right - bounds.left;
 
-			_rectd = rectd;
+			_bounds = bounds;
 
-			if (layout_changed)
+			if (old_width != new_width)
 				perform_layouts();
 
 			TOOLINFO ti = { sizeof(TOOLINFO) };
 			ti.uFlags   = TTF_SUBCLASS;
-			ti.hwnd     = _renderer->window().hwnd();
+			ti.hwnd     = _hWnd;
 			ti.lpszText = nullptr;
-			ti.rect     = tooltip_rect(ti.hwnd);
+			ti.rect     = _bounds;
 			SendMessage(_tooltip, TTM_SETTOOLINFO, 0, (LPARAM) (LPTOOLINFO) &ti);
 
-			invalidate();
+			::InvalidateRect(_hWnd, 0, 0);
 		}
 	}
 
-	virtual void set_border_width (float bw) override
+	virtual void SetBorderWidth (float widthDIPs) noexcept override
 	{
-		if (_border_width_not_aligned != bw)
+		if (_borderWidthDIPs != widthDIPs)
 		{
-			_border_width_not_aligned = bw;
+			_borderWidthDIPs = widthDIPs;
 
 			_text_editor = nullptr;
 			perform_layouts();
 		}
 	}
 
-	void process_dpi_changed()
+	HRESULT process_dpi_changed()
 	{
+		HRESULT hr;
 		_text_editor = nullptr;
+		hr = MakePaintResources(wil::GetDC(_hWnd).get(), _paintres); RETURN_IF_FAILED(hr);
 		perform_layouts();
+		::InvalidateRect (_hWnd, nullptr, FALSE);
+		return S_OK;
 	}
 
 	virtual void clear_sections() override
 	{
 		_root_items.clear();
-		invalidate();
+		::InvalidateRect(_hWnd, 0, 0);
 	}
 
-	virtual void add_section (std::string_view heading, object_list_i& objects, string_convert_context_i* scc) override
+	virtual HRESULT STDMETHODCALLTYPE AddSection (edge::IObjectList* objects, bool showEmptySel, string_convert_context_i* scc) override
 	{
-		_root_items.push_back (make_root_item(this, heading, objects, scc));
+		com_ptr<IRootItem> ri;
+		auto hr = MakeRootItem (this, showEmptySel, objects, scc, &ri); RETURN_IF_FAILED(hr);
+		bool pushed = _root_items.try_push_back(std::move(ri)); RETURN_HR_IF(E_OUTOFMEMORY, !pushed);
+
+		LONG y = 0;
+		bool cancel = false;
+		enum_items_from(_root_items.back(), y, [this](IItem* i, LONG y, bool& cancel) {
+			return i->PerformLayout(_paintres);
+		});
+		::InvalidateRect(_hWnd, 0, 0);
+		return S_OK;
 	}
 
-	virtual std::span<const std::unique_ptr<root_item_i>> sections() const override { return _root_items; }
+	virtual HRESULT STDMETHODCALLTYPE RemoveSection (edge::IObjectList* objList) override
+	{
+		auto it = std::find_if(_root_items.begin(), _root_items.end(), [objList](IRootItem* ri) { return ri->objects() == objList; });
+		if (it == _root_items.end())
+			RETURN_HR(E_INVALIDARG);
+		_root_items.erase(it);
+		::InvalidateRect(_hWnd, 0, 0);
+		return S_OK;
+	}
+
+	//virtual std::span<const std::unique_ptr<IRootItem>> sections() const override { return _root_items; }
 
 	virtual void set_read_only (bool read_only) override final
 	{
 		_read_only = read_only;
-		invalidate();
+		::InvalidateRect(_hWnd, 0, 0);
 	}
 
 	virtual bool read_only() const override { return _read_only; }
 
-	virtual property_edited_e::subscriber property_changed() override final { return property_edited_e::subscriber(_em); }
+	//virtual property_edited_e::subscriber property_changed() override final { return property_edited_e::subscriber(_em); }
+	//
+	//virtual item_set_cursor_e::subscriber item_set_cursor() override { return item_set_cursor_e::subscriber(_em); }
+	//
+	//virtual item_clicked_e::subscriber item_clicked() override final { return item_clicked_e::subscriber(_em); }
 
-	virtual item_set_cursor_e::subscriber item_set_cursor() override { return item_set_cursor_e::subscriber(_em); }
-
-	virtual item_clicked_e::subscriber item_clicked() override final { return item_clicked_e::subscriber(_em); }
-
-	virtual bool try_show_text_editor_on_selected_item (bool bold, std::string_view str) override final
+	virtual HRESULT ShowTextEditorOnSelectedItem (bool bold, const wchar_t* str) override final
 	{
-		rassert (_selected_item);
+		_ASSERT (_selectedItem);
 
 		if (!_text_editor || try_commit_editor())
 		{
-			auto p = enum_items([si=_selected_item.get()](item_i* item, float y, bool& cancel) { cancel = (item == si); });
-			uint32_t dpi = edge::dpi(_renderer->window().hwnd());
-			float item_render_y = _rectd.top + border_width(dpi) + p.second - _top_y;
-			float vcx = value_column_left(dpi);
-			float item_height = height_aligned(p.first);
-			D2D1_RECT_F rect = { vcx + line_width(dpi), item_render_y, value_column_right(dpi), item_render_y + item_height };
-			_text_editor = text_editor_factory (_renderer, bold ? _bold_text_format : _text_format, _tcp, rect, text_lr_padding, str);
-			return true;
+			auto enumres = enum_items([si=_selectedItem](IItem* item, LONG y, bool& cancel) { cancel = (item == si); });
+			LONG dpi = edge::dpi(_hWnd);
+			LONG itemy = enumres.second;
+			LONG item_render_y = _bounds.top + BorderWidth(dpi) + itemy - _top_y;
+			LONG vcx = ValueColumnLeft(dpi);
+			LONG item_height = enumres.first->Height();
+
+			LONG x = vcx + LineWidth(dpi);
+			_text_editor.reset (CreateWindowExW (0, L"EDIT", str, WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
+											 x, item_render_y, ValueColumnRight(dpi) - x, item_height,
+											 _hWnd, (HMENU)ID_INPLACE_EDIT, (HINSTANCE)&__ImageBase, 0)); RETURN_LAST_ERROR_IF_NULL(_text_editor);
+			SetWindowLongPtr (_text_editor.get(), GWLP_USERDATA, (LONG_PTR) (void*) this);
+			_oldInplaceProc = (WNDPROC) SetWindowLongPtr (_text_editor.get(), GWLP_WNDPROC, (LONG_PTR) (void*) &InplaceEditProc);
+
+			SetWindowFont(_text_editor.get(), _paintres.normalFont.get(), TRUE);
+			Edit_SetSel(_text_editor.get(), 0, -1);
+			SetFocus(_text_editor.get());
+			return S_OK;
 		}
 
-		return false;
+		return S_FALSE;
 	}
 
-	virtual int show_enum_editor (D2D1_POINT_2F dip, const nvp* nameValuePairs) override final
+	static LRESULT CALLBACK InplaceEditProc (HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+	{
+		auto pg = (PropertyGridImpl*)(void*)GetWindowLongPtr (hWnd, GWLP_USERDATA);
+		_ASSERT (pg->_text_editor.get() == hWnd);
+
+		if (msg == WM_GETDLGCODE)
+		{
+			return DLGC_WANTALLKEYS | CallWindowProc (pg->_oldInplaceProc, hWnd, msg, wParam, lParam);
+		}
+		else if (msg == WM_CHAR)
+		{
+			// Process this message to avoid message beeps.
+			if ((wParam == VK_RETURN) || (wParam == VK_TAB) || (wParam == VK_ESCAPE))
+				return 0;
+
+			return CallWindowProc (pg->_oldInplaceProc, hWnd, msg, wParam, lParam);
+		}
+		else if (msg == WM_KEYDOWN)
+		{
+			if ((wParam == VK_RETURN) || (wParam == VK_DOWN) || (wParam == VK_UP))
+			{
+				SendMessage (hWnd, EM_SETSEL, 0, -1); // select all text
+
+				if (pg->try_commit_editor())
+				{
+					LONG itemIndex = -1;
+					auto parent = pg->_selectedItem->parent();
+					for (LONG i = 0; i < (LONG)parent->child_count(); i++)
+					{
+						if (parent->child_at(i) == pg->_selectedItem)
+						{
+							itemIndex = i;
+							break;
+						}
+					}
+
+					RETURN_HR_IF(E_UNEXPECTED, itemIndex == -1);
+					size_t nextItemIndex = itemIndex;
+					if (wParam == VK_UP)
+						nextItemIndex = itemIndex - ((itemIndex > 0) ? 1 : 0);
+					else if (wParam == VK_DOWN)
+						nextItemIndex = itemIndex + ((itemIndex < (LONG)parent->child_count() - 1) ? 1 : 0);
+
+					if (nextItemIndex != itemIndex)
+					{
+						RETURN_HR(E_NOTIMPL);
+						/*
+						// first discard the inplace editor (accesses _selectedItem), then move _selectedItem one item down, then begin editing it.
+						pg->DiscardInplaceEdit();
+
+						pg->_selectedItem = siblings[nextItemIndex];
+						InvalidateRect (pg->_hwndArea, nullptr, FALSE);
+						InvalidateRect (pg->_hwnd, nullptr, FALSE);
+
+						int y = -pg->_topY;
+						bool found = pg->FindItemY (pg->_rootItem, y, pg->_selectedItem); rassert(found);
+						pg->TryCreateInplace({ 0, y, pg->_gridAreaClientRect.right, y + pg->_selectedItem->GetHeight() });
+						*/
+					}
+				}
+
+				return 0;
+			}
+			else if (wParam == VK_ESCAPE)
+			{
+				_ASSERT(false);
+				//pg->LoadInplace();
+				return 0;
+			}
+		}
+
+		return CallWindowProc (pg->_oldInplaceProc, hWnd, msg, wParam, lParam);
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE ShowEnumEditor (POINT pt, std::span<std::pair<const wchar_t*, int> const> nameValuePairs, int* pdwSelectedIndex) noexcept override
 	{
 		_text_editor = nullptr;
-		HWND window_hwnd = _renderer->window().hwnd();
+		HWND window_hwnd = _hWnd;
 		uint32_t dpi = edge::dpi(window_hwnd);
-		POINT ptScreen = edge::pointd_to_pointp(dip, dpi, 0);
+		POINT ptScreen = pt;
 		::ClientToScreen (window_hwnd, &ptScreen);
 
 		HINSTANCE hInstance = (HINSTANCE) GetWindowLongPtr (window_hwnd, GWLP_HINSTANCE);
@@ -592,10 +779,10 @@ public:
 				ClassName, // lpszClassName
 			};
 
-			atom = ::RegisterClassW (&EditorWndClass); rassert (atom != 0);
+			atom = ::RegisterClassW (&EditorWndClass); _ASSERT (atom != 0);
 		}
 
-		auto hwnd = CreateWindowEx (WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, ClassName, L"aaa", WS_POPUP | WS_BORDER, 0, 0, 0, 0, window_hwnd, nullptr, hInstance, nullptr); rassert (hwnd != nullptr);
+		auto hwnd = CreateWindowEx (WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, ClassName, L"aaa", WS_POPUP | WS_BORDER, 0, 0, 0, 0, window_hwnd, nullptr, hInstance, nullptr); _ASSERT (hwnd != nullptr);
 
 		LONG maxTextWidth = 0;
 		LONG maxTextHeight = 0;
@@ -612,11 +799,10 @@ public:
 
 		auto hdc = ::GetDC(hwnd);
 		auto oldFont = ::SelectObject (hdc, font.get());
-		size_t count;
-		for (count = 0; nameValuePairs[count].name != nullptr; count++)
+		for (uint32_t i = 0; i < nameValuePairs.size(); i++)
 		{
 			RECT rc = { };
-			DrawTextA (hdc, nameValuePairs[count].name, -1, &rc, DT_CALCRECT);
+			DrawTextW (hdc, nameValuePairs[i].first, -1, &rc, DT_CALCRECT);
 			maxTextWidth = std::max (maxTextWidth, rc.right);
 			maxTextHeight = std::max (maxTextHeight, rc.bottom);
 		}
@@ -624,20 +810,20 @@ public:
 		::ReleaseDC (hwnd, hdc);
 
 		int lrpadding = 7 * dpi / 96;
-		int udpadding = ((count <= 5) ? 5 : 0) * dpi / 96;
+		int udpadding = ((nameValuePairs.size() <= 5) ? 5 : 0) * dpi / 96;
 		LONG buttonWidth = std::max (100l * (LONG)dpi / 96, maxTextWidth + 2 * lrpadding) + 2 * GetSystemMetrics(SM_CXEDGE);
 		LONG buttonHeight = maxTextHeight + 2 * udpadding + 2 * GetSystemMetrics(SM_CYEDGE);
 
 		int margin = 4 * dpi / 96;
 		int spacing = 2 * dpi / 96;
 		int y = margin;
-		for (size_t nvp_index = 0; nameValuePairs[nvp_index].name != nullptr;)
+		for (uint32_t nvp_index = 0; nvp_index < nameValuePairs.size(); )
 		{
 			constexpr DWORD dwStyle = WS_CHILD | WS_VISIBLE | BS_NOTIFY | BS_FLAT;
-			auto button = CreateWindowExA (0, "Button", nameValuePairs[nvp_index].name, dwStyle, margin, y, buttonWidth, buttonHeight, hwnd, (HMENU) nvp_index, hInstance, nullptr);
+			auto button = CreateWindowEx (0, L"Button", nameValuePairs[nvp_index].first, dwStyle, margin, y, buttonWidth, buttonHeight, hwnd, (HMENU)(size_t)nvp_index, hInstance, nullptr);
 			::SendMessage (button, WM_SETFONT, (WPARAM) font.get(), FALSE);
 			nvp_index++;
-			y += buttonHeight + (nameValuePairs[nvp_index].name ? spacing : margin);
+			y += buttonHeight + (nvp_index < nameValuePairs.size() ? spacing : margin);
 		}
 		RECT wr = { 0, 0, margin + buttonWidth + margin, y };
 		::AdjustWindowRectEx (&wr, (DWORD) GetWindowLongPtr(hwnd, GWL_STYLE), FALSE, (DWORD) GetWindowLongPtr(hwnd, GWL_EXSTYLE));
@@ -675,32 +861,83 @@ public:
 		}
 
 		::DestroyWindow (hwnd);
-		return selected_nvp_index;
+		*pdwSelectedIndex = selected_nvp_index;
+		return (selected_nvp_index >= 0) ? S_OK : S_FALSE;
 	}
 
-	virtual htresult hit_test (D2D1_POINT_2F pd) const override
+	STDMETHOD(NotifyLayoutChanged)(IItem* item) override
+	{
+		PaintResources ctx;
+		auto hr = MakePaintResources (GetDC(_hWnd), ctx); RETURN_IF_FAILED(hr);
+
+		LONG unused = 0;
+		enum_items_from (item, unused, [&ctx](IItem* i, LONG render_y, bool& cancel) {
+			auto hr = i->PerformLayout(ctx);
+			if (FAILED(hr))
+				cancel = true;
+		});
+		
+		return S_OK;
+	}
+
+	virtual void NotifyItemRemoving (IItem* item) override
+	{
+		if (item == _selectedItem)
+		{
+			_selectedItem = nullptr;
+			_text_editor = nullptr;
+			::InvalidateRect(_hWnd, 0, 0);
+		}
+		
+		if (item == _hotItem)
+		{
+			_hotItem = nullptr;
+			::InvalidateRect(_hWnd, 0, 0);
+		}
+
+		if (auto ei = item->AsExpandable())
+		{
+			for (uint32_t i = 0; i < ei->child_count(); i++)
+				NotifyItemRemoving(ei->child_at(i));
+		}
+	}
+
+	virtual const PaintResources& GetPaintResources() const override { return _paintres; }
+
+	enum class htcode { none, expand, name, value, output };
+
+	struct htresult
+	{
+		IItem* item;
+		LONG     render_y;
+		htcode   code;
+
+		operator bool() const { return item != nullptr; }
+	};
+
+	htresult hit_test (POINT pp) const
 	{
 		htresult result = { nullptr };
 
-		uint32_t dpi = edge::dpi(_renderer->window().hwnd());
-		enum_items ([this, pd, &result, dpi, bw=border_width(dpi)](item_i* item, float item_y, bool& cancel)
+		uint32_t dpi = edge::dpi(_hWnd);
+		enum_items ([this, pp, &result, dpi, bw=BorderWidth(dpi)](IItem* item, LONG item_y, bool& cancel)
 		{
-			if (item_y + height_aligned(item) <= _top_y)
+			if (item_y + item->Height() <= _top_y)
 			{
 				// item is scrolled above the visible area
 			}
 			else
 			{
-				float render_y = _rectd.top + bw + item_y - _top_y;
-				if (pd.y < render_y + height_aligned(item))
+				LONG render_y = _bounds.top + bw + item_y - _top_y;
+				if (pp.y < render_y + item->Height())
 				{
 					result = htresult{ };
 					result.item = item;
 					result.render_y = render_y;
 
-					if (pd.x < name_column_left(item->indent()))
+					if (pp.x < NameColumnLeft(item->indent(), dpi))
 						result.code = htcode::expand;
-					else if (pd.x < value_column_left(dpi))
+					else if (pp.x < ValueColumnLeft(dpi))
 						result.code = htcode::name;
 					else
 						result.code = htcode::value;
@@ -713,98 +950,111 @@ public:
 		return result;
 	}
 
-	virtual D2D1_POINT_2F output_of (value_property_item_i* vi) const override
+	STDMETHOD(GetValueText)(edge::IObjectList* section, IDispatch* object, DISPID prop, read_state* pState, BSTR* pbstrValueText) override
 	{
-		std::optional<D2D1_POINT_2F> res;
+		auto it = std::find_if(_root_items.begin(), _root_items.end(), [section](IRootItem* ri) { return ri->objects() == section; });
+		if (it == _root_items.end())
+			RETURN_HR(E_INVALIDARG);
+		IRootItem* root = *it;
 
-		uint32_t dpi = edge::dpi(_renderer->window().hwnd());
-		enum_items ([vi, this, &res, bw=border_width(dpi)](item_i* item, float item_y, bool& cancel)
+		auto findObjectItem = [object](auto& self, IItem* item) -> IObjectItem*
 		{
-			if (item == vi)
+			if (auto oi = wil::try_com_query_nothrow<IObjectItem>(item))
 			{
-				res = D2D1_POINT_2F{ _rectd.right, _rectd.top + bw + item_y - _top_y + height_aligned(item) / 2 };
-				cancel = true;
+				if (oi->objects()->contains(object))
+					return oi;
 			}
-		});
 
-		rassert(res);
-		return res.value();
+			if (auto ei = item->AsExpandable())
+			{
+				for (uint32_t i = 0; i < ei->child_count(); i++)
+				{
+					if (auto child = self(self, ei->child_at(i)))
+						return child;
+				}
+			}
+
+			return nullptr;
+		};
+
+		auto oi = findObjectItem(findObjectItem, root);
+		if (!oi)
+			RETURN_HR(E_INVALIDARG);
+
+		for (uint32_t i = 0; i < oi->child_count(); i++)
+		{
+			IGroupItem* gi = oi->ChildGroupItemAt(i);
+			for (IPGPropertyItem* pi : gi->children())
+			{
+				if (pi->property() == prop)
+					return pi->GetValue(pState, pbstrValueText);
+			}
+		}
+
+		RETURN_HR(E_INVALIDARG);
 	}
 
-	virtual value_property_item_i* find_item (const value_property* prop) const override
+	std::optional<LRESULT> OnMouseButtonDown (const mouse_ud_args& args)
 	{
-		value_property_item_i* res = nullptr;
+		SetFocus(_hWnd);
 
-		enum_items([&res, prop](item_i* item, float y, bool& cancel)
-		{
-			if (auto vi = dynamic_cast<value_property_item_i*>(item); vi && (vi->property() == prop))
-			{
-				res = vi;
-				cancel = true;
-			}
-		});
-
-		return res;
-	}
-
-	std::optional<LRESULT> process_mouse_button_down (const mouse_ud_args& args)
-	{
-		if (_text_editor && (_text_editor->mouse_captured() || point_in_rect(_text_editor->rect(), args.pd)))
-			return _text_editor->on_mouse_down(args) ? std::optional<LRESULT>(0) : std::nullopt;
-
-		auto clicked_item = hit_test(args.pd);
+		auto clicked_item = hit_test(args.pt);
 
 		auto new_selected_item = (clicked_item.item && clicked_item.item->selectable()) ? clicked_item.item : nullptr;
-		if (_selected_item.get() != new_selected_item)
+		if (_selectedItem != new_selected_item)
 		{
 			_text_editor = nullptr;
-			_selected_item = new_selected_item;
+			_selectedItem = new_selected_item;
+			::InvalidateRect(_hWnd, 0, 0);
 		}
 
 		if (clicked_item.item)
 		{
-			clicked_item.item->on_mouse_down (args, clicked_item.render_y);
+			clicked_item.item->ProcessMouseDown (args, clicked_item.render_y);
 			return 0;
 		}
 
 		return std::nullopt;
 	}
 
-	std::optional<LRESULT> process_mouse_button_up (const mouse_ud_args& args)
+	std::optional<LRESULT> OnMouseButtonUp (const mouse_ud_args& args)
 	{
-		if (_text_editor && _text_editor->mouse_captured())
-			return _text_editor->on_mouse_up(args) ? std::optional<LRESULT>(0) : std::nullopt;
-
-		auto clicked_item = hit_test(args.pd);
+		auto clicked_item = hit_test(args.pt);
 		if (clicked_item.item)
 		{
 			// TODO: pass first to the item's on_mouse_down, and if that one returns std::nullopt,
 			// then pass to a new "item_mouse_up" event, and if that one returns std::nullopt,
 			// then generate the "clicked" event and repeat (first to item, then to pg event handler).
-			auto res = item_clicked_e::invoker(_em).invoke(clicked_item);
-			if (res.has_value())
-				return res;
+			//auto res = item_clicked_e::invoker(_em).invoke(clicked_item);
+			//if (res.has_value())
+			//	return res;
 
-			clicked_item.item->on_mouse_up (args, clicked_item.render_y);
+			clicked_item.item->ProcessMouseUp (args, clicked_item.render_y);
 			return 0;
 		}
 
 		return std::nullopt;
 	}
 
-	void process_mouse_move (HWND hwnd, const mouse_move_args& args)
+	void OnMouseMove (HWND hwnd, POINT pt, UINT mks)
 	{
-		if (_text_editor && _text_editor->mouse_captured())
-			return _text_editor->on_mouse_move (args);
-
-		auto htres = hit_test(args.pd);
-		_hot_item = (htres.item && htres.item->selectable()) ? htres.item : nullptr;
-				
-		if (!_last_tt_location || (_last_tt_location != args.pd))
+		auto htres = hit_test(pt);
+		auto newHotItem = (htres.item && htres.item->selectable()) ? htres.item : nullptr;
+		if (_hotItem != newHotItem)
 		{
-			_last_tt_location = args.pd;
+			if (_hotItem)
+				InvalidateItem(_hotItem);
+			_hotItem = newHotItem;
+			if (_hotItem)
+				InvalidateItem(_hotItem);
+		}
+				
+		if (!_last_tt_location || (_last_tt_location != pt))
+		{
+			_last_tt_location = pt;
 
-			if (_text_editor && point_in_rect(_text_editor->rect(), args.pd))
+			RECT rc;
+			if (_text_editor && GetWindowRect(_text_editor.get(), &rc) && AdjustWindowRect(&rc, WS_CHILD, 0) && PtInRect(&rc, pt))
 			{
 				TOOLINFO ti = { sizeof(TOOLINFO), 0, hwnd };
 				SendMessage(_tooltip, TTM_UPDATETIPTEXT, 0, (LPARAM)&ti);
@@ -813,56 +1063,57 @@ public:
 			{
 				::SendMessage (_tooltip, TTM_POP, 0, 0);
 
-				std::wstring text;
-				std::wstring title;
+				wil::unique_process_heap_string text;
+				wil::unique_process_heap_string title;
 
 				if (htres.item)
 				{
-					title = utf8_to_utf16(htres.item->description_title());
-					text  = utf8_to_utf16(htres.item->description_text());
+					title = htres.item->description_title();
+					text  = htres.item->description_text();
 
-					if (!title.empty() && text.empty())
-						text = L"--";
+					if (title && !text)
+						text = wil::make_process_heap_string_nothrow(L"--");
 				}
 
 				TOOLINFO ti = { sizeof(TOOLINFO) };
 				ti.hwnd     = hwnd;
-				ti.lpszText = text.data();
+				ti.lpszText = text.get();
 				SendMessage(_tooltip, TTM_UPDATETIPTEXT, 0, (LPARAM)&ti);
 
-				SendMessage(_tooltip, TTM_SETTITLE, TTI_INFO, (LPARAM)title.data());
+				SendMessage(_tooltip, TTM_SETTITLE, TTI_INFO, (LPARAM)title.get());
 			}
 		}
 	}
 
-	std::optional<LRESULT> process_wm_mousewheel (HWND hwnd, D2D1_POINT_2F pd, modifier_key mks, short delta)
+	std::optional<LRESULT> process_wm_mousewheel (HWND hwnd, POINT pt, UINT mks, short delta)
 	{
-		float visible_height = _rectd.bottom - _rectd.top;
-		float total_height = enum_items([](auto...) { }).second;
+		uint32_t dpi = edge::dpi(hwnd);
+		LONG visible_height = _bounds.bottom - _bounds.top;
+		LONG total_height = enum_items([](auto...) { }).second;
 		if (total_height > visible_height)
 		{
 			UINT scroll_lines;
 			::SystemParametersInfo (SPI_GETWHEELSCROLLLINES, 0, &scroll_lines, 0);
 
-			float scroll_line_height = text_layout_with_metrics(_renderer->dwrite_factory(), _text_format, "A").height();
-			uint32_t dpi = edge::dpi(hwnd);
-			float pw = edge::pixel_width(dpi);
-			scroll_line_height = std::ceil(scroll_line_height / pw) * pw + line_width(dpi);
+			//float scroll_line_height = text_layout_with_metrics(_renderer->dwrite_factory(), _text_format, "A").height();
+			//float pw = edge::pixel_width(dpi);
+			//scroll_line_height = std::ceil(scroll_line_height / pw) * pw + line_width(dpi);
+			LONG scroll_line_height = 20;
 
-			float scroll_distance = (float)scroll_lines * scroll_line_height * delta / 120;
+			LONG scroll_distance = (LONG)scroll_lines * scroll_line_height * delta / 120;
 			if (scroll_distance < 0)
 			{
 				// wheel down; scroll items up
-				if (total_height > (_top_y + _rectd.bottom - _rectd.top))
+				if (total_height > (_top_y + _bounds.bottom - _bounds.top))
 				{
 					// there are items below the bottom of the grid that can be scroll up
-					float scrollable = total_height - (_top_y + _rectd.bottom - _rectd.top);
+					LONG scrollable = total_height - (_top_y + _bounds.bottom - _bounds.top);
 					scroll_distance = -scroll_distance;
 					if (scroll_distance > scrollable)
 						scroll_distance = scrollable;
 					_top_y += scroll_distance;
 					_text_editor = nullptr;
-					invalidate();
+					::InvalidateRect(_hWnd, 0, 0);
 				}
 			}
 			else if (scroll_distance > 0)
@@ -876,7 +1127,7 @@ public:
 					else
 						_top_y = 0;
 					_text_editor = nullptr;
-					invalidate();
+					::InvalidateRect(_hWnd, 0, 0);
 				}
 			}
 		}
@@ -886,79 +1137,143 @@ public:
 
 	bool try_commit_editor()
 	{
-		rassert (_text_editor);
-		rassert (_selected_item);
+		HRESULT hr;
 
-		HWND hwnd = _renderer->window().hwnd();
+		_ASSERT (_text_editor);
+		_ASSERT (_selectedItem);
 
-		try
+		wil::unique_process_heap_string errorMessage;
+
+		if (auto vpi = wil::try_com_query_nothrow<IPGValuePropertyItem>(_selectedItem))
 		{
-			if (auto vpi = dynamic_cast<const value_property_item_i*>(_selected_item.get()))
-			{
-				auto root = vpi->root();
-				auto& objs = vpi->parent()->parent()->objects();
-				this->change_property (objs, vpi->property(), utf16_to_utf8(_text_editor->wstr()), root->app_context());
+			int len = GetWindowTextLength(_text_editor.get());
+			auto text = wil::make_process_heap_string_nothrow(0, len);
+			if (!text)
+				return false;
+			GetWindowText(_text_editor.get(), text.get(), len + 1);
+			wil::unique_variant value;
+			hr = InitVariantFromString(text.get(), &value); LOG_IF_FAILED(hr);
+			if (vpi->VarType() != VT_BSTR) {
+				wil::unique_variant temp;
+				hr = VariantChangeTypeEx (&temp, &value, InvariantLCID, 0, vpi->VarType());
+				if (FAILED(hr))
+				{
+					wil::str_printf_nothrow (errorMessage, L"Cannot change \"%s\" to the property type.", text.get());
+					goto showErrorMessage;
+				}
+				
+				value = std::move(temp);
 			}
-			else if (auto vcci = dynamic_cast<const value_collection_child_item_i*>(_selected_item.get()))
+				
+			auto root = vpi->root();
+			auto objs = vpi->parent()->parent()->objects();
+			hr = this->change_property (*objs, vpi->TypeInfo(), vpi->property(), &value);
+			if (FAILED(hr))
 			{
-				size_t value_index = vcci->parent()->index_of(vcci);
-				auto& objs = vcci->parent()->parent()->parent()->objects();
-				auto root = vcci->root();
-				this->change_property (objs, vcci->parent()->property(), value_index, utf16_to_utf8(_text_editor->wstr()), root->app_context());
+				com_ptr<IErrorInfo> ei;
+				wil::unique_bstr temp;
+				if (GetErrorInfo(0, &ei) == S_OK && SUCCEEDED(ei->GetDescription(&temp))) {
+					errorMessage = wil::make_process_heap_string_nothrow(temp.get());
+				} else {
+					wil::str_printf_nothrow(errorMessage, L"Error 0x%08x", hr);
+				}
+				goto showErrorMessage;
 			}
-			else
-				rassert(false);
 		}
-		catch (const std::exception& ex)
+		else if (auto vcci = wil::try_com_query_nothrow<value_collection_child_item_i>(_selectedItem))
 		{
-			auto message = utf8_to_utf16(ex.what());
-			::MessageBox (hwnd, message.c_str(), L"Error setting property", 0);
-			::SetFocus (hwnd);
-			_text_editor->select_all();
-			return false;
+			_ASSERT(false);
+			//size_t value_index = vcci->parent()->index_of(vcci);
+			//auto* objs = vcci->parent()->parent()->parent()->objects();
+			//auto root = vcci->root();
+			//this->change_property (objs, vcci->parent()->property(), value_index, utf16_to_utf8(_text_editor->wstr()), root->app_context());
 		}
+		else
+			_ASSERT(false);
 
-		::InvalidateRect(hwnd, nullptr, TRUE);
+		::InvalidateRect(_hWnd, nullptr, TRUE);
 		_text_editor = nullptr;
 		return true;
-	}
 
-	virtual void change_property (const object_list_i& objects, const value_property* prop, std::string new_value_str, string_convert_context_i* scc) override final
+	showErrorMessage:
+		MessageBox (_hWnd, errorMessage.get(), L"Cannot set property", 0);
+		::SetFocus (_hWnd);
+		Edit_SetSel(_text_editor.get(), 0, -1);
+		return false;
+	}
+	
+	virtual HRESULT STDMETHODCALLTYPE change_property (const IObjectList& objects, ITypeInfo* ti, MEMBERID memid, VARIANT* newValue) override
 	{
-		auto pe_invoker = property_edited_e::invoker(_em);
-		bool pe_has_handlers = _em->has_handlers<property_edited_e>();
+		//auto pe_invoker = property_edited_e::invoker(_em);
+		//bool pe_has_handlers = _em->has_handlers<property_edited_e>();
 
-		std::vector<std::string> old_values;
-		if (pe_has_handlers)
-		{
-			old_values.reserve(objects.size());
-			for (auto o : objects)
-				old_values.push_back (prop->get_to_string(o, scc));
-		}
+		//DISPPARAMS params = { };
+		//EXCEPINFO exception;
+		//UINT uArgErr;
+		//wil::unique_variant value;
 
-		for (size_t i = 0; i < objects.size(); i++)
+		std::vector<wil::unique_variant> old_values;
+		//if (pe_has_handlers)
+		//{
+		//	old_values.reserve(objects.size());
+		//	for (auto o : objects)
+		//	{
+		//		auto hr = ti->Invoke(o, memid, DISPATCH_PROPERTYGET, &params, &value, &exception, &uArgErr); RETURN_IF_FAILED(hr);
+		//		old_values.push_back(std::move(value));
+		//	}
+		//}
+
+		for (uint32_t i = 0; i < objects.size(); i++)
 		{
-			try
+			DISPID named = DISPID_PROPERTYPUT;
+			DISPPARAMS params = { .rgvarg = newValue, .rgdispidNamedArgs=&named, .cArgs = 1, .cNamedArgs = 1 };
+			wil::unique_variant result; // TODO: get rid of this
+			EXCEPINFO exception;
+			UINT uArgErr;
+			auto hr = ti->Invoke(objects[i], memid, DISPATCH_PROPERTYPUT, &params, &result, &exception, &uArgErr);
+			if (FAILED(hr))
 			{
-				prop->set_from_string (new_value_str, objects[i], scc);
-			}
-			catch (const std::exception&)
-			{
-				for (size_t j = 0; j < i; j++)
-					prop->set_from_string(old_values[j], objects[j], scc);
+				wil::unique_bstr message;
+				if (hr == DISP_E_EXCEPTION)
+				{
+					hr = exception.scode;
+					message.reset(exception.bstrDescription);
+				}
 
-				throw;
+				for (uint32_t j = 0; j < i; j++)
+				{
+					params.rgvarg = old_values[j].addressof();
+					ti->Invoke(objects[j], memid, DISPATCH_PROPERTYPUT, &params, &result, &exception, &uArgErr);
+				}
+
+				if (message)
+				{
+					com_ptr<ICreateErrorInfo> cei;
+					if (SUCCEEDED(::CreateErrorInfo(&cei)))
+					{
+						cei->SetDescription(message.get());
+						::SetErrorInfo(0, wil::try_com_query_nothrow<IErrorInfo>(cei));
+					}
+
+					return hr;
+				}
+
+				return hr;
 			}
 		}
 
-		if (pe_has_handlers)
-		{
-			auto args = value_property_edited_args{ prop, objects, std::move(old_values), std::move(new_value_str), scc };
-			pe_invoker.invoke(std::move(args));
-		}
+		//if (pe_has_handlers)
+		//{
+		//	wil::unique_variant newVal;
+		//	auto hr = VariantCopy (&newVal, newValue); LOG_IF_FAILED(hr);
+		//	auto args = value_property_edited_args{ memid, objects, std::move(old_values), std::move(newVal), NULL };//scc };
+		//	pe_invoker.invoke(std::move(args));
+		//}
+
+		return S_OK;
 	}
-
-	virtual void change_property (const object_list_i& objects, const object_property* prop, const concrete_type* type) override final
+	/*
+	virtual void change_property (const IObjectList& objects, const object_property* prop, const concrete_type* type) override final
 	{
 		auto args = object_property_edited_args{ prop, objects };
 		for (object* obj : objects)
@@ -975,7 +1290,7 @@ public:
 		property_edited_e::invoker(_em).invoke(std::move(args));
 	}
 
-	virtual void change_property (const object_list_i& objects, const value_collection_property* prop, size_t value_index, std::string new_value_str, edge::string_convert_context_i* scc) override final
+	virtual void change_property (const IObjectList& objects, const value_collection_property* prop, size_t value_index, std::string new_value_str, edge::string_convert_context_i* scc) override final
 	{
 		std::vector<std::string> old_values;
 		for (auto o : objects)
@@ -998,68 +1313,58 @@ public:
 		auto args = value_collection_property_edited_args{ prop, objects, value_index, std::move(old_values), std::move(new_value_str), scc };
 		property_edited_e::invoker(_em).invoke(std::move(args));
 	}
-
-	float border_width (uint32_t dpi) const
+	*/
+	LONG BorderWidth (LONG dpi) const
 	{
-		float pw = edge::pixel_width(dpi);
-		return roundf(_border_width_not_aligned / pw) * pw;
+		return (LONG)std::roundf(_borderWidthDIPs / 96 * dpi);
 	}
 
-	float scroll_bar_width (uint32_t dpi) const
+	LONG ScrollBarWidth (LONG dpi) const
 	{
-		float pw = edge::pixel_width(dpi);
-		return std::round(16 / pw) * pw;
+		return (LONG)std::roundf(16.0f * dpi / 96);
 	}
 
-	virtual float line_width (uint32_t dpi) const override
+	virtual LONG LineWidth (LONG dpi) const noexcept override
 	{
-		auto lt = roundf(line_width_not_aligned / edge::pixel_width(dpi)) * edge::pixel_width(dpi);
-		return lt;
+		return (LONG)roundf(line_width_not_aligned * dpi / 96.0f);
 	}
 
-	virtual float expand_column_left (uint32_t dpi) const override final
+	virtual LONG ExpandColumnLeft (LONG dpi) const noexcept override
 	{
-		return _rectd.left + border_width(dpi);
+		return _bounds.left + BorderWidth(dpi);
 	}
 
-	virtual float name_column_left (size_t indent) const override
+	virtual LONG NameColumnLeft (uint32_t indent, LONG dpi) const noexcept override
 	{
-		uint32_t dpi = edge::dpi(_renderer->window().hwnd());
-		float x = _rectd.left + border_width(dpi) + indent * indent_width();
-		auto pw = edge::pixel_width(dpi);
-		x = roundf(x / pw) * pw;
-		return x;
+		return _bounds.left + BorderWidth(dpi) + indent * IndentWidth(dpi);
 	}
 
-	virtual float value_column_left (uint32_t dpi) const override final
+	virtual LONG ValueColumnLeft (LONG dpi) const noexcept override
 	{
-		float bw = border_width(dpi);
-		float w = (_rectd.right - _rectd.left - 2 * bw) * _name_column_factor;
-		if (w < 75)
-			w = 75;
-		float x = _rectd.left + bw + w;
-		auto pw = pixel_width(dpi);
-		x = roundf(x / pw) * pw;
-		return x;
+		LONG bw = BorderWidth(dpi);
+		LONG w = (LONG)std::roundf ((_bounds.right - _bounds.left - 2 * bw) * _name_column_factor);
+		LONG minWidth = 75 * dpi / 96;
+		if (w < minWidth)
+			w = minWidth;
+		return _bounds.left + bw + w;
 	}
 
-	virtual float value_column_right (uint32_t dpi) const override final
+	virtual LONG ValueColumnRight (LONG dpi) const noexcept override
 	{
-		float r = _rectd.right - border_width(dpi);
+		LONG r = _bounds.right - BorderWidth(dpi);
 		if (_scroll_bar_visible)
-			r -= scroll_bar_width(dpi);
+			r -= ScrollBarWidth(dpi);
 		return r;
 	}
 
-	virtual float indent_width() const override final
+	virtual LONG IndentWidth (LONG dpi) const noexcept override
 	{
-		float pw = edge::pixel_width(_renderer->window().hwnd());
-		return std::round(8 / pw) * pw;
+		return 8 * dpi / 96;
 	}
 
-	virtual const theme_color_provider_i* tcp() const override final { return _tcp; }
+	virtual const IThemeColorProvider* tcp() const override final { return _tcp; }
 
-	std::optional<LRESULT> process_key_down (uint32_t key, modifier_key mks)
+	std::optional<LRESULT> process_key_down (uint32_t key, UINT mks)
 	{
 		if ((key == VK_RETURN) || (key == VK_UP) || (key == VK_DOWN))
 		{
@@ -1084,25 +1389,16 @@ public:
 			return 0;
 		}
 
-		if (_text_editor)
-			return _text_editor->on_key_down (key, mks) ? std::optional<LRESULT>(0) : std::nullopt;
-
 		return std::nullopt;
 	}
 
-	std::optional<LRESULT> process_key_up (uint32_t key, modifier_key mks)
+	std::optional<LRESULT> process_key_up (uint32_t key, UINT mks)
 	{
-		if (_text_editor)
-			return _text_editor->on_key_up (key, mks) ? std::optional<LRESULT>(0) : std::nullopt;
-
 		return std::nullopt;
 	}
 
 	std::optional<LRESULT> process_char_key (uint32_t key)
 	{
-		if (_text_editor)
-			return _text_editor->on_char_key (key) ? std::optional<LRESULT>(0) : std::nullopt;
-
 		return std::nullopt;
 	}
 
@@ -1111,9 +1407,11 @@ public:
 		return _text_editor != nullptr;
 	}
 
-	virtual RECT calc_popup_window_pos (item_i* item, float item_y, D2D1_SIZE_F client_size_requested, DWORD style, DWORD ex_style) const override final
+	virtual RECT calc_popup_window_pos (IItem* item, LONG item_y, SIZE client_size_requested, DWORD style, DWORD ex_style) const override final
 	{
-		HWND hwnd = _renderer->window().hwnd();
+		_ASSERT(false); return { };
+		/*
+		HWND hwnd = _hWnd;
 		uint32_t dpi = edge::dpi(hwnd);
 		D2D1_RECT_F item_rect = _rectd;
 		item_rect.top = item_y;
@@ -1137,285 +1435,228 @@ public:
 		SIZE size = { window_rect.right - window_rect.left, window_rect.bottom - window_rect.top };
 
 		RECT popup_window_pos;
-		BOOL bres = ::CalculatePopupWindowPosition (&anchor_point, &size, 0, &item_rect_pixels, &popup_window_pos); rassert(bres);
+		BOOL bres = ::CalculatePopupWindowPosition (&anchor_point, &size, 0, &item_rect_pixels, &popup_window_pos); _ASSERT(bres);
 		return popup_window_pos;
+		*/
 	}
 
 	virtual void expand_all() override final
 	{
 		for (auto& ri : _root_items)
 		{
-			for (size_t i = 0; i < ri->child_count(); i++)
+			for (uint32_t i = 0; i < ri->child_count(); i++)
 			{
 				auto child = ri->child_at(i);
-				auto gi = checked_static_cast<group_item_i*>(child);
-				gi->expand_all();
+				_ASSERT(false);
+				//auto gi = checked_static_cast<IGroupItem*>(child);
+				//gi->expand_all();
 			}
 		}
 	}
+	
+	//virtual creating_object_e::subscriber creating_object() override final
+	//{
+	//	return creating_object_e::subscriber(*_em);
+	//}
 
-	virtual creating_object_e::subscriber creating_object() override final
-	{
-		return creating_object_e::subscriber(*_em);
-	}
-
-	virtual item_i* selected_item() const override final { return _selected_item.get(); }
-
-private:
-	class self_clear_item_ptr
-	{
-		property_grid* const _pg;
-		std::function<void(property_grid*)> const _on_clearing;
-		item_i* _item = nullptr;
-
-	public:
-		self_clear_item_ptr(property_grid* pg, std::function<void(property_grid*)> on_clearing)
-			: _pg(pg), _on_clearing(on_clearing)
-		{ }
-
-		self_clear_item_ptr(const self_clear_item_ptr&) = delete;
-		self_clear_item_ptr& operator=(const self_clear_item_ptr&) = delete;
-
-		~self_clear_item_ptr()
-		{
-			if (_item)
-				clear();
-		}
-
-		void operator= (item_i* i)
-		{
-			if (_item != i)
-			{
-				if (_item)
-					clear();
-
-				_item = i;
-
-				if (_item)
-				{
-					_item->item_removing().add_handler(&on_item_removing, this);
-					_pg->invalidate();
-				}
-			}
-		}
-
-		item_i* get() const { return _item; }
-
-		operator bool() const { return _item; }
-
-		item_i* operator->() const { return _item; }
-
-	private:
-		void clear()
-		{
-			_on_clearing(_pg);
-			_item->item_removing().remove_handler(&on_item_removing, this);
-			_item = nullptr;
-		}
-
-		static void on_item_removing (void* arg, item_i*)
-		{
-			static_cast<self_clear_item_ptr*>(arg)->clear();
-		}
-	};
-
-	void on_selected_item_changing()
-	{
-		_text_editor = nullptr;
-		invalidate();
-	}
-
-	void on_hot_item_changing()
-	{
-		invalidate();
-	}
-
-	self_clear_item_ptr _selected_item;
-	self_clear_item_ptr _hot_item;
+	virtual IItem* selected_item() const override final { return _selectedItem; }
 };
 
-property_grid_factory_t* const pg::property_grid_factory =
-	[](auto... params) -> std::unique_ptr<property_grid_i>
-	{ return std::make_unique<property_grid>(std::forward<decltype(params)>(params)...); };
+HRESULT pg::MakePropertyGrid (HWND hWnd, const RECT& bounds, edge::IThemeColorProvider* tp, IPropertyGrid** ppGrid)
+{
+	auto p = com_ptr(new (std::nothrow) PropertyGridImpl()); RETURN_IF_NULL_ALLOC(p);
+	auto hr = p->InitInstance(hWnd, bounds, tp); RETURN_IF_FAILED(hr);
+	*ppGrid = p.detach();
+	return S_OK;
+}
 
-root_item_i* item_i::root()
+IRootItem* IItem::root()
 {
 	auto current = this;
 	while (true)
 	{
 		if (auto r = current->as_root())
 			return r;
-		rassert(current->parent());
+		_ASSERT(current->parent());
 		current = current->parent()->as_item();
 	}
 }
 
-property_grid_i* item_i::grid() const
+#pragma region struct IItem
+ULONG IItem::indent() const
 {
-	return root()->grid();
+	return this->as_root() ? 0 : (parent()->as_item()->indent() + 1);
 }
 
-#pragma region struct item_i
-size_t item_i::indent() const
+#pragma region struct IExpandableItem
+void IExpandableItem::render_expand_button (const PaintResources& ctx, LONG item_y) const
 {
-	return dynamic_cast<const root_item_i*>(this) ? 0 : (parent()->as_item()->indent() + 1);
-}
-
-// TODO: make this a member of property_grid_i
-void item_i::render_default_background (const render_context& rc, float y, bool selected, bool hot, bool focused) const
-{
-	auto grid = root()->grid();
-	uint32_t dpi = edge::dpi(grid->window().hwnd());
-	auto lw = grid->line_width(dpi);
+	_ASSERT(false);
+	/*
+	auto grid = this->as_item()->root()->grid();
+	LONG dpi = edge::dpi(grid->HWnd());
 	float pw = edge::pixel_width(dpi);
-	float height = std::ceil(this->content_height() / pw) * pw;
+	LONG height = this->as_item()->Height();
+	_ASSERT(height > 0);
+	LONG name_line_x = grid->NameColumnLeft(as_item()->indent(), dpi);
 
-	D2D1_RECT_F fill_rect = { grid->expand_column_left(dpi), y, grid->value_column_right(dpi), y + height };
-	if (selected)
-	{
-		rc.dc->FillRectangle (&fill_rect, focused ? rc.selected_back_focused.get() : rc.selected_back_not_focused.get());
-	}
-	else
-	{
-		auto brush = hot ? rc.item_gradient_brush_hot.get() : rc.item_gradient_brush.get();
-		brush->SetStartPoint ({ fill_rect.left, fill_rect.top });
-		brush->SetEndPoint ({ fill_rect.left, fill_rect.bottom });
-		rc.dc->FillRectangle (&fill_rect, brush);
-	}
-
-	float name_line_x = grid->expand_column_left(dpi) + indent() * grid->indent_width();
-	rc.dc->DrawLine ({ name_line_x + lw / 2, y }, { name_line_x + lw / 2, y + height }, rc.disabled_fore, lw);
-	float linex = grid->value_column_left(dpi) + lw / 2;
-	rc.dc->DrawLine ({ linex, y }, { linex, y + height }, rc.disabled_fore, lw);
-}
-#pragma endregion
-
-#pragma region struct expandable_item_i
-void expandable_item_i::render_expand_button (const render_context& rc, float item_y) const
-{
-	auto grid = this->as_item()->grid();
-	uint32_t dpi = edge::dpi(grid->window().hwnd());
-	float pw = edge::pixel_width(dpi);
-	float height = std::ceil(this->as_item()->content_height() / pw) * pw;
-	rassert(height > 0);
-	float name_line_x = grid->name_column_left(as_item()->indent());
-
-	edge::com_ptr<ID2D1Factory> f;
+	com_ptr<ID2D1Factory> f;
 	rc.dc->GetFactory(&f);
-	edge::com_ptr<ID2D1StrokeStyle> ss;
+	com_ptr<ID2D1StrokeStyle> ss;
 	f->CreateStrokeStyle (D2D1::StrokeStyleProperties(D2D1_CAP_STYLE_ROUND, D2D1_CAP_STYLE_ROUND), nullptr, 0, &ss);
 
 	float lw = 2.5f;
-	float size = std::min(height, grid->indent_width()) - lw;
+	float size = std::min(height, grid->IndentWidth(dpi)) - lw;
 	if (!expanded())
 	{
-		D2D1_POINT_2F tip = { name_line_x - grid->indent_width() / 2 + size / 4, item_y + height / 2 };
+		POINT tip = { name_line_x - grid->IndentWidth(dpi) / 2 + size / 4, item_y + height / 2 };
 		rc.dc->DrawLine (tip, { tip.x - size / 2, tip.y - size / 2 }, rc.fore, lw, ss);
 		rc.dc->DrawLine (tip, { tip.x - size / 2, tip.y + size / 2 }, rc.fore, lw, ss);
 	}
 	else
 	{
-		D2D1_POINT_2F tip = { name_line_x - grid->indent_width() / 2, item_y + height / 2 + size / 4 };
+		POINT tip = { name_line_x - grid->IndentWidth(dpi) / 2, item_y + height / 2 + size / 4 };
 		rc.dc->DrawLine (tip, { tip.x - size / 2, tip.y - size / 2 }, rc.fore, lw, ss);
 		rc.dc->DrawLine (tip, { tip.x + size / 2, tip.y - size / 2 }, rc.fore, lw, ss);
 	}
+	*/
 }
 
-void expandable_item_i::expand_all()
+void IExpandableItem::expand_all()
 {
 	if (!expanded())
 		expand();
 
-	for (size_t i = 0; i < this->child_count(); i++)
+	for (uint32_t i = 0; i < this->child_count(); i++)
 	{
 		auto c = this->child_at(i);
-		if (auto ei = dynamic_cast<expandable_item_i*>(c))
+		if (auto ei = c->AsExpandable())
 			ei->expand_all();
 	}
 }
 #pragma endregion
 
-#pragma region property_item_i
-edge::text_layout_with_metrics property_item_i::make_name_layout() const
+HRESULT pg::GetNameText (const IPGPropertyItem* item, wil::unique_bstr& nameText)
 {
-	auto grid = root()->grid();
-	uint32_t dpi = edge::dpi(grid->window().hwnd());
-	float name_layout_width = grid->value_column_left(dpi) - grid->name_column_left(indent()) - grid->line_width(dpi) - 2 * text_lr_padding;
-	if (name_layout_width <= 0)
-		return { };
+	nameText.reset();
 
-	return text_layout_with_metrics (grid->renderer()->dwrite_factory(), grid->text_format(), property()->name(), name_layout_width);
+	ITypeInfo* ti = item->TypeInfo();
+	FUNCDESC* fd;
+	auto hr = ti->GetFuncDesc(item->GetterFuncIndex(), &fd); RETURN_IF_FAILED(hr);
+	auto releaseFD = wil::scope_exit([ti, fd] { ti->ReleaseFuncDesc(fd); });
+
+	wil::unique_bstr name;
+	UINT cNames;
+	hr = ti->GetNames(item->property(), &name, 1, &cNames); RETURN_IF_FAILED(hr);
+
+	nameText = std::move(name);
+	return S_OK;
 }
-#pragma endregion
 
-#pragma region value_property_item_i
-value_layout_t value_property_item_i::make_value_layout() const
+extern HRESULT MakeValuePropertyItem (IGroupItem* parent, ITypeInfo* typeInfo, DISPID prop, VARENUM vartype,
+									  vector_nothrow<std::pair<wil::unique_bstr, LONG>> nvps,
+									  WORD getterFuncIndex, WORD setterFuncIndex, IPGPropertyItem** ppItem);
+extern std::unique_ptr<IPGPropertyItem> make_object_property_item (IGroupItem* parent, DISPID prop);
+extern std::unique_ptr<IPGPropertyItem> make_value_collection_item (IGroupItem* parent, DISPID prop);
+extern HRESULT MakeObjectCollectionItem (IGroupItem* parent, DISPID prop, IPGPropertyItem** ppItem);
+
+HRESULT MakePropertyItem (IGroupItem* parent, DISPID prop, IPGPropertyItem** ppItem)
 {
-	auto root = this->root();
-	auto grid = root->grid();
-	uint32_t dpi = edge::dpi(grid->window().hwnd());
+	HRESULT hr;
 
-	float width = grid->value_column_right(dpi) - grid->value_column_left(dpi) - grid->line_width(dpi) - 2 * text_lr_padding;
-	if (width <= 0)
-		return { };
+	wil::com_ptr_nothrow<ITypeInfo> typeInfo;
+	hr = parent->parent()->objects()->front()->GetTypeInfo(0, InvariantLCID, &typeInfo); RETURN_IF_FAILED(hr);
+	TYPEATTR* typeAttr;
+	hr = typeInfo->GetTypeAttr(&typeAttr); RETURN_IF_FAILED(hr);
+	auto releaseTypeAttr = wil::scope_exit([ti=typeInfo.get(), typeAttr] { ti->ReleaseTypeAttr(typeAttr); });
 
-	auto factory = grid->renderer()->dwrite_factory();
-	auto& objs = parent()->parent()->objects();
-	bool changed_from_default = objs.any ([p=property()](object* o) { return p->changed_from_default(o); });
-	auto format = changed_from_default ? grid->bold_text_format() : grid->text_format();
-
-	text_layout_with_metrics tl;
-	value_layout_t::read_state state;
-	try
+	VARENUM vt;
+	int getterFuncIndex = -1;
+	int setterFuncIndex = -1;
+	HREFTYPE hreftype;
+	for (WORD i = 0; i < typeAttr->cFuncs; i++)
 	{
-		bool multiple_values = objs.any(1, objs.size(), [p=property(), first=objs[0]](object* o) { return !p->equal(first, o); });
-		if (multiple_values)
+		FUNCDESC* fd;
+		hr = typeInfo->GetFuncDesc(i, &fd); RETURN_IF_FAILED(hr);
+		auto releaseFundDesc = wil::scope_exit([ti=typeInfo.get(), fd] { ti->ReleaseFuncDesc(fd); });
+		if (fd->memid == prop)
 		{
-			tl = text_layout_with_metrics (factory, format, "(multiple values)", width);
-			state = value_layout_t::read_state::multiple_values;
-		}
-		else
-		{
-			auto str = property()->get_to_string(objs.front(), root->app_context());
-			tl = text_layout_with_metrics (factory, format, str, width);
-			state = value_layout_t::read_state::ok;
+			if (fd->invkind == INVOKE_PROPERTYGET)
+			{
+				getterFuncIndex = i;
+				vt = (VARENUM)fd->elemdescFunc.tdesc.vt;
+				hreftype = fd->elemdescFunc.tdesc.hreftype;
+			}
+			else if (fd->invkind == INVOKE_PROPERTYPUT)
+				setterFuncIndex = i;
+
+			if (getterFuncIndex != -1 && setterFuncIndex != -1)
+				break;
 		}
 	}
-	catch (const std::exception& ex)
+
+	RETURN_HR_IF(E_UNEXPECTED, getterFuncIndex == -1);
+
+	switch (vt)
 	{
-		tl = text_layout_with_metrics (factory, format, ex.what(), width);
-		state = value_layout_t::read_state::read_exception;
+		case VT_UI1:
+		case VT_UI2:
+		case VT_UI4:
+		case VT_I1:
+		case VT_I2:
+		case VT_I4:
+		case VT_BSTR:
+		case VT_BOOL:
+			return MakeValuePropertyItem (parent, typeInfo, prop, vt, { }, (WORD)getterFuncIndex, (WORD)setterFuncIndex, ppItem);
+
+		case VT_USERDEFINED:
+		{
+			com_ptr<ITypeInfo> refTypeInfo;
+			hr = typeInfo->GetRefTypeInfo(hreftype, &refTypeInfo); RETURN_IF_FAILED(hr);
+			TYPEATTR* refTypeAttr;
+			hr = refTypeInfo->GetTypeAttr(&refTypeAttr); RETURN_IF_FAILED(hr);
+			auto releaseRefTypeAttr = wil::scope_exit([ti=refTypeInfo.get(), refTypeAttr] { ti->ReleaseTypeAttr(refTypeAttr); });
+			if (refTypeAttr->typekind == TKIND_ENUM)
+			{
+				vector_nothrow<std::pair<wil::unique_bstr, LONG>> nvps;
+				bool reserved = nvps.try_reserve(refTypeAttr->cVars); RETURN_HR_IF(E_OUTOFMEMORY, !reserved);
+				for (WORD i = 0; i < refTypeAttr->cVars; i++)
+				{
+					VARDESC* varDesc;
+					auto hr = refTypeInfo->GetVarDesc(i, &varDesc); RETURN_IF_FAILED(hr);
+					auto releaseVarDesc = wil::scope_exit([&refTypeInfo, varDesc] { refTypeInfo->ReleaseVarDesc(varDesc); });
+					RETURN_HR_IF(E_INVALIDARG, varDesc->lpvarValue->vt != VT_I4);
+					wil::unique_bstr name;
+					wil::unique_bstr docString;
+					hr = refTypeInfo->GetDocumentation(varDesc->memid, &name, &docString, nullptr, nullptr); RETURN_IF_FAILED(hr);
+					if (docString)
+						nvps.try_push_back({ std::move(docString), varDesc->lpvarValue->lVal });
+					else if (name)
+						nvps.try_push_back({ std::move(name), varDesc->lpvarValue->lVal });
+					else
+						RETURN_HR(DISP_E_UNKNOWNNAME);
+				}
+
+				return MakeValuePropertyItem (parent, typeInfo, prop, vt, std::move(nvps), (WORD)getterFuncIndex, (WORD)setterFuncIndex, ppItem);
+			}
+
+			RETURN_HR(E_NOTIMPL);
+		}
+
+		default:
+			RETURN_HR(E_NOTIMPL);
 	}
 
-	return { std::move(tl), state };
-}
-#pragma endregion
-
-
-using namespace pg;
-
-extern std::unique_ptr<value_property_item_i> make_value_property_item (group_item_i* parent, const edge::value_property* prop);
-extern std::unique_ptr<property_item_i> make_object_property_item (group_item_i* parent, const edge::object_property* prop);
-extern std::unique_ptr<property_item_i> make_value_collection_item (group_item_i* parent, const edge::value_collection_property* prop);
-extern std::unique_ptr<property_item_i> make_object_collection_item (group_item_i* parent, const edge::object_collection_property* prop);
-
-std::unique_ptr<property_item_i> make_property_item (group_item_i* parent, const edge::property* prop)
-{
-	if (auto custom_item_prop = dynamic_cast<const custom_item_property_i*>(prop))
-		return custom_item_prop->create_item(parent, prop);
-
-	if (auto value_prop = dynamic_cast<const value_property*>(prop))
-		return make_value_property_item(parent, value_prop);
-
+	/*
 	if (auto obj_coll_prop = dynamic_cast<const object_collection_property*>(prop))
-		return make_object_collection_item(parent, obj_coll_prop);
+	return make_object_collection_item(parent, obj_coll_prop);
 
 	if (auto obj_prop = dynamic_cast<const object_property*>(prop))
-		return make_object_property_item(parent, obj_prop);
+	return make_object_property_item(parent, obj_prop);
 
 	if (auto value_coll_prop = dynamic_cast<const value_collection_property*>(prop))
-		return make_value_collection_item(parent, value_coll_prop);
-
+	return make_value_collection_item(parent, value_coll_prop);
+	*/
 	// TODO: placeholder pg item for unknown types of properties
-	rassert(false); return nullptr;
+	RETURN_HR(E_NOTIMPL);
 }

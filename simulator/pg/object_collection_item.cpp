@@ -1,115 +1,138 @@
 
-#include "include/pg/property_grid.h"
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License v2.0.
+
+#include "pg_internal.h"
 
 using namespace pg;
 using namespace edge;
 
 class object_collection_item : public object_collection_item_i
 {
-	event_manager _em;
-	group_item_i* const _parent;
-	const edge::object_collection_property* const _prop;
+	ULONG _refCount = 0;
+	IGroupItem* _parent;
+	DISPID _prop;
 
 public:
-	object_collection_item (group_item_i* parent, const object_collection_property* prop)
-		: _parent(parent), _prop(prop)
-	{ }
-
-	~object_collection_item()
+	HRESULT InitInstance (IGroupItem* parent, DISPID prop)
 	{
-		item_removing_e::invoker(_em).invoke(this);
+		_parent = parent;
+		_prop = prop;
+		return S_OK;
 	}
 
-	#pragma region item_i
-	virtual void perform_layout() override final
+	IUnknown* AsUnknown() { return static_cast<IPGPropertyItem*>(this); }
+
+	#pragma region IUnknown
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override
 	{
-		rassert(false);
+		RETURN_HR_IF(E_POINTER, !ppvObject);
+		*ppvObject = nullptr;
+
+		if (   TryQI<IUnknown>(AsUnknown(), riid, ppvObject)
+			|| TryQI<IItem>(static_cast<IPGPropertyItem*>(this), riid, ppvObject)
+		)
+			return S_OK;
+
+		//if (riid == __uuidof(IWeakRef))
+		//	return _weakRefToThis.QueryIWeakRef(ppvObject);
+
+		return E_NOINTERFACE;
 	}
 
-	virtual void render (const render_context& rc, float y, bool selected, bool hot, bool focused) const override final
+	virtual ULONG STDMETHODCALLTYPE AddRef() override { return ++_refCount; }
+
+	virtual ULONG STDMETHODCALLTYPE Release() override { return ReleaseST(this, _refCount); }
+	#pragma endregion
+
+	#pragma region IItem
+	virtual LONG Height() const noexcept override
 	{
-		rassert(false);
+		_ASSERT(false); return { };
 	}
 
-	virtual float content_height() const override final
+	virtual HCURSOR cursor_at (POINT pd, LONG item_y) const override final
 	{
-		rassert(false); return { };
-	}
-
-	virtual HCURSOR cursor_at(D2D1_POINT_2F pd, float item_y) const override final
-	{
-		rassert(false); return { };
+		_ASSERT(false); return { };
 	}
 
 	virtual bool selectable() const override final
 	{
-		rassert(false); return { };
+		_ASSERT(false); return { };
 	}
 
-	virtual void on_mouse_down (const edge::mouse_ud_args& ma, float item_y) override final
+	virtual HRESULT STDMETHODCALLTYPE ProcessMouseDown (const edge::mouse_ud_args& ma, LONG item_y) noexcept override
 	{
-		rassert(false);
+		RETURN_HR(E_NOTIMPL);
 	}
 
-	virtual void on_mouse_up   (const edge::mouse_ud_args& ma, float item_y) override final
+	virtual HRESULT STDMETHODCALLTYPE ProcessMouseUp (const edge::mouse_ud_args& ma, LONG item_y) noexcept override
 	{
-		rassert(false);
+		RETURN_HR(E_NOTIMPL);
 	}
 
-	virtual std::string description_title() const override final
+	virtual wil::unique_process_heap_string description_title() const override final
 	{
-		rassert(false); return { };
+		_ASSERT(false); return { };
 	}
 
-	virtual std::string description_text() const override final
+	virtual wil::unique_process_heap_string description_text() const override final
 	{
-		rassert(false); return { };
+		_ASSERT(false); return { };
 	}
 
-	virtual item_removing_e::subscriber item_removing() override final
-	{
-		return item_removing_e::subscriber(_em);
-	}
+	STDMETHOD(GetValue)(read_state* pState, BSTR* pbstrValueText) override { RETURN_HR(E_NOTIMPL); }
 	#pragma endregion
 
-	#pragma region property_item_i
-	virtual item_i* as_item() override final { return this; }
-	virtual group_item_i* parent() const override final { return _parent; }
+	#pragma region IPGPropertyItem
+	virtual IItem* as_item() override final { return static_cast<IPGPropertyItem*>(this); }
+	virtual IGroupItem* parent() const noexcept override { return _parent; }
 	//virtual const edge::property* property() const override final { return _prop; }
 
 	// These two functions are called from code in the object_item class, which listens to corresponding events.
-	virtual void on_property_changing (size_t object_index, const edge::property_change_args& args) override final
+	virtual HRESULT STDMETHODCALLTYPE OnPropertyChanging (const PropertyChangeArgs *args) override
 	{
-		rassert(false);
+		RETURN_HR(E_NOTIMPL);
 	}
 
-	virtual void on_property_changed (size_t object_index, const edge::property_change_args& args) override final
+	virtual HRESULT STDMETHODCALLTYPE OnPropertyChanged (const PropertyChangeArgs *args) override
 	{
-		rassert(false);
+		RETURN_HR(E_NOTIMPL);
 	}
 	#pragma endregion
 
-	#pragma region object_collection_item_i
-	virtual const edge::object_collection_property* property() const override final
+	virtual ITypeInfo* TypeInfo() const override
+	{
+		_ASSERT(false); return { };
+	}
+
+	virtual DISPID property() const override final
 	{
 		return _prop;
 	}
-	#pragma endregion
+
+	virtual VARENUM VarType() const override
+	{
+		_ASSERT(false); return { };
+	}
+
+	virtual WORD GetterFuncIndex() const override
+	{
+		_ASSERT(false); return { };
+	}
 
 	bool multiple_child_types() const
 	{
 		//auto& objs = parent()->parent()->objects();
-		rassert(false); return false;
+		_ASSERT(false); return false;
 	}
 
-	#pragma region expandable_item_i
-	//virtual item_i* as_item() = 0;
+	#pragma region IExpandableItem
+	virtual uint32_t child_count() const override final { return 0; }
 
-	virtual size_t child_count() const override final { return 0; }
-
-	virtual item_i* child_at(size_t index) const override final
+	virtual IItem* child_at(uint32_t index) const override final
 	{
-		rassert(false); return { };
+		_ASSERT(false); return { };
 	}
 
 	virtual bool expanded() const override final
@@ -143,7 +166,10 @@ public:
 	#pragma endregion
 };
 
-std::unique_ptr<property_item_i> make_object_collection_item (group_item_i* parent, const edge::object_collection_property* prop)
+HRESULT MakeObjectCollectionItem (IGroupItem* parent, DISPID prop, IPGPropertyItem** ppItem)
 {
-	return std::make_unique<object_collection_item>(parent, prop);
+	auto p = com_ptr (new (std::nothrow) object_collection_item()); RETURN_IF_NULL_ALLOC(p);
+	auto hr = p->InitInstance(parent, prop); RETURN_IF_FAILED(hr);
+	*ppItem = p.detach();
+	return S_OK;
 }

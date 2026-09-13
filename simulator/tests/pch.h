@@ -13,31 +13,26 @@
 #include <charconv>
 #include <cstdint>
 #include <cstdlib>
-#include <exception>
 #include <functional>
 #include <iomanip>
 #include <locale>
-#include <memory>
-#include <mutex>
 #include <optional>
 #include <queue>
 #include <random>
 #include <set>
+#include <span>
 #include <sstream>
-#include <stdexcept>
-#include <thread>
-#include <typeindex>
 #include <unordered_map>
 #include <unordered_set>
 #include <variant>
 
+// Windows
+#define _COM_NO_STANDARD_GUIDS_
 #include <comdef.h>
 #include <Commctrl.h>
 #include <d2d1_1.h>
 #include <d3d11_1.h>
 #include <dwrite_1.h>
-#include <intrin.h>
-#include <MsXml6.h>
 #include <ShlObj.h>
 #include <Shlwapi.h>
 #include <Unknwn.h>
@@ -45,3 +40,11 @@
 #include <wincodec.h>
 #include <Windows.h>
 #include <windowsx.h>
+#undef DrawText
+
+// WIL
+#include <wil/com.h>
+#include <wil/common.h>
+
+// CppUnitTest
+#include "CppUnitTest.h"

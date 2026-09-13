@@ -3,36 +3,213 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #include "pch.h"
-#include "bridge.h"
 #include "test_helpers.h"
 #include "internal/stp_bridge.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
+using port_key = std::pair<IBridge*, unsigned>;
+
+struct port_key_hash
+{
+	size_t operator()(const port_key& key) const
+	{
+		return std::hash<IBridge*>{}(key.first) ^ (std::hash<unsigned>{}(key.second) << 1);
+	}
+};
+
+class STPPropertyChangedSink : public IStpPropertyChangedSink
+{
+	ULONG _refCount = 0;
+	WeakRefToThis _weakRefToThis;
+	std::unordered_map<port_key, STP_PORT_ROLE, port_key_hash> _mostRecentRoles;
+
+public:
+	STPPropertyChangedSink()
+	{
+		auto hr = _weakRefToThis.InitInstance(AsUnknown());
+		Assert::AreEqual(S_OK, hr);
+	}
+
+	IWeakRef* GetWeakRef() { return _weakRefToThis; }
+
+	STP_PORT_ROLE GetMostRecentRole(IBridge* bridge, unsigned portIndex) const
+	{
+		auto it = _mostRecentRoles.find({ bridge, portIndex });
+		return it == _mostRecentRoles.end() ? STP_PORT_ROLE_UNDEFINED : it->second;
+	}
+
+	IUnknown* AsUnknown() { return static_cast<IStpPropertyChangedSink*>(this); }
+
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override
+	{
+		if (TryQI<IUnknown>(AsUnknown(), riid, ppvObject)
+			|| TryQI<IStpPropertyChangedSink>(this, riid, ppvObject))
+			return S_OK;
+
+		if (riid == __uuidof(IWeakRef))
+			return _weakRefToThis.QueryIWeakRef(ppvObject);
+
+		Assert::Fail();
+		return E_NOINTERFACE;
+	}
+
+	virtual ULONG STDMETHODCALLTYPE AddRef() override { return ++_refCount; }
+	virtual ULONG STDMETHODCALLTYPE Release() override { return ReleaseST(this, _refCount); }
+
+	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanged(IBridge* bridge, unsigned int portIndex,
+		unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) override
+	{
+		if (prop == STP_PROPERTY_PORT_ROLE)
+			_mostRecentRoles[{ bridge, portIndex }] = STP_GetPortRole(bridge->stp_bridge(), portIndex, treeIndex);
+		return S_OK;
+	}
+};
+
+template<typename predicate_t>
+static void RunMessageLoopUntilCondition(predicate_t&& predicate)
+{
+	DWORD startTime = GetTickCount();
+	while (!predicate())
+	{
+		if (GetTickCount() - startTime >= 500)
+			Assert::Fail();
+
+		MSG msg;
+		while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+		Sleep(20);
+	}
+}
+
 TEST_CLASS(port_tests)
 {
-	TEST_METHOD(test_port_roles)
+	TEST_METHOD(TestPortRoleTransition_Designated_Root)
 	{
-		test_bridge bridge0 (4, 0, 0, { 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
-		STP_StartBridge (bridge0, 0);
+		HRESULT hr;
+		auto project = MakeProject();
+		auto bridge0 = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		auto bridge1 = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x70 });
+		project->AddBridge(bridge0);
+		project->AddBridge(bridge1);
 
-		test_bridge bridge1 (4, 0, 0, { 0x10, 0x20, 0x30, 0x40, 0x50, 0x70 });
-		STP_StartBridge (bridge1, 0);
+		auto wire = MakeWire();
+		wire->set_p0(bridge0->PortAt(0));
+		wire->set_p1(bridge1->PortAt(0));
+		project->AddWire(std::move(wire));
 
-		// Let's connect a 100Mbps cable between the first port of each bridge...
-		STP_OnPortEnabled (bridge0, 0, 100, true, 0);
-		STP_OnPortEnabled (bridge1, 0, 100, true, 0);
-		// ... and another 100Mbps cable between their second ports.
-		STP_OnPortEnabled (bridge0, 1, 100, true, 0);
-		STP_OnPortEnabled (bridge1, 1, 100, true, 0);
-		// Let BPDUs pass through.
-		while (exchange_bpdus(bridge0, 0, bridge1, 0) || exchange_bpdus(bridge0, 1, bridge1, 1))
-			;
-		// And check the port roles.
-		Assert::AreEqual (STP_PORT_ROLE_DESIGNATED, STP_GetPortRole(bridge0, 0, 0));
-		Assert::AreEqual (STP_PORT_ROLE_DESIGNATED, STP_GetPortRole(bridge0, 1, 0));
-		Assert::AreEqual (STP_PORT_ROLE_ROOT,       STP_GetPortRole(bridge1, 0, 0));
-		Assert::AreEqual (STP_PORT_ROLE_ALTERNATE,  STP_GetPortRole(bridge1, 1, 0));
+		auto sink = com_ptr(new STPPropertyChangedSink());
+
+		AdviseSinkToken token0;
+		hr = AdviseSink<IStpPropertyChangedSink>(bridge0, sink->GetWeakRef(), &token0); Assert::AreEqual(S_OK, hr);
+		AdviseSinkToken token1;
+		hr = AdviseSink<IStpPropertyChangedSink>(bridge1, sink->GetWeakRef(), &token1); Assert::AreEqual(S_OK, hr);
+
+		STP_StartBridge(bridge0->stp_bridge(), 0);
+		STP_StartBridge(bridge1->stp_bridge(), 0);
+
+		RunMessageLoopUntilCondition([&]
+			{
+				return sink->GetMostRecentRole(bridge0.get(), 0) == STP_PORT_ROLE_DESIGNATED
+					&& sink->GetMostRecentRole(bridge1.get(), 0) == STP_PORT_ROLE_ROOT;
+			});
+	}
+
+	TEST_METHOD(TestPortRoleTransition_Alternate)
+	{
+		HRESULT hr;
+		auto project = MakeProject();
+		auto bridge0 = MakeBridge(2, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		auto bridge1 = MakeBridge(2, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x70 });
+		project->AddBridge(bridge0);
+		project->AddBridge(bridge1);
+
+		auto wire0 = MakeWire();
+		wire0->set_p0(bridge0->PortAt(0));
+		wire0->set_p1(bridge1->PortAt(0));
+		project->AddWire(std::move(wire0));
+		auto wire1 = MakeWire();
+		wire1->set_p0(bridge0->PortAt(1));
+		wire1->set_p1(bridge1->PortAt(1));
+		project->AddWire(std::move(wire1));
+
+		auto sink = com_ptr(new STPPropertyChangedSink());
+		AdviseSinkToken token0;
+		hr = AdviseSink<IStpPropertyChangedSink>(bridge0, sink->GetWeakRef(), &token0); Assert::AreEqual(S_OK, hr);
+		AdviseSinkToken token1;
+		hr = AdviseSink<IStpPropertyChangedSink>(bridge1, sink->GetWeakRef(), &token1); Assert::AreEqual(S_OK, hr);
+
+		STP_StartBridge(bridge0->stp_bridge(), 0);
+		STP_StartBridge(bridge1->stp_bridge(), 0);
+
+		RunMessageLoopUntilCondition([&]
+			{
+				return sink->GetMostRecentRole(bridge0.get(), 0) == STP_PORT_ROLE_DESIGNATED
+					&& sink->GetMostRecentRole(bridge0.get(), 1) == STP_PORT_ROLE_DESIGNATED
+					&& sink->GetMostRecentRole(bridge1.get(), 0) == STP_PORT_ROLE_ROOT
+					&& sink->GetMostRecentRole(bridge1.get(), 1) == STP_PORT_ROLE_ALTERNATE;
+			});
+	}
+
+	TEST_METHOD(TestPortRoleTransition_Backup)
+	{
+		HRESULT hr;
+		auto project = MakeProject();
+		auto bridge = MakeBridge(2, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		project->AddBridge(bridge);
+
+		auto wire = MakeWire();
+		wire->set_p0(bridge->PortAt(0));
+		wire->set_p1(bridge->PortAt(1));
+		project->AddWire(std::move(wire));
+
+		auto sink = com_ptr(new STPPropertyChangedSink());
+		AdviseSinkToken token;
+		hr = AdviseSink<IStpPropertyChangedSink>(bridge, sink->GetWeakRef(), &token); Assert::AreEqual(S_OK, hr);
+
+		STP_StartBridge(bridge->stp_bridge(), 0);
+
+		RunMessageLoopUntilCondition([&]
+			{
+				return sink->GetMostRecentRole(bridge.get(), 0) == STP_PORT_ROLE_DESIGNATED
+					&& sink->GetMostRecentRole(bridge.get(), 1) == STP_PORT_ROLE_BACKUP;
+			});
+	}
+
+	TEST_METHOD(TestPortRoleTransition_Disabled)
+	{
+		HRESULT hr;
+		auto project = MakeProject();
+		auto bridge = MakeBridge(2, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		project->AddBridge(bridge);
+
+		auto wire = MakeWire();
+		wire->set_p0(bridge->PortAt(0));
+		wire->set_p1(bridge->PortAt(1));
+		project->AddWire(std::move(wire));
+
+		auto sink = com_ptr(new STPPropertyChangedSink());
+		AdviseSinkToken token;
+		hr = AdviseSink<IStpPropertyChangedSink>(bridge, sink->GetWeakRef(), &token); Assert::AreEqual(S_OK, hr);
+
+		STP_StartBridge(bridge->stp_bridge(), 0);
+
+		RunMessageLoopUntilCondition([&]
+			{
+				return sink->GetMostRecentRole(bridge.get(), 0) == STP_PORT_ROLE_DESIGNATED
+					&& sink->GetMostRecentRole(bridge.get(), 1) == STP_PORT_ROLE_BACKUP;
+			});
+
+		hr = project->RemoveWire(0); Assert::AreEqual(S_OK, hr);
+
+		RunMessageLoopUntilCondition([&]
+			{
+				return sink->GetMostRecentRole(bridge.get(), 0) == STP_PORT_ROLE_DISABLED
+					&& sink->GetMostRecentRole(bridge.get(), 1) == STP_PORT_ROLE_DISABLED;
+			});
 	}
 
 	void test_port_path_cost (bool internal)

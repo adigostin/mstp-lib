@@ -1,6 +1,6 @@
 
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
-// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+// Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License v2.0.
 //
 // This header file is the entire library interface; you should
 // have no need to include any other header file from the library.
@@ -57,7 +57,7 @@ struct STP_CALLBACKS
 	STP_CALLBACK_FLUSH_FDB                   flushFdb;
 	STP_CALLBACK_DEBUG_STR_OUT               debugStrOut;
 	STP_CALLBACK_ON_TOPOLOGY_CHANGE          onTopologyChange;
-	STP_CALLBACK_PORT_ROLE_CHANGED           onPortRoleChanged;
+	STP_CALLBACK_PORT_ROLE_CHANGED           onPortRoleChangedDeprecated;
 	STP_CALLBACK_ALLOC_AND_ZERO_MEMORY       allocAndZeroMemory;
 	STP_CALLBACK_FREE_MEMORY                 freeMemory;
 };
@@ -101,6 +101,18 @@ struct STP_BRIDGE_ADDRESS
 	bool operator== (const STP_BRIDGE_ADDRESS& rhs) const;
 	bool operator!= (const STP_BRIDGE_ADDRESS& rhs) const;
 	#endif
+};
+
+enum STP_PROPERTY
+{
+	STP_PROPERTY_ADMIN_EDGE,
+	STP_PROPERTY_OPER_EDGE,
+	STP_PROPERTY_DETECTED_P2P,
+	STP_PROPERTY_ADMIN_P2P,
+	STP_PROPERTY_OPER_P2P,
+	STP_PROPERTY_PORT_ENABLED,
+	STP_PROPERTY_PORT_ROLE,
+	STP_PROPERTY_MST_CONFIG_DIGEST,
 };
 
 #ifdef __cplusplus
@@ -260,6 +272,19 @@ unsigned int STP_GetTxCount (const struct STP_BRIDGE* bridge, unsigned int portI
 
 void  STP_SetApplicationContext (struct STP_BRIDGE* bridge, void* applicationContext);
 void* STP_GetApplicationContext (const struct STP_BRIDGE* bridge);
+
+// - portIndex equal to UINT_MAX and treeIndex equal to UINT_MAX means the changed property
+//   is not associated with a port or a tree, it applies to the bridge.
+// - portIndex equal to UINT_MAX and treeIndex < (1 + mstiCount) means the changed property
+//   is not associated with a port, it applies to a tree of the bridge.
+// - portIndex < portCount and treeIndex < (1 + mstiCount) means the changed property
+//   is associated with a tree of a port.
+typedef void (*STP_CALLBACK_PROPERTY_CHANGED) (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_PROPERTY prop, unsigned int timestamp);
+
+// TODO: document that only one callback can be registered at a time.
+// The callback can't call library functions that change STP state since it gets a const STP_BRIDGE* pointer.
+void STP_RegisterPropertyChangeCallback(struct STP_BRIDGE* bridge, STP_CALLBACK_PROPERTY_CHANGED changed);
+void STP_UnregisterPropertyChangeCallback(struct STP_BRIDGE* bridge);
 
 #ifdef __cplusplus
 } // extern "C"

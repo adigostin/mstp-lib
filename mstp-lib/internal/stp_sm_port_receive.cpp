@@ -86,7 +86,12 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, uns
 		updtBPDUVersion (bridge, givenPort);
 		port->rcvdInternal = fromSameRegion (bridge, givenPort);
 		rcvMsgs (bridge, givenPort);
+
+		bool oldOperEdge = port->operEdge;
 		port->operEdge = port->isolate = port->rcvdBpdu = false;
+		if (oldOperEdge && bridge->propChanged)
+			bridge->propChanged(bridge, givenPort, -1, STP_PROPERTY_OPER_EDGE, timestamp);
+
 		port->edgeDelayWhile = bridge->MigrateTime;
 	}
 	else

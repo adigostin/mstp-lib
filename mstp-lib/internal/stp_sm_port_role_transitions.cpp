@@ -378,8 +378,13 @@ static void InitState (STP_BRIDGE* bridge, PortAndTree pt, State state, unsigned
 		tree->fdWhile = MaxAge (bridge, givenPort);
 		tree->rbWhile = 0;
 
-		if ((oldRole != STP_PORT_ROLE_DISABLED) && (bridge->callbacks.onPortRoleChanged != NULL))
-			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, STP_PORT_ROLE_DISABLED, timestamp);
+		if (oldRole != STP_PORT_ROLE_DISABLED)
+		{
+			if (bridge->callbacks.onPortRoleChangedDeprecated != NULL)
+				bridge->callbacks.onPortRoleChangedDeprecated (bridge, givenPort, givenTree, STP_PORT_ROLE_DISABLED, timestamp);
+			if (bridge->propChanged)
+				bridge->propChanged(bridge, givenPort, givenTree, STP_PROPERTY_PORT_ROLE, timestamp);
+		}
 	}
 	else if (state == DISABLE_PORT)
 	{
@@ -388,8 +393,13 @@ static void InitState (STP_BRIDGE* bridge, PortAndTree pt, State state, unsigned
 		tree->role = STP_PORT_ROLE_DISABLED;
 		tree->learn = tree->forward = false;
 
-		if ((oldRole != STP_PORT_ROLE_DISABLED) && (bridge->callbacks.onPortRoleChanged != NULL))
-			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, STP_PORT_ROLE_DISABLED, timestamp);
+		if (oldRole != STP_PORT_ROLE_DISABLED)
+		{
+			if (bridge->callbacks.onPortRoleChangedDeprecated != NULL)
+				bridge->callbacks.onPortRoleChangedDeprecated (bridge, givenPort, givenTree, STP_PORT_ROLE_DISABLED, timestamp);
+			if (bridge->propChanged)
+				bridge->propChanged(bridge, givenPort, givenTree, STP_PROPERTY_PORT_ROLE, timestamp);
+		}
 	}
 	else if (state == DISABLED_PORT)
 	{
@@ -408,8 +418,13 @@ static void InitState (STP_BRIDGE* bridge, PortAndTree pt, State state, unsigned
 
 		tree->role = STP_PORT_ROLE_MASTER;
 
-		if ((oldRole != STP_PORT_ROLE_MASTER) && (bridge->callbacks.onPortRoleChanged != NULL))
-			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, STP_PORT_ROLE_MASTER, timestamp);
+		if (oldRole != STP_PORT_ROLE_MASTER)
+		{
+			if (bridge->callbacks.onPortRoleChangedDeprecated != NULL)
+				bridge->callbacks.onPortRoleChangedDeprecated (bridge, givenPort, givenTree, STP_PORT_ROLE_MASTER, timestamp);
+			if (bridge->propChanged)
+				bridge->propChanged(bridge, givenPort, givenTree, STP_PROPERTY_PORT_ROLE, timestamp);
+		}
 	}
 	else if (state == MASTER_PROPOSED)
 	{
@@ -458,8 +473,13 @@ static void InitState (STP_BRIDGE* bridge, PortAndTree pt, State state, unsigned
 		tree->role = STP_PORT_ROLE_ROOT;
 		tree->rrWhile = FwdDelay (bridge, givenPort);
 
-		if ((oldRole != STP_PORT_ROLE_ROOT) && (bridge->callbacks.onPortRoleChanged != NULL))
-			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, STP_PORT_ROLE_ROOT, timestamp);
+		if (oldRole != STP_PORT_ROLE_ROOT)
+		{
+			if (bridge->callbacks.onPortRoleChangedDeprecated != NULL)
+				bridge->callbacks.onPortRoleChangedDeprecated (bridge, givenPort, givenTree, STP_PORT_ROLE_ROOT, timestamp);
+			if (bridge->propChanged)
+				bridge->propChanged(bridge, givenPort, givenTree, STP_PROPERTY_PORT_ROLE, timestamp);
+		}
 	}
 	else if (state == ROOT_PROPOSED)
 	{
@@ -517,8 +537,13 @@ static void InitState (STP_BRIDGE* bridge, PortAndTree pt, State state, unsigned
 		if (cist (bridge, givenTree))
 			tree->proposing = tree->proposing || (!port->AdminEdge && !port->AutoEdge && port->AutoIsolate && port->operPointToPointMAC);
 
-		if ((oldRole != STP_PORT_ROLE_DESIGNATED) && (bridge->callbacks.onPortRoleChanged != NULL))
-			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, STP_PORT_ROLE_DESIGNATED, timestamp);
+		if (oldRole != STP_PORT_ROLE_DESIGNATED)
+		{
+			if (bridge->callbacks.onPortRoleChangedDeprecated != NULL)
+				bridge->callbacks.onPortRoleChangedDeprecated (bridge, givenPort, givenTree, STP_PORT_ROLE_DESIGNATED, timestamp);
+			if (bridge->propChanged)
+				bridge->propChanged(bridge, givenPort, givenTree, STP_PROPERTY_PORT_ROLE, timestamp);
+		}
 	}
 	else if (state == DESIGNATED_FORWARD)
 	{
@@ -604,8 +629,13 @@ static void InitState (STP_BRIDGE* bridge, PortAndTree pt, State state, unsigned
 		tree->role = tree->selectedRole;
 		tree->learn = tree->forward = false;
 
-		if ((oldRole != tree->role) && (bridge->callbacks.onPortRoleChanged != NULL))
-			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, tree->role, timestamp);
+		if (oldRole != tree->role)
+		{
+			if (bridge->callbacks.onPortRoleChangedDeprecated != NULL)
+				bridge->callbacks.onPortRoleChangedDeprecated (bridge, givenPort, givenTree, tree->role, timestamp);
+			if (bridge->propChanged)
+				bridge->propChanged(bridge, givenPort, givenTree, STP_PROPERTY_PORT_ROLE, timestamp);
+		}
 	}
 	else
 		assert (false);

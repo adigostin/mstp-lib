@@ -296,12 +296,19 @@ void STP_OnPortEnabled (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int
 
 	assert (!port->portEnabled);
 	port->portEnabled = true;
+	if (bridge->propChanged)
+		bridge->propChanged(bridge, portIndex, -1, STP_PROPERTY_PORT_ENABLED, timestamp);
 
 	port->detectedPointToPointMAC = detectedPointToPointMAC;
+	if (bridge->propChanged)
+		bridge->propChanged(bridge, portIndex, -1, STP_PROPERTY_DETECTED_P2P, timestamp);
+
 	if (port->adminPointToPointMAC != STP_ADMIN_P2P_AUTO)
 		port->operPointToPointMAC = (port->adminPointToPointMAC == STP_ADMIN_P2P_FORCE_TRUE);
 	else
-		port->operPointToPointMAC = detectedPointToPointMAC;
+		port->operPointToPointMAC = detectedPointToPointMAC;	
+	if (bridge->propChanged)
+		bridge->propChanged(bridge, portIndex, -1, STP_PROPERTY_OPER_P2P, timestamp);
 
 	port->detectedPortPathCost = GetDefaultPortPathCost(speedMegabitsPerSecond);
 
@@ -337,12 +344,18 @@ void STP_OnPortDisabled (STP_BRIDGE* bridge, unsigned int portIndex, unsigned in
 	if (port->portEnabled)
 	{
 		port->detectedPointToPointMAC = false;
+		if (bridge->propChanged)
+			bridge->propChanged(bridge, portIndex, -1, STP_PROPERTY_DETECTED_P2P, timestamp);
 		port->operPointToPointMAC = false;
+		if (bridge->propChanged)
+			bridge->propChanged(bridge, portIndex, -1, STP_PROPERTY_OPER_P2P, timestamp);
 		port->detectedPortPathCost = 0;
 		port->ExternalPortPathCost = 0;
 		// TODO: clear also InternalPortPathCost
 
 		port->portEnabled = false;
+		if (bridge->propChanged)
+			bridge->propChanged(bridge, portIndex, -1, STP_PROPERTY_PORT_ENABLED, timestamp);
 
 		if (bridge->started)
 			RunStateMachines (bridge, timestamp);
@@ -641,7 +654,12 @@ static void RestartStateMachines (STP_BRIDGE* bridge, unsigned int timestamp)
 
 void STP_SetPortAdminEdge (struct STP_BRIDGE* bridge, unsigned int portIndex, bool adminEdge, unsigned int timestamp)
 {
-	bridge->ports [portIndex]->AdminEdge = adminEdge;
+	if (bridge->ports [portIndex]->AdminEdge != adminEdge)
+	{
+		bridge->ports [portIndex]->AdminEdge = adminEdge;
+		if (bridge->propChanged)
+			bridge->propChanged(bridge, portIndex, -1, STP_PROPERTY_ADMIN_EDGE, timestamp);
+	}
 }
 
 bool STP_GetPortAdminEdge (const struct STP_BRIDGE* bridge, unsigned int portIndex)
@@ -671,6 +689,8 @@ void STP_SetAdminPointToPointMAC (struct STP_BRIDGE* bridge, unsigned int portIn
 	PORT* port = bridge->ports[portIndex];
 
 	port->adminPointToPointMAC = adminPointToPointMAC;
+	if (bridge->propChanged)
+		bridge->propChanged(bridge, portIndex, -1, STP_PROPERTY_ADMIN_P2P, timestamp);
 
 	if (port->portEnabled)
 	{
@@ -680,6 +700,9 @@ void STP_SetAdminPointToPointMAC (struct STP_BRIDGE* bridge, unsigned int portIn
 		if (port->operPointToPointMAC != newOperPointToPointMAC)
 		{
 			port->operPointToPointMAC = newOperPointToPointMAC;
+			if (bridge->propChanged)
+				bridge->propChanged(bridge, portIndex, -1, STP_PROPERTY_OPER_P2P, timestamp);
+
 			if (bridge->started)
 				RunStateMachines (bridge, timestamp);
 		}
@@ -934,6 +957,9 @@ void STP_SetMstConfigTable (struct STP_BRIDGE* bridge, const STP_CONFIG_TABLE_EN
 
 		if (bridge->started)
 			RestartStateMachines(bridge, timestamp);
+
+		if (bridge->propChanged)
+			bridge->propChanged(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_DIGEST, timestamp);
 	}
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
@@ -968,6 +994,9 @@ void STP_SetMstConfigTableEntry (struct STP_BRIDGE* bridge, unsigned int vlanNum
 
 		if (bridge->started)
 			RestartStateMachines(bridge, timestamp);
+
+		if (bridge->propChanged)
+			bridge->propChanged(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_DIGEST, timestamp);
 	}
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
@@ -1196,6 +1225,17 @@ void* STP_GetApplicationContext (const STP_BRIDGE* bridge)
 	return bridge->applicationContext;
 }
 
+void STP_RegisterPropertyChangeCallback(struct STP_BRIDGE* bridge, STP_CALLBACK_PROPERTY_CHANGED changed)
+{
+	assert(!bridge->propChanged);
+	bridge->propChanged = changed;
+}
+
+void STP_UnregisterPropertyChangeCallback(struct STP_BRIDGE* bridge)
+{
+	bridge->propChanged = nullptr;
+}
+
 // ============================================================================
 
 void STP_MST_CONFIG_ID::Dump (STP_BRIDGE* bridge, int port, int tree) const
@@ -1297,6 +1337,7 @@ unsigned int STP_GetExternalPortPathCost (const struct STP_BRIDGE* bridge, unsig
 
 unsigned int STP_GetInternalPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned treeIndex)
 {
+	assert(bridge->started);
 	const PORT* port = bridge->ports[portIndex];
 	if (!port->portEnabled)
 		return 0;

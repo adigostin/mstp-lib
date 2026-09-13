@@ -1,15 +1,18 @@
 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License v2.0.
+
 #include "include/pg/property_grid.h"
 #include "object_item.h"
-#include "edge/utility_functions.h"
-#include "edge/d2d_renderer.h"
 
 using namespace pg;
 using namespace edge;
 using namespace std::placeholders;
 
-class object_picker_popup
+class object_picker_popup //: ID2DRenderEventsSink
 {
+	ULONG _refCount = 0;
+
 	static constexpr DWORD style = WS_POPUPWINDOW;
 	static constexpr DWORD ex_style = WS_EX_NOACTIVATE;
 	static constexpr char bottom_hint[] = "Click a color name to select it, click a colored cell to edit the color.";
@@ -22,101 +25,133 @@ class object_picker_popup
 	};
 
 	object_property_item_i*  const _item;
-	std::function<void(const concrete_type*)> const _callback;
-	const edge::theme_color_provider_i*       const _tcp;
-	property_grid_i*         const _grid;
-	float                    const _pw;
-	float                    const _line_width;
+	std::function<void(ITypeInfo*)> const _callback;
+	const edge::IThemeColorProvider* const _tcp;
+	IPGInternal*             const _grid;
+	float                          _pw;
+	float                          _line_width;
 	float                    const _lrpadding;
 	float                    const _udpadding;
-	std::vector<std::pair<const concrete_type*, text_layout_with_metrics>> const _types;
-	float                    const _max_layout_width;
-	float                    const _max_layout_height;
-	float                    const _client_width;
-	float                    const _client_height;
-	std::unique_ptr<win32_window_i> const _window;
-	std::unique_ptr<d2d_renderer_i> const _renderer;
+	std::vector<ITypeInfo*>  const _types;
+	float                          _max_layout_width;
+	float                          _max_layout_height;
+	float                          _client_width;
+	float                          _client_height;
+	wil::unique_hwnd _hWnd;
 	//text_layout_with_metrics const _bottom_hint_text;
 	HHOOK _mouse_hook = nullptr;
+	WeakRefToThis _weakRefToThis;
 
 public:
-	object_picker_popup (object_property_item_i* item, float item_y, std::function<void(const concrete_type*)> callback, const edge::theme_color_provider_i* tcp)
+	object_picker_popup (object_property_item_i* item, LONG item_y, std::function<void(ITypeInfo*)> callback, const edge::IThemeColorProvider* tcp)
 		: _item(item)
 		, _callback(callback)
 		, _tcp(tcp)
-		, _grid(item->grid())
-		, _pw(edge::pixel_width(_grid->window().hwnd())) // we assume popup we're going to create will have same DPI
-		, _line_width(std::round(0.6f / _pw) * _pw)
+		, _grid(item->root()->grid())
+		//, _pw(edge::pixel_width(_grid->HWnd())) // we assume popup we're going to create will have same DPI
+		//, _line_width(std::round(0.6f / _pw) * _pw)
 		, _lrpadding(std::round(5 / _pw) * _pw)
 		, _udpadding(std::round(5 / _pw) * _pw)
-		, _types(make_types(_grid->renderer()->dwrite_factory(), _grid->bold_text_format(), item->property()))
-		, _max_layout_width(std::max_element(_types.begin(), _types.end(), [](auto& a, auto& b) { return a.second.width() < b.second.width(); })->second.width())
-		, _max_layout_height(std::max_element(_types.begin(), _types.end(), [](auto& a, auto& b){ return a.second.height() < b.second.height(); })->second.height())
-		, _client_width(_lrpadding + std::ceil(_max_layout_width / _pw) * _pw + _lrpadding)
-		, _client_height(std::accumulate(_types.begin(), _types.end(), 0.0f, [this](float a, auto& b) { return a + _udpadding + std::ceil(b.second.height() / _pw) * _pw + _udpadding + ((b.first != _types.back().first) ? _line_width : 0); }))
-		, _window(make_window(wnd_class, ex_style, style, _grid->window().hwnd(), _grid->calc_popup_window_pos(item, item_y, { _client_width, _client_height }, style, ex_style)))
-		, _renderer(make_d2d_renderer(*_window, _grid->renderer()->d3d_dc(), _grid->renderer()->dwrite_factory(), _grid->renderer()->d2d_factory()))
+		, _types(make_types(item->property()))
+		//, _max_layout_width(std::max_element(_types.begin(), _types.end(), [](auto& a, auto& b) { return a.second.width() < b.second.width(); })->second.width())
+		//, _max_layout_height(std::max_element(_types.begin(), _types.end(), [](auto& a, auto& b){ return a.second.height() < b.second.height(); })->second.height())
+		//, _client_width(_lrpadding + std::ceil(_max_layout_width / _pw) * _pw + _lrpadding)
+		//, _client_height(std::accumulate(_types.begin(), _types.end(), 0.0f, [this](float a, auto& b) { return a + _udpadding + std::ceil(b.second.height() / _pw) * _pw + _udpadding + ((b.first != _types.back().first) ? _line_width : 0); }))
 	{
-		_window->window_proc().add_handler<&object_picker_popup::on_window_proc>(this);
-		_renderer->render().add_handler<&object_picker_popup::on_render>(this);
-		::ShowWindow (_window->hwnd(), SW_SHOWNOACTIVATE);
+		static const WNDCLASS wnd_class = {
+			.style = CS_DBLCLKS | CS_HREDRAW | CS_VREDRAW,
+			.lpfnWndProc = WndProc,
+			.hInstance = (HINSTANCE)&__ImageBase,
+			.hCursor = ::LoadCursor(nullptr, IDC_ARROW),
+			.lpszClassName = L"object_picker_popup",
+		};
+		auto atom = RegisterClass(&wnd_class);
+
+		RECT rect = _grid->calc_popup_window_pos(item, item_y, { (LONG)_client_width, (LONG)_client_height }, style, ex_style);
+		int x = rect.left;
+		int y = rect.top;
+		int w = rect.right - rect.left;
+		int h = rect.bottom - rect.top;
+		_hWnd.reset (CreateWindowEx (ex_style, wnd_class.lpszClassName, L"", style,
+									 x, y, w, h, _grid->HWnd(), nullptr, (HINSTANCE)&__ImageBase, nullptr));
+		LOG_LAST_ERROR_IF_NULL(_hWnd);
+		SetWindowLongPtr (_hWnd.get(), GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
+
+		::ShowWindow (_hWnd.get(), SW_SHOWNOACTIVATE);
 	}
 
 	~object_picker_popup()
 	{
-		::ShowWindow (_window->hwnd(), SW_HIDE);
-		_renderer->render().remove_handler<&object_picker_popup::on_render>(this);
-		_window->window_proc().remove_handler<&object_picker_popup::on_window_proc>(this);
+		::ShowWindow (_hWnd.get(), SW_HIDE);
+	}
+	/*
+	#pragma region IUnknown
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override
+	{
+		RETURN_HR_IF(E_POINTER, !ppvObject);
+		*ppvObject = nullptr;
+
+		if (   TryQI<IUnknown>(this, riid, ppvObject)
+			|| TryQI<ID2DRenderEventsSink>(this, riid, ppvObject)
+		)
+			return S_OK;
+
+		if (riid == __uuidof(IWeakRef))
+			return _weakRefToThis.QueryIWeakRef(ppvObject);
+
+		return E_NOINTERFACE;
 	}
 
-private:
+	virtual ULONG STDMETHODCALLTYPE AddRef() override { return ++_refCount; }
 
-	static std::vector<std::pair<const concrete_type*, text_layout_with_metrics>> make_types
-	(
-		IDWriteFactory* dwrite_factory,
-		IDWriteTextFormat* text_format,
-		const object_property* prop
-	)
+	virtual ULONG STDMETHODCALLTYPE Release() override { return ReleaseST(this, _refCount); }
+	#pragma endregion
+	*/
+	static std::vector<ITypeInfo*> make_types (DISPID prop)
 	{
-		std::vector<std::pair<const concrete_type*, text_layout_with_metrics>> types;
+		std::vector<ITypeInfo*> types;
 
-		for (auto t : concrete_type::known_types())
-		{
-			if (t->is_same_or_derived_from(prop->child_type()))
-			{
-				text_layout_with_metrics name (dwrite_factory, text_format, t->name);
-				types.push_back ({ t, std::move(name) });
-			}
-		}
+		_ASSERT(false);
+		//for (auto t : concrete_type::known_types())
+		//{
+		//	if (t->is_same_or_derived_from(prop->child_type()))
+		//	{
+		//		text_layout_with_metrics name (dwrite_factory, text_format, t->name);
+		//		types.push_back ({ t, std::move(name) });
+		//	}
+		//}
 
 		return types;
 	}
 
-	std::optional<LRESULT> on_window_proc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+	static LRESULT CALLBACK WndProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 	{
-		if (msg == WM_LBUTTONDOWN)
+		if (auto This = reinterpret_cast<object_picker_popup*>(GetWindowLongPtr(hwnd, GWLP_USERDATA)))
 		{
-			POINT pp = { GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam) };
-			uint32_t dpi = edge::dpi(hwnd);
-			D2D1_POINT_2F pd = pointp_to_pointd(pp, dpi);
-			float y = 0;
-			for (auto& t : _types)
+			if (msg == WM_LBUTTONDOWN)
 			{
-				y += (_udpadding + std::ceil(t.second.height() / _pw) * _pw + _udpadding + _line_width);
-				if (y >= pd.y)
+				POINT pp = { GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam) };
+				float y = 0;
+				for (auto& t : This->_types)
 				{
-					_callback(t.first);
-					break;
+					_ASSERT(false);
+					//y += (This->_udpadding + std::ceil(t.second.height() / This->_pw) * This->_pw + This->_udpadding + This->_line_width);
+					//if (y >= pd.y)
+					//{
+					//	This->_callback(t.first);
+					//	break;
+					//}
 				}
-			}
 
-			return 0;
+				return 0;
+			}
 		}
 
-		return std::nullopt;
+		return DefWindowProc (hwnd, msg, wparam, lparam);
 	}
-
-	void on_render (HWND hwnd, ID2D1DeviceContext* dc) const
+	/*
+	#pragma region ID2DRenderEventsSink
+	virtual HRESULT STDMETHODCALLTYPE OnD2DRender (HWND hWnd, ID2D1DeviceContext* dc) override
 	{
 		D2D1_COLOR_F fore_color = _tcp->color_d2d(theme_color::foreground);
 		com_ptr<ID2D1SolidColorBrush> fore;
@@ -126,7 +161,7 @@ private:
 		com_ptr<ID2D1SolidColorBrush> disabled_fore;
 		dc->CreateSolidColorBrush (disabled_fore_color, &disabled_fore);
 
-		uint32_t dpi = edge::dpi(hwnd);
+		uint32_t dpi = edge::dpi(hWnd);
 		float pw = edge::pixel_width(dpi);
 		dc->SetTransform(edge::dpi_transform(dpi));
 		dc->Clear(_tcp->color_d2d(theme_color::background));
@@ -141,77 +176,119 @@ private:
 			dc->DrawLine ({ 0, y }, { _client_width, y }, disabled_fore, _line_width);
 			y += _line_width / 2;
 		}
+
+		return S_OK;
 	}
 
+	virtual HRESULT STDMETHODCALLTYPE OnBeforeD2DRender (HWND hWnd, ID2D1DeviceContext* dc) override { return S_OK; }
+
+	virtual HRESULT STDMETHODCALLTYPE OnAfterD2DRender (HWND hWnd, ID2D1DeviceContext* dc) override { return S_OK; }
+
+	virtual HRESULT STDMETHODCALLTYPE OnD2DDCReleasing (ID2D1DeviceContext* dc) override { return S_OK; }
+
+	virtual HRESULT STDMETHODCALLTYPE OnD2DDCRecreated (ID2D1DeviceContext* dc) override { return S_OK; }
+	#pragma endregion
+	*/
 	static LRESULT CALLBACK mouse_hook_proc(int Code, WPARAM wParam, LPARAM lParam);
 };
 
-class object_property_item : public object_property_item_i, public object_list_i
+class object_property_item : public object_property_item_i, IObjectList
 {
-	event_manager _em;
-	group_item_i* const _parent;
-	const edge::object_property* const _prop;
-	std::optional<object_item_child_manager> _child_manager;
-	edge::text_layout_with_metrics _name;
+	ULONG _refCount = 0;
+	ULONG _sig = 0xAA55000B;
+	IGroupItem* const _parent;
+	DISPID const _prop;
+	com_ptr<IObjectItemChildManager> _child_manager;
+	//edge::text_layout_with_metrics _name;
 	enum class value_state { all_null, multiple_selection, all_same_type };
-	std::pair<value_state, edge::text_layout_with_metrics> _value;
+	//std::pair<value_state, edge::text_layout_with_metrics> _value;
 
 	static inline std::optional<object_picker_popup> _popup;
 
 public:
-	object_property_item (group_item_i* parent, const object_property* prop)
+	object_property_item (IGroupItem* parent, DISPID prop)
 		: _parent(parent)
 		, _prop(prop)
 	{
-		auto& objs = _parent->parent()->objects();
-		objs.objects_change().add_handler<&object_property_item::on_parent_objects_change>(this);
-		perform_layout();
+		auto* objs = _parent->parent()->objects();
+//		objs->objects_change().add_handler<&object_property_item::on_parent_objects_change>(this);
+		//PerformLayout();
 	}
 
 	~object_property_item()
 	{
-		item_removing_e::invoker(_em).invoke(this);
-		auto& objs = _parent->parent()->objects();
-		objs.objects_change().remove_handler<&object_property_item::on_parent_objects_change>(this);
+		auto* objs = _parent->parent()->objects();
+//		objs->objects_change().remove_handler<&object_property_item::on_parent_objects_change>(this);
 		_popup.reset();
 	}
 
-	// object_list_i
-	virtual size_t size() const override final { return _parent->parent()->objects().size(); }
-	virtual edge::object* operator[](size_t index) const override final { return _prop->get(_parent->parent()->objects()[index]); }
-	virtual change_e::subscriber objects_change() override final { return change_e::subscriber(_em); }
+	IUnknown* AsUnknown() { return static_cast<IPGPropertyItem*>(this); }
 
-	static std::vector<object*> get_child_selected_objects (const object_property* prop, std::span<object* const> parent_objects)
+	#pragma region IUnknown
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override
 	{
-		std::vector<object*> res;
+		RETURN_HR_IF(E_POINTER, !ppvObject);
+		*ppvObject = nullptr;
+
+		if (   TryQI<IUnknown>(AsUnknown(), riid, ppvObject)
+			|| TryQI<IItem>(static_cast<IPGPropertyItem*>(this), riid, ppvObject)
+			|| TryQI<IObjectList>(this, riid, ppvObject)
+		)
+			return S_OK;
+
+		return E_NOINTERFACE;
+	}
+
+	virtual ULONG STDMETHODCALLTYPE AddRef() override { return ++_refCount; }
+
+	virtual ULONG STDMETHODCALLTYPE Release() override { return ReleaseST(this, _refCount); }
+	#pragma endregion
+
+	// IObjectList
+	virtual uint32_t size() const override final { return _parent->parent()->objects()->size(); }
+	virtual IDispatch* operator[](uint32_t index) const override final
+	{
+		_ASSERT(false); return { };
+		//return _prop->get(_parent->parent()->objects()[index]);
+	}
+//	virtual change_e::subscriber objects_change() override final { return change_e::subscriber(_em); }
+
+	static std::vector<com_ptr<IDispatch>> get_child_selected_objects (DISPID prop, std::span<IDispatch* const> parent_objects)
+	{
+		std::vector<com_ptr<IDispatch>> res;
 		res.reserve(parent_objects.size());
-		for (object* o : parent_objects)
-			res.push_back(prop->get(o));
+		for (IDispatch* o : parent_objects)
+		{
+			_ASSERT(false);
+			//res.push_back(prop->get(o));
+		}
 		return res;
 	}
 
-	virtual group_item_i* parent() const override final { return _parent; }
-
+	virtual IGroupItem* parent() const override final { return _parent; }
+	/*
 	text_layout_with_metrics make_name_layout() const
 	{
 		auto grid = this->grid();
-		uint32_t dpi = edge::dpi(grid->window().hwnd());
+		uint32_t dpi = edge::dpi(grid->HWnd());
 		auto dwf = grid->renderer()->dwrite_factory();
 		float ncx = grid->name_column_left(indent());
 		float name_width = grid->value_column_left(dpi) - ncx;
-		return text_layout_with_metrics(dwf, grid->text_format(), _prop->name(), name_width);
+		_ASSERT(false); return { };
+		//return text_layout_with_metrics(dwf, grid->text_format(), _prop->name(), name_width);
 	}
-
+	*/
+	/*
 	std::pair<object_property_item::value_state, text_layout_with_metrics> make_value_layout() const
 	{
-		auto grid = this->grid();
-		auto dwf = grid->renderer()->dwrite_factory();
+		auto grid = root()->grid();
 
-		uint32_t dpi = edge::dpi(grid->window().hwnd());
-		float width = grid->value_column_right(dpi) - grid->value_column_left(dpi) - grid->line_width(dpi) - 2 * text_lr_padding;
+		uint32_t dpi = edge::dpi(grid->HWnd());
+		LONG width = grid->ValueColumnRight(dpi) - grid->ValueColumnLeft(dpi) - grid->LineWidth(dpi) - 2 * text_lr_padding;
 		if (width <= 0)
 			return { };
-
+		_ASSERT(false); return { };
+		
 		auto& objs = parent()->parent()->objects();
 		if (objs.all ([prop=_prop](object* o) { return !prop->get(o); }))
 			return { value_state::all_null, text_layout_with_metrics(dwf, grid->text_format(), "(not set)", width) };
@@ -223,33 +300,37 @@ public:
 
 		return { value_state::all_same_type, text_layout_with_metrics(dwf, grid->bold_text_format(), type->name, width) };
 	}
-
-	virtual void perform_layout() override final
+	*/
+	virtual HRESULT STDMETHODCALLTYPE PerformLayout (const PaintResources& ctx) noexcept override
 	{
+		RETURN_HR(E_NOTIMPL);
+		/*
 		_name = make_name_layout();
 		_value = make_value_layout();
 
 		grid()->invalidate_item(this);
+		return S_OK;
+		*/
 	}
 
-	D2D1_RECT_F expand_button_click_rect (float item_y) const
+	RECT expand_button_click_rect (LONG item_y) const
 	{
-		rassert (_value.first == value_state::all_same_type);
-		auto grid = this->grid();
-		uint32_t dpi = edge::dpi(grid->window().hwnd());
-		float name_line_x = grid->expand_column_left(dpi) + indent() * grid->indent_width();
-		return { name_line_x - grid->indent_width(), item_y, name_line_x, item_y + this->content_height() };
+		//_ASSERT (_value.first == value_state::all_same_type);
+		auto grid = root()->grid();
+		uint32_t dpi = edge::dpi(grid->HWnd());
+		LONG name_line_x = grid->ExpandColumnLeft(dpi) + indent() * grid->IndentWidth(dpi);
+		return { name_line_x - grid->IndentWidth(dpi), item_y, name_line_x, item_y + this->Height() };
 	}
-
+	/*
 	virtual void render (const render_context& rc, float y, bool selected, bool hot, bool focused) const override final
 	{
 		render_default_background(rc, y, selected, hot, focused);
 
-		auto grid = this->grid();
-		uint32_t dpi = edge::dpi(grid->window().hwnd());
+		auto grid = root()->grid();
+		uint32_t dpi = edge::dpi(grid->HWnd());
 		auto lt = grid->line_width(dpi);
 		float pw = edge::pixel_width(dpi);
-		float height = std::ceil(this->content_height() / pw) * pw;
+		float height = std::ceil(this->Height() / pw) * pw;
 
 		float name_line_x = grid->expand_column_left(dpi) + indent() * grid->indent_width();
 
@@ -266,15 +347,16 @@ public:
 			rc.dc->DrawTextLayout ({ grid->value_column_left(dpi) + lt + text_lr_padding, y }, _value.second, rc.fore);
 		}
 	}
-
-	virtual float content_height() const override final
+	*/
+	virtual LONG Height() const noexcept override
 	{
-		return std::max(_name.height(), _value.second.height());
+		_ASSERT(false); return { };
+		//return (LONG)std::max(_name.height(), _value.second.height());
 	}
 
-	virtual HCURSOR cursor_at (D2D1_POINT_2F pd, float item_y) const override final
+	virtual HCURSOR cursor_at (POINT pd, LONG item_y) const override final
 	{
-		auto grid = this->grid();
+		auto grid = root()->grid();
 		if (grid->read_only())
 			return ::LoadCursor(nullptr, IDC_ARROW);
 
@@ -283,66 +365,89 @@ public:
 
 	virtual bool selectable() const override final { return true; }
 
-	virtual void on_mouse_down (const edge::mouse_ud_args& ma, float item_y) override final
+	virtual HRESULT STDMETHODCALLTYPE ProcessMouseDown (const edge::mouse_ud_args& ma, LONG item_y) noexcept override
 	{
-		if (_value.first == value_state::all_same_type)
-		{
-			if (point_in_rect(expand_button_click_rect(item_y), ma.pd))
-			{
-				if (expanded())
-					collapse();
-				else
-					expand();
-			}
-		}
+		RETURN_HR(E_NOTIMPL);
+		//if (_value.first == value_state::all_same_type)
+		//{
+		//	auto rc = expand_button_click_rect(item_y);
+		//	if (PtInRect(&rc, ma.pt))
+		//	{
+		//		if (expanded())
+		//			collapse();
+		//		else
+		//			expand();
+		//	}
+		//}
 	}
 
-	virtual void on_mouse_up (const edge::mouse_ud_args& ma, float item_y) override final
+	virtual HRESULT STDMETHODCALLTYPE ProcessMouseUp (const edge::mouse_ud_args& ma, LONG item_y) noexcept override
 	{
-		auto grid = this->grid();
-		uint32_t dpi = edge::dpi(grid->window().hwnd());
+		auto grid = root()->grid();
+		uint32_t dpi = edge::dpi(grid->HWnd());
 		if (grid->read_only())
-			return;
-		auto vcx = grid->value_column_left(dpi);
-		if (ma.pd.x < vcx)
-			return;
+			return S_OK;
+		auto vcx = grid->ValueColumnLeft(dpi);
+		if (ma.pt.x < vcx)
+			return S_OK;
 
 		_popup.emplace(this, item_y, std::bind(&object_property_item::on_object_picked, this, std::placeholders::_1), grid->tcp());
+		return S_OK;
 	}
 
-	virtual std::string description_title() const override final
+	virtual wil::unique_process_heap_string description_title() const override final
 	{
-		return _prop->name();
+		_ASSERT(false); return { };
+		//return _prop->name();
 	}
 
-	virtual std::string description_text() const override final
+	virtual wil::unique_process_heap_string description_text() const override final
 	{
-		auto ui_prop = dynamic_cast<const ui_property_i*>(property());
-		return ui_prop && ui_prop->description() ? std::string(ui_prop->description()) : std::string();
+		_ASSERT(false); return { };
+		//auto ui_prop = dynamic_cast<const ui_property_i*>(property());
+		//return ui_prop && ui_prop->description() ? std::string(ui_prop->description()) : std::string();
 	}
 
-	virtual item_removing_e::subscriber item_removing() override final
+	STDMETHOD(GetValue)(read_state* pState, BSTR* pbstrValueText) override { RETURN_HR(E_NOTIMPL); }
+
+	#pragma region IPGPropertyItem
+	virtual ITypeInfo* TypeInfo() const override
 	{
-		return item_removing_e::subscriber(_em);
+		_ASSERT(false); return { };
 	}
-	#pragma region property_item_i
-	virtual const edge::object_property* property() const override final { return _prop; }
+
+	virtual DISPID property() const override final
+	{
+		return _prop;
+	}
+
+	virtual VARENUM VarType() const override
+	{
+		_ASSERT(false); return { };
+	}
+
+	virtual WORD GetterFuncIndex() const override
+	{
+		_ASSERT(false); return { };
+	}
 
 	// Following two function are called by the parent item (itself of type object_item) when our property changes.
-	virtual void on_property_changing (size_t object_index, const edge::property_change_args& args) override final
+	virtual HRESULT STDMETHODCALLTYPE OnPropertyChanging (const PropertyChangeArgs* args) override
 	{
-		auto* objprop_args = checked_static_cast<const object_property_change_args*>(&args);
-		object* child_object_to_insert = objprop_args->other_child;
+		RETURN_HR(E_NOTIMPL);
+		//auto* objprop_args = checked_static_cast<const object_property_change_args*>(&args);
+		//object* child_object_to_insert = objprop_args->other_child;
 	}
 
-	virtual void on_property_changed (size_t object_index, const edge::property_change_args& args) override final
+	virtual HRESULT STDMETHODCALLTYPE OnPropertyChanged (const PropertyChangeArgs* args) override
 	{
-		auto* objprop_args = checked_static_cast<const object_property_change_args*>(&args);
-		object* child_object_removed = objprop_args->other_child;
-		perform_layout();
+		RETURN_HR(E_NOTIMPL);
+		//auto* objprop_args = checked_static_cast<const object_property_change_args*>(&args);
+		//object* child_object_removed = objprop_args->other_child;
+		//PerformLayout();
 	}
 	#pragma endregion
-
+	/*
 	void on_parent_objects_change (const change_args& args)
 	{
 		if (auto* inserting = std::get_if<inserting_args>(&args))
@@ -354,7 +459,7 @@ public:
 		else if (auto* inserted = std::get_if<inserted_args>(&args))
 		{
 			change_e::invoker(_em).invoke(args);
-			perform_layout();
+			PerformLayout();
 		}
 		else if (auto* removing = std::get_if<removing_args>(&args))
 		{
@@ -365,7 +470,7 @@ public:
 			std::vector<object*> children;
 			std::transform(removed->objects_removed.begin(), removed->objects_removed.end(), std::back_inserter(children), [p=_prop](object* parent) { return p->get(parent); });
 			change_e::invoker(_em).invoke(removed_args{ children });
-			perform_layout();
+			PerformLayout();
 		}
 		else if (auto* replacing = std::get_if<replacing_args>(&args))
 		{
@@ -378,14 +483,16 @@ public:
 			std::vector<object*> children_removed;
 			std::transform(replaced->old_objs.begin(), replaced->old_objs.end(), std::back_inserter(children_removed),  [p=_prop](object* parent) { return p->get(parent); });
 			change_e::invoker(_em).invoke(replaced_args{ replaced->index, children_removed });
-			perform_layout();
+			PerformLayout();
 		}
 		else
-			rassert(false);
+			_ASSERT(false);
 	}
-
-	void on_object_picked (const edge::concrete_type* type)
+	*/
+	void on_object_picked (ITypeInfo* type)
 	{
+		_ASSERT(false);
+		/*
 		auto& objs = parent()->parent()->objects();
 		bool different_type_selected = objs.any([prop=_prop,type](object* o) { return (prop->get(o) ? prop->get(o)->type() : nullptr) != type; });
 		if (different_type_selected)
@@ -395,25 +502,26 @@ public:
 		}
 
 		_popup.reset();
+		*/
 	}
 
-	#pragma region expandable_item_i
-	virtual item_i* as_item() override final { return this; }
+	#pragma region IExpandableItem
+	virtual IItem* as_item() override final { return this; }
 
-	virtual size_t child_count() const override final { return _child_manager.has_value() ? _child_manager->children().size() : 0; }
+	virtual uint32_t child_count() const override final { return _child_manager ? _child_manager->ChildCount() : 0; }
 
-	virtual item_i* child_at(size_t index) const override final
+	virtual IItem* child_at (uint32_t index) const override final
 	{
-		return _child_manager->children()[index].get();
+		return _child_manager->ChildAt(index);
 	}
 
-	virtual bool expanded() const override final { return _child_manager.has_value(); }
+	virtual bool expanded() const override final { return _child_manager; }
 	
 	virtual void expand() override final
 	{
-		rassert(!_child_manager);
-		_child_manager.emplace(this, *this);
-		this->grid()->invalidate();
+		_ASSERT(!_child_manager);
+		auto hr = MakeObjectItemChildManager(this, this, &_child_manager); LOG_IF_FAILED(hr);
+		::InvalidateRect(root()->grid()->HWnd(), 0, 0);
 	}
 
 	virtual void collapse() override final
@@ -421,20 +529,25 @@ public:
 		if (_child_manager)
 		{
 			_child_manager.reset();
-			this->grid()->invalidate();
+			::InvalidateRect(root()->grid()->HWnd(), 0, 0);
 		}
 	}
 	#pragma endregion
 
-	#pragma region object_item_i
-	virtual object_list_i& objects() override final
+	#pragma region IObjectItem
+	virtual IGroupItem* ChildGroupItemAt(uint32_t index) const override
 	{
-		return *this;
+		FAIL_FAST_IF(!_child_manager);
+		return _child_manager->ChildAt(index);
+	}
+	virtual IObjectList* objects() override final
+	{
+		return this;
 	}
 	#pragma endregion
 };
 
-std::unique_ptr<property_item_i> make_object_property_item (group_item_i* parent, const edge::object_property* prop)
+std::unique_ptr<IPGPropertyItem> make_object_property_item (IGroupItem* parent, DISPID prop)
 {
 	return std::make_unique<object_property_item>(parent, prop);
 }

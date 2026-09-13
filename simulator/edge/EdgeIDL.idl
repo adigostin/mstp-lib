@@ -1,0 +1,81 @@
+
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License v2.0.
+
+//import "oaidl.idl";
+//import "ocidl.idl";
+
+[uuid(0C7B378B-1781-4E81-85C9-908113BB32BD)]
+library EdgeLib
+{
+	//importlib("stdole2.tlb");
+
+	enum PropertyType { Value, Collection };
+
+	enum CollectionChangeType { Set, Insert, Remove, Rotate };
+
+	struct ObjectCollectionChangeArgs
+	{
+		enum CollectionChangeType changeType;
+
+		[switch_is(changeType)]
+		union
+		{
+			[case(Set, Insert, Remove)]
+			struct 
+			{
+				ULONG index;
+				ULONG count;
+
+				// Some of the children can be NULL.
+				// inserting - these are the children to be inserted
+				// inserted  - unused
+				// removing  - unused
+				// removed   - these are the removed children
+				// setting   - these are the children to replace the existing ones
+				// set       - these are the replaced children
+				[size_is(count)] IDispatch* const* childObjs;
+			} setInsertRemoveArgs;
+
+			[case(Rotate)]
+				struct {
+				ULONG first;
+				ULONG n_first;
+				ULONG last;
+			} rotateArgs;
+		};
+	};
+
+	[object, uuid(1564986C-AB17-4F45-90A7-DA592B01BED8), dual, nonextensible, pointer_default(unique)]
+	interface IObjectCollectionChangeEvents : IUnknown
+	{
+		HRESULT OnCollectionChanging (IUnknown* sender, const struct ObjectCollectionChangeArgs* args);
+		HRESULT OnCollectionChanged (IUnknown* sender, const struct ObjectCollectionChangeArgs* args);
+	}
+
+	struct PropertyChangeArgs
+	{
+		enum PropertyType propertyType;
+
+		[switch_is(propertyType)]
+		union
+		{
+			[case(Value)]
+			struct
+			{
+				UINT32 a;
+				UINT32 b;
+			} valueChangeArgs;
+
+			[case(Collection)]
+			struct ObjectCollectionChangeArgs collectionChangeArgs;
+		};
+	};
+
+	[object, uuid(341F4C53-65F3-443D-9D2C-172951F4A525), dual, nonextensible, pointer_default(unique)]
+	interface IPropertyChangeSink : IUnknown
+	{
+		HRESULT OnPropertyChanging (IUnknown* obj, DISPID dispID, const struct PropertyChangeArgs* args);
+		HRESULT OnPropertyChanged  (IUnknown* obj, DISPID dispID, const struct PropertyChangeArgs* args);
+	}
+}

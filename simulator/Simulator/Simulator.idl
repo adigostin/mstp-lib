@@ -1,0 +1,357 @@
+﻿
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License v2.0.
+
+import "oaidl.idl";
+import "ocidl.idl";
+import "EdgeIDL.idl";
+
+#include "dispids.h"
+#include "edge/PropDefs.h"
+
+#define GUID_STRING_(x) "{" #x "}"
+#define GUID_STRING(x)  GUID_STRING_(x)
+
+#define PropertyGroupMisc "Misc\\0"
+#define PropertyGroupTimerParams "Timer Params (Table 13-5)\\5"
+#define PropertyGroupMSTConfigID "MST Config ID\\10"
+#define PropertyGroupPortPathCost "Port Path Cost\\5"
+#define PropertyGroupLink "Link\\-5"
+
+[uuid(0C7B378B-1781-4E81-85C9-908113BB32BD)]
+library SimulatorLib
+{
+	importlib("stdole2.tlb");
+
+	interface IBridgeProperties;
+
+	[object, uuid(5E25724D-23F8-4896-93C4-E6E584D23FF2), dual, nonextensible, pointer_default(unique)]
+	interface IProjectProperties : IDispatch
+	{
+		[id(dispidBridges), propget] HRESULT Bridges ([out, ref, retval] SAFEARRAY(IDispatch*)* ppsaItems);
+		[id(dispidBridges), propput] HRESULT Bridges (SAFEARRAY(IDispatch*) psaItems);
+
+		[id(dispidWires), propget] HRESULT Wires ([out, ref, retval] SAFEARRAY(IDispatch*)* ppsaItems);
+		[id(dispidWires), propput] HRESULT Wires (SAFEARRAY(IDispatch*) psaItems);
+
+		[propget] HRESULT NextBridgeAddress ([out, retval] BSTR* pbstrNextBridgeAddress);
+		[propput] HRESULT NextBridgeAddress (BSTR bstrNextBridgeAddress);
+	}
+
+	enum BridgePriority
+	{
+		[helpstring("1000 hex ( 4096 dec)")] BridgePriority1000 = 0x1000,
+		[helpstring("2000 hex ( 8192 dec)")] BridgePriority2000 = 0x2000,
+		[helpstring("3000 hex (12288 dec)")] BridgePriority3000 = 0x3000,
+		[helpstring("4000 hex (16384 dec)")] BridgePriority4000 = 0x4000,
+		[helpstring("5000 hex (20480 dec)")] BridgePriority5000 = 0x5000,
+		[helpstring("6000 hex (24576 dec)")] BridgePriority6000 = 0x6000,
+		[helpstring("7000 hex (28672 dec)")] BridgePriority7000 = 0x7000,
+		[helpstring("8000 hex (32768 dec)")] BridgePriority8000 = 0x8000,
+		[helpstring("9000 hex (36864 dec)")] BridgePriority9000 = 0x9000,
+		[helpstring("A000 hex (40960 dec)")] BridgePriorityA000 = 0xA000,
+		[helpstring("B000 hex (45056 dec)")] BridgePriorityB000 = 0xB000,
+		[helpstring("C000 hex (49152 dec)")] BridgePriorityC000 = 0xC000,
+		[helpstring("D000 hex (53248 dec)")] BridgePriorityD000 = 0xD000,
+		[helpstring("E000 hex (57344 dec)")] BridgePriorityE000 = 0xE000,
+		[helpstring("F000 hex (61440 dec)")] BridgePriorityF000 = 0xF000,
+	};
+
+	enum PortPriority
+	{
+		[helpstring ("10 hex ( 16 dec)")] PortPriority10 = 0x10,
+		[helpstring ("20 hex ( 32 dec)")] PortPriority20 = 0x20,
+		[helpstring ("30 hex ( 48 dec)")] PortPriority30 = 0x30,
+		[helpstring ("40 hex ( 64 dec)")] PortPriority40 = 0x40,
+		[helpstring ("50 hex ( 80 dec)")] PortPriority50 = 0x50,
+		[helpstring ("60 hex ( 96 dec)")] PortPriority60 = 0x60,
+		[helpstring ("70 hex (112 dec)")] PortPriority70 = 0x70,
+		[helpstring ("80 hex (128 dec)")] PortPriority80 = 0x80,
+		[helpstring ("90 hex (144 dec)")] PortPriority90 = 0x90,
+		[helpstring ("A0 hex (160 dec)")] PortPriorityA0 = 0xA0,
+		[helpstring ("B0 hex (176 dec)")] PortPriorityB0 = 0xB0,
+		[helpstring ("C0 hex (192 dec)")] PortPriorityC0 = 0xC0,
+		[helpstring ("D0 hex (208 dec)")] PortPriorityD0 = 0xD0,
+		[helpstring ("E0 hex (224 dec)")] PortPriorityE0 = 0xE0,
+		[helpstring ("F0 hex (240 dec)")] PortPriorityF0 = 0xF0,
+	};
+
+	enum PortSpeed
+	{
+		[helpstring ("10M")]  PortSpeed10M  = 10,
+		[helpstring ("100M")] PortSpeed100M = 100,
+		[helpstring ("1G")]   PortSpeed1G   = 1000,
+		[helpstring ("10G")]  PortSpeed10G  = 10000,
+	};
+
+	[object, uuid("BC1115A7-567F-4F72-ACA3-940723B6AE30"), dual, nonextensible, pointer_default(unique)]
+	interface IBridgeTreeProperties : IDispatch
+	{
+		[propget, nonbrowsable] HRESULT __id([out, retval] BSTR* pName);
+
+		const enum BridgePriority BridgePriorityDefaultValue = BridgePriority8000;
+		[propget, id(dispidBridgePrio),
+			custom(guidPropertyGroup, PropertyGroupMisc),
+			custom(guidPropertyDefaultValue, BridgePriorityDefaultValue)]
+			HRESULT BridgePriority ([out, retval] enum BridgePriority* pPrio);
+		[propput, id(dispidBridgePrio)]
+			HRESULT BridgePriority (enum BridgePriority prio);
+
+		[propget, id(dispidTopologyChangeCount), custom(guidPropertyGroup, PropertyGroupMisc)]
+			HRESULT TopologyChangeCount ([out, retval] DWORD* pCount);
+	}
+
+	// Values correspond to STP_VERSION.
+	[uuid(6528CAE0-6B18-4EB1-97AA-66B865275523)]
+	enum STPVersion {
+		[helpstring("Legacy STP")] STPVersionLegacySTP = 0,
+		[helpstring("RSTP")] STPVersionRSTP = 2,
+		[helpstring("MSTP")] STPVersionMSTP = 3
+	};
+
+	[object, uuid(B7934040-1A24-4AB8-B3B0-D35972DACB1A), dual, nonextensible, pointer_default(unique)]
+	interface IBridgeProperties : IDispatch
+	{
+		[propget, nonbrowsable] HRESULT __id([out, retval] BSTR* pName);
+
+		[propget, id(dispidBridgeX), nonbrowsable] HRESULT X ([out, retval] LONG* pX);
+		[propput, id(dispidBridgeX), nonbrowsable] HRESULT X (LONG x);
+
+		[propget, id(dispidBridgeY), nonbrowsable] HRESULT Y ([out, retval] LONG* pY);
+		[propput, id(dispidBridgeY), nonbrowsable] HRESULT Y (LONG y);
+
+		[propget, id(dispidBridgeWidth), nonbrowsable] HRESULT Width ([out, retval] LONG* pWidth);
+		[propput, id(dispidBridgeWidth), nonbrowsable] HRESULT Width (LONG width);
+
+		[propget, id(dispidBridgeHeight), nonbrowsable] HRESULT Height ([out, retval] LONG* pHeight);
+		[propput, id(dispidBridgeHeight), nonbrowsable] HRESULT Height (LONG height);
+
+		[propget, id(dispidPorts), nonbrowsable] HRESULT Ports ([out, ref, retval] SAFEARRAY(IDispatch*)* ppsaItems);
+
+		[propget, id(dispidBridgeAddress), custom(guidPropertyGroup, PropertyGroupMisc)]
+			HRESULT BridgeAddress ([out, retval] BSTR* pbstrBridgeAddress);
+		[propput, id(dispidBridgeAddress)]
+			HRESULT BridgeAddress (BSTR bstrBridgeAddress);
+
+		const BOOL STPEnabledDefaultValue = FALSE;
+		[propget, id(dispidStpEnabled), custom(guidPropertyGroup, PropertyGroupMisc), custom(guidPropertyDefaultValue, STPEnabledDefaultValue)]
+			HRESULT STPEnabled ([out, retval] VARIANT_BOOL* pbEnabled);
+		[propput, id(dispidStpEnabled)]
+			HRESULT STPEnabled (VARIANT_BOOL bEnabled);
+
+		const enum STPVersion STPVersionDefaultValue = STPVersionRSTP;
+		[propget, id(dispidStpVersion), custom(guidPropertyGroup, PropertyGroupMisc), custom(guidPropertyDefaultValue, STPVersionDefaultValue)]
+			HRESULT STPVersion ([out, retval] enum STPVersion* pVersion);
+		[propput, id(dispidStpVersion)]
+			HRESULT STPVersion (enum STPVersion version);
+
+		[propget, id(dispidPortCount), custom(guidPropertyGroup, PropertyGroupMisc)]
+			HRESULT PortCount ([out, retval] DWORD* pdwPortCount);
+
+		[propget, id(dispidMstiCount), custom(guidPropertyGroup, PropertyGroupMisc)]
+			HRESULT MSTICount ([out, retval] DWORD* pdwMstiCount);
+
+		const DWORD MigrateTimeDefaultValue = 3;
+		[propget, id(dispidMigrateTime),
+			custom(guidPropertyGroup, PropertyGroupTimerParams),
+			custom(guidPropertyDefaultValue, MigrateTimeDefaultValue)]
+		HRESULT MigrateTime([out, retval] DWORD* pdwMigrateTime);
+
+		const DWORD BridgeHelloTimeDefaultValue = 2;
+		[propget, id(dispidBridgeHelloTime),
+			custom(guidPropertyGroup, PropertyGroupTimerParams),
+			custom(guidPropertyDefaultValue, BridgeHelloTimeDefaultValue)]
+		HRESULT BridgeHelloTime([out, retval] DWORD* pdwBridgeHelloTime);
+
+		const DWORD BridgeMaxAgeDefaultValue = 20;
+		[propget, id(dispidBridgeMaxAge),
+			custom(guidPropertyGroup, PropertyGroupTimerParams),
+			custom(guidPropertyDefaultValue, BridgeMaxAgeDefaultValue)]
+		HRESULT BridgeMaxAge([out, retval] DWORD* pdwBridgeMaxAge);
+		[propput, id(dispidBridgeMaxAge)] 
+		HRESULT BridgeMaxAge(DWORD dwBridgeMaxAge);
+
+		const DWORD BridgeForwardDelayDefaultValue = 15;
+		[propget, id(dispidBridgeForwardDelay),
+			custom(guidPropertyGroup, PropertyGroupTimerParams),
+			custom(guidPropertyDefaultValue, BridgeForwardDelayDefaultValue)]
+		HRESULT BridgeForwardDelay([out, retval] DWORD* pdwBridgeForwardDelay);
+		[propput, id(dispidBridgeForwardDelay)] 
+		HRESULT BridgeForwardDelay(DWORD dwBridgeForwardDelay);
+
+		const DWORD TxHoldCountDefaultValue = 6;
+		[propget, id(dispidTxHoldCount),
+			custom(guidPropertyGroup, PropertyGroupTimerParams),
+			custom(guidPropertyDefaultValue, TxHoldCountDefaultValue)]
+		HRESULT TxHoldCount([out, retval] DWORD* pdwTxHoldCount);
+		[propput, id(dispidTxHoldCount)] 
+		HRESULT TxHoldCount(DWORD dwTxHoldCount);
+
+		const DWORD MaxHopsDefaultValue = 20;
+		[propget, id(dispidMaxHops),
+			custom(guidPropertyGroup, PropertyGroupTimerParams),
+			custom(guidPropertyDefaultValue, MaxHopsDefaultValue),
+			helpstring("Setting this is not yet implemented in the library")]
+		HRESULT MaxHops([out, retval] DWORD* pdwMaxHops);
+
+		[propget, id(dispidMstConfigName), custom(guidPropertyGroup, PropertyGroupMSTConfigID)]
+			HRESULT MSTConfigName ([out, retval] BSTR* pbstrName);
+		[propput, id(dispidMstConfigName)]
+			HRESULT MSTConfigName (BSTR bstrName);
+
+		const WORD MSTConfigRevLevelDefaultValue = 0;
+		[propget, id(dispidMstConfigRevLevel),
+			custom(guidPropertyGroup, PropertyGroupMSTConfigID),
+			custom(guidPropertyDefaultValue, MSTConfigRevLevelDefaultValue)]
+			HRESULT MSTConfigRevLevel ([out, retval] WORD* pwConfigRevLevel);
+		[propput, id(dispidMstConfigRevLevel)]
+			HRESULT MSTConfigRevLevel (WORD wRevLevel);
+
+		[propget, id(dispidMstConfigDigest), custom(guidPropertyGroup, PropertyGroupMSTConfigID),
+			custom(guidPropertyCustomEditor, GUID_STRING(guidMSTConfigIdEditor))]
+			HRESULT MSTConfigDigest ([out, retval] BSTR* pbstrDigest);
+	}
+
+	// Values correspond to STP_PORT_ROLE.
+	[uuid(13FD1054-1CD4-413D-92B5-9E57F4D5E053)]
+	enum PortRole { Undefined, Disabled, Root, Designated, Alternate, Backup, Master };
+
+	[object, uuid(AC34AAD3-89BF-4E3B-BF20-4C5D07A6C5C5), dual, nonextensible, pointer_default(unique)]
+	interface IPortTreeProperties : IDispatch
+	{
+		[propget, id(dispidPortPriority), helpstring("The value of the priority field which is contained in the first "
+			"(in network byte order) octet of the (2 octet long) Port ID. "
+			"The other octet of the Port ID is given by the value of dot1dStpPort."),
+			custom(guidPropertyGroup, PropertyGroupMisc), custom(guidPropertyDefaultValue, PortPriority80)]
+		HRESULT PortPriority ([out, retval] enum PortPriority* pPriority);
+		[propput, id(dispidPortPriority)] HRESULT PortPriority (enum PortPriority priority);
+
+		[propget, id(dispidPortLearning), custom(guidPropertyGroup, PropertyGroupMisc)]
+			HRESULT learning ([out, retval] VARIANT_BOOL* pbLearning);
+
+		[propget, id(dispidPortForwarding), custom(guidPropertyGroup, PropertyGroupMisc)]
+			HRESULT forwarding ([out, retval] VARIANT_BOOL* pbForwarding);
+
+		[propget, id(dispidPortRole), custom(guidPropertyGroup, PropertyGroupMisc)]
+			HRESULT role ([out, retval] enum PortRole* pRole);
+
+		const DWORD AdminInternalPortPathCostDefaultValue = 0;
+		[propget, id(dispidAdminInternalPortPathCost),
+			custom(guidPropertyGroup, PropertyGroupPortPathCost),
+			custom(guidPropertyDefaultValue, AdminInternalPortPathCostDefaultValue)]
+			HRESULT AdminInternalPortPathCost ([out, retval] DWORD* pdwAdminInternalPortPathCost);
+		[propput, id(dispidAdminInternalPortPathCost)]
+			HRESULT AdminInternalPortPathCost (DWORD dwAdminInternalPortPathCost);
+
+		[propget, id(dispidInternalPortPathCost),
+			custom(guidPropertyGroup, PropertyGroupPortPathCost)]
+			HRESULT InternalPortPathCost ([out, retval] DWORD* pdwInternalPortPathCost);
+	}
+
+	[uuid(BA952BF8-50F7-46AF-8066-34180560587B)]
+	enum PortSide { Left, Top, Right, Bottom };
+
+	// values correspond to STP_ADMIN_P2P
+	[uuid(0A279EF7-DCB4-435F-AA4C-1005B658BAA1)]
+	enum AdminPointToPoint
+	{
+		[helpstring("Force True")] ForceTrue = 1,
+		[helpstring("Force False")] ForceFalse = 2,
+		[helpstring("Auto")] Auto = 3,
+	};
+
+	[object, uuid(D94755FC-1586-4B2E-94CE-343F8DC2C679), dual, nonextensible, pointer_default(unique)]
+	interface IPortProperties : IDispatch
+	{
+		[propget, id(dispidPortSide), nonbrowsable] HRESULT Side ([out, retval] enum PortSide* pSide);
+		[propput, id(dispidPortSide), nonbrowsable] HRESULT Side (enum PortSide side);
+
+		[propget, id(dispidPortOffset), nonbrowsable] HRESULT Offset ([out, retval] LONG* pOffset);
+		[propput, id(dispidPortOffset), nonbrowsable] HRESULT Offset (LONG offset);
+
+		const enum PortSpeed SupportedSpeedDefaultValue = PortSpeed100M;
+		[propget, id(dispidSupportedSpeed),
+			helpstring("Maximum supported speed. The Simulator reads this when the link "
+					   "is established (cable connected)."),
+			custom(guidPropertyGroup, PropertyGroupLink),
+			custom(guidPropertyDefaultValue, SupportedSpeedDefaultValue)]
+			HRESULT SupportedSpeed ([out, retval] enum PortSpeed* pSpeed);
+		[propput, id(dispidSupportedSpeed)]
+			HRESULT SupportedSpeed (enum PortSpeed speed);
+
+		[propget, id(dispidPortActualSpeed), helpstring("Actual speed in megabits per second, calculated when a link "
+			"is established as a minimum between this port's and remote port's "
+			"SupportedSpeed properties, and passed to STP for port path cost calculation."),
+			custom(guidPropertyGroup, PropertyGroupLink)]
+			HRESULT ActualSpeed ([out, retval] DWORD* pdwActualSpeed);
+
+		const BOOL AutoEdgeDefaultValue = TRUE;
+		[propget, helpstring("The administrative value of the Auto Edge Port parameter. "
+			"A value of true(1) indicates if the Bridge detection state machine (BDM, 13.31) "
+			"is to detect other Bridges attached to the LAN, and set ieee8021SpanningTreeRstpPortOperEdgePort automatically. "
+			"The default value is true(1) This is optional and provided only by implementations that support the automatic "
+			"identification of edge ports. The value of this object MUST be retained across reinitializations of the management system."),
+			custom(guidPropertyGroup, PropertyGroupMisc), custom(guidPropertyDefaultValue, AutoEdgeDefaultValue)]
+			HRESULT AutoEdge ([out, retval] VARIANT_BOOL* pbAutoEdge);
+		[propput]
+			HRESULT AutoEdge (VARIANT_BOOL bAutoEdge);
+
+		const BOOL AdminEdgeDefaultValue = FALSE;
+		[propget, id(dispidAdminEdge), helpstring("The administrative value of the Edge Port parameter. "
+							 "A value of true(1) indicates that this port should be assumed as an edge-port, and a value of false(2) indicates "
+							 "that this port should be assumed as a non-edge-port. Setting this object will also cause the corresponding instance "
+							 "of dot1dStpPortOperEdgePort to change to the same value. Note that even when this object's value is true, "
+							 "the value of the corresponding instance of dot1dStpPortOperEdgePort can be false if a BPDU has been received. "
+							 "The value of this object MUST be retained across reinitializations of the management system"),
+			custom(guidPropertyGroup, PropertyGroupMisc), custom(guidPropertyDefaultValue, AdminEdgeDefaultValue)]
+			HRESULT AdminEdge ([out, retval] VARIANT_BOOL* pbAdminEdge);
+		[propput, id(dispidAdminEdge)]
+			HRESULT AdminEdge (VARIANT_BOOL bAdminEdge);
+
+		[propget, id(dispidOperEdge), custom(guidPropertyGroup, PropertyGroupMisc)]
+			HRESULT operEdge ([out, retval] VARIANT_BOOL* pboperEdge);
+
+		[propget, id(dispidPortMacOperational), custom(guidPropertyGroup, PropertyGroupLink)]
+			HRESULT MAC_Operational ([out, retval] VARIANT_BOOL* pbMAC_Operational);
+
+		[propget, helpstring("The Port Path Cost calculated from ActualSpeed, which STP uses for"
+							 "path cost calculation while AdminExternalPortPathCost is zero."),
+			custom(guidPropertyGroup, PropertyGroupPortPathCost)]
+			HRESULT DetectedPortPathCost ([out, retval] DWORD* pDetectedPortPathCost);
+
+		const DWORD AdminExternalPortPathCostDefaultValue = 0;
+		[propget, custom(guidPropertyGroup, PropertyGroupPortPathCost),
+			custom(guidPropertyDefaultValue, AdminExternalPortPathCostDefaultValue)]
+			HRESULT AdminExternalPortPathCost ([out, retval] DWORD* pdwAdminExternalPortPathCost);
+		[propput]
+			HRESULT AdminExternalPortPathCost (DWORD dwAdminExternalPortPathCost);
+
+		[propget, custom(guidPropertyGroup, PropertyGroupPortPathCost)]
+			HRESULT ExternalPortPathCost ([out, retval] DWORD* pExternalPortPathCost);
+
+		[propget, id(dispidPortDetectedP2P), custom(guidPropertyGroup, PropertyGroupLink)]
+			HRESULT detectedPointToPointMAC ([out, retval] VARIANT_BOOL* pbDetectedPointToPointMAC);
+
+		const enum AdminPointToPoint adminPointToPointMACDefaultValue = Auto;
+		[propget, id(dispidPortAdminP2P), custom(guidPropertyGroup, PropertyGroupLink),
+			custom(guidPropertyDefaultValue, adminPointToPointMACDefaultValue)]
+			HRESULT adminPointToPointMAC ([out, retval] enum AdminPointToPoint* pAdminP2P);
+		[propput, id(dispidPortAdminP2P)]
+			HRESULT adminPointToPointMAC (enum AdminPointToPoint adminP2P);
+
+		[propget, id(dispidPortOperP2P), custom(guidPropertyGroup, PropertyGroupLink)]
+			HRESULT operPointToPointMAC ([out, retval] VARIANT_BOOL* pbOperPointToPointMAC);
+
+		[id(dispidPortTrees), nonbrowsable, propget] HRESULT Trees ([out, ref, retval] SAFEARRAY(IDispatch*)* ppsaItems);
+	}
+
+	[object, uuid(7635CC2E-4489-4893-B4F3-1B27F53B4EC1), dual, nonextensible, pointer_default(unique)]
+	interface IWireProperties : IDispatch
+	{
+		[id(dispidWireEndP0), nonbrowsable, propget] HRESULT P0 ([out, retval] BSTR* pbstrEnd);
+		[id(dispidWireEndP0), nonbrowsable, propput] HRESULT P0 (BSTR bstrEnd);
+
+		[id(dispidWireEndP1), nonbrowsable, propget] HRESULT P1 ([out, retval] BSTR* pbstrEnd);
+		[id(dispidWireEndP1), nonbrowsable, propput] HRESULT P1 (BSTR bstrEnd);
+	}
+}

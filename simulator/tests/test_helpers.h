@@ -3,16 +3,15 @@
 // Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "CppUnitTest.h"
 #include "stp.h"
-#include "port.h"
+#include "Simulator.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace Microsoft::VisualStudio::CppUnitTestFramework
 {
 	template<>
-	static inline std::wstring ToString(port* p)
+	static inline std::wstring ToString(IPort* p)
 	{
 		return L"port";
 	}
@@ -33,7 +32,6 @@ class test_bridge
 	static void  StpCallback_FreeMemory (void* p);
 	static void* StpCallback_TransmitGetBuffer (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int bpduSize, unsigned int timestamp);
 	static void  StpCallback_TransmitReleaseBuffer (const STP_BRIDGE* bridge, void* bufferReturnedByGetBuffer);
-	static void  StpCallback_OnPortRoleChanged (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role, unsigned int timestamp);
 	static const STP_CALLBACKS callbacks;
 
 	std::vector<uint8_t> tx_buffer;
@@ -49,7 +47,60 @@ public:
 
 	using tx_queue = std::queue<std::vector<uint8_t>>;
 	std::unordered_map<size_t, tx_queue> tx_queues;
-	std::function<void(size_t portIndex, size_t treeIndex, STP_PORT_ROLE role)> port_role_changed;
 };
 
 bool exchange_bpdus (test_bridge& one, size_t one_port, test_bridge& other, size_t other_port);
+
+inline wil::com_ptr_failfast<IBridge> MakeBridge (uint32_t portCount, uint32_t mstiCount, mac_address addr)
+{
+	com_ptr<IBridge> b;
+	auto hr = MakeBridge(portCount, mstiCount, addr, &b); Assert::AreEqual(S_OK, hr);
+	return b;
+}
+
+inline wil::com_ptr_failfast<IWire> MakeWire()
+{
+	com_ptr<IWire> w;
+	auto hr = MakeWire(&w); Assert::AreEqual(S_OK, hr);
+	return w;
+}
+
+inline wil::com_ptr_failfast<IStpProject> MakeProject()
+{
+	wil::com_ptr_failfast<IStpProject> p;
+	auto hr = MakeProject(&p); Assert::AreEqual(S_OK, hr);
+	return p;
+}
+
+struct TempProjectFile
+{
+	std::wstring folder;
+	std::wstring path;
+
+	TempProjectFile(const wchar_t* fileName)
+	{
+		wchar_t tempPath[MAX_PATH];
+		DWORD cch = GetTempPathW(_countof(tempPath), tempPath);
+		Assert::IsTrue(cch > 0 && cch < _countof(tempPath));
+
+		folder = tempPath;
+		folder += L"mstp-lib-project-tests-";
+		folder += std::to_wstring(GetCurrentProcessId());
+		folder += L"-";
+		folder += std::to_wstring(GetTickCount64());
+		path = folder + L"\\" + fileName;
+
+		BOOL ok = CreateDirectoryW(folder.c_str(), nullptr);
+		if (!ok)
+		{
+			DWORD err = GetLastError();
+			Assert::AreEqual((DWORD)ERROR_ALREADY_EXISTS, err);
+		}
+	}
+
+	~TempProjectFile()
+	{
+		DeleteFileW(path.c_str());
+		RemoveDirectoryW(folder.c_str());
+	}
+};

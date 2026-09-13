@@ -1,272 +1,471 @@
 
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License v2.0.
+
 #include "object_item.h"
 #include "include/pg/property_grid.h"
+#include "edge/PropDefs.h"
+#include "EdgeIDL.h"
 
 using namespace pg;
 using namespace edge;
 
-extern std::unique_ptr<group_item_i> make_group_item(object_item_i* parent, const property_group* group);
+extern HRESULT MakeGroupItem (IObjectItem* parent, wil::unique_bstr idlName, IGroupItem** ppItem);
 
-object_item_child_manager::object_item_child_manager (object_item_i* owner, object_list_i& selected_objects)
-	: _owner(owner)
-	, _selected_objects(selected_objects)
+struct ObjectItemChildManager : IObjectItemChildManager, IPropertyChangeSink, IObjectCollectionChangeEvents
 {
-	if (_selected_objects.size())
-		on_selected_objects_inserted({ 0, _selected_objects.size() });
+	ULONG _refCount = 0;
+	ULONG _sig = 0xAA55000a;
+	WeakRefToThis _weakRefToThis;
+	IObjectItem* _owner;
+	com_ptr<IObjectList> _selected_objects;
+	vector_nothrow<com_ptr<IGroupItem>> _children;
 
-	_selected_objects.objects_change().add_handler<&object_item_child_manager::on_selected_objects_change>(this);
-}
+	std::unordered_map<IUnknown*, AdviseSinkToken> _tokens;
+	AdviseSinkToken _collectionChangeToken;
 
-object_item_child_manager::~object_item_child_manager()
-{
-	_selected_objects.objects_change().remove_handler<&object_item_child_manager::on_selected_objects_change>(this);
-
-	if (_selected_objects.size())
-		on_selected_objects_removing({ 0, _selected_objects.size() });
-}
-
-void object_item_child_manager::register_property_change_events (range_t range)
-{
-	for (size_t i = range.from; i < range.to; i++)
+	HRESULT InitInstance (IObjectItem* owner, IObjectList* selected_objects)
 	{
-		if (auto np = dynamic_cast<edge::notify_property_change*>(_selected_objects[i]))
+		auto hr = _weakRefToThis.InitInstance(AsUnknown()); RETURN_IF_FAILED(hr);
+
+		_owner = owner;
+		_selected_objects = selected_objects;
+
+		on_selected_objects_inserted({ .changeType = Insert, .setInsertRemoveArgs = { 0, _selected_objects->size() } });
+
+		hr = AdviseSink<IObjectCollectionChangeEvents>(_selected_objects, _weakRefToThis, &_collectionChangeToken); RETURN_IF_FAILED(hr);
+
+		return S_OK;
+	}
+
+	~ObjectItemChildManager()
+	{
+		on_selected_objects_removing({ .changeType = Remove, .setInsertRemoveArgs = { 0, _selected_objects->size() } });
+	}
+
+	IUnknown* AsUnknown() { return static_cast<IObjectItemChildManager*>(this); }
+
+	#pragma region IUnknown
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override
+	{
+		RETURN_HR_IF(E_POINTER, !ppvObject);
+		*ppvObject = nullptr;
+
+		if (   TryQI<IUnknown>(AsUnknown(), riid, ppvObject)
+			|| TryQI<IObjectItemChildManager>(this, riid, ppvObject)
+			|| TryQI<IPropertyChangeSink>(this, riid, ppvObject)
+			|| TryQI<IObjectCollectionChangeEvents>(this, riid, ppvObject)
+		)
+			return S_OK;
+
+		if (riid == __uuidof(IWeakRef))
+			return _weakRefToThis.QueryIWeakRef(ppvObject);
+
+		return E_NOINTERFACE;
+	}
+
+	virtual ULONG STDMETHODCALLTYPE AddRef() override { return ++_refCount; }
+
+	virtual ULONG STDMETHODCALLTYPE Release() override { return ReleaseST(this, _refCount); }
+	#pragma endregion
+
+	virtual ULONG ChildCount() override { return _children.size(); }
+
+	virtual IGroupItem* ChildAt(ULONG i) override { return _children[i]; }
+
+	virtual IObjectList* selected_objects() const { return _selected_objects; }
+
+	void register_property_change_events (range_t range)
+	{
+		for (uint32_t i = range.from; i < range.to; i++)
 		{
-			np->property_changing().add_handler<&object_item_child_manager::on_property_changing>(this);
-			np->property_changed().add_handler<&object_item_child_manager::on_property_changed>(this);
+			auto pUnkSource = wil::try_com_query_nothrow<IUnknown>((*_selected_objects)[i]);
+			auto it = _tokens.find(pUnkSource);
+			_ASSERT(it == _tokens.end());
+			AdviseSinkToken token;
+			auto hr = AdviseSink<IPropertyChangeSink>(pUnkSource, _weakRefToThis, &token); LOG_IF_FAILED(hr);
+			_tokens[pUnkSource] = std::move(token);
 		}
 	}
-}
 
-void object_item_child_manager::unregister_property_change_events (range_t range)
-{
-	for (int i = (int)range.to - 1; i >= (int)range.from; i--)
+	void unregister_property_change_events (range_t range)
 	{
-		if (auto np = dynamic_cast<edge::notify_property_change*>(_selected_objects[i]))
+		for (int i = (int)range.to - 1; i >= (int)range.from; i--)
 		{
-			np->property_changed().remove_handler<&object_item_child_manager::on_property_changed>(this);
-			np->property_changing().remove_handler<&object_item_child_manager::on_property_changing>(this);
+			auto pUnkSource = wil::try_com_query_nothrow<IUnknown>((*_selected_objects)[i]);
+			auto it = _tokens.find(pUnkSource);
+			_ASSERT(it != _tokens.end());
+			_tokens.erase(it);
 		}
 	}
-}
 
-void object_item_child_manager::on_property_changing (object* obj, const property_change_args& args)
-{
-	size_t object_index = _selected_objects.index_of(obj);
-
-	for (auto& gi : _children)
+	virtual HRESULT STDMETHODCALLTYPE OnPropertyChanging (IUnknown *obj, DISPID dispID, const PropertyChangeArgs* args) override
 	{
-		for (auto& pi : gi->children())
+		for (auto& gi : _children)
 		{
-			if (pi->property() == args.property)
+			for (auto& pi : gi->children())
 			{
-				pi->on_property_changing (object_index, args);
-				return;
+				if (pi->property() == dispID)
+					pi->OnPropertyChanging(args);
 			}
 		}
+
+		return S_OK;
 	}
-}
 
-void object_item_child_manager::on_property_changed (object* obj, const property_change_args& args)
-{
-	size_t object_index = _selected_objects.index_of(obj);
-
-	for (auto& gi : this->children())
+	virtual HRESULT STDMETHODCALLTYPE OnPropertyChanged (IUnknown* obj, DISPID dispID, const PropertyChangeArgs *args) override
 	{
-		for (auto& pi : gi->children())
+		for (auto& gi : this->_children)
 		{
-			if (pi->property() == args.property)
+			for (auto& pi : gi->children())
 			{
-				pi->on_property_changed (object_index, args);
-				return;
+				if (pi->property() == dispID)
+					pi->OnPropertyChanged(args);
 			}
 		}
+
+		return S_OK;
 	}
-}
 
-struct group_comparer
-{
-	bool operator()(const property_group* g1, const property_group* g2) const 
+	static HRESULT make_group_list (IObjectList* objs, vector_nothrow<wil::unique_bstr>& groups)
 	{
-		int32_t g1prio = g1 ? g1->prio : 0;
-		int32_t g2prio = g2 ? g2->prio : 0;
-		if (g1prio < g2prio)
-			return true;
-		if (g1prio > g2prio)
-			return false;
+		groups.clear();
+		if (objs->empty())
+			return S_OK;
 
-		const char* g1name = g1 ? g1->name : "";
-		const char* g2name = g2 ? g2->name : "";
-		int cmp = strcmp(g1name, g2name);
-		if (cmp < 0)
-			return true;
-		if (cmp > 0)
-			return false;
+		com_ptr<ITypeInfo> typeInfo;
+		auto hr = objs->front()->GetTypeInfo(0, InvariantLCID, &typeInfo); RETURN_IF_FAILED(hr);
+		TYPEATTR* typeAttr;
+		hr = typeInfo->GetTypeAttr(&typeAttr); RETURN_IF_FAILED(hr);
+		auto releaseTypeAttr = wil::scope_exit([&typeInfo,typeAttr] { typeInfo->ReleaseTypeAttr(typeAttr); });
 
-		return g1 < g2;
-	}
-};
-
-static std::set<const property_group*, group_comparer> make_group_list (const object_list_i& objs)
-{
-	std::set<const property_group*, group_comparer> groups;
-	if (!objs.empty() && objs.all([](object* o) { return o; }))
-	{
-		for (auto pe = objs.front()->type()->make_property_enumerator(); pe; pe++)
+		for (uint32_t i = 1; i < objs->size(); i++)
 		{
-			if (auto uiprop = dynamic_cast<const ui_property_i*>(*pe))
+			com_ptr<ITypeInfo> ti;
+			hr = (*objs)[i]->GetTypeInfo(0, InvariantLCID, &ti); RETURN_IF_FAILED(hr);
+			TYPEATTR* ta;
+			hr = ti->GetTypeAttr(&ta); RETURN_IF_FAILED(hr);
+			auto releaseTA = wil::scope_exit([&ti,ta] { ti->ReleaseTypeAttr(ta); });
+			if (!IsEqualGUID(typeAttr->guid, ta->guid))
+				return S_OK; // TODO: signal somehow "multiple selection"
+		}
+
+		com_ptr<ITypeInfo2> ti2;
+		hr = typeInfo->QueryInterface(&ti2); RETURN_IF_FAILED(hr);
+
+		struct GroupNamePrio
+		{
+			wil::unique_bstr idlName;
+			wil::unique_process_heap_string name;
+			LONG prio;
+		};
+
+		vector_nothrow<GroupNamePrio> sorted;
+
+		for (WORD i = 0; i < typeAttr->cFuncs; i++)
+		{
+			FUNCDESC* fd;
+			hr = typeInfo->GetFuncDesc(i, &fd); RETURN_IF_FAILED(hr);
+			auto releaseFundDesc = wil::scope_exit([ti=typeInfo.get(), fd] { ti->ReleaseFuncDesc(fd); });
+			if ((fd->wFuncFlags & FUNCFLAG_FNONBROWSABLE) == 0 && fd->invkind == INVOKE_PROPERTYGET)
 			{
-				// Have we looked at this group in a previous property?
-				if (groups.contains(uiprop->group()))
-					continue;
-				bool seen_before = false;
-				for (auto pe1 = objs.front()->type()->make_property_enumerator(); *pe1 != *pe; pe1++)
+				wil::unique_bstr idlName;
+				wil::unique_variant data;
+				if (SUCCEEDED(ti2->GetFuncCustData(i, guidPropertyGroup, &data)) && data.vt == VT_BSTR)
+					idlName = wil::unique_bstr(data.release().bstrVal);
+
+				wil::unique_process_heap_string name;
+				LONG prio = 0;
+				if (idlName)
 				{
-					if (auto uiprop1 = dynamic_cast<const ui_property_i*>(*pe1); uiprop1 && uiprop1->group() == uiprop->group())
+					if (const wchar_t* sep = wcschr(idlName.get(), L'\\'))
 					{
-						seen_before = true;
-						break;
+						name = wil::make_process_heap_string_nothrow(idlName.get(), sep - idlName.get()); RETURN_IF_NULL_ALLOC(name);
+						prio = wcstol(sep + 1, nullptr, 10);
+					}
+					else
+					{
+						name = wil::make_process_heap_string_nothrow(idlName.get()); RETURN_IF_NULL_ALLOC(name);
+						prio = 0;
 					}
 				}
-				if (seen_before)
-					continue;
 
-				bool missing_in_any_other_object = false;
-				for (size_t i = 1; i < objs.size(); i++)
+				auto it = sorted.begin();
+				while (true)
 				{
-					bool present_in_this_object = false;
-					for (auto pe1 = objs[i]->type()->make_property_enumerator(); pe1; pe1++)
+					if (it == sorted.end())
 					{
-						if (auto uiprop1 = dynamic_cast<const ui_property_i*>(*pe1); uiprop1 && uiprop1->group() == uiprop->group())
+						sorted.try_insert(it, { std::move(idlName), std::move(name), prio });
+						break;
+					}
+
+					int cmp = wcscmp(it->name ? it->name.get() : L"", name ? name.get() : L"");
+
+					if (it->prio > prio || (it->prio == prio && cmp > 0))
+					{
+						sorted.try_insert(it, { std::move(idlName), std::move(name), prio });
+						break;
+					}
+
+					if (it->prio == prio && cmp == 0)
+						break;
+
+					it++;
+				}
+
+				// Have we looked at this group in a previous property?
+				//if (groups.contains(groupName))
+				//	continue;
+				//bool seen_before = false;
+				//for (auto pe1 = objs.front()->type()->make_property_enumerator(); *pe1 != *pe; pe1++)
+				//{
+				//	if (auto uiprop1 = dynamic_cast<const ui_property_i*>(*pe1); uiprop1 && uiprop1->group() == uiprop->group())
+				//	{
+				//		seen_before = true;
+				//		break;
+				//	}
+				//}
+				//if (seen_before)
+				//	continue;
+
+				//bool missing_in_any_other_object = false;
+				//for (uint32_t i = 1; i < objs->size(); i++)
+				//{
+				//	bool present_in_this_object = false;
+				//	for (auto pe1 = objs[i]->type()->make_property_enumerator(); pe1; pe1++)
+				//	{
+				//		if (auto uiprop1 = dynamic_cast<const ui_property_i*>(*pe1); uiprop1 && uiprop1->group() == uiprop->group())
+				//		{
+				//			present_in_this_object = true;
+				//			break;
+				//		}
+				//	}
+				//
+				//	if (!present_in_this_object)
+				//	{
+				//		missing_in_any_other_object = true;
+				//		break;
+				//	}
+				//}
+				//
+				//if (!missing_in_any_other_object)
+				//	groups.insert(uiprop->group());
+			}
+		}
+
+		bool reserved = groups.try_reserve(sorted.size()); RETURN_HR_IF(E_OUTOFMEMORY, !reserved);
+		for (auto& np : sorted)
+			groups.try_push_back(std::move(np.idlName));
+		return S_OK;
+	}
+
+	#pragma region IObjectCollectionChangeEvents
+	virtual HRESULT STDMETHODCALLTYPE OnCollectionChanging (IUnknown *sender, const ObjectCollectionChangeArgs* args) override
+	{
+		if (args->changeType == CollectionChangeType::Insert)
+			return on_selected_objects_inserting(args);
+
+		if (args->changeType == CollectionChangeType::Remove)
+			return on_selected_objects_removing(*args);
+
+		if (args->changeType == CollectionChangeType::Set)
+			return on_selected_objects_replacing(args);
+
+		RETURN_HR(E_NOTIMPL);
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE OnCollectionChanged (IUnknown *sender, const ObjectCollectionChangeArgs* args) override
+	{
+		if (args->changeType == CollectionChangeType::Insert)
+			return on_selected_objects_inserted(*args);
+
+		if (args->changeType == CollectionChangeType::Remove)
+			return on_selected_objects_removed(args);
+
+		if (args->changeType == CollectionChangeType::Set)
+			return on_selected_objects_replaced(args);
+
+		RETURN_HR(E_NOTIMPL);
+	}
+	#pragma endregion
+
+	HRESULT on_selected_objects_inserting (const ObjectCollectionChangeArgs* args)
+	{
+		HRESULT hr;
+
+		// For each existing group item, we look at its group and we check if it's missing
+		// in any of the objects to insert. If it's missing, we remove that group item.
+
+		auto& a = args->setInsertRemoveArgs;
+		bool invalidate = false;
+		for (uint32_t ci = 0; ci < _children.size(); )
+		{
+			const wchar_t* existingGroupName = _children[ci]->group();
+
+			bool missing_in_objects_to_insert = false;
+			for (IDispatch* oi : std::span<IDispatch* const>(a.childObjs, a.count))
+			{
+				bool present_in_this_object = false;
+			
+				if (oi)
+				{
+					com_ptr<ITypeInfo> ti;
+					hr = oi->GetTypeInfo(0, InvariantLCID, &ti); RETURN_IF_FAILED(hr);
+
+					com_ptr<ITypeInfo2> ti2;
+					hr = ti->QueryInterface(IID_PPV_ARGS(&ti2)); RETURN_IF_FAILED(hr);
+
+					TYPEATTR* attr;
+					hr = ti->GetTypeAttr(&attr); RETURN_IF_FAILED(hr);
+					auto releaseattr = wil::scope_exit([&ti,attr] { ti->ReleaseTypeAttr(attr); });
+
+					for (WORD fi = 0; fi < attr->cFuncs; fi++)
+					{
+						FUNCDESC* fd;
+						hr = ti->GetFuncDesc(fi, &fd); RETURN_IF_FAILED(hr);
+						auto releasefd = wil::scope_exit([&ti,fd] { ti->ReleaseFuncDesc(fd); });
+
+						if ((fd->wFuncFlags & FUNCFLAG_FNONBROWSABLE) || fd->invkind != INVOKE_PROPERTYGET)
+							continue;
+						
+						wil::unique_variant custData;
+						wil::unique_bstr name;
+						if (SUCCEEDED(ti2->GetFuncCustData(fi, guidPropertyGroup, &custData) && custData.vt == VT_BSTR))
+							name = wil::unique_bstr(custData.release().bstrVal);
+
+						if ((!name && !existingGroupName)
+							|| (name && existingGroupName && !wcscmp(name.get(), existingGroupName)))
 						{
 							present_in_this_object = true;
 							break;
 						}
 					}
-
-					if (!present_in_this_object)
-					{
-						missing_in_any_other_object = true;
-						break;
-					}
 				}
 
-				if (!missing_in_any_other_object)
-					groups.insert(uiprop->group());
-			}
-		}
-	}
-
-	return groups;
-}
-
-void object_item_child_manager::on_selected_objects_change (const object_list_i::change_args& args)
-{
-	if (std::holds_alternative<object_list_i::inserting_args>(args))
-		on_selected_objects_inserting(std::get<object_list_i::inserting_args>(args));
-	else if (std::holds_alternative<object_list_i::inserted_args>(args))
-		on_selected_objects_inserted(std::get<object_list_i::inserted_args>(args));
-	else if (std::holds_alternative<object_list_i::removing_args>(args))
-		on_selected_objects_removing(std::get<object_list_i::removing_args>(args));
-	else if (std::holds_alternative<object_list_i::removed_args>(args))
-		on_selected_objects_removed(std::get<object_list_i::removed_args>(args));
-	else if (std::holds_alternative<object_list_i::replacing_args>(args))
-		on_selected_objects_replacing(std::get<object_list_i::replacing_args>(args));
-	else if (std::holds_alternative<object_list_i::replaced_args>(args))
-		on_selected_objects_replaced(std::get<object_list_i::replaced_args>(args));
-	else
-		rassert(false);
-}
-
-void object_item_child_manager::on_selected_objects_inserting (const object_list_i::inserting_args& args)
-{
-	// For each existing group item, we look at its group and we check if it's missing
-	// in any of the objects to insert. If it's missing, we remove that group item.
-
-	for (size_t i = 0; i < _children.size(); )
-	{
-		bool missing_in_objects_to_insert = false;
-		for (object* oi : args.objects_to_insert)
-		{
-			bool present_in_this_object = false;
-			
-			if (oi)
-			{
-				for (auto pe = oi->type()->make_property_enumerator(); pe; pe++)
+				if (!present_in_this_object)
 				{
-					if (auto uiprop = dynamic_cast<const ui_property_i*>(*pe); uiprop && uiprop->group() == _children[i]->group())
-					{
-						present_in_this_object = true;
-						break;
-					}
+					missing_in_objects_to_insert = true;
+					break;
 				}
 			}
 
-			if (!present_in_this_object)
+			if (missing_in_objects_to_insert)
 			{
-				missing_in_objects_to_insert = true;
-				break;
+				_owner->as_item()->root()->grid()->NotifyItemRemoving(_children[ci].get());
+				_children.erase(_children.begin() + ci);
+				invalidate = true;
+			}
+			else
+				ci++;
+		}
+
+		if (invalidate)
+			::InvalidateRect(_owner->as_item()->root()->grid()->HWnd(), 0, 0);
+
+		return S_OK;
+	}
+
+	HRESULT on_selected_objects_inserted (const ObjectCollectionChangeArgs& args)
+	{
+		auto& a = args.setInsertRemoveArgs;
+		bool invalidate = false;
+		if (a.count == _selected_objects->size())
+		{
+			// Objects have been inserted into an empty object list. We create group items for all of their groups.
+			vector_nothrow<wil::unique_bstr> groups;
+			auto hr = make_group_list(_selected_objects, groups); LOG_IF_FAILED(hr);
+			for (auto& group : groups)
+			{
+				com_ptr<IGroupItem> gi;
+				hr = MakeGroupItem(_owner, std::move(group), &gi); LOG_IF_FAILED(hr);
+				_children.try_push_back(std::move(gi));
+				invalidate = true;
+			}
+		}
+	
+		register_property_change_events({ a.index, a.index + a.count });
+
+		if (invalidate)
+			::InvalidateRect(_owner->as_item()->root()->grid()->HWnd(), 0, 0);
+
+		return S_OK;
+	}
+
+	HRESULT on_selected_objects_removing (const ObjectCollectionChangeArgs& args)
+	{
+		auto& a = args.setInsertRemoveArgs;
+		unregister_property_change_events({ a.index, a.index + a.count });
+
+		bool invalidate = false;
+		if (a.count == _selected_objects->size())
+		{
+			// Last remaining objects are being removed from the list.
+			auto grid = _owner->as_item()->root()->grid();
+			while (_children.size())
+			{
+				grid->NotifyItemRemoving(_children.back().get());
+				_children.erase(_children.end() - 1);
+				invalidate = true;
 			}
 		}
 
-		if (missing_in_objects_to_insert)
-			_children.erase(_children.begin() + i);
-		else
+		if (invalidate)
+			::InvalidateRect(_owner->as_item()->root()->grid()->HWnd(), 0, 0);
+
+		return S_OK;
+	}
+
+	HRESULT on_selected_objects_removed (const ObjectCollectionChangeArgs* args)
+	{
+		// Find groups that are present in all remaining objects and missing in some removed objects,
+		// create group items for every such group, and insert them at the right place.
+
+		vector_nothrow<wil::unique_bstr> new_groups;
+		auto hr = make_group_list(_selected_objects, new_groups); LOG_IF_FAILED(hr);
+		auto new_it = new_groups.begin();
+		uint32_t i = 0;
+		auto root = _owner->as_item()->root();
+		bool invalidate = false;
+		while (new_it != new_groups.end())
+		{
+			if ((i == _children.size()) || wcscmp(_children[i]->group(), new_it->get()))
+			{
+				com_ptr<IGroupItem> gi;
+				hr = MakeGroupItem(_owner, std::move(*new_it), &gi); LOG_IF_FAILED(hr);
+				_children.try_insert(_children.begin() + i, { std::move(gi) });
+				invalidate = true;
+			}
+			new_it++;
 			i++;
-	}
-}
+		}
 
-void object_item_child_manager::on_selected_objects_inserted (const object_list_i::inserted_args& args)
-{
-	if (args.size == _selected_objects.size())
+		if (invalidate)
+			::InvalidateRect(_owner->as_item()->root()->grid()->HWnd(), 0, 0);
+
+		return S_OK;
+	}
+
+	HRESULT on_selected_objects_replacing (const ObjectCollectionChangeArgs* args)
 	{
-		// Objects have been inserted into an empty object list. We create group items for all of their groups.
-		for (auto* group : make_group_list(_selected_objects))
-			_children.push_back(make_group_item(_owner, group));
+		// TODO: optimize this, then take care to call unregister_property_change_events() here.
+		on_selected_objects_removing (*args);
+		on_selected_objects_inserting (args);
+		return S_OK;
 	}
-	
-	register_property_change_events({ args.index, args.index + args.size });
-}
 
-void object_item_child_manager::on_selected_objects_removing (const object_list_i::removing_args& args)
-{
-	unregister_property_change_events({ args.index, args.index + args.size });
-
-	if (args.size == _selected_objects.size())
+	HRESULT on_selected_objects_replaced (const ObjectCollectionChangeArgs* args)
 	{
-		// Last remaining objects are being removed from the list.
-		_children.clear();
+		// TODO: optimize this, then take care to call register_property_change_events() here.
+		on_selected_objects_inserted (*args);
+		on_selected_objects_removed (args);
+		return S_OK;
 	}
-}
+};
 
-void object_item_child_manager::on_selected_objects_removed (const object_list_i::removed_args& args)
+HRESULT pg::MakeObjectItemChildManager (IObjectItem* owner, IObjectList* selected_objects, IObjectItemChildManager** ppMan)
 {
-	// Find groups that are present in all remaining objects and missing in some removed objects,
-	// create group items for every such group, and insert them at the right place.
-	
-	auto new_groups = make_group_list(_selected_objects);
-	auto new_it = new_groups.begin();
-	size_t i = 0;
-	auto root = _owner->as_item()->root();
-	while (new_it != new_groups.end())
-	{
-		if ((i == _children.size()) || (_children[i]->group() != *new_it))
-			_children.insert(_children.begin() + i, make_group_item(_owner, *new_it));
-		new_it++;
-		i++;
-	}
+	auto p = com_ptr(new (std::nothrow) ObjectItemChildManager()); RETURN_IF_NULL_ALLOC(p);
+	auto hr = p->InitInstance(owner, selected_objects); RETURN_IF_FAILED(hr);
+	*ppMan = p.detach();
+	return S_OK;
 }
-
-void object_item_child_manager::on_selected_objects_replacing (const object_list_i::replacing_args& args)
-{
-	// TODO: optimize this, then take care to call unregister_property_change_events() here.
-	on_selected_objects_removing (object_list_i::removing_args{ args.index, args.new_objs.size() });
-	on_selected_objects_inserting (object_list_i::inserting_args{ args.new_objs });
-}
-
-void object_item_child_manager::on_selected_objects_replaced (const object_list_i::replaced_args& args)
-{
-	// TODO: optimize this, then take care to call register_property_change_events() here.
-	on_selected_objects_inserted (object_list_i::inserted_args{ args.index, args.old_objs.size() });
-	on_selected_objects_removed (object_list_i::removed_args{ args.old_objs });
-}
-

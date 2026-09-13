@@ -19,49 +19,30 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="edge\om\collection_property.h" />
-    <ClInclude Include="edge\om\enumerator.h" />
-    <ClInclude Include="edge\om\hierarchy_object.h" />
-    <ClInclude Include="edge\om\object_property.h" />
-    <ClInclude Include="edge\om\property.h" />
-    <ClInclude Include="edge\om\property_accessors.h" />
-    <ClInclude Include="edge\om\value_collection_property.h" />
-    <ClInclude Include="edge\om\value_property.h" />
-    <ClInclude Include="edge\rassert.h" />
-    <ClInclude Include="edge\om\object_collection_property.h" />
-    <ClInclude Include="edge\om\object.h" />
-    <ClInclude Include="edge\events.h" />
-    <ClInclude Include="edge\edge.h" />
-    <ClInclude Include="pch\pch.h" />
-    <ClInclude Include="edge\referenced_object.h" />
-    <ClInclude Include="edge\com_ptr.h" />
-    <ClInclude Include="edge\d2d_renderer.h" />
-    <ClInclude Include="edge\text_editor.h" />
-    <ClInclude Include="edge\text_layout.h" />
-    <ClInclude Include="edge\utility_functions.h" />
-    <ClInclude Include="edge\win32_window_i.h" />
-    <ClInclude Include="edge\window.h" />
-    <ClInclude Include="edge\xml_serializer.h" />
-    <ClInclude Include="edge\zoomer.h" />
+    <ClInclude Include="include\EdgeIDL.h" />
+    <ClInclude Include="include\edge\edge_d2d.h" />
+    <ClInclude Include="include\edge\object_list.h" />
+    <ClInclude Include="include\edge\edge.h" />
+    <ClInclude Include="include\edge\PropDefs.h" />
+    <ClInclude Include="include\edge\unordered_map_nothrow.h" />
+    <ClInclude Include="include\edge\vector_nothrow.h" />
+    <ClInclude Include="include\edge\Z80Xml.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="include\edge\referenced_object.h" />
+    <ClInclude Include="include\edge\com.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="edge\com_ptr.cpp" />
-    <ClCompile Include="edge\events.cpp" />
-    <ClCompile Include="edge\om\value_property.cpp" />
-    <ClCompile Include="edge\rassert.cpp" />
-    <ClCompile Include="edge\om\object.cpp" />
-    <ClCompile Include="edge\edge.cpp" />
-    <ClCompile Include="pch\pch.cpp">
+    <ClCompile Include="edge.cpp" />
+    <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="edge\d2d_renderer.cpp" />
-    <ClCompile Include="edge\text_editor.cpp" />
-    <ClCompile Include="edge\text_layout.cpp" />
-    <ClCompile Include="edge\utility_functions.cpp" />
-    <ClCompile Include="edge\win32_window_i.cpp" />
-    <ClCompile Include="edge\window.cpp" />
-    <ClCompile Include="edge\xml_serializer.cpp" />
-    <ClCompile Include="edge\zoomer.cpp" />
+    <ClCompile Include="d2d_renderer.cpp" />
+    <ClCompile Include="utility_functions.cpp" />
+    <ClCompile Include="Z80Xml.cpp" />
+    <ClCompile Include="zoomer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Midl Include="EdgeIDL.idl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
@@ -109,9 +90,21 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(SolutionDir)wil\include;$(IncludePath)</IncludePath>
+    <ExternalIncludePath>$(SolutionDir)wil\include;$(ExternalIncludePath)</ExternalIncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(SolutionDir)wil\include;$(IncludePath)</IncludePath>
+    <ExternalIncludePath>$(SolutionDir)wil\include;$(ExternalIncludePath)</ExternalIncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IncludePath>$(SolutionDir)wil\include;$(IncludePath)</IncludePath>
+    <ExternalIncludePath>$(SolutionDir)wil\include;$(ExternalIncludePath)</ExternalIncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>$(SolutionDir)wil\include;$(IncludePath)</IncludePath>
+    <ExternalIncludePath>$(SolutionDir)wil\include;$(ExternalIncludePath)</ExternalIncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -124,15 +117,22 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <StringPooling>true</StringPooling>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>$(ProjectDir)pch\pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>$(ProjectDir)pch.h</PrecompiledHeaderFile>
       <BufferSecurityCheck>false</BufferSecurityCheck>
-      <ForcedIncludeFiles>$(ProjectDir)pch\pch.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles>$(ProjectDir)pch.h</ForcedIncludeFiles>
       <SupportJustMyCode>false</SupportJustMyCode>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <ExceptionHandling>false</ExceptionHandling>
+      <AdditionalIncludeDirectories>$(ProjectDir)include\edge</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <Midl />
+    <Midl>
+      <HeaderFileName>include\%(Filename).h</HeaderFileName>
+    </Midl>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -145,15 +145,22 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <StringPooling>true</StringPooling>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>$(ProjectDir)pch\pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>$(ProjectDir)pch.h</PrecompiledHeaderFile>
       <BufferSecurityCheck>false</BufferSecurityCheck>
-      <ForcedIncludeFiles>$(ProjectDir)pch\pch.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles>$(ProjectDir)pch.h</ForcedIncludeFiles>
       <SupportJustMyCode>false</SupportJustMyCode>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <ExceptionHandling>false</ExceptionHandling>
+      <AdditionalIncludeDirectories>$(ProjectDir)include\edge</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <Midl />
+    <Midl>
+      <HeaderFileName>include\%(Filename).h</HeaderFileName>
+    </Midl>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -169,14 +176,21 @@
       <WarningLevel>Level3</WarningLevel>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>$(ProjectDir)pch\pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>$(ProjectDir)pch.h</PrecompiledHeaderFile>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <ForcedIncludeFiles>$(ProjectDir)pch\pch.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles>$(ProjectDir)pch.h</ForcedIncludeFiles>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <ExceptionHandling>false</ExceptionHandling>
+      <AdditionalIncludeDirectories>$(ProjectDir)include\edge</AdditionalIncludeDirectories>
     </ClCompile>
+    <Midl />
+    <Midl>
+      <HeaderFileName>include\%(Filename).h</HeaderFileName>
+    </Midl>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -192,14 +206,21 @@
       <WarningLevel>Level3</WarningLevel>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>$(ProjectDir)pch\pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>$(ProjectDir)pch.h</PrecompiledHeaderFile>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <ForcedIncludeFiles>$(ProjectDir)pch\pch.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles>$(ProjectDir)pch.h</ForcedIncludeFiles>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <ExceptionHandling>false</ExceptionHandling>
+      <AdditionalIncludeDirectories>$(ProjectDir)include\edge</AdditionalIncludeDirectories>
     </ClCompile>
+    <Midl />
+    <Midl>
+      <HeaderFileName>include\%(Filename).h</HeaderFileName>
+    </Midl>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

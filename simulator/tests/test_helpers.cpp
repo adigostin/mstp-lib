@@ -55,11 +55,8 @@ static void StpCallback_OnTopologyChange (const STP_BRIDGE* bridge, unsigned int
 {
 }
 
-void test_bridge::StpCallback_OnPortRoleChanged (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role, unsigned int timestamp)
+void StpCallback_OnPortRoleChanged (const STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PORT_ROLE role, unsigned int timestamp)
 {
-	test_bridge* tb = static_cast<test_bridge*>(STP_GetApplicationContext(bridge));
-	if (tb->port_role_changed)
-		tb->port_role_changed (portIndex, treeIndex, role);
 }
 
 const STP_CALLBACKS test_bridge::callbacks =
@@ -113,3 +110,9 @@ bool exchange_bpdus (test_bridge& one, size_t one_port, test_bridge& other, size
 	}
 	return exchanged;
 };
+
+TEST_MODULE_INITIALIZE(ModuleInitialize)
+{
+	wil::g_fBreakOnFailure = IsDebuggerPresent() != 0;
+}
+

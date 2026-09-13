@@ -1,9 +1,9 @@
 
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
-// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+// Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License v2.0.
 
 #include "pch.h"
-#include "bridge.h"
+#include "Simulator.h"
 #include "test_helpers.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
@@ -15,7 +15,16 @@ TEST_CLASS(bridge_tests)
 		uint32_t port_count = 4;
 		uint32_t msti_count = 0;
 		mac_address address = { 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 };
-		auto b = std::make_unique<bridge>(port_count, msti_count, address);
+		auto b = MakeBridge(port_count, msti_count, address);
+	}
+
+	TEST_METHOD(ports_test)
+	{
+		ULONG port_count = 4;
+		uint32_t msti_count = 0;
+		mac_address address = { 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 };
+		auto b = MakeBridge(port_count, msti_count, address);
+		Assert::AreEqual(port_count, b->PortCount());
 	}
 
 	TEST_METHOD(disable_stp_test1)
@@ -23,7 +32,7 @@ TEST_CLASS(bridge_tests)
 		uint32_t port_count = 4;
 		uint32_t msti_count = 0;
 		mac_address address = { 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 };
-		auto b = std::make_unique<bridge>(port_count, msti_count, address);
+		auto b = MakeBridge(port_count, msti_count, address);
 
 		auto get_root_bridge_id = [&b] { return b->trees()[0]->root_bridge_id(); };
 
@@ -35,22 +44,6 @@ TEST_CLASS(bridge_tests)
 
 		b->set_stp_enabled(true);
 		get_root_bridge_id();
-	}
-
-	TEST_METHOD(undefined_role_test)
-	{
-		STP_PORT_ROLE role_from_callback = STP_PORT_ROLE_UNDEFINED;
-		auto bridge = test_bridge(4, 0, 0, { 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
-		bridge.port_role_changed = [&role_from_callback](size_t portIndex, size_t treeIndex, enum STP_PORT_ROLE role)
-		{
-			role_from_callback = role;
-		};
-
-		Assert::AreEqual (STP_PORT_ROLE_UNDEFINED, role_from_callback);
-
-		STP_StartBridge(bridge, 0);
-
-		Assert::AreEqual (STP_PORT_ROLE_DISABLED, role_from_callback);
 	}
 
 	TEST_METHOD(receive_more_mstis_on_same_mst_config)

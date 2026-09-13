@@ -2,6 +2,12 @@
 #ifndef PCH_H
 #define PCH_H
 
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#define _COM_NO_STANDARD_GUIDS_
+#define _HAS_EXCEPTIONS 0 // Visual C++ headers look at this
+#undef __EXCEPTIONS // WIL and Intellisense look at this
+
 // C/C++
 #include <algorithm>
 #include <array>
@@ -16,21 +22,21 @@
 #include <set>
 #include <span>
 #include <string>
-#include <sstream>
 #include <typeindex>
 #include <vector>
 
 // Windows
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
-#define _COM_NO_STANDARD_GUIDS_
 //#include <comdef.h>
 #include <Windows.h>
 #include <windowsx.h>
 #include <CommCtrl.h>
-#include <d2d1_1helper.h>
-#include <d3d11_1.h>
-#include <dwrite.h>
+#include <OCIdl.h>
 #include <shtypes.h>
+#include <propvarutil.h>
+#include <Uxtheme.h>
+#undef DrawText
+
+// WIL
+#include <wil/com.h>
 
 #endif

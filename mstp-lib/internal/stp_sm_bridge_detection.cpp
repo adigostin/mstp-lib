@@ -1,6 +1,6 @@
 
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
-// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+// Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License v2.0.
 
 // This file implements 13.33 from 802.1Q-2018.
 
@@ -68,12 +68,12 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, Sta
 		//		((port->edgeDelayWhile == 0) && port->AutoEdge && port->sendRSTP && port->trees [CIST_INDEX]->proposing))
 		//
 		if ((!port->portEnabled && port->AdminEdge) ||
-				(port->portEnabled && (port->edgeDelayWhile == 0) && port->AutoEdge && port->sendRSTP && port->trees [CIST_INDEX]->proposing))
+			(port->portEnabled && (port->edgeDelayWhile == 0) && port->AutoEdge && port->sendRSTP && port->trees [CIST_INDEX]->proposing))
 		{
 			return EDGE;
 		}
 
-			if ((port->edgeDelayWhile == 0) && !port->AdminEdge && !port->AutoEdge && port->sendRSTP && port->trees [CIST_INDEX]->proposing && port->operPointToPointMAC)
+		if ((port->edgeDelayWhile == 0) && !port->AdminEdge && !port->AutoEdge && port->sendRSTP && port->trees [CIST_INDEX]->proposing && port->operPointToPointMAC)
 		{
 			return ISOLATED;
 		}
@@ -119,17 +119,29 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, uns
 
 	if (state == EDGE)
 	{
+		bool oldOperEdge = port->operEdge;
 		port->operEdge = true;
+		if (!oldOperEdge && bridge->propChanged)
+			bridge->propChanged(bridge, givenPort, -1, STP_PROPERTY_OPER_EDGE, timestamp);
+
 		port->isolate = false;
 	}
 	else if (state == NOT_EDGE)
 	{
+		bool oldOperEdge = port->operEdge;
 		port->operEdge = false;
+		if (oldOperEdge && bridge->propChanged)
+			bridge->propChanged(bridge, givenPort, -1, STP_PROPERTY_OPER_EDGE, timestamp);
+
 		port->isolate = false;
 	}
 	else if (state == ISOLATED)
 	{
+		bool oldOperEdge = port->operEdge;
 		port->operEdge = false;
+		if (oldOperEdge && bridge->propChanged)
+			bridge->propChanged(bridge, givenPort, -1, STP_PROPERTY_OPER_EDGE, timestamp);
+
 		port->isolate = true;
 	}
 	else
