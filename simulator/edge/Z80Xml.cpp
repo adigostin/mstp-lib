@@ -69,15 +69,17 @@ using ValueProperty = Property<wil::unique_bstr>;
 using ObjectProperty = Property<com_ptr<IDispatch>>;
 using ObjectCollectionProperty = Property<vector_nothrow<com_ptr<IDispatch>>>;
 
-// VS runs out of memory if we templatize SaveToXmlInternal and have it call itself. So let's reinvent the wheel...
-struct EnsureElementCreated
+// This structure is used when saving nested objects to XML. The XML saving code defers creating
+// XML elements for objects whose properties are at their default values. XML elements finally
+// get created if a nested object is found that has a property set to its non-default value.
+struct CreateAncestors
 {
 	bool insideElement = false;
 	const wchar_t* const elementName;
 	IXmlWriter* writer;
-	EnsureElementCreated* outer;
+	CreateAncestors* outer;
 
-	EnsureElementCreated (const wchar_t* elementName, IXmlWriter* writer, EnsureElementCreated* outer)
+	CreateAncestors (const wchar_t* elementName, IXmlWriter* writer, CreateAncestors* outer)
 		: elementName(elementName), writer(writer), outer(outer)
 	{ }
 
@@ -108,7 +110,7 @@ struct EnsureElementCreated
 		return S_OK;
 	}
 
-	~EnsureElementCreated()
+	~CreateAncestors()
 	{
 		WI_ASSERT(!insideElement);
 	}
@@ -312,15 +314,15 @@ static HRESULT ReadProperty (IDispatch* obj, ITypeInfo* typeInfo, MEMBERID memid
 }
 
 static HRESULT SaveToXmlInternal (IDispatch* obj, PCWSTR elementName, DWORD flags, IXmlWriter* writer,
-								  EnsureElementCreated* ensureOuterElementCreated,
+								  CreateAncestors* createAncestorsOuter,
 								  const DISPID* factoryProps = nullptr, ULONG factoryPropCount = 0);
 
 static HRESULT WriteAttributes (std::span<ValueProperty const> attributes, ITypeInfo* typeInfo,
-								IXmlWriter* writer, EnsureElementCreated& ensureElementCreated)
+								IXmlWriter* writer, CreateAncestors* createAncestors)
 {
 	if (attributes.size())
 	{
-		auto hr = ensureElementCreated.CreateStartElement(); RETURN_IF_FAILED(hr);
+		auto hr = createAncestors->CreateStartElement(); RETURN_IF_FAILED(hr);
 
 		for (auto& attr : attributes)
 		{
@@ -335,7 +337,7 @@ static HRESULT WriteAttributes (std::span<ValueProperty const> attributes, IType
 };
 
 static HRESULT WriteChildObjects (std::span<ObjectProperty const> childObjects, IDispatch* obj, ITypeInfo* typeInfo,
-								  DWORD flags, IXmlWriter* writer, EnsureElementCreated& ensureElementCreated)
+								  DWORD flags, IXmlWriter* writer, CreateAncestors* createAncestorsOuter)
 {
 	if (childObjects.empty())
 		return S_OK;
@@ -358,22 +360,22 @@ static HRESULT WriteChildObjects (std::span<ObjectProperty const> childObjects, 
 			RETURN_HR_IF(hr, FAILED(hr) && hr != E_NOTIMPL);
 			if (hr == E_NOTIMPL || childXmlElementName)
 			{
-				EnsureElementCreated ensureChildElemCreated (name.get(), writer, &ensureElementCreated);
+				CreateAncestors createAncestors (name.get(), writer, createAncestorsOuter);
 
 				LPCWSTR elemName = childXmlElementName ? childXmlElementName.get() : name.get();
 				hr = SaveToXmlInternal (child.value.get(), elemName, flags, writer,
-										&ensureChildElemCreated, factoryProps.get(), factoryPropCount); RETURN_IF_FAILED(hr);
+										&createAncestors, factoryProps.get(), factoryPropCount); RETURN_IF_FAILED(hr);
 
-				hr = ensureChildElemCreated.CreateEndElement(); RETURN_IF_FAILED(hr);
+				hr = createAncestors.CreateEndElement(); RETURN_IF_FAILED(hr);
 			}
 			else
 			{
-				hr = SaveToXmlInternal (child.value.get(), name.get(), flags, writer, &ensureElementCreated); RETURN_IF_FAILED(hr);
+				hr = SaveToXmlInternal (child.value.get(), name.get(), flags, writer, createAncestorsOuter); RETURN_IF_FAILED(hr);
 			}
 		}
 		else
 		{
-			hr = SaveToXmlInternal (child.value.get(), name.get(), flags, writer, &ensureElementCreated); RETURN_IF_FAILED(hr);
+			hr = SaveToXmlInternal (child.value.get(), name.get(), flags, writer, createAncestorsOuter); RETURN_IF_FAILED(hr);
 		}
 	}
 
@@ -381,7 +383,7 @@ static HRESULT WriteChildObjects (std::span<ObjectProperty const> childObjects, 
 }
 
 static HRESULT WriteChildCollections (std::span<ObjectCollectionProperty const> childCollections, IDispatch* obj, ITypeInfo* typeInfo,
-									  DWORD flags, IXmlWriter* writer, EnsureElementCreated& ensureElementCreated)
+									  DWORD flags, IXmlWriter* writer, CreateAncestors* createAncestorsOuter)
 {
 	if (childCollections.empty())
 		return S_OK;
@@ -395,7 +397,7 @@ static HRESULT WriteChildCollections (std::span<ObjectCollectionProperty const> 
 		UINT cNames;
 		hr = typeInfo->GetNames(coll.dispid, &name, 1, &cNames); RETURN_IF_FAILED(hr);
 
-		EnsureElementCreated ensureCollectionElementCreated (name.get(), writer, &ensureElementCreated);
+		CreateAncestors createAncestors (name.get(), writer, createAncestorsOuter);
 
 		for (auto& child : coll.value)
 		{
@@ -403,29 +405,29 @@ static HRESULT WriteChildCollections (std::span<ObjectCollectionProperty const> 
 			FactoryPropsPtr factoryProps;
 			ULONG factoryPropCount = 0;
 			hr = objAsParent->GetChildSerializeInfo (coll.dispid, child.get(), &xmlElementName, factoryProps.addressof(), &factoryPropCount); RETURN_IF_FAILED(hr);
-			hr = SaveToXmlInternal (child.get(), xmlElementName.get(), flags, writer, &ensureCollectionElementCreated,
+			hr = SaveToXmlInternal (child.get(), xmlElementName.get(), flags, writer, &createAncestors,
 									factoryProps.get(), factoryPropCount); RETURN_IF_FAILED(hr);
 		}
 
-		hr = ensureCollectionElementCreated.CreateEndElement(); RETURN_IF_FAILED(hr);
+		hr = createAncestors.CreateEndElement(); RETURN_IF_FAILED(hr);
 	}
 
 	return S_OK;
 }
 
 static HRESULT SaveToXmlInternal (IDispatch* obj, PCWSTR elementName, DWORD flags, IXmlWriter* writer,
-								  EnsureElementCreated* ensureOuterElementCreated,
+								  CreateAncestors* createAncestorsOuter,
 								  const DISPID* factoryProps, ULONG factoryPropCount)
 {
 	HRESULT hr;
 
-	EnsureElementCreated ensureElementCreated (elementName, writer, ensureOuterElementCreated);
+	CreateAncestors createAncestors (elementName, writer, createAncestorsOuter);
 	
 	// If we are the outmost XML element, we must create it even if there's nothing to save to it.
 	// That's because XmlLite doesn't seem to support writing an empty document (WriteEndDocument() will fail).
-	if (!ensureOuterElementCreated)
+	if (!createAncestorsOuter)
 	{
-		hr = ensureElementCreated.CreateStartElement(); RETURN_IF_FAILED(hr);
+		hr = createAncestors.CreateStartElement(); RETURN_IF_FAILED(hr);
 	}
 
 	wil::com_ptr_nothrow<IXmlParent> objAsXmlParent;
@@ -454,7 +456,7 @@ static HRESULT SaveToXmlInternal (IDispatch* obj, PCWSTR elementName, DWORD flag
 	// Serialize factory props.
 	RETURN_HR_IF(E_UNEXPECTED, !pv.childObjects.empty()); // we don't support this as factory props
 	RETURN_HR_IF(E_UNEXPECTED, !pv.childCollections.empty()); // we don't support this as factory props
-	hr = WriteAttributes(pv.attributes, typeInfo, writer, ensureElementCreated); RETURN_IF_FAILED(hr);
+	hr = WriteAttributes(pv.attributes, typeInfo, writer, &createAncestors); RETURN_IF_FAILED(hr);
 	pv.attributes.clear();
 
 	for (auto& [memid, indices] : functionIndices)
@@ -463,11 +465,11 @@ static HRESULT SaveToXmlInternal (IDispatch* obj, PCWSTR elementName, DWORD flag
 		hr = ReadProperty (obj, typeInfo, memid, indices, forceSerializeDefaults, false, pv); RETURN_IF_FAILED(hr);
 	}
 
-	hr = WriteAttributes(pv.attributes, typeInfo, writer, ensureElementCreated); RETURN_IF_FAILED(hr);
-	hr = WriteChildObjects(pv.childObjects, obj, typeInfo, flags, writer, ensureElementCreated); RETURN_IF_FAILED(hr);
-	hr = WriteChildCollections(pv.childCollections, obj, typeInfo, flags, writer, ensureElementCreated); RETURN_IF_FAILED(hr);
+	hr = WriteAttributes(pv.attributes, typeInfo, writer, &createAncestors); RETURN_IF_FAILED(hr);
+	hr = WriteChildObjects(pv.childObjects, obj, typeInfo, flags, writer, &createAncestors); RETURN_IF_FAILED(hr);
+	hr = WriteChildCollections(pv.childCollections, obj, typeInfo, flags, writer, &createAncestors); RETURN_IF_FAILED(hr);
 
-	hr = ensureElementCreated.CreateEndElement(); RETURN_IF_FAILED(hr);
+	hr = createAncestors.CreateEndElement(); RETURN_IF_FAILED(hr);
 
 	return S_OK;
 }
