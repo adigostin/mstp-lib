@@ -578,7 +578,7 @@ public:
 	virtual IPortTree* treeAt(uint32_t i) override { return _trees[i]; }
 
 	// IStpPropertyChangedSink
-	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanged(IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) override
+	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanged(IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override
 	{
 		// STP properties don't change that often, so it's acceptable for a UI port (PortImpl) to receive
 		// notifications for all STP properties and filter out the ones that are not relevant to it.

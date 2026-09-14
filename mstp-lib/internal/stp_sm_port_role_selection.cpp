@@ -73,7 +73,7 @@ static void InitState (STP_BRIDGE* bridge, TreeIndex givenTree, State state, uns
 	else if (state == ROLE_SELECTION)
 	{
 		clearReselectTree (bridge, givenTree);
-		updtRolesTree (bridge, givenTree);
+		updtRolesTree (bridge, givenTree, timestamp);
 		setSelectedTree (bridge, givenTree);
 	}
 	else

@@ -189,7 +189,7 @@ struct config_id_digest_p : edge::static_value_property<edge::temp_string_proper
 */
 struct DECLSPEC_NOVTABLE DECLSPEC_UUID("11BD73E6-2E25-4E85-A71D-EDB075244751") IStpPropertyChangedSink : IUnknown
 {
-	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanged(IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) = 0;
+	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanged(IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept = 0;
 };
 
 struct IStpProject;

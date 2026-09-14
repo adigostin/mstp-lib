@@ -185,6 +185,9 @@ void STP_StartBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 
 	RestartStateMachines(bridge, timestamp);
 
+	if (bridge->propChanged)
+		bridge->propChanged(bridge, -1, -1, STP_PROPERTY_BRIDGE_STARTED, timestamp);
+
 	LOG (bridge, -1, -1, "Bridge started.\r\n");
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
 	FLUSH_LOG (bridge);
@@ -221,6 +224,9 @@ void STP_StopBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 
 	// This one last, to allow the callbacks to still call "const" library functions.
 	bridge->started = false;
+
+	if (bridge->propChanged)
+		bridge->propChanged(bridge, -1, -1, STP_PROPERTY_BRIDGE_STARTED, timestamp);
 
 	LOG (bridge, -1, -1, "{T}: Bridge stopped.\r\n", timestamp);
 	LOG (bridge, -1, -1, "------------------------------------\r\n");

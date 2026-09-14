@@ -309,9 +309,15 @@ public:
 
 			if (i == 0)
 			{
-				hr = PropertyHasDefaultValue (objs->front(), property(), _getterFuncIndex); RETURN_IF_FAILED(hr);
-				if (hr == S_OK)
+				if (_setterFuncIndex == (WORD)-1 && _editorGuid == GUID_NULL)
+				{
 					changedFromDefault = false;
+				}
+				else
+				{
+					hr = PropertyHasDefaultValue (objs->front(), property(), _getterFuncIndex); RETURN_IF_FAILED(hr);
+					changedFromDefault = (hr != S_OK);
+				}
 
 				value0 = std::move(result);
 			}

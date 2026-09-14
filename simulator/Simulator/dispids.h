@@ -51,6 +51,7 @@
 #define dispidPortActualSpeed     45
 #define dispidPortMacOperational  46
 #define dispidPortDetectedP2P     47
+// List continues in Simulator.idl (the above will be moved there eventually).
 
 #ifdef __midl
 	#define guidMSTConfigIdEditor    533D2CFB-2CE4-46EF-97EC-D8126972EEEA

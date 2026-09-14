@@ -152,6 +152,8 @@ public:
 	unsigned short GetPortNumber () const;
 	unsigned short GetPortIdentifier () const;
 	bool IsBetterThan (const PORT_ID& rhs) const;
+	bool operator==(const PORT_ID& rhs) const { return this->_high == rhs._high && this->_low == rhs._low; }
+	bool operator!=(const PORT_ID& rhs) const { return this->_high != rhs._high || this->_low != rhs._low; }
 };
 
 // ============================================================================

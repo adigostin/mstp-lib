@@ -1202,7 +1202,7 @@ static void CalculateDesignatedPriorityForPort (STP_BRIDGE* bridge, unsigned int
 
 // ============================================================================
 // 13.29.ae) - 13.29.34
-void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree)
+void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree, unsigned int timestamp)
 {
 	assert (bridge->ForceProtocolVersion <= STP_VERSION_MSTP); // the SPT stuff is not implemented by this function
 
@@ -1214,9 +1214,12 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 	BRIDGE_ID previousCistRegionalRootIdentifier = bridgeTree->rootPriority.RegionalRootId;
 	uint32_nbo previousCistExternalRootPathCost   = bridgeTree->rootPriority.ExternalRootPathCost;
 
+	PRIORITY_VECTOR rootPriorityBefore = bridgeTree->rootPriority;
+	PORT_ID rootPortIdBefore = bridgeTree->rootPortId;
+
 	// initialize this to our bridge priority
-	bridgeTree->rootPriority = bridgeTree->GetBridgePriority ();
-	bridgeTree->rootPortId.Reset ();
+	bridgeTree->rootPriority = bridgeTree->GetBridgePriority();
+	bridgeTree->rootPortId.Reset();
 	bridgeTree->rootTimes = bridgeTree->BridgeTimes;
 
 	PORT_TREE* rootPortTree = NULL;
@@ -1259,6 +1262,9 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree)
 			}
 		}
 	}
+
+	if (bridge->propChanged && bridgeTree->rootPriority != rootPriorityBefore && bridgeTree->rootPortId != rootPortIdBefore)
+		bridge->propChanged(bridge, -1, givenTree, STP_PROPERTY_ROOT_PRIORITY_VECTOR, timestamp);
 
 	LOG (bridge, -1, givenTree, "  bridge root priority : {PVS}\r\n", &bridgeTree->rootPriority);
 	LOG (bridge, -1, givenTree, "  root port = {PID}\r\n", &bridgeTree->rootPortId);

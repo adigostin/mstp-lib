@@ -58,7 +58,7 @@ public:
 	virtual ULONG STDMETHODCALLTYPE Release() override { return ReleaseST(this, _refCount); }
 
 	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanged(IBridge* bridge, unsigned int portIndex,
-		unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) override
+		unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override
 	{
 		if (prop == STP_PROPERTY_PORT_ROLE)
 			_mostRecentRoles[{ bridge, portIndex }] = STP_GetPortRole(bridge->stp_bridge(), portIndex, treeIndex);

@@ -17,6 +17,15 @@ import "EdgeIDL.idl";
 #define PropertyGroupMSTConfigID "MST Config ID\\10"
 #define PropertyGroupPortPathCost "Port Path Cost\\5"
 #define PropertyGroupLink "Link\\-5"
+#define PropertyGroupRootPriorityVector "Root Priority Vector\\5"
+
+const int dispidRootId               = 48;
+const int dispidExternalRootPathCost = 49;
+const int dispidRegionalRootId       = 50;
+const int dispidInternalRootPathCost = 51;
+const int dispidDesignatedBridgeId   = 52;
+const int dispidDesignatedPortId     = 53;
+const int dispidReceivingPortId      = 54;
 
 [uuid(0C7B378B-1781-4E81-85C9-908113BB32BD)]
 library SimulatorLib
@@ -99,6 +108,21 @@ library SimulatorLib
 
 		[propget, id(dispidTopologyChangeCount), custom(guidPropertyGroup, PropertyGroupMisc)]
 			HRESULT TopologyChangeCount ([out, retval] DWORD* pCount);
+
+		[propget, id(dispidRootId), custom(guidPropertyGroup, PropertyGroupRootPriorityVector)]
+			HRESULT RootId([out, retval] BSTR* pbstrRootId);
+		[propget, id(dispidExternalRootPathCost), custom(guidPropertyGroup, PropertyGroupRootPriorityVector)]
+			HRESULT ExternalRootPathCost([out, retval] DWORD* pdwExternalRootPathCost);
+		[propget, id(dispidRegionalRootId), custom(guidPropertyGroup, PropertyGroupRootPriorityVector)]
+			HRESULT RegionalRootId([out, retval] BSTR* pbstrRegionalRootId);
+		[propget, id(dispidInternalRootPathCost), custom(guidPropertyGroup, PropertyGroupRootPriorityVector)]
+			HRESULT InternalRootPathCost([out, retval] DWORD* pdwInternalRootPathCost);
+		[propget, id(dispidDesignatedBridgeId), custom(guidPropertyGroup, PropertyGroupRootPriorityVector)]
+			HRESULT DesignatedBridgeId([out, retval] BSTR* pbstrDesignatedBridgeId);
+		[propget, id(dispidDesignatedPortId), custom(guidPropertyGroup, PropertyGroupRootPriorityVector)]
+			HRESULT DesignatedPortId([out, retval] BSTR* pbstrDesignatedPortId);
+		[propget, id(dispidReceivingPortId), custom(guidPropertyGroup, PropertyGroupRootPriorityVector)]
+			HRESULT ReceivingPortId([out, retval] BSTR* pbstrReceivingPortId);
 	}
 
 	// Values correspond to STP_VERSION.

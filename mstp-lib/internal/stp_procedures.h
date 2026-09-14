@@ -40,7 +40,7 @@ void updtAgreement         (STP_BRIDGE*, PortIndex, TreeIndex);
 void updtBPDUVersion       (STP_BRIDGE*, PortIndex);
 void updtDigest            (STP_BRIDGE*, PortIndex);
 void updtRcvdInfoWhile     (STP_BRIDGE*, PortIndex, TreeIndex);
-void updtRolesTree         (STP_BRIDGE*, TreeIndex);
+void updtRolesTree         (STP_BRIDGE*, TreeIndex, unsigned int timestamp);
 void updtRolesDisabledTree (STP_BRIDGE*, TreeIndex);
 
 #endif

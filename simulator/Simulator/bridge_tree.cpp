@@ -8,35 +8,29 @@
 
 using namespace edge;
 
-class BridgeTreeImpl : public IBridgeTree, IBridgeTreeProperties, IConnectionPointContainer
+class BridgeTreeImpl : public IBridgeTree, IBridgeTreeProperties, IConnectionPointContainer, IStpPropertyChangedSink
 {
 	ULONG _refCount = 0;
+	WeakRefToThis _weakRefToThis;
 	ULONG _sig = 0xAA550008;
 	IBridge* _bridge = nullptr;
 	uint32_t _tree_index;
 	SYSTEMTIME _last_topology_change;
 	uint32_t _topology_change_count;
 	com_ptr<ConnectionPointImpl<IPropertyChangeSink>> _propChangeCP;
+	AdviseSinkToken _stpPropChangeToken;
 
 public:
 	HRESULT InitInstance (IBridge* bridge, uint32_t tree_index)
 	{
-		HRESULT hr;
-
+		HRESULT hr = _weakRefToThis.InitInstance(AsUnknown()); RETURN_IF_FAILED(hr);
 		_bridge = bridge;
 		_tree_index = tree_index;
 		::GetSystemTime(&_last_topology_change);
 		_topology_change_count = 0;
 		hr = MakeConnectionPoint<IPropertyChangeSink>(this, &_propChangeCP); RETURN_IF_FAILED(hr);
-		//_parent->property_changing().add_handler<&bridge_tree::on_bridge_property_changing>(this);
-		//_parent->property_changed().add_handler<&bridge_tree::on_bridge_property_changed>(this);
+		hr = AdviseSink<IStpPropertyChangedSink>(_bridge, _weakRefToThis, &_stpPropChangeToken); RETURN_IF_FAILED(hr);
 		return S_OK;
-	}
-
-	~BridgeTreeImpl()
-	{
-		//_parent->property_changed().remove_handler<&bridge_tree::on_bridge_property_changed>(this);
-		//_parent->property_changing().remove_handler<&bridge_tree::on_bridge_property_changing>(this);
 	}
 
 	IUnknown* AsUnknown() { return static_cast<IBridgeTree*>(this); }
@@ -52,6 +46,7 @@ public:
 			|| TryQI<IBridgeTree>(this, riid, ppvObject)
 			|| TryQI<IBridgeTreeProperties>(this, riid, ppvObject)
 			|| TryQI<IConnectionPointContainer>(this, riid, ppvObject)
+			|| TryQI<IStpPropertyChangedSink>(this, riid, ppvObject)
 		)
 			return S_OK;
 
@@ -79,35 +74,22 @@ public:
 	}
 	#pragma endregion
 
-	//virtual ::bridge* parent() const override { return _parent; }
+	// IStpPropertyChangedSink
+	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanged (IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override
+	{
+		if (prop == STP_PROPERTY_ROOT_PRIORITY_VECTOR || prop == STP_PROPERTY_BRIDGE_STARTED)
+		{
+			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidRootId);
+			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidExternalRootPathCost);
+			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidRegionalRootId);
+			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidInternalRootPathCost);
+			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidDesignatedBridgeId);
+			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidDesignatedPortId);
+			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidReceivingPortId);
+		}
 
-	//static inline const value_property* const properties_changed_on_stp_enable_disable[] = {
-	//	&bridge_tree::root_id_property,
-	//	&bridge_tree::external_root_path_cost_property,
-	//	&bridge_tree::regional_root_id_property,
-	//	&bridge_tree::internal_root_path_cost_property,
-	//	&bridge_tree::designated_bridge_id_property,
-	//	&bridge_tree::designated_port_id_property,
-	//	&bridge_tree::receiving_port_id_property,
-	//};
-
-	//void on_bridge_property_changing (edge::object* obj, const property_change_args& args)
-	//{
-	//	if (args.property == &bridge::stp_enabled_property)
-	//	{
-	//		//for (auto prop : properties_changed_on_stp_enable_disable)
-	//		//	edge::property_changing_e::invoker(_em).invoke(this, value_property_change_args{ prop });
-	//	}
-	//}
-
-	//void on_bridge_property_changed (edge::object* obj, const property_change_args& args)
-	//{
-	//	if (args.property == &bridge::stp_enabled_property)
-	//	{
-	//		//for (auto prop : properties_changed_on_stp_enable_disable)
-	//		//	edge::property_changed_e::invoker(_em).invoke(this, value_property_change_args{ prop });
-	//	}
-	//}
+		return S_OK;
+	}
 
 	virtual void on_topology_change (unsigned int timestamp) override
 	{
@@ -170,6 +152,97 @@ public:
 		*pCount = _topology_change_count;
 		return S_OK;
 	}
+
+	virtual HRESULT STDMETHODCALLTYPE get_RootId (BSTR *pbstrRootId) override
+	{
+		if (!STP_IsBridgeStarted (_bridge->stp_bridge()))
+			return SetErrorInfoStpDisabled();
+
+		unsigned char vect[36];
+		STP_GetRootPriorityVector(_bridge->stp_bridge(), _tree_index, vect);
+		wchar_t buffer[20];
+		swprintf_s(buffer, L"%02X%02X.%02X%02X%02X%02X%02X%02X",
+				   vect[0], vect[1], vect[2], vect[3], vect[4], vect[5], vect[6], vect[7]);
+		*pbstrRootId = SysAllocString(buffer); RETURN_IF_NULL_ALLOC(*pbstrRootId);
+		return S_OK;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE get_ExternalRootPathCost (DWORD *pdwExternalRootPathCost) override
+	{
+		if (!STP_IsBridgeStarted (_bridge->stp_bridge()))
+			return SetErrorInfoStpDisabled();
+
+		unsigned char vect[36];
+		STP_GetRootPriorityVector(_bridge->stp_bridge(), _tree_index, vect);
+		*pdwExternalRootPathCost = ((uint32_t)vect[8] << 24) | ((uint32_t)vect[9] << 16) | ((uint32_t)vect[10] << 8) | vect[11];
+		return S_OK;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE get_RegionalRootId (BSTR *pbstrRegionalRootId) override
+	{
+		if (!STP_IsBridgeStarted (_bridge->stp_bridge()))
+			return SetErrorInfoStpDisabled();
+
+		unsigned char vect[36];
+		STP_GetRootPriorityVector(_bridge->stp_bridge(), _tree_index, vect);
+		wchar_t buffer[20];
+		swprintf_s(buffer, L"%02X%02X.%02X%02X%02X%02X%02X%02X",
+				   vect[12], vect[13], vect[14], vect[15], vect[16], vect[17], vect[18], vect[19]);
+		*pbstrRegionalRootId = SysAllocString(buffer); RETURN_IF_NULL_ALLOC(*pbstrRegionalRootId);
+		return S_OK;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE get_InternalRootPathCost (DWORD *pdwInternalRootPathCost) override
+	{
+		if (!STP_IsBridgeStarted (_bridge->stp_bridge()))
+			return SetErrorInfoStpDisabled();
+
+		unsigned char vect[36];
+		STP_GetRootPriorityVector(_bridge->stp_bridge(), _tree_index, vect);
+		*pdwInternalRootPathCost = ((uint32_t)vect[20] << 24) | ((uint32_t)vect[21] << 16) | ((uint32_t)vect[22] << 8) | vect[23];
+		return S_OK;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE get_DesignatedBridgeId (BSTR *pbstrDesignatedBridgeId) override
+	{
+		if (!STP_IsBridgeStarted (_bridge->stp_bridge()))
+			return SetErrorInfoStpDisabled();
+
+		unsigned char vect[36];
+		STP_GetRootPriorityVector(_bridge->stp_bridge(), _tree_index, vect);
+		wchar_t buffer[20];
+		swprintf_s(buffer, L"%02X%02X.%02X%02X%02X%02X%02X%02X",
+				   vect[24], vect[25], vect[26], vect[27], vect[28], vect[29], vect[30], vect[31]);
+		*pbstrDesignatedBridgeId = SysAllocString(buffer); RETURN_IF_NULL_ALLOC(*pbstrDesignatedBridgeId);
+		return S_OK;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE get_DesignatedPortId (BSTR *pbstrDesignatedPortId) override
+	{
+		if (!STP_IsBridgeStarted (_bridge->stp_bridge()))
+			return SetErrorInfoStpDisabled();
+
+		unsigned char vect[36];
+		STP_GetRootPriorityVector(_bridge->stp_bridge(), _tree_index, vect);
+		wchar_t buffer[6];
+		swprintf_s(buffer, L"%02X%02X", vect[32], vect[33]);
+		*pbstrDesignatedPortId = SysAllocString(buffer); RETURN_IF_NULL_ALLOC(*pbstrDesignatedPortId);
+		return S_OK;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE get_ReceivingPortId (BSTR *pbstrReceivingPortId) override
+	{
+		if (!STP_IsBridgeStarted (_bridge->stp_bridge()))
+			return SetErrorInfoStpDisabled();
+
+		unsigned char vect[36];
+		STP_GetRootPriorityVector(_bridge->stp_bridge(), _tree_index, vect);
+		wchar_t buffer[6];
+		swprintf_s(buffer, L"%02X%02X", vect[34], vect[35]);
+		*pbstrReceivingPortId = SysAllocString(buffer); RETURN_IF_NULL_ALLOC(*pbstrReceivingPortId);
+		return S_OK;
+	}
+
 	#pragma endregion
 
 	std::array<unsigned char, 36> root_priorty_vector() const
