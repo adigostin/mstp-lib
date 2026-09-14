@@ -88,6 +88,15 @@ public:
 			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidReceivingPortId);
 		}
 
+		if (prop == STP_PROPERTY_ROOT_TIMES || prop == STP_PROPERTY_BRIDGE_STARTED)
+		{
+			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidHelloTime);
+			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidMaxAge);
+			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidForwardDelay);
+			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidMessageAge);
+			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidRemainingHops);
+		}
+
 		return S_OK;
 	}
 
@@ -243,6 +252,60 @@ public:
 		return S_OK;
 	}
 
+	virtual HRESULT STDMETHODCALLTYPE get_HelloTime (DWORD *pdwHelloTime) override
+	{
+		if (!STP_IsBridgeStarted (_bridge->stp_bridge()))
+			return SetErrorInfoStpDisabled();
+
+		unsigned short helloTime;
+		STP_GetRootTimes(_bridge->stp_bridge(), _tree_index, nullptr, &helloTime, nullptr, nullptr, nullptr);
+		*pdwHelloTime = helloTime;
+		return S_OK;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE get_MaxAge (DWORD *pdwMaxAge) override
+	{
+		if (!STP_IsBridgeStarted (_bridge->stp_bridge()))
+			return SetErrorInfoStpDisabled();
+
+		unsigned short maxAge;
+		STP_GetRootTimes(_bridge->stp_bridge(), _tree_index, nullptr, nullptr, &maxAge, nullptr, nullptr);
+		*pdwMaxAge = maxAge;
+		return S_OK;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE get_ForwardDelay (DWORD *pdwForwardDelay) override
+	{
+		if (!STP_IsBridgeStarted (_bridge->stp_bridge()))
+			return SetErrorInfoStpDisabled();
+
+		unsigned short forwardDelay;
+		STP_GetRootTimes(_bridge->stp_bridge(), _tree_index, &forwardDelay, nullptr, nullptr, nullptr, nullptr);
+		*pdwForwardDelay = forwardDelay;
+		return S_OK;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE get_MessageAge (DWORD *pdwMessageAge) override
+	{
+		if (!STP_IsBridgeStarted (_bridge->stp_bridge()))
+			return SetErrorInfoStpDisabled();
+
+		unsigned short messageAge;
+		STP_GetRootTimes(_bridge->stp_bridge(), _tree_index, nullptr, nullptr, nullptr, &messageAge, nullptr);
+		*pdwMessageAge = messageAge;
+		return S_OK;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE get_remainingHops (DWORD *pdwRemainingHops) override
+	{
+		if (!STP_IsBridgeStarted (_bridge->stp_bridge()))
+			return SetErrorInfoStpDisabled();
+
+		unsigned char remainingHops;
+		STP_GetRootTimes(_bridge->stp_bridge(), _tree_index, nullptr, nullptr, nullptr, nullptr, &remainingHops);
+		*pdwRemainingHops = remainingHops;
+		return S_OK;
+	}
 	#pragma endregion
 
 	std::array<unsigned char, 36> root_priorty_vector() const

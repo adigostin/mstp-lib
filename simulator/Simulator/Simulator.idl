@@ -18,6 +18,7 @@ import "EdgeIDL.idl";
 #define PropertyGroupPortPathCost "Port Path Cost\\5"
 #define PropertyGroupLink "Link\\-5"
 #define PropertyGroupRootPriorityVector "Root Priority Vector\\5"
+#define PropertyGroupRootTimes "Root Times\\10"
 
 const int dispidRootId               = 48;
 const int dispidExternalRootPathCost = 49;
@@ -26,6 +27,11 @@ const int dispidInternalRootPathCost = 51;
 const int dispidDesignatedBridgeId   = 52;
 const int dispidDesignatedPortId     = 53;
 const int dispidReceivingPortId      = 54;
+const int dispidHelloTime       = 55;
+const int dispidMaxAge          = 56;
+const int dispidForwardDelay    = 57;
+const int dispidMessageAge      = 58;
+const int dispidRemainingHops   = 59;
 
 [uuid(0C7B378B-1781-4E81-85C9-908113BB32BD)]
 library SimulatorLib
@@ -123,6 +129,17 @@ library SimulatorLib
 			HRESULT DesignatedPortId([out, retval] BSTR* pbstrDesignatedPortId);
 		[propget, id(dispidReceivingPortId), custom(guidPropertyGroup, PropertyGroupRootPriorityVector)]
 			HRESULT ReceivingPortId([out, retval] BSTR* pbstrReceivingPortId);
+
+		[propget, id(dispidHelloTime), custom(guidPropertyGroup, PropertyGroupRootTimes)]
+			HRESULT HelloTime([out, retval] DWORD* pdwHelloTime);
+		[propget, id(dispidMaxAge), custom(guidPropertyGroup, PropertyGroupRootTimes)]
+			HRESULT MaxAge([out, retval] DWORD* pdwMaxAge);
+		[propget, id(dispidForwardDelay), custom(guidPropertyGroup, PropertyGroupRootTimes)]
+			HRESULT ForwardDelay([out, retval] DWORD* pdwForwardDelay);
+		[propget, id(dispidMessageAge), custom(guidPropertyGroup, PropertyGroupRootTimes)]
+			HRESULT MessageAge([out, retval] DWORD* pdwMessageAge);
+		[propget, id(dispidRemainingHops), custom(guidPropertyGroup, PropertyGroupRootTimes)]
+			HRESULT remainingHops([out, retval] DWORD* pdwRemainingHops);
 	}
 
 	// Values correspond to STP_VERSION.

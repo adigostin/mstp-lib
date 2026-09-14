@@ -1216,6 +1216,7 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree, unsigned int timest
 
 	PRIORITY_VECTOR rootPriorityBefore = bridgeTree->rootPriority;
 	PORT_ID rootPortIdBefore = bridgeTree->rootPortId;
+	TIMES rootTimesBefore = bridgeTree->rootTimes;
 
 	// initialize this to our bridge priority
 	bridgeTree->rootPriority = bridgeTree->GetBridgePriority();
@@ -1265,6 +1266,8 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree, unsigned int timest
 
 	if (bridge->propChanged && bridgeTree->rootPriority != rootPriorityBefore && bridgeTree->rootPortId != rootPortIdBefore)
 		bridge->propChanged(bridge, -1, givenTree, STP_PROPERTY_ROOT_PRIORITY_VECTOR, timestamp);
+	if (bridge->propChanged && bridgeTree->rootTimes != rootTimesBefore)
+		bridge->propChanged(bridge, -1, givenTree, STP_PROPERTY_ROOT_TIMES, timestamp);
 
 	LOG (bridge, -1, givenTree, "  bridge root priority : {PVS}\r\n", &bridgeTree->rootPriority);
 	LOG (bridge, -1, givenTree, "  root port = {PID}\r\n", &bridgeTree->rootPortId);
