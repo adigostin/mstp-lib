@@ -124,6 +124,32 @@ public:
 		remove(it);
 	}
 
+	iterator erase (iterator first, iterator last)
+	{
+		_ASSERT((first >= begin()) && (first <= last) && (last <= end()));
+		if (first == last)
+			return first;
+
+		auto new_end = first;
+		auto source = last;
+		while (source != end())
+		{
+			*new_end = wistd::move(*source);
+			new_end++;
+			source++;
+		}
+
+		auto old_end = end();
+		while (old_end != new_end)
+		{
+			--old_end;
+			old_end->~T();
+		}
+
+		_size -= (uint32_t)(last - first);
+		return first;
+	}
+
 	bool try_push_back (const T& from) noexcept
 	{
 		if (_size == _capacity)

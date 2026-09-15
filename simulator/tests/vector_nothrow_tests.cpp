@@ -140,4 +140,55 @@ public:
 		Assert::AreEqual(2, values[2].value);
 		Assert::AreEqual(3, values[3].value);
 	}
+
+	TEST_METHOD(EraseRangeMovesRemainingElementsAndDestroysRemovedElements)
+	{
+		vector_nothrow<tracked_vector_element> values;
+		Assert::IsTrue(values.try_push_back(tracked_vector_element(1)));
+		Assert::IsTrue(values.try_push_back(tracked_vector_element(2)));
+		Assert::IsTrue(values.try_push_back(tracked_vector_element(3)));
+		Assert::IsTrue(values.try_push_back(tracked_vector_element(4)));
+		Assert::IsTrue(values.try_push_back(tracked_vector_element(5)));
+
+		tracked_vector_element::assigned = 0;
+		auto result = values.erase(values.begin() + 1, values.begin() + 3);
+
+		Assert::IsTrue(result == values.begin() + 1);
+		Assert::AreEqual<uint32_t>(3, values.size());
+		Assert::AreEqual<uint32_t>(2, tracked_vector_element::assigned);
+		Assert::AreEqual(1, values[0].value);
+		Assert::AreEqual(4, values[1].value);
+		Assert::AreEqual(5, values[2].value);
+	}
+
+	TEST_METHOD(EraseRangeAtEndDoesNotMoveRemainingElements)
+	{
+		vector_nothrow<tracked_vector_element> values;
+		Assert::IsTrue(values.try_push_back(tracked_vector_element(1)));
+		Assert::IsTrue(values.try_push_back(tracked_vector_element(2)));
+		Assert::IsTrue(values.try_push_back(tracked_vector_element(3)));
+
+		tracked_vector_element::assigned = 0;
+		auto result = values.erase(values.begin() + 1, values.end());
+
+		Assert::IsTrue(result == values.end());
+		Assert::AreEqual<uint32_t>(1, values.size());
+		Assert::AreEqual<uint32_t>(0, tracked_vector_element::assigned);
+		Assert::AreEqual(1, values[0].value);
+	}
+
+	TEST_METHOD(EraseEmptyRangeDoesNothing)
+	{
+		vector_nothrow<int> values;
+		Assert::IsTrue(values.try_push_back(1));
+		Assert::IsTrue(values.try_push_back(2));
+
+		auto position = values.begin() + 1;
+		auto result = values.erase(position, position);
+
+		Assert::IsTrue(result == position);
+		Assert::AreEqual<uint32_t>(2, values.size());
+		Assert::AreEqual(1, values[0]);
+		Assert::AreEqual(2, values[1]);
+	}
 };
