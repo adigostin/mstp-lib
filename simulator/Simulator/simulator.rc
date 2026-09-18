@@ -144,8 +144,8 @@ END
 // TYPELIB
 //
 
-1            TYPELIB                 "Simulator.tlb"
-//2            TYPELIB                 "Edge.tlb"
+ID_TYPELIB_SIMULATOR       TYPELIB                 "Simulator.tlb"
+ID_TYPELIB_SIMULATOR_AO    TYPELIB                 "SimulatorAO.tlb"
 
 /////////////////////////////////////////////////////////////////////////////
 //

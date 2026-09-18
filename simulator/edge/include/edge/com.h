@@ -444,37 +444,60 @@ inline HRESULT AdviseSink (IUnknown* source, IWeakRef* sink, AdviseSinkToken* pT
 }
 #pragma endregion
 
-#define IMPLEMENT_IDISPATCH_(IID, filename) \
+template<typename IID>
+inline ITypeInfo* InitTypeInfo (const wchar_t* filename, uint32_t resourceId, com_ptr<ITypeInfo>& _typeInfo)
+{
+	if (!_typeInfo)
+	{
+		HRESULT hr;
+		com_ptr<ITypeLib> _typeLib;
+		if (!filename)
+		{
+			wil::unique_process_heap_string fn;
+			hr = wil::GetModuleFileNameW((HMODULE)&__ImageBase, fn); FAIL_FAST_IF_FAILED(hr);
+			if (resourceId)
+			{
+				wil::unique_process_heap_string fn1;
+				hr = wil::str_printf_nothrow(fn1, L"%s\\%u", fn, resourceId); FAIL_FAST_IF_FAILED(hr);
+				fn = std::move(fn1);
+			}
+			hr = LoadTypeLibEx (fn.get(), REGKIND_NONE, &_typeLib); FAIL_FAST_IF_FAILED(hr);
+		}
+		else if (!resourceId)
+		{
+			hr = LoadTypeLibEx (filename, REGKIND_NONE, &_typeLib); FAIL_FAST_IF_FAILED(hr);
+		}
+		else
+		{
+			wil::unique_process_heap_string fn;
+			hr = wil::str_printf_nothrow(fn, L"%s\\%u", filename, resourceId); FAIL_FAST_IF_FAILED(hr);
+			hr = LoadTypeLibEx (fn.get(), REGKIND_NONE, &_typeLib); FAIL_FAST_IF_FAILED(hr);
+		}
+
+		hr = _typeLib->GetTypeInfoOfGuid(__uuidof(IID), &_typeInfo); FAIL_FAST_IF_FAILED(hr); \
+	}
+	
+	return _typeInfo.get();
+}
+
+#define IMPLEMENT_IDISPATCH_(IID, filename, resourceId) \
 	static inline com_ptr<ITypeInfo> _typeInfo; \
-	static inline com_ptr<ITypeLib> _typeLib; \
-	static ITypeInfo* InitTypeInfo() \
-	{ \
-		if (!_typeInfo) { \
-			HRESULT hr; \
-			if(!filename) { \
-				wil::unique_process_heap_string fn; \
-				hr = wil::GetModuleFileNameW((HMODULE)&__ImageBase, fn); FAIL_FAST_IF_FAILED(hr); \
-				hr = LoadTypeLibEx (fn.get(), REGKIND_NONE, &_typeLib); FAIL_FAST_IF_FAILED(hr); \
-			} else { \
-				hr = LoadTypeLibEx (filename, REGKIND_NONE, &_typeLib); FAIL_FAST_IF_FAILED(hr); \
-			} \
-			hr = _typeLib->GetTypeInfoOfGuid(__uuidof(IID), &_typeInfo); FAIL_FAST_IF_FAILED(hr); \
-		} \
-		return _typeInfo.get(); \
-	} \
 	virtual HRESULT STDMETHODCALLTYPE GetTypeInfoCount(UINT* pctinfo) override final { *pctinfo = 1; return S_OK; } \
 	virtual HRESULT STDMETHODCALLTYPE GetTypeInfo(UINT iTInfo, LCID lcid, ITypeInfo** ppTInfo) override final { \
-		*ppTInfo = InitTypeInfo(); \
+		if (iTInfo) return DISP_E_BADINDEX; \
+		*ppTInfo = InitTypeInfo<IID>(filename, resourceId, _typeInfo); \
 		(*ppTInfo)->AddRef(); \
 		return S_OK; \
 	} \
 	virtual HRESULT STDMETHODCALLTYPE GetIDsOfNames(REFIID riid, LPOLESTR* rgszNames, UINT cNames, LCID lcid, DISPID* rgDispId) override final { \
-		return DispGetIDsOfNames (InitTypeInfo(), rgszNames, cNames, rgDispId); \
+		auto ti = InitTypeInfo<IID>(filename, resourceId, _typeInfo); \
+		return DispGetIDsOfNames (ti, rgszNames, cNames, rgDispId); \
 	} \
 	virtual HRESULT STDMETHODCALLTYPE Invoke(DISPID dispIdMember, REFIID riid, LCID lcid, WORD wFlags, DISPPARAMS* pDispParams, VARIANT* pVarResult, EXCEPINFO* pExcepInfo, UINT* puArgErr) override final { \
-		return DispInvoke (static_cast<IID*>(this), InitTypeInfo(), dispIdMember, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr); \
+		auto ti = InitTypeInfo<IID>(filename, resourceId, _typeInfo); \
+		return DispInvoke (static_cast<IID*>(this), ti, dispIdMember, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr); \
 	}
 
-#define IMPLEMENT_IDISPATCH(IID) IMPLEMENT_IDISPATCH_(IID,NULL)
+#define IMPLEMENT_IDISPATCH(IID) IMPLEMENT_IDISPATCH_(IID,NULL,0)
 
 using unique_safearray = wil::unique_any<SAFEARRAY*, decltype(SafeArrayDestroy), &SafeArrayDestroy>;

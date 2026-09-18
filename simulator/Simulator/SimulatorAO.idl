@@ -1,0 +1,50 @@
+
+// This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
+// Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License v2.0.
+
+import "oaidl.idl";
+import "ocidl.idl";
+import "Simulator.idl";
+
+[uuid(7F0B57C0-6A95-4BD8-8E3A-1E0A5E5A5D9A), version(3.0)]
+library SimulatorAutomationLib
+{
+	importlib("stdole2.tlb");
+
+	interface ISimulatorAppAO;
+	interface IProjectAO;
+	interface IBridgeAO;
+
+	[object, uuid(7D45685F-5836-41A2-AA0C-6B567EF957A6), dual, nonextensible, pointer_default(unique)]
+	interface IBridgeAO : IDispatch
+	{
+		[propget] HRESULT STPVersion ([out, retval] enum STPVersion* pVersion);
+		[propput] HRESULT STPVersion (enum STPVersion version);
+
+		HRESULT LoadTestMstConfig1();
+	};
+
+	[object, uuid(7B6D20D3-BF5D-4A98-9D32-3B9E30BCE902), dual, nonextensible, pointer_default(unique)]
+	interface IProjectAO : IDispatch
+	{
+		HRESULT AddBridge(DWORD portCount, DWORD mstiCount, [out, retval] IBridgeAO** ppBridgeAO);
+	};
+
+	[object, uuid(AD903F61-09AE-4901-A176-B8D3E3AF372A), dual, nonextensible, pointer_default(unique)]
+	interface IProjectWindowAO : IDispatch
+	{
+		HRESULT GetProject([out, retval] IProjectAO** projectAO);
+		HRESULT SelectBridge([in] IBridgeAO* bridgeAO);
+		HRESULT ClearSelection();
+		HRESULT SelectVlan(DWORD vlanNumber);
+	};
+
+	[object, uuid(62BAA56C-5C16-4A6C-9D26-9D2C2E95A901), dual, nonextensible, pointer_default(unique)]
+	interface ISimulatorAppAO : IDispatch
+	{
+		HRESULT GetProjectWindow (LONG hWnd, [out, retval] IProjectWindowAO** ppProjectWindow);
+
+			//[id(2)] HRESULT GetSelection([out, retval] ISelectionAO** selection);
+			//[id(3)] HRESULT GetVlanSelection([out, retval] IVlanSelectionAO** selection);
+	};
+};

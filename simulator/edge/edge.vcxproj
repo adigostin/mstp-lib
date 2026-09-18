@@ -92,19 +92,23 @@
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(SolutionDir)wil\include;$(IncludePath)</IncludePath>
     <ExternalIncludePath>$(SolutionDir)wil\include;$(ExternalIncludePath)</ExternalIncludePath>
+    <UseStructuredOutput>false</UseStructuredOutput>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(SolutionDir)wil\include;$(IncludePath)</IncludePath>
     <ExternalIncludePath>$(SolutionDir)wil\include;$(ExternalIncludePath)</ExternalIncludePath>
+    <UseStructuredOutput>false</UseStructuredOutput>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>$(SolutionDir)wil\include;$(IncludePath)</IncludePath>
     <ExternalIncludePath>$(SolutionDir)wil\include;$(ExternalIncludePath)</ExternalIncludePath>
+    <UseStructuredOutput>false</UseStructuredOutput>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>$(SolutionDir)wil\include;$(IncludePath)</IncludePath>
     <ExternalIncludePath>$(SolutionDir)wil\include;$(ExternalIncludePath)</ExternalIncludePath>
+    <UseStructuredOutput>false</UseStructuredOutput>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

@@ -25,6 +25,7 @@ UnitTesting/
 *_i.c
 *_p.c
 *_i.h
+*_h.h
 *.ilk
 *.meta
 *.obj

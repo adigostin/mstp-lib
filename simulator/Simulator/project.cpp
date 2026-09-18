@@ -192,10 +192,14 @@ public:
 	{
 		HRESULT hr;
 
+		com_ptr<ITypeInfo> ti;
+		hr = GetTypeInfo(0, LANG_INVARIANT, &ti); RETURN_IF_FAILED(hr);
+		com_ptr<ITypeLib> typeLib;
+		hr = ti->GetContainingTypeLib(&typeLib, nullptr); RETURN_IF_FAILED(hr);
+
 		if (dispidProperty == dispidBridges)
 		{
-			InitTypeInfo();
-			hr = _typeLib->GetTypeInfoOfGuid(__uuidof(IBridgeProperties), ppTypeInfo); RETURN_IF_FAILED(hr);
+			hr = typeLib->GetTypeInfoOfGuid(__uuidof(IBridgeProperties), ppTypeInfo); RETURN_IF_FAILED(hr);
 			auto dispids = wil::make_unique_cotaskmem_nothrow<DISPID[]>(3); RETURN_IF_NULL_ALLOC(dispids);
 			dispids.get()[0] = dispidPortCount;
 			dispids.get()[1] = dispidMstiCount;
@@ -207,8 +211,7 @@ public:
 
 		if (dispidProperty == dispidWires)
 		{
-			InitTypeInfo();
-			hr = _typeLib->GetTypeInfoOfGuid(__uuidof(IWireProperties), ppTypeInfo); RETURN_IF_FAILED(hr);
+			hr = typeLib->GetTypeInfoOfGuid(__uuidof(IWireProperties), ppTypeInfo); RETURN_IF_FAILED(hr);
 			*ppFactoryDispids = nullptr;
 			*pcFactoryDispids = 0;
 			return S_OK;

@@ -154,21 +154,23 @@ public:
 		}
 	}
 
-	virtual void clear() override final
+	virtual HRESULT STDMETHODCALLTYPE clear() noexcept override final
 	{
 		remove_internal(0, _objects.size());
+		return S_OK;
 	}
 
-	virtual void select (IDispatch* o) override final
+	virtual HRESULT STDMETHODCALLTYPE select (IDispatch* o) noexcept override
 	{
-		if (o == nullptr)
-			throw std::invalid_argument("Parameter may not be nullptr.");
+		RETURN_HR_IF(E_INVALIDARG, o == nullptr);
 
 		if ((_objects.size() != 1) || (_objects[0] != o))
 		{
 			remove_internal (0, _objects.size());
 			add_internal(o);
 		}
+
+		return S_OK;
 	}
 
 	virtual void add (IDispatch* o) override final

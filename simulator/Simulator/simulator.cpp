@@ -7,7 +7,7 @@
 #include <initguid.h>
 #include "dispids.h"
 #include "edge/PropDefs.h"
-
+#include "SimulatorAO_h.h"
 #include "simulator.h"
 #include "resource.h"
 
@@ -20,8 +20,7 @@ using namespace D2D1;
 using namespace edge;
 
 static const char company_name[] = "Adi Gostin";
-static const char app_name[] = "STP Simulator";
-static const wchar_t app_namew[] = L"STP Simulator";
+static const wchar_t app_name[] = L"STP Simulator";
 
 const char stp_disabled_text[] = "(STP disabled)";
 
@@ -154,7 +153,7 @@ struct ThemeColorProvider : ID2DThemeColorProvider, IConnectionPointContainer
 	#pragma endregion
 };
 
-class SimulatorApp : public ISimulatorApp, IProjectWindowEventsSink, IConnectionPointContainer
+class SimulatorApp : public ISimulatorApp, ISimulatorAppAO, IProjectWindowEventsSink, IConnectionPointContainer
 {
 	ULONG _refCount = 0;
 	ULONG _sig = 0xAA550006;
@@ -201,6 +200,8 @@ public:
 			|| TryQI<ISimulatorApp>(this, riid, ppvObject)
 			|| TryQI<IProjectWindowEventsSink>(this, riid, ppvObject)
 			|| TryQI<IConnectionPointContainer>(this, riid, ppvObject)
+			|| TryQI<IDispatch>(this, riid, ppvObject)
+			|| TryQI<ISimulatorAppAO>(this, riid, ppvObject)
 		)
 			return S_OK;
 
@@ -213,6 +214,24 @@ public:
 	virtual ULONG STDMETHODCALLTYPE AddRef() override { return ++_refCount; }
 
 	virtual ULONG STDMETHODCALLTYPE Release() override { return ReleaseST(this, _refCount); }
+	#pragma endregion
+
+	IMPLEMENT_IDISPATCH_(ISimulatorAppAO, nullptr, ID_TYPELIB_SIMULATOR_AO);
+
+	#pragma region ISimulatorAppAO
+	virtual HRESULT STDMETHODCALLTYPE GetProjectWindow (LONG hWnd, IProjectWindowAO** ppProjectWindow) override
+	{
+		if (!ppProjectWindow) return E_POINTER;
+		*ppProjectWindow = nullptr;
+
+		for (auto& pw : _projectWindows)
+		{
+			if (pw.first->hwnd() == (HWND)(LONG_PTR)hWnd)
+				return pw.first->QueryInterface(ppProjectWindow);
+		}
+
+		return HRESULT_FROM_WIN32(ERROR_NOT_FOUND);
+	}
 	#pragma endregion
 
 	#pragma region IConnectionPointContainer
@@ -271,11 +290,9 @@ public:
 
 	virtual const wchar_t* GetRegKeyPath() const override final { return _regKeyPath.c_str(); }
 
-	virtual const char* app_name() const override final { return ::app_name; }
+	virtual const wchar_t* app_name() const override final { return ::app_name; }
 
-	virtual const wchar_t* app_namew() const override final { return ::app_namew; }
-
-	virtual const char* app_version_string() const override final { return ::app_version_string; }
+	virtual const wchar_t* app_version_string() const override final { return ::app_version_string; }
 
 	virtual selection_factory_t* selection_factory() const override final { return &::selection_factory; }
 
@@ -333,6 +350,18 @@ public:
 		return msg.wParam;
 	}
 };
+
+static HRESULT RegisterAutomationTypeLib()
+{
+	wil::unique_process_heap_string modulefn;
+	auto hr = wil::GetModuleFileNameW((HMODULE)&__ImageBase, modulefn); RETURN_IF_FAILED(hr);
+	wil::unique_process_heap_string fn;
+	hr = wil::str_printf_nothrow(fn, L"%s\\%u", modulefn, ID_TYPELIB_SIMULATOR_AO); RETURN_IF_FAILED(hr);
+	com_ptr<ITypeLib> aotypelib;
+	hr = LoadTypeLibEx (fn.get(), REGKIND_NONE, &aotypelib); RETURN_IF_FAILED(hr);
+	hr = RegisterTypeLibForUser (aotypelib, fn.get(), nullptr); RETURN_IF_FAILED(hr);
+	return S_OK;
+}
 
 static void RegisterApplicationAndFileTypes()
 {
@@ -474,6 +503,8 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 	hr = CoRegisterClassObject (guidMSTConfigIdEditor, mstConfigIdEditorFactory, CLSCTX_LOCAL_SERVER, REGCLS_MULTIPLEUSE, &mstceCookie); RETURN_IF_FAILED(hr);
 	auto unreg = wil::scope_exit([mstceCookie] { CoRevokeClassObject(mstceCookie); });
 
+	hr = RegisterAutomationTypeLib(); RETURN_IF_FAILED(hr);
+
 	RegisterApplicationAndFileTypes();
 
 	bool tryDebugFirst = false;
@@ -519,9 +550,9 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 		if (!tryDebugFirst || FAILED(hr))
 		{
 			hr = D3D11CreateDevice(adapters[best].first, D3D_DRIVER_TYPE_UNKNOWN, nullptr,
-								   D3D11_CREATE_DEVICE_BGRA_SUPPORT,
-								   &d3dFeatureLevel, 1,
-								   D3D11_SDK_VERSION, &d3d_device, nullptr, &deviceContext);
+			                       D3D11_CREATE_DEVICE_BGRA_SUPPORT,
+			                       &d3dFeatureLevel, 1,
+			                       D3D11_SDK_VERSION, &d3d_device, nullptr, &deviceContext);
 			_ASSERT(SUCCEEDED(hr));
 		}
 
@@ -558,7 +589,7 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 		hr = MakeProject(&project); RETURN_IF_FAILED(hr);
 		if (fileToOpen)
 		{
-           hr = project->Load(fileToOpen.get()); RETURN_IF_FAILED(hr);
+			hr = project->Load(fileToOpen.get()); RETURN_IF_FAILED(hr);
 		}
 
 		project_window_create_params params = { app, project, true, true, 1, SW_SHOW };
@@ -566,6 +597,19 @@ int APIENTRY wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCm
 		hr = MakeProjectWindow (params, &projectWindow);
 		app->AddProjectWindow(projectWindow);
 		projectWindow.reset();
+
+		com_ptr<IBindCtx> bindContext;
+		hr = CreateBindCtx(0, &bindContext); RETURN_IF_FAILED(hr);
+		com_ptr<IRunningObjectTable> runningObjectTable;
+		hr = bindContext->GetRunningObjectTable(&runningObjectTable); RETURN_IF_FAILED(hr);
+		wil::unique_process_heap_string name;
+		hr = wil::str_printf_nothrow(name, L"mstp-lib.Simulator.%s:%u", app_version_string, GetCurrentProcessId()); RETURN_IF_FAILED(hr);
+		com_ptr<IMoniker> moniker;
+		hr = CreateItemMoniker(L"!", name.get(), &moniker); RETURN_IF_FAILED(hr);
+		DWORD runningObjectCookie;
+		hr = runningObjectTable->Register(ROTFLAGS_REGISTRATIONKEEPSALIVE,
+			app->AsUnknown(), moniker, &runningObjectCookie); RETURN_IF_FAILED(hr);
+		auto revokeRunningObject = wil::scope_exit([&] { runningObjectTable->Revoke(runningObjectCookie); });
 
 		processExitValue = (int)app->RunMessageLoop();
 	}

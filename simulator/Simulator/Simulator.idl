@@ -33,7 +33,7 @@ const int dispidForwardDelay    = 57;
 const int dispidMessageAge      = 58;
 const int dispidRemainingHops   = 59;
 
-[uuid(0C7B378B-1781-4E81-85C9-908113BB32BD)]
+[uuid(0C7B378B-1781-4E81-85C9-908113BB32BD), version(3.0)]
 library SimulatorLib
 {
 	importlib("stdole2.tlb");

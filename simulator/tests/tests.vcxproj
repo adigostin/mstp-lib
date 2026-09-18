@@ -79,21 +79,25 @@
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(SolutionDir)wil\include;$(VCInstallDir)UnitTest\include;$(VSInstallDir)VSSDK\VisualStudioIntegration\Common\Inc;$(IncludePath)</IncludePath>
     <ExternalIncludePath>$(SolutionDir)wil\include;$(VCInstallDir)UnitTest\include;$(VSInstallDir)VSSDK\VisualStudioIntegration\Common\Inc;$(ExternalIncludePath)</ExternalIncludePath>
+    <UseStructuredOutput>false</UseStructuredOutput>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(SolutionDir)wil\include;$(VCInstallDir)UnitTest\include;$(VSInstallDir)VSSDK\VisualStudioIntegration\Common\Inc;$(IncludePath)</IncludePath>
     <ExternalIncludePath>$(SolutionDir)wil\include;$(VCInstallDir)UnitTest\include;$(VSInstallDir)VSSDK\VisualStudioIntegration\Common\Inc;$(ExternalIncludePath)</ExternalIncludePath>
+    <UseStructuredOutput>false</UseStructuredOutput>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(SolutionDir)wil\include;$(VCInstallDir)UnitTest\include;$(VSInstallDir)VSSDK\VisualStudioIntegration\Common\Inc;$(IncludePath)</IncludePath>
     <ExternalIncludePath>$(SolutionDir)wil\include;$(VCInstallDir)UnitTest\include;$(VSInstallDir)VSSDK\VisualStudioIntegration\Common\Inc;$(ExternalIncludePath)</ExternalIncludePath>
+    <UseStructuredOutput>false</UseStructuredOutput>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(SolutionDir)wil\include;$(VCInstallDir)UnitTest\include;$(VSInstallDir)VSSDK\VisualStudioIntegration\Common\Inc;$(IncludePath)</IncludePath>
     <ExternalIncludePath>$(SolutionDir)wil\include;$(VCInstallDir)UnitTest\include;$(VSInstallDir)VSSDK\VisualStudioIntegration\Common\Inc;$(ExternalIncludePath)</ExternalIncludePath>
+    <UseStructuredOutput>false</UseStructuredOutput>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>

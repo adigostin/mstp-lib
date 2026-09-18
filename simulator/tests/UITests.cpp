@@ -6,7 +6,7 @@
 #include "simulator.h"
 #include "resource.h"
 #include "test_helpers.h"
-
+#include "SimulatorAO_h.h"
 #include <Psapi.h>
 #pragma comment(lib, "Psapi.lib")
 
@@ -215,7 +215,7 @@ static wil::com_ptr_failfast<VxDTE::Process> FindAndAttachToSimulator(DWORD simu
 	return nullptr;
 }
 
-static SimulatorInstance RunSimulator(const wchar_t* projectPath)
+static SimulatorInstance RunSimulator (const wchar_t* projectPath, bool attachDebugger = true)
 {
 	wchar_t modulePath[MAX_PATH];
 	DWORD length = GetModuleFileNameW((HMODULE)&__ImageBase, modulePath, _countof(modulePath));
@@ -228,7 +228,7 @@ static SimulatorInstance RunSimulator(const wchar_t* projectPath)
 	// that's why I introduced "-waitForDebugger".
 
 	std::wstring commandLine = L"\"" + simulatorPath + L"\"";
-	if (IsDebuggerPresent())
+	if (IsDebuggerPresent() && attachDebugger)
 		commandLine = commandLine + L" -waitForDebugger";
 	if (projectPath)
 		commandLine = commandLine + L" \"" + projectPath + L"\"";
@@ -238,7 +238,7 @@ static SimulatorInstance RunSimulator(const wchar_t* projectPath)
 	Assert::IsTrue(created);
 
 	wil::com_ptr_failfast<VxDTE::Process> attachedProcess;
-	if (IsDebuggerPresent())
+	if (IsDebuggerPresent() && attachDebugger)
 		attachedProcess = FindAndAttachToSimulator(processInfo.dwProcessId);
 
 	HWND projectWindow = nullptr;
@@ -262,6 +262,35 @@ static SimulatorInstance RunSimulator(const wchar_t* projectPath)
 	return { std::move(processInfo), projectWindow, std::move(attachedProcess) };
 }
 
+static wil::com_ptr_failfast<ISimulatorAppAO> GetSimulatorAppAO(DWORD processId)
+{
+	wil::unique_process_heap_string name;
+	auto hr = wil::str_printf_nothrow(name, L"mstp-lib.Simulator.%s:%u", app_version_string, processId);
+	Assert::AreEqual(S_OK, hr);
+
+	wil::com_ptr_failfast<IBindCtx> bindContext;
+	wil::com_ptr_failfast<IRunningObjectTable> runningObjectTable;
+	wil::com_ptr_failfast<IMoniker> moniker;
+	Assert::IsTrue(SUCCEEDED(CreateBindCtx(0, &bindContext)));
+	Assert::IsTrue(SUCCEEDED(bindContext->GetRunningObjectTable(&runningObjectTable)));
+	Assert::IsTrue(SUCCEEDED(CreateItemMoniker(L"!", name.get(), &moniker)));
+
+	for (DWORD i = 0; i < 100; i++)
+	{
+		wil::com_ptr_failfast<IUnknown> object;
+		if (SUCCEEDED(runningObjectTable->GetObject(moniker, &object)))
+		{
+			wil::com_ptr_failfast<ISimulatorAppAO> ao;
+			hr = object->QueryInterface(IID_PPV_ARGS(ao.addressof()));
+			Assert::AreEqual(S_OK, hr);
+			return ao;
+		}
+		Sleep(50);
+	}
+
+	Assert::Fail();
+}
+
 namespace UITests
 {
 	TEST_CLASS(UITests)
@@ -278,6 +307,28 @@ namespace UITests
 
 			HRESULT hr = (HRESULT)SendMessageW(simulator.projectWindow, WM_COMMAND, ID_FILE_SAVE, 0);
 			Assert::AreEqual(S_OK, hr);
+		}
+
+		TEST_METHOD(CreatingBridgeChangingVlanAndClearingSelection)
+		{
+			HRESULT hr;
+			auto simulator = RunSimulator(nullptr);
+			auto app = GetSimulatorAppAO(simulator.pi.dwProcessId);
+			wil::com_ptr_failfast<IProjectWindowAO> projectWindow;
+			hr = app->GetProjectWindow((LONG)(LONG_PTR)simulator.projectWindow, &projectWindow); Assert::AreEqual(S_OK, hr);
+			wil::com_ptr_failfast<IProjectAO> project;
+			hr = projectWindow->GetProject(&project); Assert::AreEqual(S_OK, hr);
+
+			wil::com_ptr_failfast<IBridgeAO> bridge;
+			hr = project->AddBridge(4, 4, &bridge); Assert::AreEqual(S_OK, hr);
+			
+			hr = projectWindow->SelectBridge(bridge); Assert::AreEqual(S_OK, hr);
+
+			hr = bridge->put_STPVersion(STPVersionMSTP); Assert::AreEqual(S_OK, hr);
+			hr = bridge->LoadTestMstConfig1(); Assert::AreEqual(S_OK, hr);
+			
+			hr = projectWindow->SelectVlan(5); Assert::AreEqual(S_OK, hr);
+			hr = projectWindow->ClearSelection(); Assert::AreEqual(S_OK, hr);
 		}
 	};
 }

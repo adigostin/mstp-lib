@@ -5,6 +5,7 @@
 #include "pch.h"
 #include "simulator.h"
 #include "resource.h"
+#include "SimulatorAO_h.h"
 
 using namespace edge;
 using namespace pg;
@@ -24,7 +25,11 @@ static COMDLG_FILTERSPEC const ProjectFileDialogFileTypes[] =
 };
 static const wchar_t ProjectFileExtensionWithoutDot[] = L"stp";
 
-class ProjectWindowImpl : public IProjectWindow, IConnectionPointContainer, IProjectEventsSink, IProjectWindowCollectionEventsSink, IVlanSelectionEvents
+HRESULT CreateProjectAO (IStpProject* project, IProjectAO** ppProjectAO);
+
+class ProjectWindowImpl : public IProjectWindow, IConnectionPointContainer, IProjectEventsSink
+	, IProjectWindowCollectionEventsSink, IVlanSelectionEvents
+	, IProjectWindowAO
 {
 	ULONG _refCount = 0;
 	ULONG _sig = 0xAA550005;
@@ -166,6 +171,8 @@ public:
 			|| TryQI<IProjectEventsSink>(this, riid, ppvObject)
 			|| TryQI<IProjectWindowCollectionEventsSink>(this, riid, ppvObject)
 			|| TryQI<IVlanSelectionEvents>(this, riid, ppvObject)
+			|| TryQI<IDispatch>(this, riid, ppvObject)
+			|| TryQI<IProjectWindowAO>(this, riid, ppvObject)
 		)
 			return S_OK;
 
@@ -179,6 +186,8 @@ public:
 
 	virtual ULONG STDMETHODCALLTYPE Release() override { return ReleaseST(this, _refCount); }
 	#pragma endregion
+
+	IMPLEMENT_IDISPATCH_(IProjectWindowAO, nullptr, ID_TYPELIB_SIMULATOR_AO);
 
 	#pragma region IConnectionPointContainer
 	virtual HRESULT STDMETHODCALLTYPE EnumConnectionPoints (IEnumConnectionPoints **ppEnum) override
@@ -801,8 +810,8 @@ public:
 
 		if (wParam == ID_HELP_ABOUT)
 		{
-			auto text = std::string(_app->app_name()) + " v" + _app->app_version_string();
-			MessageBoxA (_hwnd, text.c_str(), _app->app_name(), 0);
+			auto text = std::wstring(_app->app_name()) + L" v" + _app->app_version_string();
+			MessageBox (_hwnd, text.c_str(), _app->app_name(), 0);
 			return 0;
 		}
 
@@ -864,7 +873,7 @@ public:
 
 			TASKDIALOGCONFIG tdc = { sizeof (tdc) };
 			tdc.hwndParent = _hwnd;
-			tdc.pszWindowTitle = _app->app_namew();
+			tdc.pszWindowTitle = _app->app_name();
 			tdc.pszMainIcon = TD_WARNING_ICON;
 			tdc.pszMainInstruction = L"File was changed";
 			tdc.pszContent = L"Save changes?";
@@ -1005,7 +1014,43 @@ public:
 	}
 	#pragma endregion
 
+	#pragma region IProjectWindowAO
+	virtual HRESULT STDMETHODCALLTYPE GetProject (IProjectAO** ppProjectAO) override
+	{
+		if (!ppProjectAO) return E_POINTER;
+		*ppProjectAO = nullptr;
+
+		// TODO: cache it
+		return CreateProjectAO(_project, ppProjectAO);
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE SelectBridge (IBridgeAO* bridgeAO) override
+	{
+		com_ptr<IGetWrappedObject> getWrapped;
+		auto hr = bridgeAO->QueryInterface(IID_PPV_ARGS(getWrapped.addressof())); RETURN_IF_FAILED(hr);
+		com_ptr<IDispatch> bridge;
+		hr = getWrapped->GetWrappedObject(IID_PPV_ARGS(bridge.addressof())); RETURN_IF_FAILED(hr);
+		return _selection->select(bridge);
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE ClearSelection() override
+	{
+		return _selection->clear();
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE SelectVlan (DWORD vlanNumber) override
+	{
+		com_ptr<IVlanSelection> vlanSel;
+		auto hr = _vlanWindow->GetVlanSelection(&vlanSel); RETURN_IF_FAILED(hr);
+		return vlanSel->SelectVlan(vlanNumber);
+	}
+	#pragma endregion
+
 	virtual IStpProject* project() const override final { return _project; }
+	virtual HRESULT STDMETHODCALLTYPE GetSelection (ISelection** ppSelection) override
+	{
+		return _selection.copy_to(ppSelection);
+	}
 
 	virtual HRESULT STDMETHODCALLTYPE GetVlanSelection (IVlanSelection** ppVlanSelection) override
 	{

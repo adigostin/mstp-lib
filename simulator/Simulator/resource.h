@@ -2,6 +2,9 @@
 // Microsoft Visual C++ generated include file.
 // Used by simulator.rc
 //
+
+#define ID_TYPELIB_SIMULATOR            1
+#define ID_TYPELIB_SIMULATOR_AO         2
 #define IDI_DESIGNER                    107
 #define IDD_DIALOG_VLAN                 108
 #define IDR_CONTEXT_MENU_EMPTY_SPACE    130

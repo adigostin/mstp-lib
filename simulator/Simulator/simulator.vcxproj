@@ -71,21 +71,25 @@
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(SolutionDir)wil\include;$(IncludePath)</IncludePath>
     <ExternalIncludePath>$(SolutionDir)wil\include;$(ExternalIncludePath)</ExternalIncludePath>
+    <UseStructuredOutput>false</UseStructuredOutput>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(SolutionDir)wil\include;$(IncludePath)</IncludePath>
     <ExternalIncludePath>$(SolutionDir)wil\include;$(ExternalIncludePath)</ExternalIncludePath>
+    <UseStructuredOutput>false</UseStructuredOutput>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(SolutionDir)wil\include;$(IncludePath)</IncludePath>
     <ExternalIncludePath>$(SolutionDir)wil\include;$(ExternalIncludePath)</ExternalIncludePath>
+    <UseStructuredOutput>false</UseStructuredOutput>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(SolutionDir)wil\include;$(IncludePath)</IncludePath>
     <ExternalIncludePath>$(SolutionDir)wil\include;$(ExternalIncludePath)</ExternalIncludePath>
+    <UseStructuredOutput>false</UseStructuredOutput>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -113,6 +117,7 @@
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)edge;$(SolutionDir)edge\include;$(SolutionDir)pg\include</AdditionalIncludeDirectories>
+      <TypeLibraryName>$(IntDir)%(Filename).tlb</TypeLibraryName>
     </Midl>
     <ResourceCompile>
       <Culture>0x0409</Culture>
@@ -151,6 +156,7 @@
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)edge;$(SolutionDir)edge\include;$(SolutionDir)pg\include</AdditionalIncludeDirectories>
+      <TypeLibraryName>$(IntDir)%(Filename).tlb</TypeLibraryName>
     </Midl>
     <ResourceCompile>
       <Culture>0x0409</Culture>
@@ -193,6 +199,7 @@
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)edge;$(SolutionDir)edge\include;$(SolutionDir)pg\include</AdditionalIncludeDirectories>
+      <TypeLibraryName>$(IntDir)%(Filename).tlb</TypeLibraryName>
     </Midl>
     <ResourceCompile>
       <Culture>0x0409</Culture>
@@ -235,6 +242,7 @@
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)edge;$(SolutionDir)edge\include;$(SolutionDir)pg\include</AdditionalIncludeDirectories>
+      <TypeLibraryName>$(IntDir)%(Filename).tlb</TypeLibraryName>
     </Midl>
     <ResourceCompile>
       <Culture>0x0409</Culture>
@@ -258,6 +266,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="bridge.cpp" />
+    <ClCompile Include="BridgeAO.cpp" />
     <ClCompile Include="bridge_tree.cpp" />
     <ClCompile Include="edit_window.cpp" />
     <ClCompile Include="edit_states\beginning_drag_es.cpp" />
@@ -277,6 +286,7 @@
     <ClCompile Include="port.cpp" />
     <ClCompile Include="port_tree.cpp" />
     <ClCompile Include="project.cpp" />
+    <ClCompile Include="ProjectAO.cpp" />
     <ClCompile Include="project_window.cpp" />
     <ClCompile Include="properties_window.cpp" />
     <ClCompile Include="selection.cpp" />
@@ -326,6 +336,7 @@
   </ItemGroup>
   <ItemGroup>
     <Midl Include="Simulator.idl" />
+    <Midl Include="SimulatorAO.idl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

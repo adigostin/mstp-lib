@@ -24,7 +24,7 @@ static constexpr uint32_t max_vlan_number = 16;
 static constexpr wchar_t FileExtensionWithoutDot[] = L"stp";
 static constexpr wchar_t FileExtensionWithDot[] = L".stp";
 
-static constexpr char app_version_string[] = "3.0";
+static constexpr wchar_t app_version_string[] = L"3.0";
 
 extern const char stp_disabled_text[];
 
@@ -250,8 +250,8 @@ HRESULT MakeBridge (uint32_t portCount, uint32_t mstiCount, mac_address macAddre
 
 struct DECLSPEC_NOVTABLE DECLSPEC_UUID("251AC28E-9F19-4306-8217-5BBC3345F1E8") ISelection : edge::IObjectList
 {
-	virtual void select (IDispatch* o) = 0;
-	virtual void clear() = 0;
+	virtual HRESULT STDMETHODCALLTYPE select (IDispatch* o) noexcept = 0;
+	virtual HRESULT STDMETHODCALLTYPE clear() noexcept = 0;
 	virtual void add (IDispatch* o) = 0;
 	virtual void remove (IDispatch* o) = 0;
 };
@@ -267,6 +267,7 @@ struct DECLSPEC_NOVTABLE DECLSPEC_UUID("DBFEA9F6-363D-4E85-9707-F8CF20B4570D") I
 
 struct DECLSPEC_NOVTABLE DECLSPEC_UUID("A4D5FA98-518D-4137-A7DD-7B6A1215AECC") IVlanSelection : IUnknown
 {
+	virtual HRESULT STDMETHODCALLTYPE SelectVlan (DWORD dwVlan) = 0;
 	virtual HRESULT STDMETHODCALLTYPE GetSelectedVlan (DWORD* pdwVlan) = 0;
 };
 
@@ -354,6 +355,7 @@ struct DECLSPEC_NOVTABLE DECLSPEC_UUID("31165615-DAC0-427D-BD00-8E79217AC39B") I
 {
 	virtual HWND hwnd() const = 0;
 	virtual IStpProject* project() const = 0;
+	virtual HRESULT STDMETHODCALLTYPE GetSelection (ISelection** ppSelection) = 0;
 	virtual HRESULT STDMETHODCALLTYPE GetVlanSelection (IVlanSelection** ppVlanSelection) = 0;
 };
 
@@ -437,9 +439,8 @@ struct DECLSPEC_NOVTABLE DECLSPEC_UUID("B11C7D2D-9AF8-4450-A8ED-A955B5C52D10") I
 	virtual HRESULT STDMETHODCALLTYPE AddProjectWindow (IProjectWindow* pw) = 0;
 	virtual ULONG STDMETHODCALLTYPE ProjectWindowCount() const = 0;
 	virtual IProjectWindow* STDMETHODCALLTYPE ProjectWindowAt (ULONG i) const = 0;
-	virtual const char* app_name() const = 0;
-	virtual const wchar_t* app_namew() const = 0;
-	virtual const char* app_version_string() const = 0;
+	virtual const wchar_t* app_name() const = 0;
+	virtual const wchar_t* app_version_string() const = 0;
 	virtual selection_factory_t* selection_factory() const = 0;
 	virtual edit_window_factory_t* edit_window_factory() const = 0;
 	virtual project_window_factory_t* project_window_factory() const = 0;
@@ -449,6 +450,11 @@ struct DECLSPEC_NOVTABLE DECLSPEC_UUID("B11C7D2D-9AF8-4450-A8ED-A955B5C52D10") I
 	virtual ID3D11DeviceContext1* GetD3DDC() = 0;
 	virtual IDWriteFactory* GetDWriteFactory() = 0;
 	virtual ID2D1Factory1* GetD2DFactory() = 0;
+};
+
+struct DECLSPEC_NOVTABLE DECLSPEC_UUID("1BC286EB-8EDB-4F7E-BBC8-BB15DB4EE18C") IGetWrappedObject : IUnknown
+{
+	virtual HRESULT STDMETHODCALLTYPE GetWrappedObject (REFIID riid, void** ppvObject) = 0;
 };
 
 // ============================================================================

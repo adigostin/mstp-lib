@@ -128,6 +128,21 @@ public:
 		*pdwVlan = _vlan;
 		return S_OK;
 	}
+
+	virtual HRESULT STDMETHODCALLTYPE SelectVlan (DWORD dwVlan) override
+	{
+		RETURN_HR_IF(E_INVALIDARG, dwVlan == 0 || dwVlan > max_vlan_number);
+		if (_vlan != dwVlan)
+		{
+			_vlanSelectionEventsCP->Notify([this] (IVlanSelectionEvents* e) { return e->OnVlanSelectionChanging(_vlan); });
+			_vlan = dwVlan;
+			_vlanSelectionEventsCP->Notify([this] (IVlanSelectionEvents* e) { return e->OnVlanSelectionChanged(_vlan); });
+			LoadSelectedTreeEdit();
+			auto comboVlan = GetDlgItem(_hwnd, IDC_COMBO_SELECTED_VLAN);
+			ComboBox_SetCurSel(comboVlan, static_cast<int>(_vlan - 1));
+		}
+		return S_OK;
+	}
 	#pragma endregion
 
 	static constexpr auto is_bridge = [](IDispatch* o) { return wil::try_com_query_nothrow<IBridge>(o); };
@@ -259,7 +274,7 @@ public:
 					hr = editor->ShowModal (_hwnd, &unused); _ASSERT(SUCCEEDED(hr));
 				}
 				else
-					MessageBoxA (_hwnd, "Select some bridges or ports first.", _app->app_name(), 0);
+					MessageBox (_hwnd, L"Select some bridges or ports first.", _app->app_name(), 0);
 
 				return { TRUE, 0 };
 			}
