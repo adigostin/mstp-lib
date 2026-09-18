@@ -5,6 +5,7 @@
 #include "pch.h"
 #include "simulator.h"
 #include "dispids.h"
+#include "edge/vector_nothrow.h"
 
 using namespace edge;
 
@@ -13,7 +14,7 @@ class selection : public ISelection, IPropertyChangeSink, IConnectionPointContai
 	ULONG _refCount = 0;
 	ULONG _sig = 0xAA550001;
 	IStpProject* _project;
-	std::vector<com_ptr<IDispatch>> _objects;
+	vector_nothrow<com_ptr<IDispatch>> _objects;
 	AdviseSinkToken _token;
 	WeakRefToThis _weakRefToThis;
 	com_ptr<ConnectionPointImpl<IObjectCollectionChangeEvents>> _occCP;
@@ -34,7 +35,7 @@ public:
 	~selection()
 	{
 		// TODO: remove this
-		clear();
+		Clear();
 	}
 
 	IUnknown* AsUnknown() { return static_cast<ISelection*>(this); }
@@ -92,7 +93,7 @@ public:
 				auto it = std::find(_objects.begin(), _objects.end(), disp.get());
 				if (it != _objects.end())
 				{
-					size_t i = it - _objects.begin();
+					uint32_t i = (uint32_t)(it - _objects.begin());
 					remove_internal(i, 1);
 				}
 			}
@@ -109,7 +110,7 @@ public:
 				auto it = std::find(_objects.begin(), _objects.end(), disp.get());
 				if (it != _objects.end())
 				{
-					size_t i = it - _objects.begin();
+					uint32_t i = (uint32_t)(it - _objects.begin());
 					remove_internal(i, 1);
 				}
 			}
@@ -124,24 +125,27 @@ public:
 	}
 	#pragma endregion
 
-	virtual uint32_t size() const override { return (uint32_t)_objects.size(); }
+	#pragma region IObjectList
+	virtual uint32_t size() const override { return _objects.size(); }
 	
 	virtual IDispatch* operator[](uint32_t index) const override { return _objects[index]; }
+	#pragma endregion
 
-	void add_internal (IDispatch* o)
+	HRESULT STDMETHODCALLTYPE add_internal (IDispatch* o) noexcept
 	{
 		ObjectCollectionChangeArgs occ = { .changeType = Insert, .setInsertRemoveArgs = { .index = (ULONG)_objects.size(), .count = 1, .childObjs = &o } };
 		_occCP->Notify([this,&occ](IObjectCollectionChangeEvents* e) { return e->OnCollectionChanging(AsUnknown(), &occ); });
-		_objects.push_back(o);
+		_objects.try_push_back(o);
 		occ.setInsertRemoveArgs.childObjs = nullptr;
 		_occCP->Notify([this,&occ](IObjectCollectionChangeEvents* e) { return e->OnCollectionChanged(AsUnknown(), &occ); });
+		return S_OK;
 	}
 
-	void remove_internal (size_t index, size_t size)
+	HRESULT STDMETHODCALLTYPE remove_internal (uint32_t index, uint32_t size) noexcept
 	{
 		if (size)
 		{
-			ObjectCollectionChangeArgs occ = { .changeType = Remove, .setInsertRemoveArgs = { .index = (ULONG)index, .count = (ULONG)size } };
+			ObjectCollectionChangeArgs occ = { .changeType = CollectionChangeType::Remove, .setInsertRemoveArgs = { .index = (ULONG)index, .count = (ULONG)size } };
 			_occCP->Notify([this,&occ](IObjectCollectionChangeEvents* e) { return e->OnCollectionChanging(AsUnknown(), &occ); });
 			std::vector<com_ptr<IDispatch>> removed;
 			std::copy(_objects.begin() + index, _objects.begin() + index + size, std::back_inserter(removed));
@@ -152,15 +156,16 @@ public:
 			occ.setInsertRemoveArgs.childObjs = punks.data();
 			_occCP->Notify([this,&occ](IObjectCollectionChangeEvents* e) { return e->OnCollectionChanged(AsUnknown(), &occ); });
 		}
-	}
 
-	virtual HRESULT STDMETHODCALLTYPE clear() noexcept override final
-	{
-		remove_internal(0, _objects.size());
 		return S_OK;
 	}
 
-	virtual HRESULT STDMETHODCALLTYPE select (IDispatch* o) noexcept override
+	virtual HRESULT STDMETHODCALLTYPE Clear() noexcept override
+	{
+		return remove_internal(0, _objects.size());
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE Select (IDispatch* o) noexcept override
 	{
 		RETURN_HR_IF(E_INVALIDARG, o == nullptr);
 
@@ -173,28 +178,26 @@ public:
 		return S_OK;
 	}
 
-	virtual void add (IDispatch* o) override final
+	virtual HRESULT STDMETHODCALLTYPE Add (IDispatch* o) noexcept override
 	{
-		if (o == nullptr)
-			throw std::invalid_argument("Parameter may not be nullptr.");
+		RETURN_HR_IF(E_INVALIDARG, o == nullptr);
 
 		if (std::find (_objects.begin(), _objects.end(), o) != _objects.end())
-			throw std::invalid_argument("Object already in selection.");
+			RETURN_HR(HRESULT_FROM_WIN32(ERROR_ALREADY_EXISTS));
 
-		add_internal(o);
+		return add_internal(o);
 	}
 
-	virtual void remove (IDispatch* o) override final
+	virtual HRESULT STDMETHODCALLTYPE Remove (IDispatch* o) noexcept override
 	{
-		if (o == nullptr)
-			throw std::invalid_argument("Parameter may not be nullptr.");
+		RETURN_HR_IF(E_INVALIDARG, o == nullptr);
 
 		auto it = std::find (_objects.begin(), _objects.end(), o);
 		if (it == _objects.end())
-			throw std::invalid_argument("Object not in selection.");
-		size_t index = it - _objects.begin();
-
-		remove_internal(index, 1);
+			RETURN_HR(HRESULT_FROM_WIN32(ERROR_NOT_FOUND));
+		
+		uint32_t index = (uint32_t)(it - _objects.begin());
+		return remove_internal(index, 1);
 	}
 };
 

@@ -80,7 +80,7 @@ public:
 			if (std::holds_alternative<connected_wire_end>(_wire->p1()))
 			{
 				_project->SetChangedFlag(true);
-				_selection->select(wil::try_com_query_nothrow<IDispatch>(_wire));
+				_selection->Select(wil::try_com_query_nothrow<IDispatch>(_wire));
 				_substate = down;
 			}
 		}

@@ -49,7 +49,7 @@ class create_bridge_es : public edit_state
 			b->set_location(_bridge->location());
 			_project->AddBridge(b);
 			_project->SetChangedFlag(true);
-			_selection->select(b.try_query<IDispatch>());
+			_selection->Select(b.try_query<IDispatch>());
 		}
 
 		_completed = true;

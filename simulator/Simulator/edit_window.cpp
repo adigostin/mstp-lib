@@ -1061,23 +1061,23 @@ public:
 		float sd = SnapDistance * dpi / 96;
 		auto ht = hit_test_objects (ml.d, sd);
 		if (!ht.first)
-			_selection->clear();
+			_selection->Clear();
 		else
 		{
 			auto htf = wil::try_com_query_nothrow<IDispatch>(ht.first);
 			if (mks & MK_CONTROL)
 			{
 				if (_selection->contains(htf))
-					_selection->remove(htf);
+					_selection->Remove(htf);
 				else if (!_selection->empty() && SameType(_selection->front(), htf) == S_OK)
-					_selection->add(htf);
+					_selection->Add(htf);
 				else
-					_selection->select(htf);
+					_selection->Select(htf);
 			}
 			else
 			{
 				if (!_selection->contains(htf))
-					_selection->select(htf);
+					_selection->Select(htf);
 			}
 		}
 

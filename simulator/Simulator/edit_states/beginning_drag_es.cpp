@@ -74,7 +74,7 @@ public:
 			return handled(true); // discard it
 
 		if ((button == edge::mouse_button::left) && ((mks & MK_CONTROL) == 0) && (_clickedObject != nullptr))
-			_selection->select(wil::try_com_query_nothrow<IDispatch>(_clickedObject));
+			_selection->Select(wil::try_com_query_nothrow<IDispatch>(_clickedObject));
 
 		_completed = true;
 

@@ -1030,12 +1030,12 @@ public:
 		auto hr = bridgeAO->QueryInterface(IID_PPV_ARGS(getWrapped.addressof())); RETURN_IF_FAILED(hr);
 		com_ptr<IDispatch> bridge;
 		hr = getWrapped->GetWrappedObject(IID_PPV_ARGS(bridge.addressof())); RETURN_IF_FAILED(hr);
-		return _selection->select(bridge);
+		return _selection->Select(bridge);
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE ClearSelection() override
 	{
-		return _selection->clear();
+		return _selection->Clear();
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE SelectVlan (DWORD vlanNumber) override

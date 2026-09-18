@@ -34,7 +34,7 @@ namespace PG
 			hr = selection_factory(project, &selection); Assert::AreEqual(S_OK, hr);
 			com_ptr<IDispatch> portDispatch;
 			hr = port->QueryInterface(IID_PPV_ARGS(&portDispatch)); Assert::AreEqual(S_OK, hr);
-			selection->select(portDispatch);
+			selection->Select(portDispatch);
 
 			com_ptr<pg::IPropertyGrid> propertyGrid;
 			hr = MakePropertyGrid(nullptr, { }, nullptr, &propertyGrid); Assert::AreEqual(S_OK, hr);
@@ -73,7 +73,7 @@ namespace PG
 			hr = selection_factory(project, &selection); Assert::AreEqual(S_OK, hr);
 			com_ptr<IDispatch> portDispatch;
 			hr = port->QueryInterface(IID_PPV_ARGS(&portDispatch)); Assert::AreEqual(S_OK, hr);
-			selection->select(portDispatch);
+			selection->Select(portDispatch);
 
 			com_ptr<pg::IPropertyGrid> propertyGrid;
 			hr = MakePropertyGrid(nullptr, { }, nullptr, &propertyGrid); Assert::AreEqual(S_OK, hr);
@@ -130,7 +130,7 @@ namespace PG
 			hr = selection_factory(project, &selection); Assert::AreEqual(S_OK, hr);
 			com_ptr<IDispatch> portDispatch;
 			hr = port->QueryInterface(IID_PPV_ARGS(&portDispatch)); Assert::AreEqual(S_OK, hr);
-			selection->select(portDispatch);
+			selection->Select(portDispatch);
 
 			com_ptr<pg::IPropertyGrid> propertyGrid;
 			hr = MakePropertyGrid(nullptr, { }, nullptr, &propertyGrid); Assert::AreEqual(S_OK, hr);

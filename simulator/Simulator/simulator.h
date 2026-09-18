@@ -250,10 +250,10 @@ HRESULT MakeBridge (uint32_t portCount, uint32_t mstiCount, mac_address macAddre
 
 struct DECLSPEC_NOVTABLE DECLSPEC_UUID("251AC28E-9F19-4306-8217-5BBC3345F1E8") ISelection : edge::IObjectList
 {
-	virtual HRESULT STDMETHODCALLTYPE select (IDispatch* o) noexcept = 0;
-	virtual HRESULT STDMETHODCALLTYPE clear() noexcept = 0;
-	virtual void add (IDispatch* o) = 0;
-	virtual void remove (IDispatch* o) = 0;
+	virtual HRESULT STDMETHODCALLTYPE Select (IDispatch* o) noexcept = 0;
+	virtual HRESULT STDMETHODCALLTYPE Clear() noexcept = 0;
+	virtual HRESULT STDMETHODCALLTYPE Add (IDispatch* o) noexcept = 0;
+	virtual HRESULT STDMETHODCALLTYPE Remove (IDispatch* o) noexcept = 0;
 };
 using selection_factory_t = HRESULT(IStpProject* project, ISelection** ppSelection);
 
