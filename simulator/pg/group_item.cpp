@@ -99,7 +99,7 @@ public:
 		if (!objs->empty())
 		{
 			wil::com_ptr_nothrow<ITypeInfo> typeInfo;
-			hr = objs->front()->GetTypeInfo(0, InvariantLCID, &typeInfo); RETURN_IF_FAILED(hr);
+			hr = objs->front()->GetTypeInfo(0, LANG_INVARIANT, &typeInfo); RETURN_IF_FAILED(hr);
 			TYPEATTR* typeAttr;
 			hr = typeInfo->GetTypeAttr(&typeAttr); RETURN_IF_FAILED(hr);
 			auto releaseTypeAttr = wil::scope_exit([ti=typeInfo.get(), typeAttr] { ti->ReleaseTypeAttr(typeAttr); });

@@ -9,8 +9,6 @@ namespace edge
 {
 	using handled = bool;
 
-	extern const LCID InvariantLCID;
-
 	enum class mouse_button { left, right, middle, };
 
 	UINT get_modifier_keys();

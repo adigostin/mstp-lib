@@ -1150,7 +1150,7 @@ public:
 			hr = InitVariantFromString(text.get(), &value); LOG_IF_FAILED(hr);
 			if (vpi->VarType() != VT_BSTR) {
 				wil::unique_variant temp;
-				hr = VariantChangeTypeEx (&temp, &value, InvariantLCID, 0, vpi->VarType());
+				hr = VariantChangeTypeEx (&temp, &value, LANG_INVARIANT, 0, vpi->VarType());
 				if (FAILED(hr))
 				{
 					wil::str_printf_nothrow (errorMessage, L"Cannot change \"%s\" to the property type.", text.get());
@@ -1560,7 +1560,7 @@ HRESULT MakePropertyItem (IGroupItem* parent, DISPID prop, IPGPropertyItem** ppI
 	HRESULT hr;
 
 	wil::com_ptr_nothrow<ITypeInfo> typeInfo;
-	hr = parent->parent()->objects()->front()->GetTypeInfo(0, InvariantLCID, &typeInfo); RETURN_IF_FAILED(hr);
+	hr = parent->parent()->objects()->front()->GetTypeInfo(0, LANG_INVARIANT, &typeInfo); RETURN_IF_FAILED(hr);
 	TYPEATTR* typeAttr;
 	hr = typeInfo->GetTypeAttr(&typeAttr); RETURN_IF_FAILED(hr);
 	auto releaseTypeAttr = wil::scope_exit([ti=typeInfo.get(), typeAttr] { ti->ReleaseTypeAttr(typeAttr); });

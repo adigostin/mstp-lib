@@ -134,7 +134,7 @@ struct ObjectItemChildManager : IObjectItemChildManager, IPropertyChangeSink, IO
 			return S_OK;
 
 		com_ptr<ITypeInfo> typeInfo;
-		auto hr = objs->front()->GetTypeInfo(0, InvariantLCID, &typeInfo); RETURN_IF_FAILED(hr);
+		auto hr = objs->front()->GetTypeInfo(0, LANG_INVARIANT, &typeInfo); RETURN_IF_FAILED(hr);
 		TYPEATTR* typeAttr;
 		hr = typeInfo->GetTypeAttr(&typeAttr); RETURN_IF_FAILED(hr);
 		auto releaseTypeAttr = wil::scope_exit([&typeInfo,typeAttr] { typeInfo->ReleaseTypeAttr(typeAttr); });
@@ -142,7 +142,7 @@ struct ObjectItemChildManager : IObjectItemChildManager, IPropertyChangeSink, IO
 		for (uint32_t i = 1; i < objs->size(); i++)
 		{
 			com_ptr<ITypeInfo> ti;
-			hr = (*objs)[i]->GetTypeInfo(0, InvariantLCID, &ti); RETURN_IF_FAILED(hr);
+			hr = (*objs)[i]->GetTypeInfo(0, LANG_INVARIANT, &ti); RETURN_IF_FAILED(hr);
 			TYPEATTR* ta;
 			hr = ti->GetTypeAttr(&ta); RETURN_IF_FAILED(hr);
 			auto releaseTA = wil::scope_exit([&ti,ta] { ti->ReleaseTypeAttr(ta); });
@@ -310,7 +310,7 @@ struct ObjectItemChildManager : IObjectItemChildManager, IPropertyChangeSink, IO
 				if (oi)
 				{
 					com_ptr<ITypeInfo> ti;
-					hr = oi->GetTypeInfo(0, InvariantLCID, &ti); RETURN_IF_FAILED(hr);
+					hr = oi->GetTypeInfo(0, LANG_INVARIANT, &ti); RETURN_IF_FAILED(hr);
 
 					com_ptr<ITypeInfo2> ti2;
 					hr = ti->QueryInterface(IID_PPV_ARGS(&ti2)); RETURN_IF_FAILED(hr);

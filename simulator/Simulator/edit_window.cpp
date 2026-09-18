@@ -1017,13 +1017,13 @@ public:
 		HRESULT hr;
 		
 		com_ptr<ITypeInfo> tia;
-		hr = a->GetTypeInfo(0, InvariantLCID, &tia); RETURN_IF_FAILED(hr);
+		hr = a->GetTypeInfo(0, LANG_INVARIANT, &tia); RETURN_IF_FAILED(hr);
 		TYPEATTR* attra;
 		hr = tia->GetTypeAttr(&attra); RETURN_IF_FAILED(hr);
 		auto releasea = wil::scope_exit([&tia,attra] { tia->ReleaseTypeAttr(attra); });
 		
 		com_ptr<ITypeInfo> tib;
-		hr = b->GetTypeInfo(0, InvariantLCID, &tib); RETURN_IF_FAILED(hr);
+		hr = b->GetTypeInfo(0, LANG_INVARIANT, &tib); RETURN_IF_FAILED(hr);
 		TYPEATTR* attrb;
 		hr = tib->GetTypeAttr(&attrb); RETURN_IF_FAILED(hr);
 		auto releaseb = wil::scope_exit([&tib,attrb] { tib->ReleaseTypeAttr(attrb); });

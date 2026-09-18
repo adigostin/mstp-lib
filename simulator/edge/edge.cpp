@@ -7,8 +7,6 @@
 
 namespace edge
 {
-	const LCID InvariantLCID = LocaleNameToLCID(LOCALE_NAME_INVARIANT, 0);
-
 	// TODO: move to utility functions
 	UINT get_modifier_keys()
 	{
@@ -64,7 +62,7 @@ namespace edge
 		HRESULT hr;
 
 		com_ptr<ITypeInfo> ti;
-		hr = obj->GetTypeInfo(0, InvariantLCID, &ti); RETURN_IF_FAILED(hr);
+		hr = obj->GetTypeInfo(0, LANG_INVARIANT, &ti); RETURN_IF_FAILED(hr);
 
 		com_ptr<ITypeInfo2> ti2;
 		hr = ti->QueryInterface(&ti2); RETURN_IF_FAILED(hr);
@@ -82,7 +80,7 @@ namespace edge
 
 		if (defaultValueData.vt != result.vt)
 		{
-			if (FAILED(VariantChangeTypeEx (&defaultValueData, &defaultValueData, InvariantLCID, 0, result.vt)))
+			if (FAILED(VariantChangeTypeEx (&defaultValueData, &defaultValueData, LANG_INVARIANT, 0, result.vt)))
 				return S_FALSE;
 		}
 

@@ -117,7 +117,7 @@ public:
 		else if (_ol->size() == 1)
 		{
 			com_ptr<ITypeInfo> ti;
-			hr = _ol->front()->GetTypeInfo(0, InvariantLCID, &ti); RETURN_IF_FAILED(hr);
+			hr = _ol->front()->GetTypeInfo(0, LANG_INVARIANT, &ti); RETURN_IF_FAILED(hr);
 			LPOLESTR name = const_cast<LPOLESTR>(L"__id");
 			MEMBERID memid;
 			DISPPARAMS params = { };

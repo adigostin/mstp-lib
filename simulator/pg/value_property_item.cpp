@@ -335,7 +335,7 @@ public:
 		if (vt == VT_UI4 || vt == VT_UI2)
 		{
 			wil::unique_variant temp;
-			hr = VariantChangeTypeEx (&temp, &value0, InvariantLCID, 0, VT_BSTR); RETURN_IF_FAILED(hr);
+			hr = VariantChangeTypeEx (&temp, &value0, LANG_INVARIANT, 0, VT_BSTR); RETURN_IF_FAILED(hr);
 			layoutText = wil::unique_bstr(temp.release().bstrVal);
 		}
 		else if (vt == VT_BOOL)
@@ -357,7 +357,7 @@ public:
 			}
 			else
 			{
-				hr = VariantChangeTypeEx(&value0, &value0, InvariantLCID, 0, VT_BSTR); RETURN_IF_FAILED(hr);
+				hr = VariantChangeTypeEx(&value0, &value0, LANG_INVARIANT, 0, VT_BSTR); RETURN_IF_FAILED(hr);
 				layoutText = wil::unique_bstr(value0.release().bstrVal);
 			}
 		}

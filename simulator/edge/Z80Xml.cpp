@@ -173,7 +173,7 @@ static HRESULT ReadCollectionProperty (IDispatch* obj, MEMBERID memid, SAFEARRAY
 	wil::unique_variant result;
 	EXCEPINFO exception;
 	UINT uArgErr;
-	auto hr = obj->Invoke(memid, IID_NULL, InvariantLCID, DISPATCH_PROPERTYGET, &params, &result, &exception, &uArgErr); RETURN_IF_FAILED(hr);
+	auto hr = obj->Invoke(memid, IID_NULL, LANG_INVARIANT, DISPATCH_PROPERTYGET, &params, &result, &exception, &uArgErr); RETURN_IF_FAILED(hr);
 
 	unique_safearray sa (result.release().parray);
 	VARTYPE vt;
@@ -217,7 +217,7 @@ static HRESULT ReadProperty (IDispatch* obj, ITypeInfo* typeInfo, MEMBERID memid
 				|| (indices.putIndex != -1 && (forceSerializeDefaults || PropertyHasDefaultValue(obj, fd->memid, indices.getIndex) != S_OK)))
 			{
 				hr = typeInfo->Invoke(obj, fd->memid, DISPATCH_PROPERTYGET, &params, &result, &exception, &uArgErr); RETURN_IF_FAILED(hr);
-				hr = VariantChangeTypeEx(&result, &result, InvariantLCID, 0, VT_BSTR); RETURN_IF_FAILED(hr);
+				hr = VariantChangeTypeEx(&result, &result, LANG_INVARIANT, 0, VT_BSTR); RETURN_IF_FAILED(hr);
 				auto value = wil::make_bstr_nothrow(V_BSTR(&result)); RETURN_IF_NULL_ALLOC(value);
 				bool pushed = pv.attributes.try_push_back(ValueProperty{ fd->memid, std::move(value) }); RETURN_HR_IF(E_OUTOFMEMORY, !pushed);
 			}
@@ -434,7 +434,7 @@ static HRESULT SaveToXmlInternal (IDispatch* obj, PCWSTR elementName, DWORD flag
 	hr = obj->QueryInterface(&objAsXmlParent); RETURN_HR_IF(hr, FAILED(hr) && (hr != E_NOINTERFACE));
 
 	com_ptr<ITypeInfo> typeInfo;
-	hr = obj->GetTypeInfo(0, InvariantLCID, &typeInfo); RETURN_IF_FAILED(hr);
+	hr = obj->GetTypeInfo(0, LANG_INVARIANT, &typeInfo); RETURN_IF_FAILED(hr);
 	
 	FunctionIndexMap functionIndices;
 	hr = BuildFunctionIndexMap(typeInfo.get(), functionIndices); RETURN_IF_FAILED(hr);
@@ -619,7 +619,7 @@ static HRESULT ReadAttributeToVariant (IXmlReader* reader, ITypeInfo* typeInfo, 
 		case VT_I4:
 		{
 			hr = InitVariantFromString(attrValue, &valueVariant); RETURN_IF_FAILED(hr);
-			hr = VariantChangeTypeEx (&valueVariant, &valueVariant, InvariantLCID, 0, vt); RETURN_IF_FAILED(hr);
+			hr = VariantChangeTypeEx (&valueVariant, &valueVariant, LANG_INVARIANT, 0, vt); RETURN_IF_FAILED(hr);
 			break;
 		}
 
@@ -712,7 +712,7 @@ static HRESULT LoadFromXmlInternal (IDispatch* parent, MEMBERID memid, IXmlReade
 	{
 		_ASSERT(!ppObjOut);
 		hr = pObjIn->QueryInterface(&obj); RETURN_IF_FAILED(hr);
-		hr = obj->GetTypeInfo(0, InvariantLCID, &typeInfo); RETURN_IF_FAILED(hr);
+		hr = obj->GetTypeInfo(0, LANG_INVARIANT, &typeInfo); RETURN_IF_FAILED(hr);
 		hr = BuildFunctionIndexMap(typeInfo, functionIndices); RETURN_IF_FAILED(hr);
 		hrMoveToAttribute = reader->MoveToFirstAttribute(); RETURN_IF_FAILED(hr);
 	}
