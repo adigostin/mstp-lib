@@ -37,7 +37,7 @@ namespace pg
 		virtual void InvalidateItem (IItem* i) noexcept = 0;
 		virtual HRESULT ShowTextEditorOnSelectedItem (bool bold, const wchar_t* str) = 0;
 		virtual HRESULT STDMETHODCALLTYPE ShowEnumEditor (POINT pt, std::span<std::pair<const wchar_t*, int> const> nameValuePairs, int* pdwSelectedIndex) noexcept = 0;
-		STDMETHOD(NotifyLayoutChanged)(IItem* item) = 0;
+		virtual HRESULT STDMETHODCALLTYPE NotifyLayoutChangedTree (IItem* fromItem) noexcept = 0;
 
 		// Returns S_OK if it changed something, S_FALSE if it didn't (all objects already had the new value), or an error code.
 		virtual HRESULT STDMETHODCALLTYPE change_property (const edge::IObjectList& objects, ITypeInfo* ti, MEMBERID memid, VARIANT* newValue) = 0;
@@ -53,7 +53,6 @@ namespace pg
 		virtual RECT calc_popup_window_pos (IItem* item, LONG item_y, SIZE client_size_requested, DWORD style, DWORD ex_style) const = 0;
 		virtual IItem* selected_item() const = 0;
 		virtual void NotifyItemRemoving (IItem* item) = 0;
-		virtual const PaintResources& GetPaintResources() const = 0;
 	};
 
 	enum class PaintItemFlags

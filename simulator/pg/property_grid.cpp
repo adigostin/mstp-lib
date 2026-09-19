@@ -860,13 +860,13 @@ public:
 		return (selected_nvp_index >= 0) ? S_OK : S_FALSE;
 	}
 
-	STDMETHOD(NotifyLayoutChanged)(IItem* item) override
+	virtual HRESULT STDMETHODCALLTYPE NotifyLayoutChangedTree (IItem* fromItem) noexcept override
 	{
 		PaintResources ctx;
 		auto hr = MakePaintResources (GetDC(_hWnd), ctx); RETURN_IF_FAILED(hr);
 
 		LONG unused = 0;
-		enum_items_from (item, unused, [&ctx](IItem* i, LONG render_y, bool& cancel) {
+		enum_items_from (fromItem, unused, [&ctx](IItem* i, LONG render_y, bool& cancel) {
 			auto hr = i->PerformLayout(ctx);
 			if (FAILED(hr))
 				cancel = true;
@@ -896,8 +896,6 @@ public:
 				NotifyItemRemoving(ei->child_at(i));
 		}
 	}
-
-	virtual const PaintResources& GetPaintResources() const override { return _paintres; }
 
 	enum class htcode { none, expand, name, value, output };
 

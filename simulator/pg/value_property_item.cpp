@@ -102,9 +102,8 @@ public:
 	virtual HRESULT OnCollectionChanged (IUnknown* sender, const struct ObjectCollectionChangeArgs* args) override
 	{
 		auto grid = root()->grid();
-		auto& pr = grid->GetPaintResources();
-		PerformLayout(pr);
-		::InvalidateRect(grid->HWnd(), 0, 0);
+		grid->NotifyLayoutChangedTree(this);
+		grid->InvalidateItem(this);
 		return S_OK;
 	}
 	#pragma endregion

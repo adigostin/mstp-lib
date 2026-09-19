@@ -211,7 +211,7 @@ public:
 
 	virtual HRESULT STDMETHODCALLTYPE OnCollectionChanged (IUnknown *sender, const ObjectCollectionChangeArgs *args) override
 	{
-		return root()->grid()->NotifyLayoutChanged(this);
+		return root()->grid()->NotifyLayoutChangedTree(this);
 	}
 	#pragma endregion
 };
