@@ -89,7 +89,8 @@ struct STP_BRIDGE
 	bool started; // Added by me. STP_StartBridge sets it, STP_StopBridge clears it.
 
 	STP_CALLBACKS callbacks;
-	STP_CALLBACK_PROPERTY_CHANGED propChanged;
+	STP_CALLBACK_PROPERTY_CHANGE propChanging;
+	STP_CALLBACK_PROPERTY_CHANGE propChanged;
 
 	unsigned int portCount;
 	unsigned int mstiCount;

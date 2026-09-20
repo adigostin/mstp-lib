@@ -172,5 +172,37 @@ namespace PG
 				Sleep(10);
 			}
 		}
+
+		TEST_METHOD(PartialSetWithoutChildObjectsDoesNotAssert)
+		{
+			HRESULT hr;
+
+			auto bridge1 = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+			auto bridge2 = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x61 });
+			auto objects = wil::com_ptr_failfast(new TestObjectList(
+				bridge1.query<IDispatch>().get(), bridge2.query<IDispatch>().get()));
+
+			com_ptr<pg::IPropertyGrid> propertyGrid;
+			hr = MakePropertyGrid(nullptr, { }, nullptr, &propertyGrid); Assert::AreEqual(S_OK, hr);
+			hr = propertyGrid->AddSection(objects, true, nullptr); Assert::AreEqual(S_OK, hr);
+
+			// Notify Partial Set
+			ObjectCollectionChangeArgs args = {
+				.changeType = CollectionChangeType::Set,
+				.setInsertRemoveArgs = { .index = 0, .count = 1 },
+			};
+
+			auto punkObjects = wil::com_query_failfast<IUnknown>(objects);
+
+			hr = objects->GetEventSinks()->Notify([this, &punkObjects, &args](IObjectCollectionChangeEvents* sink) {
+				return sink->OnCollectionChanging(punkObjects, &args);
+			});
+			Assert::AreEqual(S_OK, hr);	
+			
+			hr = objects->GetEventSinks()->Notify([this, &punkObjects, &args](IObjectCollectionChangeEvents* sink) {
+				return sink->OnCollectionChanged(punkObjects, &args);
+			});
+			Assert::AreEqual(S_OK, hr);	
+		}
 	};
 }

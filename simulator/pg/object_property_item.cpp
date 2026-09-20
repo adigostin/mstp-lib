@@ -244,14 +244,15 @@ public:
 	virtual ULONG STDMETHODCALLTYPE Release() override { return ReleaseST(this, _refCount); }
 	#pragma endregion
 
-	// IObjectList
+	#pragma region IObjectList
 	virtual uint32_t size() const override final { return _parent->parent()->objects()->size(); }
 	virtual IDispatch* operator[](uint32_t index) const override final
 	{
 		_ASSERT(false); return { };
 		//return _prop->get(_parent->parent()->objects()[index]);
 	}
-//	virtual change_e::subscriber objects_change() override final { return change_e::subscriber(_em); }
+	virtual HRESULT STDMETHODCALLTYPE GetListTitle(BSTR* pbstrTitle) noexcept override { RETURN_HR(E_NOTIMPL); }
+	#pragma endregion
 
 	static std::vector<com_ptr<IDispatch>> get_child_selected_objects (DISPID prop, std::span<IDispatch* const> parent_objects)
 	{

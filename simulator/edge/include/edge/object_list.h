@@ -18,6 +18,9 @@ namespace edge
 	{
 		virtual uint32_t size() const = 0;
 		virtual IDispatch* operator[](uint32_t index) const = 0;
+		virtual HRESULT STDMETHODCALLTYPE GetListTitle(BSTR* pbstrTitle) noexcept = 0;
+
+		IDispatch* ObjectAt (uint32_t index) const { return this->operator[](index); }
 
 		class iterator
 		{
@@ -25,13 +28,22 @@ namespace edge
 			uint32_t _index;
 
 		public:
+			using value_type = IDispatch*;
+
 			iterator (const IObjectList* oi, uint32_t index)
 				: _objects(oi), _index(index)
 			{ }
 
-			bool operator!= (nullptr_t np) const
+			bool operator== (const iterator& other) const
 			{
-				return this->_index < _objects->size();
+				_ASSERT(_objects == other._objects);
+				return _index == other._index;
+			}
+
+			bool operator!= (const iterator& other) const
+			{
+				_ASSERT(_objects == other._objects);
+				return _index != other._index;
 			}
 
 			iterator& operator++()
@@ -39,6 +51,13 @@ namespace edge
 				_ASSERT(_index < _objects->size());
 				_index++;
 				return *this;
+			}
+
+			iterator operator++(int)
+			{
+				iterator previous = *this;
+				++*this;
+				return previous;
 			}
 
 			IDispatch* operator*() const
@@ -49,12 +68,12 @@ namespace edge
 
 			iterator operator+ (uint32_t other) const
 			{
-				return { _objects, _index + 1 };
+				return { _objects, _index + other };
 			}
 		};
 
 		iterator begin() const { return iterator(this, 0); }
-		nullptr_t end() const { return nullptr; }
+		iterator end() const { return iterator(this, size()); }
 
 		IDispatch* front() const { return this->operator[](0); }
 

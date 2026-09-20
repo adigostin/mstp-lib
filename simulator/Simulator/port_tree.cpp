@@ -89,6 +89,28 @@ public:
 	#pragma endregion
 
 	#pragma region IPortTreeProperties
+	virtual HRESULT STDMETHODCALLTYPE get_Name (BSTR *pName) override
+	{
+		if (_tree_index == 0)
+		{
+			*pName = SysAllocString(L"Port Tree CIST"); RETURN_IF_NULL_ALLOC(*pName);
+			return S_OK;
+		}
+		else
+		{
+			wil::unique_process_heap_string str;
+			auto hr = wil::str_printf_nothrow (str, L"Port Tree MSTI %u", _tree_index); RETURN_IF_FAILED(hr);
+			*pName = SysAllocString(str.get()); RETURN_IF_NULL_ALLOC(*pName);
+			return S_OK;
+		}
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE get_ClassName (BSTR *pClassName) override
+	{
+		*pClassName = SysAllocString(L"PortTree"); RETURN_IF_NULL_ALLOC(*pClassName);
+		return S_OK;
+	}
+
 	virtual HRESULT STDMETHODCALLTYPE get_PortPriority (enum PortPriority* pPriority) override
 	{
 		*pPriority = (PortPriority)STP_GetPortPriority(_parent->bridge()->stp_bridge(), _parent->port_index(), _tree_index);

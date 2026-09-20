@@ -872,6 +872,8 @@ public:
 				cancel = true;
 		});
 		
+		::InvalidateRect(_hWnd, 0, 0);
+
 		return S_OK;
 	}
 

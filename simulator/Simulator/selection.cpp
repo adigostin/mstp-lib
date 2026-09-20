@@ -129,15 +129,61 @@ public:
 	virtual uint32_t size() const override { return _objects.size(); }
 	
 	virtual IDispatch* operator[](uint32_t index) const override { return _objects[index]; }
+
+	virtual HRESULT STDMETHODCALLTYPE GetListTitle (BSTR* pbstrTitle) noexcept override
+	{
+		HRESULT hr;
+
+		*pbstrTitle = nullptr;
+
+		if (empty())
+			return S_FALSE;
+
+		if (size() == 1)
+			return GetInstanceName(front(), pbstrTitle);
+
+		com_ptr<ITypeInfo> ti;
+		hr = AllSameType(begin(), end(), &ti); RETURN_IF_FAILED(hr);
+		if (hr == S_FALSE)
+		{
+			*pbstrTitle = SysAllocString(L"(Multiple Selection)"); RETURN_IF_NULL_ALLOC(*pbstrTitle);
+			return S_OK;
+		}
+
+		// All same type.
+		LPOLESTR classNamePN = const_cast<LPOLESTR>(L"ClassName");
+		MEMBERID memid;
+		hr = front()->GetIDsOfNames(IID_NULL, &classNamePN, 1, LANG_INVARIANT, &memid);
+		if (hr == DISP_E_UNKNOWNNAME)
+			return S_FALSE;
+		RETURN_IF_FAILED(hr);
+
+		DISPPARAMS params = { };
+		wil::unique_variant result;
+		EXCEPINFO exception;
+		UINT uArgErr;
+		hr = front()->Invoke(memid, IID_NULL, LANG_INVARIANT, DISPATCH_PROPERTYGET,
+			&params, &result, &exception, &uArgErr); RETURN_IF_FAILED(hr);
+		RETURN_HR_IF(DISP_E_BADVARTYPE, result.vt != VT_BSTR);
+
+		wil::unique_process_heap_string str;
+		hr = wil::str_printf_nothrow(str, L"%s[%u]", result.bstrVal, size()); RETURN_IF_FAILED(hr);
+		*pbstrTitle = SysAllocString(str.get()); RETURN_IF_NULL_ALLOC(*pbstrTitle);
+		return S_OK;
+	}
 	#pragma endregion
 
 	HRESULT STDMETHODCALLTYPE add_internal (IDispatch* o) noexcept
 	{
 		ObjectCollectionChangeArgs occ = { .changeType = Insert, .setInsertRemoveArgs = { .index = (ULONG)_objects.size(), .count = 1, .childObjs = &o } };
-		_occCP->Notify([this,&occ](IObjectCollectionChangeEvents* e) { return e->OnCollectionChanging(AsUnknown(), &occ); });
+		_occCP->Notify([this,&occ](IObjectCollectionChangeEvents* e) {
+			return e->OnCollectionChanging(AsUnknown(), &occ);
+		});
 		_objects.try_push_back(o);
 		occ.setInsertRemoveArgs.childObjs = nullptr;
-		_occCP->Notify([this,&occ](IObjectCollectionChangeEvents* e) { return e->OnCollectionChanged(AsUnknown(), &occ); });
+		_occCP->Notify([this,&occ](IObjectCollectionChangeEvents* e) {
+			return e->OnCollectionChanged(AsUnknown(), &occ);
+		});
 		return S_OK;
 	}
 

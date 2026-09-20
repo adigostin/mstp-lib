@@ -102,7 +102,8 @@ library SimulatorLib
 	[object, uuid("BC1115A7-567F-4F72-ACA3-940723B6AE30"), dual, nonextensible, pointer_default(unique)]
 	interface IBridgeTreeProperties : IDispatch
 	{
-		[propget, nonbrowsable] HRESULT __id([out, retval] BSTR* pName);
+		[propget, nonbrowsable] HRESULT Name([out, retval] BSTR* pName);
+		[propget, nonbrowsable] HRESULT ClassName([out, retval] BSTR* pClassName);
 
 		const enum BridgePriority BridgePriorityDefaultValue = BridgePriority8000;
 		[propget, id(dispidBridgePrio),
@@ -153,7 +154,8 @@ library SimulatorLib
 	[object, uuid(B7934040-1A24-4AB8-B3B0-D35972DACB1A), dual, nonextensible, pointer_default(unique)]
 	interface IBridgeProperties : IDispatch
 	{
-		[propget, nonbrowsable] HRESULT __id([out, retval] BSTR* pName);
+		[propget, nonbrowsable] HRESULT Name([out, retval] BSTR* pName);
+		[propget, nonbrowsable] HRESULT ClassName([out, retval] BSTR* pClassName);
 
 		[propget, id(dispidBridgeX), nonbrowsable] HRESULT X ([out, retval] LONG* pX);
 		[propput, id(dispidBridgeX), nonbrowsable] HRESULT X (LONG x);
@@ -260,6 +262,9 @@ library SimulatorLib
 	[object, uuid(AC34AAD3-89BF-4E3B-BF20-4C5D07A6C5C5), dual, nonextensible, pointer_default(unique)]
 	interface IPortTreeProperties : IDispatch
 	{
+		[propget, nonbrowsable] HRESULT Name([out, retval] BSTR* pName);
+		[propget, nonbrowsable] HRESULT ClassName([out, retval] BSTR* pClassName);
+
 		[propget, id(dispidPortPriority), helpstring("The value of the priority field which is contained in the first "
 			"(in network byte order) octet of the (2 octet long) Port ID. "
 			"The other octet of the Port ID is given by the value of dot1dStpPort."),
@@ -304,6 +309,9 @@ library SimulatorLib
 	[object, uuid(D94755FC-1586-4B2E-94CE-343F8DC2C679), dual, nonextensible, pointer_default(unique)]
 	interface IPortProperties : IDispatch
 	{
+		[propget, nonbrowsable] HRESULT Name([out, retval] BSTR* pName);
+		[propget, nonbrowsable] HRESULT ClassName([out, retval] BSTR* pClassName);
+
 		[propget, id(dispidPortSide), nonbrowsable] HRESULT Side ([out, retval] enum PortSide* pSide);
 		[propput, id(dispidPortSide), nonbrowsable] HRESULT Side (enum PortSide side);
 

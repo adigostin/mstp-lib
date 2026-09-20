@@ -309,7 +309,7 @@ namespace UITests
 			Assert::AreEqual(S_OK, hr);
 		}
 
-		TEST_METHOD(CreatingBridgeChangingVlanAndClearingSelection)
+		TEST_METHOD(ChangeMstConfigTableWithVlanSelected)
 		{
 			HRESULT hr;
 			auto simulator = RunSimulator(nullptr);
@@ -327,7 +327,27 @@ namespace UITests
 			hr = bridge->put_STPVersion(STPVersionMSTP); Assert::AreEqual(S_OK, hr);
 			hr = bridge->LoadTestMstConfig1(); Assert::AreEqual(S_OK, hr);
 			
-			hr = projectWindow->SelectVlan(5); Assert::AreEqual(S_OK, hr);
+			hr = projectWindow->SelectVlan(2); Assert::AreEqual(S_OK, hr);
+			hr = projectWindow->ClearSelection(); Assert::AreEqual(S_OK, hr);
+		}
+
+		TEST_METHOD(ChangeMstpToRstpWithVlanSelected)
+		{
+			HRESULT hr;
+			auto simulator = RunSimulator(nullptr);
+			auto app = GetSimulatorAppAO(simulator.pi.dwProcessId);
+			wil::com_ptr_failfast<IProjectWindowAO> projectWindow;
+			hr = app->GetProjectWindow((LONG)(LONG_PTR)simulator.projectWindow, &projectWindow); Assert::AreEqual(S_OK, hr);
+			wil::com_ptr_failfast<IProjectAO> project;
+			hr = projectWindow->GetProject(&project); Assert::AreEqual(S_OK, hr);
+			wil::com_ptr_failfast<IBridgeAO> bridge;
+			hr = project->AddBridge(4, 4, &bridge); Assert::AreEqual(S_OK, hr);
+			hr = projectWindow->SelectBridge(bridge); Assert::AreEqual(S_OK, hr);
+			hr = bridge->put_STPVersion(STPVersionMSTP); Assert::AreEqual(S_OK, hr);
+			hr = bridge->LoadTestMstConfig1(); Assert::AreEqual(S_OK, hr);
+			hr = projectWindow->SelectVlan(2); Assert::AreEqual(S_OK, hr);
+			// Now change the STP version to RSTP while a VLAN is selected.
+			hr = bridge->put_STPVersion(STPVersionRSTP); Assert::AreEqual(S_OK, hr);
 			hr = projectWindow->ClearSelection(); Assert::AreEqual(S_OK, hr);
 		}
 	};

@@ -16,17 +16,17 @@ static const char* GetStateName (State state)
 {
 	switch (state)
 	{
-		case DISABLED:				return "DISABLED";
-		case AGED:					return "AGED";
-		case UPDATE:				return "UPDATE";
-		case SUPERIOR_DESIGNATED:	return "SUPERIOR_DESIGNATED";
-		case REPEATED_DESIGNATED:	return "REPEATED_DESIGNATED";
-		case INFERIOR_DESIGNATED:	return "INFERIOR_DESIGNATED";
-		case NOT_DESIGNATED:		return "NOT_DESIGNATED";
-		case OTHER:					return "OTHER";
-		case CURRENT:				return "CURRENT";
-		case RECEIVE:				return "RECEIVE";
-		default:					return "(undefined)";
+		case DISABLED:              return "DISABLED";
+		case AGED:                  return "AGED";
+		case UPDATE:                return "UPDATE";
+		case SUPERIOR_DESIGNATED:   return "SUPERIOR_DESIGNATED";
+		case REPEATED_DESIGNATED:   return "REPEATED_DESIGNATED";
+		case INFERIOR_DESIGNATED:   return "INFERIOR_DESIGNATED";
+		case NOT_DESIGNATED:        return "NOT_DESIGNATED";
+		case OTHER:                 return "OTHER";
+		case CURRENT:               return "CURRENT";
+		case RECEIVE:               return "RECEIVE";
+		default:                    return "(undefined)";
 	}
 }
 #endif

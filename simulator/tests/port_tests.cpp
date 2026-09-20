@@ -57,6 +57,12 @@ public:
 	virtual ULONG STDMETHODCALLTYPE AddRef() override { return ++_refCount; }
 	virtual ULONG STDMETHODCALLTYPE Release() override { return ReleaseST(this, _refCount); }
 
+	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanging(IBridge*, unsigned int portIndex,
+		unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override
+	{
+		return S_OK;
+	}
+
 	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanged(IBridge* bridge, unsigned int portIndex,
 		unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override
 	{

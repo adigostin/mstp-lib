@@ -31,7 +31,8 @@ struct ObjectItemChildManager : IObjectItemChildManager, IPropertyChangeSink, IO
 		_owner = owner;
 		_selected_objects = selected_objects;
 
-		on_selected_objects_inserted({ .changeType = Insert, .setInsertRemoveArgs = { 0, _selected_objects->size() } });
+		BOOL unused;
+		on_selected_objects_inserted({ .changeType = Insert, .setInsertRemoveArgs = { 0, _selected_objects->size() } }, &unused);
 
 		hr = AdviseSink<IObjectCollectionChangeEvents>(_selected_objects, _weakRefToThis, &_collectionChangeToken); RETURN_IF_FAILED(hr);
 
@@ -276,11 +277,26 @@ struct ObjectItemChildManager : IObjectItemChildManager, IPropertyChangeSink, IO
 
 	virtual HRESULT STDMETHODCALLTYPE OnCollectionChanged (IUnknown *sender, const ObjectCollectionChangeArgs* args) override
 	{
+		HRESULT hr;
+		auto grid = _owner->as_item()->root()->grid();
+
 		if (args->changeType == CollectionChangeType::Insert)
-			return on_selected_objects_inserted(*args);
+		{
+			BOOL itemsInserted;
+			hr = on_selected_objects_inserted(*args, &itemsInserted); RETURN_IF_FAILED(hr);
+			if (itemsInserted)
+				grid->NotifyLayoutChangedTree(_owner->as_item());
+			return S_OK;
+		}
 
 		if (args->changeType == CollectionChangeType::Remove)
-			return on_selected_objects_removed(args);
+		{
+			BOOL itemsInserted;
+			hr = on_selected_objects_removed(args, &itemsInserted); RETURN_IF_FAILED(hr);
+			if (itemsInserted)
+				grid->NotifyLayoutChangedTree(_owner->as_item());
+			return S_OK;
+		}
 
 		if (args->changeType == CollectionChangeType::Set)
 			return on_selected_objects_replaced(args);
@@ -292,6 +308,8 @@ struct ObjectItemChildManager : IObjectItemChildManager, IPropertyChangeSink, IO
 	HRESULT on_selected_objects_inserting (const ObjectCollectionChangeArgs* args)
 	{
 		HRESULT hr;
+
+		auto grid = _owner->as_item()->root()->grid();
 
 		// For each existing group item, we look at its group and we check if it's missing
 		// in any of the objects to insert. If it's missing, we remove that group item.
@@ -330,7 +348,7 @@ struct ObjectItemChildManager : IObjectItemChildManager, IPropertyChangeSink, IO
 						
 						wil::unique_variant custData;
 						wil::unique_bstr name;
-						if (SUCCEEDED(ti2->GetFuncCustData(fi, guidPropertyGroup, &custData) && custData.vt == VT_BSTR))
+						if (SUCCEEDED(ti2->GetFuncCustData(fi, guidPropertyGroup, &custData)) && custData.vt == VT_BSTR)
 							name = wil::unique_bstr(custData.release().bstrVal);
 
 						if ((!name && !existingGroupName)
@@ -351,7 +369,7 @@ struct ObjectItemChildManager : IObjectItemChildManager, IPropertyChangeSink, IO
 
 			if (missing_in_objects_to_insert)
 			{
-				_owner->as_item()->root()->grid()->NotifyItemRemoving(_children[ci].get());
+				grid->NotifyItemRemoving(_children[ci].get());
 				_children.erase(_children.begin() + ci);
 				invalidate = true;
 			}
@@ -360,39 +378,40 @@ struct ObjectItemChildManager : IObjectItemChildManager, IPropertyChangeSink, IO
 		}
 
 		if (invalidate)
-			::InvalidateRect(_owner->as_item()->root()->grid()->HWnd(), 0, 0);
+			::InvalidateRect(grid->HWnd(), 0, 0);
 
 		return S_OK;
 	}
 
-	HRESULT on_selected_objects_inserted (const ObjectCollectionChangeArgs& args)
+	HRESULT on_selected_objects_inserted (const ObjectCollectionChangeArgs& args, BOOL* pbGroupItemsCreated)
 	{
+		*pbGroupItemsCreated = FALSE;
+
+		auto grid = _owner->as_item()->root()->grid();
 		auto& a = args.setInsertRemoveArgs;
-		bool invalidate = false;
 		if (a.count == _selected_objects->size())
 		{
 			// Objects have been inserted into an empty object list. We create group items for all of their groups.
 			vector_nothrow<wil::unique_bstr> groups;
-			auto hr = make_group_list(_selected_objects, groups); LOG_IF_FAILED(hr);
+			auto hr = make_group_list(_selected_objects, groups); RETURN_IF_FAILED(hr);
 			for (auto& group : groups)
 			{
 				com_ptr<IGroupItem> gi;
-				hr = MakeGroupItem(_owner, std::move(group), &gi); LOG_IF_FAILED(hr);
+				hr = MakeGroupItem(_owner, std::move(group), &gi); RETURN_IF_FAILED(hr);
 				_children.try_push_back(std::move(gi));
-				invalidate = true;
+				*pbGroupItemsCreated = TRUE;
 			}
 		}
 	
 		register_property_change_events({ a.index, a.index + a.count });
-
-		if (invalidate)
-			::InvalidateRect(_owner->as_item()->root()->grid()->HWnd(), 0, 0);
 
 		return S_OK;
 	}
 
 	HRESULT on_selected_objects_removing (const ObjectCollectionChangeArgs& args)
 	{
+		auto grid = _owner->as_item()->root()->grid();
+
 		auto& a = args.setInsertRemoveArgs;
 		unregister_property_change_events({ a.index, a.index + a.count });
 
@@ -400,7 +419,6 @@ struct ObjectItemChildManager : IObjectItemChildManager, IPropertyChangeSink, IO
 		if (a.count == _selected_objects->size())
 		{
 			// Last remaining objects are being removed from the list.
-			auto grid = _owner->as_item()->root()->grid();
 			while (_children.size())
 			{
 				grid->NotifyItemRemoving(_children.back().get());
@@ -410,54 +428,84 @@ struct ObjectItemChildManager : IObjectItemChildManager, IPropertyChangeSink, IO
 		}
 
 		if (invalidate)
-			::InvalidateRect(_owner->as_item()->root()->grid()->HWnd(), 0, 0);
+			::InvalidateRect(grid->HWnd(), 0, 0);
 
 		return S_OK;
 	}
 
-	HRESULT on_selected_objects_removed (const ObjectCollectionChangeArgs* args)
+	HRESULT on_selected_objects_removed (const ObjectCollectionChangeArgs* args, BOOL* pbGroupItemsCreated)
 	{
 		// Find groups that are present in all remaining objects and missing in some removed objects,
 		// create group items for every such group, and insert them at the right place.
 
+		*pbGroupItemsCreated = FALSE;
+
 		vector_nothrow<wil::unique_bstr> new_groups;
-		auto hr = make_group_list(_selected_objects, new_groups); LOG_IF_FAILED(hr);
+		auto hr = make_group_list(_selected_objects, new_groups); RETURN_IF_FAILED(hr);
 		auto new_it = new_groups.begin();
 		uint32_t i = 0;
 		auto root = _owner->as_item()->root();
-		bool invalidate = false;
 		while (new_it != new_groups.end())
 		{
 			if ((i == _children.size()) || wcscmp(_children[i]->group(), new_it->get()))
 			{
 				com_ptr<IGroupItem> gi;
-				hr = MakeGroupItem(_owner, std::move(*new_it), &gi); LOG_IF_FAILED(hr);
+				hr = MakeGroupItem(_owner, std::move(*new_it), &gi); RETURN_IF_FAILED(hr);
 				_children.try_insert(_children.begin() + i, { std::move(gi) });
-				invalidate = true;
+				*pbGroupItemsCreated = TRUE;
 			}
 			new_it++;
 			i++;
 		}
-
-		if (invalidate)
-			::InvalidateRect(_owner->as_item()->root()->grid()->HWnd(), 0, 0);
 
 		return S_OK;
 	}
 
 	HRESULT on_selected_objects_replacing (const ObjectCollectionChangeArgs* args)
 	{
-		// TODO: optimize this, then take care to call unregister_property_change_events() here.
-		on_selected_objects_removing (*args);
-		on_selected_objects_inserting (args);
+		// When replacing objects in a selection, we may not know what the incoming objects are.
+		// Requiring implementors to provide these would put too much burden on them.
+		// For example when mstp-lib calls the "changing" callback with STP_PROPERTY_STP_VERSION,
+		// we don't know what the new stp version is going to be, so we don't know what
+		// bridge/port trees we'll need to select.
+		//
+		// To keep things simple, we clear all our children; we'll probably recreate most of
+		// them in on_selected_objects_replaced(), but that's an acceptable tradeoff.
+
+		auto grid = _owner->as_item()->root()->grid();
+
+		auto& a = args->setInsertRemoveArgs;
+		unregister_property_change_events({ a.index, a.index + a.count });
+
+		while (_children.size())
+		{
+			grid->NotifyItemRemoving(_children.back().get());
+			_children.erase(_children.end() - 1);
+		}
+
+		::InvalidateRect(grid->HWnd(), 0, 0);
+
 		return S_OK;
 	}
 
 	HRESULT on_selected_objects_replaced (const ObjectCollectionChangeArgs* args)
 	{
+		HRESULT hr;
+
 		// TODO: optimize this, then take care to call register_property_change_events() here.
-		on_selected_objects_inserted (*args);
-		on_selected_objects_removed (args);
+
+		BOOL groupItemsCreated1;
+		hr = on_selected_objects_inserted (*args, &groupItemsCreated1); RETURN_IF_FAILED(hr);
+
+		BOOL groupItemsCreated2;
+		hr = on_selected_objects_removed (args, &groupItemsCreated2); RETURN_IF_FAILED(hr);
+
+		if (groupItemsCreated1 || groupItemsCreated2)
+		{
+			auto grid = _owner->as_item()->root()->grid();
+			grid->NotifyLayoutChangedTree(_owner->as_item());
+		}
+
 		return S_OK;
 	}
 };

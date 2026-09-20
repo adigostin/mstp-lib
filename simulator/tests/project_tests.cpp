@@ -8,7 +8,9 @@
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
-TEST_CLASS(project_tests)
+extern HRESULT selection_factory(IStpProject* project, ISelection** ppSelection);
+
+TEST_CLASS(ProjectTests)
 {
 public:
 	TEST_METHOD(TestMethod1)
@@ -177,5 +179,185 @@ public:
 		hr = project.query<IProjectProperties>()->put_Bridges(psaItems);
 		Assert::IsFalse(SUCCEEDED(hr));
 		Assert::AreEqual(0ul, project->BridgeCount());
+	}
+
+	TEST_METHOD(TreeSelectionUpdatesAfterVlanChange)
+	{
+		HRESULT hr;
+
+		auto project = MakeProject();
+		auto bridge = MakeBridge(1, 1, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		project->AddBridge(bridge);
+
+		wil::com_ptr_failfast<ISelection> selection;
+		hr = selection_factory(project, &selection);
+
+		auto vlanSelection = new TestVlanSelection(1);
+
+		wil::com_ptr_failfast<edge::IObjectList> treeSelection;
+		hr = MakeTreeSelection(selection, vlanSelection, &treeSelection); Assert::AreEqual(S_OK, hr);
+		hr = vlanSelection->SelectVlan(2); Assert::AreEqual(S_OK, hr);
+		hr = vlanSelection->SelectVlan(1); Assert::AreEqual(S_OK, hr);
+
+		selection->Select(bridge.query<IDispatch>());
+
+		wil::unique_bstr title;
+		hr = treeSelection->GetListTitle(&title); Assert::AreEqual(S_OK, hr);
+		Assert::IsNotNull(wcsstr(title.get(), L"(VLAN 1)"));
+
+		hr = vlanSelection->SelectVlan(2); Assert::AreEqual(S_OK, hr);
+		title.reset();
+		hr = treeSelection->GetListTitle(&title); Assert::AreEqual(S_OK, hr);
+		Assert::IsNotNull(wcsstr(title.get(), L"(VLAN 2)"));
+
+		hr = selection->Clear(); Assert::AreEqual(S_OK, hr);
+		title.reset();
+		hr = treeSelection->GetListTitle(&title); Assert::AreEqual(S_FALSE, hr);
+		Assert::IsNull(title.get());
+	}
+
+	TEST_METHOD(TreeSelectionHandlesMultipleSelectionAtCreationAndDestruction)
+	{
+		HRESULT hr;
+
+		auto project = MakeProject();
+		auto bridge1 = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		auto bridge2 = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x61 });
+		project->AddBridge(bridge1);
+		project->AddBridge(bridge2);
+
+		wil::com_ptr_failfast<ISelection> selection;
+		hr = selection_factory(project, &selection); Assert::AreEqual(S_OK, hr);
+		hr = selection->Add(bridge1.query<IDispatch>()); Assert::AreEqual(S_OK, hr);
+		hr = selection->Add(bridge2.query<IDispatch>()); Assert::AreEqual(S_OK, hr);
+
+		auto vlanSelection = wil::com_ptr_failfast(new TestVlanSelection(1));
+
+		wil::com_ptr_failfast<edge::IObjectList> treeSelection;
+		hr = MakeTreeSelection(selection, vlanSelection, &treeSelection); Assert::AreEqual(S_OK, hr);
+
+		Assert::AreEqual(2u, treeSelection->size());
+		Assert::IsTrue(wil::com_query_failfast<IDispatch>(bridge1->trees()[0]).get() == treeSelection->operator[](0));
+		Assert::IsTrue(wil::com_query_failfast<IDispatch>(bridge2->trees()[0]).get() == treeSelection->operator[](1));
+
+		ULONG refCount = treeSelection.detach()->Release();
+		Assert::AreEqual(0ul, refCount);
+	}
+
+	TEST_METHOD(TreeSelectionUpdatesTwoPortsAfterVlanChange)
+	{
+		HRESULT hr;
+
+		auto project = MakeProject();
+		auto bridge = MakeBridge(2, 1, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		project->AddBridge(bridge);
+		STP_SetStpVersion(bridge->stp_bridge(), STP_VERSION_MSTP, 0);
+		STP_SetMstConfigTableEntry(bridge->stp_bridge(), 2, 1, 0);
+		auto port1 = bridge->PortAt(0);
+		auto port2 = bridge->PortAt(1);
+
+		wil::com_ptr_failfast<ISelection> selection;
+		hr = selection_factory(project, &selection); Assert::AreEqual(S_OK, hr);
+		auto vlanSelection = wil::com_ptr_failfast(new TestVlanSelection(1));
+
+		wil::com_ptr_failfast<edge::IObjectList> treeSelection;
+		hr = MakeTreeSelection(selection, vlanSelection, &treeSelection); Assert::AreEqual(S_OK, hr);
+		hr = selection->Add(wil::com_query_failfast<IDispatch>(port1)); Assert::AreEqual(S_OK, hr);
+		hr = selection->Add(wil::com_query_failfast<IDispatch>(port2)); Assert::AreEqual(S_OK, hr);
+		Assert::IsTrue(wil::com_query_failfast<IDispatch>(port1->treeAt(0)).get() == treeSelection->operator[](0));
+		Assert::IsTrue(wil::com_query_failfast<IDispatch>(port2->treeAt(0)).get() == treeSelection->operator[](1));
+
+		hr = vlanSelection->SelectVlan(2); Assert::AreEqual(S_OK, hr);
+		Assert::IsTrue(wil::com_query_failfast<IDispatch>(port1->treeAt(1)).get() == treeSelection->operator[](0));
+		Assert::IsTrue(wil::com_query_failfast<IDispatch>(port2->treeAt(1)).get() == treeSelection->operator[](1));
+
+		hr = selection->Clear(); Assert::AreEqual(S_OK, hr);
+	}
+
+	TEST_METHOD(TreeSelectionUpdatesAfterStpVersionAndMstConfigChanges)
+	{
+		HRESULT hr;
+
+		auto project = MakeProject();
+		auto bridge = MakeBridge(1, 1, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		project->AddBridge(bridge);
+
+		wil::com_ptr_failfast<ISelection> selection;
+		hr = selection_factory(project, &selection); Assert::AreEqual(S_OK, hr);
+		auto vlanSelection = wil::com_ptr_failfast(new TestVlanSelection(2));
+
+		wil::com_ptr_failfast<edge::IObjectList> treeSelection;
+		hr = MakeTreeSelection(selection, vlanSelection, &treeSelection); Assert::AreEqual(S_OK, hr);
+		hr = selection->Select(bridge.query<IDispatch>()); Assert::AreEqual(S_OK, hr);
+
+		STP_StartBridge(bridge->stp_bridge(), 0);
+		STP_SetStpVersion(bridge->stp_bridge(), STP_VERSION_MSTP, 1);
+		Assert::IsTrue(wil::com_query_failfast<IDispatch>(bridge->trees()[0]).get() == treeSelection->operator[](0));
+
+		STP_SetMstConfigTableEntry(bridge->stp_bridge(), 2, 1, 2);
+		Assert::IsTrue(wil::com_query_failfast<IDispatch>(bridge->trees()[1]).get() == treeSelection->operator[](0));
+
+		STP_SetStpVersion(bridge->stp_bridge(), STP_VERSION_RSTP, 3);
+		Assert::IsTrue(wil::com_query_failfast<IDispatch>(bridge->trees()[0]).get() == treeSelection->operator[](0));
+
+		hr = selection->Clear(); Assert::AreEqual(S_OK, hr);
+	}
+
+	TEST_METHOD(TreeSelectionNotifiesBridgeSelectionChanges)
+	{
+		HRESULT hr;
+
+		auto project = MakeProject();
+		auto bridge1 = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		auto bridge2 = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x61 });
+		project->AddBridge(bridge1);
+		project->AddBridge(bridge2);
+
+		wil::com_ptr_failfast<ISelection> selection;
+		hr = selection_factory(project, &selection); Assert::AreEqual(S_OK, hr);
+
+		wil::com_ptr_failfast<edge::IObjectList> treeSelection;
+		hr = MakeTreeSelection(selection, nullptr, &treeSelection); Assert::AreEqual(S_OK, hr);
+		auto events = wil::com_ptr_failfast(new TestObjectCollectionChangeEvents(treeSelection));
+
+		auto bridge1Disp = bridge1.query<IDispatch>();
+		auto bridge2Disp = bridge2.query<IDispatch>();
+
+		hr = selection->Add(bridge1Disp); Assert::AreEqual(S_OK, hr);
+		hr = selection->Add(bridge2Disp); Assert::AreEqual(S_OK, hr);
+
+		Assert::AreEqual(2u, events->changingNotifications.size());
+		Assert::AreEqual(2u, events->changedNotifications.size());
+		for (ULONG i = 0; i < 2; i++)
+		{
+			const auto& changing = events->changingNotifications[i];
+			Assert::IsTrue(CollectionChangeType::Insert == changing.changeType);
+			Assert::AreEqual(i, changing.index);
+			Assert::AreEqual(1ul, changing.count);
+			Assert::AreEqual(1u, changing.childObjects.size());
+
+			const auto& changed = events->changedNotifications[i];
+			Assert::IsTrue(CollectionChangeType::Insert == changed.changeType);
+			Assert::AreEqual(i, changed.index);
+			Assert::AreEqual(1ul, changed.count);
+		}
+		Assert::IsTrue(events->changingNotifications[0].childObjects[0] == wil::com_query_failfast<IDispatch>(bridge1->trees()[0]));
+		Assert::IsTrue(events->changingNotifications[1].childObjects[0] == wil::com_query_failfast<IDispatch>(bridge2->trees()[0]));
+
+		hr = selection->Clear(); Assert::AreEqual(S_OK, hr);
+
+		Assert::AreEqual(3u, events->changingNotifications.size());
+		Assert::AreEqual(3u, events->changedNotifications.size());
+		const auto& changing = events->changingNotifications.back();
+		Assert::IsTrue(CollectionChangeType::Remove == changing.changeType);
+		Assert::AreEqual(0ul, changing.index);
+		Assert::AreEqual(2ul, changing.count);
+		const auto& changed = events->changedNotifications.back();
+		Assert::IsTrue(CollectionChangeType::Remove == changed.changeType);
+		Assert::AreEqual(0ul, changed.index);
+		Assert::AreEqual(2ul, changed.count);
+		Assert::AreEqual(2u, changed.childObjects.size());
+		Assert::IsTrue(changed.childObjects[0] == wil::com_query_failfast<IDispatch>(bridge1->trees()[0]));
+		Assert::IsTrue(changed.childObjects[1] == wil::com_query_failfast<IDispatch>(bridge2->trees()[0]));
 	}
 };

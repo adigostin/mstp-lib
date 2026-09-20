@@ -103,7 +103,6 @@ public:
 	{
 		auto grid = root()->grid();
 		grid->NotifyLayoutChangedTree(this);
-		grid->InvalidateItem(this);
 		return S_OK;
 	}
 	#pragma endregion

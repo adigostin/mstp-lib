@@ -74,7 +74,13 @@ public:
 	}
 	#pragma endregion
 
-	// IStpPropertyChangedSink
+	#pragma region IStpPropertyChangedSink
+	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanging (IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override
+	{
+		// TODO:
+		return S_OK;
+	}
+
 	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanged (IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override
 	{
 		if (prop == STP_PROPERTY_ROOT_PRIORITY_VECTOR || prop == STP_PROPERTY_BRIDGE_STARTED)
@@ -99,6 +105,7 @@ public:
 
 		return S_OK;
 	}
+	#pragma endregion
 
 	virtual void on_topology_change (unsigned int timestamp) override
 	{
@@ -109,31 +116,25 @@ public:
 	}
 
 	#pragma region IBridgeTreeProperties
-	virtual HRESULT STDMETHODCALLTYPE get___id (BSTR *pName) override
+	virtual HRESULT STDMETHODCALLTYPE get_Name (BSTR *pName) override
 	{
-		HRESULT hr;
-
-		uint32_t entryCount;
-		auto table = STP_GetMstConfigTable(_bridge->stp_bridge(), &entryCount);
-		uint32_t vlan = 0;
-		do
-		{
-			if (table[vlan].treeIndex == _tree_index)
-				break;
-			vlan++;
-		} while (vlan < entryCount);
-
-		wil::unique_process_heap_string str;
 		if (_tree_index == 0)
 		{
-			hr = wil::str_printf_nothrow (str, L"VLAN %u (CIST)", vlan); RETURN_IF_FAILED(hr);
+			*pName = SysAllocString(L"Bridge Tree CIST"); RETURN_IF_NULL_ALLOC(*pName);
+			return S_OK;
 		}
 		else
 		{
-			hr = wil::str_printf_nothrow (str, L"VLAN %u (MSTI %u)", vlan, _tree_index); RETURN_IF_FAILED(hr);
+			wil::unique_process_heap_string str;
+			auto hr = wil::str_printf_nothrow (str, L"Bridge Tree MSTI %u", _tree_index); RETURN_IF_FAILED(hr);
+			*pName = SysAllocString(str.get()); RETURN_IF_NULL_ALLOC(*pName);
+			return S_OK;
 		}
+	}
 
-		*pName = SysAllocString(str.get()); RETURN_IF_NULL_ALLOC(*pName);
+	virtual HRESULT STDMETHODCALLTYPE get_ClassName (BSTR *pClassName) override
+	{
+		*pClassName = SysAllocString(L"BridgeTree"); RETURN_IF_NULL_ALLOC(*pClassName);
 		return S_OK;
 	}
 

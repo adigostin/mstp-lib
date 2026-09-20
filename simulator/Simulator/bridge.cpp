@@ -99,7 +99,7 @@ public:
 		_stpBridge = STP_CreateBridge ((unsigned int)port_count, (unsigned int)msti_count, max_vlan_number, &StpCallbacks, macAddress.data(), 256);
 		STP_EnableLogging (_stpBridge, true);
 		STP_SetApplicationContext (_stpBridge, this);
-		STP_RegisterPropertyChangeCallback(_stpBridge, &StpCallback_PropertyChanged);
+		STP_RegisterPropertyChangeCallback(_stpBridge, &StpCallback_PropertyChanging, &StpCallback_PropertyChanged);
 
 		// ----------------------------------------------------------------------------
 
@@ -213,9 +213,15 @@ public:
 	IMPLEMENT_IDISPATCH(IBridgeProperties);
 
 	#pragma region IBridgeProperties
-	virtual HRESULT STDMETHODCALLTYPE get___id (BSTR *pName) override
+   virtual HRESULT STDMETHODCALLTYPE get_Name (BSTR *pName) override
 	{
 		*pName = SysAllocString(L"Bridge"); RETURN_IF_NULL_ALLOC(*pName);
+		return S_OK;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE get_ClassName (BSTR *pClassName) override
+	{
+		*pClassName = SysAllocString(L"Bridge"); RETURN_IF_NULL_ALLOC(*pClassName);
 		return S_OK;
 	}
 
@@ -342,14 +348,7 @@ public:
 
 	virtual HRESULT STDMETHODCALLTYPE put_STPVersion (enum STPVersion version) override
 	{
-		if (STP_GetStpVersion(_stpBridge) != version)
-		{
-			NotifyPropertyChanging(_propChangeCP, AsUnknown(), dispidStpVersion, nullptr);
-			STP_SetStpVersion(_stpBridge, (STP_VERSION)version, GetMessageTime());
-			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidStpVersion, nullptr);
-			NotifyInvalidate(_invalidateCP, extent());
-		}
-
+		STP_SetStpVersion(_stpBridge, (STP_VERSION)version, GetMessageTime());
 		return S_OK;
 	}
 
@@ -915,13 +914,6 @@ public:
 	{
 	}
 
-	virtual void SetMstConfigTable (const STP_CONFIG_TABLE_ENTRY* entries, size_t entryCount) override
-	{
-		NotifyPropertyChanging(_propChangeCP, AsUnknown(), dispidMstConfigDigest);
-		STP_SetMstConfigTable (_stpBridge, &entries[0], (unsigned int) entryCount, GetMessageTime());
-		NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidMstConfigDigest);
-	}
-
 	virtual void set_stp_enabled (bool value) override
 	{
 		if (_deserializing)
@@ -1147,10 +1139,16 @@ public:
 	};
 	#pragma endregion
 
+	static void StpCallback_PropertyChanging (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp)
+	{
+		auto b = static_cast<BridgeImpl*>(STP_GetApplicationContext(bridge));
+		b->_stpPropertyChangedCP->Notify([b,portIndex,treeIndex,prop,timestamp](IStpPropertyChangedSink* sink) {
+			return sink->OnStpPropertyChanging(b, portIndex, treeIndex, prop, timestamp);
+		});
+	}
+
 	static void StpCallback_PropertyChanged (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp)
 	{
-		// We're running everything on the UI thread, so we don't need to worry about locking.
-		// HRESULTs returned by the sinks are discarded here on purpose; the library has no use for them.
 		auto b = static_cast<BridgeImpl*>(STP_GetApplicationContext(bridge));
 		b->_stpPropertyChangedCP->Notify([b,portIndex,treeIndex,prop,timestamp](IStpPropertyChangedSink* sink) {
 			return sink->OnStpPropertyChanged(b, portIndex, treeIndex, prop, timestamp);
@@ -1159,8 +1157,11 @@ public:
 		if (portIndex == -1 && treeIndex == -1)
 		{
 			// STP properties that are relevant to the bridge as a whole.
+			if (prop == STP_PROPERTY_STP_VERSION)
+				NotifyPropertyChanged(b->_propChangeCP, b->AsUnknown(), dispidStpVersion);
 			if (prop == STP_PROPERTY_MST_CONFIG_DIGEST)
 				NotifyPropertyChanged(b->_propChangeCP, b->AsUnknown(), dispidMstConfigDigest);
+			NotifyInvalidate (b->_invalidateCP, b->extent());
 		}
 	}
 };

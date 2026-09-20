@@ -14,6 +14,20 @@ library EdgeLib
 
 	enum CollectionChangeType { Set, Insert, Remove, Rotate };
 
+	struct SetInsertRemoveArgs
+	{
+		ULONG index;
+		ULONG count;
+		// Some of the children can be NULL.
+		// inserting - these are the children to be inserted
+		// inserted  - unused
+		// removing  - unused
+		// removed   - these are the removed children
+		// setting   - unused
+		// set       - unused
+		[size_is(count)] IDispatch* const* childObjs;
+	};
+
 	struct ObjectCollectionChangeArgs
 	{
 		enum CollectionChangeType changeType;
@@ -22,20 +36,7 @@ library EdgeLib
 		union
 		{
 			[case(Set, Insert, Remove)]
-			struct 
-			{
-				ULONG index;
-				ULONG count;
-
-				// Some of the children can be NULL.
-				// inserting - these are the children to be inserted
-				// inserted  - unused
-				// removing  - unused
-				// removed   - these are the removed children
-				// setting   - these are the children to replace the existing ones
-				// set       - these are the replaced children
-				[size_is(count)] IDispatch* const* childObjs;
-			} setInsertRemoveArgs;
+			struct SetInsertRemoveArgs setInsertRemoveArgs;
 
 			[case(Rotate)]
 				struct {

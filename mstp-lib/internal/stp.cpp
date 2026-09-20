@@ -953,6 +953,9 @@ void STP_SetMstConfigTable (struct STP_BRIDGE* bridge, const STP_CONFIG_TABLE_EN
 		if (entryCount == 4096)
 			assert (entries[4095].treeIndex == 0);
 
+		if (bridge->propChanging)
+			bridge->propChanging(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_DIGEST, timestamp);
+
 		memcpy (bridge->mstConfigTable, entries, entryCount * 2);
 
 		ComputeMstConfigDigest (bridge);
@@ -961,7 +964,7 @@ void STP_SetMstConfigTable (struct STP_BRIDGE* bridge, const STP_CONFIG_TABLE_EN
 			 bridge->MstConfigId.ConfigurationDigest[0], bridge->MstConfigId.ConfigurationDigest[1],
 			 bridge->MstConfigId.ConfigurationDigest[14], bridge->MstConfigId.ConfigurationDigest[15]);
 
-		if (bridge->started)
+		if (bridge->started && bridge->ForceProtocolVersion >= STP_VERSION_MSTP)
 			RestartStateMachines(bridge, timestamp);
 
 		if (bridge->propChanged)
@@ -990,6 +993,9 @@ void STP_SetMstConfigTableEntry (struct STP_BRIDGE* bridge, unsigned int vlanNum
 		else
 			assert (treeIndex < (1 + bridge->mstiCount));
 
+		if (bridge->propChanging)
+			bridge->propChanging(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_DIGEST, timestamp);
+
 		bridge->mstConfigTable[vlanNumber] = (unsigned short) treeIndex;
 
 		ComputeMstConfigDigest (bridge);
@@ -998,7 +1004,7 @@ void STP_SetMstConfigTableEntry (struct STP_BRIDGE* bridge, unsigned int vlanNum
 			bridge->MstConfigId.ConfigurationDigest[0], bridge->MstConfigId.ConfigurationDigest[1],
 			bridge->MstConfigId.ConfigurationDigest[14], bridge->MstConfigId.ConfigurationDigest[15]);
 
-		if (bridge->started)
+		if (bridge->started && bridge->ForceProtocolVersion >= STP_VERSION_MSTP)
 			RestartStateMachines(bridge, timestamp);
 
 		if (bridge->propChanged)
@@ -1044,10 +1050,16 @@ void STP_SetStpVersion (STP_BRIDGE* bridge, enum STP_VERSION version, unsigned i
 	{
 		LOG (bridge, -1, -1, "\r\n");
 
+		if (bridge->propChanging)
+			bridge->propChanging(bridge, -1, -1, STP_PROPERTY_STP_VERSION, timestamp);
+
 		bridge->ForceProtocolVersion = version;
 
 		if (bridge->started)
 			RestartStateMachines (bridge, timestamp);
+
+		if(bridge->propChanged)
+			bridge->propChanged(bridge, -1, -1, STP_PROPERTY_STP_VERSION, timestamp);
 	}
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
@@ -1231,14 +1243,17 @@ void* STP_GetApplicationContext (const STP_BRIDGE* bridge)
 	return bridge->applicationContext;
 }
 
-void STP_RegisterPropertyChangeCallback(struct STP_BRIDGE* bridge, STP_CALLBACK_PROPERTY_CHANGED changed)
+void STP_RegisterPropertyChangeCallback(struct STP_BRIDGE* bridge, STP_CALLBACK_PROPERTY_CHANGE changing, STP_CALLBACK_PROPERTY_CHANGE changed)
 {
+	assert(!bridge->propChanging);
+	bridge->propChanging = changing;
 	assert(!bridge->propChanged);
 	bridge->propChanged = changed;
 }
 
 void STP_UnregisterPropertyChangeCallback(struct STP_BRIDGE* bridge)
 {
+	bridge->propChanging = nullptr;
 	bridge->propChanged = nullptr;
 }
 

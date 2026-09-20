@@ -70,6 +70,8 @@ namespace edge
 
 	HRESULT PropertyHasDefaultValue (IDispatch* obj, DISPID prop, WORD getterFuncIndex);
 
+	HRESULT STDMETHODCALLTYPE GetInstanceName (IDispatch* obj, BSTR* pbstrName);
+
 	HRESULT PickOpenPath (HWND hWndParent, PCWSTR initialPath,
 		std::span<const COMDLG_FILTERSPEC> fileTypes,
 		PCWSTR fileExtNoDot, BSTR* pbstrPath);
@@ -82,6 +84,40 @@ namespace edge
 	SIZE client_size_pixels (HWND hwnd);
 	RECT client_rect_pixels (HWND hwnd);
 
+	template<typename iterator> requires std::is_convertible_v<decltype(*std::declval<iterator&>()), IDispatch*>
+	HRESULT STDMETHODCALLTYPE AllSameType (iterator begin, iterator end, ITypeInfo** ppTypeInfo = nullptr)
+	{
+		HRESULT hr;
+
+		RETURN_HR_IF(E_INVALIDARG, begin == end);
+
+		if (ppTypeInfo)
+			*ppTypeInfo = nullptr;
+
+		com_ptr<ITypeInfo> ti;
+		hr = (*begin)->GetTypeInfo(0, LANG_INVARIANT, ti.addressof()); RETURN_IF_FAILED(hr);
+		TYPEATTR* ta;
+		hr = ti->GetTypeAttr(&ta); RETURN_IF_FAILED(hr);
+		auto releaseta = wil::scope_exit([&] { ti->ReleaseTypeAttr(ta); });
+
+		for (auto it = begin + 1; it != end; it++)
+		{
+			com_ptr<ITypeInfo> ti2;
+			hr = (*it)->GetTypeInfo(0, LANG_INVARIANT, ti2.addressof()); RETURN_IF_FAILED(hr);
+			TYPEATTR* ta2;
+			hr = ti2->GetTypeAttr(&ta2); RETURN_IF_FAILED(hr);
+			auto releaseta2 = wil::scope_exit([&] { ti2->ReleaseTypeAttr(ta2); });
+			if (ta->guid != ta2->guid)
+				return S_FALSE;
+		}
+
+		if (ppTypeInfo)
+		{
+			*ppTypeInfo = ti;
+			(*ppTypeInfo)->AddRef();
+		}
+		return S_OK;
+	}
 }
 
 inline bool operator== (POINT a, POINT b) { return (a.x == b.x) && (a.y == b.y); }

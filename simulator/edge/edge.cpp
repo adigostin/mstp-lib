@@ -90,6 +90,39 @@ namespace edge
 		return S_OK;
 	}
 
+	HRESULT STDMETHODCALLTYPE GetInstanceName (IDispatch* obj, BSTR* pbstrName)
+	{
+		*pbstrName = nullptr;
+
+		com_ptr<ITypeInfo> ti;
+		auto hr = obj->GetTypeInfo(0, LANG_INVARIANT, &ti); RETURN_IF_FAILED(hr);
+
+		LPOLESTR instanceNamePN = const_cast<LPOLESTR>(L"Name");
+		MEMBERID memid;
+		hr = obj->GetIDsOfNames(CLSID_NULL, &instanceNamePN, 1, LANG_INVARIANT, &memid);
+		if (FAILED(hr) && hr != DISP_E_UNKNOWNNAME)
+			RETURN_HR(hr);
+
+		if (hr == DISP_E_UNKNOWNNAME)
+		{
+			wil::unique_bstr typeName;
+			hr = ti->GetDocumentation (MEMBERID_NIL, &typeName, nullptr, nullptr, nullptr); RETURN_IF_FAILED(hr);
+			*pbstrName = typeName.release();
+			return S_OK;;
+		}
+
+		DISPPARAMS params = { };
+		wil::unique_variant result;
+		EXCEPINFO exception;
+		UINT uArgErr;
+		hr = obj->Invoke(memid, IID_NULL, LANG_INVARIANT, DISPATCH_PROPERTYGET,
+			&params, &result, &exception, &uArgErr); RETURN_IF_FAILED(hr);
+		RETURN_HR_IF(DISP_E_BADVARTYPE, result.vt != VT_BSTR);
+
+		*pbstrName = result.release().bstrVal;
+		return S_OK;
+	}
+
 	HRESULT CreateTextLayoutWithMetrics (IDWriteFactory* dwf, IDWriteTextFormat* format,
 		const wchar_t* text, int textLen, float maxWidth, TextLayoutWithMetrics& tl)
 	{

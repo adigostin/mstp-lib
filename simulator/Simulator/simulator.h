@@ -189,7 +189,8 @@ struct config_id_digest_p : edge::static_value_property<edge::temp_string_proper
 */
 struct DECLSPEC_NOVTABLE DECLSPEC_UUID("11BD73E6-2E25-4E85-A71D-EDB075244751") IStpPropertyChangedSink : IUnknown
 {
-	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanged(IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept = 0;
+	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanging(IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept = 0;
+	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanged (IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept = 0;
 };
 
 struct IStpProject;
@@ -241,7 +242,6 @@ struct DECLSPEC_NOVTABLE DECLSPEC_UUID("CDE56C38-78B7-4835-827F-DA9D3E54B032") I
 	virtual void set_bridge_address (mac_address address) = 0;
 	virtual void set_stp_enabled(bool enable) = 0;
 	uint32_t msti_count() const { return STP_GetMstiCount(stp_bridge()); }
-	virtual void SetMstConfigTable (const STP_CONFIG_TABLE_ENTRY* entries, size_t entryCount) = 0;
 };
 
 HRESULT MakeBridge (uint32_t portCount, uint32_t mstiCount, mac_address macAddress, IBridge** ppBridge);
@@ -521,6 +521,7 @@ inline PropertyChangeArgs MakeObjectCollectionPropertyChangeArgs (
 	return args;
 }
 
+// When vlanSel is null, the returned list exposes CIST trees only.
 HRESULT MakeTreeSelection (edge::IObjectList* selection, IVlanSelection* vlanSel, edge::IObjectList** ppTreeSelection);
 
 HRESULT BridgeAddressToString (const mac_address& addr, BSTR* pbstrBridgeAddress);

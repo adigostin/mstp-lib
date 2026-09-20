@@ -23,7 +23,7 @@ class root_item : public IRootItem, IObjectCollectionChangeEvents
 
 	struct layout
 	{
-		wil::unique_process_heap_string text;
+		wil::unique_bstr text;
 		LONG height;
 	};
 
@@ -105,41 +105,21 @@ public:
 			_layout.reset();
 			return S_FALSE;
 		}
-		
-		wil::unique_process_heap_string text;
+
+		if (_ol->empty() && !_showEmptySel)
+		{
+			_layout.reset();
+			return S_FALSE;
+		}
+
+		wil::unique_bstr text;
 		if (_ol->empty())
 		{
-			if (_showEmptySel)
-			{
-				text = wil::make_process_heap_string_nothrow(L"(no selection)");
-			}
-		}
-		else if (_ol->size() == 1)
-		{
-			com_ptr<ITypeInfo> ti;
-			hr = _ol->front()->GetTypeInfo(0, LANG_INVARIANT, &ti); RETURN_IF_FAILED(hr);
-			LPOLESTR name = const_cast<LPOLESTR>(L"__id");
-			MEMBERID memid;
-			DISPPARAMS params = { };
-			wil::unique_variant result;
-			EXCEPINFO exception;
-			UINT uArgErr;
-			if (SUCCEEDED(ti->GetIDsOfNames (&name, 1, &memid))
-				&& SUCCEEDED(ti->Invoke(_ol->front(), memid, DISPATCH_PROPERTYGET, &params, &result, &exception, &uArgErr))
-				&& result.vt == VT_BSTR)
-			{
-				text = wil::make_process_heap_string_nothrow(result.bstrVal);
-			}
-			else
-			{
-				text = wil::make_process_heap_string_nothrow(L"Properties");
-			}
+			text = wil::make_bstr_nothrow(L"(No Selection)"); RETURN_IF_NULL_ALLOC(text);
 		}
 		else
 		{
-			wil::unique_process_heap_string str;
-			hr = wil::str_printf_nothrow (str, L"%u elements", _ol->size());
-			text = std::move(str);
+			hr = _ol->GetListTitle(&text); RETURN_IF_FAILED(hr);
 		}
 
 		LONG udPadding = (LONG)std::round(this->udPadding * ctx.dpi / 96.0f);

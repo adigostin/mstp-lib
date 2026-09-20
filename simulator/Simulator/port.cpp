@@ -96,6 +96,18 @@ public:
 	#pragma endregion
 
 	#pragma region IPortProperties
+	virtual HRESULT STDMETHODCALLTYPE get_Name (BSTR *pName) override
+	{
+		*pName = SysAllocString(L"Port"); RETURN_IF_NULL_ALLOC(*pName);
+		return S_OK;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE get_ClassName (BSTR *pClassName) override
+	{
+		*pClassName = SysAllocString(L"Port"); RETURN_IF_NULL_ALLOC(*pClassName);
+		return S_OK;
+	}
+
 	virtual HRESULT STDMETHODCALLTYPE get_Side (enum PortSide *pSide) override
 	{
 		*pSide = _side;
@@ -577,7 +589,13 @@ public:
 	
 	virtual IPortTree* treeAt(uint32_t i) override { return _trees[i]; }
 
-	// IStpPropertyChangedSink
+	#pragma region IStpPropertyChangedSink
+	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanging (IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override
+	{
+		// TODO:
+		return S_OK;
+	}
+
 	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanged(IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override
 	{
 		// STP properties don't change that often, so it's acceptable for a UI port (PortImpl) to receive
@@ -601,6 +619,7 @@ public:
 
 		return S_OK;
 	}
+	#pragma endregion
 };
 
 HRESULT MakePort (IBridge* parent, uint32_t portIndex, PortSide side, LONG offset, IPort** ppPort)

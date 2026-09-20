@@ -100,34 +100,36 @@ public:
 
 		if (args->changeType == CollectionChangeType::Insert)
 		{
-			return S_OK;
-		}
-		else if (args->changeType == CollectionChangeType::Remove)
-		{
-			if (_selection->size() > args->setInsertRemoveArgs.count)
+			auto iargs = &args->setInsertRemoveArgs;
+
+			if (_selection->empty())
 			{
-				// Removing some elements but not all. Nothing to do here.
-				return S_OK;
-			}
-			else
-			{
-				// Removing all elements.
-				if (wil::try_com_query_nothrow<IBridge>(_selection->front())
-					|| wil::try_com_query_nothrow<IPort>(_selection->front()))
+				// Adding items to an empty selection.
+				hr = AllSameType(iargs->childObjs, iargs->childObjs + iargs->count); RETURN_IF_FAILED(hr);
+				RETURN_HR_IF(E_UNEXPECTED, hr != S_OK);
+
+				if (wil::try_com_query_nothrow<IBridge>(iargs->childObjs[0])
+					|| wil::try_com_query_nothrow<IPort>(iargs->childObjs[0]))
 				{
-					hr = _pg->RemoveSection(_treeSelection); RETURN_IF_FAILED(hr);
-					_treeSelection.reset();
+					com_ptr<IVlanSelection> vlanSel;
+					hr = _vlanSel->QueryInterface(&vlanSel); RETURN_IF_FAILED(hr);
+					hr = MakeTreeSelection (_selection, vlanSel, &_treeSelection); RETURN_IF_FAILED(hr);
+					_pg->AddSection (_treeSelection, false, nullptr);
 					return S_OK;
 				}
-				else if (wil::try_com_query_nothrow<IWire>(_selection->operator[](args->setInsertRemoveArgs.index)))
+				else if (wil::try_com_query_nothrow<IWire>(iargs->childObjs[0]))
 				{
 					return S_OK;
 				}
 				else
 					RETURN_HR(E_NOTIMPL);
 			}
-
-			RETURN_HR(E_NOTIMPL);
+			else
+				return S_OK;
+		}
+		else if (args->changeType == CollectionChangeType::Remove)
+		{
+			return S_OK;
 		}
 		else
 			RETURN_HR(E_NOTIMPL);
@@ -139,33 +141,35 @@ public:
 
 		if (args->changeType == CollectionChangeType::Insert)
 		{
-			if (_selection->size() > args->setInsertRemoveArgs.count)
+			return S_OK;
+		}
+		else if (args->changeType == CollectionChangeType::Remove)
+		{
+			auto iargs = &args->setInsertRemoveArgs;
+
+			if (_selection->empty())
 			{
-				// Added more elements to an existing selection. Nothing to do here.
-				return S_OK;
-			}
-			else
-			{
-				// Added items to an empty selection.
-				if (wil::try_com_query_nothrow<IBridge>(_selection->front())
-					|| wil::try_com_query_nothrow<IPort>(_selection->front()))
+				// Removed all items from the selection.
+				hr = AllSameType(iargs->childObjs, iargs->childObjs + iargs->count); RETURN_IF_FAILED(hr);
+				RETURN_HR_IF(E_UNEXPECTED, hr != S_OK);
+
+				if (wil::try_com_query_nothrow<IBridge>(iargs->childObjs[0])
+					|| wil::try_com_query_nothrow<IPort>(iargs->childObjs[0]))
 				{
-					com_ptr<IVlanSelection> vlanSel;
-					hr = _vlanSel->QueryInterface(&vlanSel); RETURN_IF_FAILED(hr);
-					hr = MakeTreeSelection (_selection, vlanSel, &_treeSelection); RETURN_IF_FAILED(hr);
-					_pg->AddSection (_treeSelection, false, nullptr);
+					hr = _pg->RemoveSection(_treeSelection); RETURN_IF_FAILED(hr);
+					auto raw = _treeSelection.detach();
+					ULONG refCount = raw->Release();
+					_ASSERT(refCount == 0);
 					return S_OK;
 				}
-				else if (wil::try_com_query_nothrow<IWire>(_selection->operator[](args->setInsertRemoveArgs.index)))
+				else if (wil::try_com_query_nothrow<IWire>(iargs->childObjs[0]))
 				{
 					return S_OK;
 				}
 				else
 					RETURN_HR(E_NOTIMPL);
 			}
-		}
-		else if (args->changeType == CollectionChangeType::Remove)
-		{
+
 			return S_OK;
 		}
 		else
