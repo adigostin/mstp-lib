@@ -258,7 +258,6 @@
   <ItemGroup>
     <ClInclude Include="dispids.h" />
     <ClInclude Include="edit_states\edit_state.h" />
-    <ClInclude Include="selectable_object.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="simulator.h" />
