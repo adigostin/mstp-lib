@@ -8,7 +8,7 @@
 using namespace edge;
 using namespace pg;
 
-class root_item : public IRootItem, IObjectCollectionChangeEvents
+class root_item : public IRootItem
 {
 	ULONG _refCount = 0;
 	ULONG _sig = 0xAA55000D;
@@ -28,6 +28,7 @@ class root_item : public IRootItem, IObjectCollectionChangeEvents
 	};
 
 	std::optional<layout> _layout;
+	ULONG _performLayoutCount = 0;
 
 	AdviseSinkToken _collectionChangeToken;
 
@@ -45,10 +46,6 @@ public:
 
 		hr = MakeObjectItemChildManager(this, ol, &_child_manager); RETURN_IF_FAILED(hr);
 
-		// Start listening to changes in the list of objects (objects arriving or removing).
-		hr = AdviseSink<IObjectCollectionChangeEvents>(_ol, _weakRefToThis, &_collectionChangeToken); RETURN_IF_FAILED(hr);
-
-		//PerformLayoutDC(hdc, dpi(_grid->HWnd()));
 		return S_OK;
 	}
 
@@ -62,7 +59,6 @@ public:
 
 		if (   TryQI<IUnknown>(AsUnknown(), riid, ppvObject)
 			|| TryQI<IItem>(this, riid, ppvObject)
-			|| TryQI<IObjectCollectionChangeEvents>(this, riid, ppvObject)
 			|| TryQI<IExpandableItem>(this, riid, ppvObject)
 			|| TryQI<IRootItem>(this, riid, ppvObject)
 			|| TryQI<IObjectItem>(this, riid, ppvObject)
@@ -97,6 +93,8 @@ public:
 
 	virtual HRESULT STDMETHODCALLTYPE PerformLayout (const PaintResources& ctx) noexcept override
 	{
+		_performLayoutCount++;
+
 		HRESULT hr;
 
 		LONG layout_width = _grid->ValueColumnRight(ctx.dpi) - _grid->ExpandColumnLeft(ctx.dpi) - 2 * title_lr_padding;
@@ -133,6 +131,9 @@ public:
 
 		return S_OK;
 	}
+
+	virtual ULONG PerformLayoutCount() const noexcept override { return _performLayoutCount; }
+	virtual void ResetPerformLayoutCount() noexcept override { _performLayoutCount = 0; }
 
 	virtual HRESULT STDMETHODCALLTYPE Paint (HDC hdc, const PaintResources& ctx,
 		PaintItemFlags flags, LONG y, edge::IThemeColorProvider* tcp) const noexcept override
@@ -181,18 +182,6 @@ public:
 	virtual bool expanded() const override { return true; }
 	virtual void expand() override { _ASSERT(false); }
 	virtual void collapse() override { _ASSERT(false); }
-	#pragma endregion
-
-	#pragma region IObjectCollectionChangeEvents
-	virtual HRESULT STDMETHODCALLTYPE OnCollectionChanging (IUnknown *sender, const ObjectCollectionChangeArgs *args) override
-	{
-		return S_OK;
-	}
-
-	virtual HRESULT STDMETHODCALLTYPE OnCollectionChanged (IUnknown *sender, const ObjectCollectionChangeArgs *args) override
-	{
-		return root()->grid()->NotifyLayoutChangedTree(this);
-	}
 	#pragma endregion
 };
 

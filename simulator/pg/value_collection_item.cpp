@@ -15,6 +15,7 @@ class value_collection_item : public value_collection_item_i
 	ULONG _refCount = 0;
 	IGroupItem* const _parent;
 	DISPID const _prop;
+	ULONG _performLayoutCount = 0;
 
 	// TODO: get rid of this type, as we need to handle anyway all 4 combinations of null/non-null.
 	struct children_t
@@ -57,8 +58,12 @@ public:
 	#pragma region IItem
 	virtual HRESULT STDMETHODCALLTYPE PerformLayout (const PaintResources& ctx) noexcept override
 	{
+		_performLayoutCount++;
 		RETURN_HR(E_NOTIMPL);
 	}
+
+	virtual ULONG PerformLayoutCount() const noexcept override { return _performLayoutCount; }
+	virtual void ResetPerformLayoutCount() noexcept override { _performLayoutCount = 0; }
 
 	virtual LONG Height() const noexcept override
 	{

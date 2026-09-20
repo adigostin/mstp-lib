@@ -14,6 +14,7 @@ class value_collection_existing_child_item : public value_collection_child_item_
 	value_collection_item_i* const _parent;
 	//edge::text_layout_with_metrics _name;
 	uint32_t _property_setting_semaphore = 0;
+	ULONG _performLayoutCount = 0;
 
 public:
 	value_collection_existing_child_item (value_collection_item_i* parent)
@@ -125,10 +126,20 @@ public:
 	}
 
 	#pragma region IItem
-	//virtual value_collection_item_i* parent() const override final
+	virtual ULONG PerformLayoutCount() const noexcept override
+	{
+		return _performLayoutCount;
+	}
+
+	virtual void ResetPerformLayoutCount() noexcept override
+	{
+		_performLayoutCount = 0;
+	}
+
 	/*
 	virtual HRESULT STDMETHODCALLTYPE PerformLayout (const PaintResources& res) noexcept override
 	{
+		_performLayoutCount++;
 		return PerformLayout(parent()->index_of(this));
 	}
 	

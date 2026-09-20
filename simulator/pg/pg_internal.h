@@ -67,6 +67,8 @@ namespace pg
 	{
 		virtual IExpandableItem* parent() const = 0;
 		virtual HRESULT STDMETHODCALLTYPE PerformLayout (const PaintResources& res) noexcept { RETURN_HR(E_NOTIMPL); }
+		virtual ULONG PerformLayoutCount() const noexcept = 0;
+		virtual void ResetPerformLayoutCount() noexcept = 0;
 		virtual HRESULT STDMETHODCALLTYPE Paint (HDC hdc, const PaintResources& res,
 			PaintItemFlags flags, LONG y, edge::IThemeColorProvider* tcp) const noexcept { RETURN_HR(E_NOTIMPL); }
 

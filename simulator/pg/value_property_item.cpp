@@ -34,6 +34,7 @@ class value_property_item : public IPGValuePropertyItem, IObjectCollectionChange
 	};
 
 	std::optional<layout> _layout;
+	ULONG _performLayoutCount = 0;
 
 	AdviseSinkToken _objListChangeToken;
 
@@ -114,6 +115,8 @@ public:
 
 	virtual HRESULT STDMETHODCALLTYPE PerformLayout (const PaintResources& ctx) noexcept override
 	{
+		_performLayoutCount++;
+
 		HRESULT hr;
 		wil::unique_bstr nameText;
 		hr = GetNameText(this, nameText); RETURN_IF_FAILED(hr);
@@ -134,6 +137,9 @@ public:
 
 		return S_OK;
 	}
+
+	virtual ULONG PerformLayoutCount() const noexcept override { return _performLayoutCount; }
+	virtual void ResetPerformLayoutCount() noexcept override { _performLayoutCount = 0; }
 	
 	virtual HRESULT STDMETHODCALLTYPE Paint (HDC hdc, const PaintResources& ctx,
 		PaintItemFlags flags, LONG render_y, edge::IThemeColorProvider* tcp) const noexcept override

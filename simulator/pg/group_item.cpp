@@ -25,6 +25,7 @@ class group_item : public IGroupItem
 	};
 
 	std::optional<layout> _layout;
+	ULONG _performLayoutCount = 0;
 
 	vector_nothrow<com_ptr<IPGPropertyItem>> _children;
 
@@ -284,6 +285,8 @@ public:
 	#pragma region IItem
 	virtual HRESULT STDMETHODCALLTYPE PerformLayout (const PaintResources& ctx) noexcept override
 	{
+		_performLayoutCount++;
+
 		if (_idlName && _idlName.get()[0])
 		{
 			auto grid = root()->grid();
@@ -309,6 +312,9 @@ public:
 
 		return S_OK;
 	}
+
+	virtual ULONG PerformLayoutCount() const noexcept override { return _performLayoutCount; }
+	virtual void ResetPerformLayoutCount() noexcept override { _performLayoutCount = 0; }
 	
 	virtual HRESULT STDMETHODCALLTYPE Paint (HDC hdc, const PaintResources& ctx,
 		PaintItemFlags flags, LONG y, edge::IThemeColorProvider* tcp) const noexcept override

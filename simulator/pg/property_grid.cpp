@@ -36,6 +36,7 @@ class PropertyGridImpl : public IPGInternal, IThemeChangedEvents
 	IItem* _selectedItem = nullptr;
 	IItem* _hotItem = nullptr;
 	PaintResources _paintres;
+	bool _showPerformLayoutCounts = false;
 
 	static constexpr float line_width_not_aligned = 0.6f;
 
@@ -352,6 +353,22 @@ public:
 					if (item == _hotItem)
 						flags |= PaintItemFlags::Hot;
 					item->Paint (hdc, _paintres, flags, render_y, _tcp);
+
+					if (_showPerformLayoutCounts)
+					{
+						wchar_t countText[12];
+						swprintf_s(countText, L"%lu", item->PerformLayoutCount());
+						RECT countRect = {
+							NameColumnLeft(item->indent(), dpi),
+							render_y,
+							ValueColumnLeft(dpi) - text_lr_padding * 2,
+							render_y + item->Height(),
+						};
+						auto undoFont = wil::SelectObject(hdc, _paintres.normalFont.get());
+						COLORREF oldTextColor = SetTextColor(hdc, RGB(255, 0, 0));
+						DrawTextW(hdc, countText, -1, &countRect, DT_SINGLELINE | DT_RIGHT | DT_VCENTER | DT_NOPREFIX);
+						SetTextColor(hdc, oldTextColor);
+					}
 				}
 			}
 		});
@@ -1361,6 +1378,16 @@ public:
 
 	std::optional<LRESULT> process_key_down (uint32_t key, UINT mks)
 	{
+		if (key == 'L' && (mks & (MK_CONTROL | MK_SHIFT)) == (MK_CONTROL | MK_SHIFT))
+		{
+			if (!_showPerformLayoutCounts)
+				enum_items ([](IItem* item, LONG, bool&) { item->ResetPerformLayoutCount(); });
+
+			_showPerformLayoutCounts = !_showPerformLayoutCounts;
+			::InvalidateRect(_hWnd, nullptr, FALSE);
+			return 0;
+		}
+
 		if ((key == VK_RETURN) || (key == VK_UP) || (key == VK_DOWN))
 		{
 			if (!_text_editor || try_commit_editor())

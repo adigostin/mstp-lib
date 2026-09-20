@@ -46,6 +46,16 @@ public:
 	#pragma endregion
 
 	#pragma region IItem
+	virtual ULONG PerformLayoutCount() const noexcept override
+	{
+		_ASSERT(false); return { };
+	}
+
+	virtual void ResetPerformLayoutCount() noexcept override
+	{
+		_ASSERT(false);
+	}
+
 	virtual LONG Height() const noexcept override
 	{
 		_ASSERT(false); return { };

@@ -199,6 +199,7 @@ class object_property_item : public object_property_item_i, IObjectList
 	IGroupItem* const _parent;
 	DISPID const _prop;
 	com_ptr<IObjectItemChildManager> _child_manager;
+	ULONG _performLayoutCount = 0;
 	//edge::text_layout_with_metrics _name;
 	enum class value_state { all_null, multiple_selection, all_same_type };
 	//std::pair<value_state, edge::text_layout_with_metrics> _value;
@@ -210,15 +211,10 @@ public:
 		: _parent(parent)
 		, _prop(prop)
 	{
-		auto* objs = _parent->parent()->objects();
-//		objs->objects_change().add_handler<&object_property_item::on_parent_objects_change>(this);
-		//PerformLayout();
 	}
 
 	~object_property_item()
 	{
-		auto* objs = _parent->parent()->objects();
-//		objs->objects_change().remove_handler<&object_property_item::on_parent_objects_change>(this);
 		_popup.reset();
 	}
 
@@ -304,6 +300,8 @@ public:
 	*/
 	virtual HRESULT STDMETHODCALLTYPE PerformLayout (const PaintResources& ctx) noexcept override
 	{
+		_performLayoutCount++;
+
 		RETURN_HR(E_NOTIMPL);
 		/*
 		_name = make_name_layout();
@@ -313,6 +311,9 @@ public:
 		return S_OK;
 		*/
 	}
+
+	virtual ULONG PerformLayoutCount() const noexcept override { return _performLayoutCount; }
+	virtual void ResetPerformLayoutCount() noexcept override { _performLayoutCount = 0; }
 
 	RECT expand_button_click_rect (LONG item_y) const
 	{
@@ -448,48 +449,7 @@ public:
 		//PerformLayout();
 	}
 	#pragma endregion
-	/*
-	void on_parent_objects_change (const change_args& args)
-	{
-		if (auto* inserting = std::get_if<inserting_args>(&args))
-		{
-			std::vector<object*> children;
-			std::transform(inserting->objects_to_insert.begin(), inserting->objects_to_insert.end(), std::back_inserter(children), [p=_prop](object* parent) { return p->get(parent); });
-			change_e::invoker(_em).invoke(inserting_args{ children });
-		}
-		else if (auto* inserted = std::get_if<inserted_args>(&args))
-		{
-			change_e::invoker(_em).invoke(args);
-			PerformLayout();
-		}
-		else if (auto* removing = std::get_if<removing_args>(&args))
-		{
-			change_e::invoker(_em).invoke(args);
-		}
-		else if (auto* removed = std::get_if<removed_args>(&args))
-		{
-			std::vector<object*> children;
-			std::transform(removed->objects_removed.begin(), removed->objects_removed.end(), std::back_inserter(children), [p=_prop](object* parent) { return p->get(parent); });
-			change_e::invoker(_em).invoke(removed_args{ children });
-			PerformLayout();
-		}
-		else if (auto* replacing = std::get_if<replacing_args>(&args))
-		{
-			std::vector<object*> children_to_insert;
-			std::transform(replacing->new_objs.begin(), replacing->new_objs.end(), std::back_inserter(children_to_insert), [p=_prop](object* parent) { return p->get(parent); });
-			change_e::invoker(_em).invoke(replacing_args{ replacing->index, children_to_insert });
-		}
-		else if (auto* replaced = std::get_if<replaced_args>(&args))
-		{
-			std::vector<object*> children_removed;
-			std::transform(replaced->old_objs.begin(), replaced->old_objs.end(), std::back_inserter(children_removed),  [p=_prop](object* parent) { return p->get(parent); });
-			change_e::invoker(_em).invoke(replaced_args{ replaced->index, children_removed });
-			PerformLayout();
-		}
-		else
-			_ASSERT(false);
-	}
-	*/
+
 	void on_object_picked (ITypeInfo* type)
 	{
 		_ASSERT(false);

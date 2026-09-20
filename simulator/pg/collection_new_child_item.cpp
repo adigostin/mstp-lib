@@ -21,6 +21,16 @@ public:
 	}
 
 	virtual collection_item_i* parent() const noexcept override { return _parent; }
+
+	virtual ULONG PerformLayoutCount() const noexcept override
+	{
+		_ASSERT(false); return { };
+	}
+
+	virtual void ResetPerformLayoutCount() noexcept override
+	{
+		_ASSERT(false);
+	}
 	/*
 	virtual HRESULT STDMETHODCALLTYPE PerformLayout (const PaintResources& res) noexcept override
 	{
