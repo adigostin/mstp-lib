@@ -120,7 +120,7 @@ struct TreeSelection : IObjectList, IConnectionPointContainer, IObjectCollection
 	{
 		IDispatch* outer = _selection->ObjectAt(index);
 		if (auto b = wil::try_com_query_nothrow<IBridge>(outer))
-			return wil::try_com_query_nothrow<IDispatch>(b->trees()[selected_tree_index(b)]);
+			return wil::try_com_query_nothrow<IDispatch>(b->TreeAt(selected_tree_index(b)));
 
 		if (auto p = wil::try_com_query_nothrow<IPort>((*_selection)[index]))
 			return wil::try_com_query_nothrow<IDispatch>(p->treeAt(selected_tree_index(p->bridge())));
@@ -255,7 +255,7 @@ struct TreeSelection : IObjectList, IConnectionPointContainer, IObjectCollection
 		_ASSERT(a.count == 1); // only this supported for now
 		if (auto b = wil::try_com_query_nothrow<IBridge>(a.childObjs[0]))
 		{
-			auto bridgeTree = b->trees()[selected_tree_index(b)];
+			auto bridgeTree = b->TreeAt(selected_tree_index(b));
 			com_ptr<IDispatch> bridgeTreeDisp = wil::try_com_query_nothrow<IDispatch>(bridgeTree);
 			ObjectCollectionChangeArgs treeArgs = *args;
 			treeArgs.setInsertRemoveArgs.childObjs = bridgeTreeDisp.addressof();
@@ -402,7 +402,7 @@ struct TreeSelection : IObjectList, IConnectionPointContainer, IObjectCollection
 			for (uint32_t i = 0; i < a.count; i++)
 			{
 				auto b = wil::try_com_query_nothrow<IBridge>(a.childObjs[i]);
-				auto bridgeTree = b->trees()[selected_tree_index(b)];
+				auto bridgeTree = b->TreeAt(selected_tree_index(b));
 				trees.try_push_back(wil::try_com_query_nothrow<IDispatch>(bridgeTree));
 			}
 

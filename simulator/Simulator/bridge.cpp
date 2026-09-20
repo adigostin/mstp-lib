@@ -34,7 +34,7 @@ class BridgeImpl : public IBridge, IBridgeProperties, IConnectionPointContainer,
 	std::vector<std::unique_ptr<BridgeLogLine>> _logLines;
 	BridgeLogLine _currentLogLine;
 	std::queue<std::pair<uint32_t, packet_t>> _rxQueue;
-	std::vector<com_ptr<IBridgeTree>> _trees;
+	vector_nothrow<com_ptr<IBridgeTree>> _trees;
 	bool _deserializing = false;
 	bool _enable_stp_after_deserialize;
 	vector_nothrow<uint8_t> _missedLinkPulseCounters;
@@ -72,11 +72,12 @@ public:
 		hr = MakeConnectionPoint(this, &_bridgeEventsCP); RETURN_IF_FAILED(hr);
 		hr = MakeConnectionPoint(this, &_stpPropertyChangedCP); RETURN_IF_FAILED(hr);
 
+		bool reserved = _trees.try_reserve(1 + msti_count); RETURN_HR_IF(E_OUTOFMEMORY, !reserved);
 		for (uint32_t i = 0; i < 1 + msti_count; i++)
 		{
 			com_ptr<IBridgeTree> tree;
 			hr = MakeBridgeTree(this, i, &tree); RETURN_IF_FAILED(hr);
-			_trees.push_back(std::move(tree));
+			_trees.try_push_back(std::move(tree));
 		}
 
 		LONG offset = 0;
@@ -771,7 +772,9 @@ public:
 		}
 	}
 
-	virtual const std::vector<com_ptr<IBridgeTree>>& trees() const override { return _trees; }
+	virtual ULONG TreeCount() const override { return (ULONG)_trees.size(); }
+
+	virtual IBridgeTree* TreeAt(ULONG i) const override { return _trees[i]; }
 
 	virtual ULONG PortCount() const override { return _ports.size(); }
 

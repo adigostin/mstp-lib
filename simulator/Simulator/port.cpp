@@ -36,7 +36,7 @@ public:
 		_port_index = port_index;
 		_side = side;
 		_offset = offset;
-		uint32_t tree_count = (uint32_t)parent->trees().size();
+		uint32_t tree_count = (uint32_t)parent->TreeCount();
 		bool reserved = _trees.try_reserve(tree_count); RETURN_HR_IF(E_OUTOFMEMORY, !reserved);
 		for (uint32_t treeIndex = 0; treeIndex < tree_count; treeIndex++)
 		{

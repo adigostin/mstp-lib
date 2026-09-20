@@ -237,8 +237,8 @@ public:
 		hr = MakeTreeSelection(selection, vlanSelection, &treeSelection); Assert::AreEqual(S_OK, hr);
 
 		Assert::AreEqual(2u, treeSelection->size());
-		Assert::IsTrue(wil::com_query_failfast<IDispatch>(bridge1->trees()[0]).get() == treeSelection->operator[](0));
-		Assert::IsTrue(wil::com_query_failfast<IDispatch>(bridge2->trees()[0]).get() == treeSelection->operator[](1));
+		Assert::IsTrue(wil::com_query_failfast<IDispatch>(bridge1->TreeAt(0)) == treeSelection->operator[](0));
+		Assert::IsTrue(wil::com_query_failfast<IDispatch>(bridge2->TreeAt(0)) == treeSelection->operator[](1));
 
 		ULONG refCount = treeSelection.detach()->Release();
 		Assert::AreEqual(0ul, refCount);
@@ -292,13 +292,13 @@ public:
 
 		STP_StartBridge(bridge->stp_bridge(), 0);
 		STP_SetStpVersion(bridge->stp_bridge(), STP_VERSION_MSTP, 1);
-		Assert::IsTrue(wil::com_query_failfast<IDispatch>(bridge->trees()[0]).get() == treeSelection->operator[](0));
+		Assert::IsTrue(wil::com_query_failfast<IDispatch>(bridge->TreeAt(0)) == treeSelection->operator[](0));
 
 		STP_SetMstConfigTableEntry(bridge->stp_bridge(), 2, 1, 2);
-		Assert::IsTrue(wil::com_query_failfast<IDispatch>(bridge->trees()[1]).get() == treeSelection->operator[](0));
+		Assert::IsTrue(wil::com_query_failfast<IDispatch>(bridge->TreeAt(1)) == treeSelection->operator[](0));
 
 		STP_SetStpVersion(bridge->stp_bridge(), STP_VERSION_RSTP, 3);
-		Assert::IsTrue(wil::com_query_failfast<IDispatch>(bridge->trees()[0]).get() == treeSelection->operator[](0));
+		Assert::IsTrue(wil::com_query_failfast<IDispatch>(bridge->TreeAt(0)) == treeSelection->operator[](0));
 
 		hr = selection->Clear(); Assert::AreEqual(S_OK, hr);
 	}
@@ -341,8 +341,8 @@ public:
 			Assert::AreEqual(i, changed.index);
 			Assert::AreEqual(1ul, changed.count);
 		}
-		Assert::IsTrue(events->changingNotifications[0].childObjects[0] == wil::com_query_failfast<IDispatch>(bridge1->trees()[0]));
-		Assert::IsTrue(events->changingNotifications[1].childObjects[0] == wil::com_query_failfast<IDispatch>(bridge2->trees()[0]));
+		Assert::IsTrue(events->changingNotifications[0].childObjects[0] == wil::com_query_failfast<IDispatch>(bridge1->TreeAt(0)));
+		Assert::IsTrue(events->changingNotifications[1].childObjects[0] == wil::com_query_failfast<IDispatch>(bridge2->TreeAt(0)));
 
 		hr = selection->Clear(); Assert::AreEqual(S_OK, hr);
 
@@ -357,7 +357,7 @@ public:
 		Assert::AreEqual(0ul, changed.index);
 		Assert::AreEqual(2ul, changed.count);
 		Assert::AreEqual(2u, changed.childObjects.size());
-		Assert::IsTrue(changed.childObjects[0] == wil::com_query_failfast<IDispatch>(bridge1->trees()[0]));
-		Assert::IsTrue(changed.childObjects[1] == wil::com_query_failfast<IDispatch>(bridge2->trees()[0]));
+		Assert::IsTrue(changed.childObjects[0] == wil::com_query_failfast<IDispatch>(bridge1->TreeAt(0)));
+		Assert::IsTrue(changed.childObjects[1] == wil::com_query_failfast<IDispatch>(bridge2->TreeAt(0)));
 	}
 };

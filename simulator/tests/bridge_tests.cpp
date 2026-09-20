@@ -34,7 +34,7 @@ TEST_CLASS(bridge_tests)
 		mac_address address = { 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 };
 		auto b = MakeBridge(port_count, msti_count, address);
 
-		auto get_root_bridge_id = [&b] { return b->trees()[0]->root_bridge_id(); };
+		auto get_root_bridge_id = [&b] { return b->TreeAt(0)->root_bridge_id(); };
 
 		b->set_stp_enabled(true);
 		get_root_bridge_id();

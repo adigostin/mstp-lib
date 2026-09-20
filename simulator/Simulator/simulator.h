@@ -259,7 +259,8 @@ struct DECLSPEC_NOVTABLE DECLSPEC_UUID("CDE56C38-78B7-4835-827F-DA9D3E54B032") I
 	LONG width() const { return size().cx; }
 	LONG height() const { return size().cy; }
 
-	virtual const std::vector<com_ptr<IBridgeTree>>& trees() const = 0; // TODO: remove this
+	virtual ULONG TreeCount() const = 0;
+	virtual IBridgeTree* TreeAt(ULONG i) const = 0;
 
 	virtual ULONG PortCount() const = 0;
 	virtual IPort* PortAt (ULONG i) const = 0;
