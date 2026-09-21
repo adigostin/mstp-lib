@@ -360,6 +360,9 @@ public:
 	// IStpProject
 	virtual bool IsWireForwarding (IWire* wire, unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const override final
 	{
+		if (hasLoop)
+			*hasLoop = false;
+
 		if (!std::holds_alternative<connected_wire_end>(wire->p0()) || !std::holds_alternative<connected_wire_end>(wire->p1()))
 			return false;
 
@@ -385,9 +388,9 @@ public:
 
 						for (unsigned int i = 0; i < (unsigned int) rx->bridge()->PortCount(); i++)
 						{
-							if ((i != rx->port_index()) && rx->IsForwarding(vlanNumber))
+							IPort* otherTxPort = rx->bridge()->PortAt(i);
+							if ((i != rx->port_index()) && otherTxPort->IsForwarding(vlanNumber))
 							{
-								IPort* otherTxPort = rx->bridge()->PortAt(i);
 								if (otherTxPort == targetPort)
 									return true;
 
