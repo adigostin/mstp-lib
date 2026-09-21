@@ -314,4 +314,60 @@ TEST_CLASS(port_tests)
 		STP_StartBridge(bridge->stp_bridge(), 0);
 		Assert::AreEqual(STP_PORT_ROLE_DISABLED, sink->GetMostRecentRole(bridge.get(), 0));
 	}
+
+	TEST_METHOD(BpdusUseDifferentSourceAddressesForDifferentPorts)
+	{
+		struct BridgeEventsSink : IBridgeEvents
+		{
+			ULONG refCount = 1;
+			WeakRefToThis weakRefToThis;
+			AdviseSinkToken token;
+			std::array<std::optional<mac_address>, 2> bpduSourceAddresses;
+
+			BridgeEventsSink(IBridge* bridge)
+			{
+				weakRefToThis.InitInstance(static_cast<IBridgeEvents*>(this));
+				AdviseSink<IBridgeEvents>(bridge, weakRefToThis, &token);
+				refCount--;
+			}
+
+			HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override
+			{
+				if (TryQI<IUnknown>(this, riid, ppvObject) || TryQI<IBridgeEvents>(this, riid, ppvObject))
+					return S_OK;
+
+				if (riid == __uuidof(IWeakRef))
+					return weakRefToThis.QueryIWeakRef(ppvObject);
+
+				Assert::Fail();
+			}
+
+			ULONG STDMETHODCALLTYPE AddRef() override { return ++refCount; }
+			ULONG STDMETHODCALLTYPE Release() override { return ReleaseST(this, refCount); }
+
+			HRESULT STDMETHODCALLTYPE OnLogLineGenerated(IBridge*, const BridgeLogLine*) override { return S_OK; }
+			HRESULT STDMETHODCALLTYPE OnLogCleared(IBridge*) override { return S_OK; }
+
+			HRESULT STDMETHODCALLTYPE OnPacketTransmit(IBridge*, ULONG txPortIndex, packet_t&& packet) override
+			{
+				if (auto frame = std::get_if<frame_t>(&packet); frame && frame->data.size() >= 12)
+				{
+					mac_address sourceAddress;
+					memcpy(sourceAddress.data(), frame->data.data() + 6, sourceAddress.size());
+					bpduSourceAddresses[txPortIndex] = sourceAddress;
+				}
+
+				return S_OK;
+			}
+		};
+
+		auto bridge = MakeBridge(2, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		auto sink = wil::com_ptr_failfast(new BridgeEventsSink(bridge));
+
+		STP_StartBridge(bridge->stp_bridge(), 0);
+		STP_OnPortEnabled(bridge->stp_bridge(), 0, 100, true, 0);
+		STP_OnPortEnabled(bridge->stp_bridge(), 1, 100, true, 0);
+
+		Assert::IsFalse(*sink->bpduSourceAddresses[0] == *sink->bpduSourceAddresses[1]);
+	}
 };

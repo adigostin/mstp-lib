@@ -869,22 +869,18 @@ public:
 
 	virtual STP_BRIDGE* stp_bridge() const { return _stpBridge; }
 
-	std::array<uint8_t, 6> GetPortAddress (size_t portIndex) const
+	mac_address GetPortAddress (uint32_t portIndex) const
 	{
-		std::array<uint8_t, 6> pa = bridge_address();
-		pa[5]++;
-		if (pa[5] == 0)
+		auto address = bridge_address();
+		size_t increment = portIndex + 1;
+		for (size_t i = 6; i-- > 3 && increment; )
 		{
-			pa[4]++;
-			if (pa[4] == 0)
-			{
-				pa[3]++;
-				if (pa[3] == 0)
-					WI_ASSERT(false); // not implemented
-			}
+			uint16_t sum = address[i] + (increment & 0xff);
+			address[i] = (uint8_t)sum;
+			increment = (increment >> 8) + (sum >> 8);
 		}
-
-		return pa;
+		LOG_HR_IF(HRESULT_FROM_WIN32(ERROR_ARITHMETIC_OVERFLOW), increment != 0);
+		return address;
 	}
 
 	mac_address bridge_address() const
