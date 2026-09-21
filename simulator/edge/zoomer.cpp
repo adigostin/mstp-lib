@@ -7,8 +7,6 @@
 using namespace std;
 using namespace D2D1;
 
-// TODO: register message instead of using helper window
-
 namespace edge
 {
 	class ZoomerImpl : public IZoomer
