@@ -66,6 +66,64 @@ IPort* IStpProject::find_connected_port (IPort* tx_port) const
 
 	return nullptr;
 }
+
+bool IStpProject::IsWireForwarding (IWire* wire, unsigned int vlanNumber, _Out_opt_ bool* isPartOfLoop) const
+{
+	if (isPartOfLoop)
+		*isPartOfLoop = false;
+
+	if (!std::holds_alternative<connected_wire_end>(wire->p0()) || !std::holds_alternative<connected_wire_end>(wire->p1()))
+		return false;
+
+	auto portA = std::get<connected_wire_end>(wire->p0());
+	auto portB = std::get<connected_wire_end>(wire->p1());
+	bool portAFw = portA->IsForwarding(vlanNumber);
+	bool portBFw = portB->IsForwarding(vlanNumber);
+	if (!portAFw || !portBFw)
+		return false;
+
+	if (isPartOfLoop != nullptr)
+	{
+		// Block the queried wire's reverse direction so the return path uses other wires.
+		std::unordered_set<IPort*> txPorts = { portB };
+
+		auto transmitsTo = [this, vlanNumber, &txPorts, targetPort=portA](auto& self, IPort* txPort) -> bool
+			{
+				if (txPort->IsForwarding(vlanNumber))
+				{
+					IPort* rx = find_connected_port(txPort);
+					if ((rx != nullptr) && rx->IsForwarding(vlanNumber))
+					{
+						txPorts.insert(txPort);
+
+						for (unsigned int i = 0; i < (unsigned int) rx->bridge()->PortCount(); i++)
+						{
+							IPort* otherTxPort = rx->bridge()->PortAt(i);
+							if ((i != rx->port_index()) && otherTxPort->IsForwarding(vlanNumber))
+							{
+								if (otherTxPort == targetPort)
+									return true;
+
+								if (txPorts.find(otherTxPort) != txPorts.end())
+									continue;
+
+								if (self(self, otherTxPort))
+									return true;
+							}
+						}
+					}
+				}
+
+				return false;
+			};
+
+		*isPartOfLoop = transmitsTo(transmitsTo, portA);
+	}
+
+	return true;
+}
+
+
 #pragma endregion
 
 struct ThemeColorProvider : ID2DThemeColorProvider, IConnectionPointContainer

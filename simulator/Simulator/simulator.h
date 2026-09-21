@@ -423,7 +423,6 @@ struct DECLSPEC_NOVTABLE DECLSPEC_UUID("D1B260C3-2943-49E8-B575-C614857FC163") I
 	virtual HRESULT STDMETHODCALLTYPE GetFilePath(BSTR* pbstrFilePath) = 0;
 	virtual HRESULT STDMETHODCALLTYPE Save (const wchar_t* path) = 0;
 	virtual HRESULT STDMETHODCALLTYPE Load (const wchar_t* path) = 0;
-	virtual bool IsWireForwarding (IWire* wire, uint32_t vlanNumber, _Out_opt_ bool* isPartOfLoop) const = 0;
 	virtual void pause_simulation() = 0;
 	virtual void resume_simulation() = 0;
 	virtual bool simulation_paused() const = 0;
@@ -444,6 +443,7 @@ struct DECLSPEC_NOVTABLE DECLSPEC_UUID("D1B260C3-2943-49E8-B575-C614857FC163") I
 
 	std::pair<IWire*, size_t> GetWireConnectedToPort (IPort* port) const;
 	IPort* find_connected_port (IPort* txPort) const;
+	bool IsWireForwarding (IWire* wire, uint32_t vlanNumber, _Out_opt_ bool* isPartOfLoop) const;
 };
 using project_factory_t = HRESULT(IStpProject**);
 HRESULT MakeProject (IStpProject** ppProject);
