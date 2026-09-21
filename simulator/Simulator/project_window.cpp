@@ -41,6 +41,7 @@ class ProjectWindowImpl : public IProjectWindow, IConnectionPointContainer, IPro
 
 	ISimulatorApp*        _app;
 	com_ptr<IStpProject>  _project;
+	com_ptr<IProjectAO>   _projectAO;
 	com_ptr<ISelection>   _selection;
 	HWND                  _hwnd;
 
@@ -1018,11 +1019,15 @@ public:
 	#pragma region IProjectWindowAO
 	virtual HRESULT STDMETHODCALLTYPE GetProject (IProjectAO** ppProjectAO) override
 	{
-		if (!ppProjectAO) return E_POINTER;
+		RETURN_HR_IF(E_POINTER, !ppProjectAO);
 		*ppProjectAO = nullptr;
 
-		// TODO: cache it
-		return CreateProjectAO(_project, ppProjectAO);
+		if (!_projectAO)
+		{
+			auto hr = CreateProjectAO(_project, &_projectAO); RETURN_IF_FAILED(hr);
+		}
+
+		return _projectAO.copy_to(ppProjectAO);
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE SelectBridge (IBridgeAO* bridgeAO) override
