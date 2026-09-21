@@ -23,7 +23,7 @@ static constexpr uint32_t max_vlan_number = 16;
 static constexpr wchar_t FileExtensionWithoutDot[] = L"stp";
 static constexpr wchar_t FileExtensionWithDot[] = L".stp";
 
-static constexpr wchar_t app_version_string[] = L"3.0";
+static constexpr wchar_t app_version_string[] = L"2.4";
 
 extern const char stp_disabled_text[];
 
