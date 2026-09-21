@@ -5,6 +5,7 @@
 #include "pch.h"
 #include "test_helpers.h"
 #include "internal/stp_bridge.h"
+#include "dispids.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -369,5 +370,62 @@ TEST_CLASS(port_tests)
 		STP_OnPortEnabled(bridge->stp_bridge(), 1, 100, true, 0);
 
 		Assert::IsFalse(*sink->bpduSourceAddresses[0] == *sink->bpduSourceAddresses[1]);
+	}
+
+	TEST_METHOD(PortNotifiesBeforeAndAfterAdminEdgeChanges)
+	{
+		class PropertyChangeSink : public IPropertyChangeSink
+		{
+		public:
+			ULONG refCount = 1;
+			WeakRefToThis weakRefToThis;
+			AdviseSinkToken token;
+			std::optional<DISPID> changingDispid;
+			std::optional<DISPID> changedDispid;
+
+			PropertyChangeSink(IPort* port)
+			{
+				auto hr = weakRefToThis.InitInstance(static_cast<IPropertyChangeSink*>(this)); Assert::AreEqual(S_OK, hr);
+				hr = AdviseSink<IPropertyChangeSink>(port, weakRefToThis, &token); Assert::AreEqual(S_OK, hr);
+				refCount--;
+			}
+
+			HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override
+			{
+				if (TryQI<IUnknown>(static_cast<IPropertyChangeSink*>(this), riid, ppvObject)
+					|| TryQI<IPropertyChangeSink>(this, riid, ppvObject))
+					return S_OK;
+
+				if (riid == __uuidof(IWeakRef))
+					return weakRefToThis.QueryIWeakRef(ppvObject);
+
+				return E_NOINTERFACE;
+			}
+
+			ULONG STDMETHODCALLTYPE AddRef() override { return ++refCount; }
+			ULONG STDMETHODCALLTYPE Release() override { return ReleaseST(this, refCount); }
+
+			HRESULT STDMETHODCALLTYPE OnPropertyChanging(IUnknown*, DISPID dispid, const PropertyChangeArgs*) override
+			{
+				changingDispid = dispid;
+				return S_OK;
+			}
+
+			HRESULT STDMETHODCALLTYPE OnPropertyChanged(IUnknown*, DISPID dispid, const PropertyChangeArgs*) override
+			{
+				changedDispid = dispid;
+				return S_OK;
+			}
+		};
+
+		auto bridge = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		auto sink = wil::com_ptr_failfast(new PropertyChangeSink(bridge->PortAt(0)));
+
+		STP_SetPortAdminEdge(bridge->stp_bridge(), 0, true, 0);
+
+		Assert::IsTrue(sink->changingDispid.has_value());
+		Assert::AreEqual((LONG)dispidAdminEdge, (LONG)*sink->changingDispid);
+		Assert::IsTrue(sink->changedDispid.has_value());
+		Assert::AreEqual((LONG)dispidAdminEdge, (LONG)*sink->changedDispid);
 	}
 };

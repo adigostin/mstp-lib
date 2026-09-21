@@ -662,6 +662,8 @@ void STP_SetPortAdminEdge (struct STP_BRIDGE* bridge, unsigned int portIndex, bo
 {
 	if (bridge->ports [portIndex]->AdminEdge != adminEdge)
 	{
+		if (bridge->propChanging)
+			bridge->propChanging(bridge, portIndex, -1, STP_PROPERTY_ADMIN_EDGE, timestamp);
 		bridge->ports [portIndex]->AdminEdge = adminEdge;
 		if (bridge->propChanged)
 			bridge->propChanged(bridge, portIndex, -1, STP_PROPERTY_ADMIN_EDGE, timestamp);

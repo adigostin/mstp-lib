@@ -590,27 +590,34 @@ public:
 	virtual IPortTree* treeAt(uint32_t i) override { return _trees[i]; }
 
 	#pragma region IStpPropertyChangedSink
-	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanging (IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override
-	{
-		// TODO:
-		return S_OK;
-	}
+	static inline const std::pair<STP_PROPERTY, DISPID> stpPropertyToDispidMap[] = {
+		{ STP_PROPERTY_ADMIN_EDGE,   dispidAdminEdge },
+		{ STP_PROPERTY_OPER_EDGE,    dispidOperEdge },
+		{ STP_PROPERTY_DETECTED_P2P, dispidPortDetectedP2P },
+		{ STP_PROPERTY_OPER_P2P,     dispidPortOperP2P },
+		{ STP_PROPERTY_ADMIN_P2P,    dispidPortAdminP2P },
+		{ STP_PROPERTY_PORT_ENABLED, dispidPortMacOperational },
+	};
 
-	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanged(IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override
+	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanging (IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override
 	{
 		// STP properties don't change that often, so it's acceptable for a UI port (PortImpl) to receive
 		// notifications for all STP properties and filter out the ones that are not relevant to it.
 		if (portIndex != _port_index || treeIndex != -1)
 			return S_OK;
 
-		static const std::pair<STP_PROPERTY, DISPID> stpPropertyToDispidMap[] = {
-			{ STP_PROPERTY_ADMIN_EDGE,   dispidAdminEdge },
-			{ STP_PROPERTY_OPER_EDGE,    dispidOperEdge },
-			{ STP_PROPERTY_DETECTED_P2P, dispidPortDetectedP2P },
-			{ STP_PROPERTY_OPER_P2P,     dispidPortOperP2P },
-			{ STP_PROPERTY_ADMIN_P2P,    dispidPortAdminP2P },
-			{ STP_PROPERTY_PORT_ENABLED, dispidPortMacOperational },
-		};
+		auto it = std::find_if(std::begin(stpPropertyToDispidMap), std::end(stpPropertyToDispidMap),
+			[prop](const auto& pair) { return pair.first == prop; });
+		if (it != std::end(stpPropertyToDispidMap))
+			return NotifyPropertyChanging(_propChangeCP, AsUnknown(), it->second);
+
+		return S_OK;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanged(IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override
+	{
+		if (portIndex != _port_index || treeIndex != -1)
+			return S_OK;
 
 		auto it = std::find_if(std::begin(stpPropertyToDispidMap), std::end(stpPropertyToDispidMap),
 			[prop](const auto& pair) { return pair.first == prop; });
