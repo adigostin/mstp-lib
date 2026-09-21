@@ -41,10 +41,11 @@ class create_bridge_es : public edit_state
 		if (_bridge)
 		{
 			size_t number_of_addresses_to_reserve = (_bridge->PortCount() + 15) / 16 * 16;
-			auto bridge_address = _project->alloc_mac_address_range(number_of_addresses_to_reserve);
+			mac_address bridge_address;
+			auto hr = _project->AllocMACAddressRange(number_of_addresses_to_reserve, bridge_address); LOG_HR_IF(hr, FAILED(hr));
 			com_ptr<IBridge> b;
 			// Make a new bridge with the correct MAC address so it gets a MST config name
-			auto hr = MakeBridge (_bridge->PortCount(), _bridge->msti_count(), bridge_address, &b); LOG_IF_FAILED(hr);
+			hr = MakeBridge (_bridge->PortCount(), _bridge->msti_count(), bridge_address, &b); LOG_IF_FAILED(hr);
 			b->set_stp_enabled(true);
 			b->set_location(_bridge->location());
 			_project->AddBridge(b);

@@ -52,8 +52,10 @@ public:
 
 		HRESULT hr;
 		DWORD rangeSize = (portCount + 15) & ~15; // Round up to the next multiple of 16 for the MAC address range.
+		mac_address bridgeAddress;
+		hr = _project->AllocMACAddressRange(rangeSize, bridgeAddress); LOG_HR_IF(hr, FAILED(hr));
 		com_ptr<IBridge> bridge;
-		hr = MakeBridge(portCount, mstiCount, _project->alloc_mac_address_range(rangeSize), &bridge); RETURN_IF_FAILED(hr);
+		hr = MakeBridge(portCount, mstiCount, bridgeAddress, &bridge); RETURN_IF_FAILED(hr);
 		com_ptr<IBridgeAO> bridgeAO;
 		hr = CreateBridgeAO(bridge, &bridgeAO); RETURN_IF_FAILED(hr);
 		hr = _project->AddBridge(bridge); RETURN_IF_FAILED(hr);

@@ -419,7 +419,7 @@ struct DECLSPEC_NOVTABLE DECLSPEC_UUID("B343DD08-210D-44E3-A759-4D3EB8918C3E") I
 
 struct DECLSPEC_NOVTABLE DECLSPEC_UUID("D1B260C3-2943-49E8-B575-C614857FC163") IStpProject : IUnknown, edge::string_convert_context_i
 {
-	virtual mac_address alloc_mac_address_range (size_t count) = 0;
+	virtual HRESULT STDMETHODCALLTYPE AllocMACAddressRange (size_t count, mac_address& addressOut) = 0;
 	virtual HRESULT STDMETHODCALLTYPE GetFilePath(BSTR* pbstrFilePath) = 0;
 	virtual HRESULT STDMETHODCALLTYPE Save (const wchar_t* path) = 0;
 	virtual HRESULT STDMETHODCALLTYPE Load (const wchar_t* path) = 0;

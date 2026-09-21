@@ -358,21 +358,23 @@ public:
 	#pragma endregion
 
 	// IStpProject
-	virtual mac_address alloc_mac_address_range (size_t count) override final
+	virtual HRESULT STDMETHODCALLTYPE AllocMACAddressRange (size_t count, mac_address& addressOut) override
 	{
-		if (count >= 128)
-			throw std::range_error("count must be lower than 128.");
+		RETURN_HR_IF(E_INVALIDARG, count >= 128);
 
-		auto result = _nextBridgeAddress;
-		_nextBridgeAddress[5] += (uint8_t)count;
-		if (_nextBridgeAddress[5] < count)
+		auto nextAddress = _nextBridgeAddress;
+		size_t increment = count;
+		for (size_t i = 6; i-- > 3 && increment; )
 		{
-			_nextBridgeAddress[4]++;
-			if (_nextBridgeAddress[4] == 0)
-				WI_ASSERT(false); // not implemented
+			uint16_t sum = nextAddress[i] + (increment & 0xff);
+			nextAddress[i] = (uint8_t)sum;
+			increment = (increment >> 8) + (sum >> 8);
 		}
+		RETURN_HR_IF(HRESULT_FROM_WIN32(ERROR_ARITHMETIC_OVERFLOW), increment != 0);
 
-		return result;
+		addressOut = _nextBridgeAddress;
+		_nextBridgeAddress = nextAddress;
+		return S_OK;
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE GetFilePath (BSTR* pbstrFilePath) override
