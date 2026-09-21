@@ -256,7 +256,6 @@
     </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="dispids.h" />
     <ClInclude Include="edit_states\edit_state.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="resource.h" />

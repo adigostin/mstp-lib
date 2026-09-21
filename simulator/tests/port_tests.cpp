@@ -5,7 +5,6 @@
 #include "pch.h"
 #include "test_helpers.h"
 #include "internal/stp_bridge.h"
-#include "dispids.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 

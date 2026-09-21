@@ -5,7 +5,6 @@
 #include "pch.h"
 #include "simulator.h"
 #include "edge/Z80Xml.h"
-#include "dispids.h"
 
 static constexpr float thickness = 2;
 

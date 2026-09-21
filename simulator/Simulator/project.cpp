@@ -4,7 +4,6 @@
 
 #include "pch.h"
 #include "simulator.h"
-#include "dispids.h"
 #include "edge/Z80Xml.h"
 #include "edge/unordered_map_nothrow.h"
 

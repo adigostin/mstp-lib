@@ -6,11 +6,13 @@ import "oaidl.idl";
 import "ocidl.idl";
 import "EdgeIDL.idl";
 
-#include "dispids.h"
 #include "edge/PropDefs.h"
 
 #define GUID_STRING_(x) "{" #x "}"
 #define GUID_STRING(x)  GUID_STRING_(x)
+
+#define guidMSTConfigIdEditor 533D2CFB-2CE4-46EF-97EC-D8126972EEEA
+cpp_quote("DEFINE_GUID(guidMSTConfigIdEditor, 0x533D2CFB, 0x2CE4, 0x46EF, 0x97, 0xEC, 0xD8, 0x12, 0x69, 0x72, 0xEE, 0xEA);")
 
 #define PropertyGroupMisc "Misc\\0"
 #define PropertyGroupTimerParams "Timer Params (Table 13-5)\\5"
@@ -20,6 +22,53 @@ import "EdgeIDL.idl";
 #define PropertyGroupRootPriorityVector "Root Priority Vector\\5"
 #define PropertyGroupRootTimes "Root Times\\10"
 
+const int dispidBridges      = 1;
+const int dispidWires        = 2;
+const int dispidPortTrees    = 3;
+const int dispidStpEnabled   = 4;
+const int dispidBridgeWidth  = 5;
+const int dispidBridgeHeight = 6;
+const int dispidPortAdminP2P = 7;
+const int dispidPortOperP2P  = 8;
+const int dispidBridgePrio   = 9;
+const int dispidAdminInternalPortPathCost = 10;
+const int dispidInternalPortPathCost      = 11;
+const int dispidMigrateTime               = 12;
+const int dispidBridgeHelloTime           = 13;
+const int dispidBridgeMaxAge              = 14;
+const int dispidBridgeForwardDelay        = 15;
+const int dispidTxHoldCount               = 16;
+const int dispidMaxHops                   = 17;
+const int dispidBridgeAddress             = 18;
+const int dispidStpVersion                = 19;
+const int dispidPortCount    = 20;
+const int dispidMstiCount    = 21;
+const int dispidMstConfigName      = 22;
+const int dispidMstConfigRevLevel  = 23;
+const int dispidMstConfigTable     = 24;
+const int dispidPortLearning   = 25;
+const int dispidPortForwarding = 26;
+const int dispidPortRole       = 27;
+const int dispidPortPriority   = 28;
+const int dispidSupportedSpeed = 29;
+const int dispidWireEndP0 = 30;
+const int dispidWireEndP1 = 31;
+const int dispidWireEndBridgeIndex = 32;
+const int dispidWireEndPortIndex   = 33;
+const int dispidWireEndX           = 34;
+const int dispidWireEndY           = 35;
+const int dispidBridgeX  = 36;
+const int dispidBridgeY  = 37;
+const int dispidTopologyChangeCount = 38;
+const int dispidAdminEdge           = 39;
+const int dispidOperEdge            = 40;
+const int dispidPorts               = 41;
+const int dispidBridgeTrees         = 42;
+const int dispidPortSide            = 43;
+const int dispidPortOffset          = 44;
+const int dispidPortActualSpeed     = 45;
+const int dispidPortMacOperational  = 46;
+const int dispidPortDetectedP2P     = 47;
 const int dispidRootId               = 48;
 const int dispidExternalRootPathCost = 49;
 const int dispidRegionalRootId       = 50;
@@ -265,7 +314,7 @@ library SimulatorLib
 			HRESULT MSTConfigRevLevel (WORD wRevLevel);
 
 		[propget, id(dispidMstConfigTable), custom(guidPropertyGroup, PropertyGroupMSTConfigID),
-			custom(guidPropertyCustomEditor, GUID_STRING(guidMSTConfigIdEditor))]
+           custom(guidPropertyCustomEditor, "{533D2CFB-2CE4-46EF-97EC-D8126972EEEA}")]
 			HRESULT MSTConfigDigest ([out, retval] BSTR* pbstrDigest);
 
 		[propget, id(dispidMstConfig), nonbrowsable]

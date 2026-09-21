@@ -5,7 +5,6 @@
 #include "pch.h"
 
 #include <initguid.h>
-#include "dispids.h"
 #include "edge/PropDefs.h"
 #include "SimulatorAO_h.h"
 #include "simulator.h"

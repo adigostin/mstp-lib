@@ -5,7 +5,6 @@
 #include "pch.h"
 #include "Simulator.h"
 #include "test_helpers.h"
-#include "dispids.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 

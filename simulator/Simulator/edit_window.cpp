@@ -6,7 +6,6 @@
 #include "simulator.h"
 #include "resource.h"
 #include "edit_states/edit_state.h"
-#include "dispids.h"
 
 using namespace D2D1;
 using namespace edge;

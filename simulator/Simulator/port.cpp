@@ -4,7 +4,6 @@
 
 #include "pch.h"
 #include "simulator.h"
-#include "dispids.h"
 #include "edge/Z80Xml.h"
 
 using namespace D2D1;
