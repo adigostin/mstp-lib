@@ -540,9 +540,9 @@ public:
 		for (ULONG i = 0; i < _project->WireCount(); i++)
 		{
 			auto* w = _project->WireAt(i);
-			bool hasLoop;
-			bool forwarding = _project->IsWireForwarding(w, vlan, &hasLoop);
-			w->render (dc, _drawing_resources, forwarding, hasLoop);
+			bool isPartOfLoop;
+			bool forwarding = _project->IsWireForwarding(w, vlan, &isPartOfLoop);
+			w->render (dc, _drawing_resources, forwarding, isPartOfLoop);
 		}
 
 		dc->SetTransform(oldtr);

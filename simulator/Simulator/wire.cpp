@@ -199,14 +199,14 @@ public:
 			return std::get<connected_wire_end>(_points[pointIndex])->GetCPLocation();
 	}
 
-	virtual void render (ID2D1RenderTarget* rt, const drawing_resources& dos, bool forwarding, bool hasLoop) const override
+	virtual void render (ID2D1RenderTarget* rt, const drawing_resources& dos, bool forwarding, bool isPartOfLoop) const override
 	{
 		float width = thickness;
 		ID2D1Brush* brush;
 
 		if (!forwarding)
 			brush = dos._brushNoForwardingWire;
-		else if (!hasLoop)
+		else if (!isPartOfLoop)
 			brush = dos._brushForwarding;
 		else
 		{

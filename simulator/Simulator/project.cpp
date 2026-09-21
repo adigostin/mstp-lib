@@ -358,10 +358,10 @@ public:
 	#pragma endregion
 
 	// IStpProject
-	virtual bool IsWireForwarding (IWire* wire, unsigned int vlanNumber, _Out_opt_ bool* hasLoop) const override final
+	virtual bool IsWireForwarding (IWire* wire, unsigned int vlanNumber, _Out_opt_ bool* isPartOfLoop) const override final
 	{
-		if (hasLoop)
-			*hasLoop = false;
+		if (isPartOfLoop)
+			*isPartOfLoop = false;
 
 		if (!std::holds_alternative<connected_wire_end>(wire->p0()) || !std::holds_alternative<connected_wire_end>(wire->p1()))
 			return false;
@@ -373,11 +373,12 @@ public:
 		if (!portAFw || !portBFw)
 			return false;
 
-		if (hasLoop != nullptr)
+		if (isPartOfLoop != nullptr)
 		{
-			std::unordered_set<IPort*> txPorts;
+			// Block the queried wire's reverse direction so the return path uses other wires.
+			std::unordered_set<IPort*> txPorts = { portB };
 
-			std::function<bool(IPort* txPort)> transmitsTo = [this, vlanNumber, &txPorts, &transmitsTo, targetPort=portA](IPort* txPort) -> bool
+			auto transmitsTo = [this, vlanNumber, &txPorts, targetPort=portA](auto& self, IPort* txPort) -> bool
 			{
 				if (txPort->IsForwarding(vlanNumber))
 				{
@@ -397,7 +398,7 @@ public:
 								if (txPorts.find(otherTxPort) != txPorts.end())
 									continue;
 
-								if (transmitsTo(otherTxPort))
+								if (self(self, otherTxPort))
 									return true;
 							}
 						}
@@ -407,7 +408,7 @@ public:
 				return false;
 			};
 
-			*hasLoop = transmitsTo(portA);
+			*isPartOfLoop = transmitsTo(transmitsTo, portA);
 		}
 
 		return true;

@@ -14,5 +14,7 @@
 - CRITICAL: Always use tabs (\t) for indentation, never spaces.
 - Don't suggest validating pointers with E_POINTER in COM methods of internal interfaces
   (the ones that are never remoted such as IBridge or IStpProject).
-- Use wil::com_ptr_failfast and don't check for out-of-memory condition in testing code.
+- Use wil::com_ptr_failfast in testing code.
+- In testing code, in the vast majority of cases the returned HR does not need checking,
+  because the test will fail after a few lines anyway, and that's acceptable in a test.
 - Give references to code as clickable links, not as file names and line numbers.

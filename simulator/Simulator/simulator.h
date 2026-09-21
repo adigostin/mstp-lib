@@ -91,7 +91,7 @@ struct DECLSPEC_NOVTABLE DECLSPEC_UUID("5338CBD3-FF51-4DF0-AE6A-D854EC4748FB") I
 
 	virtual POINT point_coords (size_t pointIndex) const noexcept = 0;
 
-	virtual void render (ID2D1RenderTarget* rt, const drawing_resources& dos, bool forwarding, bool hasLoop) const = 0;
+	virtual void render (ID2D1RenderTarget* rt, const drawing_resources& dos, bool forwarding, bool isPartOfLoop) const = 0;
 };
 
 HRESULT MakeWire (IWire** ppWire);
@@ -423,7 +423,7 @@ struct DECLSPEC_NOVTABLE DECLSPEC_UUID("D1B260C3-2943-49E8-B575-C614857FC163") I
 	virtual HRESULT STDMETHODCALLTYPE GetFilePath(BSTR* pbstrFilePath) = 0;
 	virtual HRESULT STDMETHODCALLTYPE Save (const wchar_t* path) = 0;
 	virtual HRESULT STDMETHODCALLTYPE Load (const wchar_t* path) = 0;
-	virtual bool IsWireForwarding (IWire* wire, uint32_t vlanNumber, _Out_opt_ bool* hasLoop) const = 0;
+	virtual bool IsWireForwarding (IWire* wire, uint32_t vlanNumber, _Out_opt_ bool* isPartOfLoop) const = 0;
 	virtual void pause_simulation() = 0;
 	virtual void resume_simulation() = 0;
 	virtual bool simulation_paused() const = 0;

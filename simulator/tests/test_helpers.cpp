@@ -111,6 +111,15 @@ bool exchange_bpdus (test_bridge& one, size_t one_port, test_bridge& other, size
 	return exchanged;
 };
 
+wil::com_ptr_failfast<IWire> ConnectPorts (IStpProject* project, IPort* p0, IPort* p1)
+{
+	auto wire = MakeWire();
+	wire->set_p0(p0);
+	wire->set_p1(p1);
+	project->AddWire(wire);
+	return wire;
+}
+
 TEST_MODULE_INITIALIZE(ModuleInitialize)
 {
 	wil::g_fBreakOnFailure = IsDebuggerPresent() != 0;

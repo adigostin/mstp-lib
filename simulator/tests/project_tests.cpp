@@ -366,22 +366,14 @@ public:
 		auto project = MakeProject();
 
 		auto bridgeA = MakeBridge(3, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
-		project->AddBridge(bridgeA);
 		auto bridgeB = MakeBridge(4, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x70 });
-		project->AddBridge(bridgeB);
 		auto bridgeC = MakeBridge(2, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x80 });
-		project->AddBridge(bridgeC);
 		auto deadEnd = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x90 });
-		project->AddBridge(deadEnd);
-
-		auto connect = [&project](IPort* p0, IPort* p1)
+		for (auto bridge : { bridgeA.get(), bridgeB.get(), bridgeC.get(), deadEnd.get() })
 		{
-			auto wire = MakeWire();
-			wire->set_p0(p0);
-			wire->set_p1(p1);
-			project->AddWire(wire);
-			return wire;
-		};
+			Assert::IsFalse(STP_IsBridgeStarted(bridge->stp_bridge()));
+			project->AddBridge(bridge);
+		}
 
 		// +----------+                +----------+    +----------+
 		// | bridgeA  |  queriedWire   | bridgeB  |    | bridgeC  |
@@ -394,16 +386,58 @@ public:
 		// |    0     |
 		// | deadEnd  |
 		// +----------+
-		auto queriedWire = connect(bridgeA->PortAt(2), bridgeB->PortAt(0));
-		connect(bridgeB->PortAt(1), bridgeC->PortAt(0));
-		connect(bridgeC->PortAt(1), bridgeB->PortAt(3));
-		connect(bridgeB->PortAt(2), bridgeA->PortAt(1));
-		connect(bridgeA->PortAt(0), deadEnd->PortAt(0));
+		auto queriedWire = ConnectPorts(project, bridgeA->PortAt(2), bridgeB->PortAt(0));
+		ConnectPorts(project, bridgeB->PortAt(1), bridgeC->PortAt(0));
+		ConnectPorts(project, bridgeC->PortAt(1), bridgeB->PortAt(3));
+		ConnectPorts(project, bridgeB->PortAt(2), bridgeA->PortAt(1));
+		ConnectPorts(project, bridgeA->PortAt(0), deadEnd->PortAt(0));
 
 		// The B-C detour visits A's dead-end port before the search reaches A through
 		// the second A-B wire. Skipping that visited port must still allow closing the loop at A:2.
-		bool hasLoop = false;
-		Assert::IsTrue(project->IsWireForwarding(queriedWire, 1, &hasLoop));
-		Assert::IsTrue(hasLoop, L"A visited port must not hide the loop through a later port.");
+		bool isPartOfLoop = false;
+		Assert::IsTrue(project->IsWireForwarding(queriedWire, 1, &isPartOfLoop));
+		Assert::IsTrue(isPartOfLoop, L"A visited port must not hide the loop through a later port.");
+	}
+
+	TEST_METHOD(IsWireForwardingDoesNotMarkWireJoiningSeparateCycles)
+	{
+		auto project = MakeProject();
+
+		auto bridgeA = MakeBridge(2, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		auto bridgeB = MakeBridge(3, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x70 });
+		auto bridgeC = MakeBridge(3, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x80 });
+		auto bridgeD = MakeBridge(2, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x90 });
+		for (auto bridge : { bridgeA.get(), bridgeB.get(), bridgeC.get(), bridgeD.get() })
+		{
+			Assert::IsFalse(STP_IsBridgeStarted(bridge->stp_bridge()));
+			project->AddBridge(bridge);
+		}
+
+		// +----------+    +----------+                  +----------+    +----------+
+		// | bridgeA  |    | bridgeB  |   queriedWire    | bridgeC  |    | bridgeD  |
+		// |        0 +----+ 0      2 +------------------+ 2      0 +----+ 0        |
+		// |        1 +----+ 1        |                  |        1 +----+ 1        |
+		// +----------+    +----------+                  +----------+    +----------+
+		ConnectPorts(project, bridgeA->PortAt(0), bridgeB->PortAt(0));
+		ConnectPorts(project, bridgeA->PortAt(1), bridgeB->PortAt(1));
+		ConnectPorts(project, bridgeC->PortAt(0), bridgeD->PortAt(0));
+		ConnectPorts(project, bridgeC->PortAt(1), bridgeD->PortAt(1));
+		auto queriedWire = ConnectPorts(project, bridgeB->PortAt(2), bridgeC->PortAt(2));
+
+		for (ULONG i = 0; i < 4; i++)
+		{
+			bool isPartOfLoop = false;
+			Assert::IsTrue(project->IsWireForwarding(project->WireAt(i), 1, &isPartOfLoop));
+			Assert::IsTrue(isPartOfLoop, L"Each wire within a parallel pair belongs to a cycle.");
+		}
+
+		for (bool reverse : { false, true })
+		{
+			queriedWire->set_p0(reverse ? bridgeC->PortAt(2) : bridgeB->PortAt(2));
+			queriedWire->set_p1(reverse ? bridgeB->PortAt(2) : bridgeC->PortAt(2));
+			bool isPartOfLoop = true;
+			Assert::IsTrue(project->IsWireForwarding(queriedWire, 1, &isPartOfLoop));
+			Assert::IsFalse(isPartOfLoop, L"The only wire joining two separate cycles does not belong to a cycle.");
+		}
 	}
 };

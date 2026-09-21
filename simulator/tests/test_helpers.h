@@ -204,6 +204,8 @@ inline wil::com_ptr_failfast<IWire> MakeWire()
 	return w;
 }
 
+wil::com_ptr_failfast<IWire> ConnectPorts (IStpProject* project, IPort* p0, IPort* p1);
+
 inline wil::com_ptr_failfast<IStpProject> MakeProject()
 {
 	wil::com_ptr_failfast<IStpProject> p;
