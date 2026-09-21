@@ -111,12 +111,12 @@ struct TreeSelection : IObjectList, IConnectionPointContainer, IObjectCollection
 	}
 
 	#pragma region IObjectList
-	virtual uint32_t size() const override
+	virtual uint32_t ObjectCount() const override
 	{
 		return _selection->size();
 	}
 
-	virtual IDispatch* operator[](uint32_t index) const override
+	virtual IDispatch* ObjectAt (uint32_t index) const override
 	{
 		IDispatch* outer = _selection->ObjectAt(index);
 		if (auto b = wil::try_com_query_nothrow<IBridge>(outer))

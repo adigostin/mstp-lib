@@ -16,11 +16,12 @@ namespace edge
 
 	struct DECLSPEC_NOVTABLE DECLSPEC_UUID("17E0F04B-DCFF-4D00-9456-7C0D9FF85BC7") IObjectList : IUnknown
 	{
-		virtual uint32_t size() const = 0;
-		virtual IDispatch* operator[](uint32_t index) const = 0;
+		virtual uint32_t ObjectCount() const = 0;
+		virtual IDispatch* ObjectAt (uint32_t index) const = 0;
 		virtual HRESULT STDMETHODCALLTYPE GetListTitle(BSTR* pbstrTitle) noexcept = 0;
 
-		IDispatch* ObjectAt (uint32_t index) const { return this->operator[](index); }
+		uint32_t size() const { return ObjectCount(); }
+		IDispatch* operator[] (uint32_t index) const { return ObjectAt(index); }
 
 		class iterator
 		{

@@ -241,8 +241,8 @@ public:
 	#pragma endregion
 
 	#pragma region IObjectList
-	virtual uint32_t size() const override final { return _parent->parent()->objects()->size(); }
-	virtual IDispatch* operator[](uint32_t index) const override final
+	virtual uint32_t ObjectCount() const override final { return _parent->parent()->objects()->size(); }
+	virtual IDispatch* ObjectAt (uint32_t index) const override final
 	{
 		_ASSERT(false); return { };
 		//return _prop->get(_parent->parent()->objects()[index]);

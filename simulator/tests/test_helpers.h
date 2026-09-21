@@ -281,8 +281,8 @@ public:
 	#pragma endregion
 
 	#pragma region IObjectList
-	uint32_t size() const override { return _objects.size(); }
-	IDispatch* operator[](uint32_t index) const override { return _objects[index]; }
+	uint32_t ObjectCount() const override { return _objects.size(); }
+	IDispatch* ObjectAt (uint32_t index) const override { return _objects[index]; }
 	HRESULT STDMETHODCALLTYPE GetListTitle(BSTR* pbstrTitle) noexcept override
 	{
 		*pbstrTitle = SysAllocString(L"Test objects");

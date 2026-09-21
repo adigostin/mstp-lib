@@ -126,9 +126,9 @@ public:
 	#pragma endregion
 
 	#pragma region IObjectList
-	virtual uint32_t size() const override { return _objects.size(); }
+	virtual uint32_t ObjectCount() const override { return _objects.size(); }
 	
-	virtual IDispatch* operator[](uint32_t index) const override { return _objects[index]; }
+	virtual IDispatch* ObjectAt (uint32_t index) const override { return _objects[index]; }
 
 	virtual HRESULT STDMETHODCALLTYPE GetListTitle (BSTR* pbstrTitle) noexcept override
 	{
