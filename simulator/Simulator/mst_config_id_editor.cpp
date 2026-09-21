@@ -66,8 +66,7 @@ public:
 
 	virtual ULONG STDMETHODCALLTYPE Release() override { return ReleaseST(this, _refCount); }
 	#pragma endregion
-
-/*
+	/*
 	void on_project_property_changing (IDispatch* o, const edge::property_change_args& args)
 	{
 		if (args.property == _project->bridges_property())
@@ -81,8 +80,8 @@ public:
 			}
 		}
 	}
-*/
-	virtual HRESULT STDMETHODCALLTYPE ShowModal (HWND hWndParent, VARIANT* pvarSelectedValue) override
+	*/
+	virtual HRESULT STDMETHODCALLTYPE ShowModal (HWND hWndParent, VARIANT* pvarSelectedValue, bool readOnly) override
 	{
 		INT_PTR dr = DialogBoxParam (GetModuleHandle(nullptr), MAKEINTRESOURCE(IDD_DIALOG_MST_CONFIG_ID), hWndParent, &DialogProcStatic, (LPARAM) this);
 		if (dr == IDOK)

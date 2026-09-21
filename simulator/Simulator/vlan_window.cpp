@@ -271,7 +271,7 @@ public:
 					com_ptr<pg::ICustomPropertyEditor> editor;
 					auto hr = CreateMSTConfigIdEditor(_selection, &editor); _ASSERT(SUCCEEDED(hr));
 					wil::unique_variant unused;
-					hr = editor->ShowModal (_hwnd, &unused); _ASSERT(SUCCEEDED(hr));
+					hr = editor->ShowModal (_hwnd, &unused, false); _ASSERT(SUCCEEDED(hr));
 				}
 				else
 					MessageBox (_hwnd, L"Select some bridges or ports first.", _app->app_name(), 0);

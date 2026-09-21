@@ -32,12 +32,6 @@ public:
 		return S_OK;
 	}
 
-	~selection()
-	{
-		// TODO: remove this
-		Clear();
-	}
-
 	IUnknown* AsUnknown() { return static_cast<ISelection*>(this); }
 	#pragma region IUnknown
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override

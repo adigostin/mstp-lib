@@ -112,7 +112,7 @@ struct CreateAncestors
 
 	~CreateAncestors()
 	{
-		WI_ASSERT(!insideElement);
+		_ASSERT(!insideElement);
 	}
 };
 
@@ -724,10 +724,9 @@ static HRESULT LoadFromXmlInternal (IDispatch* parent, MEMBERID memid, IXmlReade
 
 		DISPID named = DISPID_PROPERTYPUT;
 		DISPPARAMS params = { .rgvarg = &valueVariant, .rgdispidNamedArgs=&named, .cArgs = 1, .cNamedArgs = 1 };
-		wil::unique_variant result; // TODO: get rid of this
 		EXCEPINFO exception;
 		UINT uArgErr;
-		hr = typeInfo->Invoke(obj, memid, DISPATCH_PROPERTYPUT, &params, &result, &exception, &uArgErr); RETURN_IF_FAILED(hr);
+		hr = typeInfo->Invoke(obj, memid, DISPATCH_PROPERTYPUT, &params, nullptr, &exception, &uArgErr); RETURN_IF_FAILED(hr);
 
 		hrMoveToAttribute = reader->MoveToNextAttribute();
 	}
@@ -802,10 +801,9 @@ static HRESULT LoadFromXmlInternal (IDispatch* parent, MEMBERID memid, IXmlReade
 						sa = nullptr;
 						DISPID named = DISPID_PROPERTYPUT;
 						DISPPARAMS params = { .rgvarg = &value, .rgdispidNamedArgs=&named, .cArgs = 1, .cNamedArgs = 1 };
-						wil::unique_variant result;
 						EXCEPINFO exception;
 						UINT uArgErr;
-						hr = typeInfo->Invoke (obj, memid, DISPATCH_PROPERTYPUT, &params, &result, &exception, &uArgErr); RETURN_IF_FAILED(hr);
+						hr = typeInfo->Invoke (obj, memid, DISPATCH_PROPERTYPUT, &params, nullptr, &exception, &uArgErr); RETURN_IF_FAILED(hr);
 					}
 					else
 					{
@@ -856,9 +854,7 @@ static HRESULT LoadFromXmlInternal (IDispatch* parent, MEMBERID memid, IXmlReade
 				break;
 			}
 			else
-			{
-				WI_ASSERT(false); // TODO
-			}
+				RETURN_HR(E_NOTIMPL);
 		}
 	}
 

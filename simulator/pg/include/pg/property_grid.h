@@ -15,7 +15,7 @@ namespace pg
 	struct DECLSPEC_NOVTABLE DECLSPEC_UUID("328BCEDB-8816-4A8A-95E3-A79368998CD8") ICustomPropertyEditor : IUnknown
 	{
 		// Returns S_OK if the user selected a value, S_FALSE if the user cancelled, or an error code.
-		virtual HRESULT STDMETHODCALLTYPE ShowModal (HWND hWndParent, VARIANT* pvarSelectedValue) = 0;
+		virtual HRESULT STDMETHODCALLTYPE ShowModal (HWND hWndParent, VARIANT* pvarSelectedValue, bool readOnly) = 0;
 		virtual HRESULT STDMETHODCALLTYPE Cancel() = 0;
 	};
 

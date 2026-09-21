@@ -386,23 +386,21 @@ public:
 		if (ma.pt.x < vcx)
 			return S_FALSE;
 
-		if (grid->read_only())
-			return S_OK;
+		bool readOnly = grid->read_only() || (_setterFuncIndex == (WORD)-1);
 
 		if (_editorGuid != CLSID_NULL)
 		{
 			com_ptr<ICustomPropertyEditorFactory> factory;
 			hr = CoGetClassObject (_editorGuid, CLSCTX_INPROC_SERVER, 0, IID_PPV_ARGS(&factory)); RETURN_IF_FAILED(hr);
 
-			// TODO: pass the read_only flag to the editor.
 			com_ptr<ICustomPropertyEditor> editor;
 			factory->CreateEditor(_parent->parent()->objects(), &editor);
 			wil::unique_variant selectedValue;
-			editor->ShowModal(grid->HWnd(), &selectedValue);
+			editor->ShowModal(grid->HWnd(), &selectedValue, readOnly);
 			return S_OK;
 		}
 
-		if (_setterFuncIndex == (WORD)-1)
+		if (readOnly)
 			return S_OK;
 
 		if (_vartype == VT_BOOL)

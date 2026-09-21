@@ -148,7 +148,7 @@ struct ObjectItemChildManager : IObjectItemChildManager, IPropertyChangeSink, IO
 			hr = ti->GetTypeAttr(&ta); RETURN_IF_FAILED(hr);
 			auto releaseTA = wil::scope_exit([&ti,ta] { ti->ReleaseTypeAttr(ta); });
 			if (!IsEqualGUID(typeAttr->guid, ta->guid))
-				return S_OK; // TODO: signal somehow "multiple selection"
+				return S_OK; // Not going to handle multiple types selected, so just return an empty group list.
 		}
 
 		com_ptr<ITypeInfo2> ti2;
