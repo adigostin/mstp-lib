@@ -1,243 +1,241 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-	<ItemGroup Label="ProjectConfigurations">
-		<ProjectConfiguration Include="Debug|Win32">
-			<Configuration>Debug</Configuration>
-			<Platform>Win32</Platform>
-		</ProjectConfiguration>
-		<ProjectConfiguration Include="Release|Win32">
-			<Configuration>Release</Configuration>
-			<Platform>Win32</Platform>
-		</ProjectConfiguration>
-		<ProjectConfiguration Include="Debug|x64">
-			<Configuration>Debug</Configuration>
-			<Platform>x64</Platform>
-		</ProjectConfiguration>
-		<ProjectConfiguration Include="Release|x64">
-			<Configuration>Release</Configuration>
-			<Platform>x64</Platform>
-		</ProjectConfiguration>
-	</ItemGroup>
-	<PropertyGroup Label="Globals">
-		<VCProjectVersion>16.0</VCProjectVersion>
-		<Keyword>Win32Proj</Keyword>
-		<ProjectGuid>{5febb259-c93f-4322-a965-7944208f3d28}</ProjectGuid>
-		<RootNamespace>pg</RootNamespace>
-		<WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-		<ProjectName>pg</ProjectName>
-	</PropertyGroup>
-	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-		<ConfigurationType>StaticLibrary</ConfigurationType>
-		<UseDebugLibraries>true</UseDebugLibraries>
-		<PlatformToolset>v143</PlatformToolset>
-		<CharacterSet>Unicode</CharacterSet>
-	</PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-		<ConfigurationType>StaticLibrary</ConfigurationType>
-		<UseDebugLibraries>false</UseDebugLibraries>
-		<PlatformToolset>v143</PlatformToolset>
-		<WholeProgramOptimization>true</WholeProgramOptimization>
-		<CharacterSet>Unicode</CharacterSet>
-	</PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-		<ConfigurationType>StaticLibrary</ConfigurationType>
-		<UseDebugLibraries>true</UseDebugLibraries>
-		<PlatformToolset>v143</PlatformToolset>
-		<CharacterSet>Unicode</CharacterSet>
-	</PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-		<ConfigurationType>StaticLibrary</ConfigurationType>
-		<UseDebugLibraries>false</UseDebugLibraries>
-		<PlatformToolset>v143</PlatformToolset>
-		<WholeProgramOptimization>true</WholeProgramOptimization>
-		<CharacterSet>Unicode</CharacterSet>
-	</PropertyGroup>
-	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-	<ImportGroup Label="ExtensionSettings">
-	</ImportGroup>
-	<ImportGroup Label="Shared">
-	</ImportGroup>
-	<ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-		<Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-	</ImportGroup>
-	<ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-		<Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-	</ImportGroup>
-	<ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-		<Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-	</ImportGroup>
-	<ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-		<Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-	</ImportGroup>
-	<PropertyGroup Label="UserMacros" />
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-		<LinkIncremental>true</LinkIncremental>
-		<IncludePath>$(SolutionDir)wil\include;$(IncludePath)</IncludePath>
-		<ExternalIncludePath>$(SolutionDir)wil\include;$(ExternalIncludePath)</ExternalIncludePath>
-		<UseStructuredOutput>false</UseStructuredOutput>
-	</PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-		<LinkIncremental>false</LinkIncremental>
-		<IncludePath>$(SolutionDir)wil\include;$(IncludePath)</IncludePath>
-		<ExternalIncludePath>$(SolutionDir)wil\include;$(ExternalIncludePath)</ExternalIncludePath>
-		<UseStructuredOutput>false</UseStructuredOutput>
-	</PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-		<LinkIncremental>true</LinkIncremental>
-		<IncludePath>$(SolutionDir)wil\include;$(IncludePath)</IncludePath>
-		<ExternalIncludePath>$(SolutionDir)wil\include;$(ExternalIncludePath)</ExternalIncludePath>
-		<UseStructuredOutput>false</UseStructuredOutput>
-	</PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-		<LinkIncremental>false</LinkIncremental>
-		<IncludePath>$(SolutionDir)wil\include;$(IncludePath)</IncludePath>
-		<ExternalIncludePath>$(SolutionDir)wil\include;$(ExternalIncludePath)</ExternalIncludePath>
-		<UseStructuredOutput>false</UseStructuredOutput>
-	</PropertyGroup>
-	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-		<ClCompile>
-			<WarningLevel>Level3</WarningLevel>
-			<PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-			<ConformanceMode>true</ConformanceMode>
-			<PrecompiledHeader>Use</PrecompiledHeader>
-			<PrecompiledHeaderFile>$(ProjectDir)pch.h</PrecompiledHeaderFile>
-			<LanguageStandard>stdcpp20</LanguageStandard>
-			<MultiProcessorCompilation>true</MultiProcessorCompilation>
-			<StringPooling>true</StringPooling>
-			<BufferSecurityCheck>false</BufferSecurityCheck>
-			<RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-			<AdditionalIncludeDirectories>$(ProjectDir)..\edge\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-			<ForcedIncludeFiles>$(ProjectDir)pch.h</ForcedIncludeFiles>
-			<SupportJustMyCode>false</SupportJustMyCode>
-			<ExceptionHandling>false</ExceptionHandling>
-			<RuntimeTypeInfo>false</RuntimeTypeInfo>
-		</ClCompile>
-		<Link>
-			<SubSystem>
-			</SubSystem>
-			<GenerateDebugInformation>true</GenerateDebugInformation>
-		</Link>
-		<Lib>
-			<AdditionalDependencies>Propsys.lib;Msimg32.lib;UxTheme.lib;%(AdditionalDependencies)</AdditionalDependencies>
-			<AdditionalOptions>/ignore:4006 %(AdditionalOptions)</AdditionalOptions>
-		</Lib>
-	</ItemDefinitionGroup>
-	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-		<ClCompile>
-			<WarningLevel>Level3</WarningLevel>
-			<FunctionLevelLinking>true</FunctionLevelLinking>
-			<IntrinsicFunctions>true</IntrinsicFunctions>
-			<PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-			<ConformanceMode>true</ConformanceMode>
-			<PrecompiledHeader>Use</PrecompiledHeader>
-			<PrecompiledHeaderFile>$(ProjectDir)pch.h</PrecompiledHeaderFile>
-			<LanguageStandard>stdcpp20</LanguageStandard>
-			<MultiProcessorCompilation>true</MultiProcessorCompilation>
-			<StringPooling>true</StringPooling>
-			<BufferSecurityCheck>false</BufferSecurityCheck>
-			<RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-			<AdditionalIncludeDirectories>$(ProjectDir)..\edge\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-			<ForcedIncludeFiles>$(ProjectDir)pch.h</ForcedIncludeFiles>
-			<ExceptionHandling>false</ExceptionHandling>
-			<RuntimeTypeInfo>false</RuntimeTypeInfo>
-		</ClCompile>
-		<Link>
-			<SubSystem>
-			</SubSystem>
-			<EnableCOMDATFolding>true</EnableCOMDATFolding>
-			<OptimizeReferences>true</OptimizeReferences>
-			<GenerateDebugInformation>true</GenerateDebugInformation>
-		</Link>
-		<Lib>
-			<AdditionalDependencies>Propsys.lib;Msimg32.lib;UxTheme.lib;%(AdditionalDependencies)</AdditionalDependencies>
-			<AdditionalOptions>/ignore:4006 %(AdditionalOptions)</AdditionalOptions>
-		</Lib>
-	</ItemDefinitionGroup>
-	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-		<ClCompile>
-			<WarningLevel>Level3</WarningLevel>
-			<PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-			<ConformanceMode>true</ConformanceMode>
-			<PrecompiledHeader>Use</PrecompiledHeader>
-			<PrecompiledHeaderFile>$(ProjectDir)pch.h</PrecompiledHeaderFile>
-			<LanguageStandard>stdcpp20</LanguageStandard>
-			<MultiProcessorCompilation>true</MultiProcessorCompilation>
-			<StringPooling>true</StringPooling>
-			<BufferSecurityCheck>false</BufferSecurityCheck>
-			<RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-			<AdditionalIncludeDirectories>$(ProjectDir)..\edge\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-			<ForcedIncludeFiles>$(ProjectDir)pch.h</ForcedIncludeFiles>
-			<SupportJustMyCode>false</SupportJustMyCode>
-			<ExceptionHandling>false</ExceptionHandling>
-			<RuntimeTypeInfo>false</RuntimeTypeInfo>
-		</ClCompile>
-		<Link>
-			<SubSystem>
-			</SubSystem>
-			<GenerateDebugInformation>true</GenerateDebugInformation>
-		</Link>
-		<Lib>
-			<AdditionalDependencies>Propsys.lib;Msimg32.lib;UxTheme.lib;%(AdditionalDependencies)</AdditionalDependencies>
-			<AdditionalOptions>/ignore:4006 %(AdditionalOptions)</AdditionalOptions>
-		</Lib>
-	</ItemDefinitionGroup>
-	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-		<ClCompile>
-			<WarningLevel>Level3</WarningLevel>
-			<FunctionLevelLinking>true</FunctionLevelLinking>
-			<IntrinsicFunctions>true</IntrinsicFunctions>
-			<PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-			<ConformanceMode>true</ConformanceMode>
-			<PrecompiledHeader>Use</PrecompiledHeader>
-			<PrecompiledHeaderFile>$(ProjectDir)pch.h</PrecompiledHeaderFile>
-			<LanguageStandard>stdcpp20</LanguageStandard>
-			<MultiProcessorCompilation>true</MultiProcessorCompilation>
-			<StringPooling>true</StringPooling>
-			<BufferSecurityCheck>false</BufferSecurityCheck>
-			<RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-			<AdditionalIncludeDirectories>$(ProjectDir)..\edge\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-			<ForcedIncludeFiles>$(ProjectDir)pch.h</ForcedIncludeFiles>
-			<ExceptionHandling>false</ExceptionHandling>
-			<RuntimeTypeInfo>false</RuntimeTypeInfo>
-		</ClCompile>
-		<Link>
-			<SubSystem>
-			</SubSystem>
-			<EnableCOMDATFolding>true</EnableCOMDATFolding>
-			<OptimizeReferences>true</OptimizeReferences>
-			<GenerateDebugInformation>true</GenerateDebugInformation>
-		</Link>
-		<Lib>
-			<AdditionalDependencies>Propsys.lib;Msimg32.lib;UxTheme.lib;%(AdditionalDependencies)</AdditionalDependencies>
-			<AdditionalOptions>/ignore:4006 %(AdditionalOptions)</AdditionalOptions>
-		</Lib>
-	</ItemDefinitionGroup>
-	<ItemGroup>
-		<ClInclude Include="pg_internal.h" />
-		<ClInclude Include="object_item.h" />
-		<ClInclude Include="pch.h" />
-		<ClInclude Include="include\pg\property_grid.h" />
-	</ItemGroup>
-	<ItemGroup>
-		<ClCompile Include="group_item.cpp" />
-		<ClCompile Include="object_collection_item.cpp" />
-		<ClCompile Include="collection_new_child_item.cpp" />
-		<ClCompile Include="object_item.cpp" />
-		<ClCompile Include="object_property_item.cpp" />
-		<ClCompile Include="pch.cpp">
-			<PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
-			<PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-			<PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
-			<PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-		</ClCompile>
-		<ClCompile Include="property_grid.cpp" />
-		<ClCompile Include="root_item.cpp" />
-		<ClCompile Include="value_collection_child_item.cpp" />
-		<ClCompile Include="value_collection_item.cpp" />
-		<ClCompile Include="value_property_item.cpp" />
-	</ItemGroup>
-	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-	<ImportGroup Label="ExtensionTargets">
-	</ImportGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{5febb259-c93f-4322-a965-7944208f3d28}</ProjectGuid>
+    <RootNamespace>pg</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>pg</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(SolutionDir)wil\include;$(IncludePath)</IncludePath>
+    <ExternalIncludePath>$(SolutionDir)wil\include;$(ExternalIncludePath)</ExternalIncludePath>
+    <UseStructuredOutput>false</UseStructuredOutput>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <IncludePath>$(SolutionDir)wil\include;$(IncludePath)</IncludePath>
+    <ExternalIncludePath>$(SolutionDir)wil\include;$(ExternalIncludePath)</ExternalIncludePath>
+    <UseStructuredOutput>false</UseStructuredOutput>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(SolutionDir)wil\include;$(IncludePath)</IncludePath>
+    <ExternalIncludePath>$(SolutionDir)wil\include;$(ExternalIncludePath)</ExternalIncludePath>
+    <UseStructuredOutput>false</UseStructuredOutput>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <IncludePath>$(SolutionDir)wil\include;$(IncludePath)</IncludePath>
+    <ExternalIncludePath>$(SolutionDir)wil\include;$(ExternalIncludePath)</ExternalIncludePath>
+    <UseStructuredOutput>false</UseStructuredOutput>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>$(ProjectDir)pch.h</PrecompiledHeaderFile>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <StringPooling>true</StringPooling>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\edge\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ForcedIncludeFiles>$(ProjectDir)pch.h</ForcedIncludeFiles>
+      <SupportJustMyCode>false</SupportJustMyCode>
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+    </ClCompile>
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Lib>
+      <AdditionalDependencies>Propsys.lib;Msimg32.lib;UxTheme.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/ignore:4006 %(AdditionalOptions)</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>$(ProjectDir)pch.h</PrecompiledHeaderFile>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <StringPooling>true</StringPooling>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\edge\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ForcedIncludeFiles>$(ProjectDir)pch.h</ForcedIncludeFiles>
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+    </ClCompile>
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Lib>
+      <AdditionalDependencies>Propsys.lib;Msimg32.lib;UxTheme.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/ignore:4006 %(AdditionalOptions)</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>$(ProjectDir)pch.h</PrecompiledHeaderFile>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <StringPooling>true</StringPooling>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\edge\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ForcedIncludeFiles>$(ProjectDir)pch.h</ForcedIncludeFiles>
+      <SupportJustMyCode>false</SupportJustMyCode>
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+    </ClCompile>
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Lib>
+      <AdditionalDependencies>Propsys.lib;Msimg32.lib;UxTheme.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/ignore:4006 %(AdditionalOptions)</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>$(ProjectDir)pch.h</PrecompiledHeaderFile>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <StringPooling>true</StringPooling>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\edge\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ForcedIncludeFiles>$(ProjectDir)pch.h</ForcedIncludeFiles>
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+    </ClCompile>
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Lib>
+      <AdditionalDependencies>Propsys.lib;Msimg32.lib;UxTheme.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/ignore:4006 %(AdditionalOptions)</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="pg_internal.h" />
+    <ClInclude Include="object_item.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="include\pg\property_grid.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="group_item.cpp" />
+    <ClCompile Include="object_collection_item.cpp" />
+    <ClCompile Include="collection_new_child_item.cpp" />
+    <ClCompile Include="object_item.cpp" />
+    <ClCompile Include="object_property_item.cpp" />
+    <ClCompile Include="pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="property_grid.cpp" />
+    <ClCompile Include="root_item.cpp" />
+    <ClCompile Include="value_collection_child_item.cpp" />
+    <ClCompile Include="value_collection_item.cpp" />
+    <ClCompile Include="value_property_item.cpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
 </Project>

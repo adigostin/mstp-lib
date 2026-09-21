@@ -57,7 +57,7 @@ struct STP_CALLBACKS
 	STP_CALLBACK_FLUSH_FDB                   flushFdb;
 	STP_CALLBACK_DEBUG_STR_OUT               debugStrOut;
 	STP_CALLBACK_ON_TOPOLOGY_CHANGE          onTopologyChange;
-	STP_CALLBACK_PORT_ROLE_CHANGED           onPortRoleChangedDeprecated;
+	STP_CALLBACK_PORT_ROLE_CHANGED           onPortRoleChanged; // deprecated, use STP_CALLBACK_PROPERTY_CHANGE instead
 	STP_CALLBACK_ALLOC_AND_ZERO_MEMORY       allocAndZeroMemory;
 	STP_CALLBACK_FREE_MEMORY                 freeMemory;
 };
@@ -101,27 +101,6 @@ struct STP_BRIDGE_ADDRESS
 	bool operator== (const STP_BRIDGE_ADDRESS& rhs) const;
 	bool operator!= (const STP_BRIDGE_ADDRESS& rhs) const;
 	#endif
-};
-
-enum STP_PROPERTY
-{
-	STP_PROPERTY_ADMIN_EDGE,
-	STP_PROPERTY_OPER_EDGE,
-	STP_PROPERTY_DETECTED_P2P,
-	STP_PROPERTY_ADMIN_P2P,
-	STP_PROPERTY_OPER_P2P,
-	STP_PROPERTY_PORT_ENABLED,
-	STP_PROPERTY_PORT_ROLE,
-	STP_PROPERTY_MST_CONFIG_NAME,
-	STP_PROPERTY_MST_CONFIG_REVISION_LEVEL,
-	STP_PROPERTY_MST_CONFIG_TABLE,
-	STP_PROPERTY_ROOT_PRIORITY_VECTOR,
-	STP_PROPERTY_ROOT_TIMES,
-	STP_PROPERTY_BRIDGE_STARTED,
-	STP_PROPERTY_STP_VERSION,
-	STP_PROPERTY_DETECTED_PORT_PATH_COST,
-	STP_PROPERTY_EXTERNAL_PORT_PATH_COST,
-	STP_PROPERTY_INTERNAL_PORT_PATH_COST,
 };
 
 #ifdef __cplusplus
@@ -282,6 +261,28 @@ unsigned int STP_GetTxCount (const struct STP_BRIDGE* bridge, unsigned int portI
 void  STP_SetApplicationContext (struct STP_BRIDGE* bridge, void* applicationContext);
 void* STP_GetApplicationContext (const struct STP_BRIDGE* bridge);
 
+#if STP_ENABLE_PROP_CHANGE_CALLBACKS
+enum STP_PROPERTY
+{
+	STP_PROPERTY_ADMIN_EDGE,
+	STP_PROPERTY_OPER_EDGE,
+	STP_PROPERTY_DETECTED_P2P,
+	STP_PROPERTY_ADMIN_P2P,
+	STP_PROPERTY_OPER_P2P,
+	STP_PROPERTY_PORT_ENABLED,
+	STP_PROPERTY_PORT_ROLE,
+	STP_PROPERTY_MST_CONFIG_NAME,
+	STP_PROPERTY_MST_CONFIG_REVISION_LEVEL,
+	STP_PROPERTY_MST_CONFIG_TABLE,
+	STP_PROPERTY_ROOT_PRIORITY_VECTOR,
+	STP_PROPERTY_ROOT_TIMES,
+	STP_PROPERTY_BRIDGE_STARTED,
+	STP_PROPERTY_STP_VERSION,
+	STP_PROPERTY_DETECTED_PORT_PATH_COST,
+	STP_PROPERTY_EXTERNAL_PORT_PATH_COST,
+	STP_PROPERTY_INTERNAL_PORT_PATH_COST,
+};
+
 // - portIndex equal to UINT_MAX and treeIndex equal to UINT_MAX means the changed property
 //   is not associated with a port or a tree, it applies to the bridge.
 // - portIndex equal to UINT_MAX and treeIndex < (1 + mstiCount) means the changed property
@@ -290,10 +291,10 @@ void* STP_GetApplicationContext (const struct STP_BRIDGE* bridge);
 //   is associated with a tree of a port.
 typedef void (*STP_CALLBACK_PROPERTY_CHANGE) (const struct STP_BRIDGE* bridge, unsigned portIndex, unsigned treeIndex, enum STP_PROPERTY prop, unsigned timestamp);
 
-// TODO: document that only one pair of callbacks can be registered at a time.
 // The callbacks can't call library functions that change STP state since they get a const STP_BRIDGE*.
 void STP_RegisterPropertyChangeCallbacks(struct STP_BRIDGE* bridge, STP_CALLBACK_PROPERTY_CHANGE changing, STP_CALLBACK_PROPERTY_CHANGE changed);
 void STP_UnregisterPropertyChangeCallbacks(struct STP_BRIDGE* bridge);
+#endif
 
 #ifdef __cplusplus
 } // extern "C"

@@ -121,8 +121,8 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, uns
 	{
 		bool oldOperEdge = port->operEdge;
 		port->operEdge = true;
-		if (!oldOperEdge && bridge->propChanged)
-			bridge->propChanged(bridge, givenPort, -1, STP_PROPERTY_OPER_EDGE, timestamp);
+		if (!oldOperEdge)
+			PROP_CHANGED(bridge, givenPort, -1, STP_PROPERTY_OPER_EDGE, timestamp);
 
 		port->isolate = false;
 	}
@@ -130,8 +130,8 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, uns
 	{
 		bool oldOperEdge = port->operEdge;
 		port->operEdge = false;
-		if (oldOperEdge && bridge->propChanged)
-			bridge->propChanged(bridge, givenPort, -1, STP_PROPERTY_OPER_EDGE, timestamp);
+		if (oldOperEdge)
+			PROP_CHANGED(bridge, givenPort, -1, STP_PROPERTY_OPER_EDGE, timestamp);
 
 		port->isolate = false;
 	}
@@ -139,8 +139,8 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, uns
 	{
 		bool oldOperEdge = port->operEdge;
 		port->operEdge = false;
-		if (oldOperEdge && bridge->propChanged)
-			bridge->propChanged(bridge, givenPort, -1, STP_PROPERTY_OPER_EDGE, timestamp);
+		if (oldOperEdge)
+			PROP_CHANGED(bridge, givenPort, -1, STP_PROPERTY_OPER_EDGE, timestamp);
 
 		port->isolate = true;
 	}

@@ -89,8 +89,10 @@ struct STP_BRIDGE
 	bool started; // Added by me. STP_StartBridge sets it, STP_StopBridge clears it.
 
 	STP_CALLBACKS callbacks;
+#if STP_ENABLE_PROP_CHANGE_CALLBACKS
 	STP_CALLBACK_PROPERTY_CHANGE propChanging;
 	STP_CALLBACK_PROPERTY_CHANGE propChanged;
+#endif
 
 	unsigned int portCount;
 	unsigned int mstiCount;
@@ -128,6 +130,16 @@ struct STP_BRIDGE
 	PORT*                   receivedBpduPort;
 };
 
-
+#if STP_ENABLE_PROP_CHANGE_CALLBACKS
+	#define PROP_CHANGING(bridge, portIndex, treeIndex, prop, timestamp) \
+		if ((bridge)->propChanging) \
+			(bridge)->propChanging((bridge), (portIndex), (treeIndex), (prop), (timestamp))
+	#define PROP_CHANGED(bridge, portIndex, treeIndex, prop, timestamp) \
+		if ((bridge)->propChanged) \
+			(bridge)->propChanged((bridge), (portIndex), (treeIndex), (prop), (timestamp))
+#else
+	#define PROP_CHANGING(bridge, portIndex, treeIndex, prop, timestamp) ((void)0)
+	#define PROP_CHANGED(bridge, portIndex, treeIndex, prop, timestamp) ((void)0)
+#endif
 
 #endif

@@ -1263,12 +1263,10 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree, unsigned int timest
 
 	if (newRootPriority != bridgeTree->rootPriority || newRootPortId != bridgeTree->rootPortId)
 	{
-		if (bridge->propChanging)
-			bridge->propChanging(bridge, -1, givenTree, STP_PROPERTY_ROOT_PRIORITY_VECTOR, timestamp);
+		PROP_CHANGING(bridge, -1, givenTree, STP_PROPERTY_ROOT_PRIORITY_VECTOR, timestamp);
 		bridgeTree->rootPriority = newRootPriority;
 		bridgeTree->rootPortId = newRootPortId;
-		if (bridge->propChanged)
-			bridge->propChanged(bridge, -1, givenTree, STP_PROPERTY_ROOT_PRIORITY_VECTOR, timestamp);
+		PROP_CHANGED(bridge, -1, givenTree, STP_PROPERTY_ROOT_PRIORITY_VECTOR, timestamp);
 
 		LOG (bridge, -1, givenTree, "  bridge root priority : {PVS}\r\n", &bridgeTree->rootPriority);
 		LOG (bridge, -1, givenTree, "  root port = {PID}\r\n", &bridgeTree->rootPortId);
@@ -1276,11 +1274,9 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree, unsigned int timest
 
 	if (newRootTimes != bridgeTree->rootTimes)
 	{
-		if (bridge->propChanging)
-			bridge->propChanging(bridge, -1, givenTree, STP_PROPERTY_ROOT_TIMES, timestamp);
+		PROP_CHANGING(bridge, -1, givenTree, STP_PROPERTY_ROOT_TIMES, timestamp);
 		bridgeTree->rootTimes = newRootTimes;
-		if (bridge->propChanged)
-			bridge->propChanged(bridge, -1, givenTree, STP_PROPERTY_ROOT_TIMES, timestamp);
+		PROP_CHANGED(bridge, -1, givenTree, STP_PROPERTY_ROOT_TIMES, timestamp);
 	}
 
 	for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
