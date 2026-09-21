@@ -9,8 +9,6 @@
 
 using namespace edge;
 
-using unique_safearray = wil::unique_any<SAFEARRAY*, decltype(SafeArrayDestroy), &SafeArrayDestroy>;
-
 using FactoryPropsPtr = wil::unique_any<DISPID*, decltype(&::CoTaskMemFree), ::CoTaskMemFree>;
 
 static HRESULT GetNameFromEnumValue (ITypeInfo* ti, const TYPEATTR* typeAttr, LONG value, BSTR* nameOut)
@@ -164,9 +162,9 @@ static HRESULT BuildFunctionIndexMap (ITypeInfo* typeInfo, FunctionIndexMap& fun
 	return S_OK;
 }
 
-static HRESULT ReadCollectionProperty (IDispatch* obj, MEMBERID memid, SAFEARRAY** ppsaChildren, ULONG* count)
+static HRESULT ReadObjectCollectionProperty (IDispatch* obj, MEMBERID memid, SAFEARRAY** ppsaChildren, ULONG* count)
 {
-	// An object that contains a property of type SAFEARRAY must implement IXmlParent.
+	// An object that contains a property of type SAFEARRAY(VT_DISPATCH) must implement IXmlParent.
 	RETURN_HR_IF(E_UNEXPECTED, !wil::try_com_query_nothrow<IXmlParent>(obj));
 
 	DISPPARAMS params = { };
@@ -189,6 +187,87 @@ static HRESULT ReadCollectionProperty (IDispatch* obj, MEMBERID memid, SAFEARRAY
 
 	*ppsaChildren = sa.release();
 	*count = (ULONG)ubound + 1;
+	return S_OK;
+}
+
+// Returns S_OK if the property has a non-default value, S_FALSE if the property has its default value, or an error code.
+static HRESULT ReadByteArrayProperty (IDispatch* obj, ITypeInfo* typeInfo, MEMBERID memid, wil::unique_bstr& valueOut)
+{
+	DISPPARAMS params = { };
+	wil::unique_variant result;
+	EXCEPINFO exception;
+
+	UINT uArgErr;
+	auto hr = typeInfo->Invoke(obj, memid, DISPATCH_PROPERTYGET, &params, &result, &exception, &uArgErr); RETURN_IF_FAILED(hr);
+	unique_safearray values(result.release().parray);
+	VARTYPE vt;
+	hr = SafeArrayGetVartype(values.get(), &vt); RETURN_IF_FAILED(hr);
+	RETURN_HR_IF(E_NOTIMPL, vt != VT_UI1 || SafeArrayGetDim(values.get()) != 1);
+	LONG lowerBound, upperBound;
+	hr = SafeArrayGetLBound(values.get(), 1, &lowerBound); RETURN_IF_FAILED(hr);
+	hr = SafeArrayGetUBound(values.get(), 1, &upperBound); RETURN_IF_FAILED(hr);
+	RETURN_HR_IF(E_NOTIMPL, lowerBound != 0 || upperBound < 0);
+	ULONG count = (ULONG)upperBound + 1;
+	BYTE* data;
+	hr = SafeArrayAccessData(values.get(), reinterpret_cast<void**>(&data)); RETURN_IF_FAILED(hr);
+	auto unaccessData = wil::scope_exit([&values] { SafeArrayUnaccessData(values.get()); });
+
+	bool changed = false;
+	for (ULONG i = 0; i < count; i++)
+	{
+		if (data[i] != 0)
+		{
+			changed = true;
+			break;
+		}
+	}
+	if (!changed)
+		return S_FALSE;
+
+	auto text = wil::make_unique_nothrow<wchar_t[]>(count * 4 + 1); RETURN_IF_NULL_ALLOC(text);
+	wchar_t* write = text.get();
+	for (ULONG i = 0; i < count; i++)
+	{
+		int written = swprintf_s(write, 5, i ? L",%u" : L"%u", data[i]);
+		RETURN_HR_IF(E_UNEXPECTED, written < 0);
+		write += written;
+	}
+	valueOut = wil::make_bstr_nothrow(text.get()); RETURN_IF_NULL_ALLOC(valueOut);
+	return S_OK;
+}
+
+static HRESULT ReadByteArrayFromString(PCWSTR text, wil::unique_variant& valueOut)
+{
+	RETURN_HR_IF(E_INVALIDARG, !text || !*text);
+	ULONG count = 1;
+	for (const wchar_t* p = text; *p; p++)
+	{
+		if (*p == L',')
+			count++;
+	}
+
+	unique_safearray values(SafeArrayCreateVector(VT_UI1, 0, count)); RETURN_IF_NULL_ALLOC(values);
+	BYTE* data;
+	auto hr = SafeArrayAccessData(values.get(), reinterpret_cast<void**>(&data)); RETURN_IF_FAILED(hr);
+	auto unaccessData = wil::scope_exit([&values] { SafeArrayUnaccessData(values.get()); });
+	const wchar_t* current = text;
+	for (ULONG i = 0; i < count; i++)
+	{
+		wchar_t* end;
+		unsigned long number = wcstoul(current, &end, 10);
+		RETURN_HR_IF(E_INVALIDARG, end == current || number > UCHAR_MAX);
+		data[i] = (BYTE)number;
+		if (i + 1 == count)
+			RETURN_HR_IF(E_INVALIDARG, *end != 0);
+		else
+		{
+			RETURN_HR_IF(E_INVALIDARG, *end != L',');
+			current = end + 1;
+		}
+	}
+
+	valueOut.vt = VT_ARRAY | VT_UI1;
+	valueOut.parray = values.release();
 	return S_OK;
 }
 
@@ -291,11 +370,28 @@ static HRESULT ReadProperty (IDispatch* obj, ITypeInfo* typeInfo, MEMBERID memid
 			break;
 
 		case VT_SAFEARRAY:
-			if (isFactoryProp || forceSerializeDefaults || PropertyHasDefaultValue(obj, fd->memid, indices.getIndex) != S_OK)
+			// For VT_SAFEARRAY we don't call PropertyHasDefaultValue, since that will call the getter there once,
+			// and then we'll call the getter here a second time, which might be expensive. Whatever we put in this
+			// switch case should call the getter only once, and then look at "forceSerializeDefaults" and at what
+			// the getter returned and decide whether to serialize the property or not.
+
+			// A factory prop of type VT_SAFEARRAY would be complicated, so let's assume this is not the case.
+			RETURN_HR_IF(E_NOTIMPL, isFactoryProp);
+
+			if (fd->elemdescFunc.tdesc.lptdesc->vt == VT_UI1)
+			{
+				wil::unique_bstr value;
+				hr = ReadByteArrayProperty(obj, typeInfo, fd->memid, value); RETURN_IF_FAILED(hr);
+				if (hr == S_OK)
+				{
+					bool pushed = pv.attributes.try_push_back(ValueProperty{ fd->memid, std::move(value) }); RETURN_HR_IF(E_OUTOFMEMORY, !pushed);
+				}
+			}
+			else if (fd->elemdescFunc.tdesc.lptdesc->vt == VT_DISPATCH)
 			{
 				unique_safearray children;
 				ULONG count;
-				hr = ReadCollectionProperty (obj, fd->memid, &children, &count); RETURN_IF_FAILED(hr);
+				hr = ReadObjectCollectionProperty (obj, fd->memid, &children, &count); RETURN_IF_FAILED(hr);
 				bool pushed = pv.childCollections.try_push_back(ObjectCollectionProperty{ fd->memid, { } }); RETURN_HR_IF(E_OUTOFMEMORY, !pushed);
 				for (LONG i = 0; i < (LONG)count; i++)
 				{
@@ -304,6 +400,8 @@ static HRESULT ReadProperty (IDispatch* obj, ITypeInfo* typeInfo, MEMBERID memid
 					pushed = pv.childCollections.back().value.try_push_back(std::move(obj)); RETURN_HR_IF(E_OUTOFMEMORY, !pushed);
 				}
 			}
+			else
+				RETURN_HR(E_NOTIMPL);
 			break;
 
 		default:
@@ -506,7 +604,7 @@ static HRESULT LoadReadOnlyCollection (IXmlReader* reader, IDispatch* obj, MEMBE
 
 	unique_safearray children;
 	ULONG childCount;
-	hr = ReadCollectionProperty (obj, memid, &children, &childCount); RETURN_IF_FAILED(hr);
+	hr = ReadObjectCollectionProperty (obj, memid, &children, &childCount); RETURN_IF_FAILED(hr);
 
 	com_ptr<IXmlParent> objAsParent;
 	hr = obj->QueryInterface(&objAsParent); RETURN_IF_FAILED(hr);
@@ -630,6 +728,10 @@ static HRESULT ReadAttributeToVariant (IXmlReader* reader, ITypeInfo* typeInfo, 
 		case VT_BOOL:
 			hr = InitVariantFromBoolean(!wcscmp(attrValue, L"True"), &valueVariant); RETURN_IF_FAILED(hr);
 			break;
+
+		case VT_SAFEARRAY:
+			RETURN_HR_IF(E_NOTIMPL, getfd->elemdescFunc.tdesc.lptdesc->vt != VT_UI1);
+			return ReadByteArrayFromString(attrValue, valueVariant);
 
 		case VT_USERDEFINED:
 		{
@@ -812,11 +914,10 @@ static HRESULT LoadFromXmlInternal (IDispatch* parent, MEMBERID memid, IXmlReade
 				}
 				else if (vt == VT_PTR)
 				{
-					RETURN_HR(E_NOTIMPL);
-					/*
 					if (!readOnly)
 					{
-						// We get here, for example, for IProjectConfig::put_GeneralProperties
+						RETURN_HR(E_NOTIMPL);
+						/*
 						com_ptr<IDispatch> child;
 						hr = objAsParent->CreateChild(memid, childElemName, &child); RETURN_IF_FAILED(hr);
 						RETURN_HR(E_NOTIMPL);
@@ -828,6 +929,7 @@ static HRESULT LoadFromXmlInternal (IDispatch* parent, MEMBERID memid, IXmlReade
 						EXCEPINFO exception;
 						UINT uArgErr;
 						hr = typeInfo->Invoke (obj, memid, DISPATCH_PROPERTYPUT, &params, nullptr, &exception, &uArgErr); RETURN_IF_FAILED(hr);
+						*/
 					}
 					else
 					{
@@ -835,11 +937,10 @@ static HRESULT LoadFromXmlInternal (IDispatch* parent, MEMBERID memid, IXmlReade
 						wil::unique_variant result;
 						EXCEPINFO exception;
 						UINT uArgErr;
-						hr = typeInfo->Invoke (obj, memid, DISPATCH_PROPERTYGET, &params, &result, &exception, &uArgErr); RETURN_IF_FAILED(hr);
+						hr = typeInfo->Invoke(obj, memid, DISPATCH_PROPERTYGET, &params, &result, &exception, &uArgErr); RETURN_IF_FAILED(hr);
 						RETURN_HR_IF(E_UNEXPECTED, result.vt != VT_DISPATCH);
-						hr = LoadFromXmlInternal (reader, childElemName, V_DISPATCH(&result)); RETURN_IF_FAILED(hr);
+						hr = LoadFromXmlInternal(obj, memid, reader, childElemName, V_DISPATCH(&result), nullptr); RETURN_IF_FAILED(hr);
 					}
-					*/
 				}
 				else
 				{

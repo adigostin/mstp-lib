@@ -57,6 +57,7 @@ class BridgeImpl : public IBridge, IBridgeProperties, IConnectionPointContainer,
 	com_ptr<ConnectionPointImpl<IInvalidateSink>> _invalidateCP;
 	com_ptr<ConnectionPointImpl<IBridgeEvents>> _bridgeEventsCP;
 	com_ptr<ConnectionPointImpl<IStpPropertyChangeSink>> _stpPropertyChangedCP;
+	com_ptr<IMSTConfigProperties> _mstConfig;
 
 public:
 	HRESULT InitInstance (uint32_t port_count, uint32_t msti_count, mac_address macAddress)
@@ -101,6 +102,10 @@ public:
 		STP_EnableLogging (_stpBridge, true);
 		STP_SetApplicationContext (_stpBridge, this);
 		STP_RegisterPropertyChangeCallback(_stpBridge, &StpCallback_PropertyChanging, &StpCallback_PropertyChanged);
+
+		auto mstConfig = com_ptr(new (std::nothrow) MstConfigImpl()); RETURN_IF_NULL_ALLOC(mstConfig);
+		hr = mstConfig->InitInstance(this); RETURN_IF_FAILED(hr);
+		_mstConfig = std::move(mstConfig);
 
 		// ----------------------------------------------------------------------------
 
@@ -446,59 +451,148 @@ public:
 		return S_OK;
 	}
 
+	class MstConfigImpl : public IMSTConfigProperties
+	{
+		ULONG _refCount = 0;
+		BridgeImpl* _bridge = nullptr;
+
+	public:
+		HRESULT InitInstance(BridgeImpl* bridge)
+		{
+			_bridge = bridge;
+			return S_OK;
+		}
+
+		#pragma region IUnknown
+		virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override
+		{
+			RETURN_HR_IF(E_POINTER, !ppvObject);
+			*ppvObject = nullptr;
+
+			if (   TryQI<IUnknown>(this, riid, ppvObject)
+				|| TryQI<IDispatch>(this, riid, ppvObject)
+				|| TryQI<IMSTConfigProperties>(this, riid, ppvObject))
+				return S_OK;
+
+			return E_NOINTERFACE;
+		}
+
+		virtual ULONG STDMETHODCALLTYPE AddRef() override { return ++_refCount; }
+
+		virtual ULONG STDMETHODCALLTYPE Release() override { return ReleaseST(this, _refCount); }
+		#pragma endregion
+
+		IMPLEMENT_IDISPATCH(IMSTConfigProperties);
+
+		virtual HRESULT STDMETHODCALLTYPE get_Name(BSTR* pbstrName) override
+		{
+			const STP_MST_CONFIG_ID* configId = STP_GetMstConfigId(_bridge->_stpBridge);
+			uint32_t len = (uint32_t)strnlen(configId->ConfigurationName, 32);
+			wchar_t str[32];
+			for (uint32_t i = 0; i < len; i++)
+				str[i] = configId->ConfigurationName[i];
+			*pbstrName = SysAllocStringLen(str, len); RETURN_IF_NULL_ALLOC(*pbstrName);
+			return S_OK;
+		}
+
+		virtual HRESULT STDMETHODCALLTYPE put_Name(BSTR bstrName) override
+		{
+			UINT len = SysStringLen(bstrName);
+			if (len > 32)
+				return SetErrorInfo(E_INVALIDARG, L"Invalid MST Config Name: more than 32 characters.");
+
+			char str[33];
+			for (UINT i = 0; i < len; i++)
+			{
+				if (bstrName[i] >= 256)
+					return SetErrorInfo(E_INVALIDARG, L"Invalid MST Config Name: non-ASCII chars.");
+				str[i] = (char)bstrName[i];
+			}
+			str[len] = 0;
+
+			STP_SetMstConfigName(_bridge->_stpBridge, str, GetMessageTime());
+			NotifyInvalidate(_bridge->_invalidateCP, _bridge->extent());
+			return S_OK;
+		}
+
+		virtual HRESULT STDMETHODCALLTYPE get_RevisionLevel(WORD* pwRevisionLevel) override
+		{
+			const STP_MST_CONFIG_ID* id = STP_GetMstConfigId(_bridge->_stpBridge);
+			*pwRevisionLevel = ((WORD)id->RevisionLevelHigh << 8) | (WORD)id->RevisionLevelLow;
+			return S_OK;
+		}
+
+		virtual HRESULT STDMETHODCALLTYPE put_RevisionLevel(WORD wRevisionLevel) override
+		{
+			const STP_MST_CONFIG_ID* id = STP_GetMstConfigId(_bridge->_stpBridge);
+			WORD existing = ((WORD)id->RevisionLevelHigh << 8) | (WORD)id->RevisionLevelLow;
+			if (existing != wRevisionLevel)
+			{
+				STP_SetMstConfigRevisionLevel(_bridge->_stpBridge, wRevisionLevel, GetMessageTime());
+			}
+
+			return S_OK;
+		}
+
+		virtual HRESULT STDMETHODCALLTYPE get_Values(SAFEARRAY** pValues) override
+		{
+			unsigned int entryCount;
+			const STP_CONFIG_TABLE_ENTRY* entries = STP_GetMstConfigTable(_bridge->_stpBridge, &entryCount);
+			unique_safearray values(SafeArrayCreateVector(VT_UI1, 0, entryCount)); RETURN_IF_NULL_ALLOC(values);
+			BYTE* data;
+			auto hr = SafeArrayAccessData(values.get(), reinterpret_cast<void**>(&data)); RETURN_IF_FAILED(hr);
+			for (unsigned int i = 0; i < entryCount; i++)
+				data[i] = entries[i].treeIndex;
+			hr = SafeArrayUnaccessData(values.get()); RETURN_IF_FAILED(hr);
+			*pValues = values.release();
+			return S_OK;
+		}
+
+		virtual HRESULT STDMETHODCALLTYPE put_Values(SAFEARRAY* values) override
+		{
+			VARTYPE vartype;
+			auto hr = SafeArrayGetVartype(values, &vartype); RETURN_IF_FAILED(hr);
+			RETURN_HR_IF(E_INVALIDARG, vartype != VT_UI1 || SafeArrayGetDim(values) != 1);
+			LONG lowerBound, upperBound;
+			hr = SafeArrayGetLBound(values, 1, &lowerBound); RETURN_IF_FAILED(hr);
+			hr = SafeArrayGetUBound(values, 1, &upperBound); RETURN_IF_FAILED(hr);
+			unsigned int entryCount;
+			STP_GetMstConfigTable(_bridge->_stpBridge, &entryCount);
+			RETURN_HR_IF(E_INVALIDARG, lowerBound != 0 || upperBound != (LONG)entryCount - 1);
+
+			BYTE* data;
+			hr = SafeArrayAccessData(values, reinterpret_cast<void**>(&data)); RETURN_IF_FAILED(hr);
+			auto unaccessData = wil::scope_exit([values] { SafeArrayUnaccessData(values); });
+			STP_CONFIG_TABLE_ENTRY entries[1 + max_vlan_number];
+			for (unsigned int i = 0; i < entryCount; i++)
+			{
+				RETURN_HR_IF(E_INVALIDARG, data[i] >= 1 + STP_GetMstiCount(_bridge->_stpBridge));
+				entries[i] = { .unused = 0, .treeIndex = data[i] };
+			}
+
+			STP_SetMstConfigTable(_bridge->_stpBridge, entries, entryCount, GetMessageTime());
+			return S_OK;
+		}
+	};
+
 	virtual HRESULT STDMETHODCALLTYPE get_MSTConfigName (BSTR *pbstrName) override
 	{
-		const STP_MST_CONFIG_ID* configId = STP_GetMstConfigId(_stpBridge);
-		uint32_t len = (uint32_t)strnlen (configId->ConfigurationName, 32);
-		wchar_t str[32];
-		for (uint32_t i = 0; i < len; i++)
-			str[i] = configId->ConfigurationName[i];
-		*pbstrName = SysAllocStringLen(str, len); RETURN_IF_NULL_ALLOC(*pbstrName);
-		return S_OK;
+		return _mstConfig->get_Name(pbstrName);
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE put_MSTConfigName (BSTR bstrName) override
 	{
-		UINT len = SysStringLen(bstrName);
-		if (len > 32)
-			return SetErrorInfo(E_INVALIDARG, L"Invalid MST Config Name: more than 32 characters.");
-
-		char str[33];
-		for (UINT i = 0; i < len; i++)
-		{
-			if (bstrName[i] >= 256)
-				return SetErrorInfo(E_INVALIDARG, L"Invalid MST Config Name: non-ASCII chars.");
-			str[i] = (char)bstrName[i];
-		}
-		str[len] = 0;
-
-		NotifyPropertyChanging(_propChangeCP, AsUnknown(), dispidMstConfigName);
-		STP_SetMstConfigName (_stpBridge, str, GetMessageTime());
-		NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidMstConfigName);
-		NotifyInvalidate(_invalidateCP, extent());
-		return S_OK;
+		return _mstConfig->put_Name(bstrName);
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE get_MSTConfigRevLevel (WORD* pwConfigRevLevel) override
 	{
-		const STP_MST_CONFIG_ID* id = STP_GetMstConfigId(_stpBridge);
-		*pwConfigRevLevel = ((WORD)id->RevisionLevelHigh << 8) | (WORD)id->RevisionLevelLow;
-		return S_OK;
+		return _mstConfig->get_RevisionLevel(pwConfigRevLevel);
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE put_MSTConfigRevLevel (WORD wRevLevel) override
 	{
-		const STP_MST_CONFIG_ID* id = STP_GetMstConfigId(_stpBridge);
-		WORD existing = ((WORD)id->RevisionLevelHigh << 8) | (WORD)id->RevisionLevelLow;
-		
-		if (existing != wRevLevel)
-		{
-			NotifyPropertyChanging(_propChangeCP, AsUnknown(), dispidMstConfigRevLevel);
-			STP_SetMstConfigRevisionLevel (_stpBridge, wRevLevel, GetMessageTime());
-			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidMstConfigRevLevel);
-		}
-
-		return S_OK;
+		return _mstConfig->put_RevisionLevel(wRevLevel);
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE get_MSTConfigDigest (BSTR *pbstrDigest) override
@@ -514,6 +608,13 @@ public:
 		}
 		buffer[32] = 0;
 		*pbstrDigest = SysAllocString(buffer); RETURN_IF_NULL_ALLOC(*pbstrDigest);
+		return S_OK;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE get_MSTConfig(IMSTConfigProperties** ppMSTConfig) override
+	{
+		*ppMSTConfig = _mstConfig.get();
+		(*ppMSTConfig)->AddRef();
 		return S_OK;
 	}
 	#pragma endregion
@@ -533,7 +634,16 @@ public:
 		_Outptr_opt_result_buffer_(*pcFactoryDispids) DISPID** ppFactoryDispids,
 		_Out_ ULONG* pcFactoryDispids) override
 	{
-		if (dispidProperty == dispidPorts)
+		if (dispidProperty == dispidMstConfig)
+		{
+			*pbstrXmlElementName = nullptr;
+			if (ppFactoryDispids)
+				*ppFactoryDispids = nullptr;
+			if (pcFactoryDispids)
+				*pcFactoryDispids = 0;
+			return S_OK;
+		}
+		else if (dispidProperty == dispidPorts)
 		{
 			*pbstrXmlElementName = SysAllocString(L"Port"); RETURN_IF_NULL_ALLOC(*pbstrXmlElementName);
 			if (ppFactoryDispids)
@@ -1144,6 +1254,17 @@ public:
 		b->_stpPropertyChangedCP->Notify([b,portIndex,treeIndex,prop,timestamp](IStpPropertyChangeSink* sink) {
 			return sink->OnStpPropertyChanging(b, portIndex, treeIndex, prop, timestamp);
 		});
+
+		if (portIndex == -1 && treeIndex == -1)
+		{
+			// STP properties that are relevant to the bridge, not to a bridge tree or to a port.
+			if (prop == STP_PROPERTY_MST_CONFIG_NAME)
+				NotifyPropertyChanging(b->_propChangeCP, b->AsUnknown(), dispidMstConfigName);
+			if (prop == STP_PROPERTY_MST_CONFIG_REVISION_LEVEL)
+				NotifyPropertyChanging(b->_propChangeCP, b->AsUnknown(), dispidMstConfigRevLevel);
+			if (prop == STP_PROPERTY_MST_CONFIG_TABLE)
+				NotifyPropertyChanging(b->_propChangeCP, b->AsUnknown(), dispidMstConfigTable);
+		}
 	}
 
 	static void StpCallback_PropertyChanged (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp)
@@ -1155,11 +1276,15 @@ public:
 
 		if (portIndex == -1 && treeIndex == -1)
 		{
-			// STP properties that are relevant to the bridge as a whole.
 			if (prop == STP_PROPERTY_STP_VERSION)
 				NotifyPropertyChanged(b->_propChangeCP, b->AsUnknown(), dispidStpVersion);
-			if (prop == STP_PROPERTY_MST_CONFIG_DIGEST)
-				NotifyPropertyChanged(b->_propChangeCP, b->AsUnknown(), dispidMstConfigDigest);
+			if (prop == STP_PROPERTY_MST_CONFIG_NAME)
+				NotifyPropertyChanged(b->_propChangeCP, b->AsUnknown(), dispidMstConfigName);
+			if (prop == STP_PROPERTY_MST_CONFIG_REVISION_LEVEL)
+				NotifyPropertyChanged(b->_propChangeCP, b->AsUnknown(), dispidMstConfigRevLevel);
+			if (prop == STP_PROPERTY_MST_CONFIG_TABLE)
+				NotifyPropertyChanged(b->_propChangeCP, b->AsUnknown(), dispidMstConfigTable);
+
 			NotifyInvalidate (b->_invalidateCP, b->extent());
 		}
 	}

@@ -32,6 +32,7 @@ const int dispidMaxAge          = 56;
 const int dispidForwardDelay    = 57;
 const int dispidMessageAge      = 58;
 const int dispidRemainingHops   = 59;
+const int dispidMstConfig       = 60;
 
 [uuid(0C7B378B-1781-4E81-85C9-908113BB32BD), version(2.4)]
 library SimulatorLib
@@ -151,6 +152,19 @@ library SimulatorLib
 		[helpstring("MSTP")] STPVersionMSTP = 3
 	};
 
+	[object, uuid(4B88CE7F-13A2-45FA-9E64-4F8254C2AD2F), dual, nonextensible, pointer_default(unique)]
+	interface IMSTConfigProperties : IDispatch
+	{
+		[propget, id(dispidMstConfigName)] HRESULT Name([out, retval] BSTR* pbstrName);
+		[propput, id(dispidMstConfigName)] HRESULT Name(BSTR bstrName);
+
+		[propget, id(dispidMstConfigRevLevel)] HRESULT RevisionLevel([out, retval] WORD* pwRevisionLevel);
+		[propput, id(dispidMstConfigRevLevel)] HRESULT RevisionLevel(WORD wRevisionLevel);
+
+		[propget, id(dispidMstConfigTable)] HRESULT Values([out, retval] SAFEARRAY(BYTE)* pValues);
+		[propput, id(dispidMstConfigTable)] HRESULT Values(SAFEARRAY(BYTE) values);
+	}
+
 	[object, uuid(B7934040-1A24-4AB8-B3B0-D35972DACB1A), dual, nonextensible, pointer_default(unique)]
 	interface IBridgeProperties : IDispatch
 	{
@@ -250,9 +264,12 @@ library SimulatorLib
 		[propput, id(dispidMstConfigRevLevel)]
 			HRESULT MSTConfigRevLevel (WORD wRevLevel);
 
-		[propget, id(dispidMstConfigDigest), custom(guidPropertyGroup, PropertyGroupMSTConfigID),
+		[propget, id(dispidMstConfigTable), custom(guidPropertyGroup, PropertyGroupMSTConfigID),
 			custom(guidPropertyCustomEditor, GUID_STRING(guidMSTConfigIdEditor))]
 			HRESULT MSTConfigDigest ([out, retval] BSTR* pbstrDigest);
+
+		[propget, id(dispidMstConfig), nonbrowsable]
+			HRESULT MSTConfig([out, retval] IMSTConfigProperties** ppMSTConfig);
 	}
 
 	// Values correspond to STP_PORT_ROLE.

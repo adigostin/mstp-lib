@@ -27,7 +27,7 @@
 #define dispidMstiCount    21
 #define dispidMstConfigName      22
 #define dispidMstConfigRevLevel  23
-#define dispidMstConfigDigest    24
+#define dispidMstConfigTable     24
 #define dispidPortLearning   25
 #define dispidPortForwarding 26
 #define dispidPortRole       27

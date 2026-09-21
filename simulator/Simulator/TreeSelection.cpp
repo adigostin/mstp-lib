@@ -214,7 +214,7 @@ struct TreeSelection : IObjectList, IConnectionPointContainer, IObjectCollection
 	{
 		// See comments in OnStpPropertyChanged.
 		if (prop == STP_PROPERTY_STP_VERSION
-			|| (prop == STP_PROPERTY_MST_CONFIG_DIGEST && STP_GetStpVersion(b->stp_bridge()) >= STP_VERSION_MSTP))
+			|| (prop == STP_PROPERTY_MST_CONFIG_TABLE && STP_GetStpVersion(b->stp_bridge()) >= STP_VERSION_MSTP))
 		{
 			ObjectCollectionChangeArgs args = { .changeType = CollectionChangeType::Set, .setInsertRemoveArgs = { .count = 1 } };
 			args.setInsertRemoveArgs.count = _selection->size();
@@ -232,7 +232,7 @@ struct TreeSelection : IObjectList, IConnectionPointContainer, IObjectCollection
 		// If the STP version is changed to/from MSTP, or if the MST config table is changed, the mapping
 		// of VLANs to trees changes. In that case, we need to notify that the selection has changed.
 		if (prop == STP_PROPERTY_STP_VERSION
-			|| (prop == STP_PROPERTY_MST_CONFIG_DIGEST && STP_GetStpVersion(b->stp_bridge()) >= STP_VERSION_MSTP))
+			|| (prop == STP_PROPERTY_MST_CONFIG_TABLE && STP_GetStpVersion(b->stp_bridge()) >= STP_VERSION_MSTP))
 		{
 			// Here we'd have to find out which index in the selection is the bridge whose property changed,
 			// or which ports belong to the bridge whose property changed, and notify that those objects

@@ -890,11 +890,17 @@ void STP_SetMstConfigName (STP_BRIDGE* bridge, const char* name, unsigned int ti
 
 	LOG (bridge, -1, -1, "{T}: Setting MST Config Name to \"{S}\"...\r\n", timestamp, name);
 
+	if (bridge->propChanging)
+		bridge->propChanging(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_NAME, timestamp);
+
 	memset (bridge->MstConfigId.ConfigurationName, 0, 32);
 	memcpy (bridge->MstConfigId.ConfigurationName, name, strlen (name));
 
 	if (bridge->started)
 		RestartStateMachines(bridge, timestamp);
+
+	if (bridge->propChanged)
+		bridge->propChanged(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_NAME, timestamp);
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
 	FLUSH_LOG (bridge);
@@ -906,11 +912,17 @@ void STP_SetMstConfigRevisionLevel (STP_BRIDGE* bridge, unsigned short revisionL
 {
 	LOG (bridge, -1, -1, "{T}: Setting MST Config Revision Level to {D}...\r\n", timestamp, (int) revisionLevel);
 
+	if (bridge->propChanging)
+		bridge->propChanging(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_REVISION_LEVEL, timestamp);
+
 	bridge->MstConfigId.RevisionLevelHigh = revisionLevel >> 8;
 	bridge->MstConfigId.RevisionLevelLow = revisionLevel & 0xff;
 
 	if (bridge->started)
 		RestartStateMachines(bridge, timestamp);
+
+	if (bridge->propChanged)
+		bridge->propChanged(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_REVISION_LEVEL, timestamp);
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
 	FLUSH_LOG (bridge);
@@ -956,7 +968,7 @@ void STP_SetMstConfigTable (struct STP_BRIDGE* bridge, const STP_CONFIG_TABLE_EN
 			assert (entries[4095].treeIndex == 0);
 
 		if (bridge->propChanging)
-			bridge->propChanging(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_DIGEST, timestamp);
+			bridge->propChanging(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_TABLE, timestamp);
 
 		memcpy (bridge->mstConfigTable, entries, entryCount * 2);
 
@@ -970,7 +982,7 @@ void STP_SetMstConfigTable (struct STP_BRIDGE* bridge, const STP_CONFIG_TABLE_EN
 			RestartStateMachines(bridge, timestamp);
 
 		if (bridge->propChanged)
-			bridge->propChanged(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_DIGEST, timestamp);
+			bridge->propChanged(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_TABLE, timestamp);
 	}
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
@@ -996,7 +1008,7 @@ void STP_SetMstConfigTableEntry (struct STP_BRIDGE* bridge, unsigned int vlanNum
 			assert (treeIndex < (1 + bridge->mstiCount));
 
 		if (bridge->propChanging)
-			bridge->propChanging(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_DIGEST, timestamp);
+			bridge->propChanging(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_TABLE, timestamp);
 
 		bridge->mstConfigTable[vlanNumber] = (unsigned short) treeIndex;
 
@@ -1010,7 +1022,7 @@ void STP_SetMstConfigTableEntry (struct STP_BRIDGE* bridge, unsigned int vlanNum
 			RestartStateMachines(bridge, timestamp);
 
 		if (bridge->propChanged)
-			bridge->propChanged(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_DIGEST, timestamp);
+			bridge->propChanged(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_TABLE, timestamp);
 	}
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");

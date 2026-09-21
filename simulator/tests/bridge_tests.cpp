@@ -94,4 +94,52 @@ TEST_CLASS(bridge_tests)
 		Assert::IsTrue(sink->ChangingCalled(dispidHelloTime));
 		Assert::IsTrue(sink->ChangedCalled(dispidHelloTime));
 	}
+
+	TEST_METHOD(BridgeNotifiesWhenMSTConfigTableChanges)
+	{
+		HRESULT hr;
+
+		auto bridge = MakeBridge(1, 1, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		auto sink = CreateTestPropertyChangeSink(bridge.get());
+		auto bridgeProperties = wil::com_query_failfast<IBridgeProperties>(bridge);
+		com_ptr<IMSTConfigProperties> mstConfig;
+		hr = bridgeProperties->get_MSTConfig(&mstConfig); Assert::AreEqual(S_OK, hr);
+
+		unique_safearray values;
+		hr = mstConfig->get_Values(&values); Assert::AreEqual(S_OK, hr);
+		LONG index = 1;
+		BYTE value = 1;
+		hr = SafeArrayPutElement(values.get(), &index, &value); Assert::AreEqual(S_OK, hr);
+
+		hr = mstConfig->put_Values(values.get()); Assert::AreEqual(S_OK, hr);
+
+		Assert::IsTrue(sink->ChangingCalled(dispidMstConfigTable));
+		Assert::IsTrue(sink->ChangedCalled(dispidMstConfigTable));
+	}
+
+	TEST_METHOD(BridgeNotifiesWhenMSTConfigNameChanges)
+	{
+		auto bridge = MakeBridge(1, 1, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		auto sink = CreateTestPropertyChangeSink(bridge.get());
+		auto bridgeProperties = wil::com_query_failfast<IBridgeProperties>(bridge);
+		com_ptr<IMSTConfigProperties> mstConfig;
+		auto hr = bridgeProperties->get_MSTConfig(&mstConfig); Assert::AreEqual(S_OK, hr);
+
+		hr = mstConfig->put_Name(wil::make_bstr_failfast(L"Changed").get()); Assert::AreEqual(S_OK, hr);
+		Assert::IsTrue(sink->ChangingCalled(dispidMstConfigName));
+		Assert::IsTrue(sink->ChangedCalled(dispidMstConfigName));
+	}
+
+	TEST_METHOD(BridgeNotifiesWhenMSTConfigRevisionLevelChanges)
+	{
+		auto bridge = MakeBridge(1, 1, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		auto sink = CreateTestPropertyChangeSink(bridge.get());
+		auto bridgeProperties = wil::com_query_failfast<IBridgeProperties>(bridge);
+		com_ptr<IMSTConfigProperties> mstConfig;
+		auto hr = bridgeProperties->get_MSTConfig(&mstConfig); Assert::AreEqual(S_OK, hr);
+
+		hr = mstConfig->put_RevisionLevel(1); Assert::AreEqual(S_OK, hr);
+		Assert::IsTrue(sink->ChangingCalled(dispidMstConfigRevLevel));
+		Assert::IsTrue(sink->ChangedCalled(dispidMstConfigRevLevel));
+	}
 };

@@ -440,4 +440,34 @@ public:
 			Assert::IsFalse(isPartOfLoop, L"The only wire joining two separate cycles does not belong to a cycle.");
 		}
 	}
+
+	TEST_METHOD(SaveLoadRoundTripPreservesMSTConfig)
+	{
+		HRESULT hr;
+
+		auto project1 = MakeProject();
+		auto bridge1 = MakeBridge(4, 3, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		project1->AddBridge(bridge1);
+		STP_CONFIG_TABLE_ENTRY table[1 + max_vlan_number] = { };
+		for (LONG i = 1; i <= max_vlan_number; i += 2)
+			table[i].treeIndex = (BYTE)((i % 3) + 1);
+		STP_SetMstConfigTable(bridge1->stp_bridge(), table, 1 + max_vlan_number, 0);
+
+		TempProjectFile file(L"project.stp");
+		hr = project1->Save(file.path.c_str()); Assert::AreEqual(S_OK, hr);
+
+		auto project2 = MakeProject();
+		hr = project2->Load(file.path.c_str()); Assert::AreEqual(S_OK, hr);
+		auto bridge2 = project2->BridgeAt(0);
+		const STP_MST_CONFIG_ID* configId1 = STP_GetMstConfigId(bridge1->stp_bridge());
+		const STP_MST_CONFIG_ID* configId2 = STP_GetMstConfigId(bridge2->stp_bridge());
+		Assert::IsTrue(memcmp(configId1, configId2, sizeof(*configId1)) == 0);
+		unsigned int entryCount1;
+		const STP_CONFIG_TABLE_ENTRY* table1 = STP_GetMstConfigTable(bridge1->stp_bridge(), &entryCount1);
+		unsigned int entryCount2;
+		const STP_CONFIG_TABLE_ENTRY* table2 = STP_GetMstConfigTable(bridge2->stp_bridge(), &entryCount2);
+		Assert::AreEqual(entryCount1, entryCount2);
+		for (unsigned int i = 0; i < entryCount1; i++)
+			Assert::AreEqual(table1[i].treeIndex, table2[i].treeIndex);
+	}
 };
