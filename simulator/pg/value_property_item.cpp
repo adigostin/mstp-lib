@@ -370,7 +370,7 @@ public:
 
 		state = read_state::ok;
 		valueText = std::move(layoutText);
-		changedFromDefault = changedFromDefault;
+		// changedFromDefault was assigned in the first iteration of the loop above.
 		return S_OK;
 	}
 
