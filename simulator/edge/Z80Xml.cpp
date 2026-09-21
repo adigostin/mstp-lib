@@ -670,15 +670,12 @@ static HRESULT LoadCollection (IXmlReader* reader, IDispatch* obj, MEMBERID memi
 		{
 			LPCWSTR endElementName;
 			hr = reader->GetLocalName(&endElementName, nullptr); RETURN_IF_FAILED(hr);
-			SAFEARRAYBOUND sabound = { .cElements = (ULONG)children.size(), .lLbound = 0 };
-			SAFEARRAY* sa = SafeArrayCreate (VT_DISPATCH, 1, &sabound); RETURN_IF_NULL_ALLOC(sa);
-			auto freeSafeArray = wil::scope_exit([&sa] { SafeArrayDestroy(sa); sa = nullptr; });
+			auto sa = unique_safearray(SafeArrayCreateVector (VT_DISPATCH, 0, (ULONG)children.size())); RETURN_IF_NULL_ALLOC(sa);
 			for (LONG i = 0; i < (LONG)children.size(); i++)
 			{
-				hr = SafeArrayPutElement (sa, &i, children[i].get()); RETURN_IF_FAILED(hr);
+				hr = SafeArrayPutElement (sa.get(), &i, children[i].get()); RETURN_IF_FAILED(hr);
 			}
-			freeSafeArray.release();
-			*to = sa;
+			*to = sa.release();
 			return S_OK;
 		}
 		else

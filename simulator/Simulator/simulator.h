@@ -567,10 +567,7 @@ HRESULT BridgeAddressFromString (const wchar_t* pszBridgeAddress, mac_address& a
 template<typename GetAt> requires std::is_invocable_r_v<HRESULT, GetAt, ULONG, IDispatch**>
 HRESULT GetItems (ULONG cItems, GetAt getAt, SAFEARRAY** ppsaItems)
 {
-	SAFEARRAYBOUND bound;
-	bound.cElements = cItems;
-	bound.lLbound = 0;
-	auto sa = unique_safearray(SafeArrayCreate(VT_DISPATCH, 1, &bound)); RETURN_HR_IF(E_OUTOFMEMORY, !sa);
+	auto sa = unique_safearray(SafeArrayCreateVector(VT_DISPATCH, 0, cItems)); RETURN_HR_IF(E_OUTOFMEMORY, !sa);
 	for (LONG i = 0; i < (LONG)cItems; i++)
 	{
 		com_ptr<IDispatch> pDisp;

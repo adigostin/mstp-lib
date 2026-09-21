@@ -163,20 +163,16 @@ public:
 		auto validBridge = MakeBridge(4, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
 		auto invalidWire = MakeWire();
 
-		SAFEARRAYBOUND bound;
-		bound.cElements = 2;
-		bound.lLbound = 0;
-		SAFEARRAY* psaItems = SafeArrayCreate(VT_DISPATCH, 1, &bound); Assert::IsNotNull(psaItems);
-		auto cleanup = wil::scope_exit([psaItems] { SafeArrayDestroy(psaItems); });
+		auto psaItems = unique_safearray(SafeArrayCreateVector(VT_DISPATCH, 0, 2)); Assert::IsNotNull(psaItems.get());
 
 		IDispatch* disp0 = wil::com_query_failfast<IDispatch>(validBridge);
 		IDispatch* disp1 = wil::com_query_failfast<IDispatch>(invalidWire);
 		LONG i = 0;
-		hr = SafeArrayPutElement(psaItems, &i, disp0); Assert::AreEqual(S_OK, hr);
+		hr = SafeArrayPutElement(psaItems.get(), &i, disp0); Assert::AreEqual(S_OK, hr);
 		i = 1;
-		hr = SafeArrayPutElement(psaItems, &i, disp1); Assert::AreEqual(S_OK, hr);
+		hr = SafeArrayPutElement(psaItems.get(), &i, disp1); Assert::AreEqual(S_OK, hr);
 
-		hr = project.query<IProjectProperties>()->put_Bridges(psaItems);
+		hr = project.query<IProjectProperties>()->put_Bridges(psaItems.get());
 		Assert::IsFalse(SUCCEEDED(hr));
 		Assert::AreEqual(0ul, project->BridgeCount());
 	}
