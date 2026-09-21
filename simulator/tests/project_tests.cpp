@@ -360,4 +360,50 @@ public:
 		Assert::IsTrue(changed.childObjects[0] == wil::com_query_failfast<IDispatch>(bridge1->TreeAt(0)));
 		Assert::IsTrue(changed.childObjects[1] == wil::com_query_failfast<IDispatch>(bridge2->TreeAt(0)));
 	}
+
+	TEST_METHOD(IsWireForwardingFindsLoopAfterVisitedPort)
+	{
+		auto project = MakeProject();
+
+		auto bridgeA = MakeBridge(3, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		project->AddBridge(bridgeA);
+		auto bridgeB = MakeBridge(4, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x70 });
+		project->AddBridge(bridgeB);
+		auto bridgeC = MakeBridge(2, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x80 });
+		project->AddBridge(bridgeC);
+		auto deadEnd = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x90 });
+		project->AddBridge(deadEnd);
+
+		auto connect = [&project](IPort* p0, IPort* p1)
+		{
+			auto wire = MakeWire();
+			wire->set_p0(p0);
+			wire->set_p1(p1);
+			project->AddWire(wire);
+			return wire;
+		};
+
+		// +----------+                +----------+    +----------+
+		// | bridgeA  |  queriedWire   | bridgeB  |    | bridgeC  |
+		// |        2 +----------------+ 0      1 +----+ 0        |
+		// |        1 +----------------+ 2      3 +----+ 1        |
+		// |    0     |                +----------+    +----------+
+		// +----+-----+
+		//      |
+		// +----+-----+
+		// |    0     |
+		// | deadEnd  |
+		// +----------+
+		auto queriedWire = connect(bridgeA->PortAt(2), bridgeB->PortAt(0));
+		connect(bridgeB->PortAt(1), bridgeC->PortAt(0));
+		connect(bridgeC->PortAt(1), bridgeB->PortAt(3));
+		connect(bridgeB->PortAt(2), bridgeA->PortAt(1));
+		connect(bridgeA->PortAt(0), deadEnd->PortAt(0));
+
+		// The B-C detour visits A's dead-end port before the search reaches A through
+		// the second A-B wire. Skipping that visited port must still allow closing the loop at A:2.
+		bool hasLoop = false;
+		Assert::IsTrue(project->IsWireForwarding(queriedWire, 1, &hasLoop));
+		Assert::IsTrue(hasLoop, L"A visited port must not hide the loop through a later port.");
+	}
 };

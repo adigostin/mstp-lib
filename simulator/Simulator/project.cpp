@@ -392,7 +392,7 @@ public:
 									return true;
 
 								if (txPorts.find(otherTxPort) != txPorts.end())
-									return false;
+									continue;
 
 								if (transmitsTo(otherTxPort))
 									return true;
