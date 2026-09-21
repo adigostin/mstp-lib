@@ -699,8 +699,9 @@ public:
 	std::optional<LRESULT> ProcessWmCommand (WPARAM wParam, LPARAM lParam)
 	{
 		HRESULT hr;
+		const auto command = LOWORD(wParam);
 
-		if (wParam == ID_VIEW_PROPERTIES)
+		if (command == ID_VIEW_PROPERTIES)
 		{
 			if (_pw)
 				DestroyPropertiesWindow();
@@ -710,7 +711,7 @@ public:
 			return 0;
 		}
 
-		if (wParam == ID_VIEW_STPLOG)
+		if (command == ID_VIEW_STPLOG)
 		{
 			if (_log_window != nullptr)
 				destroy_log_window();
@@ -721,15 +722,15 @@ public:
 			return 0;
 		}
 
-		if (wParam == ID_VIEW_VLANS)
+		if (command == ID_VIEW_VLANS)
 		{
 			// TODO: show/hide.
 			return 0;
 		}
 
-		if (((HIWORD(wParam) == 0) || (HIWORD(wParam) == 1)) && ((LOWORD(wParam) == ID_FILE_SAVE) || (LOWORD(wParam) == ID_FILE_SAVEAS)))
+		if (((HIWORD(wParam) == 0) || (HIWORD(wParam) == 1)) && ((command == ID_FILE_SAVE) || (command == ID_FILE_SAVEAS)))
 		{
-			if ((LOWORD(wParam) == ID_FILE_SAVEAS) || _project->GetFilePath(nullptr) == S_FALSE)
+			if ((command == ID_FILE_SAVEAS) || _project->GetFilePath(nullptr) == S_FALSE)
 			{
 				wil::unique_bstr path;
 				hr = PickSavePath (_hwnd, nullptr, ProjectFileDialogFileTypes, ProjectFileExtensionWithoutDot, &path);
@@ -749,7 +750,7 @@ public:
 			return 0;
 		}
 
-		if (((HIWORD(wParam) == 0) || (HIWORD(wParam) == 1)) && (LOWORD(wParam) == ID_FILE_OPEN))
+		if (((HIWORD(wParam) == 0) || (HIWORD(wParam) == 1)) && (command == ID_FILE_OPEN))
 		{
 			wil::unique_bstr path;
 			hr = PickOpenPath (_hwnd, nullptr, ProjectFileDialogFileTypes, ProjectFileExtensionWithoutDot, &path);
@@ -764,7 +765,7 @@ public:
 			return 0;
 		}
 
-		if (((HIWORD(wParam) == 0) || (HIWORD(wParam) == 1)) && (LOWORD(wParam) == ID_FILE_NEW))
+		if (((HIWORD(wParam) == 0) || (HIWORD(wParam) == 1)) && (command == ID_FILE_NEW))
 		{
 			com_ptr<IStpProject> project;
 			auto hr = _app->project_factory()(&project); LOG_IF_FAILED(hr);
@@ -781,22 +782,22 @@ public:
 			return 0;
 		}
 
-		if (wParam == ID_FILE_EXIT)
+		if (command == ID_FILE_EXIT)
 		{
 			PostMessage (_hwnd, WM_CLOSE, 0, 0);
 			return 0;
 		}
 
-		if ((wParam >= ID_RECENT_FILE_FIRST) && (wParam <= ID_RECENT_FILE_LAST))
+		if ((command >= ID_RECENT_FILE_FIRST) && (command <= ID_RECENT_FILE_LAST))
 		{
-			UINT recentFileIndex = (UINT)wParam - ID_RECENT_FILE_FIRST;
+			UINT recentFileIndex = (UINT)command - ID_RECENT_FILE_FIRST;
 			auto mainMenu = ::GetMenu(_hwnd);
 			auto fileMenu = ::GetSubMenu (mainMenu, 0);
-			int charCount = ::GetMenuString (fileMenu, (UINT)wParam, nullptr, 0, MF_BYCOMMAND);
+			int charCount = ::GetMenuString (fileMenu, (UINT)command, nullptr, 0, MF_BYCOMMAND);
 			if (charCount > 0)
 			{
 				auto path = std::make_unique<wchar_t[]>(charCount + 1);
-				::GetMenuString (fileMenu, (UINT)wParam, path.get(), charCount + 1, MF_BYCOMMAND);
+				::GetMenuString (fileMenu, (UINT)command, path.get(), charCount + 1, MF_BYCOMMAND);
 				//try
 				//{
 					open(path.get());
@@ -808,7 +809,7 @@ public:
 			}
 		}
 
-		if (wParam == ID_HELP_ABOUT)
+		if (command == ID_HELP_ABOUT)
 		{
 			auto text = std::wstring(_app->app_name()) + L" v" + _app->app_version_string();
 			MessageBox (_hwnd, text.c_str(), _app->app_name(), 0);

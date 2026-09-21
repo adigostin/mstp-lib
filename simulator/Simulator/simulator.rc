@@ -34,6 +34,7 @@ BEGIN
     "O",            ID_FILE_OPEN,           VIRTKEY, CONTROL, NOINVERT
     "N",            ID_FILE_NEW,            VIRTKEY, CONTROL, NOINVERT
     "S",            ID_FILE_SAVE,           VIRTKEY, CONTROL, NOINVERT
+    "X",            ID_FILE_EXIT,           VIRTKEY, ALT, NOINVERT
 END
 
 
@@ -83,7 +84,7 @@ BEGIN
         MENUITEM SEPARATOR
         MENUITEM "No Recent Files",             ID_FILE_RECENT, INACTIVE
         MENUITEM SEPARATOR
-        MENUITEM "E&xit\tAlt+F4",               ID_FILE_EXIT
+        MENUITEM "E&xit\tAlt+X",                ID_FILE_EXIT
     END
     MENUITEM "&Edit",                       ID_EDIT
     POPUP "&View"
