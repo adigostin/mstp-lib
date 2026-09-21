@@ -20,18 +20,25 @@ struct port_key_hash
 
 class STPPropertyChangedSink : public IStpPropertyChangedSink
 {
-	ULONG _refCount = 0;
+	ULONG _refCount = 1;
 	WeakRefToThis _weakRefToThis;
 	std::unordered_map<port_key, STP_PORT_ROLE, port_key_hash> _mostRecentRoles;
-
+	vector_nothrow<AdviseSinkToken> _tokens;
+	
 public:
-	STPPropertyChangedSink()
+	STPPropertyChangedSink(std::initializer_list<IBridge*> bridges)
 	{
-		auto hr = _weakRefToThis.InitInstance(AsUnknown());
-		Assert::AreEqual(S_OK, hr);
-	}
+		_weakRefToThis.InitInstance(AsUnknown());
 
-	IWeakRef* GetWeakRef() { return _weakRefToThis; }
+		for (auto bridge : bridges)
+		{
+			AdviseSinkToken token;
+			auto hr = AdviseSink<IStpPropertyChangedSink>(bridge, _weakRefToThis, &token); Assert::AreEqual(S_OK, hr);
+			_tokens.try_push_back(std::move(token));
+		}
+
+		_refCount--;
+	}
 
 	STP_PORT_ROLE GetMostRecentRole(IBridge* bridge, unsigned portIndex) const
 	{
@@ -95,7 +102,6 @@ TEST_CLASS(port_tests)
 {
 	TEST_METHOD(TestPortRoleTransition_Designated_Root)
 	{
-		HRESULT hr;
 		auto project = MakeProject();
 		auto bridge0 = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
 		auto bridge1 = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x70 });
@@ -107,12 +113,7 @@ TEST_CLASS(port_tests)
 		wire->set_p1(bridge1->PortAt(0));
 		project->AddWire(std::move(wire));
 
-		auto sink = com_ptr(new STPPropertyChangedSink());
-
-		AdviseSinkToken token0;
-		hr = AdviseSink<IStpPropertyChangedSink>(bridge0, sink->GetWeakRef(), &token0); Assert::AreEqual(S_OK, hr);
-		AdviseSinkToken token1;
-		hr = AdviseSink<IStpPropertyChangedSink>(bridge1, sink->GetWeakRef(), &token1); Assert::AreEqual(S_OK, hr);
+		auto sink = wil::com_ptr_failfast(new STPPropertyChangedSink({ bridge0, bridge1 }));
 
 		STP_StartBridge(bridge0->stp_bridge(), 0);
 		STP_StartBridge(bridge1->stp_bridge(), 0);
@@ -126,7 +127,6 @@ TEST_CLASS(port_tests)
 
 	TEST_METHOD(TestPortRoleTransition_Alternate)
 	{
-		HRESULT hr;
 		auto project = MakeProject();
 		auto bridge0 = MakeBridge(2, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
 		auto bridge1 = MakeBridge(2, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x70 });
@@ -142,11 +142,7 @@ TEST_CLASS(port_tests)
 		wire1->set_p1(bridge1->PortAt(1));
 		project->AddWire(std::move(wire1));
 
-		auto sink = com_ptr(new STPPropertyChangedSink());
-		AdviseSinkToken token0;
-		hr = AdviseSink<IStpPropertyChangedSink>(bridge0, sink->GetWeakRef(), &token0); Assert::AreEqual(S_OK, hr);
-		AdviseSinkToken token1;
-		hr = AdviseSink<IStpPropertyChangedSink>(bridge1, sink->GetWeakRef(), &token1); Assert::AreEqual(S_OK, hr);
+		auto sink = wil::com_ptr_failfast(new STPPropertyChangedSink({ bridge0, bridge1 }));
 
 		STP_StartBridge(bridge0->stp_bridge(), 0);
 		STP_StartBridge(bridge1->stp_bridge(), 0);
@@ -162,7 +158,6 @@ TEST_CLASS(port_tests)
 
 	TEST_METHOD(TestPortRoleTransition_Backup)
 	{
-		HRESULT hr;
 		auto project = MakeProject();
 		auto bridge = MakeBridge(2, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
 		project->AddBridge(bridge);
@@ -172,9 +167,7 @@ TEST_CLASS(port_tests)
 		wire->set_p1(bridge->PortAt(1));
 		project->AddWire(std::move(wire));
 
-		auto sink = com_ptr(new STPPropertyChangedSink());
-		AdviseSinkToken token;
-		hr = AdviseSink<IStpPropertyChangedSink>(bridge, sink->GetWeakRef(), &token); Assert::AreEqual(S_OK, hr);
+		auto sink = wil::com_ptr_failfast(new STPPropertyChangedSink({ bridge }));
 
 		STP_StartBridge(bridge->stp_bridge(), 0);
 
@@ -197,9 +190,7 @@ TEST_CLASS(port_tests)
 		wire->set_p1(bridge->PortAt(1));
 		project->AddWire(std::move(wire));
 
-		auto sink = com_ptr(new STPPropertyChangedSink());
-		AdviseSinkToken token;
-		hr = AdviseSink<IStpPropertyChangedSink>(bridge, sink->GetWeakRef(), &token); Assert::AreEqual(S_OK, hr);
+		auto sink = wil::com_ptr_failfast(new STPPropertyChangedSink({ bridge }));
 
 		STP_StartBridge(bridge->stp_bridge(), 0);
 
@@ -312,5 +303,15 @@ TEST_CLASS(port_tests)
 	TEST_METHOD(test_internal_port_path_cost)
 	{
 		test_port_path_cost(true);
+	}
+
+	TEST_METHOD(TestPortRoleTransition_Undefined_Disabled)
+	{
+		auto bridge = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		auto sink = wil::com_ptr_failfast(new STPPropertyChangedSink({ bridge }));
+
+		Assert::AreEqual(STP_PORT_ROLE_UNDEFINED, sink->GetMostRecentRole(bridge.get(), 0));
+		STP_StartBridge(bridge->stp_bridge(), 0);
+		Assert::AreEqual(STP_PORT_ROLE_DISABLED, sink->GetMostRecentRole(bridge.get(), 0));
 	}
 };
