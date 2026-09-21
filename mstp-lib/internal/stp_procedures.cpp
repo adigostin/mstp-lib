@@ -1214,14 +1214,11 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree, unsigned int timest
 	BRIDGE_ID previousCistRegionalRootIdentifier = bridgeTree->rootPriority.RegionalRootId;
 	uint32_nbo previousCistExternalRootPathCost   = bridgeTree->rootPriority.ExternalRootPathCost;
 
-	PRIORITY_VECTOR rootPriorityBefore = bridgeTree->rootPriority;
-	PORT_ID rootPortIdBefore = bridgeTree->rootPortId;
-	TIMES rootTimesBefore = bridgeTree->rootTimes;
-
 	// initialize this to our bridge priority
-	bridgeTree->rootPriority = bridgeTree->GetBridgePriority();
-	bridgeTree->rootPortId.Reset();
-	bridgeTree->rootTimes = bridgeTree->BridgeTimes;
+	PRIORITY_VECTOR newRootPriority = bridgeTree->GetBridgePriority();
+	PORT_ID newRootPortId;
+	newRootPortId.Reset();
+	TIMES newRootTimes = bridgeTree->BridgeTimes;
 
 	PORT_TREE* rootPortTree = NULL;
 
@@ -1242,35 +1239,49 @@ void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree, unsigned int timest
 			if ((rootPathPriority.DesignatedBridgeId.GetAddress () != bridgeTree->GetBridgePriority ().DesignatedBridgeId.GetAddress ())
 				&& (port->restrictedRole == false))
 			{
-				if (rootPathPriority.IsBetterThan (bridgeTree->rootPriority)
-					|| ((rootPathPriority == bridgeTree->rootPriority) && (portTree->portId.IsBetterThan (bridgeTree->rootPortId))))
+				if (rootPathPriority.IsBetterThan (newRootPriority)
+					|| ((rootPathPriority == newRootPriority) && (portTree->portId.IsBetterThan (newRootPortId))))
 				{
 					rootPortTree = portTree;
 
-					bridgeTree->rootPriority = rootPathPriority;
-					bridgeTree->rootPortId   = portTree->portId;
+					newRootPriority = rootPathPriority;
+					newRootPortId   = portTree->portId;
 
 					// d)
-					bridgeTree->rootTimes = portTree->portTimes;
+					newRootTimes = portTree->portTimes;
 					if (port->rcvdInternal == false)
-						bridgeTree->rootTimes.MessageAge++;
+						newRootTimes.MessageAge++;
 					else
 					{
-						assert (bridgeTree->rootTimes.remainingHops > 0);
-						bridgeTree->rootTimes.remainingHops--;
+						assert (newRootTimes.remainingHops > 0);
+						newRootTimes.remainingHops--;
 					}
 				}
 			}
 		}
 	}
 
-	if (bridge->propChanged && bridgeTree->rootPriority != rootPriorityBefore && bridgeTree->rootPortId != rootPortIdBefore)
-		bridge->propChanged(bridge, -1, givenTree, STP_PROPERTY_ROOT_PRIORITY_VECTOR, timestamp);
-	if (bridge->propChanged && bridgeTree->rootTimes != rootTimesBefore)
-		bridge->propChanged(bridge, -1, givenTree, STP_PROPERTY_ROOT_TIMES, timestamp);
+	if (newRootPriority != bridgeTree->rootPriority || newRootPortId != bridgeTree->rootPortId)
+	{
+		if (bridge->propChanging)
+			bridge->propChanging(bridge, -1, givenTree, STP_PROPERTY_ROOT_PRIORITY_VECTOR, timestamp);
+		bridgeTree->rootPriority = newRootPriority;
+		bridgeTree->rootPortId = newRootPortId;
+		if (bridge->propChanged)
+			bridge->propChanged(bridge, -1, givenTree, STP_PROPERTY_ROOT_PRIORITY_VECTOR, timestamp);
 
-	LOG (bridge, -1, givenTree, "  bridge root priority : {PVS}\r\n", &bridgeTree->rootPriority);
-	LOG (bridge, -1, givenTree, "  root port = {PID}\r\n", &bridgeTree->rootPortId);
+		LOG (bridge, -1, givenTree, "  bridge root priority : {PVS}\r\n", &bridgeTree->rootPriority);
+		LOG (bridge, -1, givenTree, "  root port = {PID}\r\n", &bridgeTree->rootPortId);
+	}
+
+	if (newRootTimes != bridgeTree->rootTimes)
+	{
+		if (bridge->propChanging)
+			bridge->propChanging(bridge, -1, givenTree, STP_PROPERTY_ROOT_TIMES, timestamp);
+		bridgeTree->rootTimes = newRootTimes;
+		if (bridge->propChanged)
+			bridge->propChanged(bridge, -1, givenTree, STP_PROPERTY_ROOT_TIMES, timestamp);
+	}
 
 	for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
 	{

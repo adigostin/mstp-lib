@@ -8,7 +8,7 @@
 
 using namespace edge;
 
-struct TreeSelection : IObjectList, IConnectionPointContainer, IObjectCollectionChangeEvents, IVlanSelectionEvents, IStpPropertyChangedSink
+struct TreeSelection : IObjectList, IConnectionPointContainer, IObjectCollectionChangeEvents, IVlanSelectionEvents, IStpPropertyChangeSink
 {
 	ULONG _refCount = 0;
 	WeakRefToThis _weakRefToThis;
@@ -71,7 +71,7 @@ struct TreeSelection : IObjectList, IConnectionPointContainer, IObjectCollection
 			|| TryQI<IConnectionPointContainer>(this, riid, ppvObject)
 			|| TryQI<IObjectCollectionChangeEvents>(this, riid, ppvObject)
 			|| TryQI<IVlanSelectionEvents>(this, riid, ppvObject)
-			|| TryQI<IStpPropertyChangedSink>(this, riid, ppvObject)
+			|| TryQI<IStpPropertyChangeSink>(this, riid, ppvObject)
 		)
 			return S_OK;
 
@@ -208,7 +208,7 @@ struct TreeSelection : IObjectList, IConnectionPointContainer, IObjectCollection
 	}
 	#pragma endregion
 
-	// IStpPropertyChangedSink
+	// IStpPropertyChangeSink
 	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanging (IBridge* b, unsigned int portIndex,
 		unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override
 	{
@@ -307,7 +307,7 @@ struct TreeSelection : IObjectList, IConnectionPointContainer, IObjectCollection
 					hr = _selection->ObjectAt(a.index + i)->QueryInterface(IID_PPV_ARGS(b.addressof())); RETURN_IF_FAILED(hr);
 					auto it = _stpPropChangeTokens.find(b); RETURN_HR_IF(E_UNEXPECTED, it != _stpPropChangeTokens.end());
 					AdviseSinkToken token;
-					hr = AdviseSink<IStpPropertyChangedSink>(b, _weakRefToThis, &token); RETURN_IF_FAILED(hr);
+					hr = AdviseSink<IStpPropertyChangeSink>(b, _weakRefToThis, &token); RETURN_IF_FAILED(hr);
 					bool inserted = _stpPropChangeTokens.try_insert({ b, std::make_pair(std::move(token), 1u) }); RETURN_HR_IF(E_OUTOFMEMORY, !inserted);
 				}
 			}
@@ -321,7 +321,7 @@ struct TreeSelection : IObjectList, IConnectionPointContainer, IObjectCollection
 					if (it == _stpPropChangeTokens.end())
 					{
 						AdviseSinkToken token;
-						hr = AdviseSink<IStpPropertyChangedSink>(p->bridge(), _weakRefToThis, &token); RETURN_IF_FAILED(hr);
+						hr = AdviseSink<IStpPropertyChangeSink>(p->bridge(), _weakRefToThis, &token); RETURN_IF_FAILED(hr);
 						bool inserted = _stpPropChangeTokens.try_insert({ p->bridge(), std::make_pair(std::move(token), 1u) }); RETURN_HR_IF(E_OUTOFMEMORY, !inserted);
 					}
 					else

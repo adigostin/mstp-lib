@@ -10,7 +10,7 @@
 using namespace D2D1;
 using namespace edge;
 
-class PortImpl : public IPort, IPortProperties, IConnectionPointContainer, IXmlParent, IStpPropertyChangedSink
+class PortImpl : public IPort, IPortProperties, IConnectionPointContainer, IXmlParent, IStpPropertyChangeSink
 {
 	ULONG _refCount = 0;
 	WeakRefToThis _weakRefToThis;
@@ -45,7 +45,7 @@ public:
 			_trees.try_push_back(std::move(tree));
 		}
 
-		hr = AdviseSink<IStpPropertyChangedSink>(parent, _weakRefToThis, &_stpPropertyChangedToken); RETURN_IF_FAILED(hr);
+		hr = AdviseSink<IStpPropertyChangeSink>(parent, _weakRefToThis, &_stpPropertyChangedToken); RETURN_IF_FAILED(hr);
 
 		return S_OK;
 	}
@@ -65,7 +65,7 @@ public:
 			|| TryQI<ISelectableObject>(this, riid, ppvObject)
 			|| TryQI<IConnectionPointContainer>(this, riid, ppvObject)
 			|| TryQI<IXmlParent>(this, riid, ppvObject)
-			|| TryQI<IStpPropertyChangedSink>(this, riid, ppvObject)
+			|| TryQI<IStpPropertyChangeSink>(this, riid, ppvObject)
 		)
 			return S_OK;
 
@@ -589,7 +589,7 @@ public:
 	
 	virtual IPortTree* treeAt(uint32_t i) override { return _trees[i]; }
 
-	#pragma region IStpPropertyChangedSink
+	#pragma region IStpPropertyChangeSink
 	static inline const std::pair<STP_PROPERTY, DISPID> stpPropertyToDispidMap[] = {
 		{ STP_PROPERTY_ADMIN_EDGE,   dispidAdminEdge },
 		{ STP_PROPERTY_OPER_EDGE,    dispidOperEdge },

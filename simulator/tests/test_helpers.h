@@ -1,6 +1,6 @@
 
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
-// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+// Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License v2.0.
 
 #pragma once
 #include "stp.h"
@@ -303,3 +303,12 @@ public:
 
 	ConnectionPointImpl<IObjectCollectionChangeEvents>* GetEventSinks() { return _events.get(); }
 };
+
+struct DECLSPEC_NOVTABLE DECLSPEC_UUID("025DAA73-3BC6-4C62-AAA6-9CA0F248C8CA") ITestPropertyChangeSink : IUnknown
+{
+	virtual bool ChangingCalled(DISPID dispid) const = 0;
+	virtual bool ChangedCalled(DISPID dispid) const = 0;
+};
+
+wil::com_ptr_failfast<ITestPropertyChangeSink> CreateTestPropertyChangeSink(IUnknown* source);
+

@@ -1,6 +1,6 @@
 
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
-// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+// Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License v2.0.
 
 #include "pch.h"
 #include "test_helpers.h"
@@ -19,7 +19,7 @@ struct port_key_hash
 	}
 };
 
-class STPPropertyChangedSink : public IStpPropertyChangedSink
+class STPPropertyChangedSink : public IStpPropertyChangeSink
 {
 	ULONG _refCount = 1;
 	WeakRefToThis _weakRefToThis;
@@ -34,7 +34,7 @@ public:
 		for (auto bridge : bridges)
 		{
 			AdviseSinkToken token;
-			auto hr = AdviseSink<IStpPropertyChangedSink>(bridge, _weakRefToThis, &token); Assert::AreEqual(S_OK, hr);
+			auto hr = AdviseSink<IStpPropertyChangeSink>(bridge, _weakRefToThis, &token); Assert::AreEqual(S_OK, hr);
 			_tokens.try_push_back(std::move(token));
 		}
 
@@ -47,12 +47,12 @@ public:
 		return it == _mostRecentRoles.end() ? STP_PORT_ROLE_UNDEFINED : it->second;
 	}
 
-	IUnknown* AsUnknown() { return static_cast<IStpPropertyChangedSink*>(this); }
+	IUnknown* AsUnknown() { return static_cast<IStpPropertyChangeSink*>(this); }
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override
 	{
 		if (TryQI<IUnknown>(AsUnknown(), riid, ppvObject)
-			|| TryQI<IStpPropertyChangedSink>(this, riid, ppvObject))
+			|| TryQI<IStpPropertyChangeSink>(this, riid, ppvObject))
 			return S_OK;
 
 		if (riid == __uuidof(IWeakRef))
@@ -374,58 +374,12 @@ TEST_CLASS(port_tests)
 
 	TEST_METHOD(PortNotifiesBeforeAndAfterAdminEdgeChanges)
 	{
-		class PropertyChangeSink : public IPropertyChangeSink
-		{
-		public:
-			ULONG refCount = 1;
-			WeakRefToThis weakRefToThis;
-			AdviseSinkToken token;
-			std::optional<DISPID> changingDispid;
-			std::optional<DISPID> changedDispid;
-
-			PropertyChangeSink(IPort* port)
-			{
-				auto hr = weakRefToThis.InitInstance(static_cast<IPropertyChangeSink*>(this)); Assert::AreEqual(S_OK, hr);
-				hr = AdviseSink<IPropertyChangeSink>(port, weakRefToThis, &token); Assert::AreEqual(S_OK, hr);
-				refCount--;
-			}
-
-			HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override
-			{
-				if (TryQI<IUnknown>(static_cast<IPropertyChangeSink*>(this), riid, ppvObject)
-					|| TryQI<IPropertyChangeSink>(this, riid, ppvObject))
-					return S_OK;
-
-				if (riid == __uuidof(IWeakRef))
-					return weakRefToThis.QueryIWeakRef(ppvObject);
-
-				return E_NOINTERFACE;
-			}
-
-			ULONG STDMETHODCALLTYPE AddRef() override { return ++refCount; }
-			ULONG STDMETHODCALLTYPE Release() override { return ReleaseST(this, refCount); }
-
-			HRESULT STDMETHODCALLTYPE OnPropertyChanging(IUnknown*, DISPID dispid, const PropertyChangeArgs*) override
-			{
-				changingDispid = dispid;
-				return S_OK;
-			}
-
-			HRESULT STDMETHODCALLTYPE OnPropertyChanged(IUnknown*, DISPID dispid, const PropertyChangeArgs*) override
-			{
-				changedDispid = dispid;
-				return S_OK;
-			}
-		};
-
 		auto bridge = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
-		auto sink = wil::com_ptr_failfast(new PropertyChangeSink(bridge->PortAt(0)));
+		auto sink = CreateTestPropertyChangeSink(bridge->PortAt(0));
 
 		STP_SetPortAdminEdge(bridge->stp_bridge(), 0, true, 0);
 
-		Assert::IsTrue(sink->changingDispid.has_value());
-		Assert::AreEqual((LONG)dispidAdminEdge, (LONG)*sink->changingDispid);
-		Assert::IsTrue(sink->changedDispid.has_value());
-		Assert::AreEqual((LONG)dispidAdminEdge, (LONG)*sink->changedDispid);
+		Assert::IsTrue(sink->ChangingCalled(dispidAdminEdge));
+		Assert::IsTrue(sink->ChangedCalled(dispidAdminEdge));
 	}
 };

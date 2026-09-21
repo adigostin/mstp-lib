@@ -1,9 +1,14 @@
 
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
-// Copyright (c) 2011-2020 Adi Gostin, distributed under Apache License v2.0.
+// Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License v2.0.
 
 #include "pch.h"
 #include "test_helpers.h"
+
+TEST_MODULE_INITIALIZE(ModuleInitialize)
+{
+	wil::g_fBreakOnFailure = IsDebuggerPresent() != 0;
+}
 
 void* test_bridge::StpCallback_AllocAndZeroMemory (unsigned int size)
 {
@@ -120,8 +125,67 @@ wil::com_ptr_failfast<IWire> ConnectPorts (IStpProject* project, IPort* p0, IPor
 	return wire;
 }
 
-TEST_MODULE_INITIALIZE(ModuleInitialize)
+class TestPropertyChangeSink : public ITestPropertyChangeSink, IPropertyChangeSink
 {
-	wil::g_fBreakOnFailure = IsDebuggerPresent() != 0;
+	ULONG _refCount;
+	WeakRefToThis _weakRefToThis;
+	AdviseSinkToken _token;
+	std::unordered_set<DISPID> _changingDispids;
+	std::unordered_set<DISPID> _changedDispids;
+	
+public:
+	TestPropertyChangeSink(IUnknown* source)
+		: _refCount(1)
+	{
+		auto hr = _weakRefToThis.InitInstance(static_cast<IPropertyChangeSink*>(this));
+		Assert::AreEqual(S_OK, hr);
+		hr = AdviseSink<IPropertyChangeSink>(source, _weakRefToThis, &_token);
+		Assert::AreEqual(S_OK, hr);
+		_refCount--;
+	}
+
+	IUnknown* AsUnknown() { return static_cast<IPropertyChangeSink*>(this); }
+
+	#pragma region IUnknown
+	HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override
+	{
+		if (   TryQI<IUnknown>(AsUnknown(), riid, ppvObject)
+			|| TryQI<ITestPropertyChangeSink>(this, riid, ppvObject)
+			|| TryQI<IPropertyChangeSink>(this, riid, ppvObject))
+			return S_OK;
+
+		if (riid == __uuidof(IWeakRef))
+			return _weakRefToThis.QueryIWeakRef(ppvObject);
+
+		return E_NOINTERFACE;
+	}
+
+	ULONG STDMETHODCALLTYPE AddRef() override { return ++_refCount; }
+	ULONG STDMETHODCALLTYPE Release() override { return ReleaseST(this, _refCount); }
+	#pragma endregion
+
+	#pragma region IPropertyChangeSink
+	HRESULT STDMETHODCALLTYPE OnPropertyChanging(IUnknown*, DISPID dispid, const PropertyChangeArgs*) override
+	{
+		_changingDispids.insert(dispid);
+		return S_OK;
+	}
+
+	HRESULT STDMETHODCALLTYPE OnPropertyChanged(IUnknown*, DISPID dispid, const PropertyChangeArgs*) override
+	{
+		_changedDispids.insert(dispid);
+		return S_OK;
+	}
+	#pragma endregion
+
+	#pragma region ITestPropertyChangeSink
+	virtual bool ChangingCalled(DISPID dispid) const override { return _changingDispids.contains(dispid); }
+	virtual bool ChangedCalled(DISPID dispid) const override { return _changedDispids.contains(dispid); }
+	#pragma endregion
+};
+
+wil::com_ptr_failfast<ITestPropertyChangeSink> CreateTestPropertyChangeSink(IUnknown* source)
+{
+	return wil::com_ptr_failfast<ITestPropertyChangeSink>(new TestPropertyChangeSink(source));
 }
 

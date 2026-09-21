@@ -5,6 +5,7 @@
 #include "pch.h"
 #include "Simulator.h"
 #include "test_helpers.h"
+#include "dispids.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -79,5 +80,18 @@ TEST_CLASS(bridge_tests)
 		uint64_t root_id;
 		memcpy (&root_id, rpv, 8);
 		Assert::AreEqual (0ull, root_id);
+	}
+
+	TEST_METHOD(BridgeTreeNotifiesWhenRootTimeChanges)
+	{
+		auto bridge = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		auto sink = CreateTestPropertyChangeSink(bridge->TreeAt(0));
+		
+		STP_StartBridge(bridge->stp_bridge(), 0);
+
+		Assert::IsTrue(sink->ChangingCalled(dispidRootId));
+		Assert::IsTrue(sink->ChangedCalled(dispidRootId));
+		Assert::IsTrue(sink->ChangingCalled(dispidHelloTime));
+		Assert::IsTrue(sink->ChangedCalled(dispidHelloTime));
 	}
 };

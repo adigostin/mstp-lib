@@ -56,7 +56,7 @@ class BridgeImpl : public IBridge, IBridgeProperties, IConnectionPointContainer,
 	com_ptr<ConnectionPointImpl<IPropertyChangeSink>> _propChangeCP;
 	com_ptr<ConnectionPointImpl<IInvalidateSink>> _invalidateCP;
 	com_ptr<ConnectionPointImpl<IBridgeEvents>> _bridgeEventsCP;
-	com_ptr<ConnectionPointImpl<IStpPropertyChangedSink>> _stpPropertyChangedCP;
+	com_ptr<ConnectionPointImpl<IStpPropertyChangeSink>> _stpPropertyChangedCP;
 
 public:
 	HRESULT InitInstance (uint32_t port_count, uint32_t msti_count, mac_address macAddress)
@@ -596,7 +596,7 @@ public:
 			return wil::com_query_to_nothrow(_invalidateCP, ppCP);
 		if (riid == __uuidof(IBridgeEvents))
 			return wil::com_query_to_nothrow(_bridgeEventsCP, ppCP);
-		if (riid == __uuidof(IStpPropertyChangedSink))
+		if (riid == __uuidof(IStpPropertyChangeSink))
 			return wil::com_query_to_nothrow(_stpPropertyChangedCP, ppCP);
 		RETURN_HR(E_NOTIMPL);
 	}
@@ -1141,7 +1141,7 @@ public:
 	static void StpCallback_PropertyChanging (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp)
 	{
 		auto b = static_cast<BridgeImpl*>(STP_GetApplicationContext(bridge));
-		b->_stpPropertyChangedCP->Notify([b,portIndex,treeIndex,prop,timestamp](IStpPropertyChangedSink* sink) {
+		b->_stpPropertyChangedCP->Notify([b,portIndex,treeIndex,prop,timestamp](IStpPropertyChangeSink* sink) {
 			return sink->OnStpPropertyChanging(b, portIndex, treeIndex, prop, timestamp);
 		});
 	}
@@ -1149,7 +1149,7 @@ public:
 	static void StpCallback_PropertyChanged (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp)
 	{
 		auto b = static_cast<BridgeImpl*>(STP_GetApplicationContext(bridge));
-		b->_stpPropertyChangedCP->Notify([b,portIndex,treeIndex,prop,timestamp](IStpPropertyChangedSink* sink) {
+		b->_stpPropertyChangedCP->Notify([b,portIndex,treeIndex,prop,timestamp](IStpPropertyChangeSink* sink) {
 			return sink->OnStpPropertyChanged(b, portIndex, treeIndex, prop, timestamp);
 		});
 

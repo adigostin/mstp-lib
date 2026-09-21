@@ -18,3 +18,5 @@
 - In testing code, in the vast majority of cases the returned HR does not need checking,
   because the test will fail after a few lines anyway, and that's acceptable in a test.
 - Give references to code as clickable links, not as file names and line numbers.
+- As a general rule, don't look inside the embedded applications located outside the solution
+  directory (those in directories with the "TestApp" prefix).

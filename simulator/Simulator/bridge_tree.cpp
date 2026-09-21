@@ -8,7 +8,7 @@
 
 using namespace edge;
 
-class BridgeTreeImpl : public IBridgeTree, IBridgeTreeProperties, IConnectionPointContainer, IStpPropertyChangedSink
+class BridgeTreeImpl : public IBridgeTree, IBridgeTreeProperties, IConnectionPointContainer, IStpPropertyChangeSink
 {
 	ULONG _refCount = 0;
 	WeakRefToThis _weakRefToThis;
@@ -29,7 +29,7 @@ public:
 		::GetSystemTime(&_last_topology_change);
 		_topology_change_count = 0;
 		hr = MakeConnectionPoint<IPropertyChangeSink>(this, &_propChangeCP); RETURN_IF_FAILED(hr);
-		hr = AdviseSink<IStpPropertyChangedSink>(_bridge, _weakRefToThis, &_stpPropChangeToken); RETURN_IF_FAILED(hr);
+		hr = AdviseSink<IStpPropertyChangeSink>(_bridge, _weakRefToThis, &_stpPropChangeToken); RETURN_IF_FAILED(hr);
 		return S_OK;
 	}
 
@@ -46,7 +46,7 @@ public:
 			|| TryQI<IBridgeTree>(this, riid, ppvObject)
 			|| TryQI<IBridgeTreeProperties>(this, riid, ppvObject)
 			|| TryQI<IConnectionPointContainer>(this, riid, ppvObject)
-			|| TryQI<IStpPropertyChangedSink>(this, riid, ppvObject)
+			|| TryQI<IStpPropertyChangeSink>(this, riid, ppvObject)
 		)
 			return S_OK;
 
@@ -74,34 +74,42 @@ public:
 	}
 	#pragma endregion
 
-	#pragma region IStpPropertyChangedSink
+	#pragma region IStpPropertyChangeSink
+	static inline const std::pair<STP_PROPERTY, DISPID> stpPropertyToDispidMap[] = {
+		{ STP_PROPERTY_ROOT_PRIORITY_VECTOR, dispidRootId },
+		{ STP_PROPERTY_ROOT_PRIORITY_VECTOR, dispidExternalRootPathCost },
+		{ STP_PROPERTY_ROOT_PRIORITY_VECTOR, dispidRegionalRootId },
+		{ STP_PROPERTY_ROOT_PRIORITY_VECTOR, dispidInternalRootPathCost },
+		{ STP_PROPERTY_ROOT_PRIORITY_VECTOR, dispidDesignatedBridgeId },
+		{ STP_PROPERTY_ROOT_PRIORITY_VECTOR, dispidDesignatedPortId },
+		{ STP_PROPERTY_ROOT_PRIORITY_VECTOR, dispidReceivingPortId },
+		{ STP_PROPERTY_ROOT_TIMES, dispidHelloTime },
+		{ STP_PROPERTY_ROOT_TIMES, dispidMaxAge },
+		{ STP_PROPERTY_ROOT_TIMES, dispidForwardDelay },
+		{ STP_PROPERTY_ROOT_TIMES, dispidMessageAge },
+		{ STP_PROPERTY_ROOT_TIMES, dispidRemainingHops },
+	};
+
 	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanging (IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override
 	{
-		// TODO:
+		if (portIndex != (unsigned int)-1 || treeIndex != _tree_index)
+			return S_OK;
+
+		for (const auto& [property, dispid] : stpPropertyToDispidMap)
+			if (property == prop)
+				NotifyPropertyChanging(_propChangeCP, AsUnknown(), dispid);
+
 		return S_OK;
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanged (IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override
 	{
-		if (prop == STP_PROPERTY_ROOT_PRIORITY_VECTOR || prop == STP_PROPERTY_BRIDGE_STARTED)
-		{
-			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidRootId);
-			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidExternalRootPathCost);
-			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidRegionalRootId);
-			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidInternalRootPathCost);
-			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidDesignatedBridgeId);
-			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidDesignatedPortId);
-			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidReceivingPortId);
-		}
+		if (portIndex != (unsigned int)-1 || treeIndex != _tree_index)
+			return S_OK;
 
-		if (prop == STP_PROPERTY_ROOT_TIMES || prop == STP_PROPERTY_BRIDGE_STARTED)
-		{
-			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidHelloTime);
-			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidMaxAge);
-			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidForwardDelay);
-			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidMessageAge);
-			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidRemainingHops);
-		}
+		for (const auto& [property, dispid] : stpPropertyToDispidMap)
+			if (property == prop)
+				NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispid);
 
 		return S_OK;
 	}
