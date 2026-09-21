@@ -28,7 +28,6 @@
     <ClInclude Include="include\edge\vector_nothrow.h" />
     <ClInclude Include="include\edge\Z80Xml.h" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="include\edge\referenced_object.h" />
     <ClInclude Include="include\edge\com.h" />
   </ItemGroup>
   <ItemGroup>
@@ -37,7 +36,6 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="d2d_renderer.cpp" />
-    <ClCompile Include="utility_functions.cpp" />
     <ClCompile Include="Z80Xml.cpp" />
     <ClCompile Include="zoomer.cpp" />
   </ItemGroup>

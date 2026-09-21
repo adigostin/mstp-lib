@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="edge.cpp" />
+    <ClCompile Include="d2d_renderer.cpp" />
+    <ClCompile Include="Z80Xml.cpp" />
+    <ClCompile Include="zoomer.cpp" />
+    <ClCompile Include="pch.cpp">
+      <Filter>pch</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\EdgeIDL.h" />
+    <ClInclude Include="include\edge\edge_d2d.h" />
+    <ClInclude Include="include\edge\object_list.h" />
+    <ClInclude Include="include\edge\edge.h" />
+    <ClInclude Include="include\edge\PropDefs.h" />
+    <ClInclude Include="include\edge\unordered_map_nothrow.h" />
+    <ClInclude Include="include\edge\vector_nothrow.h" />
+    <ClInclude Include="include\edge\Z80Xml.h" />
+    <ClInclude Include="include\edge\com.h" />
+    <ClInclude Include="pch.h">
+      <Filter>pch</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Midl Include="EdgeIDL.idl" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="pch">
+      <UniqueIdentifier>{3be8fe3c-05cc-4094-a10b-7bed7a6851ad}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
