@@ -219,7 +219,25 @@ void STP_StopBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 				bridge->callbacks.enableForwarding(bridge, pi, ti, true, timestamp);
 				tree->forwarding = true;
 			}
+
+			if (bridge->propChanging)
+				bridge->propChanging(bridge, pi, ti, STP_PROPERTY_INTERNAL_PORT_PATH_COST, timestamp);
+			tree->InternalPortPathCost = 0;
+			if (bridge->propChanged)
+				bridge->propChanged(bridge, pi, ti, STP_PROPERTY_INTERNAL_PORT_PATH_COST, timestamp);
 		}
+
+		if (bridge->propChanging)
+			bridge->propChanging(bridge, pi, -1, STP_PROPERTY_DETECTED_PORT_PATH_COST, timestamp);
+		port->detectedPortPathCost = 0;
+		if (bridge->propChanged)
+			bridge->propChanged(bridge, pi, -1, STP_PROPERTY_DETECTED_PORT_PATH_COST, timestamp);
+
+		if (bridge->propChanging)
+			bridge->propChanging(bridge, pi, -1, STP_PROPERTY_EXTERNAL_PORT_PATH_COST, timestamp);
+		port->ExternalPortPathCost = 0;
+			if (bridge->propChanged)
+			bridge->propChanged(bridge, pi, -1, STP_PROPERTY_EXTERNAL_PORT_PATH_COST, timestamp);
 	}
 
 	// This one last, to allow the callbacks to still call "const" library functions.
@@ -316,20 +334,32 @@ void STP_OnPortEnabled (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int
 	if (bridge->propChanged)
 		bridge->propChanged(bridge, portIndex, -1, STP_PROPERTY_OPER_P2P, timestamp);
 
+	if (bridge->propChanging)
+		bridge->propChanging(bridge, portIndex, -1, STP_PROPERTY_DETECTED_PORT_PATH_COST, timestamp);
 	port->detectedPortPathCost = GetDefaultPortPathCost(speedMegabitsPerSecond);
+	if (bridge->propChanged)
+		bridge->propChanged(bridge, portIndex, -1, STP_PROPERTY_DETECTED_PORT_PATH_COST, timestamp);
 
+	if (bridge->propChanging)
+		bridge->propChanging(bridge, portIndex, -1, STP_PROPERTY_EXTERNAL_PORT_PATH_COST, timestamp);
 	if (port->adminExternalPortPathCost != 0)
 		port->ExternalPortPathCost = port->adminExternalPortPathCost;
 	else
 		port->ExternalPortPathCost = port->detectedPortPathCost;
+	if (bridge->propChanged)
+		bridge->propChanged(bridge, portIndex, -1, STP_PROPERTY_EXTERNAL_PORT_PATH_COST, timestamp);
 
 	for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount(); treeIndex++)
 	{
 		PORT_TREE* portTree = port->trees[treeIndex];
+		if (bridge->propChanging)
+			bridge->propChanging(bridge, portIndex, treeIndex, STP_PROPERTY_INTERNAL_PORT_PATH_COST, timestamp);
 		if (portTree->adminInternalPortPathCost != 0)
 			portTree->InternalPortPathCost = portTree->adminInternalPortPathCost;
 		else
 			portTree->InternalPortPathCost = port->detectedPortPathCost;
+		if (bridge->propChanged)
+			bridge->propChanged(bridge, portIndex, treeIndex, STP_PROPERTY_INTERNAL_PORT_PATH_COST, timestamp);
 	}
 
 	if (bridge->started)
@@ -355,9 +385,26 @@ void STP_OnPortDisabled (STP_BRIDGE* bridge, unsigned int portIndex, unsigned in
 		port->operPointToPointMAC = false;
 		if (bridge->propChanged)
 			bridge->propChanged(bridge, portIndex, -1, STP_PROPERTY_OPER_P2P, timestamp);
+		if (bridge->propChanging)
+			bridge->propChanging(bridge, portIndex, -1, STP_PROPERTY_DETECTED_PORT_PATH_COST, timestamp);
 		port->detectedPortPathCost = 0;
+		if (bridge->propChanged)
+			bridge->propChanged(bridge, portIndex, -1, STP_PROPERTY_DETECTED_PORT_PATH_COST, timestamp);
+
+		if (bridge->propChanging)
+			bridge->propChanging(bridge, portIndex, -1, STP_PROPERTY_EXTERNAL_PORT_PATH_COST, timestamp);
 		port->ExternalPortPathCost = 0;
-		// TODO: clear also InternalPortPathCost
+		if (bridge->propChanged)
+			bridge->propChanged(bridge, portIndex, -1, STP_PROPERTY_EXTERNAL_PORT_PATH_COST, timestamp);
+
+		for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount(); treeIndex++)
+		{
+			if (bridge->propChanging)
+				bridge->propChanging(bridge, portIndex, treeIndex, STP_PROPERTY_INTERNAL_PORT_PATH_COST, timestamp);
+			port->trees[treeIndex]->InternalPortPathCost = 0;
+			if (bridge->propChanged)
+				bridge->propChanged(bridge, portIndex, treeIndex, STP_PROPERTY_INTERNAL_PORT_PATH_COST, timestamp);
+		}
 
 		port->portEnabled = false;
 		if (bridge->propChanged)
@@ -1257,7 +1304,7 @@ void* STP_GetApplicationContext (const STP_BRIDGE* bridge)
 	return bridge->applicationContext;
 }
 
-void STP_RegisterPropertyChangeCallback(struct STP_BRIDGE* bridge, STP_CALLBACK_PROPERTY_CHANGE changing, STP_CALLBACK_PROPERTY_CHANGE changed)
+void STP_RegisterPropertyChangeCallbacks(struct STP_BRIDGE* bridge, STP_CALLBACK_PROPERTY_CHANGE changing, STP_CALLBACK_PROPERTY_CHANGE changed)
 {
 	assert(!bridge->propChanging);
 	bridge->propChanging = changing;
@@ -1265,7 +1312,7 @@ void STP_RegisterPropertyChangeCallback(struct STP_BRIDGE* bridge, STP_CALLBACK_
 	bridge->propChanged = changed;
 }
 
-void STP_UnregisterPropertyChangeCallback(struct STP_BRIDGE* bridge)
+void STP_UnregisterPropertyChangeCallbacks(struct STP_BRIDGE* bridge)
 {
 	bridge->propChanging = nullptr;
 	bridge->propChanged = nullptr;
@@ -1363,21 +1410,12 @@ unsigned int STP_GetDetectedPortPathCost (const struct STP_BRIDGE* bridge, unsig
 
 unsigned int STP_GetExternalPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex)
 {
-	const PORT* port = bridge->ports[portIndex];
-	if (!port->portEnabled)
-		return 0;
-
-	return port->ExternalPortPathCost;
+	return bridge->ports[portIndex]->ExternalPortPathCost;
 }
 
 unsigned int STP_GetInternalPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned treeIndex)
 {
-	assert(bridge->started);
-	const PORT* port = bridge->ports[portIndex];
-	if (!port->portEnabled)
-		return 0;
-
-	return port->trees[treeIndex]->InternalPortPathCost;
+	return bridge->ports[portIndex]->trees[treeIndex]->InternalPortPathCost;
 }
 
 unsigned int STP_GetAdminInternalPortPathCost (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex)

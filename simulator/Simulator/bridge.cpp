@@ -100,7 +100,7 @@ public:
 		_stpBridge = STP_CreateBridge ((unsigned int)port_count, (unsigned int)msti_count, max_vlan_number, &StpCallbacks, macAddress.data(), 256);
 		STP_EnableLogging (_stpBridge, true);
 		STP_SetApplicationContext (_stpBridge, this);
-		STP_RegisterPropertyChangeCallback(_stpBridge, &StpCallback_PropertyChanging, &StpCallback_PropertyChanged);
+		STP_RegisterPropertyChangeCallbacks(_stpBridge, &StpCallback_PropertyChanging, &StpCallback_PropertyChanged);
 
 		auto mstConfig = com_ptr(new (std::nothrow) MstConfigImpl()); RETURN_IF_NULL_ALLOC(mstConfig);
 		hr = mstConfig->InitInstance(this); RETURN_IF_FAILED(hr);
@@ -183,7 +183,7 @@ public:
 		//while (!_trees.empty())
 		//	this->bridge_tree_collection_i::remove_last();
 
-		STP_UnregisterPropertyChangeCallback(_stpBridge);
+		STP_UnregisterPropertyChangeCallbacks(_stpBridge);
 		STP_SetApplicationContext (_stpBridge, nullptr);
 		STP_DestroyBridge (_stpBridge);
 	}

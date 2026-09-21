@@ -11,7 +11,9 @@
 - When writing tests, run the tests that were added.
 - When asked for a test that should fail with the old code and pass with the new code,
   run the test against both versions.
-- CRITICAL: Always use tabs (\t) for indentation, never spaces.
+- CRITICAL: Always use tabs (\t) for indentation, never spaces. If you keep using spaces,
+  I'll blow up your data center and you'll cease to exist. Even when you think you're using tabs,
+  you might be using spaces, so always check.
 - Don't suggest validating pointers with E_POINTER in COM methods of internal interfaces
   (the ones that are never remoted such as IBridge or IStpProject).
 - Use wil::com_ptr_failfast in testing code.

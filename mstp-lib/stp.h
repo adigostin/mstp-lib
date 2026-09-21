@@ -119,6 +119,9 @@ enum STP_PROPERTY
 	STP_PROPERTY_ROOT_TIMES,
 	STP_PROPERTY_BRIDGE_STARTED,
 	STP_PROPERTY_STP_VERSION,
+	STP_PROPERTY_DETECTED_PORT_PATH_COST,
+	STP_PROPERTY_EXTERNAL_PORT_PATH_COST,
+	STP_PROPERTY_INTERNAL_PORT_PATH_COST,
 };
 
 #ifdef __cplusplus
@@ -285,12 +288,12 @@ void* STP_GetApplicationContext (const struct STP_BRIDGE* bridge);
 //   is not associated with a port, it applies to a tree of the bridge.
 // - portIndex < portCount and treeIndex < (1 + mstiCount) means the changed property
 //   is associated with a tree of a port.
-typedef void (*STP_CALLBACK_PROPERTY_CHANGE) (const struct STP_BRIDGE* bridge, unsigned int portIndex, unsigned int treeIndex, enum STP_PROPERTY prop, unsigned int timestamp);
+typedef void (*STP_CALLBACK_PROPERTY_CHANGE) (const struct STP_BRIDGE* bridge, unsigned portIndex, unsigned treeIndex, enum STP_PROPERTY prop, unsigned timestamp);
 
 // TODO: document that only one pair of callbacks can be registered at a time.
 // The callbacks can't call library functions that change STP state since they get a const STP_BRIDGE*.
-void STP_RegisterPropertyChangeCallback(struct STP_BRIDGE* bridge, STP_CALLBACK_PROPERTY_CHANGE changing, STP_CALLBACK_PROPERTY_CHANGE changed);
-void STP_UnregisterPropertyChangeCallback(struct STP_BRIDGE* bridge);
+void STP_RegisterPropertyChangeCallbacks(struct STP_BRIDGE* bridge, STP_CALLBACK_PROPERTY_CHANGE changing, STP_CALLBACK_PROPERTY_CHANGE changed);
+void STP_UnregisterPropertyChangeCallbacks(struct STP_BRIDGE* bridge);
 
 #ifdef __cplusplus
 } // extern "C"

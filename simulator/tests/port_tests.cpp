@@ -20,13 +20,14 @@ struct port_key_hash
 
 class STPPropertyChangedSink : public IStpPropertyChangeSink
 {
-	ULONG _refCount = 1;
+	ULONG _refCount;
 	WeakRefToThis _weakRefToThis;
 	std::unordered_map<port_key, STP_PORT_ROLE, port_key_hash> _mostRecentRoles;
 	vector_nothrow<AdviseSinkToken> _tokens;
 	
 public:
 	STPPropertyChangedSink(std::initializer_list<IBridge*> bridges)
+		: _refCount(1)
 	{
 		_weakRefToThis.InitInstance(AsUnknown());
 
@@ -380,5 +381,120 @@ TEST_CLASS(port_tests)
 
 		Assert::IsTrue(sink->ChangingCalled(dispidAdminEdge));
 		Assert::IsTrue(sink->ChangedCalled(dispidAdminEdge));
+	}
+
+	struct BridgeForPathCostValues
+	{
+		STP_BRIDGE* _stpBridge;
+
+		std::optional<uint32_t> detectedBefore, detectedAfter;
+		std::optional<uint32_t> externalBefore, externalAfter;
+		std::optional<uint32_t> internalBefore, internalAfter;
+
+		inline static const STP_CALLBACKS callbacks =
+		{
+			[](auto...) { },
+			[](auto...) { },
+			[](auto...) { },
+			[](auto...) -> void* { return nullptr; },
+			[](auto...) { },
+			[](auto...) { },
+			[](auto...) { },
+			[](auto...) { },
+			[](auto...) { },
+			[](unsigned int size)
+			{
+				void* result = malloc(size);
+				memset(result, 0, size);
+				return result;
+			},
+			[](void* p) { free(p); },
+		};
+
+		BridgeForPathCostValues (unsigned portCount, unsigned mstiCount, uint16_t maxVlanNumber, const mac_address& address)
+		{
+			_stpBridge = STP_CreateBridge(portCount, mstiCount, maxVlanNumber, &callbacks, address.data(), 256);
+			STP_SetApplicationContext(_stpBridge, this);
+			STP_RegisterPropertyChangeCallbacks(_stpBridge, OnStpPropChanging, OnStpPropChanged);
+		}
+
+		~BridgeForPathCostValues()
+		{
+			STP_DestroyBridge(_stpBridge);
+		}
+
+		static void OnStpPropChanging(const STP_BRIDGE* stpb, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int)
+		{
+			auto b = static_cast<BridgeForPathCostValues*>(STP_GetApplicationContext(stpb));
+			if (portIndex == 0)
+			{
+				if (prop == STP_PROPERTY_DETECTED_PORT_PATH_COST)
+					b->detectedBefore = STP_GetDetectedPortPathCost(stpb, 0);
+				if (prop == STP_PROPERTY_EXTERNAL_PORT_PATH_COST)
+					b->externalBefore = STP_GetExternalPortPathCost(stpb, 0);
+				if (prop == STP_PROPERTY_INTERNAL_PORT_PATH_COST && treeIndex == CIST_INDEX)
+					b->internalBefore = STP_GetInternalPortPathCost(stpb, 0, CIST_INDEX);
+			}
+		}
+
+		static void OnStpPropChanged(const STP_BRIDGE* stpb, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int)
+		{
+			auto b = static_cast<BridgeForPathCostValues*>(STP_GetApplicationContext(stpb));
+			if (portIndex == 0)
+			{
+				if (prop == STP_PROPERTY_DETECTED_PORT_PATH_COST)
+					b->detectedAfter = STP_GetDetectedPortPathCost(stpb, 0);
+				if (prop == STP_PROPERTY_EXTERNAL_PORT_PATH_COST)
+					b->externalAfter = STP_GetExternalPortPathCost(stpb, 0);
+				if (prop == STP_PROPERTY_INTERNAL_PORT_PATH_COST && treeIndex == CIST_INDEX)
+					b->internalAfter = STP_GetInternalPortPathCost(stpb, 0, CIST_INDEX);
+			}
+		}
+
+		void AssertCostsZeroToNonzero()
+		{
+			Assert::AreEqual(0u, *detectedBefore);
+			Assert::AreEqual(0u, *externalBefore);
+			Assert::AreEqual(0u, *internalBefore);
+			Assert::AreNotEqual(0u, *detectedAfter);
+			Assert::AreNotEqual(0u, *externalAfter);
+			Assert::AreNotEqual(0u, *internalAfter);
+		}
+
+		void AssertCostsNonzeroToZero()
+		{
+			Assert::AreNotEqual(0u, *detectedBefore);
+			Assert::AreNotEqual(0u, *externalBefore);
+			Assert::AreNotEqual(0u, *internalBefore);
+			Assert::AreEqual(0u, *detectedAfter);
+			Assert::AreEqual(0u, *externalAfter);
+			Assert::AreEqual(0u, *internalAfter);
+		}
+	};
+
+	TEST_METHOD(PortPathCostsPropChangeCallbacksOnPortEnableDisable)
+	{
+		BridgeForPathCostValues b (4, 4, 16, { 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+
+		STP_StartBridge(b._stpBridge, 0);
+
+		STP_OnPortEnabled(b._stpBridge, 0, 100, true, 0);
+		b.AssertCostsZeroToNonzero();
+
+		STP_OnPortDisabled(b._stpBridge, 0, 0);
+		b.AssertCostsNonzeroToZero();
+	}
+
+	TEST_METHOD(PortPathCostsPropChangeCallbacksOnBridgeStartStop)
+	{
+		BridgeForPathCostValues b (4, 4, 16, { 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+
+		STP_OnPortEnabled(b._stpBridge, 0, 100, true, 0);
+
+		STP_StartBridge(b._stpBridge, 0);
+		b.AssertCostsZeroToNonzero();
+
+		STP_StopBridge(b._stpBridge, 0);
+		b.AssertCostsNonzeroToZero();
 	}
 };
