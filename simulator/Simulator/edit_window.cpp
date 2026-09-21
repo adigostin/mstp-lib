@@ -502,7 +502,7 @@ public:
 		return S_OK;
 	}
 
-	void render_bridges (ID2D1DeviceContext* dc, DWORD vlan, const std::set<STP_MST_CONFIG_ID>& configIds) const
+	void RenderBridges (ID2D1DeviceContext* dc, DWORD vlan, const std::set<STP_MST_CONFIG_ID>& configIds) const
 	{
 		HRESULT hr;
 
@@ -530,7 +530,7 @@ public:
 		dc->SetTransform(oldtr);
 	}
 
-	void render_wires (ID2D1DeviceContext* dc, DWORD vlan, D2D1_SIZE_F clientSize ) const
+	void RenderWires (ID2D1DeviceContext* dc, DWORD vlan) const
 	{
 		Matrix3x2F oldtr;
 		dc->GetTransform(&oldtr);
@@ -546,37 +546,6 @@ public:
 
 		dc->SetTransform(oldtr);
 
-		// TODO: move this out of this function
-		if (_project->BridgeCount() == 0)
-		{
-			RenderHint (dc, { clientSize.width / 2, clientSize.height / 2 }, L"No bridges created. Right-click to create some.", DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, false);
-		}
-		else if (_project->BridgeCount() == 1)
-		{
-			RenderHint (dc, { clientSize.width / 2, clientSize.height / 2 }, L"Right-click to add more bridges.", DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, false);
-		}
-		else
-		{
-			bool anyPortConnected = false;
-			for (ULONG bi = 0; bi < _project->BridgeCount() && !anyPortConnected; bi++)
-			{
-				IBridge* b = _project->BridgeAt(bi);
-				for (ULONG pi = 0; pi < b->PortCount() && !anyPortConnected; pi++)
-				{
-					IPort* p = b->PortAt(pi);
-					anyPortConnected |= (_project->GetWireConnectedToPort(p).first != nullptr);
-				}
-			}
-
-			if (!anyPortConnected)
-			{
-				IBridge* b = _project->BridgeAt(0);
-				auto text = L"No port connected. You can connect\r\nports by drawing wires with the mouse.";
-				auto wl = D2D1_POINT_2F { (float)b->left() + (float)b->width() / 2, (float)b->bottom() + PortExteriorHeight * 1.5f };
-				auto dl = _zoomer->pointw_to_pointd(wl);
-				RenderHint (dc, { dl.x, dl.y }, text, DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, false);
-			}
-		}
 	}
 
 	void render_hover (ID2D1DeviceContext* dc) const
@@ -678,9 +647,40 @@ public:
 
 		RenderLegend(hWnd, dc, clientSize);
 
-		render_bridges (dc, vlan, configIds);
+		RenderBridges (dc, vlan, configIds);
 
-		render_wires (dc, vlan, clientSize);
+		RenderWires (dc, vlan);
+
+		if (_project->BridgeCount() == 0)
+		{
+			RenderHint (dc, { clientSize.width / 2, clientSize.height / 2 }, L"No bridges created. Right-click to create some.", DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, false);
+		}
+		else if (_project->BridgeCount() == 1)
+		{
+			RenderHint (dc, { clientSize.width / 2, clientSize.height / 2 }, L"Right-click to add more bridges.", DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, false);
+		}
+		else
+		{
+			bool anyPortConnected = false;
+			for (ULONG bi = 0; bi < _project->BridgeCount() && !anyPortConnected; bi++)
+			{
+				IBridge* b = _project->BridgeAt(bi);
+				for (ULONG pi = 0; pi < b->PortCount() && !anyPortConnected; pi++)
+				{
+					IPort* p = b->PortAt(pi);
+					anyPortConnected |= (_project->GetWireConnectedToPort(p).first != nullptr);
+				}
+			}
+
+			if (!anyPortConnected)
+			{
+				IBridge* b = _project->BridgeAt(0);
+				auto text = L"No port connected. You can connect\r\nports by drawing wires with the mouse.";
+				auto wl = D2D1_POINT_2F { (float)b->left() + (float)b->width() / 2, (float)b->bottom() + PortExteriorHeight * 1.5f };
+				auto dl = _zoomer->pointw_to_pointd(wl);
+				RenderHint (dc, { dl.x, dl.y }, text, DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_PARAGRAPH_ALIGNMENT_NEAR, false);
+			}
+		}
 
 		for (IDispatch* o : *_selection)
 		{
