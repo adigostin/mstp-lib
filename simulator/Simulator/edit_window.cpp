@@ -1084,7 +1084,7 @@ public:
 		{
 			if (!ht.first)
 			{
-				// TODO: area selection
+				// Area selection would start here. Not worth the effort to implement it.
 				//stateForMoveThreshold =
 				return handled(true);
 			}

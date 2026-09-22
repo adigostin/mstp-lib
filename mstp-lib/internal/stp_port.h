@@ -159,8 +159,6 @@ struct PORT
 
 	STP_ADMIN_P2P adminPointToPointMAC;
 
-	// TODO: we might have to force operPointToPointMAC to false while a port is disabled,
-	// to avoid an infinite loop in the BridgeDetection state machine. Also see the comments there.
 	bool operPointToPointMAC;
 
 	// Variable that stores the detectedPointToPointMAC parameter passed to STP_OnPortEnabled.

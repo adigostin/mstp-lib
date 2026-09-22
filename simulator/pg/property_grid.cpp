@@ -1239,10 +1239,9 @@ public:
 		{
 			DISPID named = DISPID_PROPERTYPUT;
 			DISPPARAMS params = { .rgvarg = newValue, .rgdispidNamedArgs=&named, .cArgs = 1, .cNamedArgs = 1 };
-			wil::unique_variant result; // TODO: get rid of this
 			EXCEPINFO exception;
 			UINT uArgErr;
-			auto hr = ti->Invoke(objects[i], memid, DISPATCH_PROPERTYPUT, &params, &result, &exception, &uArgErr);
+			auto hr = ti->Invoke(objects[i], memid, DISPATCH_PROPERTYPUT, &params, nullptr, &exception, &uArgErr);
 			if (FAILED(hr))
 			{
 				wil::unique_bstr message;
@@ -1255,7 +1254,7 @@ public:
 				for (uint32_t j = 0; j < i; j++)
 				{
 					params.rgvarg = old_values[j].addressof();
-					ti->Invoke(objects[j], memid, DISPATCH_PROPERTYPUT, &params, &result, &exception, &uArgErr);
+					ti->Invoke(objects[j], memid, DISPATCH_PROPERTYPUT, &params, nullptr, &exception, &uArgErr);
 				}
 
 				if (message)
