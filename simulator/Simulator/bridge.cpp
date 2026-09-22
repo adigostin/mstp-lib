@@ -1009,44 +1009,6 @@ public:
 		_bridgeEventsCP->Notify([this](IBridgeEvents* e) { return e->OnLogCleared(this); });
 	}
 
-	#pragma region properties
-	size_t mst_config_table_get_value_count() const
-	{
-		unsigned int entry_count;
-		STP_GetMstConfigTable(_stpBridge, &entry_count);
-		return entry_count;
-	}
-
-	uint32_t mst_config_table_get_value(size_t i) const
-	{
-		unsigned int entry_count;
-		auto entries = STP_GetMstConfigTable(_stpBridge, &entry_count);
-		return entries[i].treeIndex;
-	}
-
-	void mst_config_table_set_value(size_t i, uint32_t value)
-	{
-		unsigned int entry_count;
-		auto table = STP_GetMstConfigTable (_stpBridge, &entry_count);
-		WI_ASSERT (i < entry_count);
-		if (table->treeIndex != value)
-		{
-			//edge::value_collection_property_change_args args = { &mst_config_table_property, i, edge::collection_property_change_type::set };
-			WI_ASSERT(false);
-			//this->on_property_changing(args);
-			//STP_SetMstConfigTableEntry (_stpBridge, (unsigned int)i, value, ::GetMessageTime());
-			//this->on_property_changed(args);
-		}
-	}
-
-	bool mst_config_table_changed (size_t i) const
-	{
-		unsigned int entry_count;
-		const STP_CONFIG_TABLE_ENTRY* entries = STP_GetMstConfigTable (_stpBridge, &entry_count);
-		WI_ASSERT(i < entry_count);
-		return entries[i].treeIndex != 0;
-	}
-
 	//void on_deserializing (edge::xml_deserializer_i* de)
 	//{
 	//	_deserializing = true;
@@ -1059,19 +1021,7 @@ public:
 	//		STP_StartBridge (_stpBridge, ::GetMessageTime());
 	//	_deserializing = false;
 	//}
-	/*
-	static const pg::property_group bridge_times_group = { 5, "Timer Params (Table 13-5)" };
-	static const pg::property_group mst_group = { 10, "MST Config Id" };
 
-	const edge::typed_value_collection_property<edge::uint32_property_traits> bridge::mst_config_table_property = {
-		"MstConfigTable",
-		&mst_config_table_get_value_count,
-		&mst_config_table_get_value,
-		&mst_config_table_set_value,
-		&mst_config_table_changed,
-	};
-	#pragma endregion
-	*/
 	#pragma region STP Callbacks
 	static void* StpCallback_AllocAndZeroMemory(unsigned int size)
 	{

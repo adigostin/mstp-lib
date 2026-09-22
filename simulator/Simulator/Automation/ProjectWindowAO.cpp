@@ -2,11 +2,10 @@
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
 // Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License v2.0.
 
-#include "pch.h"
-#include "simulator.h"
-#include "SimulatorAO_h.h"
-#include "edge/com.h"
-#include "resource.h"
+#include "../pch.h"
+#include "../simulator.h"
+#include "../SimulatorAO_h.h"
+#include "../resource.h"
 
 HRESULT CreateProjectAO(IStpProject* project, IProjectAO** ppProjectAO);
 
