@@ -95,12 +95,12 @@ public:
 	#pragma endregion
 
 	#pragma region IObjectCollectionChangeEvents
-	virtual HRESULT OnCollectionChanging (IUnknown* sender, const struct ObjectCollectionChangeArgs* args) override
+	virtual HRESULT STDMETHODCALLTYPE OnCollectionChanging (IUnknown* sender, const struct ObjectCollectionChangeArgs* args) override
 	{
 		return S_OK;
 	}
 
-	virtual HRESULT OnCollectionChanged (IUnknown* sender, const struct ObjectCollectionChangeArgs* args) override
+	virtual HRESULT STDMETHODCALLTYPE OnCollectionChanged (IUnknown* sender, const struct ObjectCollectionChangeArgs* args) override
 	{
 		auto grid = root()->grid();
 		grid->NotifyLayoutChangedTree(this);

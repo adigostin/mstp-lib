@@ -437,6 +437,7 @@ struct DECLSPEC_NOVTABLE DECLSPEC_UUID("D1B260C3-2943-49E8-B575-C614857FC163") I
 	virtual HRESULT RemoveWire (ULONG index, _Outptr_opt_ IWire** ppRemoved = nullptr) = 0;
 	virtual ULONG STDMETHODCALLTYPE WireCount() const noexcept = 0;
 	virtual IWire* STDMETHODCALLTYPE WireAt(ULONG index) const noexcept = 0;
+	virtual HRESULT STDMETHODCALLTYPE DeleteObjects (edge::IObjectList* objects) = 0;
 
 	std::pair<IWire*, size_t> GetWireConnectedToPort (IPort* port) const;
 	IPort* find_connected_port (IPort* txPort) const;
@@ -481,6 +482,7 @@ struct DECLSPEC_NOVTABLE DECLSPEC_UUID("B11C7D2D-9AF8-4450-A8ED-A955B5C52D10") I
 {
 	virtual const wchar_t* GetRegKeyPath() const = 0;
 	virtual HRESULT STDMETHODCALLTYPE AddProjectWindow (IProjectWindow* pw) = 0;
+	virtual HRESULT STDMETHODCALLTYPE OpenWindowForVlan (IStpProject* project, DWORD vlanNumber, _Out_opt_ HWND* phWnd) = 0;
 	virtual ULONG STDMETHODCALLTYPE ProjectWindowCount() const = 0;
 	virtual IProjectWindow* STDMETHODCALLTYPE ProjectWindowAt (ULONG i) const = 0;
 	virtual const wchar_t* app_name() const = 0;

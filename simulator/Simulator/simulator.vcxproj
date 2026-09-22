@@ -282,6 +282,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="port.cpp" />
+    <ClCompile Include="PortAO.cpp" />
     <ClCompile Include="port_tree.cpp" />
     <ClCompile Include="project.cpp" />
     <ClCompile Include="ProjectAO.cpp" />
@@ -311,6 +312,7 @@
     <ClCompile Include="TreeSelection.cpp" />
     <ClCompile Include="VlanWindow.cpp" />
     <ClCompile Include="wire.cpp" />
+    <ClCompile Include="WireAO.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="simulator.rc" />

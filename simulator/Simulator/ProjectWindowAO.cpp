@@ -70,11 +70,30 @@ public:
 		return selection->Select(bridge);
 	}
 
+	virtual HRESULT STDMETHODCALLTYPE SelectWire(IWireAO* wire) override
+	{
+		RETURN_HR_IF(E_POINTER, !wire);
+		com_ptr<ISelection> selection;
+		auto hr = _projectWindow->GetSelection(&selection); RETURN_IF_FAILED(hr);
+		com_ptr<IGetWrappedObject> getWrapped;
+		hr = wire->QueryInterface(IID_PPV_ARGS(getWrapped.addressof())); RETURN_IF_FAILED(hr);
+		com_ptr<IDispatch> dispatch;
+		hr = getWrapped->GetWrappedObject(IID_PPV_ARGS(dispatch.addressof())); RETURN_IF_FAILED(hr);
+		return selection->Select(dispatch);
+	}
+
 	virtual HRESULT STDMETHODCALLTYPE ClearSelection() override
 	{
 		com_ptr<ISelection> selection;
 		auto hr = _projectWindow->GetSelection(&selection); RETURN_IF_FAILED(hr);
 		return selection->Clear();
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE DeleteSelection() override
+	{
+		com_ptr<ISelection> selection;
+		auto hr = _projectWindow->GetSelection(&selection); RETURN_IF_FAILED(hr);
+		return _projectWindow->project()->DeleteObjects(selection);
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE SelectVlan(DWORD vlanNumber) override

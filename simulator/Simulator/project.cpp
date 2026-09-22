@@ -464,32 +464,95 @@ public:
 		}
 	}
 
-	//virtual const edge::typed_object_collection_property1<bridge>* bridges_property() const override final { return &bridges_prop; }
+	virtual HRESULT STDMETHODCALLTYPE DeleteObjects (edge::IObjectList* objects) override
+	{
+		RETURN_HR_IF(E_POINTER, !objects);
 
-	//virtual const edge::typed_object_collection_property1<wire>* wires_property() const override final { return &wires_prop; }
+		static constexpr auto is_port = [](IDispatch* o) { return wil::try_com_query_nothrow<IPort>(o) != nullptr; };
+		if (objects->any(is_port))
+			return HRESULT_FROM_WIN32(ERROR_INVALID_OPERATION);
 
-	//virtual edge::property_changing_e::subscriber property_changing() override final { return edge::property_changing_e::subscriber(_em); }
+		std::set<IBridge*> bridgesToRemove;
+		std::set<IWire*> wiresToRemove;
+		std::unordered_map<IWire*, std::vector<size_t>> pointsToDisconnect;
 
-	//virtual edge::property_changed_e::subscriber property_changed() override final { return edge::property_changed_e::subscriber(_em); }
+		for (IDispatch* o : *objects)
+		{
+			if (auto w = wil::try_com_query_nothrow<IWire>(o); w != nullptr)
+				wiresToRemove.insert(w);
+			else if (auto b = wil::try_com_query_nothrow<IBridge>(o); b != nullptr)
+				bridgesToRemove.insert(b);
+			else
+				_ASSERT(false);
+		}
+
+		for (ULONG i = 0; i < WireCount(); i++)
+		{
+			auto* w = WireAt(i);
+			if (wiresToRemove.find(w) != wiresToRemove.end())
+				continue;
+
+			for (size_t pi = 0; pi < w->points().size(); pi++)
+			{
+				if (!std::holds_alternative<connected_wire_end>(w->points()[pi]))
+					continue;
+
+				auto port = std::get<connected_wire_end>(w->points()[pi]);
+				if (bridgesToRemove.find(port->bridge()) == bridgesToRemove.end())
+					continue;
+
+				// point is connected to bridge being removed.
+				pointsToDisconnect[w].push_back(pi);
+			}
+		}
+
+		for (auto it = pointsToDisconnect.begin(); it != pointsToDisconnect.end(); )
+		{
+			IWire* wire = it->first;
+			bool anyPointRemainsConnected = any_of(wire->points().begin(), wire->points().end(),
+				[&bridgesToRemove](auto& pt) { return std::holds_alternative<connected_wire_end>(pt)
+						&& (bridgesToRemove.count(std::get<connected_wire_end>(pt)->bridge()) == 0); });
+
+			auto it1 = it;
+			it++;
+
+			if (!anyPointRemainsConnected)
+			{
+				wiresToRemove.insert(wire);
+				pointsToDisconnect.erase(it1);
+			}
+		}
+
+		if (!bridgesToRemove.empty() || !wiresToRemove.empty() || !pointsToDisconnect.empty())
+		{
+			for (auto& p : pointsToDisconnect)
+				for (auto pi : p.second)
+					p.first->set_point(pi, p.first->point_coords(pi));
+
+			for (auto w : wiresToRemove)
+			{
+				ULONG i = 0;
+				while (i < WireCount() && WireAt(i) != w)
+					i++;
+				FAIL_FAST_IF(i == WireCount());
+				RemoveWire(i);
+			}
+
+			for (auto b : bridgesToRemove)
+			{
+				ULONG i = 0;
+				while (i < BridgeCount() && BridgeAt(i) != b)
+					i++;
+				FAIL_FAST_IF(i == BridgeCount());
+				RemoveBridge(i);
+			}
+		}
+
+		return S_OK;
+	}
 
 	mac_address next_mac_address() const { return _nextBridgeAddress; }
 };
-
-//const edge::typed_object_collection_property1<bridge> StpProjectImpl::bridges_prop = {
-//	"Bridges",
-//	&StpProjectImpl::bridge_count,
-//	&StpProjectImpl::bridge_at,
-//	&StpProjectImpl::insert_bridge,
-//	&StpProjectImpl::remove_bridge,
-//};
-//
-//const edge::typed_object_collection_property1<wire> StpProjectImpl::wires_prop {
-//	"Wires",
-//	&StpProjectImpl::wire_count,
-//	&StpProjectImpl::wire_at,
-//	&StpProjectImpl::insert_wire,
-//	&StpProjectImpl::remove_wire,
-//};
 
 HRESULT MakeProject (IStpProject** ppProject)
 {

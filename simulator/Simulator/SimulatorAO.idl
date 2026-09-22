@@ -14,20 +14,33 @@ library SimulatorAutomationLib
 	interface ISimulatorAppAO;
 	interface IProjectAO;
 	interface IBridgeAO;
+	interface IPortAO;
 
 	[object, uuid(7D45685F-5836-41A2-AA0C-6B567EF957A6), dual, nonextensible, pointer_default(unique)]
 	interface IBridgeAO : IDispatch
 	{
+		HRESULT GetPort(DWORD portIndex, [out, retval] IPortAO** ppPort);
+		HRESULT LoadTestMstConfig1();
+
 		[propget] HRESULT STPVersion ([out, retval] enum STPVersion* pVersion);
 		[propput] HRESULT STPVersion (enum STPVersion version);
+	};
 
-		HRESULT LoadTestMstConfig1();
+	[object, uuid(4D1E4B6D-7D2C-4E76-9A65-9D6A4BD6B0B1), dual, nonextensible, pointer_default(unique)]
+	interface IWireAO : IDispatch
+	{
+	};
+
+	[object, uuid(8C0A4A49-5C72-4D8E-9F0E-4A53E4DC8D31), dual, nonextensible, pointer_default(unique)]
+	interface IPortAO : IDispatch
+	{
 	};
 
 	[object, uuid(7B6D20D3-BF5D-4A98-9D32-3B9E30BCE902), dual, nonextensible, pointer_default(unique)]
 	interface IProjectAO : IDispatch
 	{
 		HRESULT AddBridge(DWORD portCount, DWORD mstiCount, [out, retval] IBridgeAO** ppBridgeAO);
+		HRESULT AddWire(IPortAO* port0, IPortAO* port1, [out, retval] IWireAO** ppWire);
 	};
 
 	[object, uuid(AD903F61-09AE-4901-A176-B8D3E3AF372A), dual, nonextensible, pointer_default(unique)]
@@ -35,7 +48,9 @@ library SimulatorAutomationLib
 	{
 		HRESULT GetProject([out, retval] IProjectAO** projectAO);
 		HRESULT SelectBridge([in] IBridgeAO* bridgeAO);
+		HRESULT SelectWire([in] IWireAO* wire);
 		HRESULT ClearSelection();
+		HRESULT DeleteSelection();
 		HRESULT SelectVlan(DWORD vlanNumber);
 	};
 
@@ -43,8 +58,10 @@ library SimulatorAutomationLib
 	interface ISimulatorAppAO : IDispatch
 	{
 		HRESULT GetProjectWindow (LONG hWnd, [out, retval] IProjectWindowAO** ppProjectWindow);
+		HRESULT OpenWindowForVlan([in] IProjectAO* projectAO, DWORD vlanNumber, [out, retval] LONG* pHWnd);
+		HRESULT EnableFailFastOnAssertions();
 
-			//[id(2)] HRESULT GetSelection([out, retval] ISelectionAO** selection);
-			//[id(3)] HRESULT GetVlanSelection([out, retval] IVlanSelectionAO** selection);
+		//[id(2)] HRESULT GetSelection([out, retval] ISelectionAO** selection);
+		//[id(3)] HRESULT GetVlanSelection([out, retval] IVlanSelectionAO** selection);
 	};
 };

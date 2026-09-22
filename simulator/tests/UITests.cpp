@@ -350,5 +350,37 @@ namespace UITests
 			hr = bridge->put_STPVersion(STPVersionRSTP); Assert::AreEqual(S_OK, hr);
 			hr = projectWindow->ClearSelection(); Assert::AreEqual(S_OK, hr);
 		}
+
+		TEST_METHOD(DeleteWireCreatedInAnotherProjectWindow)
+		{
+			HRESULT hr;
+			auto simulator = RunSimulator(nullptr);
+			auto app = GetSimulatorAppAO(simulator.pi.dwProcessId);
+			hr = app->EnableFailFastOnAssertions(); Assert::AreEqual(S_OK, hr);
+			wil::com_ptr_failfast<IProjectWindowAO> projectWindow;
+			hr = app->GetProjectWindow((LONG)(LONG_PTR)simulator.projectWindow, &projectWindow); Assert::AreEqual(S_OK, hr);
+			wil::com_ptr_failfast<IProjectAO> project;
+			hr = projectWindow->GetProject(&project); Assert::AreEqual(S_OK, hr);
+
+			wil::com_ptr_failfast<IBridgeAO> bridge;
+			hr = project->AddBridge(2, 0, &bridge); Assert::AreEqual(S_OK, hr);
+			wil::com_ptr_failfast<IPortAO> port0;
+			hr = bridge->GetPort(0, &port0); Assert::AreEqual(S_OK, hr);
+			wil::com_ptr_failfast<IPortAO> port1;
+			hr = bridge->GetPort(1, &port1); Assert::AreEqual(S_OK, hr);
+			wil::com_ptr_failfast<IWireAO> wire;
+			hr = project->AddWire(port0, port1, &wire); Assert::AreEqual(S_OK, hr);
+
+			LONG secondWindowHandle;
+			hr = app->OpenWindowForVlan(project, 2, &secondWindowHandle);
+			Assert::AreEqual(S_OK, hr);
+			Assert::AreNotEqual((LONG)(LONG_PTR)simulator.projectWindow, secondWindowHandle);
+			auto closeSecondWindow = wil::scope_exit([&]() { PostMessageW((HWND)(LONG_PTR)secondWindowHandle, WM_CLOSE, 0, 0); });
+
+			wil::com_ptr_failfast<IProjectWindowAO> secondProjectWindow;
+			hr = app->GetProjectWindow(secondWindowHandle, &secondProjectWindow); Assert::AreEqual(S_OK, hr);
+			hr = secondProjectWindow->SelectWire(wire); Assert::AreEqual(S_OK, hr);
+			hr = secondProjectWindow->DeleteSelection(); Assert::AreEqual(S_OK, hr);
+		}
 	};
 }

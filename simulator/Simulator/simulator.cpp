@@ -306,6 +306,39 @@ public:
 
 		return HRESULT_FROM_WIN32(ERROR_NOT_FOUND);
 	}
+
+	virtual HRESULT STDMETHODCALLTYPE OpenWindowForVlan(IProjectAO* projectAO, DWORD vlanNumber, LONG* pHWnd) override
+	{
+		RETURN_HR_IF(E_POINTER, !projectAO || !pHWnd);
+		*pHWnd = 0;
+		com_ptr<IGetWrappedObject> getWrapped;
+		auto hr = projectAO->QueryInterface(IID_PPV_ARGS(getWrapped.addressof())); RETURN_IF_FAILED(hr);
+		com_ptr<IStpProject> project;
+		hr = getWrapped->GetWrappedObject(IID_PPV_ARGS(project.addressof())); RETURN_IF_FAILED(hr);
+		HWND hwnd;
+		hr = OpenWindowForVlan(project, vlanNumber, &hwnd); RETURN_IF_FAILED(hr);
+		*pHWnd = (LONG)(LONG_PTR)hwnd;
+		return S_OK;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE EnableFailFastOnAssertions() override
+	{
+		auto hook = [](int reportType, char*, int*) -> int
+			{
+				if (reportType == _CRT_ASSERT)
+					RaiseFailFastException(nullptr, nullptr, 0);
+				return FALSE;
+			};
+
+		// When running under debugger, we _want_ the assertion dialog, so we ignore this call.
+		if (!IsDebuggerPresent())
+		{
+			_CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_DEBUG);
+			RETURN_HR_IF(E_FAIL, _CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, hook) < 0);
+		}
+
+		return S_OK;
+	}
 	#pragma endregion
 
 	#pragma region IConnectionPointContainer
@@ -336,6 +369,38 @@ public:
 		_windowCollectionEventsCP->Notify([this](IProjectWindowCollectionEventsSink* sink) {
 			return sink->OnProjectWindowInserted(_projectWindows.back().projectWindow); });
 		return S_OK;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE OpenWindowForVlan(IStpProject* project, DWORD vlanNumber, _Out_opt_ HWND* phWnd) override
+	{
+		RETURN_HR_IF(E_INVALIDARG, vlanNumber == 0 || vlanNumber > 4094);
+		if (phWnd)
+			*phWnd = nullptr;
+
+		for (ULONG i = 0; i < ProjectWindowCount(); ++i)
+		{
+			auto pw = ProjectWindowAt(i);
+			com_ptr<IVlanSelection> vlanSelection;
+			DWORD pwVlan;
+			if (pw->project() == project
+				&& SUCCEEDED(pw->GetVlanSelection(&vlanSelection))
+				&& SUCCEEDED(vlanSelection->GetSelectedVlan(&pwVlan))
+				&& pwVlan == vlanNumber)
+			{
+				::BringWindowToTop(pw->hwnd());
+				::FlashWindow(pw->hwnd(), FALSE);
+				if (phWnd)
+					*phWnd = pw->hwnd();
+				return S_OK;
+			}
+		}
+
+		project_window_create_params create_params = { this, project, false, false, vlanNumber, SW_SHOW };
+		com_ptr<IProjectWindow> pw;
+		auto hr = project_window_factory()(create_params, &pw); RETURN_IF_FAILED(hr);
+		if (phWnd)
+			*phWnd = pw->hwnd();
+		return AddProjectWindow(pw);
 	}
 
 	#pragma region IProjectWindowEventsSink

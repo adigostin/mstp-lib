@@ -121,12 +121,12 @@ public:
 	virtual HWND hwnd() const override { return _hWnd.get(); }
 
 	#pragma region IObjectCollectionChangeEvents
-	virtual HRESULT OnCollectionChanging (IUnknown* sender, const struct ObjectCollectionChangeArgs* args) override
+	virtual HRESULT STDMETHODCALLTYPE OnCollectionChanging (IUnknown* sender, const struct ObjectCollectionChangeArgs* args) override
 	{
 		return S_OK;
 	}
 
-	virtual HRESULT OnCollectionChanged (IUnknown* sender, const struct ObjectCollectionChangeArgs* args) override
+	virtual HRESULT STDMETHODCALLTYPE OnCollectionChanged (IUnknown* sender, const struct ObjectCollectionChangeArgs* args) override
 	{
 		if (_selection->size() != 1)
 			select_bridge(nullptr);

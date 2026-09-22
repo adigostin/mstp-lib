@@ -363,37 +363,7 @@ public:
 	{
 		auto index = ComboBox_GetCurSel(hwnd);
 		auto vlanNumber = (unsigned int) (index + 1);
-
-		IProjectWindow* existing = nullptr;
-		for (ULONG i = 0; i < _app->ProjectWindowCount(); i++)
-		{
-			auto pw = _app->ProjectWindowAt(i);
-			com_ptr<IVlanSelection> vlanSelection;
-			DWORD pwVlan;
-			if (pw->project() == _project
-				&& SUCCEEDED(pw->GetVlanSelection(&vlanSelection))
-				&& SUCCEEDED(vlanSelection->GetSelectedVlan(&pwVlan))
-				&& pwVlan == vlanNumber)
-			{
-				existing = pw;
-				break;
-			}
-		}
-
-		if (existing)
-		{
-			::BringWindowToTop (existing->hwnd());
-			::FlashWindow (existing->hwnd(), FALSE);
-		}
-		else
-		{
-			project_window_create_params create_params = { _app, _project, false, false, vlanNumber, SW_SHOW };
-			com_ptr<IProjectWindow> pw;
-			auto hr = _app->project_window_factory()(create_params, &pw); LOG_IF_FAILED(hr);
-			if (SUCCEEDED(hr))
-				_app->AddProjectWindow(pw);
-		}
-
+		auto hr = _app->OpenWindowForVlan(_project, vlanNumber, nullptr); LOG_IF_FAILED(hr);
 		ComboBox_SetCurSel (hwnd, -1);
 	}
 

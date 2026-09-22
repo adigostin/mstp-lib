@@ -180,12 +180,15 @@ public:
 	#pragma region IPropertyChangeSink
 	virtual HRESULT STDMETHODCALLTYPE OnPropertyChanging (IUnknown* obj, DISPID dispID, const PropertyChangeArgs* args) override
 	{
+		HRESULT hr;
+
 		if (dispID == dispidBridges)
 		{
-			_ASSERT(args->propertyType == PropertyType::Collection);
+			RETURN_HR_IF(E_UNEXPECTED, args->propertyType != PropertyType::Collection);
 			if (args->collectionChangeArgs.changeType == CollectionChangeType::Remove)
 			{
 				// Removing bridge
+				RETURN_HR_IF(E_NOTIMPL, args->collectionChangeArgs.setInsertRemoveArgs.count != 1);
 				if (_htResult.first == _project->BridgeAt(args->collectionChangeArgs.setInsertRemoveArgs.index))
 				{
 					_htResult = { nullptr, 0 };
@@ -195,10 +198,11 @@ public:
 		}
 		else if (dispID == dispidWires)
 		{
-			_ASSERT(args->propertyType == PropertyType::Collection);
+			RETURN_HR_IF(E_UNEXPECTED, args->propertyType != PropertyType::Collection);
 			if (args->collectionChangeArgs.changeType == CollectionChangeType::Remove)
 			{
 				// Removing wire
+				RETURN_HR_IF(E_NOTIMPL, args->collectionChangeArgs.setInsertRemoveArgs.count != 1);
 				if (_htResult.first == _project->WireAt(args->collectionChangeArgs.setInsertRemoveArgs.index))
 				{
 					_htResult = { nullptr, 0 };
@@ -209,17 +213,24 @@ public:
 
 		if (dispID == dispidBridges || dispID == dispidWires)
 		{
-			_ASSERT(args->propertyType == PropertyType::Collection);
+			RETURN_HR_IF(E_UNEXPECTED, args->propertyType != PropertyType::Collection);
 			if (args->collectionChangeArgs.changeType == CollectionChangeType::Remove)
 			{
 				// Removing bridge or wire.
-				IUnknown* child;
+				RETURN_HR_IF(E_NOTIMPL, args->collectionChangeArgs.setInsertRemoveArgs.count != 1);
+				com_ptr<IUnknown> child;
 				if (dispID == dispidBridges)
-					child = _project->BridgeAt(args->collectionChangeArgs.setInsertRemoveArgs.index);
+				{
+					auto b = _project->BridgeAt(args->collectionChangeArgs.setInsertRemoveArgs.index);
+					hr = b->QueryInterface(IID_PPV_ARGS(&child)); RETURN_IF_FAILED(hr);
+				}
 				else
-					child = _project->WireAt(args->collectionChangeArgs.setInsertRemoveArgs.index);
+				{
+					auto w = _project->WireAt(args->collectionChangeArgs.setInsertRemoveArgs.index);
+					hr = w->QueryInterface(IID_PPV_ARGS(&child)); RETURN_IF_FAILED(hr);
+				}
 				auto it = _bridgeWiresInvalidateTokens.find(child);
-				WI_ASSERT(it != _bridgeWiresInvalidateTokens.end());
+				_ASSERT(it != _bridgeWiresInvalidateTokens.end());
 				_bridgeWiresInvalidateTokens.erase(it);
 			}
 		}
@@ -233,15 +244,22 @@ public:
 
 		if (dispID == dispidBridges || dispID == dispidWires)
 		{
-			_ASSERT(args->propertyType == PropertyType::Collection);
+			RETURN_HR_IF(E_UNEXPECTED, args->propertyType != PropertyType::Collection);
 			if (args->collectionChangeArgs.changeType == CollectionChangeType::Insert)
 			{
 				// Inserted bridge or wire.
-				IUnknown* child;
+				RETURN_HR_IF(E_NOTIMPL, args->collectionChangeArgs.setInsertRemoveArgs.count != 1);
+				com_ptr<IUnknown> child;
 				if (dispID == dispidBridges)
-					child = _project->BridgeAt(args->collectionChangeArgs.setInsertRemoveArgs.index);
+				{
+					auto b = _project->BridgeAt(args->collectionChangeArgs.setInsertRemoveArgs.index);
+					hr = b->QueryInterface(IID_PPV_ARGS(&child)); RETURN_IF_FAILED(hr);
+				}
 				else
-					child = _project->WireAt(args->collectionChangeArgs.setInsertRemoveArgs.index);
+				{
+					auto w = _project->WireAt(args->collectionChangeArgs.setInsertRemoveArgs.index);
+					hr = w->QueryInterface(IID_PPV_ARGS(&child)); RETURN_IF_FAILED(hr);
+				}
 				auto it = _bridgeWiresInvalidateTokens.find(child);
 				_ASSERT(it == _bridgeWiresInvalidateTokens.end());
 				AdviseSinkToken token;
@@ -273,12 +291,12 @@ public:
 	#pragma endregion
 
 	#pragma region IObjectCollectionChangeEvents
-	virtual HRESULT OnCollectionChanging (IUnknown* sender, const struct ObjectCollectionChangeArgs* args) override
+	virtual HRESULT STDMETHODCALLTYPE OnCollectionChanging (IUnknown* sender, const struct ObjectCollectionChangeArgs* args) override
 	{
 		return S_OK;
 	}
 
-	virtual HRESULT OnCollectionChanged (IUnknown* sender, const struct ObjectCollectionChangeArgs* args) override
+	virtual HRESULT STDMETHODCALLTYPE OnCollectionChanged (IUnknown* sender, const struct ObjectCollectionChangeArgs* args) override
 	{
 		::InvalidateRect(_hWnd.get(), 0, 0);
 		return S_OK;
@@ -898,82 +916,8 @@ public:
 			return;
 		}
 
-		std::set<IBridge*> bridgesToRemove;
-		std::set<IWire*> wiresToRemove;
-		std::unordered_map<IWire*, std::vector<size_t>> pointsToDisconnect;
-
-		for (IDispatch* o : *_selection)
-		{
-			if (auto w = wil::try_com_query_nothrow<IWire>(o); w != nullptr)
-				wiresToRemove.insert(w);
-			else if (auto b = wil::try_com_query_nothrow<IBridge>(o); b != nullptr)
-				bridgesToRemove.insert(b);
-			else
-				_ASSERT(false);
-		}
-
-		for (ULONG i = 0; i < _project->WireCount(); i++)
-		{
-			auto* w = _project->WireAt(i);
-			if (wiresToRemove.find(w) != wiresToRemove.end())
-				continue;
-
-			for (size_t pi = 0; pi < w->points().size(); pi++)
-			{
-				if (!std::holds_alternative<connected_wire_end>(w->points()[pi]))
-					continue;
-
-				auto port = std::get<connected_wire_end>(w->points()[pi]);
-				if (bridgesToRemove.find(port->bridge()) == bridgesToRemove.end())
-					continue;
-
-				// point is connected to bridge being removed.
-				pointsToDisconnect[w].push_back(pi);
-			}
-		}
-
-		for (auto it = pointsToDisconnect.begin(); it != pointsToDisconnect.end(); )
-		{
-			IWire* wire = it->first;
-			bool anyPointRemainsConnected = any_of (wire->points().begin(), wire->points().end(),
-				[&bridgesToRemove, this](auto& pt) { return std::holds_alternative<connected_wire_end>(pt)
-					&& (bridgesToRemove.count(std::get<connected_wire_end>(pt)->bridge()) == 0); });
-
-			auto it1 = it;
-			it++;
-
-			if (!anyPointRemainsConnected)
-			{
-				wiresToRemove.insert(wire);
-				pointsToDisconnect.erase(it1);
-			}
-		}
-
-		if (!bridgesToRemove.empty() || !wiresToRemove.empty() || !pointsToDisconnect.empty())
-		{
-			for (auto& p : pointsToDisconnect)
-				for (auto pi : p.second)
-					p.first->set_point(pi, p.first->point_coords(pi));
-
-			for (auto w : wiresToRemove)
-			{
-				ULONG i = 0;
-				while (i < _project->WireCount() && _project->WireAt(i) != w)
-					i++;
-				FAIL_FAST_IF(i == _project->WireCount());
-				_project->RemoveWire(i);
-			}
-
-			for (auto b : bridgesToRemove)
-			{
-				ULONG i = 0;
-				while (i < _project->BridgeCount() && _project->BridgeAt(i) != b)
-					i++;
-				FAIL_FAST_IF(i == _project->BridgeCount());
-				_project->RemoveBridge(i);
-			}
-			_project->SetChangedFlag(true);
-		}
+		_project->DeleteObjects(_selection);
+		_project->SetChangedFlag(true);
 	}
 
 	handled process_key_or_syskey_down (uint32_t vkey, UINT mks)
@@ -992,7 +936,8 @@ public:
 
 		if (vkey == VK_DELETE)
 		{
-			delete_selection();
+			if (!_selection->empty())
+				delete_selection();
 			return handled(true);
 		}
 

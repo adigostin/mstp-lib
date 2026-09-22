@@ -8,6 +8,8 @@
 #include "edge/com.h"
 #include "resource.h"
 
+HRESULT CreatePortAO (IPort* port, IPortAO** ppPort);
+
 class BridgeAOImpl : public IBridgeAO, IGetWrappedObject
 {
 	ULONG _refCount = 0;
@@ -46,6 +48,14 @@ public:
 	IMPLEMENT_IDISPATCH_(IBridgeAO, nullptr, ID_TYPELIB_SIMULATOR_AO);
 
 	#pragma region IBridgeAO
+	virtual HRESULT STDMETHODCALLTYPE GetPort(DWORD portIndex, IPortAO** ppPort) override
+	{
+		RETURN_HR_IF(E_POINTER, !ppPort);
+		*ppPort = nullptr;
+		RETURN_HR_IF(E_INVALIDARG, portIndex >= _bridge->PortCount());
+		return CreatePortAO(_bridge->PortAt(portIndex), ppPort);
+	}
+
 	virtual HRESULT STDMETHODCALLTYPE get_STPVersion (enum STPVersion *pVersion) override
 	{
 		return _bridge.try_query<IBridgeProperties>()->get_STPVersion(pVersion);

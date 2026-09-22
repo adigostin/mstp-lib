@@ -9,8 +9,9 @@
 #include "resource.h"
 
 HRESULT CreateBridgeAO (IBridge* bridge, IBridgeAO** ppBridgeAO);
+HRESULT CreateWireAO (IWire* wire, IWireAO** ppWireAO);
 
-class ProjectAOImpl : public IProjectAO
+class ProjectAOImpl : public IProjectAO, IGetWrappedObject
 {
 	ULONG _refCount = 0;
 	com_ptr<IStpProject> _project;
@@ -22,15 +23,18 @@ public:
 		return S_OK;
 	}
 
+	IUnknown* AsUnknown() { return static_cast<IProjectAO*>(this); }
+
 	#pragma region IUnknown
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override
 	{
 		RETURN_HR_IF(E_POINTER, !ppvObject);
 		*ppvObject = nullptr;
 
-		if (   TryQI<IUnknown>(this, riid, ppvObject)
+		if (   TryQI<IUnknown>(AsUnknown(), riid, ppvObject)
 			|| TryQI<IDispatch>(this, riid, ppvObject)
 			|| TryQI<IProjectAO>(this, riid, ppvObject)
+			|| TryQI<IGetWrappedObject>(this, riid, ppvObject)
 		)
 			return S_OK;
 
@@ -62,7 +66,40 @@ public:
 		*ppBridgeAO = bridgeAO.detach();
 		return S_OK;
 	}
+
+	virtual HRESULT STDMETHODCALLTYPE AddWire (IPortAO* from, IPortAO* to, IWireAO** ppWire) override
+	{
+		HRESULT hr;
+
+		RETURN_HR_IF(E_POINTER, !ppWire);
+		*ppWire = nullptr;
+		RETURN_HR_IF(E_POINTER, !from || !to);
+
+		com_ptr<IGetWrappedObject> getWrapped0;
+		hr = from->QueryInterface(IID_PPV_ARGS(getWrapped0.addressof())); RETURN_IF_FAILED(hr);
+		com_ptr<IPort> port0;
+		hr = getWrapped0->GetWrappedObject(IID_PPV_ARGS(port0.addressof())); RETURN_IF_FAILED(hr);
+		RETURN_HR_IF(E_INVALIDARG, port0->bridge()->parent() != _project);
+
+		com_ptr<IGetWrappedObject> getWrapped1;
+		hr = to->QueryInterface(IID_PPV_ARGS(getWrapped1.addressof())); RETURN_IF_FAILED(hr);
+		com_ptr<IPort> port1;
+		hr = getWrapped1->GetWrappedObject(IID_PPV_ARGS(port1.addressof())); RETURN_IF_FAILED(hr);
+		RETURN_HR_IF(E_INVALIDARG, port1->bridge()->parent() != _project);
+
+		com_ptr<IWire> wire;
+		hr = MakeWire(&wire); RETURN_IF_FAILED(hr);
+		wire->set_p0(port0.get());
+		wire->set_p1(port1.get());
+		hr = _project->AddWire(std::move(wire)); RETURN_IF_FAILED(hr);
+		return CreateWireAO(_project->WireAt(_project->WireCount() - 1), ppWire);
+	}
 	#pragma endregion
+
+	virtual HRESULT STDMETHODCALLTYPE GetWrappedObject (REFIID riid, void** ppvObject) override
+	{
+		return _project->QueryInterface(riid, ppvObject);
+	}
 };
 
 HRESULT CreateProjectAO (IStpProject* project, IProjectAO** ppProjectAO)
