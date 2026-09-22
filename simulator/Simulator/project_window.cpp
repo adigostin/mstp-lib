@@ -98,7 +98,6 @@ public:
 				_restore_bounds.right - _restore_bounds.left, _restore_bounds.bottom - _restore_bounds.top, FALSE);
 			_restoring_size_from_registry = false;
 		}
-		::ShowWindow (_hwnd, nCmdShow);
 
 		RECT client_rect_pixels;
 		::GetClientRect(_hwnd, &client_rect_pixels);
@@ -115,7 +114,6 @@ public:
 
 		if (create_params.show_property_grid) {
 			hr = CreatePropertiesWindow(); RETURN_IF_FAILED(hr);
-			MoveWindow (_vlanWindow->hwnd(), { GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->preferred_size().cy });
 		}
 
 		if (create_params.showLogWindow) {
@@ -125,6 +123,8 @@ public:
 		EditWindowCreateParams cps = { _app, this, _project.get(), _selection.get(), _hwnd, edit_window_rect() };
 		hr = _app->edit_window_factory()(cps, &_edit_window); LOG_IF_FAILED(hr);
 		_edit_window->zoom_all();
+
+		::ShowWindow (_hwnd, nCmdShow);
 
 		if (auto recentFiles = GetRecentFileList(); !recentFiles.empty())
 			AddRecentFileMenuItems(recentFiles);
@@ -138,7 +138,7 @@ public:
 	~ProjectWindowImpl()
 	{
 		// Destroy things explicitly, and in this order, because they keep raw pointers to each other.
-		// This needs refactoring!
+		// TODO: This needs refactoring!
 		if (_pw)
 			DestroyPropertiesWindow();
 		_log_window = nullptr;
@@ -262,7 +262,7 @@ public:
 		return S_OK;
 	}
 
-	void destroy_log_window()
+	void DestroyLogWindow()
 	{
 		_log_window = nullptr;
 		SetMainMenuItemCheck (ID_VIEW_STPLOG, false);
@@ -352,7 +352,7 @@ public:
 			rect.right -= logRect.right - logRect.left + splitter_width_pixels();
 		}
 
-		if (_vlanWindow != nullptr)
+		if (_vlanWindow && (::GetWindowLongPtr(_vlanWindow->hwnd(), GWL_STYLE) & WS_VISIBLE))
 		{
 			RECT vlanRect;
 			::GetWindowRect(_vlanWindow->hwnd(), &vlanRect);
@@ -555,7 +555,7 @@ public:
 		if (_log_window != nullptr)
 			MoveWindow (_log_window->hwnd(), log_restricted_rect());
 
-		if (_vlanWindow != nullptr)
+		if (_vlanWindow && (::GetWindowLongPtr(_vlanWindow->hwnd(), GWL_STYLE) & WS_VISIBLE))
 			MoveWindow (_vlanWindow->hwnd(), { GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->preferred_size().cy });
 
 		if (_edit_window != nullptr)
@@ -589,7 +589,7 @@ public:
 	{
 		uint32_t dpi = edge::dpi(_hwnd);
 		LONG vlanHeight = 0;
-		if (_vlanWindow)
+		if (::GetWindowLongPtr(_vlanWindow->hwnd(), GWL_STYLE) & WS_VISIBLE)
 		{
 			RECT vlanRect;
 			::GetWindowRect(_vlanWindow->hwnd(), &vlanRect);
@@ -715,17 +715,26 @@ public:
 		if (command == ID_VIEW_STPLOG)
 		{
 			if (_log_window != nullptr)
-				destroy_log_window();
-			else {
-				auto hr = CreateLogWindow(); LOG_IF_FAILED(hr);
-			}
+				DestroyLogWindow();
+			else
+				CreateLogWindow();
 			ResizeChildWindows();
 			return 0;
 		}
 
 		if (command == ID_VIEW_VLANS)
 		{
-			// TODO: show/hide.
+			if (!(::GetWindowLongPtr(_vlanWindow->hwnd(), GWL_STYLE) & WS_VISIBLE))
+			{
+				ShowWindow(_vlanWindow->hwnd(), SW_SHOW);
+				SetMainMenuItemCheck (ID_VIEW_VLANS, true);
+			}
+			else
+			{
+				ShowWindow(_vlanWindow->hwnd(), SW_HIDE);
+				SetMainMenuItemCheck (ID_VIEW_VLANS, false);
+			}
+			ResizeChildWindows();
 			return 0;
 		}
 
