@@ -77,8 +77,13 @@ namespace pg
 
 		virtual HCURSOR cursor_at(POINT pt, LONG item_y) const = 0;
 		virtual bool selectable() const = 0;
+
+		// Returns S_OK if the event was handled and "consumed", S_FALSE if it wasn't, or an error code.
 		virtual HRESULT STDMETHODCALLTYPE ProcessMouseDown (const edge::mouse_ud_args& ma, LONG item_y) noexcept = 0;
+
+		// Returns S_OK if the event was handled and "consumed", S_FALSE if it wasn't, or an error code.
 		virtual HRESULT STDMETHODCALLTYPE ProcessMouseUp (const edge::mouse_ud_args& ma, LONG item_y) noexcept = 0;
+
 		virtual wil::unique_process_heap_string description_title() const = 0;
 		virtual wil::unique_process_heap_string description_text() const = 0;
 		virtual IRootItem* as_root() { return nullptr; }

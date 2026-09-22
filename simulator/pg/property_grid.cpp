@@ -321,9 +321,6 @@ public:
 		auto hpb = ::BeginBufferedPaint(hdcOuter, &ps.rcPaint, BPBF_COMPATIBLEBITMAP, nullptr, &hdc); RETURN_LAST_ERROR_IF_NULL(hpb);
 		auto endbp = wil::scope_exit([hpb] { ::EndBufferedPaint(hpb, TRUE); });
 
-		// TODO: once the grid gets focus, only an item should have focus.
-		bool focused = GetFocus() == hWnd;
-
 		LONG dpi = edge::dpi(hWnd);
 		LONG bwp = BorderWidth(dpi);
 
@@ -1022,8 +1019,9 @@ public:
 
 		if (clicked_item.item)
 		{
-			clicked_item.item->ProcessMouseDown (args, clicked_item.render_y);
-			return 0;
+			if (clicked_item.item->ProcessMouseDown (args, clicked_item.render_y) == S_OK)
+				return 0;
+			return std::nullopt;
 		}
 
 		return std::nullopt;
@@ -1034,15 +1032,9 @@ public:
 		auto clicked_item = hit_test(args.pt);
 		if (clicked_item.item)
 		{
-			// TODO: pass first to the item's on_mouse_down, and if that one returns std::nullopt,
-			// then pass to a new "item_mouse_up" event, and if that one returns std::nullopt,
-			// then generate the "clicked" event and repeat (first to item, then to pg event handler).
-			//auto res = item_clicked_e::invoker(_em).invoke(clicked_item);
-			//if (res.has_value())
-			//	return res;
-
-			clicked_item.item->ProcessMouseUp (args, clicked_item.render_y);
-			return 0;
+			if (clicked_item.item->ProcessMouseUp (args, clicked_item.render_y) == S_OK)
+				return 0;
+			return std::nullopt;
 		}
 
 		return std::nullopt;
@@ -1678,6 +1670,5 @@ HRESULT MakePropertyItem (IGroupItem* parent, DISPID prop, IPGPropertyItem** ppI
 	if (auto value_coll_prop = dynamic_cast<const value_collection_property*>(prop))
 	return make_value_collection_item(parent, value_coll_prop);
 	*/
-	// TODO: placeholder pg item for unknown types of properties
 	RETURN_HR(E_NOTIMPL);
 }
