@@ -125,18 +125,22 @@ struct STP_BRIDGE
 	// When there's no received BPDU, we set it to the invalid value NULL, to cause a crash on access and signal the programming error early.
 	// (Note that the crash won't happen on some microcontrollers for which address 0 is
 	//  readable/writeable, that's why we also have asserts all around the place).
-	const MSTP_BPDU*		receivedBpduContent;
-	VALIDATED_BPDU_TYPE		receivedBpduType;
+	const MSTP_BPDU*        receivedBpduContent;
+	VALIDATED_BPDU_TYPE     receivedBpduType;
 	PORT*                   receivedBpduPort;
 };
 
 #if STP_ENABLE_PROP_CHANGE_CALLBACKS
 	#define PROP_CHANGING(bridge, portIndex, treeIndex, prop, timestamp) \
-		if ((bridge)->propChanging) \
-			(bridge)->propChanging((bridge), (portIndex), (treeIndex), (prop), (timestamp))
+		do { \
+			if ((bridge)->propChanging) \
+				(bridge)->propChanging((bridge), (portIndex), (treeIndex), (prop), (timestamp)); \
+		} while (0)
 	#define PROP_CHANGED(bridge, portIndex, treeIndex, prop, timestamp) \
-		if ((bridge)->propChanged) \
-			(bridge)->propChanged((bridge), (portIndex), (treeIndex), (prop), (timestamp))
+		do { \
+			if ((bridge)->propChanged) \
+				(bridge)->propChanged((bridge), (portIndex), (treeIndex), (prop), (timestamp)); \
+		} while (0)
 #else
 	#define PROP_CHANGING(bridge, portIndex, treeIndex, prop, timestamp) ((void)0)
 	#define PROP_CHANGED(bridge, portIndex, treeIndex, prop, timestamp) ((void)0)

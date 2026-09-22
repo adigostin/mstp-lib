@@ -36,13 +36,13 @@ TEST_CLASS(bridge_tests)
 
 		auto get_root_bridge_id = [&b] { return b->TreeAt(0)->root_bridge_id(); };
 
-		b->set_stp_enabled(true);
+		STP_StartBridge(b->stp_bridge(), 0);
 		get_root_bridge_id();
 
-		b->set_stp_enabled(false);
+		STP_StopBridge(b->stp_bridge(), 0);
 		Assert::ExpectException<const std::logic_error&>(get_root_bridge_id);
 
-		b->set_stp_enabled(true);
+		STP_StartBridge(b->stp_bridge(), 0);
 		get_root_bridge_id();
 	}
 
@@ -140,5 +140,72 @@ TEST_CLASS(bridge_tests)
 		hr = mstConfig->put_RevisionLevel(1); Assert::AreEqual(S_OK, hr);
 		Assert::IsTrue(sink->ChangingCalled(dispidMstConfigRevLevel));
 		Assert::IsTrue(sink->ChangedCalled(dispidMstConfigRevLevel));
+	}
+
+	TEST_METHOD(BridgeNotifiesWhenStpStarts)
+	{
+		auto bridge = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		auto sink = CreateTestPropertyChangeSink(bridge.get());
+
+		STP_StartBridge(bridge->stp_bridge(), 0);
+
+		Assert::IsTrue(sink->ChangingCalled(dispidStpEnabled));
+		Assert::IsTrue(sink->ChangedCalled(dispidStpEnabled));
+	}
+
+	TEST_METHOD(PortNotifiesWhenOperEdgeChanges)
+	{
+		auto bridge = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		auto sink = CreateTestPropertyChangeSink(bridge->PortAt(0));
+
+		STP_SetPortAdminEdge(bridge->stp_bridge(), 0, true, 0);
+		STP_StartBridge(bridge->stp_bridge(), 0);
+
+		Assert::IsTrue(sink->ChangingCalled(dispidOperEdge));
+		Assert::IsTrue(sink->ChangedCalled(dispidOperEdge));
+	}
+
+	TEST_METHOD(PortTreeNotifiesWhenRoleChanges)
+	{
+		auto bridge = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		auto sink = CreateTestPropertyChangeSink(bridge->PortAt(0)->treeAt(0));
+
+		STP_StartBridge(bridge->stp_bridge(), 0);
+
+		Assert::IsTrue(sink->ChangingCalled(dispidPortRole));
+		Assert::IsTrue(sink->ChangedCalled(dispidPortRole));
+	}
+
+	TEST_METHOD(PortNotifiesWhenDetectedP2PChanges)
+	{
+		auto bridge = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		auto sink = CreateTestPropertyChangeSink(bridge->PortAt(0));
+
+		STP_OnPortEnabled(bridge->stp_bridge(), 0, 100, true, 0);
+
+		Assert::IsTrue(sink->ChangingCalled(dispidPortDetectedP2P));
+		Assert::IsTrue(sink->ChangedCalled(dispidPortDetectedP2P));
+	}
+
+	TEST_METHOD(PortNotifiesWhenOperP2PChanges)
+	{
+		auto bridge = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		auto sink = CreateTestPropertyChangeSink(bridge->PortAt(0));
+
+		STP_OnPortEnabled(bridge->stp_bridge(), 0, 100, true, 0);
+
+		Assert::IsTrue(sink->ChangingCalled(dispidPortOperP2P));
+		Assert::IsTrue(sink->ChangedCalled(dispidPortOperP2P));
+	}
+
+	TEST_METHOD(PortNotifiesWhenAdminP2PChanges)
+	{
+		auto bridge = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		auto sink = CreateTestPropertyChangeSink(bridge->PortAt(0));
+
+		STP_SetAdminPointToPointMAC(bridge->stp_bridge(), 0, STP_ADMIN_P2P_FORCE_TRUE, 0);
+
+		Assert::IsTrue(sink->ChangingCalled(dispidPortAdminP2P));
+		Assert::IsTrue(sink->ChangedCalled(dispidPortAdminP2P));
 	}
 };

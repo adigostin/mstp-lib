@@ -813,7 +813,12 @@ public:
 				for (IDispatch* o : *_selection)
 				{
 					if (auto b = wil::try_com_query_nothrow<IBridge>(o))
-						b->set_stp_enabled(enable);
+					{
+						if (enable && !STP_IsBridgeStarted(b->stp_bridge()))
+							STP_StartBridge(b->stp_bridge(), ::GetMessageTime());
+						else if (!enable && STP_IsBridgeStarted(b->stp_bridge()))
+							STP_StopBridge(b->stp_bridge(), ::GetMessageTime());
+					}
 				}
 
 				_project->SetChangedFlag(true);

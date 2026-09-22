@@ -275,9 +275,6 @@ struct DECLSPEC_NOVTABLE DECLSPEC_UUID("CDE56C38-78B7-4835-827F-DA9D3E54B032") I
 	virtual void clear_log() = 0;
 	std::array<uint8_t, 6> GetPortAddress (size_t portIndex) const;
 
-	//mac_address bridge_address() const;
-	virtual void set_bridge_address (mac_address address) = 0;
-	virtual void set_stp_enabled(bool enable) = 0;
 	uint32_t msti_count() const { return STP_GetMstiCount(stp_bridge()); }
 };
 

@@ -341,7 +341,16 @@ public:
 
 	virtual HRESULT STDMETHODCALLTYPE put_STPEnabled (VARIANT_BOOL bEnabled) override
 	{
-		set_stp_enabled(bEnabled);
+		if (_deserializing)
+		{
+			_enable_stp_after_deserialize = !!bEnabled;
+			return S_OK;
+		}
+
+		if (bEnabled && !STP_IsBridgeStarted(_stpBridge))
+			STP_StartBridge (_stpBridge, GetMessageTime());
+		else if (!bEnabled && STP_IsBridgeStarted(_stpBridge))
+			STP_StopBridge (_stpBridge, GetMessageTime());
 		return S_OK;
 	}
 
@@ -980,7 +989,8 @@ public:
 
 	mac_address GetPortAddress (uint32_t portIndex) const
 	{
-		auto address = bridge_address();
+		mac_address address;
+		memcpy (address.data(), STP_GetBridgeAddress(_stpBridge)->bytes, 6);
 		size_t increment = portIndex + 1;
 		for (size_t i = 6; i-- > 3 && increment; )
 		{
@@ -992,69 +1002,11 @@ public:
 		return address;
 	}
 
-	mac_address bridge_address() const
-	{
-		mac_address address;
-		auto x = sizeof(address);
-		memcpy (address.data(), STP_GetBridgeAddress(_stpBridge)->bytes, 6);
-		return address;
-	}
-
-	virtual void set_bridge_address (mac_address address) override
-	{
-		if (memcmp(STP_GetBridgeAddress(_stpBridge)->bytes, address.data(), 6) != 0)
-		{
-//			edge::value_property_change_args args = { bridge_address_property };
-//			edge::property_changing_e::invoker(_em).invoke(this, args);
-			STP_SetBridgeAddress(_stpBridge, address.data(), GetMessageTime());
-//			edge::property_changed_e::invoker(_em).invoke(this, args);
-		}
-	}
-
 	virtual void clear_log() override
 	{
 		_logLines.clear();
 		_currentLogLine.text.clear();
 		_bridgeEventsCP->Notify([this](IBridgeEvents* e) { return e->OnLogCleared(this); });
-	}
-
-	std::string GetMstConfigIdDigest() const
-	{
-	}
-
-	virtual void set_stp_enabled (bool value) override
-	{
-		if (_deserializing)
-		{
-			_enable_stp_after_deserialize = value;
-			return;
-		}
-
-		if (value && !STP_IsBridgeStarted(_stpBridge))
-		{
-			NotifyPropertyChanging(_propChangeCP, AsUnknown(), { dispidStpEnabled }, nullptr);
-			STP_StartBridge (_stpBridge, GetMessageTime());
-			NotifyPropertyChanged(_propChangeCP, AsUnknown(), { dispidStpEnabled }, nullptr);
-			NotifyInvalidate(_invalidateCP, extent());
-		}
-		else if (!value && STP_IsBridgeStarted(_stpBridge))
-		{
-			NotifyPropertyChanging(_propChangeCP, AsUnknown(), { dispidStpEnabled }, nullptr);
-			STP_StopBridge (_stpBridge, GetMessageTime());
-			NotifyPropertyChanged(_propChangeCP, AsUnknown(), { dispidStpEnabled }, nullptr);
-			NotifyInvalidate(_invalidateCP, extent());
-		}
-	}
-
-	void set_stp_version (STP_VERSION stp_version)
-	{
-		if (STP_GetStpVersion(_stpBridge) != stp_version)
-		{
-			WI_ASSERT(false);
-			//this->on_property_changing(&stp_version_property);
-			//STP_SetStpVersion(_stpBridge, stp_version, GetMessageTime());
-			//this->on_property_changed(&stp_version_property);
-		}
 	}
 
 	#pragma region properties
@@ -1257,6 +1209,10 @@ public:
 		if (portIndex == -1 && treeIndex == -1)
 		{
 			// STP properties that are relevant to the bridge, not to a bridge tree or to a port.
+			if (prop == STP_PROPERTY_BRIDGE_STARTED)
+				NotifyPropertyChanging(b->_propChangeCP, b->AsUnknown(), dispidStpEnabled);
+			if (prop == STP_PROPERTY_STP_VERSION)
+				NotifyPropertyChanging(b->_propChangeCP, b->AsUnknown(), dispidStpVersion);
 			if (prop == STP_PROPERTY_MST_CONFIG_NAME)
 				NotifyPropertyChanging(b->_propChangeCP, b->AsUnknown(), dispidMstConfigName);
 			if (prop == STP_PROPERTY_MST_CONFIG_REVISION_LEVEL)
@@ -1275,6 +1231,8 @@ public:
 
 		if (portIndex == -1 && treeIndex == -1)
 		{
+			if (prop == STP_PROPERTY_BRIDGE_STARTED)
+				NotifyPropertyChanged(b->_propChangeCP, b->AsUnknown(), dispidStpEnabled);
 			if (prop == STP_PROPERTY_STP_VERSION)
 				NotifyPropertyChanged(b->_propChangeCP, b->AsUnknown(), dispidStpVersion);
 			if (prop == STP_PROPERTY_MST_CONFIG_NAME)

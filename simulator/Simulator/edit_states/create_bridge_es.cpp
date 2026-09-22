@@ -46,7 +46,7 @@ class create_bridge_es : public edit_state
 			com_ptr<IBridge> b;
 			// Make a new bridge with the correct MAC address so it gets a MST config name
 			hr = MakeBridge (_bridge->PortCount(), _bridge->msti_count(), bridge_address, &b); LOG_IF_FAILED(hr);
-			b->set_stp_enabled(true);
+			STP_StartBridge (b->stp_bridge(), GetMessageTime());
 			b->set_location(_bridge->location());
 			_project->AddBridge(b);
 			_project->SetChangedFlag(true);

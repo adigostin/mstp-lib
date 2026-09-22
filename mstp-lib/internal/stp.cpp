@@ -181,10 +181,9 @@ void STP_StartBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 
 	bridge->callbacks.enableBpduTrapping (bridge, true, timestamp);
 
+	PROP_CHANGING(bridge, -1, -1, STP_PROPERTY_BRIDGE_STARTED, timestamp);
 	bridge->started = true;
-
 	RestartStateMachines(bridge, timestamp);
-
 	PROP_CHANGED(bridge, -1, -1, STP_PROPERTY_BRIDGE_STARTED, timestamp);
 
 	LOG (bridge, -1, -1, "Bridge started.\r\n");
@@ -234,8 +233,8 @@ void STP_StopBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 	}
 
 	// This one last, to allow the callbacks to still call "const" library functions.
+	PROP_CHANGING(bridge, -1, -1, STP_PROPERTY_BRIDGE_STARTED, timestamp);
 	bridge->started = false;
-
 	PROP_CHANGED(bridge, -1, -1, STP_PROPERTY_BRIDGE_STARTED, timestamp);
 
 	LOG (bridge, -1, -1, "{T}: Bridge stopped.\r\n", timestamp);
@@ -314,13 +313,15 @@ void STP_OnPortEnabled (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int
 	port->portEnabled = true;
 	PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_PORT_ENABLED, timestamp);
 
+	PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_DETECTED_P2P, timestamp);
 	port->detectedPointToPointMAC = detectedPointToPointMAC;
 	PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_DETECTED_P2P, timestamp);
 
+	PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_OPER_P2P, timestamp);
 	if (port->adminPointToPointMAC != STP_ADMIN_P2P_AUTO)
 		port->operPointToPointMAC = (port->adminPointToPointMAC == STP_ADMIN_P2P_FORCE_TRUE);
 	else
-		port->operPointToPointMAC = detectedPointToPointMAC;	
+		port->operPointToPointMAC = detectedPointToPointMAC;
 	PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_OPER_P2P, timestamp);
 
 	PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_DETECTED_PORT_PATH_COST, timestamp);
@@ -362,10 +363,14 @@ void STP_OnPortDisabled (STP_BRIDGE* bridge, unsigned int portIndex, unsigned in
 	// We allow calling this function on an already disabled port.
 	if (port->portEnabled)
 	{
+		PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_DETECTED_P2P, timestamp);
 		port->detectedPointToPointMAC = false;
 		PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_DETECTED_P2P, timestamp);
+
+		PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_OPER_P2P, timestamp);
 		port->operPointToPointMAC = false;
 		PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_OPER_P2P, timestamp);
+
 		PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_DETECTED_PORT_PATH_COST, timestamp);
 		port->detectedPortPathCost = 0;
 		PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_DETECTED_PORT_PATH_COST, timestamp);
@@ -715,6 +720,7 @@ void STP_SetAdminPointToPointMAC (struct STP_BRIDGE* bridge, unsigned int portIn
 
 	PORT* port = bridge->ports[portIndex];
 
+	PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_ADMIN_P2P, timestamp);
 	port->adminPointToPointMAC = adminPointToPointMAC;
 	PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_ADMIN_P2P, timestamp);
 
@@ -725,6 +731,7 @@ void STP_SetAdminPointToPointMAC (struct STP_BRIDGE* bridge, unsigned int portIn
 
 		if (port->operPointToPointMAC != newOperPointToPointMAC)
 		{
+			PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_OPER_P2P, timestamp);
 			port->operPointToPointMAC = newOperPointToPointMAC;
 			PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_OPER_P2P, timestamp);
 
@@ -912,7 +919,7 @@ void STP_SetMstConfigName (STP_BRIDGE* bridge, const char* name, unsigned int ti
 	memset (bridge->MstConfigId.ConfigurationName, 0, 32);
 	memcpy (bridge->MstConfigId.ConfigurationName, name, strlen (name));
 
-	if (bridge->started)
+	if (bridge->started && bridge->ForceProtocolVersion >= STP_VERSION_MSTP)
 		RestartStateMachines(bridge, timestamp);
 
 	PROP_CHANGED(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_NAME, timestamp);
@@ -932,7 +939,7 @@ void STP_SetMstConfigRevisionLevel (STP_BRIDGE* bridge, unsigned short revisionL
 	bridge->MstConfigId.RevisionLevelHigh = revisionLevel >> 8;
 	bridge->MstConfigId.RevisionLevelLow = revisionLevel & 0xff;
 
-	if (bridge->started)
+	if (bridge->started && bridge->ForceProtocolVersion >= STP_VERSION_MSTP)
 		RestartStateMachines(bridge, timestamp);
 
 	PROP_CHANGED(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_REVISION_LEVEL, timestamp);
@@ -1074,12 +1081,9 @@ void STP_SetStpVersion (STP_BRIDGE* bridge, enum STP_VERSION version, unsigned i
 		LOG (bridge, -1, -1, "\r\n");
 
 		PROP_CHANGING(bridge, -1, -1, STP_PROPERTY_STP_VERSION, timestamp);
-
 		bridge->ForceProtocolVersion = version;
-
 		if (bridge->started)
 			RestartStateMachines (bridge, timestamp);
-
 		PROP_CHANGED(bridge, -1, -1, STP_PROPERTY_STP_VERSION, timestamp);
 	}
 
