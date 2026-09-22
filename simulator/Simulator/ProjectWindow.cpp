@@ -59,8 +59,8 @@ class ProjectWindowImpl : public IProjectWindow, IConnectionPointContainer, IPro
 	LONG _resize_offset;
 	HWND _lastFocusedWindow = nullptr;
 
-	static inline uint32_t wnd_class_ref_count = 0;
-	static const WNDCLASSEX wnd_class;
+	static inline uint32_t refCountWndClass = 0;
+	static const WNDCLASSEX WndClass;
 
 public:
 	HRESULT InitInstance (const project_window_create_params& create_params)
@@ -74,13 +74,12 @@ public:
 	
 		hr = create_params.app->selection_factory()(create_params.project, &_selection); RETURN_IF_FAILED(hr);
 
-		if (!wnd_class_ref_count)
+		if (!refCountWndClass)
 		{
-			ATOM wnd_class_atom = RegisterClassEx(&wnd_class);
-			_ASSERT(wnd_class_atom);
+			ATOM atom = RegisterClassEx(&WndClass); RETURN_LAST_ERROR_IF(!atom);
 		}
-		wnd_class_ref_count++;
-		_hwnd = CreateWindowEx(0, wnd_class.lpszClassName, L"", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+		refCountWndClass++;
+		_hwnd = CreateWindowEx(0, WndClass.lpszClassName, L"", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
 			CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr, (HINSTANCE)&__ImageBase, nullptr);
 
 		_ASSERT (create_params.selectedVlan >= 1);
@@ -138,25 +137,14 @@ public:
 
 	~ProjectWindowImpl()
 	{
-		// Destroy things explicitly, and in this order, because they keep raw pointers to each other.
-		// TODO: This needs refactoring!
-		if (_pw)
-			DestroyPropertiesWindow();
-		_log_window = nullptr;
-		_vlanWindow = nullptr;
-		_edit_window = nullptr;
-		_selection = nullptr;
-
 		_ASSERT (reinterpret_cast<ProjectWindowImpl*>(GetWindowLongPtr(_hwnd, GWLP_USERDATA)) == this);
 		::SetWindowLongPtr (_hwnd, GWLP_USERDATA, 0);
 		::DestroyWindow(_hwnd);
-		_ASSERT(wnd_class_ref_count);
-		wnd_class_ref_count--;
-		if (!wnd_class_ref_count)
-		{
-			BOOL bres = UnregisterClass(wnd_class.lpszClassName, (HINSTANCE)&__ImageBase);
-			_ASSERT(bres);
-		}
+
+		_ASSERT(refCountWndClass);
+		refCountWndClass--;
+		if (!refCountWndClass)
+			UnregisterClass(WndClass.lpszClassName, (HINSTANCE)&__ImageBase);
 	}
 
 	IUnknown* AsUnknown() { return static_cast<IProjectWindow*>(this); }
@@ -1155,7 +1143,7 @@ public:
 };
 
 //static
-const WNDCLASSEX ProjectWindowImpl::wnd_class = {
+const WNDCLASSEX ProjectWindowImpl::WndClass = {
 	.cbSize = sizeof(WNDCLASSEX),
 	.style = CS_DBLCLKS,
 	.lpfnWndProc = &ProjectWindowImpl::WndProcStatic,

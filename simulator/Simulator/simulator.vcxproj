@@ -285,7 +285,7 @@
     <ClCompile Include="port_tree.cpp" />
     <ClCompile Include="project.cpp" />
     <ClCompile Include="ProjectAO.cpp" />
-    <ClCompile Include="project_window.cpp" />
+    <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="properties_window.cpp" />
     <ClCompile Include="selection.cpp" />
     <ClCompile Include="simulator.cpp" />
