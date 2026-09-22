@@ -483,28 +483,28 @@ struct ObjectItemChildManager : IObjectItemChildManager, IPropertyChangeSink, IO
 			_children.erase(_children.end() - 1);
 		}
 
-		::InvalidateRect(grid->HWnd(), 0, 0);
-
 		return S_OK;
 	}
 
 	HRESULT on_selected_objects_replaced (const ObjectCollectionChangeArgs* args)
 	{
-		HRESULT hr;
+		// Since in on_selected_objects_replacing we cleared all child group items, we can now simply
+		// create new ones for the new selection, without looking at what was changed in it.
 
-		// TODO: optimize this, then take care to call register_property_change_events() here.
-
-		BOOL groupItemsCreated1;
-		hr = on_selected_objects_inserted (*args, &groupItemsCreated1); RETURN_IF_FAILED(hr);
-
-		BOOL groupItemsCreated2;
-		hr = on_selected_objects_removed (args, &groupItemsCreated2); RETURN_IF_FAILED(hr);
-
-		if (groupItemsCreated1 || groupItemsCreated2)
+		vector_nothrow<wil::unique_bstr> groups;
+		auto hr = make_group_list(_selected_objects, groups); RETURN_IF_FAILED(hr);
+		for (auto& group : groups)
 		{
-			auto grid = _owner->as_item()->root()->grid();
-			grid->NotifyLayoutChangedTree(_owner->as_item());
+			com_ptr<IGroupItem> gi;
+			hr = MakeGroupItem(_owner, std::move(group), &gi); RETURN_IF_FAILED(hr);
+			_children.try_push_back(std::move(gi));
 		}
+
+		auto grid = _owner->as_item()->root()->grid();
+		grid->NotifyLayoutChangedTree(_owner->as_item());
+
+		auto& a = args->setInsertRemoveArgs;
+		register_property_change_events({ a.index, a.index + a.count });
 
 		return S_OK;
 	}
