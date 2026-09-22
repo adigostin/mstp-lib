@@ -29,6 +29,8 @@ extern project_window_factory_t MakeProjectWindow;
 
 extern HRESULT MakeMSTConfigIdEditorFactory (pg::ICustomPropertyEditorFactory** ppFactory);
 
+HRESULT CreateVlanWindow (const VlanWindowCreateParams* params, IVlanWindow** ppVlanWindow);
+
 #pragma region IStpProject
 std::pair<IWire*, size_t> IStpProject::GetWireConnectedToPort (IPort* port) const
 {
@@ -360,6 +362,11 @@ public:
 	virtual project_factory_t* project_factory() const override { return MakeProject; }
 
 	virtual properties_window_factory_t* properties_window_factory() const override final { return MakePropertiesWindow; }
+
+	virtual HRESULT STDMETHODCALLTYPE CreateVlanWindow (const VlanWindowCreateParams* params, IVlanWindow** ppVlanWindow) override
+	{
+		return ::CreateVlanWindow(params, ppVlanWindow);
+	}
 
 	virtual edge::IThemeColorProvider* GetThemeColorProvider() const override { return _tcp; }
 

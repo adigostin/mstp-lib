@@ -29,24 +29,23 @@ class VlanWindowImpl
 	com_ptr<ConnectionPointImpl<IVlanSelectionEvents>> _vlanSelectionEventsCP;
 
 public:
-	HRESULT InitInstance (ISimulatorApp* app, IProjectWindow* pw, IStpProject* project,
-						  ISelection* selection, DWORD vlan, HWND hWndParent, POINT location)
+	HRESULT InitInstance (const VlanWindowCreateParams* params)
 	{
 		auto hr = _weakRefToThis.InitInstance(AsUnknown()); RETURN_IF_FAILED(hr);
 
-		_app = app;
-		_pw = pw;
-		_project = project;
-		_selection = selection;
-		_vlan = vlan;
+		_app = params->app;
+		_pw = params->pw;
+		_project = params->project;
+		_selection = params->selection;
+		_vlan = params->vlan;
 	
 		hr = MakeConnectionPoint (this, &_vlanSelectionEventsCP); RETURN_IF_FAILED(hr);
 
-		_hwnd = CreateDialogParam ((HINSTANCE)&__ImageBase, MAKEINTRESOURCE(IDD_DIALOG_VLAN), hWndParent, &DialogProcStatic, reinterpret_cast<LPARAM>(this));
+		_hwnd = CreateDialogParam ((HINSTANCE)&__ImageBase, MAKEINTRESOURCE(IDD_DIALOG_VLAN), params->hWndParent, &DialogProcStatic, reinterpret_cast<LPARAM>(this));
 
 		RECT rc;
 		::GetWindowRect(_hwnd, &rc);
-		::MoveWindow (_hwnd, location.x, location.y, rc.right - rc.left, rc.bottom - rc.top, TRUE);
+		::MoveWindow (_hwnd, params->location.x, params->location.y, rc.right - rc.left, rc.bottom - rc.top, TRUE);
 
 		hr = AdviseSink<IObjectCollectionChangeEvents>(_selection, _weakRefToThis, &_collectionChangeToken); RETURN_IF_FAILED(hr);
 
@@ -151,9 +150,9 @@ public:
 
 	static constexpr auto is_bridge_or_port = [](IDispatch* o) { return is_bridge(o) || is_port(o); };
 
-	virtual HWND hwnd() const override final { return _hwnd; }
+	virtual HWND HWnd() const override final { return _hwnd; }
 
-	virtual SIZE preferred_size() const override final
+	virtual SIZE PreferredSize() const override final
 	{
 		RECT rect;
 		::GetWindowRect(GetDlgItem(_hwnd, IDC_STATIC_EXTENT), &rect);
@@ -169,9 +168,9 @@ public:
 		}
 		else
 		{
-			HDC tempDC = GetDC(hwnd());
+			HDC tempDC = GetDC(_hwnd);
 			UINT dpi = GetDeviceCaps (tempDC, LOGPIXELSX);
-			ReleaseDC (hwnd(), tempDC);
+			ReleaseDC (_hwnd, tempDC);
 			BOOL bRes = AdjustWindowRectEx (&rect, GetWindowStyle(_hwnd), FALSE, GetWindowExStyle(_hwnd)); WI_ASSERT(bRes);
 			return { rect.right - rect.left, rect.bottom - rect.top };
 		}
@@ -449,13 +448,10 @@ public:
 	}
 };
 
-HRESULT MakeVlanWindow (	ISimulatorApp* app, IProjectWindow* pw, IStpProject* project,
-						ISelection* selection, DWORD vlan, HWND hWndParent, POINT location, IVlanWindow** ppVlanWindow)
+HRESULT CreateVlanWindow (const VlanWindowCreateParams* params, IVlanWindow** ppVlanWindow)
 {
 	auto p = com_ptr(new (std::nothrow) VlanWindowImpl()); RETURN_IF_NULL_ALLOC(p);
-	auto hr = p->InitInstance(app, pw, project, selection, vlan, hWndParent, location); RETURN_IF_FAILED(hr);
+	auto hr = p->InitInstance(params); RETURN_IF_FAILED(hr);
 	*ppVlanWindow = p.detach();
 	return S_OK;
 }
-
-vlan_window_factory_t* const vlan_window_factory = &MakeVlanWindow;

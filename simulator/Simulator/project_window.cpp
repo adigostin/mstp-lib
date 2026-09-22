@@ -108,7 +108,8 @@ public:
 		_log_desired_width_dips = client_width * 30 / 100;
 		TryReadRegFloat (RegValueNameLogWindowWidth, _log_desired_width_dips);
 
-		hr = vlan_window_factory (_app, this, _project, _selection.get(), create_params.selectedVlan, _hwnd, { GetVlanWindowLeft(), 0 }, &_vlanWindow); RETURN_IF_FAILED(hr);
+		auto vlanParams = VlanWindowCreateParams{ _app, this, _project.get(), _selection.get(), create_params.selectedVlan, _hwnd, { GetVlanWindowLeft(), 0 } };
+		hr = _app->CreateVlanWindow (&vlanParams, &_vlanWindow); RETURN_IF_FAILED(hr);
 		SetMainMenuItemCheck (ID_VIEW_VLANS, true);
 		hr = AdviseSink<IVlanSelectionEvents>(_vlanWindow, _weakRefToThis, &_vlanSelectionToken); RETURN_IF_FAILED(hr);
 
@@ -352,10 +353,10 @@ public:
 			rect.right -= logRect.right - logRect.left + splitter_width_pixels();
 		}
 
-		if (_vlanWindow && (::GetWindowLongPtr(_vlanWindow->hwnd(), GWL_STYLE) & WS_VISIBLE))
+		if (_vlanWindow && (::GetWindowLongPtr(_vlanWindow->HWnd(), GWL_STYLE) & WS_VISIBLE))
 		{
 			RECT vlanRect;
-			::GetWindowRect(_vlanWindow->hwnd(), &vlanRect);
+			::GetWindowRect(_vlanWindow->HWnd(), &vlanRect);
 			rect.top += vlanRect.bottom - vlanRect.top;
 		}
 
@@ -555,8 +556,8 @@ public:
 		if (_log_window != nullptr)
 			MoveWindow (_log_window->hwnd(), log_restricted_rect());
 
-		if (_vlanWindow && (::GetWindowLongPtr(_vlanWindow->hwnd(), GWL_STYLE) & WS_VISIBLE))
-			MoveWindow (_vlanWindow->hwnd(), { GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->preferred_size().cy });
+		if (_vlanWindow && (::GetWindowLongPtr(_vlanWindow->HWnd(), GWL_STYLE) & WS_VISIBLE))
+			MoveWindow (_vlanWindow->HWnd(), { GetVlanWindowLeft(), 0, GetVlanWindowRight(), _vlanWindow->PreferredSize().cy });
 
 		if (_edit_window != nullptr)
 			MoveWindow (_edit_window->hWnd(), edit_window_rect());
@@ -589,10 +590,10 @@ public:
 	{
 		uint32_t dpi = edge::dpi(_hwnd);
 		LONG vlanHeight = 0;
-		if (::GetWindowLongPtr(_vlanWindow->hwnd(), GWL_STYLE) & WS_VISIBLE)
+		if (::GetWindowLongPtr(_vlanWindow->HWnd(), GWL_STYLE) & WS_VISIBLE)
 		{
 			RECT vlanRect;
-			::GetWindowRect(_vlanWindow->hwnd(), &vlanRect);
+			::GetWindowRect(_vlanWindow->HWnd(), &vlanRect);
 			vlanHeight = vlanRect.bottom - vlanRect.top;
 		}
 		SIZE cs = edge::client_size_pixels(_hwnd);
@@ -607,8 +608,8 @@ public:
 				_pw_desired_width_dips = new_pg_desired_width_dips;
 				MoveWindow (_pw->hWnd(), pg_restricted_rect());
 				::UpdateWindow (_pw->hWnd());
-				MoveWindow (_vlanWindow->hwnd(), { GetVlanWindowLeft(), 0, GetVlanWindowRight(), vlanHeight });
-				::UpdateWindow (_vlanWindow->hwnd());
+				MoveWindow (_vlanWindow->HWnd(), { GetVlanWindowLeft(), 0, GetVlanWindowRight(), vlanHeight });
+				::UpdateWindow (_vlanWindow->HWnd());
 				MoveWindow (_edit_window->hWnd(), edit_window_rect());
 				::UpdateWindow (_edit_window->hWnd());
 			}
@@ -624,8 +625,8 @@ public:
 				_log_desired_width_dips = new_log_desired_width_dips;
 				MoveWindow (_log_window->hwnd(), log_restricted_rect());
 				::UpdateWindow (_log_window->hwnd());
-				MoveWindow (_vlanWindow->hwnd(), { GetVlanWindowLeft(), 0, GetVlanWindowRight(), vlanHeight });
-				::UpdateWindow (_vlanWindow->hwnd());
+				MoveWindow (_vlanWindow->HWnd(), { GetVlanWindowLeft(), 0, GetVlanWindowRight(), vlanHeight });
+				::UpdateWindow (_vlanWindow->HWnd());
 				MoveWindow (_edit_window->hWnd(), edit_window_rect());
 				::UpdateWindow (_edit_window->hWnd());
 			}
@@ -724,14 +725,14 @@ public:
 
 		if (command == ID_VIEW_VLANS)
 		{
-			if (!(::GetWindowLongPtr(_vlanWindow->hwnd(), GWL_STYLE) & WS_VISIBLE))
+			if (!(::GetWindowLongPtr(_vlanWindow->HWnd(), GWL_STYLE) & WS_VISIBLE))
 			{
-				ShowWindow(_vlanWindow->hwnd(), SW_SHOW);
+				ShowWindow(_vlanWindow->HWnd(), SW_SHOW);
 				SetMainMenuItemCheck (ID_VIEW_VLANS, true);
 			}
 			else
 			{
-				ShowWindow(_vlanWindow->hwnd(), SW_HIDE);
+				ShowWindow(_vlanWindow->HWnd(), SW_HIDE);
 				SetMainMenuItemCheck (ID_VIEW_VLANS, false);
 			}
 			ResizeChildWindows();

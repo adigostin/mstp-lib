@@ -452,13 +452,12 @@ HRESULT MakeProject (IStpProject** ppProject);
 
 struct DECLSPEC_NOVTABLE DECLSPEC_UUID("E5F597A4-ACA4-4BEE-B60B-235D56BC597E") IVlanWindow : IUnknown
 {
-	virtual HWND hwnd() const = 0;
-	virtual SIZE preferred_size() const = 0;
+	virtual HWND HWnd() const = 0;
+	virtual SIZE PreferredSize() const = 0;
 	virtual HRESULT STDMETHODCALLTYPE GetVlanSelection (IVlanSelection** ppVlanSelection) = 0;
 };
 using vlan_window_factory_t = HRESULT (ISimulatorApp* app, IProjectWindow* pw, IStpProject* project,
 									   ISelection* selection, DWORD vlan, HWND hWndParent, POINT location, IVlanWindow** ppVlanWindow);
-extern vlan_window_factory_t* const vlan_window_factory;
 
 // ============================================================================
 
@@ -468,6 +467,17 @@ struct DECLSPEC_NOVTABLE DECLSPEC_UUID("70A3136A-9E07-457D-B8D1-FAE468D5A0B2") I
 	virtual HRESULT STDMETHODCALLTYPE OnProjectWindowInserted (IProjectWindow*) = 0;
 	virtual HRESULT STDMETHODCALLTYPE OnProjectWindowRemoving (IProjectWindow*) = 0;
 	virtual HRESULT STDMETHODCALLTYPE OnProjectWindowRemoved (IProjectWindow*) = 0;
+};
+
+struct VlanWindowCreateParams
+{
+	ISimulatorApp* app;
+	IProjectWindow* pw;
+	IStpProject* project;
+	ISelection* selection;
+	DWORD vlan;
+	HWND hWndParent;
+	POINT location;
 };
 
 struct DECLSPEC_NOVTABLE DECLSPEC_UUID("B11C7D2D-9AF8-4450-A8ED-A955B5C52D10") ISimulatorApp : IUnknown
@@ -483,6 +493,7 @@ struct DECLSPEC_NOVTABLE DECLSPEC_UUID("B11C7D2D-9AF8-4450-A8ED-A955B5C52D10") I
 	virtual project_window_factory_t* project_window_factory() const = 0;
 	virtual project_factory_t* project_factory() const = 0;
 	virtual properties_window_factory_t* properties_window_factory() const = 0;
+	virtual HRESULT STDMETHODCALLTYPE CreateVlanWindow (const VlanWindowCreateParams* params, IVlanWindow** ppVlanWindow) = 0;
 	virtual edge::IThemeColorProvider* GetThemeColorProvider() const = 0;
 	virtual ID3D11DeviceContext1* GetD3DDC() = 0;
 	virtual IDWriteFactory* GetDWriteFactory() = 0;

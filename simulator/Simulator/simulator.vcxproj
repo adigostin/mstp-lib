@@ -308,7 +308,7 @@
       </ForcedIncludeFiles>
     </ClCompile>
     <ClCompile Include="TreeSelection.cpp" />
-    <ClCompile Include="vlan_window.cpp" />
+    <ClCompile Include="VlanWindow.cpp" />
     <ClCompile Include="wire.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -482,9 +482,8 @@ public:
 		}
 
 		// Need to set SIF_DISABLENOSCROLL due to what seems like a Windows bug:
-		// GetScrollInfo returns garbage if called right after SetScrollInfo, if SetScrollInfo made the scroll bar change from invisible to visible,
-
-		// TODO: fix this
+		// GetScrollInfo returns garbage if called right after SetScrollInfo,
+		// if SetScrollInfo made the scroll bar change from invisible to visible.
 		SCROLLINFO si = { sizeof (si) };
 		si.fMask = SIF_RANGE | SIF_PAGE | SIF_POS | SIF_DISABLENOSCROLL;
 		si.nMin = 0;
