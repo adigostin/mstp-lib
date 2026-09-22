@@ -18,6 +18,8 @@
 using namespace D2D1;
 using namespace edge;
 
+HRESULT CreateProjectWindowAO(IProjectWindow* projectWindow, IProjectWindowAO** ppProjectWindowAO);
+
 static const char company_name[] = "Adi Gostin";
 static const wchar_t app_name[] = L"STP Simulator";
 
@@ -223,7 +225,13 @@ class SimulatorApp : public ISimulatorApp, ISimulatorAppAO, IProjectWindowEvents
 	ID2D1Factory1* _d2dFactory;
 	IDWriteFactory* _dwriteFactory;
 	std::wstring _regKeyPath;
-	vector_nothrow<std::pair<com_ptr<IProjectWindow>, AdviseSinkToken>> _projectWindows;
+	struct ProjectWindowInfo
+	{
+		com_ptr<IProjectWindow> projectWindow;
+		com_ptr<IProjectWindowAO> projectWindowAO;
+		AdviseSinkToken eventsToken;
+	};
+	vector_nothrow<ProjectWindowInfo> _projectWindows;
 	com_ptr<IThemeColorProvider> _tcp;
 
 public:
@@ -285,8 +293,15 @@ public:
 
 		for (auto& pw : _projectWindows)
 		{
-			if (pw.first->hwnd() == (HWND)(LONG_PTR)hWnd)
-				return pw.first->QueryInterface(ppProjectWindow);
+			if (pw.projectWindow->hwnd() == (HWND)(LONG_PTR)hWnd)
+			{
+				if (!pw.projectWindowAO)
+				{
+					auto hr = CreateProjectWindowAO(pw.projectWindow, &pw.projectWindowAO); RETURN_IF_FAILED(hr);
+				}
+
+				return pw.projectWindowAO.copy_to(ppProjectWindow);
+			}
 		}
 
 		return HRESULT_FROM_WIN32(ERROR_NOT_FOUND);
@@ -310,27 +325,30 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE AddProjectWindow (IProjectWindow* pw) override
 	{
 		HRESULT hr;
+		ProjectWindowInfo info;
+		info.projectWindow = pw;
 		AdviseSinkToken token;
 		hr = AdviseSink<IProjectWindowEventsSink>(pw, _weakRefToThis, &token); RETURN_IF_FAILED(hr);
 		_windowCollectionEventsCP->Notify([this,pw](IProjectWindowCollectionEventsSink* sink) {
 			return sink->OnProjectWindowInserting(pw); });
-		bool pushed = _projectWindows.try_push_back({ pw, std::move(token) }); RETURN_HR_IF(E_OUTOFMEMORY, !pushed);
+		info.eventsToken = std::move(token);
+		bool pushed = _projectWindows.try_push_back(std::move(info)); RETURN_HR_IF(E_OUTOFMEMORY, !pushed);
 		_windowCollectionEventsCP->Notify([this](IProjectWindowCollectionEventsSink* sink) {
-			return sink->OnProjectWindowInserted(_projectWindows.back().first); });
+			return sink->OnProjectWindowInserted(_projectWindows.back().projectWindow); });
 		return S_OK;
 	}
 
 	#pragma region IProjectWindowEventsSink
 	virtual HRESULT STDMETHODCALLTYPE OnProjectWindowClosed (IProjectWindow* pw) override
 	{
-		auto it = std::find_if (_projectWindows.begin(), _projectWindows.end(), [pw](auto& p) { return p.first == pw; });
+		auto it = std::find_if (_projectWindows.begin(), _projectWindows.end(), [pw](auto& p) { return p.projectWindow == pw; });
 		_ASSERT (it != _projectWindows.end());
 		_windowCollectionEventsCP->Notify([this,pw](IProjectWindowCollectionEventsSink* sink) {
 			return sink->OnProjectWindowRemoving(pw); });
 		auto pwLastRef = std::move(*it);
 		_projectWindows.erase(it);
 		_windowCollectionEventsCP->Notify([this,&pwLastRef](IProjectWindowCollectionEventsSink* sink) {
-			return sink->OnProjectWindowRemoved(pwLastRef.first); });
+			return sink->OnProjectWindowRemoved(pwLastRef.projectWindow); });
 		if (_projectWindows.empty())
 			PostQuitMessage(0);
 		return S_OK;
@@ -344,7 +362,7 @@ public:
 
 	virtual IProjectWindow* STDMETHODCALLTYPE ProjectWindowAt (ULONG i) const override
 	{
-		return _projectWindows[i].first;
+		return _projectWindows[i].projectWindow;
 	}
 
 	virtual const wchar_t* GetRegKeyPath() const override final { return _regKeyPath.c_str(); }
@@ -397,9 +415,9 @@ public:
 			int translatedAccelerator = 0;
 			for (auto& pw : _projectWindows)
 			{
-				if ((msg.hwnd == pw.first->hwnd()) || ::IsChild(pw.first->hwnd(), msg.hwnd))
+				if ((msg.hwnd == pw.projectWindow->hwnd()) || ::IsChild(pw.projectWindow->hwnd(), msg.hwnd))
 				{
-					translatedAccelerator = TranslateAccelerator (pw.first->hwnd(), accelerators, &msg);
+					translatedAccelerator = TranslateAccelerator (pw.projectWindow->hwnd(), accelerators, &msg);
 					break;
 				}
 			}

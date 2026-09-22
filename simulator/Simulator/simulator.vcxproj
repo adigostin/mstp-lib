@@ -286,6 +286,7 @@
     <ClCompile Include="project.cpp" />
     <ClCompile Include="ProjectAO.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
+    <ClCompile Include="ProjectWindowAO.cpp" />
     <ClCompile Include="properties_window.cpp" />
     <ClCompile Include="selection.cpp" />
     <ClCompile Include="simulator.cpp" />

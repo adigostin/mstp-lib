@@ -5,7 +5,6 @@
 #include "pch.h"
 #include "simulator.h"
 #include "resource.h"
-#include "SimulatorAO_h.h"
 
 using namespace edge;
 using namespace pg;
@@ -25,11 +24,8 @@ static COMDLG_FILTERSPEC const ProjectFileDialogFileTypes[] =
 };
 static const wchar_t ProjectFileExtensionWithoutDot[] = L"stp";
 
-HRESULT CreateProjectAO (IStpProject* project, IProjectAO** ppProjectAO);
-
 class ProjectWindowImpl : public IProjectWindow, IConnectionPointContainer, IProjectEventsSink
 	, IProjectWindowCollectionEventsSink, IVlanSelectionEvents
-	, IProjectWindowAO
 {
 	ULONG _refCount = 0;
 	ULONG _sig = 0xAA550005;
@@ -41,7 +37,6 @@ class ProjectWindowImpl : public IProjectWindow, IConnectionPointContainer, IPro
 
 	ISimulatorApp*        _app;
 	com_ptr<IStpProject>  _project;
-	com_ptr<IProjectAO>   _projectAO;
 	com_ptr<ISelection>   _selection;
 	HWND                  _hwnd;
 
@@ -161,8 +156,6 @@ public:
 			|| TryQI<IProjectEventsSink>(this, riid, ppvObject)
 			|| TryQI<IProjectWindowCollectionEventsSink>(this, riid, ppvObject)
 			|| TryQI<IVlanSelectionEvents>(this, riid, ppvObject)
-			|| TryQI<IDispatch>(this, riid, ppvObject)
-			|| TryQI<IProjectWindowAO>(this, riid, ppvObject)
 		)
 			return S_OK;
 
@@ -176,8 +169,6 @@ public:
 
 	virtual ULONG STDMETHODCALLTYPE Release() override { return ReleaseST(this, _refCount); }
 	#pragma endregion
-
-	IMPLEMENT_IDISPATCH_(IProjectWindowAO, nullptr, ID_TYPELIB_SIMULATOR_AO);
 
 	#pragma region IConnectionPointContainer
 	virtual HRESULT STDMETHODCALLTYPE EnumConnectionPoints (IEnumConnectionPoints **ppEnum) override
@@ -1011,42 +1002,6 @@ public:
 		_ASSERT ((vlanNumber > 0) && (vlanNumber <= 4094));
 		SetWindowTitle();
 		return S_OK;
-	}
-	#pragma endregion
-
-	#pragma region IProjectWindowAO
-	virtual HRESULT STDMETHODCALLTYPE GetProject (IProjectAO** ppProjectAO) override
-	{
-		RETURN_HR_IF(E_POINTER, !ppProjectAO);
-		*ppProjectAO = nullptr;
-
-		if (!_projectAO)
-		{
-			auto hr = CreateProjectAO(_project, &_projectAO); RETURN_IF_FAILED(hr);
-		}
-
-		return _projectAO.copy_to(ppProjectAO);
-	}
-
-	virtual HRESULT STDMETHODCALLTYPE SelectBridge (IBridgeAO* bridgeAO) override
-	{
-		com_ptr<IGetWrappedObject> getWrapped;
-		auto hr = bridgeAO->QueryInterface(IID_PPV_ARGS(getWrapped.addressof())); RETURN_IF_FAILED(hr);
-		com_ptr<IDispatch> bridge;
-		hr = getWrapped->GetWrappedObject(IID_PPV_ARGS(bridge.addressof())); RETURN_IF_FAILED(hr);
-		return _selection->Select(bridge);
-	}
-
-	virtual HRESULT STDMETHODCALLTYPE ClearSelection() override
-	{
-		return _selection->Clear();
-	}
-
-	virtual HRESULT STDMETHODCALLTYPE SelectVlan (DWORD vlanNumber) override
-	{
-		com_ptr<IVlanSelection> vlanSel;
-		auto hr = _vlanWindow->GetVlanSelection(&vlanSel); RETURN_IF_FAILED(hr);
-		return vlanSel->SelectVlan(vlanNumber);
 	}
 	#pragma endregion
 
