@@ -465,7 +465,7 @@ public:
 		return (dLocation.x >= lt.x) && (dLocation.y >= lt.y) && (dLocation.x < rb.x) && (dLocation.y < rb.y);
 	}
 
-	virtual int32_t hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) override
+	virtual std::optional<int> hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) override
 	{
 		if (HitTestCP (wtr, dLocation, tolerance))
 			return HTCodeCP;
@@ -473,7 +473,7 @@ public:
 		if (HitTestInnerOuter (wtr, dLocation, tolerance))
 			return HTCodeInnerOuter;
 
-		return 0;
+		return { };
 	}
 
 	virtual RECT extent() const noexcept override { _ASSERT(false); return { }; }

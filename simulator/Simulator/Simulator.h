@@ -54,7 +54,7 @@ struct drawing_resources
 struct DECLSPEC_NOVTABLE DECLSPEC_UUID("9F626A71-4C9E-4F25-A821-FBBE33748563") ISelectableObject : IUnknown
 {
 	virtual void render_selection (ID2D1DeviceContext* dc, const edge::IZoomer* zoomer, const drawing_resources& dos) const = 0;
-	virtual int32_t hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) = 0;
+	virtual std::optional<int> hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) = 0;
 	virtual RECT extent() const noexcept = 0;
 
 	D2D1_RECT_F extentf() const noexcept 

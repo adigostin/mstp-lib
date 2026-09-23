@@ -242,7 +242,7 @@ public:
 		dc->DrawLine (vertices[3], vertices[0], dos._brushHighlight, 2, dos._strokeStyleSelectionRect);
 	}
 
-	virtual int32_t hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) override
+	virtual std::optional<int> hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance) override
 	{
 		auto p0d = wtr.TransformPoint(point_to_pointf(point_coords(0)));
 		auto p1d = wtr.TransformPoint(point_to_pointf(point_coords(1)));
@@ -259,7 +259,7 @@ public:
 		if (edge::hit_test_line(dLocation, tolerance, p0d, p1d, lw))
 			return -1;
 
-		return 0;
+		return { };
 	}
 
 	virtual RECT extent() const noexcept override

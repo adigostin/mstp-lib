@@ -29,7 +29,7 @@ class EditWindowImpl : public IEditWindow
 	, IVlanSelectionEvents
 	, IObjectCollectionChangeEvents
 {
-	using ht_result = std::pair<ISelectableObject*, int32_t>;
+	using ht_result = std::pair<ISelectableObject*, int>;
 
 	ULONG _refCount = 0;
 	ULONG _sig = 0xAA550002;
@@ -886,7 +886,7 @@ public:
 			auto* w = _project->WireAt(i);
 			auto htcode = w->hit_test (_zoomer->zoom_transform(), pd, tolerance);
 			if (htcode)
-				return { w, htcode };
+				return { w, htcode.value() };
 		}
 
 		for (ULONG bi = _project->BridgeCount() - 1; bi != -1; bi--)
@@ -895,12 +895,12 @@ public:
 			for (ULONG pi = 0; pi < b->PortCount(); pi++)
 			{
 				IPort* p = b->PortAt(pi);
-				if (uint8_t htcode = p->hit_test(_zoomer->zoom_transform(), pd, tolerance))
-					return { p, htcode };
+				if (auto htcode = p->hit_test(_zoomer->zoom_transform(), pd, tolerance))
+					return { p, htcode.value() };
 			}
 
-			if (uint8_t htcode = b->hit_test(_zoomer->zoom_transform(), pd, tolerance))
-				return { b, htcode };
+			if (auto htcode = b->hit_test(_zoomer->zoom_transform(), pd, tolerance))
+				return { b, htcode.value() };
 		}
 
 		return { };

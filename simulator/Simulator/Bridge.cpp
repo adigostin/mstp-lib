@@ -973,7 +973,7 @@ public:
 	}
 
 
-	virtual int32_t hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance)
+	virtual std::optional<int> hit_test (const D2D1::Matrix3x2F& wtr, D2D1_POINT_2F dLocation, float tolerance)
 	{
 		auto tl = wtr.TransformPoint({ (float)left(), (float)top() });
 		auto br = wtr.TransformPoint({ (float)right(), (float)bottom() });
