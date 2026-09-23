@@ -5,7 +5,7 @@
 #include "pch.h"
 #include "Simulator.h"
 #include "resource.h"
-#include "edit_states/edit_state.h"
+#include "EditStates/EditState.h"
 
 using namespace D2D1;
 using namespace edge;

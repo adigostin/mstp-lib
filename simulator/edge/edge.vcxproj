@@ -134,6 +134,7 @@
     <Midl />
     <Midl>
       <HeaderFileName>include\%(Filename).h</HeaderFileName>
+      <InterfaceIdentifierFileName>nul</InterfaceIdentifierFileName>
     </Midl>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -162,6 +163,7 @@
     <Midl />
     <Midl>
       <HeaderFileName>include\%(Filename).h</HeaderFileName>
+      <InterfaceIdentifierFileName>nul</InterfaceIdentifierFileName>
     </Midl>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -191,6 +193,7 @@
     <Midl />
     <Midl>
       <HeaderFileName>include\%(Filename).h</HeaderFileName>
+      <InterfaceIdentifierFileName>nul</InterfaceIdentifierFileName>
     </Midl>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -220,6 +223,7 @@
     <Midl />
     <Midl>
       <HeaderFileName>include\%(Filename).h</HeaderFileName>
+      <InterfaceIdentifierFileName>nul</InterfaceIdentifierFileName>
     </Midl>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -2,7 +2,7 @@
 // This file is part of the mstp-lib library, available at https://github.com/adigostin/mstp-lib
 // Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License v2.0.
 
-#include "edit_state.h"
+#include "EditState.h"
 
 class create_wire_es : public edit_state
 {
