@@ -497,4 +497,22 @@ TEST_CLASS(port_tests)
 		STP_StopBridge(b._stpBridge, 0);
 		b.AssertCostsNonzeroToZero();
 	}
+
+	TEST_METHOD(PortTransitionsToDesignatedForwardingOperEdgeAfterMigrateTime)
+	{
+		test_bridge bridge (1, 0, 16, { 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		STP_OnPortEnabled (bridge, 0, 100, true, 0);
+		STP_StartBridge (bridge, 0);
+
+		Assert::IsFalse (STP_GetPortOperEdge (bridge, 0));
+
+		// Table 13-5 - Timer and related parameter values
+		unsigned MigrateTime = 3;
+		for (unsigned i = 0; i < MigrateTime; i++)
+			STP_OnOneSecondTick (bridge, 0);
+
+		Assert::AreEqual(STP_PORT_ROLE_DESIGNATED, STP_GetPortRole(bridge, 0, CIST_INDEX));
+		Assert::IsTrue (STP_GetPortForwarding (bridge, 0, 0));
+		Assert::IsTrue (STP_GetPortOperEdge (bridge, 0));
+	}
 };

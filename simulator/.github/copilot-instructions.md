@@ -23,3 +23,4 @@
 - As a general rule, don't look inside the embedded applications located outside the solution
   directory (those in directories with the "TestApp" prefix), and also don't look at WIL
   outside of its "include" directory.
+- When adding a test, add it at the end of the file.
