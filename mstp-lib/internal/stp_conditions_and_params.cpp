@@ -11,7 +11,7 @@
 // ============================================================================
 // 13.28.a) - 13.28.1
 // TRUE, if and only if, agree is TRUE for the given port for all SPTs.
-bool allSptAgree (const STP_BRIDGE* bridge)
+bool allSptAgree (const STP_BRIDGE*)
 {
 	assert(false); return false; // not implemented
 }
@@ -131,7 +131,7 @@ const PRIORITY_VECTOR& BestAgreementPriority()
 // ============================================================================
 // 13.28.5
 // TRUE only for CIST state machines; i.e., FALSE for MSTI state machine instances.
-bool cist (const STP_BRIDGE* bridge, TreeIndex givenTree)
+bool cist (const STP_BRIDGE*, TreeIndex givenTree)
 {
 	return givenTree == 0;
 }
@@ -297,9 +297,9 @@ bool rcvdMstiMsg (const STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex given
 // TRUE if the rrWhile timer is clear (zero) for all Ports for the given tree other than the given Port.
 bool reRooted (const STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree)
 {
-	for (unsigned int portIndex = 0; portIndex < bridge->portCount; portIndex++)
+	for (unsigned portIndex = 0; portIndex < bridge->portCount; portIndex++)
 	{
-		if (portIndex == givenPort)
+		if (portIndex == (unsigned)givenPort)
 			continue;
 
 		if (bridge->ports[portIndex]->trees[givenTree]->rrWhile != 0)

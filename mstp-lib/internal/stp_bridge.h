@@ -134,12 +134,12 @@ struct STP_BRIDGE
 	#define PROP_CHANGING(bridge, portIndex, treeIndex, prop, timestamp) \
 		do { \
 			if ((bridge)->propChanging) \
-				(bridge)->propChanging((bridge), (portIndex), (treeIndex), (prop), (timestamp)); \
+				(bridge)->propChanging((bridge), (unsigned)(portIndex), (unsigned)(treeIndex), (prop), (timestamp)); \
 		} while (0)
 	#define PROP_CHANGED(bridge, portIndex, treeIndex, prop, timestamp) \
 		do { \
 			if ((bridge)->propChanged) \
-				(bridge)->propChanged((bridge), (portIndex), (treeIndex), (prop), (timestamp)); \
+				(bridge)->propChanged((bridge), (unsigned)(portIndex), (unsigned)(treeIndex), (prop), (timestamp)); \
 		} while (0)
 #else
 	#define PROP_CHANGING(bridge, portIndex, treeIndex, prop, timestamp) ((void)0)

@@ -203,7 +203,7 @@ void newTcWhile (STP_BRIDGE* bridge, PortIndex givenPort, TreeIndex givenTree, u
 // NOTE-If two L2GP ports are configured with the same CIST pseudoRootId then the IST may partition within the MST
 // Region, but either of the L2GP ports can be selected to provide connectivity from the Region/customer network to a
 // provider's network on an MSTI by MSTI basis.
-void pseudoRcvMsgs (STP_BRIDGE* bridge, PortIndex givenPort)
+void pseudoRcvMsgs (STP_BRIDGE*, PortIndex)
 {
 	// The L2GP state machine is not yet implemented.
 	assert (false);
@@ -447,7 +447,7 @@ void rcvMsgs (STP_BRIDGE* bridge, PortIndex givenPort)
 
 // ============================================================================
 // 13.29.14 in 802.1Q-2018
-void rcvAgreements (STP_BRIDGE*, PortIndex portIndex)
+void rcvAgreements (STP_BRIDGE*, PortIndex)
 {
 	assert(false); // SPB not yet implemented
 }
@@ -905,7 +905,7 @@ void txRstp (STP_BRIDGE* bridge, PortIndex givenPort, unsigned int timestamp)
 		assert(false); // SPT not yet implemented by this function
 
 	// octet 5 - 14.4.a) to 14.4.g) in 802.1Q-2018
-	bpdu->cistFlags = GetBpduPortRole(cistTree->role) << 2;
+	bpdu->cistFlags = (unsigned char) (GetBpduPortRole(cistTree->role) << 2);
 	if (cistTree->agree)
 		bpdu->cistFlags |= (unsigned char) 0x40;
 
@@ -974,7 +974,7 @@ void txRstp (STP_BRIDGE* bridge, PortIndex givenPort, unsigned int timestamp)
 			const PORT_TREE* tree = port->trees [1 + mstiIndex];
 
 			// a)
-			mstiMessage->flags = GetBpduPortRole (tree->role) << 2;
+			mstiMessage->flags = (unsigned char) (GetBpduPortRole(tree->role) << 2);
 
 			if (tree->agree)
 				mstiMessage->flags |= (unsigned char) 0x40;
@@ -1084,7 +1084,7 @@ void updtBPDUVersion (STP_BRIDGE* bridge, PortIndex givenPort)
 
 // ============================================================================
 // 13.29.32 in 802.1Q-2018
-void updtDigest (STP_BRIDGE* bridge, PortIndex givenPort)
+void updtDigest (STP_BRIDGE*, PortIndex)
 {
 	assert(false); // SPT not yet implemented
 }

@@ -65,6 +65,8 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortIndex givenPort, Sta
 
 static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, unsigned int timestamp)
 {
+	(void)timestamp;
+
 	PORT* port = bridge->ports[givenPort];
 
 	if (state == ONE_SECOND)

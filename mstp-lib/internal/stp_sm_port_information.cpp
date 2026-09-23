@@ -138,6 +138,8 @@ static State CheckConditions (const STP_BRIDGE* bridge, PortAndTree pt, State st
 
 static void InitState (STP_BRIDGE* bridge, PortAndTree pt, State state, unsigned int timestamp)
 {
+	(void)timestamp;
+
 	PortIndex givenPort = pt.portIndex;
 	TreeIndex givenTree = pt.treeIndex;
 

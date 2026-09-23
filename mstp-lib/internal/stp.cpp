@@ -91,7 +91,7 @@ STP_BRIDGE* STP_CreateBridge (unsigned int portCount,
 	bridge->trees [CIST_INDEX]->BridgeTimes.MaxAge        = 20;
 
 	// per-bridge MSTI vars
-	for (unsigned int treeIndex = 1; treeIndex < (1 + bridge->mstiCount); treeIndex++)
+	for (unsigned short treeIndex = 1; treeIndex < (1 + bridge->mstiCount); treeIndex++)
 	{
 		bridge->trees [treeIndex] = (BRIDGE_TREE*) callbacks->allocAndZeroMemory (sizeof (BRIDGE_TREE));
 		assert (bridge->trees [treeIndex] != NULL);
@@ -703,7 +703,12 @@ bool STP_GetPortAdminEdge (const struct STP_BRIDGE* bridge, unsigned int portInd
 
 void STP_SetPortAutoEdge (struct STP_BRIDGE* bridge, unsigned int portIndex, bool autoEdge, unsigned int timestamp)
 {
-	bridge->ports [portIndex]->AutoEdge = autoEdge;
+	if (bridge->ports [portIndex]->AutoEdge != autoEdge)
+	{
+		PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_AUTO_EDGE, timestamp);
+		bridge->ports [portIndex]->AutoEdge = autoEdge;
+		PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_AUTO_EDGE, timestamp);
+	}
 }
 
 bool STP_GetPortAutoEdge (const struct STP_BRIDGE* bridge, unsigned int portIndex)
@@ -848,7 +853,7 @@ void STP_SetBridgePriority (STP_BRIDGE* bridge, unsigned int treeIndex, unsigned
 	{
 		LOG (bridge, -1, -1, "\r\n");
 
-		bid.SetPriorityAndMstid(bridgePriority, treeIndex);
+		bid.SetPriorityAndMstid(bridgePriority, (uint16_t)treeIndex);
 		bridge->trees[treeIndex]->SetBridgeIdentifier(bid);
 
 		if (bridge->started && (treeIndex < bridge->treeCount()))
@@ -925,7 +930,7 @@ void STP_GetDefaultMstConfigName (const unsigned char bridgeAddress[6], char nam
 	char* ptr = nameOut;
 	for (unsigned int i = 0; i < 6; i++)
 	{
-		unsigned int val = bridgeAddress[i] >> 4;
+		unsigned char val = (unsigned char) (bridgeAddress[i] >> 4);
 		*ptr++ = (val < 10) ? (val + '0') : (val - 10 + 'a');
 		val = bridgeAddress[i] & 0x0F;
 		*ptr++ = (val < 10) ? (val + '0') : (val - 10 + 'a');
@@ -939,7 +944,7 @@ void STP_SetMstConfigName (STP_BRIDGE* bridge, const char* name, unsigned int ti
 
 	LOG (bridge, -1, -1, "{T}: Setting MST Config Name to \"{S}\"...\r\n", timestamp, name);
 
-	PROP_CHANGING(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_NAME, timestamp);
+	PROP_CHANGING(bridge, -1, -1, STP_PROPERTY_MST_CONFIG_NAME, timestamp);
 
 	memset (bridge->MstConfigId.ConfigurationName, 0, 32);
 	memcpy (bridge->MstConfigId.ConfigurationName, name, strlen (name));
@@ -947,7 +952,7 @@ void STP_SetMstConfigName (STP_BRIDGE* bridge, const char* name, unsigned int ti
 	if (bridge->started && bridge->ForceProtocolVersion >= STP_VERSION_MSTP)
 		RestartStateMachines(bridge, timestamp);
 
-	PROP_CHANGED(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_NAME, timestamp);
+	PROP_CHANGED(bridge, -1, -1, STP_PROPERTY_MST_CONFIG_NAME, timestamp);
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
 	FLUSH_LOG (bridge);
@@ -959,7 +964,7 @@ void STP_SetMstConfigRevisionLevel (STP_BRIDGE* bridge, unsigned short revisionL
 {
 	LOG (bridge, -1, -1, "{T}: Setting MST Config Revision Level to {D}...\r\n", timestamp, (int) revisionLevel);
 
-	PROP_CHANGING(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_REVISION_LEVEL, timestamp);
+	PROP_CHANGING(bridge, -1, -1, STP_PROPERTY_MST_CONFIG_REVISION_LEVEL, timestamp);
 
 	bridge->MstConfigId.RevisionLevelHigh = revisionLevel >> 8;
 	bridge->MstConfigId.RevisionLevelLow = revisionLevel & 0xff;
@@ -967,7 +972,7 @@ void STP_SetMstConfigRevisionLevel (STP_BRIDGE* bridge, unsigned short revisionL
 	if (bridge->started && bridge->ForceProtocolVersion >= STP_VERSION_MSTP)
 		RestartStateMachines(bridge, timestamp);
 
-	PROP_CHANGED(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_REVISION_LEVEL, timestamp);
+	PROP_CHANGED(bridge, -1, -1, STP_PROPERTY_MST_CONFIG_REVISION_LEVEL, timestamp);
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
 	FLUSH_LOG (bridge);
@@ -1012,7 +1017,7 @@ void STP_SetMstConfigTable (struct STP_BRIDGE* bridge, const STP_CONFIG_TABLE_EN
 		if (entryCount == 4096)
 			assert (entries[4095].treeIndex == 0);
 
-		PROP_CHANGING(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_TABLE, timestamp);
+		PROP_CHANGING(bridge, -1, -1, STP_PROPERTY_MST_CONFIG_TABLE, timestamp);
 
 		memcpy (bridge->mstConfigTable, entries, entryCount * 2);
 
@@ -1025,7 +1030,7 @@ void STP_SetMstConfigTable (struct STP_BRIDGE* bridge, const STP_CONFIG_TABLE_EN
 		if (bridge->started && bridge->ForceProtocolVersion >= STP_VERSION_MSTP)
 			RestartStateMachines(bridge, timestamp);
 
-		PROP_CHANGED(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_TABLE, timestamp);
+		PROP_CHANGED(bridge, -1, -1, STP_PROPERTY_MST_CONFIG_TABLE, timestamp);
 	}
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
@@ -1050,7 +1055,7 @@ void STP_SetMstConfigTableEntry (struct STP_BRIDGE* bridge, unsigned int vlanNum
 		else
 			assert (treeIndex < (1 + bridge->mstiCount));
 
-		PROP_CHANGING(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_TABLE, timestamp);
+		PROP_CHANGING(bridge, -1, -1, STP_PROPERTY_MST_CONFIG_TABLE, timestamp);
 
 		bridge->mstConfigTable[vlanNumber] = (unsigned short) treeIndex;
 
@@ -1063,7 +1068,7 @@ void STP_SetMstConfigTableEntry (struct STP_BRIDGE* bridge, unsigned int vlanNum
 		if (bridge->started && bridge->ForceProtocolVersion >= STP_VERSION_MSTP)
 			RestartStateMachines(bridge, timestamp);
 
-		PROP_CHANGED(bridge, (unsigned)-1, (unsigned)-1, STP_PROPERTY_MST_CONFIG_TABLE, timestamp);
+		PROP_CHANGED(bridge, -1, -1, STP_PROPERTY_MST_CONFIG_TABLE, timestamp);
 	}
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
@@ -1416,7 +1421,7 @@ unsigned int STP_GetAdminInternalPortPathCost (const struct STP_BRIDGE* bridge, 
 
 // ============================================================================
 
-extern "C" void STP_SetBridgeHelloTime (struct STP_BRIDGE* bridge, unsigned int helloTime, unsigned int timestamp)
+extern "C" void STP_SetBridgeHelloTime (struct STP_BRIDGE*, unsigned int helloTime, unsigned int)
 {
 	// Note AG: In recent versions of the standard this is fixed to two seconds (Table 13-5 on page 510 in 802.1Q-2018),
 	// and it's even required to ignore any HelloTime value received and to use two seconds instead (13.29.20 in 802.1Q-2018).
@@ -1442,7 +1447,7 @@ extern "C" void STP_SetBridgeMaxAge (struct STP_BRIDGE* bridge, unsigned int max
 
 	if (bridge->trees[CIST_INDEX]->BridgeTimes.MaxAge != maxAge)
 	{
-		bridge->trees[CIST_INDEX]->BridgeTimes.MaxAge = maxAge;
+		bridge->trees[CIST_INDEX]->BridgeTimes.MaxAge = (unsigned short)maxAge;
 		if (bridge->started)
 			RecomputePrioritiesAndPortRoles (bridge, CIST_INDEX, timestamp);
 	}
@@ -1466,7 +1471,7 @@ extern "C" void STP_SetBridgeForwardDelay (struct STP_BRIDGE* bridge, unsigned i
 
 	if (bridge->trees[CIST_INDEX]->BridgeTimes.ForwardDelay != forwardDelay)
 	{
-		bridge->trees[CIST_INDEX]->BridgeTimes.ForwardDelay = forwardDelay;
+		bridge->trees[CIST_INDEX]->BridgeTimes.ForwardDelay = (unsigned short)forwardDelay;
 		if (bridge->started)
 			RecomputePrioritiesAndPortRoles (bridge, CIST_INDEX, timestamp);
 	}
@@ -1486,6 +1491,7 @@ extern "C" unsigned int STP_GetForwardDelay (const struct STP_BRIDGE* bridge)
 
 extern "C" void STP_SetTxHoldCount (struct STP_BRIDGE* bridge, unsigned int txHoldCount, unsigned int timestamp)
 {
+	(void)timestamp;
 	assert (txHoldCount >= 1 && txHoldCount <= 10); // Table 13-5 in 802.1Q-2018.
 	if (bridge->TxHoldCount != txHoldCount)
 	{
