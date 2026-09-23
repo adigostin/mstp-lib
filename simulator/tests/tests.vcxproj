@@ -208,23 +208,23 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="bpdu_tests.cpp" />
+    <ClCompile Include="BpduTests.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="bridge_tests.cpp" />
-    <ClCompile Include="port_tests.cpp" />
-    <ClCompile Include="project_tests.cpp" />
+    <ClCompile Include="BridgeTests.cpp" />
+    <ClCompile Include="PortTests.cpp" />
+    <ClCompile Include="ProjectTests.cpp" />
     <ClCompile Include="PropertyGridTests.cpp" />
-    <ClCompile Include="test_helpers.cpp" />
+    <ClCompile Include="TestHelpers.cpp" />
     <ClCompile Include="UITests.cpp" />
-    <ClCompile Include="vector_nothrow_tests.cpp" />
+    <ClCompile Include="VectorNothrowTests.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="test_helpers.h" />
+    <ClInclude Include="TestHelpers.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
@@ -242,7 +242,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="tests.rc" />
+    <ResourceCompile Include="Tests_.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

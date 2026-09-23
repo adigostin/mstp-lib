@@ -3,13 +3,13 @@
 // Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License v2.0.
 
 #include "pch.h"
-#include "simulator.h"
+#include "Simulator_.h"
 #include "pg/property_grid.h"
 
 using namespace edge;
 using namespace pg;
 
-class properties_window : public IPropertiesWindow, IObjectCollectionChangeEvents
+class PropertiesWindowImpl : public IPropertiesWindow, IObjectCollectionChangeEvents
 {
 	ULONG _refCount = 0;
 	WeakRefToThis _weakRefToThis;
@@ -36,7 +36,7 @@ public:
 			.lpfnWndProc = WndProc,
 			.hInstance = (HINSTANCE)&__ImageBase,
 			.hCursor = ::LoadCursor(nullptr, IDC_ARROW),
-			.lpszClassName = L"properties_window",
+			.lpszClassName = L"PropertiesWindowImpl",
 		};
 
 		auto atom = RegisterClass(&wnd_class);
@@ -184,7 +184,7 @@ public:
 
 	static LRESULT CALLBACK WndProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
-		if (auto pw = reinterpret_cast<properties_window*>(GetWindowLongPtr(hWnd, GWLP_USERDATA)))
+		if (auto pw = reinterpret_cast<PropertiesWindowImpl*>(GetWindowLongPtr(hWnd, GWLP_USERDATA)))
 		{
 			if (uMsg == WM_SIZE)
 			{
@@ -201,7 +201,7 @@ public:
 
 HRESULT MakePropertiesWindow (const properties_window_create_params& cps, IPropertiesWindow** ppPW)
 {
-	auto p = com_ptr(new (std::nothrow) properties_window()); RETURN_IF_NULL_ALLOC(p);
+	auto p = com_ptr(new (std::nothrow) PropertiesWindowImpl()); RETURN_IF_NULL_ALLOC(p);
 	auto hr = p->InitInstance(cps); RETURN_IF_FAILED(hr);
 	*ppPW = p.detach();
 	return S_OK;

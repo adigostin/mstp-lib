@@ -6,8 +6,8 @@
 
 #include <initguid.h>
 #include "edge/PropDefs.h"
-#include "SimulatorAO_h.h"
-#include "simulator.h"
+#include "SimulatorAO.h"
+#include "Simulator_.h"
 #include "resource.h"
 
 #pragma comment (lib, "Shlwapi")

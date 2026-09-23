@@ -118,6 +118,7 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)edge;$(SolutionDir)edge\include;$(SolutionDir)pg\include</AdditionalIncludeDirectories>
       <TypeLibraryName>$(IntDir)%(Filename).tlb</TypeLibraryName>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
     </Midl>
     <ResourceCompile>
       <Culture>0x0409</Culture>
@@ -157,6 +158,7 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)edge;$(SolutionDir)edge\include;$(SolutionDir)pg\include</AdditionalIncludeDirectories>
       <TypeLibraryName>$(IntDir)%(Filename).tlb</TypeLibraryName>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
     </Midl>
     <ResourceCompile>
       <Culture>0x0409</Culture>
@@ -200,6 +202,7 @@
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)edge;$(SolutionDir)edge\include;$(SolutionDir)pg\include</AdditionalIncludeDirectories>
       <TypeLibraryName>$(IntDir)%(Filename).tlb</TypeLibraryName>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
     </Midl>
     <ResourceCompile>
       <Culture>0x0409</Culture>
@@ -243,6 +246,7 @@
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)edge;$(SolutionDir)edge\include;$(SolutionDir)pg\include</AdditionalIncludeDirectories>
       <TypeLibraryName>$(IntDir)%(Filename).tlb</TypeLibraryName>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
     </Midl>
     <ResourceCompile>
       <Culture>0x0409</Culture>
@@ -259,38 +263,38 @@
     <ClInclude Include="edit_states\edit_state.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="simulator.h" />
+    <ClInclude Include="Simulator_.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="bridge.cpp" />
+    <ClCompile Include="Bridge_.cpp" />
     <ClCompile Include="Automation\BridgeAO.cpp" />
-    <ClCompile Include="bridge_tree.cpp" />
-    <ClCompile Include="edit_window.cpp" />
+    <ClCompile Include="BridgeTree.cpp" />
+    <ClCompile Include="EditWindow.cpp" />
     <ClCompile Include="edit_states\beginning_drag_es.cpp" />
     <ClCompile Include="edit_states\create_bridge_es.cpp" />
     <ClCompile Include="edit_states\create_wire_es.cpp" />
     <ClCompile Include="edit_states\move_bridges_es.cpp" />
     <ClCompile Include="edit_states\move_port_es.cpp" />
     <ClCompile Include="edit_states\move_wire_point_es.cpp" />
-    <ClCompile Include="log_window.cpp" />
-    <ClCompile Include="mst_config_id_editor.cpp" />
+    <ClCompile Include="LogWindow.cpp" />
+    <ClCompile Include="MSTConfigIdEditor.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="port.cpp" />
+    <ClCompile Include="Port_.cpp" />
     <ClCompile Include="Automation\PortAO.cpp" />
-    <ClCompile Include="port_tree.cpp" />
-    <ClCompile Include="project.cpp" />
+    <ClCompile Include="PortTree.cpp" />
+    <ClCompile Include="Project_.cpp" />
     <ClCompile Include="Automation\ProjectAO.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="Automation\ProjectWindowAO.cpp" />
-    <ClCompile Include="properties_window.cpp" />
-    <ClCompile Include="selection.cpp" />
-    <ClCompile Include="simulator.cpp" />
+    <ClCompile Include="PropertiesWindow.cpp" />
+    <ClCompile Include="Selection_.cpp" />
+    <ClCompile Include="Simulator_.cpp" />
     <ClCompile Include="test.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
@@ -311,11 +315,11 @@
     </ClCompile>
     <ClCompile Include="TreeSelection.cpp" />
     <ClCompile Include="VlanWindow.cpp" />
-    <ClCompile Include="wire.cpp" />
+    <ClCompile Include="Wire_.cpp" />
     <ClCompile Include="Automation\WireAO.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="simulator.rc" />
+    <ResourceCompile Include="Simulator_.rc" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="simulator.ico" />
@@ -336,7 +340,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Midl Include="Simulator.idl" />
+    <Midl Include="SimulatorIDL.idl" />
     <Midl Include="Automation\SimulatorAO.idl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

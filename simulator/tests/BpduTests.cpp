@@ -4,7 +4,7 @@
 
 #include "pch.h"
 #include "internal/stp_bpdu.h"
-#include "test_helpers.h"
+#include "TestHelpers.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 

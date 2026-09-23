@@ -3,8 +3,8 @@
 // Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License v2.0.
 
 #include "pch.h"
-#include "Simulator.h"
-#include "test_helpers.h"
+#include "Simulator_.h"
+#include "TestHelpers.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 

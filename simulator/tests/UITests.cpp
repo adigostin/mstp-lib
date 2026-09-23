@@ -3,10 +3,10 @@
 // Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License v2.0.
 
 #include "pch.h"
-#include "simulator.h"
+#include "Simulator_.h"
 #include "resource.h"
-#include "test_helpers.h"
-#include "SimulatorAO_h.h"
+#include "TestHelpers.h"
+#include "SimulatorAO.h"
 #include <Psapi.h>
 #pragma comment(lib, "Psapi.lib")
 

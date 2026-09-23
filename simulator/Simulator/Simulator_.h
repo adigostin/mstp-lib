@@ -4,7 +4,7 @@
 
 #pragma once
 #include "stp.h"
-#include "Simulator_h.h"
+#include "SimulatorIDL.h"
 #include "edge/edge_d2d.h"
 #include "pg/property_grid.h"
 

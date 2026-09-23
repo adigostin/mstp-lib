@@ -4,7 +4,7 @@
 
 import "oaidl.idl";
 import "ocidl.idl";
-import "Simulator.idl";
+import "SimulatorIDL.idl";
 
 [uuid(7F0B57C0-6A95-4BD8-8E3A-1E0A5E5A5D9A), version(2.4)]
 library SimulatorAutomationLib

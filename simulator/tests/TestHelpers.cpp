@@ -3,7 +3,7 @@
 // Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License v2.0.
 
 #include "pch.h"
-#include "test_helpers.h"
+#include "TestHelpers.h"
 
 TEST_MODULE_INITIALIZE(ModuleInitialize)
 {

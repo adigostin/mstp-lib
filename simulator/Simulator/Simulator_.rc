@@ -145,7 +145,7 @@ END
 // TYPELIB
 //
 
-ID_TYPELIB_SIMULATOR       TYPELIB                 "Simulator.tlb"
+ID_TYPELIB_SIMULATOR       TYPELIB                 "SimulatorIDL.tlb"
 ID_TYPELIB_SIMULATOR_AO    TYPELIB                 "SimulatorAO.tlb"
 
 /////////////////////////////////////////////////////////////////////////////

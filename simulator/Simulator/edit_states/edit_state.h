@@ -3,7 +3,7 @@
 // Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License v2.0.
 
 #pragma once
-#include "..\simulator.h"
+#include "..\Simulator_.h"
 
 using edge::handled;
 using edge::mouse_button;

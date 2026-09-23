@@ -3,8 +3,8 @@
 // Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License v2.0.
 
 #include "../pch.h"
-#include "../simulator.h"
-#include "../SimulatorAO_h.h"
+#include "../Simulator_.h"
+#include "../SimulatorAO.h"
 #include "../resource.h"
 
 class PortAutomationObjectImpl : public IPortAO, IGetWrappedObject

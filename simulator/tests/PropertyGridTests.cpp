@@ -3,8 +3,8 @@
 // Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License 2.0.
 
 #include "pch.h"
-#include "simulator.h"
-#include "test_helpers.h"
+#include "Simulator_.h"
+#include "TestHelpers.h"
 #include "pg/property_grid.h"
 #include "edge/com.h"
 

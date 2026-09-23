@@ -3,7 +3,7 @@
 // Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License v2.0.
 
 #include "pch.h"
-#include "simulator.h"
+#include "Simulator_.h"
 #include "resource.h"
 
 class VlanWindowImpl
