@@ -7,7 +7,7 @@
 #include <initguid.h>
 #include "edge/PropDefs.h"
 #include "SimulatorAO.h"
-#include "Simulator_.h"
+#include "Simulator.h"
 #include "resource.h"
 
 #pragma comment (lib, "Shlwapi")

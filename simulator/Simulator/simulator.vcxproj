@@ -263,11 +263,11 @@
     <ClInclude Include="edit_states\edit_state.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="Simulator_.h" />
+    <ClInclude Include="Simulator.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Bridge_.cpp" />
+    <ClCompile Include="Bridge.cpp" />
     <ClCompile Include="Automation\BridgeAO.cpp" />
     <ClCompile Include="BridgeTree.cpp" />
     <ClCompile Include="EditWindow.cpp" />
@@ -285,16 +285,16 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Port_.cpp" />
+    <ClCompile Include="Port.cpp" />
     <ClCompile Include="Automation\PortAO.cpp" />
     <ClCompile Include="PortTree.cpp" />
-    <ClCompile Include="Project_.cpp" />
+    <ClCompile Include="Project.cpp" />
     <ClCompile Include="Automation\ProjectAO.cpp" />
     <ClCompile Include="ProjectWindow.cpp" />
     <ClCompile Include="Automation\ProjectWindowAO.cpp" />
     <ClCompile Include="PropertiesWindow.cpp" />
-    <ClCompile Include="Selection_.cpp" />
-    <ClCompile Include="Simulator_.cpp" />
+    <ClCompile Include="Selection.cpp" />
+    <ClCompile Include="Simulator.cpp" />
     <ClCompile Include="test.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
@@ -315,11 +315,11 @@
     </ClCompile>
     <ClCompile Include="TreeSelection.cpp" />
     <ClCompile Include="VlanWindow.cpp" />
-    <ClCompile Include="Wire_.cpp" />
+    <ClCompile Include="Wire.cpp" />
     <ClCompile Include="Automation\WireAO.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="Simulator_.rc" />
+    <ResourceCompile Include="Simulator.rc" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="simulator.ico" />

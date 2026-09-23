@@ -3,7 +3,7 @@
 // Copyright (c) 2011-2026 Adrian Gostin, distributed under Apache License v2.0.
 
 #include "pch.h"
-#include "Simulator_.h"
+#include "Simulator.h"
 #include "resource.h"
 #include "edit_states/edit_state.h"
 

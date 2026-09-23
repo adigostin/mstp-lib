@@ -4,7 +4,7 @@
 
 #pragma once
 #include "stp.h"
-#include "Simulator_.h"
+#include "Simulator.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
