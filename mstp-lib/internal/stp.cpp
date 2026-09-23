@@ -745,8 +745,7 @@ bool STP_GetPortRestrictedRole (const struct STP_BRIDGE* bridge, unsigned int po
 
 void STP_SetAdminPointToPointMAC (struct STP_BRIDGE* bridge, unsigned int portIndex, enum STP_ADMIN_P2P adminPointToPointMAC, unsigned int timestamp)
 {
-	const char* p2pString = STP_GetAdminP2PString (adminPointToPointMAC);
-	LOG (bridge, portIndex, -1, "{T}: Setting adminPointToPointMAC = {S} on port {D}...\r\n", timestamp, p2pString, 1 + portIndex);
+	LOG (bridge, portIndex, -1, "{T}: Setting adminPointToPointMAC = {S} on port {D}...\r\n", timestamp, STP_GetAdminP2PString(adminPointToPointMAC), 1 + portIndex);
 
 	PORT* port = bridge->ports[portIndex];
 
