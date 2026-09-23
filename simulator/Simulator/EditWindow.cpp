@@ -36,7 +36,6 @@ class EditWindowImpl : public IEditWindow
 	ISimulatorApp*  _app;
 	com_ptr<ID2DThemeColorProvider> _tcp;
 	IProjectWindow* _pw;
-	com_ptr<IVlanSelection> _vlanSel;
 	IStpProject*      _project;
 	com_ptr<ISelection> _selection;
 	wil::unique_hwnd _hWnd;
@@ -1064,8 +1063,8 @@ public:
 						auto alreadyConnectedWire = _project->GetWireConnectedToPort(port);
 						if (alreadyConnectedWire.first == nullptr)
 						{
-							stateMoveThreshold = create_state_create_wire(make_edit_state_deps());
-							stateButtonUp = create_state_create_wire(make_edit_state_deps());
+							stateMoveThreshold = CreateStateCreateWire(make_edit_state_deps(), port);
+							stateButtonUp = CreateStateCreateWire(make_edit_state_deps(), port);
 						}
 					}
 				}

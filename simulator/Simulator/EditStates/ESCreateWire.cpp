@@ -4,10 +4,11 @@
 
 #include "EditState.h"
 
-class create_wire_es : public edit_state
+class ESCreateWire : public edit_state
 {
 	using base = edit_state;
 
+	IPort* _fromPort;
 	IWire* _wire = nullptr;
 
 	enum substate
@@ -22,7 +23,9 @@ class create_wire_es : public edit_state
 	substate _substate = waiting_first_down;
 
 public:
-	using base::base;
+	ESCreateWire (const edit_state_deps& deps, IPort* fromPort)
+		: base(deps), _fromPort(fromPort)
+	{ }
 
 	virtual handled OnMouseButtonDown (mouse_button button, UINT mks, const mouse_location& ml) override final
 	{
@@ -31,17 +34,13 @@ public:
 
 		if (_substate == waiting_first_down)
 		{
-			auto fromPort = _ew->GetCPAt(ml.d, SnapDistance);
-			if (fromPort != nullptr)
-			{
-				com_ptr<IWire> newWire;
-				auto hr = MakeWire(&newWire); LOG_IF_FAILED(hr);
-				newWire->set_p0 (fromPort);
-				newWire->set_p1 (fromPort->GetCPLocation());
-				_wire = newWire.get();
-				_project->AddWire(std::move(newWire));
-				_substate  = waiting_first_up;
-			}
+			com_ptr<IWire> newWire;
+			auto hr = MakeWire(&newWire); LOG_IF_FAILED(hr);
+			newWire->set_p0 (_fromPort);
+			newWire->set_p1 (_fromPort->GetCPLocation());
+			_wire = newWire.get();
+			_project->AddWire(std::move(newWire));
+			_substate = waiting_first_up;
 		}
 
 		return handled(true);
@@ -52,7 +51,8 @@ public:
 		if (_substate == waiting_first_down)
 			return;
 
-		auto port = _ew->GetCPAt (location.d, SnapDistance);
+		float sd = SnapDistance * edge::dpi(_ew->hWnd()) / 96;
+		auto port = _ew->GetCPAt (location.d, sd);
 		if (port != nullptr)
 		{
 			if (port != std::get<connected_wire_end>(_wire->p0()))
@@ -121,4 +121,7 @@ public:
 	virtual HCURSOR cursor() const override final { return LoadCursor(nullptr, IDC_CROSS); }
 };
 
-std::unique_ptr<edit_state> create_state_create_wire (const edit_state_deps& deps)  { return std::unique_ptr<edit_state>(new create_wire_es(deps)); }
+std::unique_ptr<edit_state> CreateStateCreateWire (const edit_state_deps& deps, IPort* fromPort)
+{
+	return std::unique_ptr<edit_state>(new ESCreateWire(deps, fromPort));
+}

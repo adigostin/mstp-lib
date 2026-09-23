@@ -47,7 +47,7 @@ public:
 std::unique_ptr<edit_state> create_state_move_bridges (const edit_state_deps& deps);
 std::unique_ptr<edit_state> create_state_move_port (const edit_state_deps& deps);
 std::unique_ptr<edit_state> create_state_create_bridge (const edit_state_deps& deps);
-std::unique_ptr<edit_state> create_state_create_wire (const edit_state_deps& deps);
+std::unique_ptr<edit_state> CreateStateCreateWire (const edit_state_deps& deps, IPort* fromPort);
 std::unique_ptr<edit_state> CreateStateMoveWirePoint (const edit_state_deps& deps, IWire* wire, size_t pointIndex);
 std::unique_ptr<edit_state> CreateStateBeginningDrag (const edit_state_deps& deps,
 	ISelectableObject* clickedObject,
