@@ -403,7 +403,7 @@ void rcvMsgs (STP_BRIDGE* bridge, PortIndex givenPort)
 			LOG (bridge, -1, -1, "rcvMsgs() -- Ignoring MSTI messages {D}..{D}\r\n", (int)bridge->mstiCount, (int)mstiMessageCount - 1);
 			mstiMessageCount = bridge->mstiCount;
 		}
-		
+
 		for (size_t messageIndex = 0; messageIndex < mstiMessageCount; messageIndex++)
 		{
 			const MSTI_CONFIG_MESSAGE* message = &mstiMessages[messageIndex];
@@ -1204,6 +1204,8 @@ static void CalculateDesignatedPriorityForPort (STP_BRIDGE* bridge, unsigned int
 // 13.29.ae) - 13.29.34
 void updtRolesTree (STP_BRIDGE* bridge, TreeIndex givenTree, unsigned int timestamp)
 {
+	(void)timestamp;
+
 	assert (bridge->ForceProtocolVersion <= STP_VERSION_MSTP); // the SPT stuff is not implemented by this function
 
 	BRIDGE_TREE* bridgeTree = bridge->trees [givenTree];
