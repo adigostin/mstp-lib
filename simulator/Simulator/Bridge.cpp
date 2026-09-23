@@ -902,8 +902,6 @@ public:
 	{
 		HRESULT hr;
 
-		auto treeIndex = STP_GetTreeIndexFromVlanNumber (_stpBridge, vlanNumber);
-
 		const unsigned char* addr = STP_GetBridgeAddress(_stpBridge)->bytes;
 
 		wil::unique_process_heap_string text;

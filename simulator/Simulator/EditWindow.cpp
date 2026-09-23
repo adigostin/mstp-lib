@@ -176,7 +176,7 @@ public:
 	}
 	#pragma endregion
 
-	#pragma region IPropertyChangeSink
+	#pragma region IPropertyChangeSink - registered on IProject
 	virtual HRESULT STDMETHODCALLTYPE OnPropertyChanging (IUnknown* obj, DISPID dispID, const PropertyChangeArgs* args) override
 	{
 		HRESULT hr;
