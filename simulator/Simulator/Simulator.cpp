@@ -26,11 +26,10 @@ static const wchar_t app_name[] = L"STP Simulator";
 const char stp_disabled_text[] = "(STP disabled)";
 
 extern selection_factory_t selection_factory;
-extern edit_window_factory_t edit_window_factory;
 extern project_window_factory_t MakeProjectWindow;
 
 extern HRESULT MakeMSTConfigIdEditorFactory (pg::ICustomPropertyEditorFactory** ppFactory);
-
+HRESULT CreateEditWindow (const EditWindowCreateParams& params, IEditWindow** ppEditWindow);
 HRESULT CreateVlanWindow (const VlanWindowCreateParams* params, IVlanWindow** ppVlanWindow);
 
 #pragma region IStpProject
@@ -438,7 +437,7 @@ public:
 
 	virtual selection_factory_t* selection_factory() const override final { return &::selection_factory; }
 
-	virtual edit_window_factory_t* edit_window_factory() const override final { return &::edit_window_factory; }
+	virtual edit_window_factory_t* edit_window_factory() const override final { return CreateEditWindow; }
 
 	virtual project_window_factory_t* project_window_factory() const override final { return &::MakeProjectWindow; }
 

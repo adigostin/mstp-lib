@@ -22,7 +22,7 @@ static const D2D1_COLOR_F RegionColors[] =
 	ColorF(ColorF::DarkMagenta),
 };
 
-class edit_window : public IEditWindow
+class EditWindowImpl : public IEditWindow
 	, IPropertyChangeSink
 	, IInvalidateSink
 	, ID2DRenderEventsSink
@@ -745,7 +745,7 @@ public:
 
 	static LRESULT CALLBACK WndProcStatic (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
-		if (auto w = reinterpret_cast<edit_window*>(GetWindowLongPtr (hWnd, GWLP_USERDATA)))
+		if (auto w = reinterpret_cast<EditWindowImpl*>(GetWindowLongPtr (hWnd, GWLP_USERDATA)))
 			return w->WndProc(hWnd, uMsg, wParam, lParam);
 		return DefWindowProc(hWnd, uMsg, wParam, lParam);
 	}
@@ -1235,10 +1235,10 @@ public:
 	}
 };
 
-HRESULT edit_window_factory (const EditWindowCreateParams& create_params, IEditWindow** ppEditWindow)
+HRESULT CreateEditWindow (const EditWindowCreateParams& params, IEditWindow** ppEditWindow)
 {
-	auto p = com_ptr (new (std::nothrow) edit_window()); RETURN_IF_NULL_ALLOC(p);
-	auto hr = p->InitInstance(create_params); RETURN_IF_FAILED(hr);
+	auto p = com_ptr (new (std::nothrow) EditWindowImpl()); RETURN_IF_NULL_ALLOC(p);
+	auto hr = p->InitInstance(params); RETURN_IF_FAILED(hr);
 	*ppEditWindow = p.detach();
 	return S_OK;
 };
