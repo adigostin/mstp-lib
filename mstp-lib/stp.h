@@ -161,6 +161,10 @@ bool STP_GetPortAdminEdge (const struct STP_BRIDGE* bridge, unsigned int portInd
 void STP_SetPortAutoEdge (struct STP_BRIDGE* bridge, unsigned int portIndex, bool autoEdge, unsigned int timestamp);
 bool STP_GetPortAutoEdge (const struct STP_BRIDGE* bridge, unsigned int portIndex);
 
+// ieee8021MstpCistPortRestrictedRole / ieee8021MstpPortRestrictedRole
+void STP_SetPortRestrictedRole (struct STP_BRIDGE* bridge, unsigned int portIndex, bool restrictedRole, unsigned int timestamp);
+bool STP_GetPortRestrictedRole (const struct STP_BRIDGE* bridge, unsigned int portIndex);
+
 // ----------------------------------------------------------------------------
 
 // ieee8021BridgeBasePortAdminPointToPoint / dot1dStpPortAdminPointToPoint

@@ -713,6 +713,31 @@ bool STP_GetPortAutoEdge (const struct STP_BRIDGE* bridge, unsigned int portInde
 
 // ============================================================================
 
+void STP_SetPortRestrictedRole (struct STP_BRIDGE* bridge, unsigned int portIndex, bool restrictedRole, unsigned int timestamp)
+{
+	LOG (bridge, portIndex, -1, "{T}: Setting Port {D} restrictedRole to {D}...\r\n", timestamp, 1 + portIndex, restrictedRole ? 1 : 0);
+
+	PORT* port = bridge->ports[portIndex];
+
+	if (port->restrictedRole != restrictedRole)
+	{
+		port->restrictedRole = restrictedRole;
+
+		if (bridge->started)
+			RecomputePrioritiesAndPortRoles (bridge, CIST_INDEX, timestamp);
+	}
+
+	LOG (bridge, -1, -1, "------------------------------------\r\n");
+	FLUSH_LOG (bridge);
+}
+
+bool STP_GetPortRestrictedRole (const struct STP_BRIDGE* bridge, unsigned int portIndex)
+{
+	return bridge->ports[portIndex]->restrictedRole;
+}
+
+// ============================================================================
+
 void STP_SetAdminPointToPointMAC (struct STP_BRIDGE* bridge, unsigned int portIndex, enum STP_ADMIN_P2P adminPointToPointMAC, unsigned int timestamp)
 {
 	const char* p2pString = STP_GetAdminP2PString (adminPointToPointMAC);
@@ -1479,4 +1504,3 @@ extern "C" unsigned int STP_GetTxCount (const struct STP_BRIDGE* bridge, unsigne
 {
 	return bridge->ports[portIndex]->txCount;
 }
-
