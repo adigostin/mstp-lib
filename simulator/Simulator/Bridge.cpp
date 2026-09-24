@@ -313,6 +313,13 @@ public:
 		}, ppsaItems);
 	}
 
+	virtual HRESULT STDMETHODCALLTYPE get_Trees (SAFEARRAY * *ppsaItems) override
+	{
+		return GetItems (_trees.size(), [this](ULONG i, IDispatch** ppDisp) -> HRESULT {
+			return _trees[i]->QueryInterface(ppDisp);
+		}, ppsaItems);
+	}
+
 	virtual HRESULT STDMETHODCALLTYPE get_BridgeAddress (BSTR* pbstrBridgeAddress) override
 	{
 		mac_address addr;
@@ -665,6 +672,15 @@ public:
 				*pcFactoryDispids = 2;
 			return S_OK;
 		}
+		else if (dispidProperty == dispidBridgeTrees)
+		{
+			*pbstrXmlElementName = SysAllocString(L"Tree"); RETURN_IF_NULL_ALLOC(*pbstrXmlElementName);
+			if (ppFactoryDispids)
+				*ppFactoryDispids = nullptr;
+			if (pcFactoryDispids)
+				*pcFactoryDispids = 0;
+			return S_OK;
+		}
 		else
 			RETURN_HR(E_NOTIMPL);
 	}
@@ -677,11 +693,12 @@ public:
 		_Out_ ULONG* pcFactoryDispids) override
 	{
 		if (dispidProperty == dispidPorts)
-		{
 			RETURN_HR(E_UNEXPECTED); // This is a read-only property, so we're not supposed to get here.
-		}
-		else
-			RETURN_HR(E_NOTIMPL);
+
+		if (dispidProperty == dispidBridgeTrees)
+			RETURN_HR(E_UNEXPECTED); // This is a read-only property, so we're not supposed to get here.
+
+		RETURN_HR(E_NOTIMPL);
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE CreateChild (
@@ -692,11 +709,12 @@ public:
 		_Outptr_ IDispatch** childOut) override
 	{
 		if (dispidProperty == dispidPorts)
-		{
 			RETURN_HR(E_UNEXPECTED); // This is a read-only property, so we're not supposed to get here.
-		}
-		else
-			RETURN_HR(E_NOTIMPL);
+
+		if (dispidProperty == dispidBridgeTrees)
+			RETURN_HR(E_UNEXPECTED); // This is a read-only property, so we're not supposed to get here.
+
+		RETURN_HR(E_NOTIMPL);
 	}
 	#pragma endregion
 

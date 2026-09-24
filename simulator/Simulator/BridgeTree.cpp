@@ -87,6 +87,7 @@ public:
 		{ STP_PROPERTY_ROOT_TIMES, dispidForwardDelay },
 		{ STP_PROPERTY_ROOT_TIMES, dispidMessageAge },
 		{ STP_PROPERTY_ROOT_TIMES, dispidRemainingHops },
+		{ STP_PROPERTY_BRIDGE_TREE_PRIORITY, dispidBridgePrio },
 	};
 
 	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanging (IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override
@@ -153,14 +154,7 @@ public:
 
 	virtual HRESULT STDMETHODCALLTYPE put_BridgePriority (enum BridgePriority prio) override
 	{
-		auto old_prio = (enum BridgePriority)STP_GetBridgePriority (_bridge->stp_bridge(), _tree_index);
-		if (old_prio != prio)
-		{
-			NotifyPropertyChanging (_propChangeCP, AsUnknown(), dispidBridgePrio);
-			STP_SetBridgePriority (_bridge->stp_bridge(), _tree_index, (unsigned short) prio, GetMessageTime());
-			NotifyPropertyChanged  (_propChangeCP, AsUnknown(), dispidBridgePrio);
-		}
-
+		STP_SetBridgePriority (_bridge->stp_bridge(), _tree_index, (unsigned short) prio, GetMessageTime());
 		return S_OK;
 	}
 

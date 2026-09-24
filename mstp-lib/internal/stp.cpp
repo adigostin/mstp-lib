@@ -852,8 +852,10 @@ void STP_SetBridgePriority (STP_BRIDGE* bridge, unsigned int treeIndex, unsigned
 	{
 		LOG (bridge, -1, -1, "\r\n");
 
+		PROP_CHANGING(bridge, -1, treeIndex, STP_PROPERTY_BRIDGE_TREE_PRIORITY, timestamp);
 		bid.SetPriorityAndMstid(bridgePriority, (uint16_t)treeIndex);
 		bridge->trees[treeIndex]->SetBridgeIdentifier(bid);
+		PROP_CHANGED(bridge, -1, treeIndex, STP_PROPERTY_BRIDGE_TREE_PRIORITY, timestamp);
 
 		if (bridge->started && (treeIndex < bridge->treeCount()))
 			RecomputePrioritiesAndPortRoles (bridge, treeIndex, timestamp);
