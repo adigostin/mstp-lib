@@ -7,7 +7,7 @@
 
 using namespace edge;
 
-class PortTreeImpl : public IPortTree, IPortTreeProperties, IConnectionPointContainer, IPropertyChangeSink
+class PortTreeImpl : public IPortTree, IPortTreeProperties, IConnectionPointContainer, IStpPropertyChangeSink
 {
 	ULONG _refCount = 0;
 	WeakRefToThis _weakRefToThis;
@@ -16,7 +16,7 @@ class PortTreeImpl : public IPortTree, IPortTreeProperties, IConnectionPointCont
 	ULONGLONG _flush_tick_count = 0;
 	bool _flush_text_visible = false;
 	com_ptr<ConnectionPointImpl<IPropertyChangeSink>> _propChangeCP;
-	AdviseSinkToken _bridgePropChangeToken;
+	AdviseSinkToken _stpPropChangeToken;
 
 	static inline UINT_PTR _flush_timer;
 	static inline std::unordered_set<PortTreeImpl*> _trees;
@@ -31,7 +31,7 @@ public:
 
 		hr = MakeConnectionPoint<IPropertyChangeSink>(this, &_propChangeCP); RETURN_IF_FAILED(hr);
 
-		hr = AdviseSink<IPropertyChangeSink>(_parent->bridge(), _weakRefToThis, &_bridgePropChangeToken); RETURN_IF_FAILED(hr);
+		hr = AdviseSink<IStpPropertyChangeSink>(_parent->bridge(), _weakRefToThis, &_stpPropChangeToken); RETURN_IF_FAILED(hr);
 
 		if (_trees.empty())
 			_flush_timer = ::SetTimer (nullptr, 0, 100, flush_timer_proc);
@@ -59,7 +59,7 @@ public:
 			|| TryQI<IPortTree>(this, riid, ppvObject)
 			|| TryQI<IPortTreeProperties>(this, riid, ppvObject)
 			|| TryQI<IConnectionPointContainer>(this, riid, ppvObject)
-			|| TryQI<IPropertyChangeSink>(this, riid, ppvObject)
+			|| TryQI<IStpPropertyChangeSink>(this, riid, ppvObject)
 		)
 			return S_OK;
 
@@ -190,28 +190,39 @@ public:
 		return _parent;
 	}
 
-	#pragma region IPropertyChangeSink
-	virtual HRESULT STDMETHODCALLTYPE OnPropertyChanging (IUnknown *obj, DISPID dispID, const struct PropertyChangeArgs *args) override
+	#pragma region IStpPropertyChangeSink
+	static const inline std::pair<STP_PROPERTY, DISPID> _dispidMap[] = {
+		{ STP_PROPERTY_BRIDGE_STARTED, dispidPortLearning },
+		{ STP_PROPERTY_BRIDGE_STARTED, dispidPortForwarding },
+		{ STP_PROPERTY_BRIDGE_STARTED, dispidPortRole },
+		{ STP_PROPERTY_BRIDGE_STARTED, dispidInternalPortPathCost },
+		{ STP_PROPERTY_PORT_ROLE, dispidPortRole },
+		{ STP_PROPERTY_INTERNAL_PORT_PATH_COST, dispidInternalPortPathCost },
+	};
+
+	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanging(IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override
 	{
-		if (dispID == dispidStpEnabled)
+		if (portIndex == _parent->port_index() && treeIndex == _tree_index)
 		{
-			NotifyPropertyChanging(_propChangeCP, AsUnknown(), dispidPortLearning);
-			NotifyPropertyChanging(_propChangeCP, AsUnknown(), dispidPortForwarding);
-			NotifyPropertyChanging(_propChangeCP, AsUnknown(), dispidPortRole);
-			NotifyPropertyChanging(_propChangeCP, AsUnknown(), dispidInternalPortPathCost);
+			for (const auto& [stpProp, dispid] : _dispidMap)
+			{
+				if (prop == stpProp)
+					NotifyPropertyChanging(_propChangeCP, AsUnknown(), dispid, nullptr);
+			}
 		}
 
 		return S_OK;
 	}
 
-	virtual HRESULT STDMETHODCALLTYPE OnPropertyChanged (IUnknown *obj, DISPID dispID, const struct PropertyChangeArgs *args) override
+	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanged (IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override
 	{
-		if (dispID == dispidStpEnabled)
+		if (portIndex == _parent->port_index() && treeIndex == _tree_index)
 		{
-			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidInternalPortPathCost);
-			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidPortRole);
-			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidPortForwarding);
-			NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidPortLearning);
+			for (const auto& [stpProp, dispid] : _dispidMap)
+			{
+				if (prop == stpProp)
+					NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispid, nullptr);
+			}
 		}
 
 		return S_OK;

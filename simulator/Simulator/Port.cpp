@@ -226,12 +226,8 @@ public:
 
 	virtual HRESULT STDMETHODCALLTYPE put_AdminExternalPortPathCost (DWORD dwAdminExternalPortPathCost) override
 	{
-		RETURN_HR(E_NOTIMPL);
-	//	//edge::property_changing_e::invoker(_em).invoke(this, value_property_change_args(admin_external_port_path_cost_property));
-	//	//edge::property_changing_e::invoker(_em).invoke(this, value_property_change_args(external_port_path_cost_property));
-	//	STP_SetAdminExternalPortPathCost (bridge()->stp_bridge(), (unsigned int)_port_index, adminExternalPortPathCost, GetMessageTime());
-	//	//edge::property_changed_e::invoker(_em).invoke(this, value_property_change_args(external_port_path_cost_property));
-	//	//edge::property_changed_e::invoker(_em).invoke(this, value_property_change_args(admin_external_port_path_cost_property));
+		STP_SetAdminExternalPortPathCost (bridge()->stp_bridge(), _port_index, dwAdminExternalPortPathCost, GetMessageTime());
+		return S_OK;
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE get_ExternalPortPathCost (DWORD* pExternalPortPathCost) override
@@ -596,6 +592,9 @@ public:
 		{ STP_PROPERTY_OPER_P2P,     dispidPortOperP2P },
 		{ STP_PROPERTY_ADMIN_P2P,    dispidPortAdminP2P },
 		{ STP_PROPERTY_PORT_ENABLED, dispidPortMacOperational },
+		{ STP_PROPERTY_ADMIN_EXTERNAL_PORT_PATH_COST, dispidAdminExternalPortPathCost },
+		{ STP_PROPERTY_DETECTED_PORT_PATH_COST, dispidDetectedPortPathCost },
+		{ STP_PROPERTY_EXTERNAL_PORT_PATH_COST, dispidExternalPortPathCost },
 	};
 
 	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanging (IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override

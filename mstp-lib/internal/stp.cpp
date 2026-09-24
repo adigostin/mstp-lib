@@ -1350,14 +1350,18 @@ void STP_SetAdminExternalPortPathCost (struct STP_BRIDGE* bridge, unsigned int p
 
 	if (port->adminExternalPortPathCost != adminExternalPortPathCost)
 	{
+		PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_ADMIN_EXTERNAL_PORT_PATH_COST, timestamp);
 		port->adminExternalPortPathCost = adminExternalPortPathCost;
+		PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_ADMIN_EXTERNAL_PORT_PATH_COST, timestamp);
 
 		if (port->portEnabled)
 		{
 			unsigned int newCost = (port->adminExternalPortPathCost != 0) ? port->adminExternalPortPathCost : port->detectedPortPathCost;
 			if (port->ExternalPortPathCost != newCost)
 			{
+				PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_EXTERNAL_PORT_PATH_COST, timestamp);
 				port->ExternalPortPathCost = newCost;
+				PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_EXTERNAL_PORT_PATH_COST, timestamp);
 				if (bridge->started)
 					RecomputePrioritiesAndPortRoles (bridge, CIST_INDEX, timestamp);
 			}

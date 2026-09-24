@@ -82,6 +82,9 @@ const int dispidForwardDelay    = 57;
 const int dispidMessageAge      = 58;
 const int dispidRemainingHops   = 59;
 const int dispidMstConfig       = 60;
+const int dispidAdminExternalPortPathCost = 61;
+const int dispidDetectedPortPathCost      = 62;
+const int dispidExternalPortPathCost      = 63;
 
 [uuid(0C7B378B-1781-4E81-85C9-908113BB32BD), version(2.4)]
 library SimulatorLib
@@ -433,19 +436,20 @@ library SimulatorLib
 		[propget, id(dispidPortMacOperational), custom(guidPropertyGroup, PropertyGroupLink)]
 			HRESULT MAC_Operational ([out, retval] VARIANT_BOOL* pbMAC_Operational);
 
-		[propget, helpstring("The Port Path Cost calculated from ActualSpeed, which STP uses for"
-							 "path cost calculation while AdminExternalPortPathCost is zero."),
+		[propget, id(dispidDetectedPortPathCost),
+			helpstring("The Port Path Cost calculated from ActualSpeed, which STP uses for"
+				"path cost calculation while AdminExternalPortPathCost is zero."),
 			custom(guidPropertyGroup, PropertyGroupPortPathCost)]
 			HRESULT DetectedPortPathCost ([out, retval] DWORD* pDetectedPortPathCost);
 
 		const DWORD AdminExternalPortPathCostDefaultValue = 0;
-		[propget, custom(guidPropertyGroup, PropertyGroupPortPathCost),
+		[propget, id(dispidAdminExternalPortPathCost), custom(guidPropertyGroup, PropertyGroupPortPathCost),
 			custom(guidPropertyDefaultValue, AdminExternalPortPathCostDefaultValue)]
 			HRESULT AdminExternalPortPathCost ([out, retval] DWORD* pdwAdminExternalPortPathCost);
-		[propput]
+		[propput, id(dispidAdminExternalPortPathCost)]
 			HRESULT AdminExternalPortPathCost (DWORD dwAdminExternalPortPathCost);
 
-		[propget, custom(guidPropertyGroup, PropertyGroupPortPathCost)]
+		[propget, id(dispidExternalPortPathCost), custom(guidPropertyGroup, PropertyGroupPortPathCost)]
 			HRESULT ExternalPortPathCost ([out, retval] DWORD* pExternalPortPathCost);
 
 		[propget, id(dispidPortDetectedP2P), custom(guidPropertyGroup, PropertyGroupLink)]
