@@ -8,6 +8,25 @@
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
+template<typename predicate_t>
+void RunMessageLoopUntilCondition(predicate_t&& predicate, DWORD timeout = 500)
+{
+	DWORD startTime = GetTickCount();
+	while (!predicate())
+	{
+		if (GetTickCount() - startTime >= timeout)
+			Assert::Fail();
+
+		MSG msg;
+		while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+		Sleep(20);
+	}
+}
+
 namespace Microsoft::VisualStudio::CppUnitTestFramework
 {
 	template<>

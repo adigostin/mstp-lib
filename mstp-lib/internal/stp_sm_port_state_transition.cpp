@@ -94,20 +94,28 @@ static void InitState (STP_BRIDGE* bridge, PortAndTree pt, State state, unsigned
 
 	if (state == DISCARDING)
 	{
+		PROP_CHANGING(bridge, givenPort, givenTree, STP_PROP_LEARNING, timestamp);
+		PROP_CHANGING(bridge, givenPort, givenTree, STP_PROP_FORWARDING, timestamp);
 		disableLearning (bridge, givenPort, givenTree, timestamp);
 		tree->learning = false;
 		disableForwarding (bridge, givenPort, givenTree, timestamp);
 		tree->forwarding = false;
+		PROP_CHANGED(bridge, givenPort, givenTree, STP_PROP_LEARNING, timestamp);
+		PROP_CHANGED(bridge, givenPort, givenTree, STP_PROP_FORWARDING, timestamp);
 	}
 	else if (state == LEARNING)
 	{
+		PROP_CHANGING(bridge, givenPort, givenTree, STP_PROP_LEARNING, timestamp);
 		enableLearning (bridge, givenPort, givenTree, timestamp);
 		tree->learning = true;
+		PROP_CHANGED(bridge, givenPort, givenTree, STP_PROP_LEARNING, timestamp);
 	}
 	else if (state == FORWARDING)
 	{
+		PROP_CHANGING(bridge, givenPort, givenTree, STP_PROP_FORWARDING, timestamp);
 		enableForwarding (bridge, givenPort, givenTree, timestamp);
 		tree->forwarding = true;
+		PROP_CHANGED(bridge, givenPort, givenTree, STP_PROP_FORWARDING, timestamp);
 	}
 	else
 		assert (false);

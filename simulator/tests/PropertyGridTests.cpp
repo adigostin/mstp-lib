@@ -203,5 +203,48 @@ namespace PG
 			});
 			Assert::AreEqual(S_OK, hr);	
 		}
+
+		TEST_METHOD(LearningAndForwardingPGValuesChangeAfterConnectingBridges)
+		{
+			HRESULT hr;
+
+			auto project = MakeProject();
+
+			auto bridge1 = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+			STP_StartBridge(bridge1->stp_bridge(), 0);
+			project->AddBridge(bridge1);
+
+			auto bridge2 = MakeBridge(1, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x70 });
+			STP_StartBridge(bridge2->stp_bridge(), 0);
+			project->AddBridge(bridge2);
+
+			com_ptr<ISelection> selection;
+			hr = selection_factory(project, &selection); Assert::AreEqual(S_OK, hr);
+			com_ptr<IDispatch> treeDispatch;
+			hr = bridge1->PortAt(0)->treeAt(0)->QueryInterface(IID_PPV_ARGS(&treeDispatch)); Assert::AreEqual(S_OK, hr);
+			selection->Select(treeDispatch);
+
+			com_ptr<pg::IPropertyGrid> propertyGrid;
+			hr = MakePropertyGrid(nullptr, { }, nullptr, &propertyGrid); Assert::AreEqual(S_OK, hr);
+			hr = propertyGrid->AddSection(selection, true, nullptr); Assert::AreEqual(S_OK, hr);
+
+			pg::read_state state;
+			wil::unique_bstr learning;
+			wil::unique_bstr forwarding;
+			hr = propertyGrid->GetValueText(selection, treeDispatch, dispidPortLearning, &state, &learning); Assert::AreEqual(S_OK, hr);
+			Assert::AreEqual(L"False", learning.get());
+			hr = propertyGrid->GetValueText(selection, treeDispatch, dispidPortForwarding, &state, &forwarding); Assert::AreEqual(S_OK, hr);
+			Assert::AreEqual(L"False", forwarding.get());
+
+			ConnectPorts(project, bridge1->PortAt(0), bridge2->PortAt(0));
+
+			RunMessageLoopUntilCondition([&]
+			{
+				hr = propertyGrid->GetValueText(selection, treeDispatch, dispidPortLearning, &state, &learning); Assert::AreEqual(S_OK, hr);
+				hr = propertyGrid->GetValueText(selection, treeDispatch, dispidPortForwarding, &state, &forwarding); Assert::AreEqual(S_OK, hr);
+				return STP_GetPortRole(bridge2->stp_bridge(), 0, 0) == STP_PORT_ROLE_ROOT
+					&& !wcscmp(learning.get(), L"True") && !wcscmp(forwarding.get(), L"True");
+			});
+		}
 	};
 }

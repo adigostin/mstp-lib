@@ -80,25 +80,6 @@ public:
 	}
 };
 
-template<typename predicate_t>
-static void RunMessageLoopUntilCondition(predicate_t&& predicate)
-{
-	DWORD startTime = GetTickCount();
-	while (!predicate())
-	{
-		if (GetTickCount() - startTime >= 500)
-			Assert::Fail();
-
-		MSG msg;
-		while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
-		{
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}
-		Sleep(20);
-	}
-}
-
 TEST_CLASS(port_tests)
 {
 	TEST_METHOD(TestPortRoleTransition_Designated_Root)

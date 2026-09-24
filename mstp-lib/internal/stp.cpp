@@ -208,14 +208,18 @@ void STP_StopBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 
 			if (!tree->learning)
 			{
+				PROP_CHANGING(bridge, pi, ti, STP_PROP_LEARNING, timestamp);
 				bridge->callbacks.enableLearning(bridge, pi, ti, true, timestamp);
 				tree->learning = true;
+				PROP_CHANGED(bridge, pi, ti, STP_PROP_LEARNING, timestamp);
 			}
 
 			if (!tree->forwarding)
 			{
+				PROP_CHANGING(bridge, pi, ti, STP_PROP_FORWARDING, timestamp);
 				bridge->callbacks.enableForwarding(bridge, pi, ti, true, timestamp);
 				tree->forwarding = true;
+				PROP_CHANGED(bridge, pi, ti, STP_PROP_FORWARDING, timestamp);
 			}
 
 			PROP_CHANGING(bridge, pi, ti, STP_PROP_INTERNAL_PORT_PATH_COST, timestamp);

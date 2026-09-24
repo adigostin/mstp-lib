@@ -192,10 +192,10 @@ public:
 
 	#pragma region IStpPropertyChangeSink
 	static const inline std::pair<STP_PROPERTY, DISPID> _dispidMap[] = {
-		{ STP_PROP_BRIDGE_STARTED, dispidPortLearning },
-		{ STP_PROP_BRIDGE_STARTED, dispidPortForwarding },
 		{ STP_PROP_BRIDGE_STARTED, dispidPortRole },
 		{ STP_PROP_BRIDGE_STARTED, dispidInternalPortPathCost },
+		{ STP_PROP_LEARNING, dispidPortLearning },
+		{ STP_PROP_FORWARDING, dispidPortForwarding },
 		{ STP_PROP_PORT_ROLE, dispidPortRole },
 		{ STP_PROP_INTERNAL_PORT_PATH_COST, dispidInternalPortPathCost },
 	};
