@@ -62,7 +62,7 @@ public:
 		_v.erase(it);
 	}
 
-	[[nodiscard]] bool try_insert (value_type&& val)
+	bool try_insert (value_type&& val)
 	{
 		for (uint32_t i = 0; i < _v.size(); i++)
 			WI_ASSERT(_v[i].first != val.first);

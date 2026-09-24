@@ -177,6 +177,28 @@ public:
 		Assert::AreEqual(0ul, project->BridgeCount());
 	}
 
+	TEST_METHOD(PutWiresIsAtomicWhenAChildFailsToQueryInterface)
+	{
+		HRESULT hr;
+
+		auto project = MakeProject();
+		auto validWire = MakeWire();
+		auto invalidBridge = MakeBridge(4, 0, mac_address{ 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+
+		auto psaItems = unique_safearray(SafeArrayCreateVector(VT_DISPATCH, 0, 2)); Assert::IsNotNull(psaItems.get());
+
+		IDispatch* disp0 = wil::com_query_failfast<IDispatch>(validWire);
+		IDispatch* disp1 = wil::com_query_failfast<IDispatch>(invalidBridge);
+		LONG i = 0;
+		hr = SafeArrayPutElement(psaItems.get(), &i, disp0); Assert::AreEqual(S_OK, hr);
+		i = 1;
+		hr = SafeArrayPutElement(psaItems.get(), &i, disp1); Assert::AreEqual(S_OK, hr);
+
+		hr = project.query<IProjectProperties>()->put_Wires(psaItems.get());
+		Assert::IsFalse(SUCCEEDED(hr));
+		Assert::AreEqual(0ul, project->WireCount());
+	}
+
 	TEST_METHOD(TreeSelectionUpdatesAfterVlanChange)
 	{
 		HRESULT hr;

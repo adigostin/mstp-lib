@@ -88,17 +88,34 @@ public:
 		// We don't support replacing items with this function, we only support adding them once.
 		RETURN_HR_IF(E_UNEXPECTED, !_bridges.empty());
 
-		// This is meant to be called only from LoadXml, no need to set dirty flag or send notifications.
+		vector_nothrow<com_ptr<IDispatch>> bridges;
+		auto hr = PutItems(psaItems, bridges); RETURN_IF_FAILED(hr);
+		
+		if (!_bridgeEventsTokens.try_reserve(bridges.size())) RETURN_HR(E_OUTOFMEMORY);
+		if (!_bridges.try_reserve(bridges.size())) RETURN_HR(E_OUTOFMEMORY);
 
-		return PutItems<IBridge> (psaItems, [this](IBridge* bridge) -> HRESULT {
+		for (ULONG i = 0; i < bridges.size(); i++)
+			RETURN_HR_IF(E_NOINTERFACE, !bridges[i].try_query<IBridge>());
+
+		auto args = MakeObjectCollectionPropertyChangeArgs (CollectionChangeType::Insert, 
+			0, bridges.size(), bridges.data()->addressof());
+		NotifyPropertyChanging(_propChangeCP, AsUnknown(), dispidBridges, &args);
+
+		for (auto& b : bridges)
+		{
+			com_ptr<IBridge> bridge;
+			hr = b->QueryInterface(IID_PPV_ARGS(&bridge)); RETURN_IF_FAILED(hr);
 			AdviseSinkToken token;
 			auto hr = AdviseSink<IBridgeEvents>(bridge, _weakRefToThis, &token); RETURN_IF_FAILED(hr);
-			bool inserted = _bridgeEventsTokens.try_insert({ bridge, std::move(token) }); RETURN_HR_IF(E_OUTOFMEMORY, !inserted);
-			bool pushed = _bridges.try_push_back(bridge); RETURN_HR_IF(E_OUTOFMEMORY, !pushed);
+			_bridgeEventsTokens.try_insert({ bridge, std::move(token) });
+			_bridges.try_push_back(bridge);
 			bridge->set_parent(this);
-			return S_OK;
-		});
+		}
 
+		args.collectionChangeArgs.setInsertRemoveArgs.childObjs = nullptr;
+		NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidBridges, &args);
+
+		return S_OK;
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE get_Wires (SAFEARRAY** ppsaItems) override
@@ -113,13 +130,30 @@ public:
 		// We don't support replacing items with this function, we only support adding them once.
 		RETURN_HR_IF(E_UNEXPECTED, !_wires.empty());
 
-		// This is meant to be called only from LoadXml, no need to set dirty flag or send notifications.
+		vector_nothrow<com_ptr<IDispatch>> wires;
+		auto hr = PutItems(psaItems, wires); RETURN_IF_FAILED(hr);
 
-		return PutItems<IWire> (psaItems, [this](IWire* wire) -> HRESULT {
-			bool pushed = _wires.try_push_back(std::move(wire)); RETURN_HR_IF(E_OUTOFMEMORY, !pushed);
+		for (ULONG i = 0; i < wires.size(); i++)
+			RETURN_HR_IF(E_NOINTERFACE, !wires[i].try_query<IWire>());
+
+		if (!_wires.try_reserve(wires.size())) RETURN_HR(E_OUTOFMEMORY);
+
+		auto args = MakeObjectCollectionPropertyChangeArgs (CollectionChangeType::Insert, 
+			0, wires.size(), wires.data()->addressof());
+		NotifyPropertyChanging(_propChangeCP, AsUnknown(), dispidWires, &args);
+
+		for (auto& w : wires)
+		{
+			com_ptr<IWire> wire;
+			hr = w->QueryInterface(IID_PPV_ARGS(&wire)); RETURN_IF_FAILED(hr);
+			_wires.try_push_back(wire);
 			wire->set_parent(this);
-			return S_OK;
-		});
+		}
+
+		args.collectionChangeArgs.setInsertRemoveArgs.childObjs = nullptr;
+		NotifyPropertyChanged(_propChangeCP, AsUnknown(), dispidWires, &args);
+
+		return S_OK;
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE get_NextBridgeAddress (BSTR* pbstrNextBridgeAddress) override

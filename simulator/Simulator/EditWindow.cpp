@@ -246,24 +246,21 @@ public:
 			RETURN_HR_IF(E_UNEXPECTED, args->propertyType != PropertyType::Collection);
 			if (args->collectionChangeArgs.changeType == CollectionChangeType::Insert)
 			{
-				// Inserted bridge or wire.
-				RETURN_HR_IF(E_NOTIMPL, args->collectionChangeArgs.setInsertRemoveArgs.count != 1);
-				com_ptr<IUnknown> child;
-				if (dispID == dispidBridges)
+				// Inserted bridges or wires.
+				auto& a = args->collectionChangeArgs.setInsertRemoveArgs;
+				for (ULONG i = 0; i < a.count; i++)
 				{
-					auto b = _project->BridgeAt(args->collectionChangeArgs.setInsertRemoveArgs.index);
-					hr = b->QueryInterface(IID_PPV_ARGS(&child)); RETURN_IF_FAILED(hr);
+					com_ptr<IUnknown> child;
+					if (dispID == dispidBridges)
+						_project->BridgeAt(a.index + i)->QueryInterface(IID_PPV_ARGS(&child));
+					else
+						_project->WireAt(a.index + i)->QueryInterface(IID_PPV_ARGS(&child));
+					auto it = _bridgeWiresInvalidateTokens.find(child);
+					_ASSERT(it == _bridgeWiresInvalidateTokens.end());
+					AdviseSinkToken token;
+					hr = AdviseSink<IInvalidateSink>(child, _weakRefToThis, &token); RETURN_IF_FAILED(hr);
+					_bridgeWiresInvalidateTokens[child] = std::move(token);
 				}
-				else
-				{
-					auto w = _project->WireAt(args->collectionChangeArgs.setInsertRemoveArgs.index);
-					hr = w->QueryInterface(IID_PPV_ARGS(&child)); RETURN_IF_FAILED(hr);
-				}
-				auto it = _bridgeWiresInvalidateTokens.find(child);
-				_ASSERT(it == _bridgeWiresInvalidateTokens.end());
-				AdviseSinkToken token;
-				hr = AdviseSink<IInvalidateSink>(child, _weakRefToThis, &token); RETURN_IF_FAILED(hr);
-				_bridgeWiresInvalidateTokens[child] = std::move(token);
 			}
 		}
 

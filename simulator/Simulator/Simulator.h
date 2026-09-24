@@ -589,8 +589,8 @@ HRESULT GetItems (ULONG cItems, GetAt getAt, SAFEARRAY** ppsaItems)
 	return S_OK;
 }
 
-template<typename TItem, typename Inserter> requires std::is_invocable_r_v<HRESULT, Inserter, com_ptr<TItem>&&>
-HRESULT PutItems (SAFEARRAY* psaItems, Inserter inserter)
+template<typename TItem>
+HRESULT PutItems (SAFEARRAY* psaItems, vector_nothrow<com_ptr<TItem>>& itemsOut)
 {
 	VARTYPE vt;
 	auto hr = SafeArrayGetVartype(psaItems, &vt); RETURN_IF_FAILED(hr);
@@ -610,14 +610,10 @@ HRESULT PutItems (SAFEARRAY* psaItems, Inserter inserter)
 	{
 		com_ptr<IDispatch> child;
 		hr = SafeArrayGetElement (psaItems, &i, child.addressof()); RETURN_IF_FAILED(hr);
-     hr = child->QueryInterface(IID_PPV_ARGS(&items[(size_t)(i - lbound)])); RETURN_IF_FAILED(hr);
+		hr = child->QueryInterface(IID_PPV_ARGS(&items[(size_t)(i - lbound)])); RETURN_IF_FAILED(hr);
 	}
 
-	for (auto& item : items)
-	{
-		hr = inserter(std::move(item)); RETURN_IF_FAILED(hr);
-	}
-
+	itemsOut = std::move(items);
 	return S_OK;
 }
 
