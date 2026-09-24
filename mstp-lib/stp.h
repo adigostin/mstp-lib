@@ -265,7 +265,7 @@ unsigned int STP_GetTxCount (const struct STP_BRIDGE* bridge, unsigned int portI
 void  STP_SetApplicationContext (struct STP_BRIDGE* bridge, void* applicationContext);
 void* STP_GetApplicationContext (const struct STP_BRIDGE* bridge);
 
-#if STP_ENABLE_PROP_CHANGE_CALLBACKS
+#if STP_ENABLE_PROPERTIES
 enum STP_PROPERTY
 {
 	STP_PROPERTY_ADMIN_EDGE,

@@ -1299,7 +1299,7 @@ void* STP_GetApplicationContext (const STP_BRIDGE* bridge)
 	return bridge->applicationContext;
 }
 
-#if STP_ENABLE_PROP_CHANGE_CALLBACKS
+#if STP_ENABLE_PROPERTIES
 void STP_RegisterPropertyChangeCallbacks(struct STP_BRIDGE* bridge, STP_CALLBACK_PROPERTY_CHANGE changing, STP_CALLBACK_PROPERTY_CHANGE changed)
 {
 	assert(!bridge->propChanging);

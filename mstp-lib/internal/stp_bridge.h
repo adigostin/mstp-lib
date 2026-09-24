@@ -89,7 +89,7 @@ struct STP_BRIDGE
 	bool started; // Added by me. STP_StartBridge sets it, STP_StopBridge clears it.
 
 	STP_CALLBACKS callbacks;
-#if STP_ENABLE_PROP_CHANGE_CALLBACKS
+#if STP_ENABLE_PROPERTIES
 	STP_CALLBACK_PROPERTY_CHANGE propChanging;
 	STP_CALLBACK_PROPERTY_CHANGE propChanged;
 #endif
@@ -130,7 +130,7 @@ struct STP_BRIDGE
 	PORT*                   receivedBpduPort;
 };
 
-#if STP_ENABLE_PROP_CHANGE_CALLBACKS
+#if STP_ENABLE_PROPERTIES
 	#define PROP_CHANGING(bridge, portIndex, treeIndex, prop, timestamp) \
 		do { \
 			if ((bridge)->propChanging) \
