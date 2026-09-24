@@ -488,4 +488,57 @@ public:
 		for (unsigned int i = 0; i < entryCount1; i++)
 			Assert::AreEqual(table1[i].treeIndex, table2[i].treeIndex);
 	}
+
+	TEST_METHOD(DutAdvertisesExternalRootPathCostAfterConvergence)
+	{
+		test_bridge b1(4, 0, 16, { 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		test_bridge b2(4, 0, 16, { 0x10, 0x20, 0x30, 0x40, 0x50, 0x70 });
+		test_bridge dut(4, 0, 16, { 0x10, 0x20, 0x30, 0x40, 0x50, 0x80 });
+
+		STP_SetBridgePriority(b1, 0, 0x1000, 0);
+		STP_SetBridgePriority(b2, 0, 0xF000, 0);
+		STP_StartBridge(b1, 0);
+		STP_StartBridge(b2, 0);
+		STP_StartBridge(dut, 0);
+
+		STP_OnPortEnabled(b1, 0, 100, true, 0);
+		STP_OnPortEnabled(dut, 0, 100, true, 0);
+		STP_OnPortEnabled(b1, 3, 100, true, 0);
+		STP_OnPortEnabled(b2, 2, 100, true, 0);
+		STP_OnPortEnabled(dut, 1, 100, true, 0);
+		STP_OnPortEnabled(b2, 0, 100, true, 0);
+
+		auto exchangeAllBpdus = [&]()
+		{
+			bool exchanged;
+			do
+			{
+				exchanged = false;
+				exchanged |= exchange_bpdus(b1, 0, dut, 0);
+				exchanged |= exchange_bpdus(b1, 3, b2, 2);
+				exchanged |= exchange_bpdus(dut, 1, b2, 0);
+			} while (exchanged);
+		};
+
+		std::vector<uint8_t> lastBpduOutOfDutPort2;
+		for (uint32_t second = 1; second <= 4; second++)
+		{
+			STP_OnOneSecondTick(b1, second);
+			STP_OnOneSecondTick(b2, second);
+			STP_OnOneSecondTick(dut, second);
+			if (!dut.tx_queues[1].empty())
+				lastBpduOutOfDutPort2 = dut.tx_queues[1].back();
+			exchangeAllBpdus();
+		}
+
+		Assert::IsFalse(lastBpduOutOfDutPort2.empty());
+
+		auto& bpdu = lastBpduOutOfDutPort2;
+		Assert::IsTrue(bpdu.size() >= 17);
+		const uint32_t cistExternalPathCost = (static_cast<uint32_t>(bpdu[13]) << 24)
+			| (static_cast<uint32_t>(bpdu[14]) << 16)
+			| (static_cast<uint32_t>(bpdu[15]) << 8)
+			| bpdu[16];
+		Assert::AreEqual(200000u, cistExternalPathCost);
+	}
 };

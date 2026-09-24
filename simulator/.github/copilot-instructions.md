@@ -24,3 +24,4 @@
   directory (those in directories with the "TestApp" prefix), and also don't look at WIL
   outside of its "include" directory.
 - When adding a test, add it at the end of the file.
+- The STP specification is in Chapter 13 here: C:\Users\adigo\OneDrive\doc\Ethernet\802.1Q-2018.pdf

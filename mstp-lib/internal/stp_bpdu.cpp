@@ -289,7 +289,7 @@ void DumpRstpBpdu (STP_BRIDGE* bridge, int port, int tree, const MSTP_BPDU* bpdu
 			(int) GetBpduFlagForwarding (bpdu->cistFlags),
 			(int) GetBpduFlagAgreement (bpdu->cistFlags));
 	LOG (bridge, port, tree, "  Root ID        : {BID}\r\n", &bpdu->cistRootId);
-	LOG (bridge, port, tree, "  Root Path Cost : {D7}\r\n", (int) bpdu->cistExternalPathCost);
+	LOG (bridge, port, tree, "  Root Path Cost : {D}\r\n", (int) bpdu->cistExternalPathCost);
 	LOG (bridge, port, tree, "  Bridge ID      : {BID}\r\n", &bpdu->cistRegionalRootId);
 	LOG (bridge, port, tree, "  Port ID        : {PID}\r\n", &bpdu->cistPortId);
 	LOG (bridge, port, tree, "  MessageAge={D}, MaxAge={D}, HelloTime={D}, ForwardDelay={D}\r\n",
