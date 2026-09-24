@@ -75,19 +75,19 @@ public:
 
 	#pragma region IStpPropertyChangeSink
 	static inline const std::pair<STP_PROPERTY, DISPID> stpPropertyToDispidMap[] = {
-		{ STP_PROPERTY_ROOT_PRIORITY_VECTOR, dispidRootId },
-		{ STP_PROPERTY_ROOT_PRIORITY_VECTOR, dispidExternalRootPathCost },
-		{ STP_PROPERTY_ROOT_PRIORITY_VECTOR, dispidRegionalRootId },
-		{ STP_PROPERTY_ROOT_PRIORITY_VECTOR, dispidInternalRootPathCost },
-		{ STP_PROPERTY_ROOT_PRIORITY_VECTOR, dispidDesignatedBridgeId },
-		{ STP_PROPERTY_ROOT_PRIORITY_VECTOR, dispidDesignatedPortId },
-		{ STP_PROPERTY_ROOT_PRIORITY_VECTOR, dispidReceivingPortId },
-		{ STP_PROPERTY_ROOT_TIMES, dispidHelloTime },
-		{ STP_PROPERTY_ROOT_TIMES, dispidMaxAge },
-		{ STP_PROPERTY_ROOT_TIMES, dispidForwardDelay },
-		{ STP_PROPERTY_ROOT_TIMES, dispidMessageAge },
-		{ STP_PROPERTY_ROOT_TIMES, dispidRemainingHops },
-		{ STP_PROPERTY_BRIDGE_TREE_PRIORITY, dispidBridgePrio },
+		{ STP_PROP_ROOT_PRIORITY_VECTOR, dispidRootId },
+		{ STP_PROP_ROOT_PRIORITY_VECTOR, dispidExternalRootPathCost },
+		{ STP_PROP_ROOT_PRIORITY_VECTOR, dispidRegionalRootId },
+		{ STP_PROP_ROOT_PRIORITY_VECTOR, dispidInternalRootPathCost },
+		{ STP_PROP_ROOT_PRIORITY_VECTOR, dispidDesignatedBridgeId },
+		{ STP_PROP_ROOT_PRIORITY_VECTOR, dispidDesignatedPortId },
+		{ STP_PROP_ROOT_PRIORITY_VECTOR, dispidReceivingPortId },
+		{ STP_PROP_ROOT_TIMES, dispidHelloTime },
+		{ STP_PROP_ROOT_TIMES, dispidMaxAge },
+		{ STP_PROP_ROOT_TIMES, dispidForwardDelay },
+		{ STP_PROP_ROOT_TIMES, dispidMessageAge },
+		{ STP_PROP_ROOT_TIMES, dispidRemainingHops },
+		{ STP_PROP_BRIDGE_TREE_PRIORITY, dispidBridgePrio },
 	};
 
 	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanging (IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override

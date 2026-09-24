@@ -370,7 +370,7 @@ static void InitState (STP_BRIDGE* bridge, PortAndTree pt, State state, unsigned
 	{
 		STP_PORT_ROLE oldRole = tree->role;
 
-		PROP_CHANGING(bridge, givenPort, givenTree, STP_PROPERTY_PORT_ROLE, timestamp);
+		PROP_CHANGING(bridge, givenPort, givenTree, STP_PROP_PORT_ROLE, timestamp);
 		tree->role = STP_PORT_ROLE_DISABLED;
 		tree->learn = tree->forward = false;
 		tree->synced = false;
@@ -378,7 +378,7 @@ static void InitState (STP_BRIDGE* bridge, PortAndTree pt, State state, unsigned
 		tree->rrWhile = FwdDelay (bridge, givenPort);
 		tree->fdWhile = MaxAge (bridge, givenPort);
 		tree->rbWhile = 0;
-		PROP_CHANGED(bridge, givenPort, givenTree, STP_PROPERTY_PORT_ROLE, timestamp);
+		PROP_CHANGED(bridge, givenPort, givenTree, STP_PROP_PORT_ROLE, timestamp);
 
 		if ((oldRole != STP_PORT_ROLE_DISABLED) && (bridge->callbacks.onPortRoleChanged != NULL))
 			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, STP_PORT_ROLE_DISABLED, timestamp);
@@ -387,10 +387,10 @@ static void InitState (STP_BRIDGE* bridge, PortAndTree pt, State state, unsigned
 	{
 		STP_PORT_ROLE oldRole = tree->role;
 
-		PROP_CHANGING(bridge, givenPort, givenTree, STP_PROPERTY_PORT_ROLE, timestamp);
+		PROP_CHANGING(bridge, givenPort, givenTree, STP_PROP_PORT_ROLE, timestamp);
 		tree->role = STP_PORT_ROLE_DISABLED;
 		tree->learn = tree->forward = false;
-		PROP_CHANGED(bridge, givenPort, givenTree, STP_PROPERTY_PORT_ROLE, timestamp);
+		PROP_CHANGED(bridge, givenPort, givenTree, STP_PROP_PORT_ROLE, timestamp);
 
 		if ((oldRole != STP_PORT_ROLE_DISABLED) && (bridge->callbacks.onPortRoleChanged != NULL))
 			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, STP_PORT_ROLE_DISABLED, timestamp);
@@ -410,9 +410,9 @@ static void InitState (STP_BRIDGE* bridge, PortAndTree pt, State state, unsigned
 	{
 		STP_PORT_ROLE oldRole = tree->role;
 
-		PROP_CHANGING(bridge, givenPort, givenTree, STP_PROPERTY_PORT_ROLE, timestamp);
+		PROP_CHANGING(bridge, givenPort, givenTree, STP_PROP_PORT_ROLE, timestamp);
 		tree->role = STP_PORT_ROLE_MASTER;
-		PROP_CHANGED(bridge, givenPort, givenTree, STP_PROPERTY_PORT_ROLE, timestamp);
+		PROP_CHANGED(bridge, givenPort, givenTree, STP_PROP_PORT_ROLE, timestamp);
 
 		if ((oldRole != STP_PORT_ROLE_MASTER) && (bridge->callbacks.onPortRoleChanged != NULL))
 			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, STP_PORT_ROLE_MASTER, timestamp);
@@ -461,10 +461,10 @@ static void InitState (STP_BRIDGE* bridge, PortAndTree pt, State state, unsigned
 	{
 		STP_PORT_ROLE oldRole = tree->role;
 
-		PROP_CHANGING(bridge, givenPort, givenTree, STP_PROPERTY_PORT_ROLE, timestamp);
+		PROP_CHANGING(bridge, givenPort, givenTree, STP_PROP_PORT_ROLE, timestamp);
 		tree->role = STP_PORT_ROLE_ROOT;
 		tree->rrWhile = FwdDelay (bridge, givenPort);
-		PROP_CHANGED(bridge, givenPort, givenTree, STP_PROPERTY_PORT_ROLE, timestamp);
+		PROP_CHANGED(bridge, givenPort, givenTree, STP_PROP_PORT_ROLE, timestamp);
 
 		if ((oldRole != STP_PORT_ROLE_ROOT) && (bridge->callbacks.onPortRoleChanged != NULL))
 			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, STP_PORT_ROLE_ROOT, timestamp);
@@ -521,11 +521,11 @@ static void InitState (STP_BRIDGE* bridge, PortAndTree pt, State state, unsigned
 	{
 		STP_PORT_ROLE oldRole = tree->role;
 
-		PROP_CHANGING(bridge, givenPort, givenTree, STP_PROPERTY_PORT_ROLE, timestamp);
+		PROP_CHANGING(bridge, givenPort, givenTree, STP_PROP_PORT_ROLE, timestamp);
 		tree->role = STP_PORT_ROLE_DESIGNATED;
 		if (cist (bridge, givenTree))
 			tree->proposing = tree->proposing || (!port->AdminEdge && !port->AutoEdge && port->AutoIsolate && port->operPointToPointMAC);
-		PROP_CHANGED(bridge, givenPort, givenTree, STP_PROPERTY_PORT_ROLE, timestamp);
+		PROP_CHANGED(bridge, givenPort, givenTree, STP_PROP_PORT_ROLE, timestamp);
 
 		if ((oldRole != STP_PORT_ROLE_DESIGNATED) && (bridge->callbacks.onPortRoleChanged != NULL))
 			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, STP_PORT_ROLE_DESIGNATED, timestamp);
@@ -611,10 +611,10 @@ static void InitState (STP_BRIDGE* bridge, PortAndTree pt, State state, unsigned
 	{
 		STP_PORT_ROLE oldRole = tree->role;
 
-		PROP_CHANGING(bridge, givenPort, givenTree, STP_PROPERTY_PORT_ROLE, timestamp);
+		PROP_CHANGING(bridge, givenPort, givenTree, STP_PROP_PORT_ROLE, timestamp);
 		tree->role = tree->selectedRole;
 		tree->learn = tree->forward = false;
-		PROP_CHANGED(bridge, givenPort, givenTree, STP_PROPERTY_PORT_ROLE, timestamp);
+		PROP_CHANGED(bridge, givenPort, givenTree, STP_PROP_PORT_ROLE, timestamp);
 
 		if ((oldRole != tree->role) && (bridge->callbacks.onPortRoleChanged != NULL))
 			bridge->callbacks.onPortRoleChanged (bridge, givenPort, givenTree, tree->role, timestamp);

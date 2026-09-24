@@ -87,9 +87,9 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, uns
 		port->rcvdInternal = fromSameRegion (bridge, givenPort);
 		rcvMsgs (bridge, givenPort);
 
-		PROP_CHANGING(bridge, givenPort, -1, STP_PROPERTY_OPER_EDGE, timestamp);
+		PROP_CHANGING(bridge, givenPort, -1, STP_PROP_OPER_EDGE, timestamp);
 		port->operEdge = port->isolate = port->rcvdBpdu = false;
-		PROP_CHANGED(bridge, givenPort, -1, STP_PROPERTY_OPER_EDGE, timestamp);
+		PROP_CHANGED(bridge, givenPort, -1, STP_PROP_OPER_EDGE, timestamp);
 
 		port->edgeDelayWhile = bridge->MigrateTime;
 	}

@@ -1175,15 +1175,15 @@ public:
 		if (portIndex == -1 && treeIndex == -1)
 		{
 			// STP properties that are relevant to the bridge, not to a bridge tree or to a port.
-			if (prop == STP_PROPERTY_BRIDGE_STARTED)
+			if (prop == STP_PROP_BRIDGE_STARTED)
 				NotifyPropertyChanging(b->_propChangeCP, b->AsUnknown(), dispidStpEnabled);
-			if (prop == STP_PROPERTY_STP_VERSION)
+			if (prop == STP_PROP_STP_VERSION)
 				NotifyPropertyChanging(b->_propChangeCP, b->AsUnknown(), dispidStpVersion);
-			if (prop == STP_PROPERTY_MST_CONFIG_NAME)
+			if (prop == STP_PROP_MST_CONFIG_NAME)
 				NotifyPropertyChanging(b->_propChangeCP, b->AsUnknown(), dispidMstConfigName);
-			if (prop == STP_PROPERTY_MST_CONFIG_REVISION_LEVEL)
+			if (prop == STP_PROP_MST_CONFIG_REVISION_LEVEL)
 				NotifyPropertyChanging(b->_propChangeCP, b->AsUnknown(), dispidMstConfigRevLevel);
-			if (prop == STP_PROPERTY_MST_CONFIG_TABLE)
+			if (prop == STP_PROP_MST_CONFIG_TABLE)
 				NotifyPropertyChanging(b->_propChangeCP, b->AsUnknown(), dispidMstConfigTable);
 		}
 	}
@@ -1197,15 +1197,15 @@ public:
 
 		if (portIndex == -1 && treeIndex == -1)
 		{
-			if (prop == STP_PROPERTY_BRIDGE_STARTED)
+			if (prop == STP_PROP_BRIDGE_STARTED)
 				NotifyPropertyChanged(b->_propChangeCP, b->AsUnknown(), dispidStpEnabled);
-			if (prop == STP_PROPERTY_STP_VERSION)
+			if (prop == STP_PROP_STP_VERSION)
 				NotifyPropertyChanged(b->_propChangeCP, b->AsUnknown(), dispidStpVersion);
-			if (prop == STP_PROPERTY_MST_CONFIG_NAME)
+			if (prop == STP_PROP_MST_CONFIG_NAME)
 				NotifyPropertyChanged(b->_propChangeCP, b->AsUnknown(), dispidMstConfigName);
-			if (prop == STP_PROPERTY_MST_CONFIG_REVISION_LEVEL)
+			if (prop == STP_PROP_MST_CONFIG_REVISION_LEVEL)
 				NotifyPropertyChanged(b->_propChangeCP, b->AsUnknown(), dispidMstConfigRevLevel);
-			if (prop == STP_PROPERTY_MST_CONFIG_TABLE)
+			if (prop == STP_PROP_MST_CONFIG_TABLE)
 				NotifyPropertyChanged(b->_propChangeCP, b->AsUnknown(), dispidMstConfigTable);
 
 			NotifyInvalidate (b->_invalidateCP, b->extent());

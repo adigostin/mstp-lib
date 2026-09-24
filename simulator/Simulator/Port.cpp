@@ -586,15 +586,15 @@ public:
 
 	#pragma region IStpPropertyChangeSink
 	static inline const std::pair<STP_PROPERTY, DISPID> stpPropertyToDispidMap[] = {
-		{ STP_PROPERTY_ADMIN_EDGE,   dispidAdminEdge },
-		{ STP_PROPERTY_OPER_EDGE,    dispidOperEdge },
-		{ STP_PROPERTY_DETECTED_P2P, dispidPortDetectedP2P },
-		{ STP_PROPERTY_OPER_P2P,     dispidPortOperP2P },
-		{ STP_PROPERTY_ADMIN_P2P,    dispidPortAdminP2P },
-		{ STP_PROPERTY_PORT_ENABLED, dispidPortMacOperational },
-		{ STP_PROPERTY_ADMIN_EXTERNAL_PORT_PATH_COST, dispidAdminExternalPortPathCost },
-		{ STP_PROPERTY_DETECTED_PORT_PATH_COST, dispidDetectedPortPathCost },
-		{ STP_PROPERTY_EXTERNAL_PORT_PATH_COST, dispidExternalPortPathCost },
+		{ STP_PROP_ADMIN_EDGE,   dispidAdminEdge },
+		{ STP_PROP_OPER_EDGE,    dispidOperEdge },
+		{ STP_PROP_DETECTED_P2P, dispidPortDetectedP2P },
+		{ STP_PROP_OPER_P2P,     dispidPortOperP2P },
+		{ STP_PROP_ADMIN_P2P,    dispidPortAdminP2P },
+		{ STP_PROP_PORT_ENABLED, dispidPortMacOperational },
+		{ STP_PROP_ADMIN_EXTERNAL_PORT_PATH_COST, dispidAdminExternalPortPathCost },
+		{ STP_PROP_DETECTED_PORT_PATH_COST, dispidDetectedPortPathCost },
+		{ STP_PROP_EXTERNAL_PORT_PATH_COST, dispidExternalPortPathCost },
 	};
 
 	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanging (IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override

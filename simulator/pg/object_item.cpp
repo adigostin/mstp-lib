@@ -465,7 +465,7 @@ struct ObjectItemChildManager : IObjectItemChildManager, IPropertyChangeSink, IO
 	{
 		// When replacing objects in a selection, we may not know what the incoming objects are.
 		// Requiring implementors to provide these would put too much burden on them.
-		// For example when mstp-lib calls the "changing" callback with STP_PROPERTY_STP_VERSION,
+		// For example when mstp-lib calls the "changing" callback with STP_PROP_STP_VERSION,
 		// we don't know what the new stp version is going to be, so we don't know what
 		// bridge/port trees we'll need to select.
 		//

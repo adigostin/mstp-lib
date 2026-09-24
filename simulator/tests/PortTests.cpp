@@ -74,7 +74,7 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanged(IBridge* bridge, unsigned int portIndex,
 		unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override
 	{
-		if (prop == STP_PROPERTY_PORT_ROLE)
+		if (prop == STP_PROP_PORT_ROLE)
 			_mostRecentRoles[{ bridge, portIndex }] = STP_GetPortRole(bridge->stp_bridge(), portIndex, treeIndex);
 		return S_OK;
 	}
@@ -428,11 +428,11 @@ TEST_CLASS(port_tests)
 			auto b = static_cast<BridgeForPathCostValues*>(STP_GetApplicationContext(stpb));
 			if (portIndex == 0)
 			{
-				if (prop == STP_PROPERTY_DETECTED_PORT_PATH_COST)
+				if (prop == STP_PROP_DETECTED_PORT_PATH_COST)
 					b->detectedBefore = STP_GetDetectedPortPathCost(stpb, 0);
-				if (prop == STP_PROPERTY_EXTERNAL_PORT_PATH_COST)
+				if (prop == STP_PROP_EXTERNAL_PORT_PATH_COST)
 					b->externalBefore = STP_GetExternalPortPathCost(stpb, 0);
-				if (prop == STP_PROPERTY_INTERNAL_PORT_PATH_COST && treeIndex == CIST_INDEX)
+				if (prop == STP_PROP_INTERNAL_PORT_PATH_COST && treeIndex == CIST_INDEX)
 					b->internalBefore = STP_GetInternalPortPathCost(stpb, 0, CIST_INDEX);
 			}
 		}
@@ -442,11 +442,11 @@ TEST_CLASS(port_tests)
 			auto b = static_cast<BridgeForPathCostValues*>(STP_GetApplicationContext(stpb));
 			if (portIndex == 0)
 			{
-				if (prop == STP_PROPERTY_DETECTED_PORT_PATH_COST)
+				if (prop == STP_PROP_DETECTED_PORT_PATH_COST)
 					b->detectedAfter = STP_GetDetectedPortPathCost(stpb, 0);
-				if (prop == STP_PROPERTY_EXTERNAL_PORT_PATH_COST)
+				if (prop == STP_PROP_EXTERNAL_PORT_PATH_COST)
 					b->externalAfter = STP_GetExternalPortPathCost(stpb, 0);
-				if (prop == STP_PROPERTY_INTERNAL_PORT_PATH_COST && treeIndex == CIST_INDEX)
+				if (prop == STP_PROP_INTERNAL_PORT_PATH_COST && treeIndex == CIST_INDEX)
 					b->internalAfter = STP_GetInternalPortPathCost(stpb, 0, CIST_INDEX);
 			}
 		}

@@ -119,24 +119,24 @@ static void InitState (STP_BRIDGE* bridge, PortIndex givenPort, State state, uns
 
 	if (state == EDGE)
 	{
-		PROP_CHANGING(bridge, givenPort, -1, STP_PROPERTY_OPER_EDGE, timestamp);
+		PROP_CHANGING(bridge, givenPort, -1, STP_PROP_OPER_EDGE, timestamp);
 		port->operEdge = true;
 		port->isolate = false;
-		PROP_CHANGED(bridge, givenPort, -1, STP_PROPERTY_OPER_EDGE, timestamp);
+		PROP_CHANGED(bridge, givenPort, -1, STP_PROP_OPER_EDGE, timestamp);
 	}
 	else if (state == NOT_EDGE)
 	{
-		PROP_CHANGING(bridge, givenPort, -1, STP_PROPERTY_OPER_EDGE, timestamp);
+		PROP_CHANGING(bridge, givenPort, -1, STP_PROP_OPER_EDGE, timestamp);
 		port->operEdge = false;
 		port->isolate = false;
-		PROP_CHANGED(bridge, givenPort, -1, STP_PROPERTY_OPER_EDGE, timestamp);
+		PROP_CHANGED(bridge, givenPort, -1, STP_PROP_OPER_EDGE, timestamp);
 	}
 	else if (state == ISOLATED)
 	{
-		PROP_CHANGING(bridge, givenPort, -1, STP_PROPERTY_OPER_EDGE, timestamp);
+		PROP_CHANGING(bridge, givenPort, -1, STP_PROP_OPER_EDGE, timestamp);
 		port->operEdge = false;
 		port->isolate = true;
-		PROP_CHANGED(bridge, givenPort, -1, STP_PROPERTY_OPER_EDGE, timestamp);
+		PROP_CHANGED(bridge, givenPort, -1, STP_PROP_OPER_EDGE, timestamp);
 	}
 	else
 		assert (false);

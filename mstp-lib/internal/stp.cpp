@@ -181,10 +181,10 @@ void STP_StartBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 
 	bridge->callbacks.enableBpduTrapping (bridge, true, timestamp);
 
-	PROP_CHANGING(bridge, -1, -1, STP_PROPERTY_BRIDGE_STARTED, timestamp);
+	PROP_CHANGING(bridge, -1, -1, STP_PROP_BRIDGE_STARTED, timestamp);
 	bridge->started = true;
 	RestartStateMachines(bridge, timestamp);
-	PROP_CHANGED(bridge, -1, -1, STP_PROPERTY_BRIDGE_STARTED, timestamp);
+	PROP_CHANGED(bridge, -1, -1, STP_PROP_BRIDGE_STARTED, timestamp);
 
 	LOG (bridge, -1, -1, "Bridge started.\r\n");
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
@@ -218,24 +218,24 @@ void STP_StopBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 				tree->forwarding = true;
 			}
 
-			PROP_CHANGING(bridge, pi, ti, STP_PROPERTY_INTERNAL_PORT_PATH_COST, timestamp);
+			PROP_CHANGING(bridge, pi, ti, STP_PROP_INTERNAL_PORT_PATH_COST, timestamp);
 			tree->InternalPortPathCost = 0;
-			PROP_CHANGED(bridge, pi, ti, STP_PROPERTY_INTERNAL_PORT_PATH_COST, timestamp);
+			PROP_CHANGED(bridge, pi, ti, STP_PROP_INTERNAL_PORT_PATH_COST, timestamp);
 		}
 
-		PROP_CHANGING(bridge, pi, -1, STP_PROPERTY_DETECTED_PORT_PATH_COST, timestamp);
+		PROP_CHANGING(bridge, pi, -1, STP_PROP_DETECTED_PORT_PATH_COST, timestamp);
 		port->detectedPortPathCost = 0;
-		PROP_CHANGED(bridge, pi, -1, STP_PROPERTY_DETECTED_PORT_PATH_COST, timestamp);
+		PROP_CHANGED(bridge, pi, -1, STP_PROP_DETECTED_PORT_PATH_COST, timestamp);
 
-		PROP_CHANGING(bridge, pi, -1, STP_PROPERTY_EXTERNAL_PORT_PATH_COST, timestamp);
+		PROP_CHANGING(bridge, pi, -1, STP_PROP_EXTERNAL_PORT_PATH_COST, timestamp);
 		port->ExternalPortPathCost = 0;
-		PROP_CHANGED(bridge, pi, -1, STP_PROPERTY_EXTERNAL_PORT_PATH_COST, timestamp);
+		PROP_CHANGED(bridge, pi, -1, STP_PROP_EXTERNAL_PORT_PATH_COST, timestamp);
 	}
 
 	// This one last, to allow the callbacks to still call "const" library functions.
-	PROP_CHANGING(bridge, -1, -1, STP_PROPERTY_BRIDGE_STARTED, timestamp);
+	PROP_CHANGING(bridge, -1, -1, STP_PROP_BRIDGE_STARTED, timestamp);
 	bridge->started = false;
-	PROP_CHANGED(bridge, -1, -1, STP_PROPERTY_BRIDGE_STARTED, timestamp);
+	PROP_CHANGED(bridge, -1, -1, STP_PROP_BRIDGE_STARTED, timestamp);
 
 	LOG (bridge, -1, -1, "{T}: Bridge stopped.\r\n", timestamp);
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
@@ -311,39 +311,39 @@ void STP_OnPortEnabled (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int
 
 	assert (!port->portEnabled);
 	port->portEnabled = true;
-	PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_PORT_ENABLED, timestamp);
+	PROP_CHANGED(bridge, portIndex, -1, STP_PROP_PORT_ENABLED, timestamp);
 
-	PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_DETECTED_P2P, timestamp);
+	PROP_CHANGING(bridge, portIndex, -1, STP_PROP_DETECTED_P2P, timestamp);
 	port->detectedPointToPointMAC = detectedPointToPointMAC;
-	PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_DETECTED_P2P, timestamp);
+	PROP_CHANGED(bridge, portIndex, -1, STP_PROP_DETECTED_P2P, timestamp);
 
-	PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_OPER_P2P, timestamp);
+	PROP_CHANGING(bridge, portIndex, -1, STP_PROP_OPER_P2P, timestamp);
 	if (port->adminPointToPointMAC != STP_ADMIN_P2P_AUTO)
 		port->operPointToPointMAC = (port->adminPointToPointMAC == STP_ADMIN_P2P_FORCE_TRUE);
 	else
 		port->operPointToPointMAC = detectedPointToPointMAC;
-	PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_OPER_P2P, timestamp);
+	PROP_CHANGED(bridge, portIndex, -1, STP_PROP_OPER_P2P, timestamp);
 
-	PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_DETECTED_PORT_PATH_COST, timestamp);
+	PROP_CHANGING(bridge, portIndex, -1, STP_PROP_DETECTED_PORT_PATH_COST, timestamp);
 	port->detectedPortPathCost = GetDefaultPortPathCost(speedMegabitsPerSecond);
-	PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_DETECTED_PORT_PATH_COST, timestamp);
+	PROP_CHANGED(bridge, portIndex, -1, STP_PROP_DETECTED_PORT_PATH_COST, timestamp);
 
-	PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_EXTERNAL_PORT_PATH_COST, timestamp);
+	PROP_CHANGING(bridge, portIndex, -1, STP_PROP_EXTERNAL_PORT_PATH_COST, timestamp);
 	if (port->adminExternalPortPathCost != 0)
 		port->ExternalPortPathCost = port->adminExternalPortPathCost;
 	else
 		port->ExternalPortPathCost = port->detectedPortPathCost;
-	PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_EXTERNAL_PORT_PATH_COST, timestamp);
+	PROP_CHANGED(bridge, portIndex, -1, STP_PROP_EXTERNAL_PORT_PATH_COST, timestamp);
 
 	for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount(); treeIndex++)
 	{
 		PORT_TREE* portTree = port->trees[treeIndex];
-		PROP_CHANGING(bridge, portIndex, treeIndex, STP_PROPERTY_INTERNAL_PORT_PATH_COST, timestamp);
+		PROP_CHANGING(bridge, portIndex, treeIndex, STP_PROP_INTERNAL_PORT_PATH_COST, timestamp);
 		if (portTree->adminInternalPortPathCost != 0)
 			portTree->InternalPortPathCost = portTree->adminInternalPortPathCost;
 		else
 			portTree->InternalPortPathCost = port->detectedPortPathCost;
-		PROP_CHANGED(bridge, portIndex, treeIndex, STP_PROPERTY_INTERNAL_PORT_PATH_COST, timestamp);
+		PROP_CHANGED(bridge, portIndex, treeIndex, STP_PROP_INTERNAL_PORT_PATH_COST, timestamp);
 	}
 
 	if (bridge->started)
@@ -363,31 +363,31 @@ void STP_OnPortDisabled (STP_BRIDGE* bridge, unsigned int portIndex, unsigned in
 	// We allow calling this function on an already disabled port.
 	if (port->portEnabled)
 	{
-		PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_DETECTED_P2P, timestamp);
+		PROP_CHANGING(bridge, portIndex, -1, STP_PROP_DETECTED_P2P, timestamp);
 		port->detectedPointToPointMAC = false;
-		PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_DETECTED_P2P, timestamp);
+		PROP_CHANGED(bridge, portIndex, -1, STP_PROP_DETECTED_P2P, timestamp);
 
-		PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_OPER_P2P, timestamp);
+		PROP_CHANGING(bridge, portIndex, -1, STP_PROP_OPER_P2P, timestamp);
 		port->operPointToPointMAC = false;
-		PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_OPER_P2P, timestamp);
+		PROP_CHANGED(bridge, portIndex, -1, STP_PROP_OPER_P2P, timestamp);
 
-		PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_DETECTED_PORT_PATH_COST, timestamp);
+		PROP_CHANGING(bridge, portIndex, -1, STP_PROP_DETECTED_PORT_PATH_COST, timestamp);
 		port->detectedPortPathCost = 0;
-		PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_DETECTED_PORT_PATH_COST, timestamp);
+		PROP_CHANGED(bridge, portIndex, -1, STP_PROP_DETECTED_PORT_PATH_COST, timestamp);
 
-		PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_EXTERNAL_PORT_PATH_COST, timestamp);
+		PROP_CHANGING(bridge, portIndex, -1, STP_PROP_EXTERNAL_PORT_PATH_COST, timestamp);
 		port->ExternalPortPathCost = 0;
-		PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_EXTERNAL_PORT_PATH_COST, timestamp);
+		PROP_CHANGED(bridge, portIndex, -1, STP_PROP_EXTERNAL_PORT_PATH_COST, timestamp);
 
 		for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount(); treeIndex++)
 		{
-			PROP_CHANGING(bridge, portIndex, treeIndex, STP_PROPERTY_INTERNAL_PORT_PATH_COST, timestamp);
+			PROP_CHANGING(bridge, portIndex, treeIndex, STP_PROP_INTERNAL_PORT_PATH_COST, timestamp);
 			port->trees[treeIndex]->InternalPortPathCost = 0;
-			PROP_CHANGED(bridge, portIndex, treeIndex, STP_PROPERTY_INTERNAL_PORT_PATH_COST, timestamp);
+			PROP_CHANGED(bridge, portIndex, treeIndex, STP_PROP_INTERNAL_PORT_PATH_COST, timestamp);
 		}
 
 		port->portEnabled = false;
-		PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_PORT_ENABLED, timestamp);
+		PROP_CHANGED(bridge, portIndex, -1, STP_PROP_PORT_ENABLED, timestamp);
 
 		if (bridge->started)
 			RunStateMachines (bridge, timestamp);
@@ -688,9 +688,9 @@ void STP_SetPortAdminEdge (struct STP_BRIDGE* bridge, unsigned int portIndex, bo
 {
 	if (bridge->ports [portIndex]->AdminEdge != adminEdge)
 	{
-		PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_ADMIN_EDGE, timestamp);
+		PROP_CHANGING(bridge, portIndex, -1, STP_PROP_ADMIN_EDGE, timestamp);
 		bridge->ports [portIndex]->AdminEdge = adminEdge;
-		PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_ADMIN_EDGE, timestamp);
+		PROP_CHANGED(bridge, portIndex, -1, STP_PROP_ADMIN_EDGE, timestamp);
 	}
 }
 
@@ -705,9 +705,9 @@ void STP_SetPortAutoEdge (struct STP_BRIDGE* bridge, unsigned int portIndex, boo
 {
 	if (bridge->ports [portIndex]->AutoEdge != autoEdge)
 	{
-		PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_AUTO_EDGE, timestamp);
+		PROP_CHANGING(bridge, portIndex, -1, STP_PROP_AUTO_EDGE, timestamp);
 		bridge->ports [portIndex]->AutoEdge = autoEdge;
-		PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_AUTO_EDGE, timestamp);
+		PROP_CHANGED(bridge, portIndex, -1, STP_PROP_AUTO_EDGE, timestamp);
 	}
 }
 
@@ -749,9 +749,9 @@ void STP_SetAdminPointToPointMAC (struct STP_BRIDGE* bridge, unsigned int portIn
 
 	PORT* port = bridge->ports[portIndex];
 
-	PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_ADMIN_P2P, timestamp);
+	PROP_CHANGING(bridge, portIndex, -1, STP_PROP_ADMIN_P2P, timestamp);
 	port->adminPointToPointMAC = adminPointToPointMAC;
-	PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_ADMIN_P2P, timestamp);
+	PROP_CHANGED(bridge, portIndex, -1, STP_PROP_ADMIN_P2P, timestamp);
 
 	if (port->portEnabled)
 	{
@@ -760,9 +760,9 @@ void STP_SetAdminPointToPointMAC (struct STP_BRIDGE* bridge, unsigned int portIn
 
 		if (port->operPointToPointMAC != newOperPointToPointMAC)
 		{
-			PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_OPER_P2P, timestamp);
+			PROP_CHANGING(bridge, portIndex, -1, STP_PROP_OPER_P2P, timestamp);
 			port->operPointToPointMAC = newOperPointToPointMAC;
-			PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_OPER_P2P, timestamp);
+			PROP_CHANGED(bridge, portIndex, -1, STP_PROP_OPER_P2P, timestamp);
 
 			if (bridge->started)
 				RunStateMachines (bridge, timestamp);
@@ -852,10 +852,10 @@ void STP_SetBridgePriority (STP_BRIDGE* bridge, unsigned int treeIndex, unsigned
 	{
 		LOG (bridge, -1, -1, "\r\n");
 
-		PROP_CHANGING(bridge, -1, treeIndex, STP_PROPERTY_BRIDGE_TREE_PRIORITY, timestamp);
+		PROP_CHANGING(bridge, -1, treeIndex, STP_PROP_BRIDGE_TREE_PRIORITY, timestamp);
 		bid.SetPriorityAndMstid(bridgePriority, (uint16_t)treeIndex);
 		bridge->trees[treeIndex]->SetBridgeIdentifier(bid);
-		PROP_CHANGED(bridge, -1, treeIndex, STP_PROPERTY_BRIDGE_TREE_PRIORITY, timestamp);
+		PROP_CHANGED(bridge, -1, treeIndex, STP_PROP_BRIDGE_TREE_PRIORITY, timestamp);
 
 		if (bridge->started && (treeIndex < bridge->treeCount()))
 			RecomputePrioritiesAndPortRoles (bridge, treeIndex, timestamp);
@@ -945,7 +945,7 @@ void STP_SetMstConfigName (STP_BRIDGE* bridge, const char* name, unsigned int ti
 
 	LOG (bridge, -1, -1, "{T}: Setting MST Config Name to \"{S}\"...\r\n", timestamp, name);
 
-	PROP_CHANGING(bridge, -1, -1, STP_PROPERTY_MST_CONFIG_NAME, timestamp);
+	PROP_CHANGING(bridge, -1, -1, STP_PROP_MST_CONFIG_NAME, timestamp);
 
 	memset (bridge->MstConfigId.ConfigurationName, 0, 32);
 	memcpy (bridge->MstConfigId.ConfigurationName, name, strlen (name));
@@ -953,7 +953,7 @@ void STP_SetMstConfigName (STP_BRIDGE* bridge, const char* name, unsigned int ti
 	if (bridge->started && bridge->ForceProtocolVersion >= STP_VERSION_MSTP)
 		RestartStateMachines(bridge, timestamp);
 
-	PROP_CHANGED(bridge, -1, -1, STP_PROPERTY_MST_CONFIG_NAME, timestamp);
+	PROP_CHANGED(bridge, -1, -1, STP_PROP_MST_CONFIG_NAME, timestamp);
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
 	FLUSH_LOG (bridge);
@@ -965,7 +965,7 @@ void STP_SetMstConfigRevisionLevel (STP_BRIDGE* bridge, unsigned short revisionL
 {
 	LOG (bridge, -1, -1, "{T}: Setting MST Config Revision Level to {D}...\r\n", timestamp, (int) revisionLevel);
 
-	PROP_CHANGING(bridge, -1, -1, STP_PROPERTY_MST_CONFIG_REVISION_LEVEL, timestamp);
+	PROP_CHANGING(bridge, -1, -1, STP_PROP_MST_CONFIG_REVISION_LEVEL, timestamp);
 
 	bridge->MstConfigId.RevisionLevelHigh = revisionLevel >> 8;
 	bridge->MstConfigId.RevisionLevelLow = revisionLevel & 0xff;
@@ -973,7 +973,7 @@ void STP_SetMstConfigRevisionLevel (STP_BRIDGE* bridge, unsigned short revisionL
 	if (bridge->started && bridge->ForceProtocolVersion >= STP_VERSION_MSTP)
 		RestartStateMachines(bridge, timestamp);
 
-	PROP_CHANGED(bridge, -1, -1, STP_PROPERTY_MST_CONFIG_REVISION_LEVEL, timestamp);
+	PROP_CHANGED(bridge, -1, -1, STP_PROP_MST_CONFIG_REVISION_LEVEL, timestamp);
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
 	FLUSH_LOG (bridge);
@@ -1018,7 +1018,7 @@ void STP_SetMstConfigTable (struct STP_BRIDGE* bridge, const STP_CONFIG_TABLE_EN
 		if (entryCount == 4096)
 			assert (entries[4095].treeIndex == 0);
 
-		PROP_CHANGING(bridge, -1, -1, STP_PROPERTY_MST_CONFIG_TABLE, timestamp);
+		PROP_CHANGING(bridge, -1, -1, STP_PROP_MST_CONFIG_TABLE, timestamp);
 
 		memcpy (bridge->mstConfigTable, entries, entryCount * 2);
 
@@ -1031,7 +1031,7 @@ void STP_SetMstConfigTable (struct STP_BRIDGE* bridge, const STP_CONFIG_TABLE_EN
 		if (bridge->started && bridge->ForceProtocolVersion >= STP_VERSION_MSTP)
 			RestartStateMachines(bridge, timestamp);
 
-		PROP_CHANGED(bridge, -1, -1, STP_PROPERTY_MST_CONFIG_TABLE, timestamp);
+		PROP_CHANGED(bridge, -1, -1, STP_PROP_MST_CONFIG_TABLE, timestamp);
 	}
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
@@ -1056,7 +1056,7 @@ void STP_SetMstConfigTableEntry (struct STP_BRIDGE* bridge, unsigned int vlanNum
 		else
 			assert (treeIndex < (1 + bridge->mstiCount));
 
-		PROP_CHANGING(bridge, -1, -1, STP_PROPERTY_MST_CONFIG_TABLE, timestamp);
+		PROP_CHANGING(bridge, -1, -1, STP_PROP_MST_CONFIG_TABLE, timestamp);
 
 		bridge->mstConfigTable[vlanNumber] = (unsigned short) treeIndex;
 
@@ -1069,7 +1069,7 @@ void STP_SetMstConfigTableEntry (struct STP_BRIDGE* bridge, unsigned int vlanNum
 		if (bridge->started && bridge->ForceProtocolVersion >= STP_VERSION_MSTP)
 			RestartStateMachines(bridge, timestamp);
 
-		PROP_CHANGED(bridge, -1, -1, STP_PROPERTY_MST_CONFIG_TABLE, timestamp);
+		PROP_CHANGED(bridge, -1, -1, STP_PROP_MST_CONFIG_TABLE, timestamp);
 	}
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
@@ -1111,11 +1111,11 @@ void STP_SetStpVersion (STP_BRIDGE* bridge, enum STP_VERSION version, unsigned i
 	{
 		LOG (bridge, -1, -1, "\r\n");
 
-		PROP_CHANGING(bridge, -1, -1, STP_PROPERTY_STP_VERSION, timestamp);
+		PROP_CHANGING(bridge, -1, -1, STP_PROP_STP_VERSION, timestamp);
 		bridge->ForceProtocolVersion = version;
 		if (bridge->started)
 			RestartStateMachines (bridge, timestamp);
-		PROP_CHANGED(bridge, -1, -1, STP_PROPERTY_STP_VERSION, timestamp);
+		PROP_CHANGED(bridge, -1, -1, STP_PROP_STP_VERSION, timestamp);
 	}
 
 	LOG (bridge, -1, -1, "------------------------------------\r\n");
@@ -1350,18 +1350,18 @@ void STP_SetAdminExternalPortPathCost (struct STP_BRIDGE* bridge, unsigned int p
 
 	if (port->adminExternalPortPathCost != adminExternalPortPathCost)
 	{
-		PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_ADMIN_EXTERNAL_PORT_PATH_COST, timestamp);
+		PROP_CHANGING(bridge, portIndex, -1, STP_PROP_ADMIN_EXTERNAL_PORT_PATH_COST, timestamp);
 		port->adminExternalPortPathCost = adminExternalPortPathCost;
-		PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_ADMIN_EXTERNAL_PORT_PATH_COST, timestamp);
+		PROP_CHANGED(bridge, portIndex, -1, STP_PROP_ADMIN_EXTERNAL_PORT_PATH_COST, timestamp);
 
 		if (port->portEnabled)
 		{
 			unsigned int newCost = (port->adminExternalPortPathCost != 0) ? port->adminExternalPortPathCost : port->detectedPortPathCost;
 			if (port->ExternalPortPathCost != newCost)
 			{
-				PROP_CHANGING(bridge, portIndex, -1, STP_PROPERTY_EXTERNAL_PORT_PATH_COST, timestamp);
+				PROP_CHANGING(bridge, portIndex, -1, STP_PROP_EXTERNAL_PORT_PATH_COST, timestamp);
 				port->ExternalPortPathCost = newCost;
-				PROP_CHANGED(bridge, portIndex, -1, STP_PROPERTY_EXTERNAL_PORT_PATH_COST, timestamp);
+				PROP_CHANGED(bridge, portIndex, -1, STP_PROP_EXTERNAL_PORT_PATH_COST, timestamp);
 				if (bridge->started)
 					RecomputePrioritiesAndPortRoles (bridge, CIST_INDEX, timestamp);
 			}

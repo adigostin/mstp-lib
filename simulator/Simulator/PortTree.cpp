@@ -192,12 +192,12 @@ public:
 
 	#pragma region IStpPropertyChangeSink
 	static const inline std::pair<STP_PROPERTY, DISPID> _dispidMap[] = {
-		{ STP_PROPERTY_BRIDGE_STARTED, dispidPortLearning },
-		{ STP_PROPERTY_BRIDGE_STARTED, dispidPortForwarding },
-		{ STP_PROPERTY_BRIDGE_STARTED, dispidPortRole },
-		{ STP_PROPERTY_BRIDGE_STARTED, dispidInternalPortPathCost },
-		{ STP_PROPERTY_PORT_ROLE, dispidPortRole },
-		{ STP_PROPERTY_INTERNAL_PORT_PATH_COST, dispidInternalPortPathCost },
+		{ STP_PROP_BRIDGE_STARTED, dispidPortLearning },
+		{ STP_PROP_BRIDGE_STARTED, dispidPortForwarding },
+		{ STP_PROP_BRIDGE_STARTED, dispidPortRole },
+		{ STP_PROP_BRIDGE_STARTED, dispidInternalPortPathCost },
+		{ STP_PROP_PORT_ROLE, dispidPortRole },
+		{ STP_PROP_INTERNAL_PORT_PATH_COST, dispidInternalPortPathCost },
 	};
 
 	virtual HRESULT STDMETHODCALLTYPE OnStpPropertyChanging(IBridge*, unsigned int portIndex, unsigned int treeIndex, STP_PROPERTY prop, unsigned int timestamp) noexcept override
