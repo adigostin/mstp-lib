@@ -20,7 +20,7 @@ using namespace edge;
 
 HRESULT CreateProjectWindowAO(IProjectWindow* projectWindow, IProjectWindowAO** ppProjectWindowAO);
 
-static const char company_name[] = "Adi Gostin";
+static const char company_name[] = "Adrian Gostin";
 static const wchar_t app_name[] = L"STP Simulator";
 
 const char stp_disabled_text[] = "(STP disabled)";
@@ -184,20 +184,32 @@ struct ThemeColorProvider : ID2DThemeColorProvider, IConnectionPointContainer
 	#pragma region IThemeColorProvider
 	virtual uint32_t argb (theme_color color) const override
 	{
+		bool g_darkModeEnabled = false;
+
 		switch (color)
 		{
-			case theme_color::background: return get_sys_color_argb(COLOR_WINDOW);
-			case theme_color::foreground: return get_sys_color_argb(COLOR_WINDOWTEXT);
-			case theme_color::disabled_fore: return get_sys_color_argb(COLOR_GRAYTEXT);
-			case theme_color::selected_back_focused: return get_sys_color_argb(COLOR_HIGHLIGHT);
-			case theme_color::selected_back_not_focused: return get_sys_color_argb(COLOR_HIGHLIGHT);
-			case theme_color::selected_fore: return get_sys_color_argb(COLOR_HIGHLIGHTTEXT);
-			case theme_color::tooltip_back: return get_sys_color_argb(COLOR_INFOBK);
-			case theme_color::tooltip_fore: return get_sys_color_argb(COLOR_INFOTEXT);
-			case theme_color::active_caption_back: return get_sys_color_argb(COLOR_ACTIVECAPTION);
-			case theme_color::active_caption_fore: return get_sys_color_argb(COLOR_CAPTIONTEXT);
-			case theme_color::text_editor_back: return get_sys_color_argb(COLOR_WINDOW);
-			case theme_color::text_editor_fore: return get_sys_color_argb(COLOR_WINDOWTEXT);
+			case theme_color::background:                return g_darkModeEnabled ? 0xFF000000 : 0xFFFFFFFF;
+			case theme_color::foreground:                return g_darkModeEnabled ? 0xFFE0E0E0 : 0xFF000000;
+			case theme_color::disabled_fore:             return g_darkModeEnabled ? 0xFF808080 : 0xFF808080;
+			case theme_color::selected_back_focused:     return g_darkModeEnabled ? 0xFF0000C0 : 0xFFADD8E6;
+			case theme_color::selected_back_not_focused: return g_darkModeEnabled ? 0xFF404040 : 0xFF407898;
+			case theme_color::selected_fore:             return g_darkModeEnabled ? 0xFFC0C0C0 : 0xFFFFFFFF;
+			case theme_color::tooltip_back:              return g_darkModeEnabled ? 0xFFFFFCBA : 0xFFFFFCBA;
+			case theme_color::tooltip_fore:              return g_darkModeEnabled ? 0xFF000000 : 0xFF000000;
+			case theme_color::active_caption_back:       return g_darkModeEnabled ? 0xFF202050 : 0xFF0094FF;
+			case theme_color::active_caption_fore:       return g_darkModeEnabled ? 0xFFE0E0E0 : 0xFF000000;
+			case theme_color::inactive_caption_back:     return g_darkModeEnabled ? 0xFF2B2B2B : 0xFF939393;
+			case theme_color::inactive_caption_fore:     return g_darkModeEnabled ? 0xFF808080 : 0xFF808080;
+			case theme_color::button_back:               return g_darkModeEnabled ? 0xFF000000 : 0xFFDCE7F5;
+			case theme_color::button_back_hot:           return g_darkModeEnabled ? 0xFF404040 : 0xFFC0C0C0;
+			case theme_color::button_back_pushed:        return g_darkModeEnabled ? 0xFF4040C0 : 0xFFC0C0FF;
+			case theme_color::button_fore:               return g_darkModeEnabled ? 0xFFC0C0C0 : 0xFF000000;
+			case theme_color::button_fore_hot:           return g_darkModeEnabled ? 0xFFC0C0C0 : 0xFF000000;
+			case theme_color::button_fore_pushed:        return g_darkModeEnabled ? 0xFFC0C0C0 : 0xFF000000;
+			case theme_color::text_editor_back:                  return g_darkModeEnabled ? 0xFF202020 : 0xFFFFFFFF;
+			case theme_color::text_editor_fore:                  return g_darkModeEnabled ? 0xFFC0C0C0 : 0xFF000000;
+			case theme_color::text_editor_selection_focused:     return g_darkModeEnabled ? 0xFF0764D3 : 0xFF3390FF;
+			case theme_color::text_editor_selection_not_focused: return g_darkModeEnabled ? 0xFF9FC3EE : 0xFFC8C8C8;
 			default:
 				_ASSERT(false);
 				return 0;
