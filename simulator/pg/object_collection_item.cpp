@@ -81,14 +81,14 @@ public:
 		RETURN_HR(E_NOTIMPL);
 	}
 
-	virtual wil::unique_process_heap_string description_title() const override final
+	virtual HRESULT STDMETHODCALLTYPE GetDescriptionTitle (BSTR* pbstrTitle) const override
 	{
-		_ASSERT(false); return { };
+		RETURN_HR(E_NOTIMPL);
 	}
 
-	virtual wil::unique_process_heap_string description_text() const override final
+	virtual HRESULT STDMETHODCALLTYPE GetDescriptionText (BSTR* pbstrText) const override
 	{
-		_ASSERT(false); return { };
+		RETURN_HR(E_NOTIMPL);
 	}
 
 	STDMETHOD(GetValue)(read_state* pState, BSTR* pbstrValueText) override { RETURN_HR(E_NOTIMPL); }

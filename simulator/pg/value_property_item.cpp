@@ -244,19 +244,22 @@ public:
 		return _layout ? _layout->height : 0;
 	}
 
-	virtual wil::unique_process_heap_string description_title() const override final
+	virtual HRESULT STDMETHODCALLTYPE GetDescriptionTitle (BSTR* pbstrTitle) const override
 	{
-		return wil::make_process_heap_string_nothrow(L"description_title");
-		//std::stringstream ss;
-		//ss << property()->name() << " (" << property()->type_name() << ")";
-		//return ss.str();
+		*pbstrTitle = nullptr;
+		wil::unique_bstr name;
+		auto hr = _typeInfo->GetDocumentation(_prop, &name, nullptr, nullptr, nullptr); RETURN_IF_FAILED_EXPECTED(hr);
+		*pbstrTitle = name.release();
+		return S_OK;
 	}
 
-	virtual wil::unique_process_heap_string description_text() const override final
+	virtual HRESULT STDMETHODCALLTYPE GetDescriptionText (BSTR* pbstrText) const override
 	{
-		return wil::make_process_heap_string_nothrow(L"description_text");
-		//auto prop = dynamic_cast<const ui_property_i*>(this->property());
-		//return (prop && prop->description()) ? std::string(prop->description()) : std::string();
+		*pbstrText = nullptr;
+		wil::unique_bstr helpstring;
+		auto hr = _typeInfo->GetDocumentation(_prop, nullptr, &helpstring, nullptr, nullptr); RETURN_IF_FAILED_EXPECTED(hr);
+		*pbstrText = helpstring.release();
+		return S_OK;
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE OnPropertyChanging (const PropertyChangeArgs *args) override

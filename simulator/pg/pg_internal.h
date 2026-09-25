@@ -84,8 +84,9 @@ namespace pg
 		// Returns S_OK if the event was handled and "consumed", S_FALSE if it wasn't, or an error code.
 		virtual HRESULT STDMETHODCALLTYPE ProcessMouseUp (const edge::mouse_ud_args& ma, LONG item_y) noexcept = 0;
 
-		virtual wil::unique_process_heap_string description_title() const = 0;
-		virtual wil::unique_process_heap_string description_text() const = 0;
+		virtual HRESULT STDMETHODCALLTYPE GetDescriptionTitle (BSTR* pbstrTitle) const = 0;
+		virtual HRESULT STDMETHODCALLTYPE GetDescriptionText (BSTR* pbstrTitle) const = 0;
+
 		virtual IRootItem* as_root() { return nullptr; }
 		const IRootItem* as_root() const { return const_cast<IItem*>(this)->as_root(); }
 		virtual IExpandableItem* AsExpandable() { return nullptr; }

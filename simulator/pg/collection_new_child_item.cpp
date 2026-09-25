@@ -66,8 +66,8 @@ public:
 	virtual bool selectable() const override final { return true; }
 	virtual HRESULT STDMETHODCALLTYPE ProcessMouseDown (const edge::mouse_ud_args& ma, LONG item_y) noexcept override { RETURN_HR(E_NOTIMPL); }
 	virtual HRESULT STDMETHODCALLTYPE ProcessMouseUp (const edge::mouse_ud_args& ma, LONG item_y) noexcept override { RETURN_HR(E_NOTIMPL); }
-	virtual wil::unique_process_heap_string description_title() const override final { return { }; }
-	virtual wil::unique_process_heap_string description_text() const override final { return { }; }
+	virtual HRESULT STDMETHODCALLTYPE GetDescriptionTitle (BSTR* pbstrTitle) const override { RETURN_HR(E_NOTIMPL); }
+	virtual HRESULT STDMETHODCALLTYPE GetDescriptionText (BSTR* pbstrText) const override { RETURN_HR(E_NOTIMPL); }
 };
 
 std::unique_ptr<collection_new_child_item_i> make_collection_new_child_item (collection_item_i* parent)

@@ -397,15 +397,15 @@ public:
 		return S_OK;
 	}
 
-	virtual wil::unique_process_heap_string description_title() const override final
+	virtual HRESULT STDMETHODCALLTYPE GetDescriptionTitle (BSTR* pbstrTitle) const override
 	{
-		_ASSERT(false); return { };
+		RETURN_HR(E_NOTIMPL);
 		//return _prop->name();
 	}
 
-	virtual wil::unique_process_heap_string description_text() const override final
+	virtual HRESULT STDMETHODCALLTYPE GetDescriptionText (BSTR* pbstrText) const override
 	{
-		_ASSERT(false); return { };
+		RETURN_HR(E_NOTIMPL);
 		//auto ui_prop = dynamic_cast<const ui_property_i*>(property());
 		//return ui_prop && ui_prop->description() ? std::string(ui_prop->description()) : std::string();
 	}

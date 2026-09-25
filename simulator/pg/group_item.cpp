@@ -351,8 +351,19 @@ public:
 	virtual bool selectable() const override { return false; }
 	virtual HRESULT STDMETHODCALLTYPE ProcessMouseDown (const edge::mouse_ud_args& ma, LONG item_y) noexcept override { return S_OK; }
 	virtual HRESULT STDMETHODCALLTYPE ProcessMouseUp (const edge::mouse_ud_args& ma, LONG item_y) noexcept override { return S_OK; }
-	virtual wil::unique_process_heap_string description_title() const override { return { }; }
-	virtual wil::unique_process_heap_string description_text() const override { return { }; }
+	
+	virtual HRESULT STDMETHODCALLTYPE GetDescriptionTitle (BSTR* pbstrTitle) const override
+	{
+		*pbstrTitle = nullptr;
+		return S_OK;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE GetDescriptionText (BSTR* pbstrText) const override
+	{
+		*pbstrText = nullptr;
+		return S_OK;
+	}
+
 	virtual IExpandableItem* AsExpandable() override { return this; }
 	#pragma endregion
 };

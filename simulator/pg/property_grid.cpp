@@ -1067,16 +1067,16 @@ public:
 			{
 				::SendMessage (_tooltip, TTM_POP, 0, 0);
 
-				wil::unique_process_heap_string text;
-				wil::unique_process_heap_string title;
+				wil::unique_bstr title;
+				wil::unique_bstr text;
 
 				if (htres.item)
 				{
-					title = htres.item->description_title();
-					text  = htres.item->description_text();
+					htres.item->GetDescriptionTitle(&title); // ignore failure
+					htres.item->GetDescriptionText(&text); // ignore failure
 
 					if (title && !text)
-						text = wil::make_process_heap_string_nothrow(L"--");
+						text = wil::make_bstr_nothrow(L"--");
 				}
 
 				TOOLINFO ti = { sizeof(TOOLINFO) };
