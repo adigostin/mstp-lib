@@ -10,13 +10,7 @@
 
 #include "targetver.h"
 
-#ifdef _DEBUG
-	#include <crtdbg.h>
-#else
-	#define _DEBUG
-	#include <crtdbg.h>
-	#undef _DEBUG
-#endif
+#include <crtdbg.h>
 
 // C/C++
 #include <algorithm>

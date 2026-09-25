@@ -78,9 +78,9 @@ public:
 		desc.SampleDesc.Count = 1;
 		desc.SampleDesc.Quality = 0;
 		desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		desc.BufferCount = 2;
+		desc.BufferCount = 1;
 		desc.Scaling = DXGI_SCALING_STRETCH;
-		desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+		desc.SwapEffect = DXGI_SWAP_EFFECT_SEQUENTIAL;
 		desc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 		desc.Flags = 0;
 		hr = _dxgi_factory->CreateSwapChainForHwnd (_d3d_device, _hWnd, &desc, nullptr, nullptr, &_swap_chain); RETURN_IF_FAILED(hr);
