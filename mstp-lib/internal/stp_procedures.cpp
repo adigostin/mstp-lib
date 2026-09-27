@@ -335,7 +335,11 @@ void rcvMsgs (STP_BRIDGE* bridge, PortIndex givenPort)
 			portCistTree->msgTimes.remainingHops = bridge->trees[CIST_INDEX]->BridgeTimes.remainingHops;
 
 		// flags
-		if (bridge->receivedBpduType == VALIDATED_BPDU_TYPE_STP_CONFIG)
+		// From 14.2.9 in 802.1Q-2018:
+		// A received BPDU with a CIST Port Role value of 0 is identified as a Configuration BPDU.
+		if ((bridge->receivedBpduType == VALIDATED_BPDU_TYPE_STP_CONFIG)
+			|| ((bridge->receivedBpduType >= VALIDATED_BPDU_TYPE_RST)
+				&& (GetBpduFlagPortRole(bridge->receivedBpduContent->cistFlags) == 0)))
 		{
 			portCistTree->msgFlagsTc            = GetBpduFlagTc    (bridge->receivedBpduContent->cistFlags);
 			portCistTree->msgFlagsTcAckOrMaster = GetBpduFlagTcAck (bridge->receivedBpduContent->cistFlags);

@@ -218,4 +218,32 @@ TEST_CLASS(bpdu_tests)
 		type = STP_GetValidatedBpduType (STP_VERSION_MSTP, mstp_bpdu_with_mstis, sizeof(mstp_bpdu_with_mstis));
 		Assert::AreEqual<int> (VALIDATED_BPDU_TYPE_MST, type);
 	}
+
+	TEST_METHOD(BpduWithZeroCistPortRoleIsTreatedAsConfig)
+	{
+		test_bridge bridge(1, 0, 16, { 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		STP_StartBridge(bridge, 0);
+		STP_OnPortEnabled(bridge, 0, 100, true, 0);
+
+		static constexpr uint8_t bpdu[36] = {
+			0, 0, 2, 2, // Id, Version Id, BPDU Type
+			0x30, // Flags: Unknown Port Role (00), Learning and Forwarding
+			0, 0, 2, 2, 0, 0, 0, 1, // Root Id: 0000.020200000001
+			0, 0, 0, 0, // Root Path Cost: 0
+			0, 0, 2, 2, 0, 0, 0, 1, // Designated Bridge Id
+			0x80, 1, // Designated Port Id
+			0, 0, // Message Age
+			20, 0, // Max Age: 20 seconds
+			2, 0, // Hello Time: 2 seconds
+			15, 0, // Forward Delay: 15 seconds
+			0 // Version 1 Length
+		};
+		STP_OnBpduReceived(bridge, 0, bpdu, sizeof(bpdu), 0);
+
+		uint8_t rootPriorityVector[36];
+		STP_GetRootPriorityVector(bridge, 0, rootPriorityVector);
+		static constexpr uint8_t expectedRootId[8] = { 0, 0, 2, 2, 0, 0, 0, 1 };
+		Assert::IsTrue(memcmp(rootPriorityVector, expectedRootId, sizeof(expectedRootId)) == 0);
+	}
+
 };
