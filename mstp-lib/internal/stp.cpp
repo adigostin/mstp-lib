@@ -202,7 +202,7 @@ void STP_StopBridge (STP_BRIDGE* bridge, unsigned int timestamp)
 	for (unsigned int pi = 0; pi < bridge->portCount; pi++)
 	{
 		PORT* port = bridge->ports[pi];
-		for (unsigned int ti = 0; ti < bridge->treeCount(); ti++)
+		for (unsigned int ti = 0; ti < 1 + bridge->mstiCount; ti++)
 		{
 			PORT_TREE* tree = port->trees[ti];
 
@@ -339,7 +339,7 @@ void STP_OnPortEnabled (STP_BRIDGE* bridge, unsigned int portIndex, unsigned int
 		port->ExternalPortPathCost = port->detectedPortPathCost;
 	PROP_CHANGED(bridge, portIndex, -1, STP_PROP_EXTERNAL_PORT_PATH_COST, timestamp);
 
-	for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount(); treeIndex++)
+	for (unsigned int treeIndex = 0; treeIndex < 1 + bridge->mstiCount; treeIndex++)
 	{
 		PORT_TREE* portTree = port->trees[treeIndex];
 		PROP_CHANGING(bridge, portIndex, treeIndex, STP_PROP_INTERNAL_PORT_PATH_COST, timestamp);
@@ -383,7 +383,7 @@ void STP_OnPortDisabled (STP_BRIDGE* bridge, unsigned int portIndex, unsigned in
 		port->ExternalPortPathCost = 0;
 		PROP_CHANGED(bridge, portIndex, -1, STP_PROP_EXTERNAL_PORT_PATH_COST, timestamp);
 
-		for (unsigned int treeIndex = 0; treeIndex < bridge->treeCount(); treeIndex++)
+		for (unsigned int treeIndex = 0; treeIndex < 1 + bridge->mstiCount; treeIndex++)
 		{
 			PROP_CHANGING(bridge, portIndex, treeIndex, STP_PROP_INTERNAL_PORT_PATH_COST, timestamp);
 			port->trees[treeIndex]->InternalPortPathCost = 0;
