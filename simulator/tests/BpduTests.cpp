@@ -270,4 +270,66 @@ TEST_CLASS(bpdu_tests)
 
 		Assert::IsFalse(txQueue.empty());
 	}
+
+	TEST_METHOD(RstpBpduWithUnknownPortRoleTreatedAsConfigBpdu)
+	{
+		test_bridge bridge(1, 0, 16, { 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		Assert::AreEqual<int>(STP_VERSION_RSTP, STP_GetStpVersion(bridge));
+		STP_StartBridge(bridge, 0);
+		STP_OnPortEnabled(bridge, 0, 100, true, 0);
+
+		// The library should have sent one RSTP BPDU from the just enabled port.
+		auto& txQueue = bridge.tx_queues[0];
+		Assert::AreEqual<size_t>(1, txQueue.size());
+		txQueue.pop();
+
+		// Check that it sends them periodically.
+		STP_OnOneSecondTick(bridge, 0);
+		STP_OnOneSecondTick(bridge, 0);
+		Assert::AreEqual<size_t>(1, txQueue.size());
+		txQueue.pop();
+
+		// Construct a BPDUs with Unknown Port Role (00) and inferior Root Id and Designated Bridge Id, and feed it to the port.
+		static const uint8_t bpdu[36] = {
+			0, 0, 2, 2, // RSTP
+			0x30, // Flags: Unknown Port Role (00), Learning and Forwarding
+			0xF0, 0, 2, 2, 0, 0, 0, 1, // Root Id: F000.020200000001
+			0, 0, 0, 0, // Root Path Cost: 0
+			0xF0, 0, 2, 2, 0, 0, 0, 1, // Designated Bridge Id
+			0x80, 1, // Designated Port Id
+			0, 0, // Message Age
+			20, 0, // Max Age: 20 seconds
+			2, 0, // Hello Time: 2 seconds
+			15, 0, // Forward Delay: 15 seconds
+			0 // Version 1 Length
+		};
+		STP_OnBpduReceived(bridge, 0, bpdu, sizeof(bpdu), 0);
+
+		// Because the BPDU above was received on the port while mdelayWhile was counting down
+		// (started from MigrateTime = 3 and we called STP_OnOneSecondTick only two times so far),
+		// the port has not transitioned and will not transition based on that BPDU.
+		// We verify this by calling STP_OnOneSecondTick two more times (HelloTime of 2)
+		// and checking the BPDU the library sends to that port; it should be a RSTP BPDU.
+		STP_OnOneSecondTick(bridge, 0);
+		STP_OnOneSecondTick(bridge, 0);
+		Assert::AreEqual<size_t>(1, txQueue.size());
+		auto received = txQueue.front();
+		txQueue.pop();
+		Assert::AreEqual<uint8_t>(0, received[0]); // protocolId
+		Assert::AreEqual<uint8_t>(0, received[1]); // protocolId
+		Assert::AreEqual<uint8_t>(2, received[2]); // protocolVersionId
+		Assert::AreEqual<uint8_t>(2, received[3]); // bpduType
+
+		// Let's send the BPDU again. This time mdelayWhile is 0 and we should see a transition to STP.
+		STP_OnBpduReceived(bridge, 0, bpdu, sizeof(bpdu), 0);
+		STP_OnOneSecondTick(bridge, 0);
+		STP_OnOneSecondTick(bridge, 0);
+		Assert::AreEqual<size_t>(1, txQueue.size());
+		received = txQueue.front();
+		txQueue.pop();
+		Assert::AreEqual<uint8_t>(0, received[0]); // protocolId
+		Assert::AreEqual<uint8_t>(0, received[1]); // protocolId
+		Assert::AreEqual<uint8_t>(0, received[2]); // protocolVersionId
+		Assert::AreEqual<uint8_t>(0, received[3]); // bpduType
+	}
 };

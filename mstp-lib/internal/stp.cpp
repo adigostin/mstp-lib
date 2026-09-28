@@ -497,6 +497,23 @@ void STP_OnBpduReceived (STP_BRIDGE* bridge, unsigned int portIndex, const unsig
 				}
 			}
 
+			if (type >= VALIDATED_BPDU_TYPE_RST && GetBpduFlagPortRole(((MSTP_BPDU*)bpdu)->cistFlags) == 0)
+			{
+				// From 802.1D-2004, 9.2.9 Encoding of Port Role values:
+				// NOTE-If the Unknown value of the Port Role parameter is received, the state machines will
+				// effectively treat the RST BPDU as if it were a Configuration BPDU.
+				//
+				// From 802.1Q-2018, 14.2.9 Encoding of Port Role values:
+				// NOTE—IEEE Std 802.1D-2004 [B17] identified the Port Role value of 0 as Unknown, as it not used
+				// as a CIST Port Role in transmitted BPDUs. A received BPDU with a CIST Port Role value of 0
+				// is identified as a Configuration BPDU.
+				//
+				// Note AG: A BPDU received while mDelayWhile is counting down will _not_ cause a transition.
+				// See 802.1Q-2018, 13.25.4 mdelayWhile
+				LOG (bridge, portIndex, -1, "RST/MST/SPT BPDU with Role=0. Treating it as Config.\r\n");
+				type = VALIDATED_BPDU_TYPE_STP_CONFIG;
+			}
+
 			if (type != VALIDATED_BPDU_TYPE_UNKNOWN)
 			{
 				assert (bridge->receivedBpduContent == NULL);
