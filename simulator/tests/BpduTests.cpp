@@ -246,4 +246,28 @@ TEST_CLASS(bpdu_tests)
 		Assert::IsTrue(memcmp(rootPriorityVector, expectedRootId, sizeof(expectedRootId)) == 0);
 	}
 
+	TEST_METHOD(LoopbackConfigBpduIgnored)
+	{
+		test_bridge bridge(1, 0, 16, { 0x10, 0x20, 0x30, 0x40, 0x50, 0x60 });
+		STP_SetStpVersion(bridge, STP_VERSION_LEGACY_STP, 0);
+		STP_StartBridge(bridge, 0);
+		STP_OnPortEnabled(bridge, 0, 100, true, 0);
+
+		// The library should have sent one Config BPDU from the just enabled port.
+		auto& txQueue = bridge.tx_queues[0];
+		Assert::AreEqual<size_t>(1, txQueue.size());
+		auto bpdu = txQueue.front();
+		txQueue.pop();
+
+		// Feed it back to the same port.
+		STP_OnBpduReceived(bridge, 0, bpdu.data(), (unsigned)bpdu.size(), 0);
+
+		// And wait two seconds to see if the loopback BPDU was processed or not.
+		// If it was processed, the algorithm would be disturbed and would not send BPDUs for a while.
+		// If it was (correctly) ignored, the algorithm would send BPDUs every two seconds.
+		STP_OnOneSecondTick(bridge, 1);
+		STP_OnOneSecondTick(bridge, 2);
+
+		Assert::IsFalse(txQueue.empty());
+	}
 };

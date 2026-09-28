@@ -479,6 +479,24 @@ void STP_OnBpduReceived (STP_BRIDGE* bridge, unsigned int portIndex, const unsig
 					assert(false);
 			}
 
+			if (type == VALIDATED_BPDU_TYPE_STP_CONFIG)
+			{
+				PORT_TREE* cistTree = bridge->ports[portIndex]->trees[CIST_INDEX];
+				if (   ((MSTP_BPDU*)bpdu)->cistRegionalRootId == cistTree->designatedPriority.DesignatedBridgeId
+					&& ((MSTP_BPDU*)bpdu)->cistPortId == cistTree->designatedPriority.DesignatedPortId)
+				{
+					// From 802.1D-2004, 9.3.4 Validation of received BPDUs:
+					// NOTE 1-If the Bridge Identifier and Port Identifier both match the values that would be
+					// transmitted in a Configuration BPDU, the BPDU is discarded to prevent processing of the Port's
+					// own BPDUs; for example, if they are received by the Port as a result of a loopback condition.
+					// If a loopback condition exists, there will be other undesirable effects caused by the looping
+					// back of data frames relayed through the Port. When transmitting RST BPDUs, the Rapid Spanning Tree
+					// Protocol implements a more sophisticated check, so this test is not applied to RST BPDUs (see below).
+					LOG (bridge, portIndex, -1, "Loopback Config BPDU. Discarding it.\r\n");
+					type = VALIDATED_BPDU_TYPE_UNKNOWN;
+				}
+			}
+
 			if (type != VALIDATED_BPDU_TYPE_UNKNOWN)
 			{
 				assert (bridge->receivedBpduContent == NULL);
